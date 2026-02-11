@@ -1,0 +1,14 @@
+*.iml
+.gradle
+/local.properties
+.DS_Store
+build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+.idea
+.jks
+AGENTS.md
+# MaaResource
+/app/src/main/assets/MaaSync
