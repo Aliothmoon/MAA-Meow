@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       maa_tag:
-        description: 'MAA Core release tag (留空则用 latest)'
+        description: 'MAA Core release tag'
         required: false
         default: ''
 
