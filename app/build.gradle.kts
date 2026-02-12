@@ -25,7 +25,7 @@ val gitVersionCode: Int by lazy {
 
 val gitVersionName: String by lazy {
     val desc = providers.exec {
-        commandLine("git", "describe", "--tags", "--always", "--dirty")
+        commandLine("git", "describe", "--tags", "--always")
         isIgnoreExitValue = true
     }.standardOutput.asText.get().trim()
     desc.removePrefix("v").ifEmpty { "0.0.0-dev" }
