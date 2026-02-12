@@ -9,6 +9,7 @@ build
 local.properties
 .idea
 *.jks
+*.b64
 AGENTS.md
 # MaaResource
 /app/src/main/assets/MaaSync
