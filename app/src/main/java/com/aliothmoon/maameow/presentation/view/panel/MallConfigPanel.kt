@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -277,6 +278,7 @@ private fun BasicMallSettings(config: MallConfig, onConfigChange: (MallConfig) -
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FormationSelector(selectedFormation: Int, onFormationChange: (Int) -> Unit) {
     Column(
@@ -284,9 +286,9 @@ private fun FormationSelector(selectedFormation: Int, onFormationChange: (Int) -
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text("使用编队", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             MallConfig.FORMATION_OPTIONS.forEach { (value, label) ->
                 Row(
@@ -296,7 +298,7 @@ private fun FormationSelector(selectedFormation: Int, onFormationChange: (Int) -
                             if (selectedFormation == value) Color(0xFFE3F2FD) else Color.Transparent,
                             RoundedCornerShape(4.dp)
                         )
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     RadioButton(
