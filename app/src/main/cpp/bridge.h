@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+#define BRIDGE_API __attribute__((visibility("default")))
+
 // Image format enum
 typedef enum {
     IMAGE_FORMAT_UNKNOWN = 0,
@@ -100,25 +102,25 @@ typedef struct {
 } MethodParam;
 
 
-void *AttachThread(void);
+BRIDGE_API void *AttachThread(void);
 
-int DetachThread(void *env);
+BRIDGE_API int DetachThread(void *env);
 
-FrameInfo GetLockedPixels(void);
+BRIDGE_API FrameInfo GetLockedPixels(void);
 
-int UnlockPixels(FrameInfo info);
+BRIDGE_API int UnlockPixels(FrameInfo info);
 
-int DispatchInputMessage(MethodParam param);
+BRIDGE_API int DispatchInputMessage(MethodParam param);
 
 // 帧缓冲管理
-void InitFrameBuffers(int width, int height);
-void ReleaseFrameBuffers(void);
+BRIDGE_API void InitFrameBuffers(int width, int height);
+BRIDGE_API void ReleaseFrameBuffers(void);
 
 // 从 HardwareBuffer 拷贝帧数据，返回帧计数，失败返回 -1
-int64_t CopyFrameFromHardwareBuffer(void *env, void *hardwareBufferObj);
+BRIDGE_API int64_t CopyFrameFromHardwareBuffer(void *env, void *hardwareBufferObj);
 
 // 获取当前帧缓冲（只读）
-const FrameBuffer *GetCurrentFrame(void);
+BRIDGE_API const FrameBuffer *GetCurrentFrame(void);
 
 #ifdef __cplusplus
 }
