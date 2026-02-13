@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.remote
 
+import android.os.Process
 import android.view.Display
 import android.view.Surface
 import com.aliothmoon.maameow.MaaCoreService
@@ -14,6 +15,9 @@ import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
 import com.sun.jna.Native
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.exitProcess
 
@@ -70,9 +74,12 @@ class RemoteServiceImpl : RemoteService.Stub() {
         """.trimIndent()
     }
 
-    override fun setup(userDir: String?): Boolean {
+    override fun setup(userDir: String?, isDebug: Boolean): Boolean {
         val result = NativeBridgeLib.ping()
         if (!setup) {
+            if (isDebug) {
+                startLogcatCapture(userDir)
+            }
             val ctx = MaaContext ?: run {
                 Ln.e("$TAG: setup failed - MaaContext is null")
                 return false
@@ -179,5 +186,21 @@ class RemoteServiceImpl : RemoteService.Stub() {
             }
         }
         return false
+    }
+
+    private fun startLogcatCapture(userDir: String?) {
+        if (userDir == null) return
+        try {
+            val debugDir = File(userDir, "debug").apply { mkdirs() }
+            val timestamp = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Date())
+            val logcatDir = File(debugDir, "logcat_logs").apply { mkdirs() }
+            val logFile = File(logcatDir, "logcat_$timestamp.log")
+            val pid = Process.myPid().toString()
+            Ln.i("$TAG: Saving logcat (pid=$pid) to ${logFile.absolutePath}")
+            Runtime.getRuntime()
+                .exec(arrayOf("sh", "-c", "logcat --pid=$pid > ${logFile.absolutePath}"))
+        } catch (e: Exception) {
+            Ln.e("$TAG: Failed to start logcat capture: ${e.message}")
+        }
     }
 }

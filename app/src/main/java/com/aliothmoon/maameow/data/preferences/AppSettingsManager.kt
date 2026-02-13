@@ -95,4 +95,16 @@ class AppSettingsManager(private val context: Context) {
             context.dataStore.edit { it[mirrorChyanCdk] = cdk }
         }
     }
+
+    // 调试模式
+    val debugMode: StateFlow<Boolean> = settings
+        .map { it.debugMode.toBooleanStrictOrNull() ?: false }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, false)
+
+    suspend fun setDebugMode(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[debugMode] = enabled.toString() }
+        }
+    }
 }

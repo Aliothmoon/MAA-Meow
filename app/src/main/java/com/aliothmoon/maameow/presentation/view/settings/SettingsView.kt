@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -53,6 +54,7 @@ fun SettingsView(
     logExportService: LogExportService = koinInject()
 ) {
     val resourceInitState by resourceInitService.state.collectAsStateWithLifecycle()
+    val debugMode by viewModel.debugMode.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
 
     // 重新初始化确认弹窗
@@ -221,6 +223,37 @@ fun SettingsView(
                             color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
                         )
                     }
+                }
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f)
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "调试模式",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                        Text(
+                            text = "启用后记录详细日志信息",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                    Switch(
+                        checked = debugMode,
+                        onCheckedChange = { enabled ->
+                            viewModel.setDebugMode(enabled)
+                        }
+                    )
                 }
             }
 

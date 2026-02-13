@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.domain.service
 
 import com.aliothmoon.maameow.data.config.MaaPathConfig
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,7 +11,8 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 class MaaResourceLoader(
-    private val pathConfig: MaaPathConfig
+    private val pathConfig: MaaPathConfig,
+    private val appSettings: AppSettingsManager
 ) {
 
     sealed class State {
@@ -48,7 +50,7 @@ class MaaResourceLoader(
             withContext(Dispatchers.IO) {
                 useRemoteService {
                     val dir = pathConfig.rootDir
-                    it.setup(dir)
+                    it.setup(dir, appSettings.debugMode.value)
                     val maa = it.maaCoreService
                     if (!maa.LoadResource(dir)) {
                         _state.value = State.Failed("加载资源失败")

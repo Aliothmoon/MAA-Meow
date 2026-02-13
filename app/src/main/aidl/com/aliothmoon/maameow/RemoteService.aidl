@@ -23,7 +23,7 @@ interface RemoteService {
 
     MaaCoreService getMaaCoreService() = 9;
 
-    boolean setup(String userDir) = 10;
+    boolean setup(String userDir,boolean isDebug) = 10;
 
     PermissionStateInfo grantPermissions(in PermissionGrantRequest request) = 11;
 

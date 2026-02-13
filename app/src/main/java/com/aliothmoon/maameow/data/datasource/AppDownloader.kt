@@ -147,6 +147,7 @@ class AppDownloader(
                 query = buildMap {
                     put("current_version", currentVersion)
                     put("user_agent", "MAA-Meow")
+                    put("os", "android")
                     if (cdk.isNotBlank()) {
                         put("cdk", cdk)
                     }

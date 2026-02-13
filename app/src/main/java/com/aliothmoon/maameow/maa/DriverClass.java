@@ -15,8 +15,7 @@ public final class DriverClass {
     }
 
     public static boolean startApp(String packageName, int displayId, boolean forceStop) {
-        ActivityUtils.startApp(packageName, displayId, forceStop);
-        return true;
+        return ActivityUtils.startApp(packageName, displayId, forceStop);
     }
 
     public static boolean touchDown(int x, int y, int displayId) {
