@@ -153,10 +153,10 @@ object PrimaryDisplayManager {
     private fun createDisplay(): IBinder {
         // Since Android 12 (preview), secure displays could not be created with shell permissions anymore.
         // On Android 12 preview, SDK_INT is still R (not S), but CODENAME is "S".
-        val secure =
-            Build.VERSION.SDK_INT < AndroidVersions.API_30_ANDROID_11 || (Build.VERSION.SDK_INT == AndroidVersions.API_30_ANDROID_11
-                    && "S" != Build.VERSION.CODENAME)
-        return SurfaceControl.createDisplay(VD_NAME, secure)
+//        val secure =
+//            Build.VERSION.SDK_INT < AndroidVersions.API_30_ANDROID_11 || (Build.VERSION.SDK_INT == AndroidVersions.API_30_ANDROID_11
+//                    && "S" != Build.VERSION.CODENAME)
+        return SurfaceControl.createDisplay(VD_NAME, false)
     }
 
     private fun setDisplaySurface(
