@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.core.content.FileProvider
+import rikka.sui.Sui
 import timber.log.Timber
 import java.io.File
 
@@ -12,12 +13,26 @@ object ShizukuInstallHelper {
     private const val SHIZUKU_PACKAGE = "moe.shizuku.privileged.api"
     private const val ASSET_NAME = "shizuku.apk"
 
-    fun isShizukuInstalled(context: Context): Boolean {
-        return try {
+    enum class ShizukuStatus {
+        INSTALLED,      // Shizuku App 已安装
+        SUI_DETECTED,   // 检测到 Sui（Magisk 模块）
+        NOT_INSTALLED   // 均未检测到
+    }
+
+    fun checkStatus(context: Context): ShizukuStatus {
+        val appInstalled = try {
             context.packageManager.getPackageInfo(SHIZUKU_PACKAGE, 0)
             true
         } catch (_: PackageManager.NameNotFoundException) {
             false
+        }
+        if (appInstalled) return ShizukuStatus.INSTALLED
+
+        return try {
+            if (Sui.init(context.packageName)) ShizukuStatus.SUI_DETECTED
+            else ShizukuStatus.NOT_INSTALLED
+        } catch (_: Exception) {
+            ShizukuStatus.NOT_INSTALLED
         }
     }
 

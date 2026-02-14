@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.presentation.view.home
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,23 +15,23 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -41,36 +42,33 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.constant.Routes
-import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.state.ResourceInitState
+import com.aliothmoon.maameow.manager.PermissionManager
+import com.aliothmoon.maameow.manager.ShizukuInstallHelper
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.UpdateCard
+import com.aliothmoon.maameow.presentation.state.StatusColorType
 import com.aliothmoon.maameow.presentation.viewmodel.HomeViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.UpdateViewModel
 import com.aliothmoon.maameow.utils.Misc
 import org.koin.androidx.compose.koinViewModel
-import timber.log.Timber
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.compose.LifecycleResumeEffect
-import com.aliothmoon.maameow.manager.PermissionManager
-import com.aliothmoon.maameow.manager.ShizukuInstallHelper
-import com.aliothmoon.maameow.presentation.state.StatusColorType
 import org.koin.compose.koinInject
+import timber.log.Timber
 
 
 @Composable
@@ -88,7 +86,6 @@ fun HomeView(
 
     val context = LocalContext.current
     val (width, height) = Misc.getScreenSize(context)
-    val coroutineScope = rememberCoroutineScope()
 
     // 启动时检查资源初始化
     LaunchedEffect(Unit) {
@@ -667,37 +664,55 @@ fun HomeView(
             }
         }
 
-        // Shizuku 未安装时弹出不可关闭的安装引导 Dialog
-        var isShizukuInstalled by remember {
-            mutableStateOf(
-                ShizukuInstallHelper.isShizukuInstalled(
-                    context
-                )
-            )
+        // Shizuku/Sui 检测
+        var shizukuStatus by remember {
+            mutableStateOf(ShizukuInstallHelper.checkStatus(context))
         }
+        var suiWarningDismissed by remember { mutableStateOf(false) }
         LifecycleResumeEffect(Unit) {
-            isShizukuInstalled = ShizukuInstallHelper.isShizukuInstalled(context)
+            shizukuStatus = ShizukuInstallHelper.checkStatus(context)
             onPauseOrDispose {}
         }
-        if (!isShizukuInstalled) {
-            AlertDialog(
-                onDismissRequest = {},
-                properties = DialogProperties(
-                    dismissOnBackPress = false,
-                    dismissOnClickOutside = false,
-                ),
-                title = { Text("未检测到 Shizuku") },
-                text = {
-                    Text("本应用依赖 Shizuku 服务运行，检测到设备未安装 Shizuku，请先安装。")
-                },
-                confirmButton = {
-                    Button(
-                        onClick = { ShizukuInstallHelper.installShizuku(context) }
-                    ) {
-                        Text("安装 Shizuku")
+        when (shizukuStatus) {
+            ShizukuInstallHelper.ShizukuStatus.NOT_INSTALLED -> {
+                AlertDialog(
+                    onDismissRequest = {},
+                    properties = DialogProperties(
+                        dismissOnBackPress = false,
+                        dismissOnClickOutside = false,
+                    ),
+                    title = { Text("未检测到 Shizuku") },
+                    text = {
+                        Text("本应用依赖 Shizuku 服务运行，检测到设备未安装 Shizuku，请先安装。")
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = { ShizukuInstallHelper.installShizuku(context) }
+                        ) {
+                            Text("安装 Shizuku")
+                        }
                     }
+                )
+            }
+
+            ShizukuInstallHelper.ShizukuStatus.SUI_DETECTED -> {
+                if (!suiWarningDismissed) {
+                    AlertDialog(
+                        onDismissRequest = { suiWarningDismissed = true },
+                        title = { Text("检测到 Sui") },
+                        text = {
+                            Text("当前使用 Sui 提供 Shizuku 服务，Sui 以 Root 权限运行，MaaMeow 可能无法正常工作，请以实际测试为主")
+                        },
+                        confirmButton = {
+                            Button(onClick = { suiWarningDismissed = true }) {
+                                Text("知道了")
+                            }
+                        }
+                    )
                 }
-            )
+            }
+
+            ShizukuInstallHelper.ShizukuStatus.INSTALLED -> {}
         }
     }
 }
