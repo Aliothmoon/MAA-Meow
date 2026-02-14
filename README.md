@@ -38,6 +38,30 @@ python scripts/setup_maa_core.py
 ./gradlew assembleDebug
 ```
 
+## 第三方代码
+
+本项目包含来自以下开源项目的代码：
+
+| 组件                                                                                                   | 来源                                                                                      | 许可证                                                               |
+|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|-------------------------------------------------------------------|
+| MAA Core（自动化引擎，SO 库 + 资源文件）                                                                          | [MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights) | [AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html)            |
+| [`app/src/main/java/com/aliothmoon/maameow/third/`](app/src/main/java/com/aliothmoon/maameow/third/) | [Genymobile/scrcpy](https://github.com/Genymobile/scrcpy)                               | [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) |
+
+- **MaaAssistantArknights**：提供核心自动化引擎，通过 `scripts/setup_maa_core.py` 下载预编译产物
+    - **scrcpy**：`third/` 目录下的代码源自 scrcpy 服务端部分，用于在 Android shell
+      环境中设置Context并使用Hidden API
+
+## 致谢
+
+感谢以下开源项目，本项目的实现离不开它们的贡献：
+
+- [MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights) —
+  强大的明日方舟自动化引擎
+- [Genymobile/scrcpy](https://github.com/Genymobile/scrcpy) — Android 隐藏 API 访问方案
+- [Shizuku](https://github.com/RikkaApps/Shizuku) — 免 Root 权限框架
+
 ## 许可证
 
-详见 [LICENSE](LICENSE)。
+本项目以 [AGPL-3.0](LICENSE) 许可证发布。
+
+第三方代码保留其原始许可证，详见上方说明。

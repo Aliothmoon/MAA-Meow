@@ -11,6 +11,7 @@ import com.aliothmoon.maameow.constant.DisplayMode
 import com.aliothmoon.maameow.maa.MaaCoreLibrary
 import com.aliothmoon.maameow.remote.internal.PrimaryDisplayManager
 import com.aliothmoon.maameow.remote.internal.VirtualDisplayManager
+import com.aliothmoon.maameow.third.FakeContext
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
 import com.sun.jna.Native
@@ -84,6 +85,8 @@ class RemoteServiceImpl : RemoteService.Stub() {
                 Ln.e("$TAG: setup failed - MaaContext is null")
                 return false
             }
+            // call init & class init
+            FakeContext.get()
             Ln.i("NativeBridgeLib ping $result")
             with(ctx) {
                 if (!AsstSetUserDir(userDir)) {
