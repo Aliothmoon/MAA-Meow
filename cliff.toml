@@ -4,7 +4,7 @@ header = """
 """
 body = """
 {%- macro remote_url() -%}
-  https://github.com/Aliothmoon/MaaMeow
+  https://github.com/Aliothmoon/Maa-Meow
 {%- endmacro -%}
 
 {% if version -%}
