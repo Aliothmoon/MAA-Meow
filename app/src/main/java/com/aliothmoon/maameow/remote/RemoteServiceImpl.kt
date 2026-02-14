@@ -85,8 +85,6 @@ class RemoteServiceImpl : RemoteService.Stub() {
                 Ln.e("$TAG: setup failed - MaaContext is null")
                 return false
             }
-            // call init & class init
-            FakeContext.get()
             Ln.i("NativeBridgeLib ping $result")
             with(ctx) {
                 if (!AsstSetUserDir(userDir)) {
@@ -99,6 +97,8 @@ class RemoteServiceImpl : RemoteService.Stub() {
                     return false
                 }
             }
+            // call init & class init
+            FakeContext.get()
         }
         return true
     }

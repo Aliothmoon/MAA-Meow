@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.remote.internal
 
-import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
@@ -15,7 +14,6 @@ import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 
 
@@ -115,7 +113,7 @@ object VirtualDisplayManager {
             val cfg = config.get()
             NativeBridgeLib.initFrameBuffers(cfg.width, cfg.height)
 
-            val r = ImageReader.newInstance(cfg.width, cfg.height, PixelFormat.RGBA_8888, 5)
+            val r = DisplayHelper.newInstanceImagerReader(cfg.width, cfg.height)
             r.setOnImageAvailableListener({ onImageAvailable(it) }, handler)
             reader.set(r)
 

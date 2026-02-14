@@ -101,7 +101,7 @@ object PrimaryDisplayManager {
         val width = info.size.width
         val height = info.size.height
         NativeBridgeLib.initFrameBuffers(width, height)
-        val r = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 5)
+        val r = DisplayHelper.newInstanceImagerReader(width, height)
         r.setOnImageAvailableListener({ onImageAvailable(it) }, handler)
         reader.set(r)
         createVirtualDisplay(r.surface, info)
