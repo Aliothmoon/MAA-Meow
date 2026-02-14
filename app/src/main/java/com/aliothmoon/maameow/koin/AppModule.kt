@@ -33,6 +33,7 @@ import com.aliothmoon.maameow.overlay.OverlayViewModelOwner
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.overlay.border.BorderOverlayManager
 import com.aliothmoon.maameow.utils.CrashHandler
+import com.aliothmoon.maameow.utils.log.LogTreeHolder
 import okhttp3.OkHttpClient
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
@@ -91,4 +92,5 @@ val appModule = module {
     singleOf(::CharacterDataManager)
     singleOf(::TaskLogWriter)
     singleOf(::ApplicationLogWriter)
+    singleOf(::LogTreeHolder)
 }

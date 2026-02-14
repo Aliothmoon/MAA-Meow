@@ -5,10 +5,16 @@ import com.aliothmoon.maameow.data.log.ApplicationLogWriter
 import timber.log.Timber
 
 
-class FileLogTree(private val writer: ApplicationLogWriter) : Timber.DebugTree() {
+class FileLogTree(
+    private val writer: ApplicationLogWriter,
+    private val isDebug: Boolean
+) : Timber.DebugTree() {
 
 
     override fun isLoggable(tag: String?, priority: Int): Boolean {
+        if (isDebug) {
+            return true
+        }
         return priority >= Log.WARN
     }
 

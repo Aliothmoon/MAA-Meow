@@ -11,6 +11,7 @@ import com.aliothmoon.maameow.data.log.ApplicationLogWriter
 import com.aliothmoon.maameow.utils.CrashHandler
 import com.aliothmoon.maameow.utils.log.FileLogTree
 import com.aliothmoon.maameow.utils.log.DebugTree
+import com.aliothmoon.maameow.utils.log.LogTreeHolder
 import com.aliothmoon.maameow.utils.log.ReleaseTree
 import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
@@ -24,7 +25,7 @@ class MaaApplication : Application() {
     private val crashHandler: CrashHandler by inject()
     private val unifiedStateDispatcher: UnifiedStateDispatcher by inject()
     private val overlayController: OverlayController by inject()
-    private val applicationLogWriter: ApplicationLogWriter by inject()
+    private val treeHolder: LogTreeHolder by inject()
 
     override fun onCreate() {
         super.onCreate()
@@ -39,14 +40,7 @@ class MaaApplication : Application() {
     }
 
     private fun postCreateApplication() {
-        Timber.plant(
-            if (BuildConfig.DEBUG) {
-                DebugTree()
-            } else {
-                ReleaseTree()
-            }
-        )
-        Timber.plant(FileLogTree(applicationLogWriter))
+        treeHolder.setup()
         crashHandler.init(this)
         overlayController.setup()
         unifiedStateDispatcher.start()

@@ -14,8 +14,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -60,6 +63,9 @@ fun SettingsView(
     // 重新初始化确认弹窗
     var showReInitConfirm by remember { mutableStateOf(false) }
 
+    // 调试模式确认弹窗
+    var showDebugModeConfirm by remember { mutableStateOf(false) }
+
     if (showReInitConfirm) {
         ReInitializeConfirmDialog(
             onConfirm = {
@@ -69,6 +75,37 @@ fun SettingsView(
                 }
             },
             onDismiss = { showReInitConfirm = false }
+        )
+    }
+
+    if (showDebugModeConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDebugModeConfirm = false },
+            title = {
+                Text(
+                    text = "启用调试模式",
+                    style = MaterialTheme.typography.titleMedium
+                )
+            },
+            text = {
+                Text(
+                    text = "启用调试模式后将重启服务以记录详细日志。\n\n请在重启后重新操作以复现问题，相关日志将被完整记录。",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    showDebugModeConfirm = false
+                    viewModel.setDebugMode(true)
+                }) {
+                    Text("确认重启")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDebugModeConfirm = false }) {
+                    Text("取消")
+                }
+            }
         )
     }
 
@@ -251,7 +288,11 @@ fun SettingsView(
                     Switch(
                         checked = debugMode,
                         onCheckedChange = { enabled ->
-                            viewModel.setDebugMode(enabled)
+                            if (enabled) {
+                                showDebugModeConfirm = true
+                            } else {
+                                viewModel.setDebugMode(false)
+                            }
                         }
                     )
                 }
