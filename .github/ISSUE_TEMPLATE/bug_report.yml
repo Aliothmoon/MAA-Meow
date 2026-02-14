@@ -1,0 +1,117 @@
+name: Bug 反馈
+description: 提交一个 Bug 报告
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您提交 Bug 反馈！请尽量详细地填写以下信息，以帮助我们快速定位和修复问题。
+
+  - type: input
+    id: android-version
+    attributes:
+      label: Android 版本
+      description: "设备的 Android 系统版本（如 Android 14 / API 34）"
+      placeholder: "Android 14"
+    validations:
+      required: true
+
+  - type: input
+    id: device-model
+    attributes:
+      label: 设备型号
+      description: "设备品牌和型号"
+      placeholder: "小米 14 / Samsung Galaxy S24"
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: MAA Meow 版本
+      description: "当前使用的 App 版本号"
+      placeholder: "v0.1.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: 运行模式
+      description: "出现问题时使用的运行模式"
+      options:
+        - 前台模式（悬浮窗）
+        - 后台模式（虚拟显示器）
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: "简要描述遇到的问题"
+      placeholder: "执行某个任务时 App 崩溃 / 某功能无法正常工作..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: "请详细描述如何复现此问题"
+      value: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      description: "描述您期望的正确行为"
+    validations:
+      required: false
+
+  - type: textarea
+    id: log-file
+    attributes:
+      label: 日志文件
+      description: |
+        请按以下步骤导出日志：
+        1. 在 App 设置中打开 **Debug 模式**
+        2. 复现问题操作
+        3. 导出日志压缩包并上传至此处
+
+        > 日志对定位问题至关重要，**请务必上传**。
+      placeholder: "将日志 .zip 文件拖拽到此处上传"
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图 / 录屏
+      description: "如有相关截图或录屏，可上传至此处"
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 补充信息
+      description: "其他可能有助于排查问题的信息"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 提交前检查
+      options:
+        - label: 我已搜索过现有 Issue，确认没有重复提交
+          required: true
+        - label: 我已上传在 Debug 模式下复现后导出的日志文件
+          required: true
