@@ -45,11 +45,9 @@ python scripts/setup_maa_core.py
 | 组件                                                                                                   | 来源                                                                                      | 许可证                                                               |
 |------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|-------------------------------------------------------------------|
 | MAA Core（自动化引擎，SO 库 + 资源文件）                                                                          | [MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights) | [AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html)            |
-| [`app/src/main/java/com/aliothmoon/maameow/third/`](app/src/main/java/com/aliothmoon/maameow/third/) | [Genymobile/scrcpy](https://github.com/Genymobile/scrcpy)                               | [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) |
+| [`app/src/main/java/com/aliothmoon/maameow/third/`](app/src/main/java/com/aliothmoon/maameow/third/) | [Genymobile/scrcpy](https://github.com/Genymobile/scrcpy)                               | [Apache License 2.0](LICENSE-Apache-2.0) |
 
-- **MaaAssistantArknights**：提供核心自动化引擎，通过 `scripts/setup_maa_core.py` 下载预编译产物
-- **scrcpy**：`third/` 目录下的代码源自 scrcpy 服务端部分，用于在 Android shell
-      环境中设置Context并使用Hidden API
+详细的第三方代码声明、修改说明及文件清单见 [docs/THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md)。
 
 ## 致谢
 
