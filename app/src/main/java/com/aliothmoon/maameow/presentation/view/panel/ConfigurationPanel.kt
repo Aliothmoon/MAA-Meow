@@ -7,17 +7,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.data.model.TaskType
-import com.aliothmoon.maameow.data.resource.CharacterDataManager
 import com.aliothmoon.maameow.data.preferences.TaskConfigState
 import com.aliothmoon.maameow.presentation.components.EmptyConfigHint
+import com.aliothmoon.maameow.presentation.view.panel.fight.FightConfigPanel
+import com.aliothmoon.maameow.presentation.view.panel.mall.MallConfigPanel
+import com.aliothmoon.maameow.presentation.view.panel.roguelike.RoguelikeConfigPanel
 import kotlinx.coroutines.launch
 
 @Composable
 fun ConfigurationPanel(
+    modifier: Modifier = Modifier,
     state: FloatingPanelState,
     taskConfig: TaskConfigState,
-    characterDataManager: CharacterDataManager,
-    modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
 
@@ -66,7 +67,6 @@ fun ConfigurationPanel(
             TaskType.AUTO_ROGUELIKE -> RoguelikeConfigPanel(
                 config = roguelikeConfig,
                 onConfigChange = { scope.launch { taskConfig.setRoguelikeConfig(it) } },
-                characterDataManager = characterDataManager
             )
 
             TaskType.RECLAMATION -> ReclamationConfigPanel(

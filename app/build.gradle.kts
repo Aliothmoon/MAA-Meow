@@ -54,6 +54,9 @@ android {
         ndkVersion = "29.0.13113456"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
+        // TODO 先写死
+        buildConfigField("String", "MAA_CORE_VERSION", """"v6.0.0"""")
+
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }

@@ -3,8 +3,8 @@ package com.aliothmoon.maameow.presentation.viewmodel
 import android.view.Surface
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.aliothmoon.maameow.data.model.TaskType
 import com.aliothmoon.maameow.data.model.LogItem
+import com.aliothmoon.maameow.data.model.TaskType
 import com.aliothmoon.maameow.data.preferences.TaskConfigState
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.RuntimeLogCenter

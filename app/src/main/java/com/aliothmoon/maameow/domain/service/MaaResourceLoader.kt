@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.io.File
 
 class MaaResourceLoader(
     private val pathConfig: MaaPathConfig,
@@ -49,13 +50,28 @@ class MaaResourceLoader(
         return try {
             withContext(Dispatchers.IO) {
                 useRemoteService {
-                    val dir = pathConfig.rootDir
-                    it.setup(dir, appSettings.debugMode.value)
+                    val rootDir = pathConfig.rootDir
+                    val cacheDir = pathConfig.cacheDir
+                    it.setup(rootDir, appSettings.debugMode.value)
                     val maa = it.maaCoreService
-                    if (!maa.LoadResource(dir)) {
+
+                    // 复制 tasks.json 到 tasks/ 子目录（兼容新目录结构）
+                    copyTasksJson(pathConfig.resourceDir)
+                    copyTasksJson(pathConfig.cacheResourceDir)
+
+                    // 先加载主资源，再加载缓存资源（后者覆盖前者），和 WPF 逻辑一致
+                    if (!maa.LoadResource(rootDir)) {
                         _state.value = State.Failed("加载资源失败")
-                        Timber.e("LoadResource 失败: $dir")
+                        Timber.e("LoadResource 失败: $rootDir")
                         return@useRemoteService Result.failure(Exception("加载资源失败"))
+                    }
+                    // 缓存目录可能不存在资源，加载失败不影响整体
+                    if (File(pathConfig.cacheResourceDir).exists()) {
+                        if (!maa.LoadResource(cacheDir)) {
+                            Timber.w("LoadResource 缓存资源失败（非致命）: $cacheDir")
+                        } else {
+                            Timber.i("MaaCore 缓存资源加载成功: $cacheDir")
+                        }
                     }
 
                     _state.value = State.Ready
@@ -94,6 +110,66 @@ class MaaResourceLoader(
 
     fun reset() {
         _state.value = State.NotLoaded
+    }
+
+    /**
+     * 重新加载资源（热更新后调用）
+     * 先复制 tasks.json，再执行两次 LoadResource
+     */
+    suspend fun reload(): Result<Unit> {
+        _state.value = State.Reloading()
+        Timber.i("MaaCore 资源重新加载")
+
+        return try {
+            withContext(Dispatchers.IO) {
+                useRemoteService {
+                    val rootDir = pathConfig.rootDir
+                    val cacheDir = pathConfig.cacheDir
+                    val maa = it.maaCoreService
+
+                    copyTasksJson(pathConfig.resourceDir)
+                    copyTasksJson(pathConfig.cacheResourceDir)
+
+                    if (!maa.LoadResource(rootDir)) {
+                        _state.value = State.Failed("重新加载资源失败")
+                        Timber.e("reload LoadResource 失败: $rootDir")
+                        return@useRemoteService Result.failure(Exception("重新加载资源失败"))
+                    }
+                    if (File(pathConfig.cacheResourceDir).exists()) {
+                        if (!maa.LoadResource(cacheDir)) {
+                            Timber.w("reload LoadResource 缓存资源失败（非致命）: $cacheDir")
+                        }
+                    }
+
+                    _state.value = State.Ready
+                    Timber.i("MaaCore 资源重新加载成功")
+                    Result.success(Unit)
+                }
+            }
+        } catch (e: Exception) {
+            val message = e.message ?: "资源重新加载异常"
+            _state.value = State.Failed(message)
+            Timber.e(e, "资源重新加载异常")
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * 复制 tasks.json 到 tasks/tasks.json（兼容新目录结构）
+     * 和 WPF CopyTasksJson 逻辑一致
+     */
+    private fun copyTasksJson(resourcePath: String) {
+        try {
+            val src = File(resourcePath, "tasks.json")
+            if (!src.exists()) return
+            val destDir = File(resourcePath, "tasks")
+            destDir.mkdirs()
+            val dest = File(destDir, "tasks.json")
+            src.copyTo(dest, overwrite = true)
+            Timber.d("copyTasksJson: ${src.absolutePath} -> ${dest.absolutePath}")
+        } catch (e: Exception) {
+            Timber.w(e, "copyTasksJson 失败: $resourcePath")
+        }
     }
 
 }

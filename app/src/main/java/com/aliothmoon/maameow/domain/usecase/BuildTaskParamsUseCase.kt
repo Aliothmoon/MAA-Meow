@@ -10,17 +10,21 @@ class BuildTaskParamsUseCase(private val config: TaskConfigState) {
             .filter { it.isEnabled }
             .sortedBy { it.order }
 
-        return tasks.mapNotNull {
+        return tasks.flatMap {
             when (it.toTaskType()) {
-                TaskType.WAKE_UP -> config.wakeUpConfig.value.toTaskParams()
-                TaskType.RECRUITING -> config.recruitConfig.value.toTaskParams()
-                TaskType.BASE -> config.infrastConfig.value.toTaskParams()
-                TaskType.COMBAT -> config.fightConfig.value.toTaskParams()
-                TaskType.MALL -> config.mallConfig.value.toTaskParams()
-                TaskType.MISSION -> config.awardConfig.value.toTaskParams()
-                TaskType.AUTO_ROGUELIKE -> config.roguelikeConfig.value.toTaskParams()
-                TaskType.RECLAMATION -> config.reclamationConfig.value.toTaskParams()
-                null -> null
+                TaskType.COMBAT -> {
+                    val fight = config.fightConfig.value
+                    listOfNotNull(fight.toTaskParams(), fight.toRemainingSanityParams())
+                }
+
+                TaskType.WAKE_UP -> listOf(config.wakeUpConfig.value.toTaskParams())
+                TaskType.RECRUITING -> listOf(config.recruitConfig.value.toTaskParams())
+                TaskType.BASE -> listOf(config.infrastConfig.value.toTaskParams())
+                TaskType.MALL -> listOf(config.mallConfig.value.toTaskParams())
+                TaskType.MISSION -> listOf(config.awardConfig.value.toTaskParams())
+                TaskType.AUTO_ROGUELIKE -> listOf(config.roguelikeConfig.value.toTaskParams())
+                TaskType.RECLAMATION -> listOf(config.reclamationConfig.value.toTaskParams())
+                null -> emptyList()
             }
         }
     }

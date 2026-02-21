@@ -1,7 +1,6 @@
 ﻿package com.aliothmoon.maameow.maa.callback
 
 import android.content.Context
-import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.domain.service.RuntimeLogCenter

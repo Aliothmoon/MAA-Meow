@@ -11,16 +11,10 @@ import android.content.IContentProvider;
 import android.content.pm.PackageManager;
 import android.os.Binder;
 import android.os.Process;
-import android.os.UserHandle;
-import android.system.Os;
 
 import com.aliothmoon.maameow.constant.AndroidVersions;
 import com.aliothmoon.maameow.third.wrappers.ServiceManager;
 
-import java.io.OutputStreamWriter;
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.lang.reflect.Field;
 
 public final class FakeContext extends ContextWrapper {

@@ -2,8 +2,8 @@ package com.aliothmoon.maameow.data.api
 
 import android.content.Context
 import android.content.SharedPreferences
-import okhttp3.Headers
 import androidx.core.content.edit
+import okhttp3.Headers
 
 class ETagCacheManager(
     private val context: Context

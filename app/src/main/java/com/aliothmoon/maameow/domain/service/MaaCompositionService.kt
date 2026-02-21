@@ -222,6 +222,102 @@ class MaaCompositionService(
         }
     }
 
+    suspend fun startCopilot(params: String): StartResult {
+        _state.value = MaaExecutionState.STARTING
+        runtimeLogCenter.startSession(listOf("Copilot"))
+        runtimeLogCenter.appendAndWait("开始执行自动战斗", LogLevel.INFO)
+        return withContext(Dispatchers.IO) {
+            val loaded = resourceLoader.ensureLoaded()
+            if (loaded.isFailure) {
+                _state.value = MaaExecutionState.ERROR
+                runtimeLogCenter.appendAndWait("资源加载失败", LogLevel.ERROR)
+                runtimeLogCenter.endSessionAndWait("RESOURCE_ERROR")
+                return@withContext StartResult.ResourceError(loaded.exceptionOrNull())
+            }
+            val mode = appSettings.runMode.value
+            if (mode == RunMode.FOREGROUND) {
+                val (width, height) = Misc.getScreenSize(applicationContext)
+                if (height > width) {
+                    _state.value = MaaExecutionState.ERROR
+                    runtimeLogCenter.appendAndWait("当前为竖屏,无法在前台模式运行", LogLevel.ERROR)
+                    runtimeLogCenter.endSessionAndWait("PORTRAIT")
+                    return@withContext StartResult.PortraitOrientationError
+                }
+            }
+
+            return@withContext useRemoteService {
+                val maa = it.maaCoreService
+                if (!maa.hasInstance()) {
+                    val ret = maa.CreateInstance(callback)
+                    if (!ret) {
+                        _state.value = MaaExecutionState.ERROR
+                        runtimeLogCenter.appendAndWait("创建 MaaCore 实例失败", LogLevel.ERROR)
+                        runtimeLogCenter.endSessionAndWait("CREATE_INSTANCE_ERROR")
+                        return@useRemoteService StartResult.InitializationError(StartResult.InitializationError.InitPhase.CREATE_INSTANCE)
+                    }
+                    if (!maa.SetInstanceOption(TOUCH_MODE, ANDROID)) {
+                        _state.value = MaaExecutionState.ERROR
+                        runtimeLogCenter.appendAndWait("设置触控模式失败", LogLevel.ERROR)
+                        runtimeLogCenter.endSessionAndWait("SET_TOUCH_MODE_ERROR")
+                        return@useRemoteService StartResult.InitializationError(StartResult.InitializationError.InitPhase.SET_TOUCH_MODE)
+                    }
+                }
+
+                if (!it.setVirtualDisplayMode(mode.displayMode)) {
+                    _state.value = MaaExecutionState.ERROR
+                    runtimeLogCenter.appendAndWait("设置显示模式失败", LogLevel.ERROR)
+                    runtimeLogCenter.endSessionAndWait("DISPLAY_MODE_ERROR")
+                    return@useRemoteService StartResult.ConnectionError(StartResult.ConnectionError.ConnectPhase.DISPLAY_MODE)
+                }
+                val displayId = it.startVirtualDisplay()
+                if (displayId == -1) {
+                    _state.value = MaaExecutionState.ERROR
+                    runtimeLogCenter.appendAndWait("启动虚拟显示失败", LogLevel.ERROR)
+                    runtimeLogCenter.endSessionAndWait("VIRTUAL_DISPLAY_ERROR")
+                    return@useRemoteService StartResult.ConnectionError(StartResult.ConnectionError.ConnectPhase.VIRTUAL_DISPLAY)
+                }
+                val config = when (mode) {
+                    RunMode.FOREGROUND -> {
+                        val (width, height) = Misc.getScreenSize(applicationContext)
+                        buildConnectConfig(width, height, displayId)
+                    }
+                    RunMode.BACKGROUND -> {
+                        buildConnectConfig(
+                            DefaultDisplayConfig.WIDTH,
+                            DefaultDisplayConfig.HEIGHT,
+                            displayId
+                        )
+                    }
+                }
+
+                val deferred = CompletableDeferred<Boolean>()
+                connectDeferred.set(deferred)
+                maa.AsyncConnect("", "Android", config, false)
+                val ret = withTimeoutOrNull(2000) {
+                    deferred.await()
+                }
+                connectDeferred.set(null)
+                if (ret != true) {
+                    _state.value = MaaExecutionState.ERROR
+                    runtimeLogCenter.appendAndWait("启动 MaaCore 超时或失败", LogLevel.ERROR)
+                    runtimeLogCenter.endSessionAndWait("MAA_CONNECT_ERROR")
+                    return@useRemoteService StartResult.ConnectionError(StartResult.ConnectionError.ConnectPhase.MAA_CONNECT)
+                }
+
+                maa.AppendTask("Copilot", params)
+                if (!maa.Start()) {
+                    _state.value = MaaExecutionState.ERROR
+                    runtimeLogCenter.appendAndWait("MaaCore 启动失败", LogLevel.ERROR)
+                    runtimeLogCenter.endSessionAndWait("START_ERROR")
+                    return@useRemoteService StartResult.StartError
+                }
+                _state.value = MaaExecutionState.RUNNING
+                runtimeLogCenter.appendAndWait("自动战斗开始运行", LogLevel.SUCCESS)
+                return@useRemoteService StartResult.Success(maa.GetVersion())
+            }
+        }
+    }
+
     fun buildConnectConfig(width: Int, height: Int, displayId: Int): String {
         return buildJsonObject {
             put("screen_resolution", buildJsonObject {

@@ -2,8 +2,8 @@ package com.aliothmoon.maameow.data.api
 
 import android.content.Context
 import com.aliothmoon.maameow.constant.MaaApi
-import com.aliothmoon.maameow.constant.MaaFiles.MAA
 import com.aliothmoon.maameow.constant.MaaApi.API_URLS
+import com.aliothmoon.maameow.data.config.MaaPathConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Response
@@ -14,15 +14,15 @@ import java.io.IOException
 class MaaApiService(
     private val context: Context,
     private val httpClient: HttpClientHelper,
-    private val eTagCache: ETagCacheManager
+    private val eTagCache: ETagCacheManager,
+    private val pathConfig: MaaPathConfig
 ) {
     companion object {
         private const val TAG = "MaaApiService"
     }
 
-    // 缓存目录
     private val diskCacheDir: File by lazy {
-        File(context.cacheDir, MAA).also { it.mkdirs() }
+        File(pathConfig.cacheDir).also { it.mkdirs() }
     }
 
     private val internalCache by lazy {
@@ -33,9 +33,7 @@ class MaaApiService(
         val root: File
     ) {
         private fun calc(key: String): File {
-            // flat 一下
-            val fileName = key.replace("/", "_")
-            return File(root, fileName)
+            return File(root, key)
         }
 
         fun get(key: String): String? {
@@ -72,9 +70,7 @@ class MaaApiService(
     suspend fun requestWithCache(api: String, allowFallback: Boolean = true): String? {
         API_URLS.forEach {
             val result = withContext(Dispatchers.IO) {
-                fetchWithEtag("$it${api}")?.also { v ->
-                    internalCache.put(api, v)
-                }
+                fetchWithETag("$it${api}")
             }
             if (result != null) {
                 return result
@@ -87,7 +83,7 @@ class MaaApiService(
         return null
     }
 
-    private suspend fun fetchWithEtag(url: String): String? {
+    private suspend fun fetchWithETag(url: String): String? {
         return try {
             val header = eTagCache.getConditionalHeader(url)
             val response = httpClient.get(
@@ -104,17 +100,18 @@ class MaaApiService(
 
     private fun handleResponse(url: String, response: Response): String? {
         return response.use { resp ->
+            val api = getRealKey(url)
             when (resp.code) {
                 200 -> {
                     eTagCache.updateConditionalHeaders(url, resp.headers)
                     val body = resp.body.string()
+                    internalCache.put(api, body)
                     Timber.d("$TAG: 请求成功: $url (${body.length} bytes)")
                     body
                 }
 
                 304 -> {
                     Timber.d("$TAG: 304 Not Modified: $url")
-                    val api = getRealKey(url)
                     internalCache.get(api)
                 }
 
@@ -157,5 +154,13 @@ class MaaApiService(
      */
     suspend fun getTasksConfig(): String? {
         return requestWithCache(MaaApi.TASKS_API)
+    }
+
+    /**
+     * 获取全球服任务配置数据
+     * @param clientType 客户端类型（如 YoStarEN、YoStarJP、YoStarKR、txwy）
+     */
+    suspend fun getGlobalTasksConfig(clientType: String): String? {
+        return requestWithCache(MaaApi.getGlobalTasksApi(clientType))
     }
 }

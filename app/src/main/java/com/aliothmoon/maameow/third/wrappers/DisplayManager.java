@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.hardware.display.VirtualDisplay;
-import android.media.ImageReader;
 import android.os.Handler;
 import android.view.Display;
 import android.view.Surface;

@@ -1,21 +1,13 @@
 package com.aliothmoon.maameow.data.resource
 
-/**
- * MaaCore 版本管理
- * 用于版本兼容性检查
- *
- * 目前使用硬编码版本，后续需要从 MaaCore 库或配置文件中读取
- */
+import com.aliothmoon.maameow.BuildConfig.MAA_CORE_VERSION
+
+
 object MaaCoreVersion {
 
     /**
-     * 当前 MaaCore 版本
-     * TODO: 从 MaaCore 库获取实际版本
-     */
-    private const val CURRENT_VERSION = "v6.0.0"
-
-    /**
-     * 是否为调试版本
+     * 是否为调试版本，当前先都跳过检查，未遇到不支持的实现
+     * TODO 移除调试版本跳过检查的逻辑
      */
     private const val IS_DEBUG_VERSION = true
 
@@ -32,14 +24,11 @@ object MaaCoreVersion {
         // 无版本要求
         if (minimumRequired.isNullOrBlank()) return true
 
-        return try {
-            val current = parseVersion(CURRENT_VERSION)
+        return runCatching {
+            val current = parseVersion(MAA_CORE_VERSION)
             val required = parseVersion(minimumRequired)
             compareVersions(current, required) >= 0
-        } catch (e: Exception) {
-            // 解析失败，保守起见返回 true
-            true
-        }
+        }.getOrDefault(true)
     }
 
     /**

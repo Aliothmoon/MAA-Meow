@@ -1,19 +1,25 @@
 package com.aliothmoon.maameow.data.model
 
 
+import com.aliothmoon.maameow.domain.enums.InfrastMode
+import com.aliothmoon.maameow.domain.enums.InfrastRoomType
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.maa.task.TaskParamProvider
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+
 /**
  * 基建换班配置
  *
  * 完整迁移自 WPF InfrastTask.cs 和 InfrastSettingsUserControlModel.cs
- * 支持常规模式（Normal）和队列轮换模式（Rotation）
+ * 支持常规模式（Normal）、自定义模式（Custom）和队列轮换模式（Rotation）
  *
  * WPF 源文件:
  * - Model: InfrastTask.cs
@@ -28,34 +34,56 @@ data class InfrastConfig(
      * 基建切换模式
      * 对应 WPF: InfrastMode (enum)
      * - "Normal": 常规模式
+     * - "Custom": 自定义基建配置
      * - "Rotation": 队列轮换模式
-     * 注意: 不包含 Custom 自定义模式（该模式暂不迁移）
      */
-    val mode: String = "Normal",
+    val mode: InfrastMode = InfrastMode.Normal,
+
+    // ============ 自定义基建配置（Custom 模式） ============
+
+    /**
+     * 当前选择的内置预设 key
+     * 对应 WPF: DefaultInfrast (string)
+     *
+     * - "user_defined": 手动选择文件
+     * - 其他值: 对应 custom_infrast 目录下的预设文件名（不含 .json）
+     *
+     * 选择预设时会自动设置 customInfrastFile
+     */
+    val defaultInfrast: String = "user_defined",
+
+    /**
+     * 自定义基建配置文件的绝对路径
+     * 对应 WPF: CustomInfrastFile -> InfrastTask.Filename
+     *
+     * 预设模式: {resourceDir}/custom_infrast/{preset}.json
+     * 手动选择: 用户通过文件选择器指定的路径
+     */
+    val customInfrastFile: String = "",
+
+    /**
+     * 自定义基建计划选择
+     * 对应 WPF: CustomInfrastPlanSelect
+     *
+     * - -1: 根据时间段自动轮换（time rotation）
+     * - 0+: 指定计划索引
+     */
+    val customInfrastPlanSelect: Int = -1,
 
     // ============ 设施列表（有序） ============
 
     /**
-     * 基建设施优先级列表（有序）
+     * 基建设施优先级列表（有序，含启用状态）
      * 对应 WPF: InfrastItemViewModels (ObservableCollection<DragItemViewModel>)
      *
-     * 设施名称（与WPF一致）:
-     * - "Mfg": 制造站
-     * - "Trade": 贸易站
-     * - "Control": 控制中枢
-     * - "Power": 发电站
-     * - "Reception": 会客室
-     * - "Office": 办公室
-     * - "Dorm": 宿舍
-     * - "Training": 训练室
-     * - "Processing": 加工站
+     * Pair<InfrastRoomType, Boolean>:
+     * - first: 设施类型
+     * - second: 是否启用
      *
-     * 注意: 列表顺序代表换班优先级，支持拖拽调整
+     * 列表顺序代表换班优先级，支持拖拽调整
      */
-    val facilities: List<String> = listOf(
-        "Mfg", "Trade", "Control", "Power", "Reception",
-        "Office", "Dorm", "Training", "Processing"
-    ),
+    val facilities: List<Pair<InfrastRoomType, Boolean>> =
+        InfrastRoomType.values.map { it to true },
 
     // ============ 无人机用途 ============
 
@@ -102,7 +130,7 @@ data class InfrastConfig(
     val dormTrustEnabled: Boolean = false,
 
     /**
-     * 不将已进驻干员放入宿舍
+     * 宿舍是否使用未进驻筛选标签
      * 对应 WPF: DormFilterNotStationedEnabled (bool)
      *
      * 启用后，已在其他设施工作的干员不会被安排进宿舍休息
@@ -120,11 +148,11 @@ data class InfrastConfig(
 
     /**
      * 会客室留言板领取信用
-     * 对应 WPF: ReceptionMessageBoardReceive (bool)
+     * 对应 WPF: receptionMessageBoard (bool)
      *
      * 启用后，会在会客室领取留言板的信用点
      */
-    val receptionMessageBoardReceive: Boolean = true,
+    val receptionMessageBoard: Boolean = true,
 
     /**
      * 会客室线索交流
@@ -148,41 +176,78 @@ data class InfrastConfig(
      *
      * 启用后，技能专精完成后会继续进行下一个专精任务
      */
-    val continueTraining: Boolean = false
-) : TaskParamProvider {
+    val continueTraining: Boolean = false,
+
     /**
-     * 获取已启用的设施列表
+     * 自定义基建计划的时间段数据（不参与序列化）
      *
-     * 注意: 当前数据模型中设施列表没有独立的"启用"标志，
-     * 所有列表中的设施都视为已启用。
-     * 如需支持单独禁用某些设施，需要改为 Map<String, Boolean> 结构
+     * 由 UI 层解析配置文件后设置，用于 toTaskParams() 时间轮换解析
+     * 结构: plans[planIndex] -> periods -> [startTime, endTime]
      */
-    fun getEnabledFacilities(): List<String> = facilities
+    @Transient
+    val customPlanPeriods: List<List<List<String>>> = emptyList()
+) : TaskParamProvider {
 
     /**
      * 将心情阈值转换为MAA Core需要的浮点数格式(0.0-1.0)
      */
     fun getDormThresholdAsFloat(): Double = dormThreshold / 100.0
     override fun toTaskParams(): MaaTaskParams {
-        // 根据模式确定设施列表
-        val facilityList = when (mode) {
-            "Rotation" -> listOf("Mfg", "Trade", "Control", "Power", "Reception", "Office", "Dorm")
-            else -> getEnabledFacilities()
-        }
-
-        // 根据模式确定心情阈值
-        val threshold = when (mode) {
-            "Rotation" -> 0.0  // Rotation 模式不使用心情阈值
-            else -> getDormThresholdAsFloat()
-        }
-
+        val threshold = getDormThresholdAsFloat()
         val paramsJson = buildJsonObject {
-            put("facility", JsonArray(facilityList.map { JsonPrimitive(it) }))
+            put("facility", buildJsonArray {
+                facilities.filter { it.second }
+                    .map { it.first.name }
+                    .forEach {
+                        add(JsonPrimitive(it))
+                    }
+            })
             put("drones", usesOfDrones)
+            put("continue_training", continueTraining)
             put("threshold", threshold)
+            put("dorm_notstationed_enabled", dormFilterNotStationedEnabled)
+            put("dorm_trust_enabled", dormTrustEnabled)
             put("replenish", originiumShardAutoReplenishment)
+            put("reception_message_board", receptionMessageBoard)
+            put("reception_clue_exchange", receptionClueExchange)
+            put("reception_send_clue", receptionSendClue)
+            put("mode", mode.value)
+            if(mode == InfrastMode.Custom){
+                put("filename", customInfrastFile)
+                put("plan_index", resolveCustomPlanIndex())
+            }
         }
 
         return MaaTaskParams(MaaTaskType.INFRAST, paramsJson.toString())
+    }
+
+    /**
+     * 解析自定义基建计划索引
+     *
+     * 对应 WPF: AsstInfrastTask.SerializeTask 中 plan_index 的解析逻辑
+     * - customInfrastPlanSelect >= 0: 直接使用指定索引
+     * - customInfrastPlanSelect == -1: 时间轮换，匹配当前时间所在的 period
+     */
+    private fun resolveCustomPlanIndex(): Int {
+        if (customInfrastPlanSelect >= 0) return customInfrastPlanSelect
+        if (customPlanPeriods.isEmpty()) return 0
+
+        val now = LocalTime.now()
+        val formatter = DateTimeFormatter.ofPattern("H:mm")
+
+        for ((index, periods) in customPlanPeriods.withIndex()) {
+            for (period in periods) {
+                if (period.size < 2) continue
+                val start = runCatching { LocalTime.parse(period[0], formatter) }.getOrNull() ?: continue
+                val end = runCatching { LocalTime.parse(period[1], formatter) }.getOrNull() ?: continue
+                if (start <= end) {
+                    if (now in start..end) return index
+                } else {
+                    // 跨午夜时间段，如 21:00 - 04:59
+                    if (now >= start || now <= end) return index
+                }
+            }
+        }
+        return 0
     }
 }

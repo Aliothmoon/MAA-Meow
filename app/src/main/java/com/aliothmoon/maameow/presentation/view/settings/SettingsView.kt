@@ -35,9 +35,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.BuildConfig
-import com.aliothmoon.maameow.domain.state.ResourceInitState
-import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.service.LogExportService
+import com.aliothmoon.maameow.domain.service.ResourceInitService
+import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.presentation.components.InfoCard
 import com.aliothmoon.maameow.presentation.components.ReInitializeConfirmDialog

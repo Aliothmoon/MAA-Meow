@@ -143,13 +143,13 @@ fun RecruitConfigPanel(
                                 // 高优先级Tag列表
                                 AutoRecruitFirstListSection(config, onConfigChange)
 
-                                // 刷新三星Tags
+                                // 自动刷新3星tags
                                 RefreshLevel3Section(config, onConfigChange)
 
-                                // 强制刷新
+                                // 无招聘许可时继续尝试刷新Tags
                                 ForceRefreshSection(config, onConfigChange)
 
-                                // 不选一星
+                                // 手动确认1星
                                 NotChooseLevel1Section(config, onConfigChange)
 
                                 HorizontalDivider(color = Color.LightGray, thickness = 1.dp)
@@ -179,7 +179,6 @@ private fun UseExpeditedSection(
     onConfigChange: (RecruitConfig) -> Unit
 ) {
     var tipExpanded by remember { mutableStateOf(false) }
-    val tipText = "此选项不会被保存，每次任务开始前需重新勾选"
 
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -207,7 +206,7 @@ private fun UseExpeditedSection(
         }
         ExpandableTipContent(
             visible = tipExpanded,
-            tipText = tipText,
+            tipText = "此选项不会被保存，每次任务开始前需重新勾选",
             modifier = Modifier.padding(start = 28.dp)
         )
     }
@@ -254,7 +253,7 @@ private fun SelectExtraTagsSection(
     config: RecruitConfig,
     onConfigChange: (RecruitConfig) -> Unit
 ) {
-    // 选项列表（对应WPF的AutoRecruitSelectExtraTagsList）
+    // 选项列表（AutoRecruitSelectExtraTagsList）
     val options = listOf(
         "0" to "默认不选额外标签",
         "1" to "选择额外标签",
@@ -263,12 +262,16 @@ private fun SelectExtraTagsSection(
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
-            text = "自动公招选择策略",
+            modifier = Modifier.padding(vertical = 2.dp),
+            text = "公招多选 Tag 的策略",
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
         )
 
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(
+            modifier = Modifier.padding(vertical = 2.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
             options.forEach { (value, label) ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -301,16 +304,17 @@ private fun AutoRecruitFirstListSection(
     config: RecruitConfig,
     onConfigChange: (RecruitConfig) -> Unit
 ) {
-    // 可选Tag列表（对应WPF的AutoRecruitTagShowList）
+    // 可选Tag列表（AutoRecruitTagShowList）
     val availableTags = listOf(
-        "近战位", "远程位", "先锋干员", "近卫干员", "狙击干员",
-        "重装干员", "医疗干员", "辅助干员", "术师干员", "治疗",
-        "费用回复", "输出", "生存", "群攻", "防护", "减速"
+        "治疗", "输出", "生存", "群攻", "防护", "减速",
+        "近战位", "远程位",
+        "费用回复",
+        "先锋干员", "近卫干员", "狙击干员", "重装干员", "医疗干员", "辅助干员", "术师干员"
     )
+
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         var tipExpanded by remember { mutableStateOf(false) }
-        val tipText = "当只能匹配 3 星干员时，会尽可能多地选择倾向的 Tag"
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -330,7 +334,7 @@ private fun AutoRecruitFirstListSection(
 
         ExpandableTipContent(
             visible = tipExpanded,
-            tipText = tipText
+            tipText = "当只能匹配 3 星干员时，会尽可能多地选择倾向的 Tag"
         )
 
         // 多选标签面板 - 使用 FlowRow 自动换行布局
@@ -416,7 +420,7 @@ private fun RefreshLevel3Section(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "刷新三星 Tags",
+            text = "自动刷新3星Tags",
             style = MaterialTheme.typography.bodyMedium
         )
     }
@@ -461,7 +465,6 @@ private fun NotChooseLevel1Section(
     onConfigChange: (RecruitConfig) -> Unit
 ) {
     var tipExpanded by remember { mutableStateOf(false) }
-    val tipText = "选中后将不会自动确认一星干员的公招\n需要手动点击确认"
 
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -477,7 +480,7 @@ private fun NotChooseLevel1Section(
                 modifier = Modifier.size(20.dp)
             )
             Text(
-                text = "手动选择一星",
+                text = "手动确认 1 星",
                 style = MaterialTheme.typography.bodyMedium
             )
             ExpandableTipIcon(
@@ -487,7 +490,7 @@ private fun NotChooseLevel1Section(
         }
         ExpandableTipContent(
             visible = tipExpanded,
-            tipText = tipText,
+            tipText = "勾选时识别到1星词条时跳过该次招募，未勾选时将忽略1星词条",
             modifier = Modifier.padding(start = 28.dp)
         )
     }
@@ -515,7 +518,7 @@ private fun ChooseLevel3Section(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "自动选择三星",
+                text = "自动确认 3 星",
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -553,7 +556,7 @@ private fun ChooseLevel4Section(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "自动选择四星",
+                text = "自动确认 4 星",
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -590,7 +593,7 @@ private fun ChooseLevel5Section(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "自动选择五星",
+                text = "自动确认 5 星",
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -638,7 +641,7 @@ private fun TimeSelector(
                     // 计算新的总时长（分钟）
                     val totalMinutes = newHour * 60 + minute
 
-                    // WPF 时间验证逻辑
+                    // 公招时间验证
                     val validatedMinutes = when {
                         totalMinutes < 60 -> 540  // 小于 1 小时 → 9 小时
                         totalMinutes > 540 -> 60  // 大于 9 小时 → 1 小时
@@ -674,7 +677,6 @@ private fun TimeSelector(
                     // 计算新的总时长（分钟）
                     val totalMinutes = hour * 60 + newMinute
 
-                    // WPF 时间验证逻辑
                     val validatedMinutes = when {
                         totalMinutes < 60 -> 540  // 小于 1 小时 → 9 小时
                         totalMinutes > 540 -> 60  // 大于 9 小时 → 1 小时

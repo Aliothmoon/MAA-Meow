@@ -4,10 +4,10 @@ import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.maa.task.TaskParamProvider
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
-import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * 生息演算配置

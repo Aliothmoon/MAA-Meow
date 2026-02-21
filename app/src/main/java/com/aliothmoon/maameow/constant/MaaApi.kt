@@ -13,6 +13,13 @@ object MaaApi {
     // 任务配置 API 路径
     const val TASKS_API = "resource/tasks.json"
 
+    /**
+     * 获取全球服 tasks.json API 路径
+     */
+    fun getGlobalTasksApi(clientType: String): String {
+        return "resource/global/${clientType}/resource/tasks.json"
+    }
+
     val API_URLS = listOf(
         MAA_API,
         MAA_API_BACKUP
@@ -41,5 +48,27 @@ object MaaApi {
 
     // MirrorChyan App 更新源
     const val MIRROR_CHYAN_APP_RESOURCE = "https://mirrorchyan.com/api/resources/MAA-Meow/latest"
+
+    // ==================== PRTS Plus (Copilot) ====================
+
+    // PRTS Plus 基础地址
+    const val PRTS_PLUS_BASE = "https://prts.maa.plus/"
+
+    // 获取单个作业
+    const val PRTS_COPILOT_GET = "${PRTS_PLUS_BASE}copilot/get/"
+
+    // 获取作业集
+    const val PRTS_COPILOT_SET_GET = "${PRTS_PLUS_BASE}set/get/"
+
+    // 作业评分
+    const val PRTS_COPILOT_RATING = "${PRTS_PLUS_BASE}copilot/rating"
+
+    // PRTS Plus 网页地址 (用于在浏览器中查看作业)
+    const val PRTS_PLUS_URL = "https://prts.plus"
+
+    // 地图网页地址 (PRTS 地图工具)
+    const val MAP_URL = "https://map.ark-nights.com/"
+
+    const val BASE_SCHEDULING_SCHEMA = "https://maa.plus/docs/zh-cn/protocol/base-scheduling-schema.html"
 
 }

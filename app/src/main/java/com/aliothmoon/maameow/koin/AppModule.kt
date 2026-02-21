@@ -1,36 +1,40 @@
 package com.aliothmoon.maameow.koin
 
+import com.aliothmoon.maameow.data.api.CopilotApiService
 import com.aliothmoon.maameow.data.api.ETagCacheManager
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.api.MaaApiService
 import com.aliothmoon.maameow.data.config.MaaPathConfig
-import com.aliothmoon.maameow.data.datasource.AssetExtractor
 import com.aliothmoon.maameow.data.datasource.AppDownloader
+import com.aliothmoon.maameow.data.datasource.AssetExtractor
 import com.aliothmoon.maameow.data.datasource.ResourceDownloader
 import com.aliothmoon.maameow.data.datasource.ZipExtractor
-import com.aliothmoon.maameow.data.preferences.TaskConfigState
-import com.aliothmoon.maameow.data.log.TaskLogWriter
 import com.aliothmoon.maameow.data.log.ApplicationLogWriter
+import com.aliothmoon.maameow.data.log.TaskLogWriter
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
-import com.aliothmoon.maameow.data.resource.CharacterDataManager
-import com.aliothmoon.maameow.data.resource.MaaResourceManager
+import com.aliothmoon.maameow.data.preferences.TaskConfigState
+import com.aliothmoon.maameow.data.repository.CopilotRepository
+import com.aliothmoon.maameow.data.resource.ActivityManager
+import com.aliothmoon.maameow.data.resource.ItemHelper
+import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.domain.service.CopilotManager
+import com.aliothmoon.maameow.domain.service.LogExportService
+import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
-import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.domain.service.ResourceInitService
+import com.aliothmoon.maameow.domain.service.RuntimeLogCenter
+import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.domain.service.update.AppUpdateHandler
 import com.aliothmoon.maameow.domain.service.update.ResourceUpdateHandler
 import com.aliothmoon.maameow.domain.service.update.UpdateService
-import com.aliothmoon.maameow.domain.service.MaaCompositionService
-import com.aliothmoon.maameow.domain.service.RuntimeLogCenter
-import com.aliothmoon.maameow.domain.service.LogExportService
 import com.aliothmoon.maameow.maa.callback.ConnectionInfoHandler
 import com.aliothmoon.maameow.maa.callback.MaaCallbackDispatcher
 import com.aliothmoon.maameow.maa.callback.MaaExecutionStateHolder
 import com.aliothmoon.maameow.maa.callback.SubTaskHandler
 import com.aliothmoon.maameow.maa.callback.TaskChainHandler
+import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.overlay.OverlayViewModelOwner
-import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.overlay.border.BorderOverlayManager
 import com.aliothmoon.maameow.utils.CrashHandler
 import com.aliothmoon.maameow.utils.log.LogTreeHolder
@@ -88,8 +92,13 @@ val appModule = module {
     singleOf(::OverlayController)
 
 
-    singleOf(::MaaResourceManager)
-    singleOf(::CharacterDataManager)
+    singleOf(::ItemHelper)
+    singleOf(::ActivityManager)
+    singleOf(::ResourceDataManager)
+    // Copilot (自动战斗)
+    singleOf(::CopilotApiService)
+    singleOf(::CopilotRepository)
+    singleOf(::CopilotManager)
     singleOf(::TaskLogWriter)
     singleOf(::ApplicationLogWriter)
     singleOf(::LogTreeHolder)

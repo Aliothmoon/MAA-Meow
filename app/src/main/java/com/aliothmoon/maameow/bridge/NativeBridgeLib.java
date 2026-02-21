@@ -2,7 +2,6 @@ package com.aliothmoon.maameow.bridge;
 
 import android.graphics.Bitmap;
 import android.hardware.HardwareBuffer;
-import android.util.Log;
 
 import com.aliothmoon.maameow.third.Ln;
 

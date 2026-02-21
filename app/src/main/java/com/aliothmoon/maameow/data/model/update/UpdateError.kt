@@ -1,6 +1,14 @@
 package com.aliothmoon.maameow.data.model.update
 
-import com.aliothmoon.maameow.data.model.update.UpdateError.MirrorchyanBizError.*
+import com.aliothmoon.maameow.data.model.update.UpdateError.MirrorchyanBizError.InvalidArch
+import com.aliothmoon.maameow.data.model.update.UpdateError.MirrorchyanBizError.InvalidChannel
+import com.aliothmoon.maameow.data.model.update.UpdateError.MirrorchyanBizError.InvalidOs
+import com.aliothmoon.maameow.data.model.update.UpdateError.MirrorchyanBizError.KeyBlocked
+import com.aliothmoon.maameow.data.model.update.UpdateError.MirrorchyanBizError.KeyExpired
+import com.aliothmoon.maameow.data.model.update.UpdateError.MirrorchyanBizError.KeyInvalid
+import com.aliothmoon.maameow.data.model.update.UpdateError.MirrorchyanBizError.KeyMismatched
+import com.aliothmoon.maameow.data.model.update.UpdateError.MirrorchyanBizError.ResourceNotFound
+import com.aliothmoon.maameow.data.model.update.UpdateError.MirrorchyanBizError.ResourceQuotaExhausted
 
 /**
  * 更新错误类型

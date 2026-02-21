@@ -31,7 +31,6 @@ fun AwardConfigPanel(
     onConfigChange: (AwardConfig) -> Unit
 ) {
     var freeGachaTipExpanded by remember { mutableStateOf(false) }
-    val freeGachaTipText = "若不存在免费单抽，则不会抽取"
 
     Column(
         modifier = Modifier
@@ -71,7 +70,7 @@ fun AwardConfigPanel(
             }
             ExpandableTipContent(
                 visible = freeGachaTipExpanded,
-                tipText = freeGachaTipText,
+                tipText = "若不存在免费单抽，则不会抽取",
                 modifier = Modifier.padding(start = 28.dp)
             )
         }

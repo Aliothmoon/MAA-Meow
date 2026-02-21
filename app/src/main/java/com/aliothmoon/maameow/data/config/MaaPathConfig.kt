@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.config
 
 import android.content.Context
+import com.aliothmoon.maameow.constant.MaaFiles.CACHE
 import com.aliothmoon.maameow.constant.MaaFiles.DEBUG
 import com.aliothmoon.maameow.constant.MaaFiles.MAA
 import com.aliothmoon.maameow.constant.MaaFiles.RESOURCE
@@ -20,6 +21,16 @@ class MaaPathConfig(private val context: Context) {
         File(rootDir, RESOURCE).absolutePath
     }
 
+    /** 缓存目录（热更新资源） */
+    val cacheDir: String by lazy {
+        File(rootDir, CACHE).absolutePath
+    }
+
+    /** 缓存资源目录（cache/resource/） */
+    val cacheResourceDir: String by lazy {
+        File(cacheDir, RESOURCE).absolutePath
+    }
+
     /** 调试日志目录 */
     val debugDir: String by lazy {
         File(rootDir, DEBUG).absolutePath
@@ -36,6 +47,7 @@ class MaaPathConfig(private val context: Context) {
     fun ensureDirectories(): Boolean {
         return runCatching {
             File(rootDir).mkdirs()
+            File(cacheDir).mkdirs()
             File(rootDir, ".nomedia").createNewFile()
         }.getOrDefault(false)
     }

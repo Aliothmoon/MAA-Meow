@@ -3,6 +3,8 @@ package com.aliothmoon.maameow.utils
 import android.content.Context
 import android.os.Build
 import android.os.Process
+import com.aliothmoon.maameow.constant.LogConfig
+import com.aliothmoon.maameow.data.config.MaaPathConfig
 import timber.log.Timber
 import java.io.File
 import java.io.PrintWriter
@@ -10,8 +12,6 @@ import java.io.StringWriter
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.system.exitProcess
-import com.aliothmoon.maameow.constant.LogConfig
-import com.aliothmoon.maameow.data.config.MaaPathConfig
 
 class CrashHandler(private val pathConfig: MaaPathConfig) : Thread.UncaughtExceptionHandler {
 

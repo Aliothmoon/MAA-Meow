@@ -2,7 +2,6 @@ package com.aliothmoon.maameow.overlay.border
 
 import android.content.Context
 import android.graphics.PixelFormat
-import android.os.Build
 import android.view.View
 import android.view.WindowManager
 import kotlinx.coroutines.Dispatchers

@@ -7,7 +7,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -24,6 +23,8 @@ import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -33,7 +34,9 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -41,38 +44,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.constant.MaaApi
+import com.aliothmoon.maameow.data.config.MaaPathConfig
+import com.aliothmoon.maameow.data.model.CustomInfrastConfig
 import com.aliothmoon.maameow.data.model.InfrastConfig
+import com.aliothmoon.maameow.domain.enums.InfrastMode
+import com.aliothmoon.maameow.domain.enums.InfrastRoomType
+import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import org.koin.compose.koinInject
+import sh.calvin.reorderable.ReorderableColumn
+import java.io.File
+import java.time.LocalTime
 
 /**
  * 基建换班配置面板
- *
- * 包含常规设置和高级设置两个Tab，支持Normal和Rotation模式
- *
- * 功能特性:
- * 1. 常规设置:
- *    - 基建模式选择 (Normal/Rotation)
- *    - 无人机用途下拉框
- *    - 心情阈值滑块 (仅Normal模式显示)
- *    - 设施优先级列表 (支持拖拽排序)
- *    - 全选/清除按钮
- *
- * 2. 高级设置:
- *    - 宿舍信赖模式 (仅Normal模式显示)
- *    - 不将已进驻干员放入宿舍 (仅Normal模式显示)
- *    - 制造站搓玉自动补货
- *    - 会客室留言板领取信用
- *    - 会客室线索交流
- *    - 会客室赠送线索
- *    - 继续专精
- *
- * @param config 当前基建配置
- * @param onConfigChange 配置更改回调
- * @param modifier 修饰符
  */
 @Composable
 fun InfrastConfigPanel(
@@ -150,13 +145,29 @@ fun InfrastConfigPanel(
                             InfrastModeSection(config, onConfigChange)
                         }
                         item {
-                            // 无人机用途
-                            UsesOfDronesSection(config, onConfigChange)
+                            // 自定义基建配置 (仅 Custom 模式显示)
+                            AnimatedVisibility(
+                                visible = config.mode == InfrastMode.Custom,
+                                enter = expandVertically(),
+                                exit = shrinkVertically()
+                            ) {
+                                CustomInfrastSection(config, onConfigChange)
+                            }
+                        }
+                        item {
+                            // 无人机用途 (Custom 模式下禁用)
+                            AnimatedVisibility(
+                                visible = config.mode != InfrastMode.Custom,
+                                enter = expandVertically(),
+                                exit = shrinkVertically()
+                            ) {
+                                UsesOfDronesSection(config, onConfigChange)
+                            }
                         }
                         item {
                             // 心情阈值 (仅 Normal 模式显示)
                             AnimatedVisibility(
-                                visible = config.mode != "Rotation",
+                                visible = config.mode != InfrastMode.Rotation,
                                 enter = expandVertically(),
                                 exit = shrinkVertically()
                             ) {
@@ -174,7 +185,7 @@ fun InfrastConfigPanel(
                         item {
                             // 宿舍信赖模式 (仅 Normal 模式显示)
                             AnimatedVisibility(
-                                visible = config.mode != "Rotation",
+                                visible = config.mode != InfrastMode.Rotation,
                                 enter = expandVertically(),
                                 exit = shrinkVertically()
                             ) {
@@ -184,7 +195,7 @@ fun InfrastConfigPanel(
                         item {
                             // 不将已进驻干员放入宿舍 (仅 Normal 模式显示)
                             AnimatedVisibility(
-                                visible = config.mode != "Rotation",
+                                visible = config.mode != InfrastMode.Rotation,
                                 enter = expandVertically(),
                                 exit = shrinkVertically()
                             ) {
@@ -220,7 +231,6 @@ fun InfrastConfigPanel(
 
 /**
  * 基建模式选择区域
- * 使用 RadioButton 单选按钮组
  */
 @Composable
 private fun InfrastModeSection(
@@ -245,20 +255,17 @@ private fun InfrastModeSection(
             )
         }
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            modeOptions.forEach { (value, label) ->
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            InfrastMode.values.forEach {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(
-                        selected = config.mode == value,
-                        onClick = { onConfigChange(config.copy(mode = value)) },
+                        selected = config.mode == it,
+                        onClick = { onConfigChange(config.copy(mode = it)) },
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = label,
+                        text = it.displayName,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -267,7 +274,7 @@ private fun InfrastModeSection(
 
         // Rotation 模式提示文字
         AnimatedVisibility(
-            visible = config.mode == "Rotation",
+            visible = config.mode == InfrastMode.Rotation,
             enter = expandVertically(),
             exit = shrinkVertically()
         ) {
@@ -277,7 +284,11 @@ private fun InfrastModeSection(
                 shape = RoundedCornerShape(4.dp)
             ) {
                 Text(
-                    text = "轮换模式会自动轮换制造站和贸易站的工作内容，\n确保龙门币和赤金的均衡生产。",
+                    text = """
+                        ｢队列轮换｣ 的换班逻辑与游戏内基建右下角的「队列轮换」完全一致：
+                        当当前班次中任意干员心情值为 0 时，会整队替换为下一班干员。
+                        若需自定义轮换班次，请使用「自定义基建配置」
+                    """.trimIndent(),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray,
                     modifier = Modifier.padding(12.dp)
@@ -288,25 +299,339 @@ private fun InfrastModeSection(
 }
 
 /**
+ * 自定义基建配置区域（仅 Custom 模式显示）
+ */
+@Composable
+private fun CustomInfrastSection(
+    config: InfrastConfig,
+    onConfigChange: (InfrastConfig) -> Unit
+) {
+    val pathConfig: MaaPathConfig = koinInject()
+    val json = remember { Json { ignoreUnknownKeys = true } }
+
+    // 解析后的配置（用于计划下拉框）
+    var parsedConfig by remember { mutableStateOf<CustomInfrastConfig?>(null) }
+    var parseError by remember { mutableStateOf<String?>(null) }
+
+    // 当文件路径变化时解析配置
+    LaunchedEffect(config.customInfrastFile) {
+        if (config.customInfrastFile.isBlank()) {
+            parsedConfig = null
+            parseError = null
+            return@LaunchedEffect
+        }
+        withContext(Dispatchers.IO) {
+            try {
+                val file = File(config.customInfrastFile)
+                if (file.exists()) {
+                    val content = file.readText()
+                    val parsed = json.decodeFromString<CustomInfrastConfig>(content)
+                    parsedConfig = parsed
+                    parseError = null
+                    // 同步时间段数据到 config 用于 toTaskParams 的时间轮换
+                    val periods = parsed.plans.map { it.period }
+                    if (periods != config.customPlanPeriods) {
+                        onConfigChange(config.copy(customPlanPeriods = periods))
+                    }
+                } else {
+                    parsedConfig = null
+                    parseError = "文件不存在"
+                }
+            } catch (e: Exception) {
+                parsedConfig = null
+                parseError = "解析失败: ${e.message}"
+            }
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val parsed = parsedConfig
+
+        // 1. 配置信息卡片（仅当 parsed 有 title/description 时显示）
+        if (parsed != null && parsed.plans.isNotEmpty()) {
+            if (!parsed.title.isNullOrBlank() || !parsed.description.isNullOrBlank()) {
+                var descExpanded by remember { mutableStateOf(false) }
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ),
+                    modifier = Modifier.clickable(
+                        enabled = !parsed.description.isNullOrBlank()
+                    ) { descExpanded = !descExpanded }
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (!parsed.title.isNullOrBlank()) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = parsed.title.replace("\\n", "\n"),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (!parsed.description.isNullOrBlank()) {
+                                    ExpandableTipIcon(
+                                        expanded = descExpanded,
+                                        onExpandedChange = { descExpanded = it }
+                                    )
+                                }
+                            }
+                        }
+                        AnimatedVisibility(
+                            visible = descExpanded && !parsed.description.isNullOrBlank(),
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
+                            Text(
+                                text = parsed.description?.replace("\\n", "\n") ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 2. 排班计划选择
+            PlanSelectButtonGroup(
+                plans = parsed.plans,
+                selectedPlanIndex = config.customInfrastPlanSelect,
+                onPlanSelected = {
+                    onConfigChange(config.copy(customInfrastPlanSelect = it))
+                }
+            )
+        }
+
+        // 3. 在线生成器链接
+        val handler = LocalUriHandler.current
+        Text(
+            text = "自定义基建排班制作器",
+            style = MaterialTheme.typography.bodySmall.copy(
+                textDecoration = TextDecoration.Underline
+            ),
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.clickable {
+                handler.openUri(MaaApi.BASE_SCHEDULING_SCHEMA)
+            }
+        )
+
+        // 4. 内置配置选择
+        PresetButtonGroup(
+            selectedPreset = config.defaultInfrast,
+            onPresetSelected = { preset ->
+                if (preset == UiUsageConstants.USER_DEFINED_INFRAST) {
+                    onConfigChange(
+                        config.copy(
+                            defaultInfrast = preset,
+                            customInfrastFile = "",
+                            customInfrastPlanSelect = -1
+                        )
+                    )
+                } else {
+                    val filePath = File(
+                        pathConfig.resourceDir,
+                        "custom_infrast/$preset"
+                    ).absolutePath
+                    onConfigChange(
+                        config.copy(
+                            defaultInfrast = preset,
+                            customInfrastFile = filePath,
+                            customInfrastPlanSelect = -1
+                        )
+                    )
+                }
+            }
+        )
+
+        // 5. 解析错误提示
+        if (parseError != null) {
+            Text(
+                text = parseError!!,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+    }
+}
+
+/**
+ * 内置预设按钮组
+ */
+@Composable
+private fun PresetButtonGroup(
+    selectedPreset: String,
+    onPresetSelected: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = "内置配置",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium
+        )
+
+        UiUsageConstants.defaultInfrastPresets.forEach { (key, label) ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable { onPresetSelected(key) }
+            ) {
+                RadioButton(
+                    selected = selectedPreset == key,
+                    onClick = { onPresetSelected(key) },
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 计划选择按钮组
+ */
+@Composable
+private fun PlanSelectButtonGroup(
+    plans: List<CustomInfrastConfig.Plan>,
+    selectedPlanIndex: Int,
+    onPlanSelected: (Int) -> Unit
+) {
+    val hasPeriodicPlan = plans.any { it.period.isNotEmpty() }
+    val hasNonPeriodicPlan = plans.any { it.period.isEmpty() }
+
+    // 计算当前时间匹配的计划名（用于时间轮换显示）
+    // TODO: 定时刷新时间轮换显示（WPF 每分钟调用 RefreshInfrastTimeRotationDisplay 更新）
+    val currentPlanName = if (hasPeriodicPlan) {
+        val now = LocalTime.now()
+        val formatter = java.time.format.DateTimeFormatter.ofPattern("H:mm")
+        val matched = plans.firstOrNull { plan ->
+            plan.period.any { range ->
+                if (range.size < 2) return@any false
+                val start =
+                    runCatching { LocalTime.parse(range[0], formatter) }.getOrNull()
+                        ?: return@any false
+                val end = runCatching { LocalTime.parse(range[1], formatter) }.getOrNull()
+                    ?: return@any false
+                if (start <= end) now in start..end
+                else now >= start || now <= end
+            }
+        }
+        matched?.name ?: plans.firstOrNull()?.name ?: "???"
+    } else null
+
+    var tipExpanded by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "排班计划",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            ExpandableTipIcon(
+                expanded = tipExpanded,
+                onExpandedChange = { tipExpanded = it }
+            )
+        }
+
+        val tip =
+            "如「基建计划」存在执行时间，「基建换班」任务开始前或任务运行时不会自动切换，将保持Link Start!时的状态，仅在空闲或任务完成后切换"
+        ExpandableTipContent(
+            visible = tipExpanded,
+            tipText = tip
+        )
+
+        // 时间轮换项（仅当存在带 period 的计划时显示）
+        if (hasPeriodicPlan) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable { onPlanSelected(-1) }
+            ) {
+                RadioButton(
+                    selected = selectedPlanIndex == -1,
+                    onClick = { onPlanSelected(-1) },
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "根据时间段自动切换 ($currentPlanName)",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+
+        // 各计划选项
+        plans.forEachIndexed { index, plan ->
+            val periodText = if (plan.period.isNotEmpty()) {
+                plan.period.joinToString(", ") { range ->
+                    if (range.size >= 2) "${range[0]}-${range[1]}" else ""
+                }
+            } else ""
+            val label = buildString {
+                append(plan.name ?: "Plan ${'A' + index}")
+                if (periodText.isNotBlank()) append(" ($periodText)")
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable { onPlanSelected(index) }
+            ) {
+                RadioButton(
+                    selected = selectedPlanIndex == index,
+                    onClick = { onPlanSelected(index) },
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+
+        // 当前选中计划的描述
+        if (selectedPlanIndex >= 0 && selectedPlanIndex < plans.size) {
+            val desc = plans[selectedPlanIndex].description
+            if (!desc.isNullOrBlank()) {
+                Text(
+                    text = desc,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+        }
+
+        // 部分计划无时间段警告
+        if (hasPeriodicPlan && hasNonPeriodicPlan) {
+            Text(
+                text = "自定义基建配置仅有部分计划存在时间段，可能会存在预期外的行为。如需设置换班时间段请保证所有计划均设置时间段，否则请全部留空。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+    }
+}
+
+/**
  * 无人机用途选择区域
  * 使用 RadioButton 单选按钮组，FlowRow 自动换行
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun UsesOfDronesSection(
     config: InfrastConfig,
     onConfigChange: (InfrastConfig) -> Unit
 ) {
-    // 无人机用途选项 (对应WPF的UsesOfDronesList)
-    val dronesOptions = listOf(
-        "_NotUse" to "不使用",
-        "Money" to "龙门币",
-        "SyntheticJade" to "合成玉",
-        "CombatRecord" to "作战记录",
-        "PureGold" to "赤金",
-        "OriginStone" to "源石碎片",
-        "Chip" to "芯片"
-    )
+
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
@@ -320,7 +645,7 @@ private fun UsesOfDronesSection(
             verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            dronesOptions.forEach { (value, label) ->
+            UiUsageConstants.dronesUsages.forEach { (value, label) ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -352,8 +677,6 @@ private fun DormThresholdSection(
     onConfigChange: (InfrastConfig) -> Unit
 ) {
     var tipExpanded by remember { mutableStateOf(false) }
-    val tipText = "干员心情低于此值时将被替换下班休息\n阈值范围: 0-100%"
-
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -384,7 +707,7 @@ private fun DormThresholdSection(
 
         ExpandableTipContent(
             visible = tipExpanded,
-            tipText = tipText
+            tipText = "若启用自定义换班，该字段仅针对autofill 和使用工员编组的房间有效"
         )
 
         Slider(
@@ -398,22 +721,14 @@ private fun DormThresholdSection(
 
 /**
  * 设施列表区域
- *
- * TODO: 拖拽排序功能暂不支持，需要引入 reorderable 库实现
  */
 @Composable
 private fun FacilitiesSection(
     config: InfrastConfig,
     onConfigChange: (InfrastConfig) -> Unit
 ) {
-    // 所有可用设施（固定顺序，用于展示）
-    val allFacilities = listOf(
-        "Mfg", "Trade", "Control", "Power", "Reception",
-        "Office", "Dorm", "Training", "Processing"
-    )
 
     var tipExpanded by remember { mutableStateOf(false) }
-    val tipText = "勾选需要换班的设施\n设施顺序代表换班优先级"
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
@@ -433,21 +748,13 @@ private fun FacilitiesSection(
 
         ExpandableTipContent(
             visible = tipExpanded,
-            tipText = tipText
+            tipText = "勾选需要换班的设施\n设施顺序代表换班优先级"
         )
 
-        // 设施列表（支持勾选）
+        // 设施列表（支持拖拽排序 + 勾选）
         FacilityList(
-            allFacilities = allFacilities,
-            enabledFacilities = config.facilities,
-            onFacilityToggle = { facility, enabled ->
-                val newList = if (enabled) {
-                    config.facilities + facility
-                } else {
-                    config.facilities - facility
-                }
-                onConfigChange(config.copy(facilities = newList))
-            }
+            facilities = config.facilities,
+            onFacilitiesChange = { onConfigChange(config.copy(facilities = it)) }
         )
 
         // 全选/清除按钮
@@ -457,7 +764,11 @@ private fun FacilitiesSection(
         ) {
             Button(
                 onClick = {
-                    onConfigChange(config.copy(facilities = allFacilities))
+                    onConfigChange(
+                        config.copy(
+                            facilities = config.facilities.map { it.first to true }
+                        )
+                    )
                 },
                 modifier = Modifier.weight(1f)
             ) {
@@ -466,50 +777,31 @@ private fun FacilitiesSection(
 
             OutlinedButton(
                 onClick = {
-                    onConfigChange(config.copy(facilities = emptyList()))
+                    onConfigChange(
+                        config.copy(
+                            facilities = config.facilities.map { it.first to false }
+                        )
+                    )
                 },
                 modifier = Modifier.weight(1f)
             ) {
                 Text("清除")
             }
         }
-
-        // 提示文字
-        Text(
-            text = "* 拖拽排序功能将在后续版本实现",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray
-        )
     }
 }
 
 /**
- * 设施列表展示（支持勾选）
+ * 设施列表展示（支持拖拽排序 + 勾选）
  *
- * TODO: 后续版本需要支持拖拽排序，调整设施换班优先级
- *
- * @param allFacilities 所有可用设施列表
- * @param enabledFacilities 当前启用的设施列表
- * @param onFacilityToggle 设施勾选状态变化回调
+ * @param facilities 设施列表（有序，含启用状态）
+ * @param onFacilitiesChange 设施列表变化回调
  */
 @Composable
 private fun FacilityList(
-    allFacilities: List<String>,
-    enabledFacilities: List<String>,
-    onFacilityToggle: (String, Boolean) -> Unit
+    facilities: List<Pair<InfrastRoomType, Boolean>>,
+    onFacilitiesChange: (List<Pair<InfrastRoomType, Boolean>>) -> Unit
 ) {
-    // 设施显示名称映射
-    val facilityDisplayNames = mapOf(
-        "Mfg" to "制造站",
-        "Trade" to "贸易站",
-        "Control" to "控制中枢",
-        "Power" to "发电站",
-        "Reception" to "会客室",
-        "Office" to "办公室",
-        "Dorm" to "宿舍",
-        "Training" to "训练室",
-        "Processing" to "加工站"
-    )
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -517,29 +809,49 @@ private fun FacilityList(
         color = Color(0xFFF5F5F5),
         border = BorderStroke(1.dp, Color.LightGray)
     ) {
-        Column(
+        ReorderableColumn(
+            list = facilities,
+            onSettle = { fromIndex, toIndex ->
+                val newList = facilities.toMutableList().apply {
+                    add(toIndex, removeAt(fromIndex))
+                }
+                onFacilitiesChange(newList)
+            },
             modifier = Modifier.padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            allFacilities.forEach { facility ->
-                val isEnabled = enabledFacilities.contains(facility)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onFacilityToggle(facility, !isEnabled) }
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = isEnabled,
-                        onCheckedChange = { onFacilityToggle(facility, it) },
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = facilityDisplayNames[facility] ?: facility,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+        ) { _, entry, _ ->
+            key(entry.first) {
+                ReorderableItem {
+                    val (facility, enabled) = entry
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .longPressDraggableHandle()
+                            .clickable {
+                                val newList = facilities.map {
+                                    if (it.first == facility) it.first to !it.second else it
+                                }
+                                onFacilitiesChange(newList)
+                            }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = enabled,
+                            onCheckedChange = { checked ->
+                                val newList = facilities.map {
+                                    if (it.first == facility) it.first to checked else it
+                                }
+                                onFacilitiesChange(newList)
+                            },
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = facility.displayName,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 }
             }
         }
@@ -580,7 +892,6 @@ private fun DormFilterNotStationedSection(
     onConfigChange: (InfrastConfig) -> Unit
 ) {
     var tipExpanded by remember { mutableStateOf(false) }
-    val tipText = "启用后，已在其他设施工作的干员\n不会被安排进宿舍休息"
 
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -606,7 +917,7 @@ private fun DormFilterNotStationedSection(
         }
         ExpandableTipContent(
             visible = tipExpanded,
-            tipText = tipText,
+            tipText = "勾选则不会将艾丽妮等干员从训练室移除，但也会导致加工站干员不能进入宿舍。",
             modifier = Modifier.padding(start = 28.dp)
         )
     }
@@ -651,8 +962,8 @@ private fun ReceptionMessageBoardReceiveSection(
         verticalAlignment = Alignment.Top
     ) {
         Checkbox(
-            checked = config.receptionMessageBoardReceive,
-            onCheckedChange = { onConfigChange(config.copy(receptionMessageBoardReceive = it)) },
+            checked = config.receptionMessageBoard,
+            onCheckedChange = { onConfigChange(config.copy(receptionMessageBoard = it)) },
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))

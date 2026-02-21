@@ -2,10 +2,30 @@ package com.aliothmoon.maameow.presentation.view.background
 
 import android.widget.Toast
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -30,7 +50,19 @@ import com.aliothmoon.maameow.presentation.components.PlaceholderContent
 import com.aliothmoon.maameow.presentation.components.ShizukuPermissionDialog
 import com.aliothmoon.maameow.presentation.state.BackgroundTaskState
 import com.aliothmoon.maameow.presentation.state.MonitorSurfaceSource
-import com.aliothmoon.maameow.presentation.view.panel.*
+import com.aliothmoon.maameow.presentation.view.panel.AwardConfigPanel
+import com.aliothmoon.maameow.presentation.view.panel.InfrastConfigPanel
+import com.aliothmoon.maameow.presentation.view.panel.LogPanel
+import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType
+import com.aliothmoon.maameow.presentation.view.panel.PanelDialogUiState
+import com.aliothmoon.maameow.presentation.view.panel.PanelTab
+import com.aliothmoon.maameow.presentation.view.panel.ReclamationConfigPanel
+import com.aliothmoon.maameow.presentation.view.panel.RecruitConfigPanel
+import com.aliothmoon.maameow.presentation.view.panel.TaskListPanel
+import com.aliothmoon.maameow.presentation.view.panel.WakeUpConfigPanel
+import com.aliothmoon.maameow.presentation.view.panel.fight.FightConfigPanel
+import com.aliothmoon.maameow.presentation.view.panel.mall.MallConfigPanel
+import com.aliothmoon.maameow.presentation.view.panel.roguelike.RoguelikeConfigPanel
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -188,7 +220,6 @@ fun BackgroundTaskView(
                                     viewModel.onTaskMove(fromIndex, toIndex)
                                 },
                                 modifier = Modifier
-                                    .weight(0.4f)
                                     .fillMaxHeight()
                             )
 
@@ -198,7 +229,7 @@ fun BackgroundTaskView(
                                 state = state,
                                 viewModel = viewModel,
                                 modifier = Modifier
-                                    .weight(0.6f)
+                                    .weight(1f)
                                     .fillMaxHeight()
                             )
                         }

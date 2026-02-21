@@ -1,13 +1,11 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,7 +15,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -87,23 +84,23 @@ fun WakeUpConfigPanel(
             label = "启动游戏"
         )
 
-        // 服务器信息
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "服务器:",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
-            Text(
-                text = config.getServerType(),
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
+        // TODO 服务器信息
+//        Row(
+//            modifier = Modifier.fillMaxWidth(),
+//            horizontalArrangement = Arrangement.spacedBy(8.dp),
+//            verticalAlignment = Alignment.CenterVertically
+//        ) {
+//            Text(
+//                text = "服务器:",
+//                style = MaterialTheme.typography.bodySmall,
+//                color = Color.Gray
+//            )
+//            Text(
+//                text = config.getServerType(),
+//                style = MaterialTheme.typography.bodySmall,
+//                fontWeight = FontWeight.Medium,
+//                color = MaterialTheme.colorScheme.primary
+//            )
+//        }
     }
 }

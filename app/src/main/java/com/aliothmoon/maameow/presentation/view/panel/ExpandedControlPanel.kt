@@ -122,18 +122,16 @@ fun ExpandedControlPanel(
                                     onTaskSelected = viewModel::onSelectedTaskChange,
                                     onTaskMove = viewModel::onTaskMove,
                                     modifier = Modifier
-                                        .weight(0.3f)
                                         .fillMaxHeight()
                                 )
 
                                 // 右侧配置区域
                                 ConfigurationPanel(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight(),
                                     state = uiState,
                                     taskConfig = viewModel.taskConfig,
-                                    characterDataManager = viewModel.characterDataManager,
-                                    modifier = Modifier
-                                        .weight(0.65f)
-                                        .fillMaxHeight()
                                 )
                             }
                         }

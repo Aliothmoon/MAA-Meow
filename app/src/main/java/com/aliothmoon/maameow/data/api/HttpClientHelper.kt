@@ -1,19 +1,12 @@
 package com.aliothmoon.maameow.data.api
 
 import kotlinx.serialization.json.Json
-import okhttp3.Call
-import okhttp3.Callback
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
-import java.io.IOException
-import java.security.cert.Extension
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
 
 class HttpClientHelper(
     private val okHttpClient: OkHttpClient

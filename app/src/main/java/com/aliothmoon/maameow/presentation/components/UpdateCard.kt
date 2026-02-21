@@ -67,11 +67,11 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import dev.jeziellago.compose.markdowntext.MarkdownText
 import com.aliothmoon.maameow.data.model.update.UpdateInfo
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.presentation.viewmodel.UpdateViewModel
+import dev.jeziellago.compose.markdowntext.MarkdownText
 
 /**
  * 更新管理卡片

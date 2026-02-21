@@ -4,12 +4,12 @@ import android.content.Context
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.aliothmoon.maameow.data.model.TaskType
 import com.aliothmoon.maameow.data.model.LogItem
-import com.aliothmoon.maameow.data.resource.CharacterDataManager
+import com.aliothmoon.maameow.data.model.TaskType
 import com.aliothmoon.maameow.data.preferences.TaskConfigState
-import com.aliothmoon.maameow.domain.service.RuntimeLogCenter
+import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.service.RuntimeLogCenter
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.BuildTaskParamsUseCase
 import com.aliothmoon.maameow.overlay.OverlayController
@@ -29,7 +29,7 @@ import timber.log.Timber
 
 
 class ExpandedControlPanelViewModel(
-    val characterDataManager: CharacterDataManager,
+    val resourceDataManager: ResourceDataManager,
     val taskConfig: TaskConfigState,
     private val application: Context,
     private val buildTaskParams: BuildTaskParamsUseCase,

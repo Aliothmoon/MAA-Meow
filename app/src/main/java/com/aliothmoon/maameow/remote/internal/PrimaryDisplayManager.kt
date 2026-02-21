@@ -1,15 +1,12 @@
 package com.aliothmoon.maameow.remote.internal
 
-import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
-import android.os.Build
 import android.os.IBinder
 import android.view.Display
 import android.view.Surface
 import com.aliothmoon.maameow.bridge.NativeBridgeLib
-import com.aliothmoon.maameow.constant.AndroidVersions
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig.VD_NAME
 import com.aliothmoon.maameow.third.DisplayInfo
 import com.aliothmoon.maameow.third.Ln
@@ -17,7 +14,6 @@ import com.aliothmoon.maameow.third.wrappers.ServiceManager
 import com.aliothmoon.maameow.third.wrappers.SurfaceControl
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 
 object PrimaryDisplayManager {

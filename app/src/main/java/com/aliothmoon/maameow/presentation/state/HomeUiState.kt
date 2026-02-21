@@ -1,9 +1,9 @@
 package com.aliothmoon.maameow.presentation.state
 
-import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.state.ResourceInitState
 
 data class HomeUiState(
     val isShowControlOverlay: Boolean = false,

@@ -9,7 +9,7 @@ enum class MonitorPhase {
 }
 
 data class BackgroundTaskState(
-    val currentTaskType: TaskType = TaskType.WAKE_UP,
+    val currentTaskType: TaskType = TaskType.COMBAT,
     val currentTab: PanelTab = PanelTab.TASKS,
     val monitorPhase: MonitorPhase = MonitorPhase.IDLE,
     val monitorErrorMessage: String? = null,

@@ -26,8 +26,8 @@ import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
 import com.aliothmoon.maameow.presentation.view.background.BackgroundTaskView
 import com.aliothmoon.maameow.presentation.view.home.HomeView
-import com.aliothmoon.maameow.presentation.view.settings.LogHistoryView
 import com.aliothmoon.maameow.presentation.view.settings.ErrorLogView
+import com.aliothmoon.maameow.presentation.view.settings.LogHistoryView
 import com.aliothmoon.maameow.presentation.view.settings.SettingsView
 import org.koin.compose.koinInject
 

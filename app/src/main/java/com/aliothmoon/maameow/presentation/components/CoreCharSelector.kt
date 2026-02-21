@@ -28,10 +28,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.aliothmoon.maameow.data.resource.CharacterDataManager
-import kotlinx.coroutines.Dispatchers
+import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 @Composable
@@ -39,7 +37,7 @@ fun CoreCharSelector(
     value: String,
     onValueChange: (String) -> Unit,
     theme: String,
-    characterDataManager: CharacterDataManager,
+    resourceDataManager: ResourceDataManager,
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -54,18 +52,18 @@ fun CoreCharSelector(
     // 是否正在校验（用于显示加载状态）
     var isValidating by remember { mutableStateOf(false) }
 
-    // 推荐核心干员列表（按主题）
+    // 推荐开局干员列表（按主题）
     var recommendedChars by remember { mutableStateOf<List<String>>(emptyList()) }
 
     // 过滤后的建议列表
     var filteredSuggestions by remember { mutableStateOf<List<String>>(emptyList()) }
 
-    // 加载推荐核心干员列表
-    LaunchedEffect(theme) {
-        recommendedChars = characterDataManager.getRoguelikeCoreCharList(theme)
-        // 初始时显示推荐列表
+    // 加载推荐开局干员列表
+    val themeChars = remember(theme) { resourceDataManager.getRoguelikeCoreCharList(theme) }
+    LaunchedEffect(themeChars) {
+        recommendedChars = themeChars
         if (inputText.isBlank()) {
-            filteredSuggestions = recommendedChars
+            filteredSuggestions = themeChars
         }
     }
 
@@ -88,42 +86,39 @@ fun CoreCharSelector(
                 onValueChange(newValue)
             }
         } else {
-            // 开始异步校验
+            // 开始校验
             isValidating = true
-            Timber.d("[CoreCharSelector] 开始异步校验: '$newValue'")
-            coroutineScope.launch(Dispatchers.IO) {
-                Timber.d("[CoreCharSelector] 协程开始执行，调用 isValidCharacterName")
-                val validationResult = characterDataManager.isValidCharacterName(newValue)
+            Timber.d("[CoreCharSelector] 开始校验: '$newValue'")
+            coroutineScope.launch {
+                Timber.d("[CoreCharSelector] 开始校验: isValidCharacterName")
+                val validationResult = resourceDataManager.isValidCharacterName(newValue)
                 Timber.d("[CoreCharSelector] 校验结果: validationResult=$validationResult, newValue='$newValue'")
 
                 // 计算建议列表
                 val newSuggestions = if (validationResult) {
                     recommendedChars.filter { it.contains(newValue, ignoreCase = true) }
                 } else {
-                    characterDataManager.searchCharacters(newValue, 15)
+                    resourceDataManager.search(newValue, 15)
                 }
                 Timber.d("[CoreCharSelector] 建议列表计算完成: ${newSuggestions.size} 个结果")
 
-                // 所有状态更新都在主线程进行
-                withContext(Dispatchers.Main) {
-                    // 检查输入值是否仍然匹配（防止竞态条件）
-                    if (inputText != newValue) {
-                        Timber.d("[CoreCharSelector] 输入已变化，跳过此次校验结果: 当前='$inputText', 校验='$newValue'")
-                        return@withContext
-                    }
+                // 检查输入值是否仍然匹配（防止竞态条件）
+                if (inputText != newValue) {
+                    Timber.d("[CoreCharSelector] 输入已变化，跳过此次校验结果: 当前='$inputText', 校验='$newValue'")
+                    return@launch
+                }
 
-                    isValid = validationResult
-                    isValidating = false
-                    filteredSuggestions = newSuggestions
-                    Timber.d("[CoreCharSelector] UI更新完成: isValid=$isValid, isValidating=$isValidating")
+                isValid = validationResult
+                isValidating = false
+                filteredSuggestions = newSuggestions
+                Timber.d("[CoreCharSelector] UI更新完成: isValid=$isValid, isValidating=$isValidating")
 
-                    // 只有校验通过时才更新配置值
-                    if (validationResult && value != newValue) {
-                        Timber.d("[CoreCharSelector] 校验通过，更新配置: '$newValue'")
-                        onValueChange(newValue)
-                    } else if (!validationResult) {
-                        Timber.d("[CoreCharSelector] 校验失败，不更新配置。当前配置值保持: '$value'")
-                    }
+                // 只有校验通过时才更新配置值
+                if (validationResult && value != newValue) {
+                    Timber.d("[CoreCharSelector] 校验通过，更新配置: '$newValue'")
+                    onValueChange(newValue)
+                } else if (!validationResult) {
+                    Timber.d("[CoreCharSelector] 校验失败，不更新配置。当前配置值保持: '$value'")
                 }
             }
         }
@@ -143,7 +138,7 @@ fun CoreCharSelector(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "核心干员",
+                text = "开局干员",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium
             )
@@ -236,35 +231,5 @@ fun CoreCharSelector(
                 }
             }
         }
-    }
-}
-
-/**
- * 简化版核心干员选择组件（不依赖 CharacterDataManager）
- * 仅提供文本输入，不进行校验
- * 用于 CharacterDataManager 不可用时的降级方案
- */
-@Composable
-fun CoreCharSelectorSimple(
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = modifier
-    ) {
-        Text(
-            text = "核心干员",
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium
-        )
-
-        ITextField(
-            value = value,
-            onValueChange = onValueChange,
-            placeholder = "干员名称（可选）",
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }

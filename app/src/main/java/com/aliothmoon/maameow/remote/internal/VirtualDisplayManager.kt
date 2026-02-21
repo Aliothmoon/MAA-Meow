@@ -9,8 +9,8 @@ import android.os.SystemClock
 import android.view.Surface
 import com.aliothmoon.maameow.bridge.NativeBridgeLib
 import com.aliothmoon.maameow.constant.AndroidVersions
-import com.aliothmoon.maameow.constant.DefaultDisplayConfig.VD_NAME
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
+import com.aliothmoon.maameow.constant.DefaultDisplayConfig.VD_NAME
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
 import java.util.concurrent.atomic.AtomicInteger

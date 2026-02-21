@@ -1,8 +1,8 @@
 package com.aliothmoon.maameow.domain.service
 
 import com.aliothmoon.maameow.RemoteService
-import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +21,7 @@ class UnifiedStateDispatcher(
     private val appSettingsManager: AppSettingsManager,
     private val resourceLoader: MaaResourceLoader,
     private val permissionManager: PermissionManager,
+    private val activityManager: ActivityManager,
 ) {
     private val dispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
@@ -75,6 +76,7 @@ class UnifiedStateDispatcher(
             srv.setVirtualDisplayMode(mode.displayMode)
             resourceLoader.load()
         }
+        activityManager.preload()
     }
 
     fun onServiceDied() {
