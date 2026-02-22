@@ -17,6 +17,6 @@ object DefaultDisplayConfig {
     /** 16:9 宽高比 */
     val ASPECT_RATIO: Float get() = WIDTH.toFloat() / HEIGHT
 
-    const val FRAME_INTERVAL_MS = 33L
+    const val FRAME_INTERVAL_MS = 16L
 
 }

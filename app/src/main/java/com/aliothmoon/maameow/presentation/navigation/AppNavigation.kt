@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,13 +45,14 @@ fun AppNavigation(
 
     val context = LocalContext.current
 
+    var isFullscreen by remember { mutableStateOf(false) }
 
     // 执行模式状态 - 用于底部导航拦截
     val runMode by appSettings.runMode.collectAsStateWithLifecycle()
     val resourceLoadState by resourceLoader.state.collectAsStateWithLifecycle()
 
     // 判断是否显示底部导航（只在主 Tab 页面显示）
-    val showBottomBar = currentRoute in listOf(Routes.HOME, Routes.BACKGROUND_TASK)
+    val showBottomBar = currentRoute in listOf(Routes.HOME, Routes.BACKGROUND_TASK) && !isFullscreen
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -138,7 +142,7 @@ fun AppNavigation(
                     popEnterTransition = { fadeIn(animationSpec = tween(200)) },
                     popExitTransition = { fadeOut(animationSpec = tween(200)) }
                 ) {
-                    BackgroundTaskView()
+                    BackgroundTaskView(onFullscreenChanged = { isFullscreen = it })
                 }
 
                 composable(

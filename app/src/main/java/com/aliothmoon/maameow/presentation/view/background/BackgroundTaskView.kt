@@ -1,7 +1,19 @@
 package com.aliothmoon.maameow.presentation.view.background
 
+import android.app.Activity
+import android.content.pm.ActivityInfo
+import android.graphics.Matrix
+import android.graphics.SurfaceTexture
+import android.view.Surface
+import android.view.TextureView
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,12 +29,16 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -30,6 +46,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -37,10 +54,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.data.model.TaskType
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
@@ -49,7 +73,6 @@ import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.presentation.components.PlaceholderContent
 import com.aliothmoon.maameow.presentation.components.ShizukuPermissionDialog
 import com.aliothmoon.maameow.presentation.state.BackgroundTaskState
-import com.aliothmoon.maameow.presentation.state.MonitorSurfaceSource
 import com.aliothmoon.maameow.presentation.view.panel.AwardConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.InfrastConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.LogPanel
@@ -64,12 +87,14 @@ import com.aliothmoon.maameow.presentation.view.panel.fight.FightConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.mall.MallConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.roguelike.RoguelikeConfigPanel
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
 @Composable
 fun BackgroundTaskView(
+    onFullscreenChanged: (Boolean) -> Unit = {},
     viewModel: BackgroundTaskViewModel = koinViewModel(),
     compositionService: MaaCompositionService = koinInject(),
     dispatcher: UnifiedStateDispatcher = koinInject(),
@@ -105,6 +130,10 @@ fun BackgroundTaskView(
     }
 
     val context = LocalContext.current
+    LaunchedEffect(state.isFullscreenMonitor) {
+        onFullscreenChanged(state.isFullscreenMonitor)
+    }
+
     LaunchedEffect(Unit) {
         viewModel.onPageEnter()
     }
@@ -140,17 +169,57 @@ fun BackgroundTaskView(
         )
     }
 
-    if (state.isFullscreenMonitor) {
-        FullscreenPreviewDialog(
-            onSurfaceAvailable = { surface ->
-                viewModel.onSurfaceAvailable(MonitorSurfaceSource.FULLSCREEN, surface)
-            },
-            onSurfaceDestroyed = {
-                viewModel.onSurfaceDestroyed(MonitorSurfaceSource.FULLSCREEN)
-            },
-            onDismiss = { viewModel.onToggleFullscreenMonitor() }
-        )
+    var isSurfaceAvailable by remember { mutableStateOf(false) }
+    val previewContent = remember {
+        movableContentOf {
+            AndroidView(
+                factory = { ctx ->
+                    TextureView(ctx).apply {
+                        var currentSurface: Surface? = null
+                        surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                            override fun onSurfaceTextureAvailable(
+                                surfaceTexture: SurfaceTexture,
+                                width: Int,
+                                height: Int
+                            ) {
+                                surfaceTexture.setDefaultBufferSize(
+                                    DefaultDisplayConfig.WIDTH,
+                                    DefaultDisplayConfig.HEIGHT
+                                )
+                                currentSurface?.release()
+                                val surface = Surface(surfaceTexture)
+                                currentSurface = surface
+                                isSurfaceAvailable = true
+                                viewModel.onSurfaceAvailable(surface)
+                                updateTextureTransform(this@apply, width, height)
+                            }
+
+                            override fun onSurfaceTextureSizeChanged(
+                                surfaceTexture: SurfaceTexture,
+                                width: Int,
+                                height: Int
+                            ) {
+                                updateTextureTransform(this@apply, width, height)
+                            }
+
+                            override fun onSurfaceTextureDestroyed(surfaceTexture: SurfaceTexture): Boolean {
+                                isSurfaceAvailable = false
+                                viewModel.onSurfaceDestroyed()
+                                currentSurface?.release()
+                                currentSurface = null
+                                return true
+                            }
+
+                            override fun onSurfaceTextureUpdated(surfaceTexture: SurfaceTexture) =
+                                Unit
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     }
+
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -163,20 +232,14 @@ fun BackgroundTaskView(
             if (!state.isFullscreenMonitor) {
                 VirtualDisplayPreview(
                     isRunning = state.isMonitorRunning,
-                    isLoading = state.isMonitorLoading,
-                    errorMessage = state.monitorErrorMessage,
-                    onSurfaceAvailable = { surface ->
-                        viewModel.onSurfaceAvailable(MonitorSurfaceSource.EMBEDDED, surface)
-                    },
-                    onSurfaceDestroyed = {
-                        viewModel.onSurfaceDestroyed(MonitorSurfaceSource.EMBEDDED)
-                    },
-                    onRetry = viewModel::retryMonitorBinding,
+                    isSurfaceAvailable = isSurfaceAvailable,
                     onClick = { viewModel.onToggleFullscreenMonitor() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(0.3f)
-                )
+                ) {
+                    previewContent()
+                }
             } else {
                 Spacer(
                     modifier = Modifier
@@ -293,6 +356,89 @@ fun BackgroundTaskView(
                     )
                 ) {
                     Text("停止任务")
+                }
+            }
+        }
+
+        // 全屏预览
+        if (state.isFullscreenMonitor) {
+            val activity = context as? Activity
+
+            DisposableEffect(Unit) {
+                val window = activity?.window
+                val originalOrientation = activity?.requestedOrientation
+                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+
+                val controller = window?.let {
+                    WindowCompat.getInsetsController(it, it.decorView)
+                }
+                controller?.hide(WindowInsetsCompat.Type.systemBars())
+                controller?.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+
+                onDispose {
+                    if (originalOrientation != null) {
+                        activity.requestedOrientation = originalOrientation
+                    }
+                    controller?.show(WindowInsetsCompat.Type.systemBars())
+                }
+            }
+
+            BackHandler { viewModel.onToggleFullscreenMonitor() }
+
+            // 控件自动隐藏
+            var showControls by remember { mutableStateOf(true) }
+            LaunchedEffect(showControls) {
+                if (showControls) {
+                    delay(3000)
+                    showControls = false
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { showControls = !showControls },
+                contentAlignment = Alignment.Center
+            ) {
+                previewContent()
+
+                // 顶部渐变遮罩 + 关闭按钮
+                AnimatedVisibility(
+                    visible = showControls,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.TopCenter)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color.Black.copy(alpha = 0.5f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
+                            .padding(top = 8.dp, end = 8.dp, bottom = 24.dp)
+                    ) {
+                        IconButton(
+                            onClick = { viewModel.onToggleFullscreenMonitor() },
+                            modifier = Modifier.align(Alignment.TopEnd)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "关闭",
+                                tint = Color.White,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -483,4 +629,27 @@ private fun TaskResultDialog(
             }
         }
     )
+}
+
+private fun updateTextureTransform(textureView: TextureView, viewWidth: Int, viewHeight: Int) {
+    if (viewWidth == 0 || viewHeight == 0) return
+
+    val viewW = viewWidth.toFloat()
+    val viewH = viewHeight.toFloat()
+    val bufferW = DefaultDisplayConfig.WIDTH.toFloat()
+    val bufferH = DefaultDisplayConfig.HEIGHT.toFloat()
+
+    val matrix = Matrix()
+    val scale = minOf(viewW / bufferW, viewH / bufferH)
+
+    matrix.postScale(bufferW / viewW, bufferH / viewH)
+    matrix.postScale(scale, scale)
+
+    val scaledW = bufferW * scale
+    val scaledH = bufferH * scale
+    val offsetX = (viewW - scaledW) / 2f
+    val offsetY = (viewH - scaledH) / 2f
+    matrix.postTranslate(offsetX, offsetY)
+
+    textureView.setTransform(matrix)
 }

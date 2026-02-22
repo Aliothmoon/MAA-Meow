@@ -173,7 +173,7 @@ object RemoteServiceManager {
     fun isConnected(): Boolean = getInstanceOrNull() != null
 
     suspend inline fun <R> useRemoteService(
-        timeoutMs: Long = 10_000,
+        timeoutMs: Long = 5_000,
         crossinline action: suspend (RemoteService) -> R
     ): R {
         return requireShizukuPermissionGranted {

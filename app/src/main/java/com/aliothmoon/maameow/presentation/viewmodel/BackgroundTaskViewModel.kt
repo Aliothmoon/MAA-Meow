@@ -14,23 +14,17 @@ import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
 import com.aliothmoon.maameow.presentation.state.BackgroundTaskState
-import com.aliothmoon.maameow.presentation.state.MonitorPhase
-import com.aliothmoon.maameow.presentation.state.MonitorSurfaceSource
+
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogConfirmAction
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogUiState
 import com.aliothmoon.maameow.presentation.view.panel.PanelTab
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 
 class BackgroundTaskViewModel(
@@ -46,16 +40,8 @@ class BackgroundTaskViewModel(
     val runtimeLogs: StateFlow<List<LogItem>> = runtimeLogCenter.logs
 
     private var currentSurface: Surface? = null
-    private var currentSurfaceSource: MonitorSurfaceSource? = null
-    private var bindGeneration: Long = 0
-    private var monitorBindJob: Job? = null
-    private val monitorBindMutex = Mutex()
     private var pageActive: Boolean = false
     private var monitorStartedByPage: Boolean = false
-
-    companion object {
-        private const val MONITOR_TIMEOUT_MS = 3_000L
-    }
 
     init {
         observeCompositionState()
@@ -67,25 +53,11 @@ class BackgroundTaskViewModel(
             compositionService.state.collect { executionState ->
                 val running = executionState == MaaExecutionState.RUNNING
                 val wasRunning = _state.value.isMonitorRunning
-                _state.update {
-                    val nextPhase = when {
-                        it.monitorPhase == MonitorPhase.ERROR -> MonitorPhase.ERROR
-                        running && it.hasSurface -> {
-                            if (it.isMonitorLoading) MonitorPhase.BINDING else MonitorPhase.RUNNING
-                        }
-
-                        running -> MonitorPhase.WAITING_FRAME
-                        else -> MonitorPhase.IDLE
-                    }
-                    it.copy(
-                        isMonitorRunning = running,
-                        monitorPhase = nextPhase
-                    )
-                }
+                _state.update { it.copy(isMonitorRunning = running) }
 
                 // 状态从非 RUNNING 变为 RUNNING 时，重新绑定 Surface 到新的虚拟显示
                 if (running && !wasRunning) {
-                    currentSurface?.let { bindMonitorSurface(it) }
+                    currentSurface?.let { setRemoteSurface(it) }
                 }
             }
         }
@@ -97,10 +69,20 @@ class BackgroundTaskViewModel(
                 if (serviceState is RemoteServiceManager.ServiceState.Connected && pageActive) {
                     currentSurface?.takeIf { it.isValid }?.let { surface ->
                         Timber.i("Remote service reconnected, rebinding monitor surface")
-                        bindMonitorSurface(surface)
+                        setRemoteSurface(surface)
                     }
                 }
             }
+        }
+    }
+
+    private fun setRemoteSurface(surface: Surface?) {
+        runCatching {
+            runBlocking {
+                useRemoteService { it.setMonitorSurface(surface) }
+            }
+        }.onFailure {
+            Timber.w(it, "setMonitorSurface failed")
         }
     }
 
@@ -151,145 +133,22 @@ class BackgroundTaskViewModel(
             return
         }
         monitorStartedByPage = true
-        startMonitor()
-    }
-
-    fun startMonitor() {
-        _state.update {
-            it.copy(
-                monitorErrorMessage = null,
-                monitorPhase = if (it.isMonitorRunning) {
-                    if (it.hasSurface) MonitorPhase.BINDING else MonitorPhase.WAITING_FRAME
-                } else {
-                    MonitorPhase.IDLE
-                }
-            )
-        }
-        currentSurface?.let { bindMonitorSurface(it) }
+        currentSurface?.let { setRemoteSurface(it) }
     }
 
     fun stopMonitor() {
-        bindGeneration += 1
-        monitorBindJob?.cancel()
         currentSurface = null
-        currentSurfaceSource = null
-
-        viewModelScope.launch {
-            monitorBindMutex.withLock {
-                runCatching {
-                    withContext(Dispatchers.IO) {
-                        useRemoteService {
-                            it.setMonitorSurface(null)
-                        }
-                    }
-                }.onFailure {
-                    Timber.w(it, "Failed to clear monitor surface")
-                }
-            }
-        }
-
-        _state.update {
-            it.copy(
-                hasSurface = false,
-                isMonitorLoading = false,
-                monitorErrorMessage = null,
-                monitorPhase = if (it.isMonitorRunning) MonitorPhase.WAITING_FRAME else MonitorPhase.IDLE
-            )
-        }
+        setRemoteSurface(null)
     }
 
-    fun onSurfaceAvailable(source: MonitorSurfaceSource, surface: Surface) {
-        currentSurfaceSource = source
+    fun onSurfaceAvailable(surface: Surface) {
         currentSurface = surface
-        _state.update { it.copy(hasSurface = surface.isValid) }
-        bindMonitorSurface(surface)
+        setRemoteSurface(surface)
     }
 
-    fun onSurfaceDestroyed(source: MonitorSurfaceSource) {
-        if (currentSurfaceSource != source) {
-            Timber.d("Ignore stale monitor surface destroy: source=%s, current=%s", source, currentSurfaceSource)
-            return
-        }
-        currentSurfaceSource = null
+    fun onSurfaceDestroyed() {
         currentSurface = null
-        _state.update { it.copy(hasSurface = false) }
-        bindMonitorSurface(null)
-    }
-
-    fun retryMonitorBinding() {
-        currentSurface?.let { bindMonitorSurface(it, fromRetry = true) }
-    }
-
-    private fun bindMonitorSurface(surface: Surface?, fromRetry: Boolean = false) {
-        val generation = ++bindGeneration
-        monitorBindJob?.cancel()
-
-        monitorBindJob = viewModelScope.launch {
-            val beforeState = state.value
-            _state.update {
-                it.copy(
-                    isMonitorLoading = true,
-                    monitorErrorMessage = null,
-                    monitorPhase = when {
-                        surface == null -> if (it.isMonitorRunning) MonitorPhase.WAITING_FRAME else MonitorPhase.IDLE
-                        else -> MonitorPhase.BINDING
-                    }
-                )
-            }
-
-            monitorBindMutex.withLock {
-                if (generation != bindGeneration) {
-                    return@withLock
-                }
-
-                val result = runCatching {
-                    withTimeout(MONITOR_TIMEOUT_MS) {
-                        withContext(Dispatchers.IO) {
-                            useRemoteService {
-                                it.setMonitorSurface(surface)
-                            }
-                        }
-                    }
-                }
-
-                if (generation != bindGeneration) {
-                    return@withLock
-                }
-
-                result.onSuccess {
-                _state.update {
-                    it.copy(
-                        isMonitorLoading = false,
-                        monitorErrorMessage = null,
-                        monitorPhase = when {
-                            surface == null -> if (it.isMonitorRunning) MonitorPhase.WAITING_FRAME else MonitorPhase.IDLE
-                            it.isMonitorRunning -> MonitorPhase.RUNNING
-                            else -> MonitorPhase.IDLE
-                        }
-                    )
-                }
-            }.onFailure { throwable ->
-                Timber.e(throwable, "Failed to set monitor surface")
-                val errorMessage = when {
-                    throwable is kotlinx.coroutines.TimeoutCancellationException -> {
-                        "预览连接超时，请重试"
-                    }
-
-                    fromRetry -> "重试失败，请检查服务状态"
-                    beforeState.isMonitorRunning -> "预览连接失败，请重试"
-                    else -> "预览初始化失败，请重试"
-                }
-
-                _state.update {
-                    it.copy(
-                        isMonitorLoading = false,
-                        monitorErrorMessage = errorMessage,
-                        monitorPhase = MonitorPhase.ERROR
-                    )
-                }
-            }
-            }
-        }
+        setRemoteSurface(null)
     }
 
     fun onToggleFullscreenMonitor() {
