@@ -41,10 +41,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.resource.ActivityManager
-import com.aliothmoon.maameow.data.resource.ActivityManager.StageGroup
-import com.aliothmoon.maameow.data.resource.ActivityManager.StageItem
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.StageAliasMapper
+import com.aliothmoon.maameow.data.resource.StageGroup
+import com.aliothmoon.maameow.data.resource.StageItem
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
@@ -63,7 +63,7 @@ fun FightConfigPanel(
     resourceManager: ActivityManager = koinInject(),
     itemHelper: ItemHelper = koinInject()
 ) {
-
+    // 资源收集
     val resourceCollectionInfo by resourceManager.resourceCollection.collectAsState()
     val isResourceCollectionOpen = resourceCollectionInfo?.isOpen == true
 

@@ -152,7 +152,7 @@ class MaaApiService(
     /**
      * 获取任务配置数据
      */
-    suspend fun getTasksConfig(): String? {
+    suspend fun getTasksInfo(): String? {
         return requestWithCache(MaaApi.TASKS_API)
     }
 
@@ -160,7 +160,7 @@ class MaaApiService(
      * 获取全球服任务配置数据
      * @param clientType 客户端类型（如 YoStarEN、YoStarJP、YoStarKR、txwy）
      */
-    suspend fun getGlobalTasksConfig(clientType: String): String? {
+    suspend fun getGlobalTasksInfo(clientType: String): String? {
         return requestWithCache(MaaApi.getGlobalTasksApi(clientType))
     }
 }

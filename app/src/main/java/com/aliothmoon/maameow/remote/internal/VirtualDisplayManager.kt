@@ -37,6 +37,7 @@ object VirtualDisplayManager {
     private const val VIRTUAL_DISPLAY_FLAG_TOUCH_FEEDBACK_DISABLED: Int = 1 shl 13
     private const val VIRTUAL_DISPLAY_FLAG_OWN_FOCUS: Int = 1 shl 14
     private const val VIRTUAL_DISPLAY_FLAG_DEVICE_DISPLAY_GROUP: Int = 1 shl 15
+    private const val VIRTUAL_DISPLAY_FLAG_STEAL_TOP_FOCUS_DISABLED: Int = 1 shl 16
 
     private const val VD_SYSTEM_DECORATIONS = false
     private const val VD_DESTROY_CONTENT = true
@@ -188,7 +189,8 @@ object VirtualDisplayManager {
                     or VIRTUAL_DISPLAY_FLAG_TOUCH_FEEDBACK_DISABLED)
             if (Build.VERSION.SDK_INT >= AndroidVersions.API_34_ANDROID_14) {
                 flags = flags or (VIRTUAL_DISPLAY_FLAG_OWN_FOCUS
-                        or VIRTUAL_DISPLAY_FLAG_DEVICE_DISPLAY_GROUP)
+                        or VIRTUAL_DISPLAY_FLAG_DEVICE_DISPLAY_GROUP
+                        or VIRTUAL_DISPLAY_FLAG_STEAL_TOP_FOCUS_DISABLED)
             }
         }
         return flags

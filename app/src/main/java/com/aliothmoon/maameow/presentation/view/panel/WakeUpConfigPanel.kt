@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.presentation.view.panel
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,21 +19,29 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.data.model.WakeUpConfig
+import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
+import org.koin.compose.koinInject
 
 /**
  * 开始唤醒配置面板
  *
- * 迁移自 WPF StartUpSettingsUserControl.xaml
+ * see StartUpSettingsUserControl.xaml
  * 包含客户端类型选择功能
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun WakeUpConfigPanel(
     config: WakeUpConfig,
-    onConfigChange: (WakeUpConfig) -> Unit
+    onConfigChange: (WakeUpConfig) -> Unit,
+    compositionService: MaaCompositionService = koinInject()
 ) {
+    val state = compositionService.state.collectAsStateWithLifecycle()
+    val isTaskActive =
+        state.value == MaaExecutionState.STARTING || state.value == MaaExecutionState.RUNNING
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -55,19 +62,32 @@ fun WakeUpConfigPanel(
             ) {
                 WakeUpConfig.CLIENT_TYPE_OPTIONS.forEach { (value, displayName) ->
                     val isSelected = value == config.clientType
+                    val chipColor = when {
+                        isSelected -> MaterialTheme.colorScheme.primary.copy(
+                            alpha = if (isTaskActive) 0.5f else 1f
+                        )
+
+                        else -> Color(0xFFE0E0E0)
+                    }
+                    val textColor = when {
+                        isSelected -> Color.White
+                        isTaskActive -> Color.Gray
+                        else -> Color.DarkGray
+                    }
                     Surface(
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
-                            .clickable { onConfigChange(config.copy(clientType = value)) },
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color(
-                            0xFFE0E0E0
-                        ),
+                            .then(
+                                if (isTaskActive) Modifier
+                                else Modifier.clickable { onConfigChange(config.copy(clientType = value)) }
+                            ),
+                        color = chipColor,
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Text(
                             text = displayName,
                             style = MaterialTheme.typography.bodySmall,
-                            color = if (isSelected) Color.White else Color.DarkGray,
+                            color = textColor,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         )
                     }

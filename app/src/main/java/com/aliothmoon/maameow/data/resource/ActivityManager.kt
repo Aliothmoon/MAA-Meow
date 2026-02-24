@@ -1,26 +1,25 @@
 package com.aliothmoon.maameow.data.resource
 
 import com.aliothmoon.maameow.data.api.MaaApiService
-import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.model.activity.ActivityStage
+import com.aliothmoon.maameow.data.model.activity.ClientStageActivity
 import com.aliothmoon.maameow.data.model.activity.MiniGame
 import com.aliothmoon.maameow.data.model.activity.StageActivityInfo
 import com.aliothmoon.maameow.data.model.activity.StageActivityRoot
 import com.aliothmoon.maameow.data.preferences.TaskConfigState
-import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import timber.log.Timber
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
+import kotlin.collections.plus
 
 /**
  * MAA 资源管理器
@@ -29,16 +28,10 @@ import java.time.temporal.ChronoUnit
  */
 class ActivityManager(
     private val maaApiService: MaaApiService,
-    private val pathConfig: MaaPathConfig,
-    private val resourceLoader: MaaResourceLoader,
     private val taskConfigState: TaskConfigState,
-    private val itemHelper: ItemHelper
+    private val itemHelper: ItemHelper,
+    private val resourceDataManager: ResourceDataManager
 ) {
-
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
 
     private val _activityStages = MutableStateFlow<List<ActivityStage>>(emptyList())
     private val _miniGames = MutableStateFlow<List<MiniGame>>(emptyList())
@@ -66,147 +59,80 @@ class ActivityManager(
      * 本地数据同步加载，活动关卡异步加载
      */
     suspend fun preload() {
+        val clientType = getEffectiveClientType()
         withContext(Dispatchers.IO) {
             itemHelper.load()
+            resourceDataManager.load(clientType)
         }
-        loadActivityStages()
+        doLoadActivityStages(clientType)
     }
 
-
-    // ==================== 活动关卡相关 ====================
-
-    /**
-     * 获取活动关卡列表
-     * @param onlyOpen 是否只返回正在开放的活动关卡
-     */
-    fun getActivityStages(onlyOpen: Boolean = true): List<ActivityStage> {
-        val stages = _activityStages.value
-        return if (onlyOpen) {
-            stages.filter { it.isAvailable }
-        } else {
-            stages
-        }
-    }
-
-    /**
-     * 获取小游戏列表
-     * @param onlyOpen 是否只返回正在开放的小游戏
-     */
-    fun getMiniGames(onlyOpen: Boolean = true): List<MiniGame> {
-        val games = _miniGames.value
-        return if (onlyOpen) {
-            games.filter { it.isOpen }
-        } else {
-            games
-        }
-    }
-
-    /**
-     * 获取资源收集活动信息
-     * @return 如果资源收集活动正在进行，返回活动信息；否则返回 null
-     */
-    fun getResourceCollection(): StageActivityInfo? {
-        return _resourceCollection.value?.takeIf { it.isOpen }
-    }
 
     /**
      * 刷新活动关卡数据（从网络重新加载）
      */
     suspend fun refreshActivityStages() {
-        loadActivityStages()
+        doLoadActivityStages(getEffectiveClientType())
     }
 
     /**
      * 从网络加载活动关卡数据
      * 迁移自 WPF LoadWebStages
-     * 并行下载 StageActivityV2.json 和 tasks.json
-     * 非 Official 客户端额外下载全球服 tasks.json
+     * 并行下载 StageActivityV2.json 和 tasks.json，然后解析并构建合并字典
+     *
+     * @param clientType 有效客户端类型 (Official, YoStarEN, YoStarJP, YoStarKR, txwy)
      */
-    private suspend fun loadActivityStages() {
+    private suspend fun doLoadActivityStages(clientType: String) {
         withContext(Dispatchers.IO) {
-            val stageDeferred = async { maaApiService.getStageActivity() }
-            val tasksDeferred = async { downloadAndDeployTasksConfig() }
-
-            val effectiveClient = getEffectiveClientType()
-            val globalTasksDeferred = if (effectiveClient != "Official") {
-                async { downloadAndDeployGlobalTasksConfig(effectiveClient) }
-            } else {
-                null
-            }
-
-            tasksDeferred.await()
-            globalTasksDeferred?.await()
-
-            val jsonContent = stageDeferred.await()
-            if (jsonContent == null) {
-                Timber.w("无法获取活动关卡数据")
-                _activityStages.value = emptyList()
-                _miniGames.value = emptyList()
-                return@withContext
-            }
+            setupHotUpdate(clientType)
+            doLoadWebStages(clientType)
 
             try {
-                parseActivityStages(jsonContent)
                 buildMergedStagesMap()
             } catch (e: Exception) {
                 Timber.e(e, "解析活动关卡数据失败")
-                _activityStages.value = emptyList()
-                _miniGames.value = emptyList()
             }
         }
     }
 
-    /**
-     * 解析活动关卡 JSON
-     * from WPF ParseActivityStages
-     */
-    private fun parseActivityStages(jsonContent: String) {
-        val root = json.decodeFromString<StageActivityRoot>(jsonContent)
-        val official = root.official
+    private suspend fun doLoadWebStages(clientType: String) {
+        val jsonVal = maaApiService.getStageActivity()
+        if (jsonVal == null) {
+            Timber.w("无法获取活动关卡数据")
+            return
+        }
+        val activity = StageActivityRoot.parse(jsonVal, clientType)
 
-        if (official == null) {
-            Timber.w("活动关卡数据中没有 Official 字段")
-            _activityStages.value = emptyList()
-            _miniGames.value = emptyList()
+        if (activity == null) {
+            Timber.w("活动关卡数据中没有 $clientType 字段")
             return
         }
 
-        val activityStages = mutableListOf<ActivityStage>()
+        _activityStages.value = doParseStageInfo(activity)
+        _miniGames.value = doParseMiniGame(activity)
 
-        // 解析支线活动
-        // TODO: 需要支持（YoStarJP/YoStarKR/YoStarEN），当前只解析 Official
-        official.sideStoryStage?.forEach { (key, entry) ->
-            val groupMinReq = entry.minimumRequired
-            val groupActivityInfo = entry.activity?.let { info ->
-                StageActivityInfo.fromActivityInfo(key, info)
-            }
-
-            entry.stages?.forEach { stageRaw ->
-                // Per-stage MinimumRequired，fallback 到分组级别 (WPF: stageObj["MinimumRequired"] ?? groupMinReqStr)
-                val minReq = stageRaw.minimumRequired ?: groupMinReq
-                if (!MaaCoreVersion.meetsMinimumRequired(minReq)) {
-                    Timber.d("跳过关卡 ${stageRaw.value}: 需要版本 $minReq")
-                    return@forEach
-                }
-
-                // Per-stage Activity override (WPF: stageObj["Activity"] ?? activityToken)
-                val stageActivityInfo = stageRaw.activity?.let { info ->
-                    StageActivityInfo.fromActivityInfo(key, info)
-                } ?: groupActivityInfo
-
-                activityStages.add(
-                    ActivityStage.fromRaw(stageRaw, stageActivityInfo, key)
-                )
-            }
+        // 解析资源收集活动
+        val resourceCollection = activity.resourceCollection?.let { info ->
+            StageActivityInfo.fromResourceCollection(info)
         }
 
-        // 解析小游戏 (对标 WPF ParseMiniGameEntries)
-        val parsedMiniGames = official.miniGame
+
+        _resourceCollection.value = resourceCollection
+
+        Timber.d("加载了 ${_activityStages.value.size} 个活动关卡, ${_miniGames.value.size} 个小游戏")
+        if (resourceCollection?.isOpen == true) {
+            Timber.d("资源收集活动进行中: ${resourceCollection.tip}")
+        }
+    }
+
+    private fun doParseMiniGame(activity: ClientStageActivity): List<MiniGame> {
+        // 解析小游戏 (see WPF ParseMiniGameEntries)
+        val parsedMiniGames = activity.miniGame
             ?.map { MiniGame.fromEntry(it) }
             ?.filter { it.isOpen }  // WPF: entry.BeingOpen
             ?: emptyList()
 
-        // 合并默认小游戏 (对标 WPF InitializeDefaultMiniGameEntries + InsertRange)
+        // 合并默认小游戏 (see WPF InitializeDefaultMiniGameEntries + InsertRange)
         val parsedValues = parsedMiniGames.map { it.value }.toSet()
         val defaultMiniGames = DefaultMiniGames.ENTRIES
             .filter { it.value !in parsedValues }  // 按 value 去重
@@ -219,46 +145,48 @@ class ActivityManager(
                     tipKey = entry.tipKey
                 )
             }
-        val miniGames = parsedMiniGames + defaultMiniGames  // API 在前，默认在后
-
-        // 解析资源收集活动
-        val resourceCollection = official.resourceCollection?.let { info ->
-            StageActivityInfo.fromResourceCollection(info)
-        }
-
-        _activityStages.value = activityStages
-        _miniGames.value = miniGames
-        _resourceCollection.value = resourceCollection
-
-        Timber.d("加载了 ${activityStages.size} 个活动关卡, ${miniGames.size} 个小游戏")
-        if (resourceCollection?.isOpen == true) {
-            Timber.d("资源收集活动进行中: ${resourceCollection.tip}")
-        }
+        return parsedMiniGames + defaultMiniGames  // API 在前，默认在后
     }
 
-    // ==================== 合并关卡列表 ====================
+    private fun doParseStageInfo(activity: ClientStageActivity): List<ActivityStage> {
+        // 解析支线活动
+        return activity.sideStoryStage?.flatMap { (key, entry) ->
+            val groupMinReq = entry.minimumRequired
+            val result = entry.stages?.mapNotNull { stageRaw ->
+                // Per-stage MinimumRequired，fallback 到分组级别 (WPF: stageObj["MinimumRequired"] ?? groupMinReqStr)
+                val minReq = stageRaw.minimumRequired ?: groupMinReq
+                if (!MaaCoreVersion.meetsMinimumRequired(minReq)) {
+                    Timber.d("跳过关卡 ${stageRaw.value}: 需要版本 $minReq")
+                    return@mapNotNull null
+                }
 
-    /**
-     * 关卡分组数据
-     * 用于 UI 显示分组标题
-     */
-    data class StageGroup(
-        val title: String,           // 分组标题
-        val stages: List<StageItem>, // 关卡列表
-        val daysLeftText: String? = null  // 剩余天数文本（活动关卡分组）
-    )
+                // Per-stage Activity override (WPF: stageObj["Activity"] ?? activityToken)
+                val stageActivityInfo = stageRaw.activity?.let { info ->
+                    StageActivityInfo.fromActivityInfo(key, info)
+                } ?: entry.activity?.let { info ->
+                    StageActivityInfo.fromActivityInfo(key, info)
+                }
 
-    /**
-     * 统一的关卡项（活动关卡和常驻关卡的统一表示）
-     */
-    data class StageItem(
-        val code: String,            // 关卡代码（如 "ME-8", "CE-6"）
-        val displayName: String,     // 显示名称
-        val isActivityStage: Boolean = false,  // 是否为活动关卡
-        val isOpenToday: Boolean = true,       // 今天是否开放
-        val drop: String? = null,    // 掉落物品 ID（活动关卡）
-        val dropGroups: List<List<String>> = emptyList()  // 芯片本掉落组 (迁移自 WPF)
-    )
+                ActivityStage.fromRaw(stageRaw, stageActivityInfo, key)
+            }
+            result ?: emptyList()
+        } ?: emptyList()
+
+    }
+
+
+    private suspend fun setupHotUpdate(clientType: String) {
+        val job = withContext(Dispatchers.IO) {
+            async {
+                maaApiService.getTasksInfo()
+            }
+        }
+        if (clientType != "Official") {
+            maaApiService.getGlobalTasksInfo(clientType)
+        }
+        job.await()
+    }
+
 
     /**
      * 获取合并后的关卡列表（按分组）
@@ -367,32 +295,6 @@ class ActivityManager(
         return _resourceCollection.value?.isOpen == true
     }
 
-    // ==================== tasks.json 热更新 ====================
-
-    /**
-     * 下载 tasks.json 并部署到缓存资源目录
-     * DiskCache 自动写入 {cacheDir}/resource/tasks.json，与 MaaCore LoadResource(cacheDir) 对齐
-     */
-    private suspend fun downloadAndDeployTasksConfig() {
-        try {
-            maaApiService.getTasksConfig()
-        } catch (e: Exception) {
-            Timber.w(e, "下载/部署 tasks.json 失败")
-        }
-    }
-
-
-    /**
-     * 下载全球服 tasks.json 并部署到缓存资源目录
-     * 路径: cache/resource/global/{clientType}/resource/tasks.json
-     */
-    private suspend fun downloadAndDeployGlobalTasksConfig(clientType: String) {
-        try {
-            maaApiService.getGlobalTasksConfig(clientType)
-        } catch (e: Exception) {
-            Timber.w(e, "下载/部署全球服 tasks.json 失败: $clientType")
-        }
-    }
 
     /**
      * 获取有效的客户端类型

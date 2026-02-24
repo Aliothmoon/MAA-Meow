@@ -16,6 +16,9 @@ import kotlinx.serialization.json.jsonPrimitive
 import timber.log.Timber
 import java.io.File
 
+/**
+ * see DataHelper
+ */
 class ResourceDataManager(
     val pathConfig: MaaPathConfig
 ) {
@@ -27,6 +30,7 @@ class ResourceDataManager(
 
     private val _characters = MutableStateFlow<Map<String, CharacterInfo>>(emptyMap())
     private val _nameIndex = MutableStateFlow<Map<String, CharacterInfo>>(emptyMap())
+    private val _characterNames = MutableStateFlow<Set<String>>(emptySet())
     private val _roguelikeCoreCharacters = MutableStateFlow<Map<String, List<String>>>(emptyMap())
     private val _operators = MutableStateFlow<Map<String, CharacterInfo>>(emptyMap())
     private val _recruitTags = MutableStateFlow<Map<String, Pair<String, String>>>(emptyMap())
@@ -34,6 +38,9 @@ class ResourceDataManager(
 
     val characters: StateFlow<Map<String, CharacterInfo>> = _characters.asStateFlow()
     val operators: StateFlow<Map<String, CharacterInfo>> = _operators.asStateFlow()
+
+    /** 当前语言与客户端类型下的干员名集合, see WPF: DataHelper.CharacterNames */
+    val characterNames: StateFlow<Set<String>> = _characterNames.asStateFlow()
     val recruitTags: StateFlow<Map<String, Pair<String, String>>> = _recruitTags.asStateFlow()
     val mapData: StateFlow<List<MapInfo>> = _mapData.asStateFlow()
 
@@ -42,6 +49,14 @@ class ResourceDataManager(
         private const val ROGUELIKE_DIR = "roguelike"
         private const val RECRUITMENT_FILE = "recruitment.json"
         private const val MAP_DATA_FILE = "Arknights-Tile-Pos/overview.json"
+
+        // 自动公招标签 key 列表 (中文名作为 key)
+        // see WPF: RecruitSettingsUserControlModel._autoRecruitTagList
+        val AUTO_RECRUIT_TAG_KEYS = listOf(
+            "近战位", "远程位", "先锋干员", "近卫干员", "狙击干员", "重装干员",
+            "医疗干员", "辅助干员", "术师干员", "治疗", "费用回复", "输出",
+            "生存", "群攻", "防护", "减速"
+        )
 
         // 虚拟干员 (预备干员、肉鸽临时干员、阿米娅变体)
         private val VIRTUAL_OPERATORS = setOf(
@@ -101,18 +116,11 @@ class ResourceDataManager(
         )
     }
 
-    suspend fun load() {
-        withContext(Dispatchers.IO) {
-            val characters = doLoadCharactersFromFile()
-            _characters.value = characters
-            _operators.value = characters.filter { (id, info) ->
-                info.isOperator && id !in VIRTUAL_OPERATORS
-            }
-            _nameIndex.value = doBuildNameIndex(characters)
-            _roguelikeCoreCharacters.value = doLoadRoguelikeThemes()
-            _recruitTags.value = doLoadRecruitTags()
-            _mapData.value = doLoadMapData()
-        }
+    fun load(clientType: String = "Official") {
+        doLoadRecruitTags(clientType = clientType)
+        doLoadCharacters(clientType = clientType)
+        doLoadRoguelikeThemes(clientType = clientType)
+        doLoadMapData()
     }
 
     fun isValidCharacterName(name: String): Boolean {
@@ -215,56 +223,63 @@ class ResourceDataManager(
 
     // ---- 数据加载 ----
 
-    private fun doLoadCharactersFromFile(): Map<String, CharacterInfo> {
-        try {
+    private fun doLoadCharacters(
+        displayLanguage: String = "zh-cn",
+        clientType: String = "Official"
+    ) {
+        val characters = try {
             val file = File(pathConfig.resourceDir, BATTLE_DATA_FILE)
             if (!file.exists()) {
                 Timber.w("$BATTLE_DATA_FILE 不存在: ${file.absolutePath}")
-                return emptyMap()
+                emptyMap()
+            } else {
+                doParseBattleDataJson(file.readText())
             }
-
-            val content = file.readText()
-            return doParseBattleDataJson(content)
         } catch (e: Exception) {
             Timber.e(e, "加载 battle_data.json 失败")
-            return emptyMap()
+            emptyMap()
         }
+        _characters.value = characters
+        _operators.value = characters.filter { (id, info) ->
+            info.isOperator && id !in VIRTUAL_OPERATORS
+        }
+        _nameIndex.value = doBuildNameIndex(characters)
+        _characterNames.value = doBuildCharacterNames(characters, displayLanguage, clientType)
     }
 
-    private fun doLoadRoguelikeThemes(clientType: String = "Official"): Map<String, List<String>> {
-        val result = mutableMapOf<String, List<String>>()
-        try {
+    private fun doLoadRoguelikeThemes(clientType: String = "Official") {
+        _roguelikeCoreCharacters.value = try {
             val dir = File(pathConfig.resourceDir, ROGUELIKE_DIR)
-            if (!dir.isDirectory) return emptyMap()
-
-            val language = CLIENT_LANGUAGE_MAPPER[clientType] ?: "zh-cn"
-
-            dir.listFiles()?.filter { it.isDirectory }?.forEach { theme ->
-                val file = File(theme, RECRUITMENT_FILE)
-                if (file.exists()) {
-                    try {
-                        val content = file.readText()
-                        val rawNames = doParseRecruitmentJson(content)
-                        // 过滤: 干员在当前客户端可用 + 获取本地化名称
-                        val filtered = rawNames.mapNotNull { name ->
-                            val info = getCharacterByNameOrAlias(name)
-                                ?: return@mapNotNull name
-                            if (!isCharacterAvailableInClient(info, clientType)) {
-                                return@mapNotNull null
-                            }
-                            getLocalizedCharacterName(info, language) ?: name
-                        }.sorted()
-                        result[theme.name] = filtered
-                        Timber.d("doLoadRoguelikeThemes ${theme.name}: ${filtered.size} characters")
-                    } catch (e: Exception) {
-                        Timber.w(e, "doLoadRoguelikeThemes error: ${theme.name}")
+            if (!dir.isDirectory) {
+                emptyMap()
+            } else {
+                val language = CLIENT_LANGUAGE_MAPPER[clientType] ?: "zh-cn"
+                val result = mutableMapOf<String, List<String>>()
+                dir.listFiles()?.filter { it.isDirectory }?.forEach { theme ->
+                    val file = File(theme, RECRUITMENT_FILE)
+                    if (file.exists()) {
+                        try {
+                            val rawNames = doParseRecruitmentJson(file.readText())
+                            // 过滤: 干员在当前客户端可用 + 获取本地化名称
+                            result[theme.name] = rawNames.mapNotNull { name ->
+                                val info = getCharacterByNameOrAlias(name)
+                                    ?: return@mapNotNull name
+                                if (!isCharacterAvailableInClient(info, clientType)) {
+                                    return@mapNotNull null
+                                }
+                                getLocalizedCharacterName(info, language) ?: name
+                            }.sorted()
+                        } catch (e: Exception) {
+                            Timber.w(e, "Failed to load roguelike theme: ${theme.name}")
+                        }
                     }
                 }
+                result
             }
         } catch (e: Exception) {
-            Timber.e(e, "doLoadRoguelikeThemes error")
+            Timber.e(e, "Failed to load roguelike themes")
+            emptyMap()
         }
-        return result
     }
 
     /**
@@ -276,8 +291,8 @@ class ResourceDataManager(
     private fun doLoadRecruitTags(
         clientType: String = "Official",
         displayLanguage: String = "zh-cn"
-    ): Map<String, Pair<String, String>> {
-        try {
+    ) {
+        _recruitTags.value = try {
             // 客户端标签路径
             val clientSubPath = when (clientType) {
                 "", "Official", "Bilibili" -> ""
@@ -311,38 +326,38 @@ class ResourceDataManager(
                 doParseRecruitTags(displayFile)
             }
 
-            // 合并: key=标签中文名, value=(显示名, 客户端名)
-            return clientTags.mapNotNull { (key, clientName) ->
+            // key=标签中文名, value=(显示名, 客户端名)
+            clientTags.mapNotNull { (key, clientName) ->
                 if (clientName.isBlank()) return@mapNotNull null
                 val displayName = displayTags[key] ?: clientName
                 key to (displayName to clientName)
             }.toMap()
         } catch (e: Exception) {
-            Timber.e(e, "加载公招标签失败")
-            return emptyMap()
+            Timber.e(e, "Failed to load recruit tags")
+            emptyMap()
         }
     }
 
-    private fun doLoadMapData(): List<MapInfo> {
-        try {
+    private fun doLoadMapData() {
+        _mapData.value = try {
             val file = File(pathConfig.resourceDir, MAP_DATA_FILE)
             if (!file.exists()) {
                 Timber.w("地图数据文件不存在: ${file.absolutePath}")
-                return emptyList()
-            }
-
-            val content = file.readText()
-            val mapObj = json.parseToJsonElement(content).jsonObject
-            return mapObj.values.mapNotNull { element ->
-                try {
-                    json.decodeFromJsonElement<MapInfo>(element)
-                } catch (e: Exception) {
-                    null
+                emptyList()
+            } else {
+                val content = file.readText()
+                val mapObj = json.parseToJsonElement(content).jsonObject
+                mapObj.values.mapNotNull { element ->
+                    try {
+                        json.decodeFromJsonElement<MapInfo>(element)
+                    } catch (e: Exception) {
+                        null
+                    }
                 }
             }
         } catch (e: Exception) {
             Timber.e(e, "加载地图数据失败")
-            return emptyList()
+            emptyList()
         }
     }
 
@@ -371,6 +386,29 @@ class ResourceDataManager(
         }
 
         return index
+    }
+
+    /**
+     * 构建当前语言与客户端类型下的干员名集合
+     * see WPF: DataHelper.LoadBattleData + GetCharacterNamesAddAction
+     */
+    private fun doBuildCharacterNames(
+        characters: Map<String, CharacterInfo>,
+        displayLanguage: String,
+        clientType: String
+    ): Set<String> {
+        val names = mutableSetOf<String>()
+        val clientLanguage = CLIENT_LANGUAGE_MAPPER[clientType] ?: "zh-cn"
+        for ((id, info) in characters) {
+            if (!id.startsWith("char_")) continue
+            getLocalizedCharacterName(info, displayLanguage)
+                ?.takeIf { it.isNotBlank() }?.let { names.add(it) }
+            if (clientLanguage != displayLanguage) {
+                getLocalizedCharacterName(info, clientLanguage)
+                    ?.takeIf { it.isNotBlank() }?.let { names.add(it) }
+            }
+        }
+        return names
     }
 
     private fun doParseBattleDataJson(content: String): Map<String, CharacterInfo> {

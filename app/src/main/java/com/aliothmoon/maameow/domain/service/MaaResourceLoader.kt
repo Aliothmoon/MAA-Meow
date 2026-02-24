@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.domain.service
 
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.data.preferences.TaskConfigState
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,7 +14,8 @@ import java.io.File
 
 class MaaResourceLoader(
     private val pathConfig: MaaPathConfig,
-    private val appSettings: AppSettingsManager
+    private val appSettings: AppSettingsManager,
+    private val taskConfigState: TaskConfigState,
 ) {
 
     sealed class State {
@@ -36,17 +38,10 @@ class MaaResourceLoader(
     private val _state = MutableStateFlow<State>(State.NotLoaded)
     val state: StateFlow<State> = _state.asStateFlow()
 
-    val isReady: Boolean get() = _state.value is State.Ready
 
     suspend fun load(): Result<Unit> {
-        if (_state.value is State.Ready) {
-            Timber.d("资源已加载，跳过")
-            return Result.success(Unit)
-        }
-
         _state.value = State.Loading()
         Timber.i("MaaCore Resources Loading")
-
         return try {
             withContext(Dispatchers.IO) {
                 useRemoteService {
@@ -112,47 +107,6 @@ class MaaResourceLoader(
         _state.value = State.NotLoaded
     }
 
-    /**
-     * 重新加载资源（热更新后调用）
-     * 先复制 tasks.json，再执行两次 LoadResource
-     */
-    suspend fun reload(): Result<Unit> {
-        _state.value = State.Reloading()
-        Timber.i("MaaCore 资源重新加载")
-
-        return try {
-            withContext(Dispatchers.IO) {
-                useRemoteService {
-                    val rootDir = pathConfig.rootDir
-                    val cacheDir = pathConfig.cacheDir
-                    val maa = it.maaCoreService
-
-                    copyTasksJson(pathConfig.resourceDir)
-                    copyTasksJson(pathConfig.cacheResourceDir)
-
-                    if (!maa.LoadResource(rootDir)) {
-                        _state.value = State.Failed("重新加载资源失败")
-                        Timber.e("reload LoadResource 失败: $rootDir")
-                        return@useRemoteService Result.failure(Exception("重新加载资源失败"))
-                    }
-                    if (File(pathConfig.cacheResourceDir).exists()) {
-                        if (!maa.LoadResource(cacheDir)) {
-                            Timber.w("reload LoadResource 缓存资源失败（非致命）: $cacheDir")
-                        }
-                    }
-
-                    _state.value = State.Ready
-                    Timber.i("MaaCore 资源重新加载成功")
-                    Result.success(Unit)
-                }
-            }
-        } catch (e: Exception) {
-            val message = e.message ?: "资源重新加载异常"
-            _state.value = State.Failed(message)
-            Timber.e(e, "资源重新加载异常")
-            Result.failure(e)
-        }
-    }
 
     /**
      * 复制 tasks.json 到 tasks/tasks.json（兼容新目录结构）

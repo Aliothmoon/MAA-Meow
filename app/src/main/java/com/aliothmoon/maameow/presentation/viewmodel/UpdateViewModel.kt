@@ -9,6 +9,7 @@ import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.service.update.UpdateService
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +31,7 @@ class UpdateViewModel(
     private val appSettingsManager: AppSettingsManager,
     private val maaResourceLoader: MaaResourceLoader,
     private val pathConfig: MaaPathConfig,
+    private val activityManager: ActivityManager,
 ) : ViewModel() {
 
     // ==================== 资源更新 ====================
@@ -116,6 +118,7 @@ class UpdateViewModel(
                 refreshResourceVersion()
                 maaResourceLoader.reset()
                 maaResourceLoader.load()
+                activityManager.preload()
             }
         }
     }

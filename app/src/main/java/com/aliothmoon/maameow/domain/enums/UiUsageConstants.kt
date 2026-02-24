@@ -216,9 +216,11 @@ object UiUsageConstants {
                         add("key" to "钥匙")
                         add("dice" to "骰子")
                     }
+
                     "Sarkaz" -> {
                         add("ideas" to "构想")
                     }
+
                     "JieGarden" -> {
                         // 界园移除希望，添加票券
                         removeAll { it.first == "hope" }
@@ -293,7 +295,10 @@ object UiUsageConstants {
 
         // 分队列表（按主题）= 专属分队 + 通用分队
         // WPF: UpdateRoguelikeSquadList (lines 244-275)
-        fun getSquadOptionsForTheme(theme: String, mode: RoguelikeMode = RoguelikeMode.Exp): List<String> {
+        fun getSquadOptionsForTheme(
+            theme: String,
+            mode: RoguelikeMode = RoguelikeMode.Exp
+        ): List<String> {
             if (theme == "Sarkaz" && mode == RoguelikeMode.Investment) {
                 return SARKAZ_INVESTMENT_SQUADS + COMMON_SQUADS
             }

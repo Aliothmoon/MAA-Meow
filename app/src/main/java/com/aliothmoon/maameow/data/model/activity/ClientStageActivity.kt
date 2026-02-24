@@ -4,10 +4,10 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * Official 服务器活动数据
+ * 客户端活动数据 (Official / YoStarEN / YoStarJP / YoStarKR / txwy 共用同一结构)
  */
 @Serializable
-data class OfficialStageActivity(
+data class ClientStageActivity(
     @SerialName("sideStoryStage")
     val sideStoryStage: Map<String, SideStoryStageEntry>? = null,
 

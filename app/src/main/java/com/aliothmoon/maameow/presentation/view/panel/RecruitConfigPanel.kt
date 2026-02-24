@@ -4,7 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -42,11 +41,14 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.data.model.RecruitConfig
+import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.presentation.components.INumericField
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 /**
  * 自动公招配置面板
@@ -297,21 +299,14 @@ private fun SelectExtraTagsSection(
 
 /**
  * 3星Tag倾向（多选）
- * WPF: CheckComboBox with AutoRecruitFirstList binding + AutoRecruitTagShowList
  */
 @Composable
 private fun AutoRecruitFirstListSection(
     config: RecruitConfig,
-    onConfigChange: (RecruitConfig) -> Unit
+    onConfigChange: (RecruitConfig) -> Unit,
+    resourceDataManager: ResourceDataManager = koinInject()
 ) {
-    // 可选Tag列表（AutoRecruitTagShowList）
-    val availableTags = listOf(
-        "治疗", "输出", "生存", "群攻", "防护", "减速",
-        "近战位", "远程位",
-        "费用回复",
-        "先锋干员", "近卫干员", "狙击干员", "重装干员", "医疗干员", "辅助干员", "术师干员"
-    )
-
+    val recruitTags by resourceDataManager.recruitTags.collectAsStateWithLifecycle()
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         var tipExpanded by remember { mutableStateOf(false) }
@@ -348,27 +343,28 @@ private fun AutoRecruitFirstListSection(
                 modifier = Modifier.padding(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                @OptIn(ExperimentalLayoutApi::class)
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    availableTags.forEach { tag ->
-                        val isSelected = config.autoRecruitFirstList.contains(tag)
+                    ResourceDataManager.AUTO_RECRUIT_TAG_KEYS.mapNotNull { key ->
+                        recruitTags[key]
+                    }.forEach { (display, client) ->
+                        val isSelected = config.autoRecruitFirstList.contains(client)
                         FilterChip(
                             selected = isSelected,
                             onClick = {
                                 val newList = if (isSelected) {
-                                    config.autoRecruitFirstList - tag
+                                    config.autoRecruitFirstList - client
                                 } else {
-                                    config.autoRecruitFirstList + tag
+                                    config.autoRecruitFirstList + client
                                 }
                                 onConfigChange(config.copy(autoRecruitFirstList = newList))
                             },
                             label = {
                                 Text(
-                                    text = tag,
+                                    text = display,
                                     style = MaterialTheme.typography.labelSmall,
                                     maxLines = 1
                                 )

@@ -8,6 +8,9 @@ import kotlinx.serialization.json.Json
 import timber.log.Timber
 import java.io.File
 
+/**
+ * see ItemListHelper
+ */
 class ItemHelper(
     private val pathConfig: MaaPathConfig
 ) {
@@ -22,7 +25,6 @@ class ItemHelper(
     /**  (itemId -> ItemInfo) */
     val items: StateFlow<Map<String, ItemInfo>> = _items.asStateFlow()
     val dropItems: StateFlow<List<ItemInfo>> = _dropItems.asStateFlow()
-
 
     /**
      * 关卡不可掉落的材料排除列表
@@ -56,24 +58,20 @@ class ItemHelper(
             .sortedBy { it.id }  // WPF: string.Compare Ordinal
     }
 
-
     fun getItemInfo(itemId: String): ItemInfo? {
         return _items.value[itemId]
     }
 
-
     private fun doParseItemsJson(): Map<String, ItemInfo> {
-        try {
+        // TODO 暂时只支持中文
+        return try {
             val file = File(pathConfig.resourceDir, INDEX_JSON)
             if (!file.exists()) {
-                Timber.w("item_index.json 不存在: ${file.absolutePath}")
+                Timber.w("item_index.json not found: ${file.absolutePath}")
                 return emptyMap()
             }
-
-            val content = file.readText()
-            val entries: Map<String, ItemJsonEntry> = json.decodeFromString(content)
-
-            return entries.mapValues { (id, entry) ->
+            val entries: Map<String, ItemJsonEntry> = json.decodeFromString(file.readText())
+            entries.mapValues { (id, entry) ->
                 ItemInfo(
                     id = id,
                     name = entry.name,
@@ -81,13 +79,10 @@ class ItemHelper(
                     sortId = entry.sortId,
                     classifyType = entry.classifyType ?: ""
                 )
-            }.also {
-                Timber.d("加载了 ${it.size} 个材料")
             }
-
         } catch (e: Exception) {
-            Timber.e(e, "加载 item_index.json 失败")
-            return emptyMap()
+            Timber.e(e, "Failed to load item_index.json")
+            emptyMap()
         }
     }
 }
