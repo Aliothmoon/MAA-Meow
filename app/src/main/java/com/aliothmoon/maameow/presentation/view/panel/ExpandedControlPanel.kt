@@ -26,9 +26,13 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.components.OverlayDialog
+import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
 import com.aliothmoon.maameow.presentation.components.PlaceholderContent
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType.ERROR
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType.SUCCESS
@@ -44,10 +48,14 @@ fun ExpandedControlPanel(
     isLocked: Boolean = false,
     onLockToggle: (Boolean) -> Unit = {},
     viewModel: ExpandedControlPanelViewModel = viewModel(),
-    service: MaaCompositionService = koinInject()
+    service: MaaCompositionService = koinInject(),
+    resourceLoader: MaaResourceLoader = koinInject(),
+    appSettings: AppSettingsManager = koinInject()
 ) {
     val uiState by viewModel.state.collectAsState()
     val maaState by service.state.collectAsState()
+    val resourceLoadState by resourceLoader.state.collectAsState()
+    val runMode by appSettings.runMode.collectAsState()
     val logs by viewModel.runtimeLogs.collectAsState()
 
     val tasks by viewModel.taskConfig.taskList.collectAsState()
@@ -176,6 +184,10 @@ fun ExpandedControlPanel(
                     isStarting = maaState == MaaExecutionState.STARTING
                 )
             }
+        }
+
+        if (runMode == RunMode.BACKGROUND) {
+            ResourceLoadingOverlay(state = resourceLoadState)
         }
 
         val dialog = uiState.dialog

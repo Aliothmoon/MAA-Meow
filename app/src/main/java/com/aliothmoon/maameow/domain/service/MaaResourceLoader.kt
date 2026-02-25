@@ -29,8 +29,8 @@ class MaaResourceLoader(
 
     sealed class State {
         data object NotLoaded : State()
-        data class Loading(val message: String = "Loading MAA resources, please wait ...") : State()
-        data class Reloading(val message: String = "Reloading MAA resources, please wait ...") : State()
+        data class Loading(val message: String = "正在加载MAA资源, 请稍等 ...") : State()
+        data class Reloading(val message: String = "正在重新加载MAA资源, 请稍等 ...") : State()
         data object Ready : State()
         data class Failed(val message: String) : State()
     }
@@ -38,7 +38,7 @@ class MaaResourceLoader(
     private val _state = MutableStateFlow<State>(State.NotLoaded)
     val state: StateFlow<State> = _state.asStateFlow()
 
-    suspend fun load(clientType: String = "Official"): Result<Unit> {
+    suspend fun load(clientType: String = taskConfigState.wakeUpConfig.value.clientType): Result<Unit> {
         _state.value = State.Loading()
         Timber.i("MaaCore resources loading, clientType=$clientType")
 
@@ -114,11 +114,14 @@ class MaaResourceLoader(
                         Result.success(Unit)
                     } else {
                         Result.failure(
-                            Exception((_state.value as? State.Failed)?.message ?: "Resource not loaded")
+                            Exception(
+                                (_state.value as? State.Failed)?.message ?: "Resource not loaded"
+                            )
                         )
                     }
                 }
             }
+
             else -> load()
         }
     }
