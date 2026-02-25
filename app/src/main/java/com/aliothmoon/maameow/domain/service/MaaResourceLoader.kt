@@ -1,10 +1,16 @@
 package com.aliothmoon.maameow.domain.service
 
+import com.aliothmoon.maameow.MaaCoreService
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskConfigState
+import com.aliothmoon.maameow.data.resource.ActivityManager
+import com.aliothmoon.maameow.data.resource.ItemHelper
+import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,69 +22,86 @@ class MaaResourceLoader(
     private val pathConfig: MaaPathConfig,
     private val appSettings: AppSettingsManager,
     private val taskConfigState: TaskConfigState,
+    private val itemHelper: ItemHelper,
+    private val resourceDataManager: ResourceDataManager,
+    private val activityManager: ActivityManager
 ) {
 
     sealed class State {
-        /** 未加载 */
         data object NotLoaded : State()
-
-        /** 加载中 */
-        data class Loading(val message: String = "正在加载MAA资源, 请稍等 ...") : State()
-
-        /** 重新加载中（资源更新后） */
-        data class Reloading(val message: String = "正在重新加载MAA资源, 请稍等 ...") : State()
-
-        /** 已就绪 */
+        data class Loading(val message: String = "Loading MAA resources, please wait ...") : State()
+        data class Reloading(val message: String = "Reloading MAA resources, please wait ...") : State()
         data object Ready : State()
-
-        /** 加载失败 */
         data class Failed(val message: String) : State()
     }
 
     private val _state = MutableStateFlow<State>(State.NotLoaded)
     val state: StateFlow<State> = _state.asStateFlow()
 
-
-    suspend fun load(): Result<Unit> {
+    suspend fun load(clientType: String = "Official"): Result<Unit> {
         _state.value = State.Loading()
-        Timber.i("MaaCore Resources Loading")
+        Timber.i("MaaCore resources loading, clientType=$clientType")
+
+        loadDepsInfo(clientType)
+
         return try {
             withContext(Dispatchers.IO) {
-                useRemoteService {
-                    val rootDir = pathConfig.rootDir
-                    val cacheDir = pathConfig.cacheDir
-                    it.setup(rootDir, appSettings.debugMode.value)
-                    val maa = it.maaCoreService
+                useRemoteService { remote ->
+                    remote.setup(pathConfig.rootDir, appSettings.debugMode.value)
+                    val maa = remote.maaCoreService
+                    val isGlobal = clientType !in listOf("", "Official", "Bilibili")
 
-                    // 复制 tasks.json 到 tasks/ 子目录（兼容新目录结构）
-                    copyTasksJson(pathConfig.resourceDir)
                     copyTasksJson(pathConfig.cacheResourceDir)
 
-                    // 先加载主资源，再加载缓存资源（后者覆盖前者），和 WPF 逻辑一致
-                    if (!maa.LoadResource(rootDir)) {
-                        _state.value = State.Failed("加载资源失败")
-                        Timber.e("LoadResource 失败: $rootDir")
-                        return@useRemoteService Result.failure(Exception("加载资源失败"))
+                    if (!loadResIfExists(maa, pathConfig.rootDir)) {
+                        _state.value = State.Failed("Failed to load main resource")
+                        Timber.e("LoadResource failed: ${pathConfig.rootDir}")
+                        return@useRemoteService Result.failure(Exception("Failed to load main resource"))
                     }
-                    // 缓存目录可能不存在资源，加载失败不影响整体
-                    if (File(pathConfig.cacheResourceDir).exists()) {
-                        if (!maa.LoadResource(cacheDir)) {
-                            Timber.w("LoadResource 缓存资源失败（非致命）: $cacheDir")
-                        } else {
-                            Timber.i("MaaCore 缓存资源加载成功: $cacheDir")
+
+                    val followUps = buildList {
+                        add(pathConfig.cacheDir)
+                        if (isGlobal) {
+                            pathConfig.globalResourceDir(clientType).parent?.let(::add)
+                            pathConfig.globalCacheResourceDir(clientType).parent?.let(::add)
                         }
                     }
 
+                    if (isGlobal) {
+                        copyTasksJson(pathConfig.globalCacheResourceDir(clientType).absolutePath)
+                    }
+
+                    followUps.forEach { loadResIfExists(maa, it) }
+
                     _state.value = State.Ready
-                    Timber.i("MaaCore 资源加载成功")
                     Result.success(Unit)
                 }
             }
         } catch (e: Exception) {
-            val message = e.message ?: "资源加载异常"
-            _state.value = State.Failed(message)
-            Timber.e(e, "资源加载异常")
+            _state.value = State.Failed(e.message ?: "Resource loading exception")
             Result.failure(e)
+        }
+    }
+
+    private suspend fun loadDepsInfo(clientType: String) {
+        withContext(Dispatchers.IO) {
+            listOf(
+                async { resourceDataManager.load(clientType) },
+                async { itemHelper.load() },
+                async { activityManager.load(clientType) }
+            )
+        }.awaitAll()
+    }
+
+    private fun loadResIfExists(maa: MaaCoreService, parentDir: String): Boolean {
+        val resDir = File(parentDir, "resource")
+        if (!resDir.exists()) {
+            Timber.d("Resource directory not found, skipping: ${resDir.absolutePath}")
+            return true
+        }
+        return maa.LoadResource(parentDir).also { ok ->
+            if (ok) Timber.i("LoadResource succeeded: $parentDir")
+            else Timber.w("LoadResource failed: $parentDir")
         }
     }
 
@@ -91,14 +114,11 @@ class MaaResourceLoader(
                         Result.success(Unit)
                     } else {
                         Result.failure(
-                            Exception(
-                                (_state.value as? State.Failed)?.message ?: "资源未加载"
-                            )
+                            Exception((_state.value as? State.Failed)?.message ?: "Resource not loaded")
                         )
                     }
                 }
             }
-
             else -> load()
         }
     }
@@ -107,23 +127,19 @@ class MaaResourceLoader(
         _state.value = State.NotLoaded
     }
 
-
     /**
-     * 复制 tasks.json 到 tasks/tasks.json（兼容新目录结构）
-     * 和 WPF CopyTasksJson 逻辑一致
+     * Copy tasks.json to tasks/tasks.json (compatible with new directory structure)
      */
     private fun copyTasksJson(resourcePath: String) {
         try {
             val src = File(resourcePath, "tasks.json")
             if (!src.exists()) return
-            val destDir = File(resourcePath, "tasks")
-            destDir.mkdirs()
+            val destDir = File(resourcePath, "tasks").apply { mkdirs() }
             val dest = File(destDir, "tasks.json")
             src.copyTo(dest, overwrite = true)
             Timber.d("copyTasksJson: ${src.absolutePath} -> ${dest.absolutePath}")
         } catch (e: Exception) {
-            Timber.w(e, "copyTasksJson 失败: $resourcePath")
+            Timber.w(e, "copyTasksJson failed: $resourcePath")
         }
     }
-
 }

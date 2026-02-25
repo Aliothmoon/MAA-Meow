@@ -9,6 +9,7 @@ import com.aliothmoon.maameow.data.model.activity.StageActivityRoot
 import com.aliothmoon.maameow.data.preferences.TaskConfigState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,26 +55,10 @@ class ActivityManager(
     /** 鹰历时区（UTC+8） */
     private val serverZone = ZoneId.of("Asia/Shanghai")
 
-    /**
-     * 预加载资源（必须在 UI 访问数据之前调用）
-     * 本地数据同步加载，活动关卡异步加载
-     */
-    suspend fun preload() {
-        val clientType = getEffectiveClientType()
-        withContext(Dispatchers.IO) {
-            itemHelper.load()
-            resourceDataManager.load(clientType)
-        }
+    suspend fun load(clientType: String) {
         doLoadActivityStages(clientType)
     }
 
-
-    /**
-     * 刷新活动关卡数据（从网络重新加载）
-     */
-    suspend fun refreshActivityStages() {
-        doLoadActivityStages(getEffectiveClientType())
-    }
 
     /**
      * 从网络加载活动关卡数据
@@ -83,16 +68,18 @@ class ActivityManager(
      * @param clientType 有效客户端类型 (Official, YoStarEN, YoStarJP, YoStarKR, txwy)
      */
     private suspend fun doLoadActivityStages(clientType: String) {
-        withContext(Dispatchers.IO) {
-            setupHotUpdate(clientType)
-            doLoadWebStages(clientType)
-
-            try {
-                buildMergedStagesMap()
-            } catch (e: Exception) {
-                Timber.e(e, "解析活动关卡数据失败")
+        val job = withContext(Dispatchers.IO) {
+            async {
+                setupHotUpdate(clientType)
             }
         }
+        try {
+            doLoadWebStages(clientType)
+            buildMergedStagesMap()
+        } catch (e: Exception) {
+            Timber.e(e, "解析活动关卡数据失败")
+        }
+        job.await()
     }
 
     private suspend fun doLoadWebStages(clientType: String) {
@@ -109,6 +96,7 @@ class ActivityManager(
         }
 
         _activityStages.value = doParseStageInfo(activity)
+
         _miniGames.value = doParseMiniGame(activity)
 
         // 解析资源收集活动
@@ -295,15 +283,6 @@ class ActivityManager(
         return _resourceCollection.value?.isOpen == true
     }
 
-
-    /**
-     * 获取有效的客户端类型
-     * 官服和B服使用同样的资源 (对标 WPF GetClientType)
-     */
-    private fun getEffectiveClientType(): String {
-        val clientType = taskConfigState.wakeUpConfig.value.clientType
-        return if (clientType == "Bilibili" || clientType.isBlank()) "Official" else clientType
-    }
 
     /**
      * 构建合并关卡字典

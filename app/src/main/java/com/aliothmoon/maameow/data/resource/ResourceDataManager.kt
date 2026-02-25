@@ -2,6 +2,8 @@ package com.aliothmoon.maameow.data.resource
 
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,9 +21,7 @@ import java.io.File
 /**
  * see DataHelper
  */
-class ResourceDataManager(
-    val pathConfig: MaaPathConfig
-) {
+class ResourceDataManager(val pathConfig: MaaPathConfig) {
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -53,9 +53,22 @@ class ResourceDataManager(
         // 自动公招标签 key 列表 (中文名作为 key)
         // see WPF: RecruitSettingsUserControlModel._autoRecruitTagList
         val AUTO_RECRUIT_TAG_KEYS = listOf(
-            "近战位", "远程位", "先锋干员", "近卫干员", "狙击干员", "重装干员",
-            "医疗干员", "辅助干员", "术师干员", "治疗", "费用回复", "输出",
-            "生存", "群攻", "防护", "减速"
+            "近战位",
+            "远程位",
+            "先锋干员",
+            "近卫干员",
+            "狙击干员",
+            "重装干员",
+            "医疗干员",
+            "辅助干员",
+            "术师干员",
+            "治疗",
+            "费用回复",
+            "输出",
+            "生存",
+            "群攻",
+            "防护",
+            "减速"
         )
 
         // 虚拟干员 (预备干员、肉鸽临时干员、阿米娅变体)
@@ -116,11 +129,24 @@ class ResourceDataManager(
         )
     }
 
-    fun load(clientType: String = "Official") {
-        doLoadRecruitTags(clientType = clientType)
-        doLoadCharacters(clientType = clientType)
-        doLoadRoguelikeThemes(clientType = clientType)
-        doLoadMapData()
+    suspend fun load(clientType: String = "Official") {
+        val start = System.nanoTime()
+        withContext(Dispatchers.IO) {
+            listOf(
+                async {
+                    doLoadRecruitTags(clientType = clientType)
+                },
+                async {
+                    doLoadCharacters(clientType = clientType)
+                },
+                async {
+                    doLoadRoguelikeThemes(clientType = clientType)
+                },
+                async {
+                    doLoadMapData()
+                }
+            )
+        }.awaitAll()
     }
 
     fun isValidCharacterName(name: String): Boolean {
@@ -193,10 +219,8 @@ class ResourceDataManager(
         // 先找精确匹配，再找包含匹配
         val exactMatch = index[q]?.name
         val containsMatches =
-            index.entries.filter { it.key.contains(q) && it.key != q }
-                .map { it.value.name }
-                .distinct()
-                .take(limit - if (exactMatch != null) 1 else 0)
+            index.entries.filter { it.key.contains(q) && it.key != q }.map { it.value.name }
+                .distinct().take(limit - if (exactMatch != null) 1 else 0)
 
         return if (exactMatch != null) {
             listOf(exactMatch) + containsMatches
@@ -215,17 +239,14 @@ class ResourceDataManager(
     fun findMap(mapId: String): MapInfo? {
         if (mapId.isBlank()) return null
         val maps = _mapData.value
-        return maps.firstOrNull { it.code == mapId }
-            ?: maps.firstOrNull { it.name == mapId }
-            ?: maps.firstOrNull { it.stageId == mapId }
-            ?: maps.firstOrNull { it.levelId == mapId }
+        return maps.firstOrNull { it.code == mapId } ?: maps.firstOrNull { it.name == mapId }
+        ?: maps.firstOrNull { it.stageId == mapId } ?: maps.firstOrNull { it.levelId == mapId }
     }
 
     // ---- 数据加载 ----
 
     private fun doLoadCharacters(
-        displayLanguage: String = "zh-cn",
-        clientType: String = "Official"
+        displayLanguage: String = "zh-cn", clientType: String = "Official"
     ) {
         val characters = try {
             val file = File(pathConfig.resourceDir, BATTLE_DATA_FILE)
@@ -262,8 +283,7 @@ class ResourceDataManager(
                             val rawNames = doParseRecruitmentJson(file.readText())
                             // 过滤: 干员在当前客户端可用 + 获取本地化名称
                             result[theme.name] = rawNames.mapNotNull { name ->
-                                val info = getCharacterByNameOrAlias(name)
-                                    ?: return@mapNotNull name
+                                val info = getCharacterByNameOrAlias(name) ?: return@mapNotNull name
                                 if (!isCharacterAvailableInClient(info, clientType)) {
                                     return@mapNotNull null
                                 }
@@ -289,8 +309,7 @@ class ResourceDataManager(
      * @return Map<标签中文名, Pair<显示名, 客户端名>>
      */
     private fun doLoadRecruitTags(
-        clientType: String = "Official",
-        displayLanguage: String = "zh-cn"
+        clientType: String = "Official", displayLanguage: String = "zh-cn"
     ) {
         _recruitTags.value = try {
             // 客户端标签路径
@@ -393,19 +412,17 @@ class ResourceDataManager(
      * see WPF: DataHelper.LoadBattleData + GetCharacterNamesAddAction
      */
     private fun doBuildCharacterNames(
-        characters: Map<String, CharacterInfo>,
-        displayLanguage: String,
-        clientType: String
+        characters: Map<String, CharacterInfo>, displayLanguage: String, clientType: String
     ): Set<String> {
         val names = mutableSetOf<String>()
         val clientLanguage = CLIENT_LANGUAGE_MAPPER[clientType] ?: "zh-cn"
         for ((id, info) in characters) {
             if (!id.startsWith("char_")) continue
-            getLocalizedCharacterName(info, displayLanguage)
-                ?.takeIf { it.isNotBlank() }?.let { names.add(it) }
+            getLocalizedCharacterName(info, displayLanguage)?.takeIf { it.isNotBlank() }
+                ?.let { names.add(it) }
             if (clientLanguage != displayLanguage) {
-                getLocalizedCharacterName(info, clientLanguage)
-                    ?.takeIf { it.isNotBlank() }?.let { names.add(it) }
+                getLocalizedCharacterName(info, clientLanguage)?.takeIf { it.isNotBlank() }
+                    ?.let { names.add(it) }
             }
         }
         return names

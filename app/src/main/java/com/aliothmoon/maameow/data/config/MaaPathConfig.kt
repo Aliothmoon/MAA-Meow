@@ -31,6 +31,22 @@ class MaaPathConfig(private val context: Context) {
         File(cacheDir, RESOURCE).absolutePath
     }
 
+    /**
+     * 全球服资源目录（resource/global/{clientType}/resource/）
+     * 对标 WPF: Path.Combine(mainRes, "global", clientType, "resource")
+     */
+    fun globalResourceDir(clientType: String): File {
+        return File(resourceDir, "global/$clientType/$RESOURCE")
+    }
+
+    /**
+     * 全球服缓存资源目录（cache/resource/global/{clientType}/resource/）
+     * 对标 WPF: Path.Combine(mainCacheRes, "global", clientType, "resource")
+     */
+    fun globalCacheResourceDir(clientType: String): File {
+        return File(cacheResourceDir, "global/$clientType/$RESOURCE")
+    }
+
     /** 调试日志目录 */
     val debugDir: String by lazy {
         File(rootDir, DEBUG).absolutePath
