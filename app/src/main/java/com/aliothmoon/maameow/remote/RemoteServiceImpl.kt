@@ -44,7 +44,26 @@ class RemoteServiceImpl : RemoteService.Stub() {
     }
 
 
-    private val aliveFlagFile = File("/data/local/tmp/Maa/screen_flag")
+    private val _flag = File("/data/local/tmp/maa_screen_flag")
+
+    private var flag: Boolean
+        get() = runCatching { _flag.exists() }.onFailure {
+            Ln.e("$TAG: Failed to check if alive flag file exists: ${it.message}")
+            Ln.e(it.stackTraceToString())
+        }.getOrDefault(false)
+        set(value) {
+            runCatching {
+                if (value) {
+                    _flag.parentFile?.mkdirs()
+                    _flag.createNewFile()
+                } else {
+                    _flag.delete()
+                }
+            }.onFailure {
+                Ln.e("$TAG: Failed to set alive flag file: ${it.message}")
+                Ln.e(it.stackTraceToString())
+            }
+        }
 
     private val virtualDisplayMode = AtomicInteger(0)
 
@@ -53,7 +72,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
     override fun destroy() {
         Ln.i("$TAG: destroy()")
         maaService.DestroyInstance()
-        if (aliveFlagFile.exists()) {
+        if (flag) {
             clearForcedDisplaySize()
         }
         exitProcess(0)
@@ -112,14 +131,13 @@ class RemoteServiceImpl : RemoteService.Stub() {
     }
 
     override fun setForcedDisplaySize(width: Int, height: Int): Boolean {
-        aliveFlagFile.parentFile?.mkdirs()
-        aliveFlagFile.createNewFile()
+        flag = true
         return ServiceManager.getWindowManager()
             .setForcedDisplaySize(Display.DEFAULT_DISPLAY, width, height)
     }
 
     override fun clearForcedDisplaySize(): Boolean {
-        aliveFlagFile.delete()
+        flag = false
         return ServiceManager.getWindowManager().clearForcedDisplaySize(Display.DEFAULT_DISPLAY)
     }
 
