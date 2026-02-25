@@ -17,8 +17,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.runBlocking
 
 
 class AppSettingsManager(private val context: Context) {
@@ -31,6 +33,9 @@ class AppSettingsManager(private val context: Context) {
 
     val settings: Flow<AppSettings> = with(AppSettingsSchema) { context.dataStore.flow }
 
+    // 阻塞读取 DataStore 首次值，确保后续 .value 不会是默认值
+    private val initialSettings: AppSettings = runBlocking { settings.first() }
+
     suspend fun setSettings(settings: AppSettings) {
         with(AppSettingsSchema) { context.dataStore.update(settings) }
     }
@@ -42,7 +47,11 @@ class AppSettingsManager(private val context: Context) {
                 .getOrDefault(OverlayControlMode.ACCESSIBILITY)
         }
         .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, OverlayControlMode.ACCESSIBILITY)
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            runCatching { OverlayControlMode.valueOf(initialSettings.overlayMode) }
+                .getOrDefault(OverlayControlMode.ACCESSIBILITY)
+        )
 
     suspend fun setFloatWindowMode(mode: OverlayControlMode) {
         with(AppSettingsSchema) {
@@ -57,7 +66,11 @@ class AppSettingsManager(private val context: Context) {
                 .getOrDefault(RunMode.BACKGROUND)
         }
         .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, RunMode.BACKGROUND)
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            runCatching { RunMode.valueOf(initialSettings.runMode) }
+                .getOrDefault(RunMode.BACKGROUND)
+        )
 
     suspend fun setRunMode(mode: RunMode) {
         with(AppSettingsSchema) {
@@ -76,7 +89,15 @@ class AppSettingsManager(private val context: Context) {
                 .getOrDefault(UpdateSource.GITHUB)
         }
         .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, UpdateSource.GITHUB)
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            runCatching {
+                UpdateSource.entries
+                    .find { it.type == initialSettings.updateSource.toInt() }
+                    ?: UpdateSource.GITHUB
+            }
+                .getOrDefault(UpdateSource.GITHUB)
+        )
 
     suspend fun setUpdateSource(source: UpdateSource) {
         with(AppSettingsSchema) {
@@ -88,7 +109,7 @@ class AppSettingsManager(private val context: Context) {
     val mirrorChyanCdk: StateFlow<String> = settings
         .map { it.mirrorChyanCdk }
         .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, "")
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.mirrorChyanCdk)
 
     suspend fun setMirrorChyanCdk(cdk: String) {
         with(AppSettingsSchema) {
@@ -100,7 +121,10 @@ class AppSettingsManager(private val context: Context) {
     val debugMode: StateFlow<Boolean> = settings
         .map { it.debugMode.toBooleanStrictOrNull() ?: false }
         .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, false)
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            initialSettings.debugMode.toBooleanStrictOrNull() ?: false
+        )
 
     suspend fun setDebugMode(enabled: Boolean) {
         with(AppSettingsSchema) {

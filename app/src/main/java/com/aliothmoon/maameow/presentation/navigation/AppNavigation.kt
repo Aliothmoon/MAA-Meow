@@ -253,9 +253,7 @@ fun AppNavigation(
             }
         }
 
-        if (runMode == RunMode.FOREGROUND) {
-            ResourceLoadingOverlay(state = resourceLoadState)
-        }
+        ResourceLoadingOverlay(state = resourceLoadState)
     }
 }
 

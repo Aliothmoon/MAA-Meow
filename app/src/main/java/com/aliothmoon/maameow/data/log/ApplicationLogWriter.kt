@@ -1,7 +1,10 @@
 package com.aliothmoon.maameow.data.log
 
+import android.os.Build
 import android.util.Log
+import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.data.config.MaaPathConfig
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,7 +17,12 @@ import java.io.FileOutputStream
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
-class ApplicationLogWriter(private val pathConfig: MaaPathConfig) {
+class ApplicationLogWriter(
+    private val pathConfig: MaaPathConfig,
+    appSettings: AppSettingsManager
+) {
+
+    private val isDebug = appSettings.debugMode.value
 
     companion object {
         private const val LOG_DIR_NAME = "error_logs"
@@ -48,10 +56,33 @@ class ApplicationLogWriter(private val pathConfig: MaaPathConfig) {
 
     init {
         scope.launch {
+            Timber.d("Starting log writer isDebug=$isDebug")
+            if (isDebug) {
+                writeAppInfoHeader()
+            }
             for (entry in writeChannel) {
                 writeToFile(entry)
             }
         }
+    }
+
+    private fun writeAppInfoHeader() {
+        val header = buildString {
+            append("\n")
+            append("=".repeat(60))
+            append("\n")
+            append("=== Application Start ===\n")
+            append("Time       : ${ZonedDateTime.now().format(dateTimeFormatter)}\n")
+            append("App        : ${BuildConfig.APPLICATION_ID}\n")
+            append("Version    : ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n")
+            append("Build Type : ${BuildConfig.BUILD_TYPE}\n")
+            append("Device     : ${Build.MANUFACTURER} ${Build.MODEL}\n")
+            append("Android    : ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n")
+            append("ABI        : ${Build.SUPPORTED_ABIS.joinToString()}\n")
+            append("=".repeat(60))
+            append("\n\n")
+        }
+        writeToFile(header)
     }
 
     fun submit(priority: Int, tag: String?, message: String, throwable: Throwable?) {

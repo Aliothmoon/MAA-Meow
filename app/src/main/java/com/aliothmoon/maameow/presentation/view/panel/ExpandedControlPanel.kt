@@ -31,6 +31,7 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
+import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import com.aliothmoon.maameow.presentation.components.OverlayDialog
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
 import com.aliothmoon.maameow.presentation.components.PlaceholderContent
@@ -186,7 +187,7 @@ fun ExpandedControlPanel(
             }
         }
 
-        if (runMode == RunMode.BACKGROUND) {
+        if (LocalFloatingWindowContext.current && runMode == RunMode.FOREGROUND) {
             ResourceLoadingOverlay(state = resourceLoadState)
         }
 

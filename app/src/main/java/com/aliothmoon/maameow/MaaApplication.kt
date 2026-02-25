@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow
 
 import android.app.Application
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.koin.appModule
 import com.aliothmoon.maameow.koin.floatingWindowModule
@@ -9,6 +10,8 @@ import com.aliothmoon.maameow.koin.viewModelModule
 import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.utils.CrashHandler
 import com.aliothmoon.maameow.utils.log.LogTreeHolder
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
