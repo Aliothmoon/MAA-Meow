@@ -18,11 +18,14 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
+import org.koin.compose.koinInject
 
 /**
  * 资源加载 Loading 遮罩
@@ -30,9 +33,11 @@ import com.aliothmoon.maameow.domain.service.MaaResourceLoader
  */
 @Composable
 fun ResourceLoadingOverlay(
-    state: MaaResourceLoader.State,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    loader: MaaResourceLoader = koinInject(),
 ) {
+
+    val state by loader.state.collectAsState()
     val isVisible = state is MaaResourceLoader.State.Loading
             || state is MaaResourceLoader.State.Reloading
 
@@ -70,8 +75,8 @@ fun ResourceLoadingOverlay(
                     )
                     Text(
                         text = when (state) {
-                            is MaaResourceLoader.State.Loading -> state.message
-                            is MaaResourceLoader.State.Reloading -> state.message
+                            is MaaResourceLoader.State.Loading -> (state as MaaResourceLoader.State.Loading).message
+                            is MaaResourceLoader.State.Reloading -> (state as MaaResourceLoader.State.Reloading).message
                             else -> ""
                         },
                         style = MaterialTheme.typography.titleMedium,

@@ -29,7 +29,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
-import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import com.aliothmoon.maameow.presentation.components.OverlayDialog
@@ -50,12 +49,10 @@ fun ExpandedControlPanel(
     onLockToggle: (Boolean) -> Unit = {},
     viewModel: ExpandedControlPanelViewModel = viewModel(),
     service: MaaCompositionService = koinInject(),
-    resourceLoader: MaaResourceLoader = koinInject(),
     appSettings: AppSettingsManager = koinInject()
 ) {
     val uiState by viewModel.state.collectAsState()
     val maaState by service.state.collectAsState()
-    val resourceLoadState by resourceLoader.state.collectAsState()
     val runMode by appSettings.runMode.collectAsState()
     val logs by viewModel.runtimeLogs.collectAsState()
 
@@ -188,7 +185,7 @@ fun ExpandedControlPanel(
         }
 
         if (LocalFloatingWindowContext.current && runMode == RunMode.FOREGROUND) {
-            ResourceLoadingOverlay(state = resourceLoadState)
+            ResourceLoadingOverlay()
         }
 
         val dialog = uiState.dialog

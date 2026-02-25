@@ -25,7 +25,6 @@ import androidx.navigation.compose.rememberNavController
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RunMode
-import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
 import com.aliothmoon.maameow.presentation.view.background.BackgroundTaskView
 import com.aliothmoon.maameow.presentation.view.home.HomeView
@@ -37,7 +36,6 @@ import org.koin.compose.koinInject
 @Composable
 fun AppNavigation(
     appSettings: AppSettingsManager = koinInject(),
-    resourceLoader: MaaResourceLoader = koinInject()
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -49,7 +47,6 @@ fun AppNavigation(
 
     // 执行模式状态 - 用于底部导航拦截
     val runMode by appSettings.runMode.collectAsStateWithLifecycle()
-    val resourceLoadState by resourceLoader.state.collectAsStateWithLifecycle()
 
     // 判断是否显示底部导航（只在主 Tab 页面显示）
     val showBottomBar = currentRoute in listOf(Routes.HOME, Routes.BACKGROUND_TASK) && !isFullscreen
@@ -253,7 +250,7 @@ fun AppNavigation(
             }
         }
 
-        ResourceLoadingOverlay(state = resourceLoadState)
+        ResourceLoadingOverlay()
     }
 }
 

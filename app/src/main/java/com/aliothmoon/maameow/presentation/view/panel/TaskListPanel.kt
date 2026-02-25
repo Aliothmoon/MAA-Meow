@@ -2,6 +2,8 @@ package com.aliothmoon.maameow.presentation.view.panel
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -40,7 +42,9 @@ fun TaskListPanel(
     ReorderableColumn(
         list = tasks,
         onSettle = { fromIndex, toIndex -> onTaskMove(fromIndex, toIndex) },
-        modifier = modifier.width(IntrinsicSize.Max),
+        modifier = modifier
+            .width(IntrinsicSize.Max)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) { _, task, _ ->
         key(task.type) {
