@@ -10,6 +10,7 @@ import okhttp3.Response
 import timber.log.Timber
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 
 class MaaApiService(
     private val context: Context,
@@ -26,42 +27,50 @@ class MaaApiService(
     }
 
     private val internalCache by lazy {
-        DiskCache(diskCacheDir)
+        LayeredCache(diskCacheDir)
     }
 
-    internal class DiskCache(
+    internal class LayeredCache(
         val root: File
     ) {
+        private val cache = ConcurrentHashMap<String, String>()
+
         private fun calc(key: String): File {
             return File(root, key)
         }
 
         fun get(key: String): String? {
+            cache[key]?.let {
+                Timber.d("$TAG: in-memory cache hit: $key")
+                return it
+            }
             return try {
                 val file = calc(key)
                 if (file.exists()) {
-                    file.readText()
+                    file.readText().also { cache[key] = it }
                 } else {
                     null
                 }
             } catch (e: Exception) {
-                Timber.w(e, "$TAG: 读取缓存失败")
+                Timber.w(e, "$TAG: failed to read cache")
                 null
             }
         }
 
         fun put(key: String, value: String) {
+            cache[key] = value
             try {
                 val file = calc(key)
                 file.parentFile?.mkdirs()
                 file.writeText(value)
-                Timber.d("$TAG: 缓存已保存: ${file.name}")
+                Timber.d("$TAG: cache saved: ${file.name}")
             } catch (e: Exception) {
-                Timber.w(e, "$TAG: 保存缓存失败")
+                Timber.w(e, "$TAG: failed to save cache")
             }
         }
 
         fun invalidate() {
+            cache.clear()
             root.deleteRecursively()
             root.mkdirs()
         }
@@ -93,7 +102,7 @@ class MaaApiService(
 
             handleResponse(url, response)
         } catch (e: IOException) {
-            Timber.e(e, "$TAG: 请求异常: $url")
+            Timber.e(e, "$TAG: request failed: $url")
             null
         }
     }
@@ -106,7 +115,7 @@ class MaaApiService(
                     eTagCache.updateConditionalHeaders(url, resp.headers)
                     val body = resp.body.string()
                     internalCache.put(api, body)
-                    Timber.d("$TAG: 请求成功: $url (${body.length} bytes)")
+                    Timber.d("$TAG: request succeeded: $url (${body.length} bytes)")
                     body
                 }
 
@@ -136,9 +145,9 @@ class MaaApiService(
         try {
             internalCache.invalidate()
             eTagCache.invalidate()
-            Timber.d("$TAG: 缓存已清除")
+            Timber.d("$TAG: cache cleared")
         } catch (e: Exception) {
-            Timber.w(e, "$TAG: 清除缓存失败")
+            Timber.w(e, "$TAG: failed to clear cache")
         }
     }
 
@@ -157,7 +166,7 @@ class MaaApiService(
     }
 
     /**
-     * 获取全球服任务配置数据
+     * 获取外服任务配置数据
      * @param clientType 客户端类型（如 YoStarEN、YoStarJP、YoStarKR、txwy）
      */
     suspend fun getGlobalTasksInfo(clientType: String): String? {

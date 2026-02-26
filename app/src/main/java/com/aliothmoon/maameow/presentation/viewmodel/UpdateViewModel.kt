@@ -6,6 +6,7 @@ import com.alibaba.fastjson2.JSON
 import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.constant.MaaFiles.VERSION_FILE
 import com.aliothmoon.maameow.data.config.MaaPathConfig
+import com.aliothmoon.maameow.data.datasource.ResourceDownloader
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
@@ -51,7 +52,8 @@ class UpdateViewModel(
 
 
     suspend fun refreshResourceVersion() {
-        _currentResourceVersion.value = loadResourceVersion()
+        val raw = loadResourceVersion()
+        _currentResourceVersion.value = ResourceDownloader.formatVersionForDisplay(raw)
     }
 
     private suspend fun loadResourceVersion(): String {

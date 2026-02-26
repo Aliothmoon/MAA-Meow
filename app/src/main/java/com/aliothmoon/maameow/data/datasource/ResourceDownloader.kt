@@ -17,6 +17,8 @@ import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
@@ -40,8 +42,18 @@ class ResourceDownloader(
 
     companion object {
         private val VERSION_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+        private val DISPLAY_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
         val json = JsonUtils.common
+
+        fun formatVersionForDisplay(version: String): String {
+            return runCatching {
+                LocalDateTime.parse(version, VERSION_FORMATTER)
+                    .atZone(ZoneOffset.UTC)
+                    .withZoneSameInstant(ZoneId.systemDefault())
+                    .format(DISPLAY_FORMATTER)
+            }.getOrDefault(version)
+        }
 
         fun compareVersions(v1: String, v2: String): Int {
             return try {
@@ -117,7 +129,7 @@ class ResourceDownloader(
         }
 
         return VersionCheckResult.UpdateAvailable(
-            UpdateInfo(version = remote, downloadUrl = downloadUrl)
+            UpdateInfo(version = formatVersionForDisplay(remote), downloadUrl = downloadUrl)
         )
     }
 
