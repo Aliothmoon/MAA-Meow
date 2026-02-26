@@ -93,7 +93,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleRelease
+          ./gradlew clean assembleRelease
 
       - name: Rename APK
         run: |
