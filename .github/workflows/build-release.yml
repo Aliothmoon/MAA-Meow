@@ -70,9 +70,6 @@ jobs:
       - name: Print MAA Resource version
         run: cat app/src/main/assets/MaaSync/MaaResource/version.json
 
-      - name: Remove synced MAA resources
-        run: rm -rf app/src/main/assets/MaaSync
-
       - name: Override ABI filter
         if: matrix.abi != 'all'
         run: |
