@@ -17,7 +17,6 @@ import timber.log.Timber
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.util.UUID
 
 class AppDownloader(
     private val context: Context,
@@ -190,10 +189,28 @@ class AppDownloader(
     }
 
     /**
-     * 下载 APK 到临时文件
+     * 查找已缓存的完整 APK（仅 .apk 后缀表示下载完成）
      */
+    fun getCachedApk(version: String): File? {
+        val file = File(context.cacheDir, apkFileName(version))
+        return file.takeIf { it.exists() && it.length() > 0 }
+    }
+
+    /**
+     * 清理其他版本的缓存 APK 和残留的 .dl 文件
+     */
+    fun cleanOldApks(keepVersion: String) {
+        val keepName = apkFileName(keepVersion)
+        context.cacheDir.listFiles()
+            ?.filter { it.name.startsWith("MaaMeow-") && (it.name.endsWith(".apk") || it.name.endsWith(".apk.dl")) }
+            ?.filter { it.name != keepName }
+            ?.forEach { it.delete() }
+    }
+
+
     suspend fun downloadToTempFile(
         url: String,
+        version: String,
         onProgress: (ResourceDownloader.DownloadProgress) -> Unit
     ): Result<File> {
         return try {
@@ -206,11 +223,15 @@ class AppDownloader(
 
             val body = response.body
             val total = body.contentLength().takeIf { it > 0 } ?: 0L
-            val tempFile = File(context.cacheDir, "MaaMeow-${UUID.randomUUID()}.apk")
+            val apkFile = File(context.cacheDir, apkFileName(version))
+            val dlFile = File(context.cacheDir, "${apkFileName(version)}.dl")
+
+            // 清理可能残留的 .dl 文件
+            dlFile.delete()
 
             withContext(Dispatchers.IO) {
                 val bfz = 2 * 1024 * 1024
-                BufferedOutputStream(FileOutputStream(tempFile), bfz).use { output ->
+                BufferedOutputStream(FileOutputStream(dlFile), bfz).use { output ->
                     val buffer = ByteArray(bfz)
                     var downloaded = 0L
                     var lastUpdateTime = System.currentTimeMillis()
@@ -246,14 +267,20 @@ class AppDownloader(
                         }
                     }
                 }
+
+                // 下载完成
+                apkFile.delete()
+                dlFile.renameTo(apkFile)
             }
 
-            Result.success(tempFile)
+            Result.success(apkFile)
         } catch (e: Exception) {
             Timber.e(e, "下载 APK 失败")
             Result.failure(e)
         }
     }
+
+    private fun apkFileName(version: String): String = "MaaMeow-${version}.apk"
 
     private fun formatSpeed(bytesPerSecond: Long): String {
         return when {
