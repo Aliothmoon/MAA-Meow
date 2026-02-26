@@ -48,14 +48,6 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      - name: Cache MAA Core
-        uses: actions/cache@v4
-        with:
-          path: .maa-cache
-          key: maa-core-${{ github.event.inputs.maa_tag || 'latest' }}
-          restore-keys: |
-            maa-core-
-
       - name: Download and deploy MAA Core
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -65,6 +57,12 @@ jobs:
             TAG_ARG="--tag ${{ github.event.inputs.maa_tag }}"
           fi
           python scripts/setup_maa_core.py --clean $TAG_ARG
+
+      - name: Print MAA Resource version
+        run: cat app/src/main/assets/MaaSync/MaaResource/version.json
+
+      - name: Remove synced MAA resources
+        run: rm -rf app/src/main/assets/MaaSync
 
       - name: Build Debug APK
         run: |

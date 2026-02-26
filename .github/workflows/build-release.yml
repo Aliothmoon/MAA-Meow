@@ -53,14 +53,6 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      - name: Cache MAA Core
-        uses: actions/cache@v4
-        with:
-          path: .maa-cache
-          key: maa-core-${{ github.event.inputs.maa_tag || 'latest' }}
-          restore-keys: |
-            maa-core-
-
       - name: Download and deploy MAA Core
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -74,6 +66,12 @@ jobs:
           else
             python scripts/setup_maa_core.py --clean --abi ${{ matrix.abi }} $TAG_ARG
           fi
+
+      - name: Print MAA Resource version
+        run: cat app/src/main/assets/MaaSync/MaaResource/version.json
+
+      - name: Remove synced MAA resources
+        run: rm -rf app/src/main/assets/MaaSync
 
       - name: Override ABI filter
         if: matrix.abi != 'all'
