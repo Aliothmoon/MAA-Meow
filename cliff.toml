@@ -21,7 +21,7 @@ body = """
 {%- else -%}
 - {{ commit.message }}
 {%- endif %}
-{%- endfor %}
+{% endfor %}
 {% endfor -%}
 """
 trim = true
