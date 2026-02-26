@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.domain.service.update
 import com.aliothmoon.maameow.constant.MaaApi
 import com.aliothmoon.maameow.data.datasource.ResourceDownloader
 import com.aliothmoon.maameow.data.datasource.ZipExtractor
+import com.aliothmoon.maameow.data.model.update.UpdateCheckResult
 import com.aliothmoon.maameow.data.model.update.UpdateError
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.model.update.UpdateSource
@@ -16,30 +17,14 @@ class ResourceUpdateHandler(
     private val downloader: ResourceDownloader,
     private val extractor: ZipExtractor,
 ) {
-    private val _state = MutableStateFlow<UpdateProcessState>(UpdateProcessState.Idle)
-    val state: StateFlow<UpdateProcessState> = _state.asStateFlow()
+    private val _processState = MutableStateFlow<UpdateProcessState>(UpdateProcessState.Idle)
+    val processState: StateFlow<UpdateProcessState> = _processState.asStateFlow()
 
     /**
-     * 检查资源更新
+     * 检查资源更新（纯函数，不修改任何状态）
      */
-    suspend fun checkUpdate(currentVersion: String, cdk: String = "") {
-        _state.value = UpdateProcessState.Checking("正在检查更新...")
-
-        when (val result = downloader.checkVersion(currentVersion, cdk)) {
-            is ResourceDownloader.VersionCheckResult.UpdateAvailable -> {
-                _state.value = UpdateProcessState.Available(result.info)
-            }
-
-            is ResourceDownloader.VersionCheckResult.NoUpdate -> {
-                _state.value = UpdateProcessState.NoUpdate(result.currentVersion)
-            }
-
-            is ResourceDownloader.VersionCheckResult.Error -> {
-                _state.value = UpdateProcessState.Failed(
-                    UpdateError.fromCode(result.code, result.message)
-                )
-            }
-        }
+    suspend fun checkUpdate(currentVersion: String, cdk: String = ""): UpdateCheckResult {
+        return downloader.checkVersion(currentVersion, cdk)
     }
 
     /**
@@ -54,25 +39,21 @@ class ResourceUpdateHandler(
     ): Result<Unit> {
         val url = when (source) {
             UpdateSource.MIRROR_CHYAN -> {
-                _state.value = UpdateProcessState.Checking("正在获取下载链接...")
                 when (val result = downloader.resolveDownloadUrl(currentVersion, cdk)) {
-                    is ResourceDownloader.VersionCheckResult.UpdateAvailable -> {
+                    is UpdateCheckResult.Available -> {
                         if (result.info.downloadUrl.isBlank()) {
-                            _state.value = UpdateProcessState.Failed(UpdateError.CdkRequired)
+                            _processState.value = UpdateProcessState.Failed(UpdateError.CdkRequired)
                             return Result.failure(Exception("CDK 验证失败"))
                         }
                         result.info.downloadUrl
                     }
 
-                    is ResourceDownloader.VersionCheckResult.Error -> {
-                        _state.value = UpdateProcessState.Failed(
-                            UpdateError.fromCode(result.code, result.message)
-                        )
-                        return Result.failure(Exception(result.message))
+                    is UpdateCheckResult.Error -> {
+                        _processState.value = UpdateProcessState.Failed(result.error)
+                        return Result.failure(Exception(result.error.message))
                     }
 
-                    is ResourceDownloader.VersionCheckResult.NoUpdate -> {
-                        _state.value = UpdateProcessState.NoUpdate(result.currentVersion)
+                    is UpdateCheckResult.UpToDate -> {
                         return Result.failure(Exception("已是最新版本"))
                     }
                 }
@@ -89,10 +70,10 @@ class ResourceUpdateHandler(
     private suspend fun downloadAndInstall(target: File, url: String): Result<Unit> {
 
         // 1. 下载
-        _state.value = UpdateProcessState.Downloading(0, "准备下载...", 0L, 0L)
+        _processState.value = UpdateProcessState.Downloading(0, "准备下载...", 0L, 0L)
 
         val downloadResult = downloader.downloadToTempFile(url) { progress ->
-            _state.value = UpdateProcessState.Downloading(
+            _processState.value = UpdateProcessState.Downloading(
                 progress = progress.progress,
                 speed = progress.speed,
                 downloaded = progress.downloaded,
@@ -101,13 +82,13 @@ class ResourceUpdateHandler(
         }
 
         val tempFile = downloadResult.getOrElse { e ->
-            _state.value =
+            _processState.value =
                 UpdateProcessState.Failed(UpdateError.NetworkError(e.message ?: "下载失败"))
             return Result.failure(e)
         }
 
         // 2. 解压
-        _state.value = UpdateProcessState.Extracting(0, 0, 0)
+        _processState.value = UpdateProcessState.Extracting(0, 0, 0)
 
         if (!target.exists()) {
             target.mkdirs()
@@ -127,7 +108,7 @@ class ResourceUpdateHandler(
                 }
             },
             onProgress = { progress ->
-                _state.value = UpdateProcessState.Extracting(
+                _processState.value = UpdateProcessState.Extracting(
                     progress = progress.progress,
                     current = progress.current,
                     total = progress.total
@@ -140,21 +121,18 @@ class ResourceUpdateHandler(
 
         return extractResult.fold(
             onSuccess = {
-                _state.value = UpdateProcessState.Success
+                _processState.value = UpdateProcessState.Success
                 Timber.i("资源更新完成")
                 Result.success(Unit)
             },
             onFailure = { e ->
-                _state.value = UpdateProcessState.Failed(UpdateError.UnknownError("解压失败"))
+                _processState.value = UpdateProcessState.Failed(UpdateError.UnknownError("解压失败"))
                 Result.failure(e)
             }
         )
     }
 
-    /**
-     * 重置状态
-     */
     fun resetState() {
-        _state.value = UpdateProcessState.Idle
+        _processState.value = UpdateProcessState.Idle
     }
 }

@@ -6,6 +6,8 @@ import com.aliothmoon.maameow.constant.MaaApi
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.api.await
 import com.aliothmoon.maameow.data.api.model.MirrorChyanResponse
+import com.aliothmoon.maameow.data.model.update.UpdateCheckResult
+import com.aliothmoon.maameow.data.model.update.UpdateError
 import com.aliothmoon.maameow.data.model.update.UpdateInfo
 import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
@@ -33,12 +35,6 @@ class ResourceDownloader(
         val downloaded: Long,
         val total: Long
     )
-
-    sealed class VersionCheckResult {
-        data class UpdateAvailable(val info: UpdateInfo) : VersionCheckResult()
-        data class NoUpdate(val currentVersion: String) : VersionCheckResult()
-        data class Error(val code: Int, val message: String? = null) : VersionCheckResult()
-    }
 
     companion object {
         private val VERSION_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
@@ -71,7 +67,7 @@ class ResourceDownloader(
         }
     }
 
-    suspend fun checkVersion(current: String, cdk: String = ""): VersionCheckResult {
+    suspend fun checkVersion(current: String, cdk: String = ""): UpdateCheckResult {
         return try {
             val result = httpClient.get(
                 MaaApi.MIRROR_CHYAN_RESOURCE,
@@ -85,7 +81,7 @@ class ResourceDownloader(
             )
 
             if (result.code == 500) {
-                return VersionCheckResult.Error(500, "更新服务不可用")
+                return UpdateCheckResult.Error(UpdateError.UnknownError("更新服务不可用", 500))
             }
 
             val response = runCatching {
@@ -95,14 +91,14 @@ class ResourceDownloader(
             parseVersionResponse(response, current, cdk.isNotBlank())
         } catch (e: Exception) {
             Timber.e(e, "检查版本失败")
-            VersionCheckResult.Error(-1, e.message ?: "网络错误")
+            UpdateCheckResult.Error(UpdateError.NetworkError(e.message ?: "网络错误"))
         }
     }
 
     /**
      * 通过 MirrorChyan API 获取下载链接
      */
-    suspend fun resolveDownloadUrl(currentVersion: String, cdk: String): VersionCheckResult {
+    suspend fun resolveDownloadUrl(currentVersion: String, cdk: String): UpdateCheckResult {
         return checkVersion(currentVersion, cdk)
     }
 
@@ -110,25 +106,26 @@ class ResourceDownloader(
         body: MirrorChyanResponse,
         current: String,
         useMirrorChyan: Boolean
-    ): VersionCheckResult {
+    ): UpdateCheckResult {
         if (body.code != 0) {
-            return VersionCheckResult.Error(body.code, body.msg)
+            return UpdateCheckResult.Error(UpdateError.fromCode(body.code, body.msg))
         }
 
-        val data = body.data ?: return VersionCheckResult.Error(-1, "数据为空")
+        val data =
+            body.data ?: return UpdateCheckResult.Error(UpdateError.UnknownError("数据为空", -1))
         val remote = data.versionName
 
         if (remote.isEmpty() || compareVersions(current, remote) >= 0) {
-            return VersionCheckResult.NoUpdate(current)
+            return UpdateCheckResult.UpToDate(current)
         }
 
         val downloadUrl = if (useMirrorChyan) {
-            data.url ?: return VersionCheckResult.Error(-1, "下载链接为空")
+            data.url ?: return UpdateCheckResult.Error(UpdateError.UnknownError("下载链接为空", -1))
         } else {
             ""
         }
 
-        return VersionCheckResult.UpdateAvailable(
+        return UpdateCheckResult.Available(
             UpdateInfo(version = formatVersionForDisplay(remote), downloadUrl = downloadUrl)
         )
     }

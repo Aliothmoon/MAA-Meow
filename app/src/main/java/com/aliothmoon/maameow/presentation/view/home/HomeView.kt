@@ -55,6 +55,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.constant.Routes
+import com.aliothmoon.maameow.data.datasource.ResourceDownloader
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.state.ResourceInitState
@@ -87,6 +88,8 @@ fun HomeView(
     val context = LocalContext.current
     val (width, height) = Misc.getScreenSize(context)
 
+    val startupDialog by updateViewModel.startupUpdateDialog.collectAsStateWithLifecycle()
+
     // 启动时检查资源初始化
     LaunchedEffect(Unit) {
         viewModel.checkAndInitResource()
@@ -95,6 +98,7 @@ fun HomeView(
     LaunchedEffect(uiState.resourceInitState) {
         if (uiState.resourceInitState is ResourceInitState.Ready) {
             updateViewModel.refreshResourceVersion()
+            updateViewModel.checkUpdatesOnStartup()
         }
     }
 
@@ -103,6 +107,47 @@ fun HomeView(
         state = uiState.resourceInitState,
         onRetry = { viewModel.onTryResourceInit() }
     )
+
+    startupDialog?.let { result ->
+        AlertDialog(
+            onDismissRequest = { updateViewModel.dismissStartupDialog() },
+            title = { Text("发现更新") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    result.appUpdate?.let {
+                        Text("应用新版本: ${it.version}")
+                    }
+                    result.resourceUpdate?.let {
+                        val display = ResourceDownloader.formatVersionForDisplay(it.version)
+                        Text("资源新版本: $display")
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        updateViewModel.dismissStartupDialog()
+                        // 两者都有更新时只触发 App 更新
+                        if (result.appUpdate != null) {
+                            updateViewModel.confirmAppDownload()
+                        } else {
+                            updateViewModel.confirmResourceDownload()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF4CAF50)
+                    )
+                ) {
+                    Text("下载更新")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { updateViewModel.dismissStartupDialog() }) {
+                    Text("忽略")
+                }
+            }
+        )
+    }
 
     if (uiState.showRunModeUnsupportedDialog) {
         AlertDialog(

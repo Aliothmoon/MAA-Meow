@@ -7,6 +7,8 @@ import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.api.await
 import com.aliothmoon.maameow.data.api.model.GitHubRelease
 import com.aliothmoon.maameow.data.api.model.MirrorChyanResponse
+import com.aliothmoon.maameow.data.model.update.UpdateCheckResult
+import com.aliothmoon.maameow.data.model.update.UpdateError
 import com.aliothmoon.maameow.data.model.update.UpdateInfo
 import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
@@ -23,12 +25,6 @@ class AppDownloader(
     private val context: Context,
     private val httpClient: HttpClientHelper
 ) {
-
-    sealed class VersionCheckResult {
-        data class UpdateAvailable(val info: UpdateInfo) : VersionCheckResult()
-        data class NoUpdate(val currentVersion: String) : VersionCheckResult()
-        data class Error(val code: Int, val message: String? = null) : VersionCheckResult()
-    }
 
     companion object {
         private val json = JsonUtils.common
@@ -95,32 +91,47 @@ class AppDownloader(
     /**
      * 通过 GitHub Release API 检查更新
      */
-    suspend fun checkVersionFromGitHub(): VersionCheckResult {
+    suspend fun checkVersionFromGitHub(): UpdateCheckResult {
         return try {
             val response = httpClient.get(MaaApi.APP_GITHUB_RELEASES)
             if (!response.isSuccessful) {
-                return VersionCheckResult.Error(response.code, "GitHub API 请求失败")
+                return UpdateCheckResult.Error(
+                    UpdateError.UnknownError(
+                        "GitHub API 请求失败",
+                        response.code
+                    )
+                )
             }
 
             val release = runCatching {
                 val releases = json.decodeFromString<List<GitHubRelease>>(response.body.string())
                 releases.firstOrNull()
             }.getOrElse { e ->
-                return VersionCheckResult.Error(-1, "解析响应失败: ${e.message}")
-            } ?: return VersionCheckResult.NoUpdate(BuildConfig.VERSION_NAME)
+                return UpdateCheckResult.Error(
+                    UpdateError.UnknownError(
+                        "解析响应失败: ${e.message}",
+                        -1
+                    )
+                )
+            } ?: return UpdateCheckResult.UpToDate(BuildConfig.VERSION_NAME)
 
             val remoteVersion = release.tagName.removePrefix("v").removePrefix("V")
             val currentVersion = BuildConfig.VERSION_NAME
 
             if (compareVersions(currentVersion, remoteVersion) >= 0) {
-                return VersionCheckResult.NoUpdate(currentVersion)
+                return UpdateCheckResult.UpToDate(currentVersion)
             }
 
             // 查找 APK asset
             val apkAsset = release.assets.firstOrNull { it.name.endsWith("universal.apk") }
-                ?: return VersionCheckResult.Error(-1, "Release 中未找到 APK 文件")
+                ?: return UpdateCheckResult.Error(
+                    UpdateError.UnknownError(
+                        "Release 中未找到 APK 文件",
+                        -1
+                    )
+                )
 
-            VersionCheckResult.UpdateAvailable(
+            UpdateCheckResult.Available(
                 UpdateInfo(
                     version = remoteVersion,
                     downloadUrl = apkAsset.browserDownloadUrl,
@@ -129,14 +140,14 @@ class AppDownloader(
             )
         } catch (e: Exception) {
             Timber.e(e, "GitHub 检查更新失败")
-            VersionCheckResult.Error(-1, e.message ?: "网络错误")
+            UpdateCheckResult.Error(UpdateError.NetworkError(e.message ?: "网络错误"))
         }
     }
 
     /**
      * 通过 MirrorChyan API 检查更新
      */
-    suspend fun checkVersionFromMirrorChyan(cdk: String = ""): VersionCheckResult {
+    suspend fun checkVersionFromMirrorChyan(cdk: String = ""): UpdateCheckResult {
         return try {
             val currentVersion = BuildConfig.VERSION_NAME
             val response = httpClient.get(
@@ -152,7 +163,7 @@ class AppDownloader(
             )
 
             if (response.code == 500) {
-                return VersionCheckResult.Error(500, "更新服务不可用")
+                return UpdateCheckResult.Error(UpdateError.UnknownError("更新服务不可用", 500))
             }
 
             val body = runCatching {
@@ -160,23 +171,33 @@ class AppDownloader(
             }.getOrDefault(MirrorChyanResponse.UNKNOWN_ERR)
 
             if (body.code != 0) {
-                return VersionCheckResult.Error(body.code, body.msg)
+                return UpdateCheckResult.Error(UpdateError.fromCode(body.code, body.msg))
             }
 
-            val data = body.data ?: return VersionCheckResult.Error(-1, "数据为空")
+            val data = body.data ?: return UpdateCheckResult.Error(
+                UpdateError.UnknownError(
+                    "数据为空",
+                    -1
+                )
+            )
             val remoteVersion = data.versionName
 
             if (remoteVersion.isEmpty() || compareVersions(currentVersion, remoteVersion) >= 0) {
-                return VersionCheckResult.NoUpdate(currentVersion)
+                return UpdateCheckResult.UpToDate(currentVersion)
             }
 
             val downloadUrl = if (cdk.isNotBlank()) {
-                data.url ?: return VersionCheckResult.Error(-1, "下载链接为空")
+                data.url ?: return UpdateCheckResult.Error(
+                    UpdateError.UnknownError(
+                        "下载链接为空",
+                        -1
+                    )
+                )
             } else {
                 ""
             }
 
-            VersionCheckResult.UpdateAvailable(
+            UpdateCheckResult.Available(
                 UpdateInfo(
                     version = remoteVersion,
                     downloadUrl = downloadUrl,
@@ -185,7 +206,7 @@ class AppDownloader(
             )
         } catch (e: Exception) {
             Timber.e(e, "MirrorChyan 检查 App 更新失败")
-            VersionCheckResult.Error(-1, e.message ?: "网络错误")
+            UpdateCheckResult.Error(UpdateError.NetworkError(e.message ?: "网络错误"))
         }
     }
 

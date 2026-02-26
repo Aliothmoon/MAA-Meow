@@ -13,5 +13,7 @@ data class AppSettings(
 
     @PrefKey(default = "") val mirrorChyanCdk: String = "",
 
-    @PrefKey(default = "false") val debugMode: String = "false"
+    @PrefKey(default = "false") val debugMode: String = "false",
+
+    @PrefKey(default = "true") val autoCheckUpdate: String = "true"
 )

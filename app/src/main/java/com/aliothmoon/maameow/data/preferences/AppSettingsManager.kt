@@ -131,4 +131,19 @@ class AppSettingsManager(private val context: Context) {
             context.dataStore.edit { it[debugMode] = enabled.toString() }
         }
     }
+
+    // 启动时自动检查更新
+    val autoCheckUpdate: StateFlow<Boolean> = settings
+        .map { it.autoCheckUpdate.toBooleanStrictOrNull() ?: true }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            initialSettings.autoCheckUpdate.toBooleanStrictOrNull() ?: true
+        )
+
+    suspend fun setAutoCheckUpdate(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[autoCheckUpdate] = enabled.toString() }
+        }
+    }
 }

@@ -7,12 +7,16 @@ import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.constant.MaaFiles.VERSION_FILE
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.datasource.ResourceDownloader
+import com.aliothmoon.maameow.data.model.update.StartupUpdateResult
+import com.aliothmoon.maameow.data.model.update.UpdateCheckResult
+import com.aliothmoon.maameow.data.model.update.UpdateInfo
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.service.update.UpdateService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,7 +39,7 @@ class UpdateViewModel(
 
     // ==================== 资源更新 ====================
 
-    val resourceUpdateState = updateService.resourceUpdateState
+    val resourceUpdateState = updateService.resourceProcessState
 
     private val _currentResourceVersion = MutableStateFlow("")
     val currentResourceVersion: StateFlow<String> = _currentResourceVersion.asStateFlow()
@@ -43,6 +47,20 @@ class UpdateViewModel(
     val updateSource: StateFlow<UpdateSource> = appSettingsManager.updateSource
 
     val mirrorChyanCdk: StateFlow<String> = appSettingsManager.mirrorChyanCdk
+
+    // 检查状态
+    private val _appChecking = MutableStateFlow(false)
+    val appChecking: StateFlow<Boolean> = _appChecking.asStateFlow()
+
+    private val _resourceChecking = MutableStateFlow(false)
+    val resourceChecking: StateFlow<Boolean> = _resourceChecking.asStateFlow()
+
+    // 检查结果（仅手动触发时写入）
+    private val _appCheckResult = MutableStateFlow<UpdateCheckResult?>(null)
+    val appCheckResult: StateFlow<UpdateCheckResult?> = _appCheckResult.asStateFlow()
+
+    private val _resourceCheckResult = MutableStateFlow<UpdateCheckResult?>(null)
+    val resourceCheckResult: StateFlow<UpdateCheckResult?> = _resourceCheckResult.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -85,21 +103,23 @@ class UpdateViewModel(
 
     fun checkResourceUpdate() {
         val currentState = resourceUpdateState.value
-        if (currentState is UpdateProcessState.Downloading || currentState is UpdateProcessState.Extracting || currentState is UpdateProcessState.Installing || currentState is UpdateProcessState.Checking) {
+        if (_resourceChecking.value || currentState is UpdateProcessState.Downloading || currentState is UpdateProcessState.Extracting || currentState is UpdateProcessState.Installing) {
             return
         }
         viewModelScope.launch {
+            _resourceChecking.value = true
             val currentVersion = loadResourceVersion()
             Timber.d("当前资源版本: $currentVersion, 下载源: ${updateSource.value}")
-            updateService.checkResourceUpdate(currentVersion)
+            _resourceCheckResult.value = updateService.checkResourceUpdate(currentVersion)
+            _resourceChecking.value = false
         }
     }
 
+    fun dismissResourceCheckResult() {
+        _resourceCheckResult.value = null
+    }
 
     fun confirmResourceDownload() {
-        val state = resourceUpdateState.value
-        if (state !is UpdateProcessState.Available) return
-
         viewModelScope.launch {
             val resourcesDir = pathConfig.resourceDir
             val file = File(resourcesDir)
@@ -123,31 +143,74 @@ class UpdateViewModel(
     }
 
 
+    // ==================== 启动检查 ====================
+
+    private var hasCheckedOnStartup = false
+
+    private val _startupUpdateDialog = MutableStateFlow<StartupUpdateResult?>(null)
+    val startupUpdateDialog: StateFlow<StartupUpdateResult?> = _startupUpdateDialog.asStateFlow()
+
+    fun checkUpdatesOnStartup() {
+        if (hasCheckedOnStartup) return
+        hasCheckedOnStartup = true
+
+        viewModelScope.launch {
+            if (!appSettingsManager.autoCheckUpdate.value) return@launch
+
+            val currentVersion = loadResourceVersion()
+
+            // 并行检查
+            val appResultDeferred = async { updateService.checkAppUpdate(mirrorChyanCdk.value) }
+            val resResultDeferred = async { updateService.checkResourceUpdate(currentVersion, mirrorChyanCdk.value) }
+
+            val appResult = appResultDeferred.await()
+            val resResult = resResultDeferred.await()
+
+            // 聚合结果
+            val appAvailable = (appResult as? UpdateCheckResult.Available)?.info
+            val resAvailable = (resResult as? UpdateCheckResult.Available)?.info
+
+            if (appAvailable != null || resAvailable != null) {
+                _startupUpdateDialog.value = StartupUpdateResult(
+                    appUpdate = appAvailable,
+                    resourceUpdate = resAvailable
+                )
+            }
+        }
+    }
+
+    fun dismissStartupDialog() {
+        _startupUpdateDialog.value = null
+    }
+
     fun reset() {
-        updateService.reset()
+        updateService.resetResourceProcess()
     }
 
     // ==================== App 更新 ====================
 
-    val appUpdateState = updateService.appUpdateState
+    val appUpdateState = updateService.appProcessState
 
     val currentAppVersion: String = BuildConfig.VERSION_NAME
 
     fun checkAppUpdate() {
         val currentState = appUpdateState.value
-        if (currentState is UpdateProcessState.Downloading || currentState is UpdateProcessState.Installing || currentState is UpdateProcessState.Checking) {
+        if (_appChecking.value || currentState is UpdateProcessState.Downloading || currentState is UpdateProcessState.Installing) {
             return
         }
         viewModelScope.launch {
+            _appChecking.value = true
             Timber.i("检查 App 更新 (MirrorChyan)")
-            updateService.checkAppUpdate()
+            _appCheckResult.value = updateService.checkAppUpdate()
+            _appChecking.value = false
         }
     }
 
-    fun confirmAppDownload() {
-        val state = appUpdateState.value
-        if (state !is UpdateProcessState.Available) return
+    fun dismissAppCheckResult() {
+        _appCheckResult.value = null
+    }
 
+    fun confirmAppDownload() {
         viewModelScope.launch {
             updateService.confirmAndDownloadApp(
                 source = updateSource.value,
@@ -157,6 +220,6 @@ class UpdateViewModel(
     }
 
     fun resetAppUpdate() {
-        updateService.resetAppUpdate()
+        updateService.resetAppProcess()
     }
 }

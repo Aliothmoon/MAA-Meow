@@ -56,6 +56,7 @@ fun SettingsView(
 ) {
     val resourceInitState by resourceInitService.state.collectAsStateWithLifecycle()
     val debugMode by viewModel.debugMode.collectAsStateWithLifecycle()
+    val autoCheckUpdate by viewModel.autoCheckUpdate.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
 
     // 重新初始化确认弹窗
@@ -251,6 +252,35 @@ fun SettingsView(
                             color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
                         )
                     }
+                }
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f)
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "启动时检查更新",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                        Text(
+                            text = "启动应用时自动检查应用和资源更新",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                    Switch(
+                        checked = autoCheckUpdate,
+                        onCheckedChange = { viewModel.setAutoCheckUpdate(it) }
+                    )
                 }
 
                 HorizontalDivider(

@@ -59,7 +59,7 @@ class HomeViewModel(
 
     private fun observeResourceUpdateState() {
         viewModelScope.launch {
-            updateService.resourceUpdateState.collect { state ->
+            updateService.resourceProcessState.collect { state ->
                 Timber.i("ResourceUpdateState collect $state")
                 _uiState.update { it.copy(resourceUpdateState = state) }
             }

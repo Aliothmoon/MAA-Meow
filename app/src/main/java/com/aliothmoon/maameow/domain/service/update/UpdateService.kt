@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.domain.service.update
 
+import com.aliothmoon.maameow.data.model.update.UpdateCheckResult
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import kotlinx.coroutines.flow.StateFlow
@@ -16,11 +17,11 @@ class UpdateService(
 ) {
     // ==================== 资源更新 ====================
 
-    val resourceUpdateState: StateFlow<UpdateProcessState>
-        get() = resourceHandler.state
+    val resourceProcessState: StateFlow<UpdateProcessState>
+        get() = resourceHandler.processState
 
-    suspend fun checkResourceUpdate(current: String) {
-        resourceHandler.checkUpdate(current)
+    suspend fun checkResourceUpdate(currentVersion: String, cdk: String = ""): UpdateCheckResult {
+        return resourceHandler.checkUpdate(currentVersion, cdk)
     }
 
     suspend fun confirmAndDownloadResource(
@@ -32,24 +33,24 @@ class UpdateService(
         return resourceHandler.confirmAndDownload(source, cdk, currentVersion, dir)
     }
 
-    fun reset() {
+    fun resetResourceProcess() {
         resourceHandler.resetState()
     }
 
     // ==================== App 更新 ====================
 
-    val appUpdateState: StateFlow<UpdateProcessState>
-        get() = appHandler.state
+    val appProcessState: StateFlow<UpdateProcessState>
+        get() = appHandler.processState
 
-    suspend fun checkAppUpdate() {
-        appHandler.checkUpdate()
+    suspend fun checkAppUpdate(cdk: String = ""): UpdateCheckResult {
+        return appHandler.checkUpdate(cdk)
     }
 
     suspend fun confirmAndDownloadApp(source: UpdateSource, cdk: String): Result<Unit> {
         return appHandler.confirmAndDownload(source, cdk)
     }
 
-    fun resetAppUpdate() {
+    fun resetAppProcess() {
         appHandler.resetState()
     }
 }

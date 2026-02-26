@@ -67,6 +67,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.aliothmoon.maameow.data.model.update.UpdateCheckResult
 import com.aliothmoon.maameow.data.model.update.UpdateInfo
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.model.update.UpdateSource
@@ -84,24 +85,57 @@ fun UpdateCard(
 ) {
     val resourceUpdateState by viewModel.resourceUpdateState.collectAsState()
     val appUpdateState by viewModel.appUpdateState.collectAsState()
+    val resIsChecking by viewModel.resourceChecking.collectAsState()
+    val appIsChecking by viewModel.appChecking.collectAsState()
+    val resourceCheckResult by viewModel.resourceCheckResult.collectAsState()
+    val appCheckResult by viewModel.appCheckResult.collectAsState()
     val updateSource by viewModel.updateSource.collectAsState()
     val mirrorChyanCdk by viewModel.mirrorChyanCdk.collectAsState()
     val context = LocalContext.current
 
-    var showResourceUpdateDialog by remember { mutableStateOf(false) }
-    var showAppUpdateDialog by remember { mutableStateOf(false) }
     var resourceErrorMessage by remember { mutableStateOf<String?>(null) }
     var appErrorMessage by remember { mutableStateOf<String?>(null) }
 
-    // ==================== 资源更新状态处理 ====================
+    // ==================== 资源检查结果处理 ====================
+
+    LaunchedEffect(resourceCheckResult) {
+        when (val result = resourceCheckResult) {
+            is UpdateCheckResult.UpToDate -> {
+                Toast.makeText(context, "资源已是最新版本", Toast.LENGTH_SHORT).show()
+                viewModel.dismissResourceCheckResult()
+            }
+
+            is UpdateCheckResult.Error -> {
+                resourceErrorMessage = "检查资源更新失败: ${result.error.message}"
+                viewModel.dismissResourceCheckResult()
+            }
+
+            else -> {}
+        }
+    }
+
+    // ==================== 应用检查结果处理 ====================
+
+    LaunchedEffect(appCheckResult) {
+        when (val result = appCheckResult) {
+            is UpdateCheckResult.UpToDate -> {
+                Toast.makeText(context, "应用已是最新版本", Toast.LENGTH_SHORT).show()
+                viewModel.dismissAppCheckResult()
+            }
+
+            is UpdateCheckResult.Error -> {
+                appErrorMessage = "检查应用更新失败: ${result.error.message}"
+                viewModel.dismissAppCheckResult()
+            }
+
+            else -> {}
+        }
+    }
+
+    // ==================== 下载过程状态处理 ====================
 
     LaunchedEffect(resourceUpdateState) {
         when (val state = resourceUpdateState) {
-            is UpdateProcessState.NoUpdate -> {
-                Toast.makeText(context, "资源已是最新版本", Toast.LENGTH_SHORT).show()
-                viewModel.reset()
-            }
-
             is UpdateProcessState.Failed -> {
                 resourceErrorMessage = "资源更新失败: ${state.error.message}"
             }
@@ -111,23 +145,12 @@ fun UpdateCard(
                 viewModel.reset()
             }
 
-            is UpdateProcessState.Available -> {
-                showResourceUpdateDialog = true
-            }
-
             else -> {}
         }
     }
 
-    // ==================== 应用更新状态处理 ====================
-
     LaunchedEffect(appUpdateState) {
         when (val state = appUpdateState) {
-            is UpdateProcessState.NoUpdate -> {
-                Toast.makeText(context, "应用已是最新版本", Toast.LENGTH_SHORT).show()
-                viewModel.resetAppUpdate()
-            }
-
             is UpdateProcessState.Failed -> {
                 appErrorMessage = "${state.error.message}"
             }
@@ -137,10 +160,6 @@ fun UpdateCard(
                 viewModel.resetAppUpdate()
             }
 
-            is UpdateProcessState.Available -> {
-                showAppUpdateDialog = true
-            }
-
             else -> {}
         }
     }
@@ -148,34 +167,30 @@ fun UpdateCard(
     // ==================== 弹窗 ====================
 
     // 资源更新确认弹窗
-    if (showResourceUpdateDialog && resourceUpdateState is UpdateProcessState.Available) {
-        val updateInfo = (resourceUpdateState as UpdateProcessState.Available).info
+    (resourceCheckResult as? UpdateCheckResult.Available)?.info?.let { updateInfo ->
         UpdateConfirmDialog(
             updateInfo = updateInfo,
             onConfirm = {
-                showResourceUpdateDialog = false
+                viewModel.dismissResourceCheckResult()
                 viewModel.confirmResourceDownload()
             },
             onDismiss = {
-                showResourceUpdateDialog = false
-                viewModel.reset()
+                viewModel.dismissResourceCheckResult()
             }
         )
     }
 
     // 应用更新确认弹窗
-    if (showAppUpdateDialog && appUpdateState is UpdateProcessState.Available) {
-        val updateInfo = (appUpdateState as UpdateProcessState.Available).info
+    (appCheckResult as? UpdateCheckResult.Available)?.info?.let { updateInfo ->
         AppUpdateConfirmDialog(
             updateInfo = updateInfo,
             currentVersion = viewModel.currentAppVersion,
             onConfirm = {
-                showAppUpdateDialog = false
+                viewModel.dismissAppCheckResult()
                 viewModel.confirmAppDownload()
             },
             onDismiss = {
-                showAppUpdateDialog = false
-                viewModel.resetAppUpdate()
+                viewModel.dismissAppCheckResult()
             }
         )
     }
@@ -204,13 +219,11 @@ fun UpdateCard(
 
     // ==================== 状态标记 ====================
 
-    val resIsChecking = resourceUpdateState is UpdateProcessState.Checking
     val resIsDownloading = resourceUpdateState is UpdateProcessState.Downloading
     val resIsExtracting = resourceUpdateState is UpdateProcessState.Extracting
     val resIsInstalling = resourceUpdateState is UpdateProcessState.Installing
     val resIsUpdating = resIsDownloading || resIsExtracting || resIsInstalling
 
-    val appIsChecking = appUpdateState is UpdateProcessState.Checking
     val appIsDownloading = appUpdateState is UpdateProcessState.Downloading
     val appIsInstalling = appUpdateState is UpdateProcessState.Installing
     val appIsUpdating = appIsDownloading || appIsInstalling

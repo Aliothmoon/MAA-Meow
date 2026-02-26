@@ -31,4 +31,13 @@ class SettingsViewModel(
             }
         }
     }
+
+    val autoCheckUpdate: StateFlow<Boolean> = appSettingsManager.autoCheckUpdate
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun setAutoCheckUpdate(enabled: Boolean) {
+        viewModelScope.launch {
+            appSettingsManager.setAutoCheckUpdate(enabled)
+        }
+    }
 }
