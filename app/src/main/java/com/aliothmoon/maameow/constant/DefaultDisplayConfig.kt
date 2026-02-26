@@ -8,8 +8,8 @@ object DefaultDisplayConfig {
     const val DISPLAY_NONE = -1
 
 
-    const val WIDTH = 1280
-    const val HEIGHT = 720
+    const val WIDTH = 1920
+    const val HEIGHT = 1080
     const val DPI = 240
     const val ASPECT_RATIO_WIDTH = 16
     const val ASPECT_RATIO_HEIGHT = 9
