@@ -1,13 +1,13 @@
 package com.aliothmoon.maameow.manager
 
-import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
 import android.os.Build
-import android.view.accessibility.AccessibilityManager
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.aliothmoon.maameow.data.permission.PermissionState
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
 import com.aliothmoon.maameow.remote.PermissionGrantRequest
 import com.aliothmoon.maameow.service.AccessibilityHelperService
@@ -31,7 +31,8 @@ import timber.log.Timber
 import kotlin.coroutines.resume
 
 class PermissionManager(
-    private val context: Context
+    private val context: Context,
+    private val appSettings: AppSettingsManager
 ) : DefaultLifecycleObserver {
 
     private val _state = MutableStateFlow(PermissionState())
@@ -121,10 +122,12 @@ class PermissionManager(
 
     private fun checkAccessibility(): Boolean {
         return try {
-            val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
-            val enabledServices =
-                am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-            enabledServices.any { it.id == AccessibilityHelperService.SERVICE_ID }
+            XXPermissions.isGrantedPermission(
+                context,
+                PermissionLists.getBindAccessibilityServicePermission(
+                    AccessibilityHelperService::class.java
+                )
+            )
         } catch (e: Exception) {
             Timber.e(e, "Error checking accessibility permission")
             false
@@ -162,9 +165,6 @@ class PermissionManager(
         }
 
         val granted = ShizukuManager.requestPermission()
-        if (granted) {
-            grantAll()
-        }
         _state.update { it.copy(shizuku = granted) }
         return granted
     }
@@ -241,6 +241,28 @@ class PermissionManager(
         return granted
     }
 
+    suspend fun requestAccessibility(context: Context): Boolean {
+        if (checkAccessibility()) {
+            _state.update { it.copy(accessibility = true) }
+            return true
+        }
+
+        val granted = suspendCancellableCoroutine { cont ->
+            XXPermissions.with(context)
+                .permission(
+                    PermissionLists.getBindAccessibilityServicePermission(
+                        AccessibilityHelperService::class.java
+                    )
+                )
+                .request { grantedList, _ ->
+                    cont.resume(grantedList.isNotEmpty())
+                }
+        }
+
+        _state.update { it.copy(accessibility = granted) }
+        return granted
+    }
+
     private suspend fun grantAll() {
         if (!ShizukuManager.checkPermissionGranted()) {
             Timber.w("grantAll: Shizuku permission not granted")
@@ -251,8 +273,9 @@ class PermissionManager(
         try {
             val packageName = context.packageName
             val uid = context.applicationInfo.uid
+            val isForeground = appSettings.runMode.value == RunMode.FOREGROUND
 
-            Timber.i("grantAll: packageName=$packageName, uid=$uid")
+            Timber.i("grantAll: packageName=$packageName, uid=$uid, isForeground=$isForeground")
 
             val result = withContext(Dispatchers.IO) {
                 useRemoteService { service ->
@@ -260,14 +283,15 @@ class PermissionManager(
                         PermissionGrantRequest(
                             packageName = packageName,
                             uid = uid,
-                            accessibilityServiceId = AccessibilityHelperService.SERVICE_ID
+                            accessibilityServiceId = if (isForeground)
+                                AccessibilityHelperService.SERVICE_ID else ""
                         )
                     )
                 }
             }
 
-            // 等待无障碍服务连接
-            if (result.accessibilityPermission) {
+            // 仅前台模式等待无障碍服务连接
+            if (isForeground && result.accessibilityPermission) {
                 withTimeoutOrNull(3000L) {
                     AccessibilityHelperService.isConnected
                         .filter { it }
@@ -285,4 +309,6 @@ class PermissionManager(
             _isGranting.value = false
         }
     }
+
+
 }

@@ -468,7 +468,9 @@ fun HomeView(
                                         color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                     TextButton(
-                                        onClick = { /* 无障碍权限通过 Shizuku 自动授予 */ },
+                                        onClick = {
+                                            viewModel.onRequestAccessibility(context)
+                                        },
                                         enabled = !permissionState.accessibility,
                                         contentPadding = PaddingValues(
                                             horizontal = 8.dp,

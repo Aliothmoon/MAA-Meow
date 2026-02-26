@@ -10,12 +10,4 @@ data class PermissionState(
     val accessibility: Boolean = false,
     val batteryWhitelist: Boolean = false,
     val notification: Boolean = false
-) {
-
-    /**
-     * 是否所有权限都已授权
-     */
-    val allGranted: Boolean
-        get() = shizuku && overlay && storage &&
-                accessibility && batteryWhitelist && notification
-}
+)

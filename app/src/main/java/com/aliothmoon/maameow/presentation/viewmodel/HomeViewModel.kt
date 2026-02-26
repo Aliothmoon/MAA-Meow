@@ -215,6 +215,11 @@ class HomeViewModel(
         }
     }
 
+    fun onRequestAccessibility(context: Context) {
+        viewModelScope.launch {
+            permissionManager.requestAccessibility(context)
+        }
+    }
 
     fun onControlOverlayModeChanged(mode: OverlayControlMode) {
         viewModelScope.launch {
@@ -439,4 +444,6 @@ class HomeViewModel(
         val value = compositionService.state.value
         return !(value == MaaExecutionState.RUNNING || value == MaaExecutionState.STARTING)
     }
+
+
 }
