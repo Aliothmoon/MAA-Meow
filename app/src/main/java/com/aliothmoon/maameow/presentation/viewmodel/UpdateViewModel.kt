@@ -160,11 +160,13 @@ class UpdateViewModel(
             val currentVersion = loadResourceVersion()
 
             // 并行检查
-            val appResultDeferred = async { updateService.checkAppUpdate(mirrorChyanCdk.value) }
-            val resResultDeferred = async { updateService.checkResourceUpdate(currentVersion, mirrorChyanCdk.value) }
+            val appResultDeferred = async {
+                updateService.checkAppUpdate(mirrorChyanCdk.value)
+            }
+            val resResult =
+                updateService.checkResourceUpdate(currentVersion, mirrorChyanCdk.value)
 
             val appResult = appResultDeferred.await()
-            val resResult = resResultDeferred.await()
 
             // 聚合结果
             val appAvailable = (appResult as? UpdateCheckResult.Available)?.info

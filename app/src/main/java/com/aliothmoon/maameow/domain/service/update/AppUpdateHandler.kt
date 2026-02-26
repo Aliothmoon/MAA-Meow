@@ -23,9 +23,7 @@ class AppUpdateHandler(
     private val _processState = MutableStateFlow<UpdateProcessState>(UpdateProcessState.Idle)
     val processState: StateFlow<UpdateProcessState> = _processState.asStateFlow()
 
-    /**
-     * 检查 App 更新（纯函数，不修改任何状态）
-     */
+
     suspend fun checkUpdate(cdk: String = ""): UpdateCheckResult {
         return downloader.checkVersionFromMirrorChyan(cdk)
     }

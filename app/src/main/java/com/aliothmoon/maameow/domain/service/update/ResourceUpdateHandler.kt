@@ -37,6 +37,7 @@ class ResourceUpdateHandler(
         currentVersion: String,
         target: File
     ): Result<Unit> {
+        _processState.value = UpdateProcessState.Downloading(0, "准备下载...", 0L, 0L)
         val url = when (source) {
             UpdateSource.MIRROR_CHYAN -> {
                 when (val result = downloader.resolveDownloadUrl(currentVersion, cdk)) {
@@ -68,9 +69,6 @@ class ResourceUpdateHandler(
      * 下载并安装资源更新
      */
     private suspend fun downloadAndInstall(target: File, url: String): Result<Unit> {
-
-        // 1. 下载
-        _processState.value = UpdateProcessState.Downloading(0, "准备下载...", 0L, 0L)
 
         val downloadResult = downloader.downloadToTempFile(url) { progress ->
             _processState.value = UpdateProcessState.Downloading(
@@ -126,7 +124,8 @@ class ResourceUpdateHandler(
                 Result.success(Unit)
             },
             onFailure = { e ->
-                _processState.value = UpdateProcessState.Failed(UpdateError.UnknownError("解压失败"))
+                _processState.value =
+                    UpdateProcessState.Failed(UpdateError.UnknownError("解压失败"))
                 Result.failure(e)
             }
         )

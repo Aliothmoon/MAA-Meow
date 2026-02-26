@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -62,6 +63,7 @@ import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
+import dev.jeziellago.compose.markdowntext.MarkdownText
 import com.aliothmoon.maameow.presentation.components.UpdateCard
 import com.aliothmoon.maameow.presentation.state.StatusColorType
 import com.aliothmoon.maameow.presentation.viewmodel.HomeViewModel
@@ -109,30 +111,77 @@ fun HomeView(
     )
 
     startupDialog?.let { result ->
+        var showReleaseNotes by remember { mutableStateOf(false) }
+        val hasReleaseNotes = result.appUpdate?.releaseNote?.isNotBlank() == true
+                || result.resourceUpdate?.releaseNote?.isNotBlank() == true
+
         AlertDialog(
             onDismissRequest = { updateViewModel.dismissStartupDialog() },
             title = { Text("发现更新") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    result.appUpdate?.let {
-                        Text("应用新版本: ${it.version}")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            result.appUpdate?.let {
+                                Text("应用新版本: ${it.version}")
+                            }
+                            result.resourceUpdate?.let {
+                                val display = ResourceDownloader.formatVersionForDisplay(it.version)
+                                Text("资源新版本: $display")
+                            }
+                        }
+                        if (hasReleaseNotes) {
+                            Text(
+                                text = if (showReleaseNotes) "收起" else "查看日志",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.clickable {
+                                    showReleaseNotes = !showReleaseNotes
+                                }
+                            )
+                        }
                     }
-                    result.resourceUpdate?.let {
-                        val display = ResourceDownloader.formatVersionForDisplay(it.version)
-                        Text("资源新版本: $display")
+                    if (hasReleaseNotes && showReleaseNotes) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 200.dp)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            result.appUpdate?.releaseNote?.takeIf { it.isNotBlank() }?.let { note ->
+                                MarkdownText(
+                                    markdown = note,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            result.resourceUpdate?.releaseNote?.takeIf { it.isNotBlank() }
+                                ?.let { note ->
+                                    MarkdownText(
+                                        markdown = note,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                        }
                     }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        updateViewModel.dismissStartupDialog()
                         // 两者都有更新时只触发 App 更新
                         if (result.appUpdate != null) {
                             updateViewModel.confirmAppDownload()
                         } else {
                             updateViewModel.confirmResourceDownload()
                         }
+                        updateViewModel.dismissStartupDialog()
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF4CAF50)
