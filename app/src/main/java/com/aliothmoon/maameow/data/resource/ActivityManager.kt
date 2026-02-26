@@ -65,16 +65,17 @@ class ActivityManager(
      * 迁移自 WPF LoadWebStages
      * 并行下载 StageActivityV2.json 和 tasks.json，然后解析并构建合并字典
      *
-     * @param clientType 有效客户端类型 (Official, YoStarEN, YoStarJP, YoStarKR, txwy)
+     * @param clientType 有效客户端类型 (Official,Bilibili, YoStarEN, YoStarJP, YoStarKR, txwy)
      */
     private suspend fun doLoadActivityStages(clientType: String) {
+        val type = if (clientType == "Bilibili") "Official" else clientType
         val job = withContext(Dispatchers.IO) {
             async {
-                setupHotUpdate(clientType)
+                setupHotUpdate(type)
             }
         }
         try {
-            doLoadWebStages(clientType)
+            doLoadWebStages(type)
             buildMergedStagesMap()
         } catch (e: Exception) {
             Timber.e(e, "解析活动关卡数据失败")

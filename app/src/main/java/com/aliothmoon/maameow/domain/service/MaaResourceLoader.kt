@@ -42,6 +42,9 @@ class MaaResourceLoader(
         _state.value = State.Loading()
         Timber.i("MaaCore resources loading, clientType=$clientType")
 
+        if (clientType == "Bilibili") {
+        }
+
         loadDepsInfo(clientType)
 
         return try {
