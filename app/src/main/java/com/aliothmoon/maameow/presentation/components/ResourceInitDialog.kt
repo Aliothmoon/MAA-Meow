@@ -24,14 +24,13 @@ import com.aliothmoon.maameow.domain.state.ResourceInitState
 
 /**
  * 资源初始化弹窗
- * 显示初始化进度或权限请求
+ * 显示初始化进度或失败信息
  */
 @Composable
 fun ResourceInitDialog(
     state: ResourceInitState,
     onDismiss: () -> Unit = {},
-    onRetry: () -> Unit = {},
-    onRequestPermission: () -> Unit = {}
+    onRetry: () -> Unit = {}
 ) {
 
     when (state) {
@@ -98,42 +97,6 @@ fun ResourceInitDialog(
                     }
                 }
             }
-        }
-
-        is ResourceInitState.NeedPermission, is ResourceInitState.PermissionDenied -> {
-            // 权限请求弹窗
-            AlertDialog(
-                onDismissRequest = onDismiss,
-                title = { Text("需要存储权限") },
-                text = {
-                    Column {
-                        Text("MaaMeow 需要「所有文件访问」权限来管理资源文件。")
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "资源文件将存储在 /sdcard/Maa/ 目录下。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        if (state is ResourceInitState.PermissionDenied) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "权限被拒绝，请在设置中手动授予权限。",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            onRequestPermission()
-                        }
-                    ) {
-                        Text("授予权限")
-                    }
-                }
-            )
         }
 
         is ResourceInitState.Failed -> {

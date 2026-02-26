@@ -4,7 +4,6 @@ import com.aliothmoon.maameow.constant.MaaFiles.ASSET_DIR_NAME
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.datasource.AssetExtractor
 import com.aliothmoon.maameow.domain.state.ResourceInitState
-import com.aliothmoon.maameow.manager.PermissionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,48 +15,23 @@ import java.io.File
 
 class ResourceInitService(
     private val assetExtractor: AssetExtractor,
-    private val permissionManager: PermissionManager,
     private val pathConfig: MaaPathConfig
 ) {
     private val _state = MutableStateFlow<ResourceInitState>(ResourceInitState.NotChecked)
     val state: StateFlow<ResourceInitState> = _state.asStateFlow()
 
-    fun hasStoragePermission(): Boolean {
-        return permissionManager.permissions.storage
-    }
-
     suspend fun checkAndInit() {
         _state.value = ResourceInitState.Checking
 
-        // check version file
         if (pathConfig.isResourceReady) {
             _state.value = ResourceInitState.Ready
-            return
-        }
-
-        if (!hasStoragePermission()) {
-            Timber.d("需要存储权限")
-            _state.value = ResourceInitState.NeedPermission
             return
         }
 
         doExtractFromAssets()
     }
 
-    suspend fun onPermissionChecking() {
-        if (hasStoragePermission()) {
-            checkAndInit()
-        } else {
-            _state.value = ResourceInitState.PermissionDenied
-        }
-    }
-
     suspend fun reInitialize() {
-        if (!hasStoragePermission()) {
-            Timber.d("需要存储权限")
-            _state.value = ResourceInitState.NeedPermission
-            return
-        }
         doExtractFromAssets()
     }
 

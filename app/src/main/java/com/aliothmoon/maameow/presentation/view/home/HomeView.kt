@@ -101,8 +101,7 @@ fun HomeView(
     // 资源初始化弹窗
     ResourceInitDialog(
         state = uiState.resourceInitState,
-        onRetry = { viewModel.onTryResourceInit() },
-        onRequestPermission = { viewModel.onPermissionForResourceInit(context) }
+        onRetry = { viewModel.onTryResourceInit() }
     )
 
     if (uiState.showRunModeUnsupportedDialog) {

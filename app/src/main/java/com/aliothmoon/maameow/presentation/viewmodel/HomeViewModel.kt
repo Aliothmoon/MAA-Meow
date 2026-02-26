@@ -170,13 +170,6 @@ class HomeViewModel(
         }
     }
 
-    fun onPermissionForResourceInit(context: Context) {
-        viewModelScope.launch {
-            permissionManager.requestStorage(context)
-            resourceInitService.onPermissionChecking()
-        }
-    }
-
     fun onRequestShizuku(context: Context) {
         viewModelScope.launch {
             if (!ShizukuManager.isShizukuAvailable()) {

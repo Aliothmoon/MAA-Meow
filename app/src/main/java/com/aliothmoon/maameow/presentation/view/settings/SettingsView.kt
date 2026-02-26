@@ -38,7 +38,6 @@ import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.domain.service.LogExportService
 import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.state.ResourceInitState
-import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.presentation.components.InfoCard
 import com.aliothmoon.maameow.presentation.components.ReInitializeConfirmDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
@@ -53,7 +52,6 @@ fun SettingsView(
     navController: NavController,
     viewModel: SettingsViewModel = koinViewModel(),
     resourceInitService: ResourceInitService = koinInject(),
-    permissionManager: PermissionManager = koinInject(),
     logExportService: LogExportService = koinInject()
 ) {
     val resourceInitState by resourceInitService.state.collectAsStateWithLifecycle()
@@ -114,14 +112,7 @@ fun SettingsView(
     if (resourceInitState is ResourceInitState.Extracting) {
         ResourceInitDialog(
             state = resourceInitState,
-            onRetry = {},
-            onRequestPermission = {
-                coroutineScope.launch {
-                    // 先请求权限，再继续初始化流程
-                    permissionManager.requestStorage(context)
-                    resourceInitService.onPermissionChecking()
-                }
-            }
+            onRetry = {}
         )
     }
 

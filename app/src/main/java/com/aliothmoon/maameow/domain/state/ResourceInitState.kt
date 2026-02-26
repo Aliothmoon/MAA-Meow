@@ -20,16 +20,6 @@ sealed class ResourceInitState {
     data object Ready : ResourceInitState()
 
     /**
-     * 需要存储权限
-     */
-    data object NeedPermission : ResourceInitState()
-
-    /**
-     * 权限被拒绝
-     */
-    data object PermissionDenied : ResourceInitState()
-
-    /**
      * 解压中
      */
     data class Extracting(
