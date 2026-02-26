@@ -247,7 +247,7 @@ class HomeViewModel(
 
                 val missingPermissions = buildList {
                     if (!state.overlay) add("悬浮窗权限")
-                    if (!state.storage) add("存储权限")
+                    if (!state.storage) add("外部存储权限")
                     if (currentMode == OverlayControlMode.ACCESSIBILITY && !state.accessibility) {
                         add("无障碍权限")
                     }
