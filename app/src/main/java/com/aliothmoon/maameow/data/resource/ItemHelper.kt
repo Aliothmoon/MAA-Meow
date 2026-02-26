@@ -1,10 +1,10 @@
 package com.aliothmoon.maameow.data.resource
 
 import com.aliothmoon.maameow.data.config.MaaPathConfig
+import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.serialization.json.Json
 import timber.log.Timber
 import java.io.File
 
@@ -14,10 +14,7 @@ import java.io.File
 class ItemHelper(
     private val pathConfig: MaaPathConfig
 ) {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
+    private val json = JsonUtils.common
 
     private val _items = MutableStateFlow<Map<String, ItemInfo>>(emptyMap())
     private val _dropItems = MutableStateFlow<List<ItemInfo>>(emptyList())

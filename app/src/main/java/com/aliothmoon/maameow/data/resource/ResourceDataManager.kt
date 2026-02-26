@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.resource
 
 import com.aliothmoon.maameow.data.config.MaaPathConfig
+import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -8,7 +9,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -23,10 +23,7 @@ import java.io.File
  */
 class ResourceDataManager(val pathConfig: MaaPathConfig) {
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
+    private val json = JsonUtils.common
 
     private val _characters = MutableStateFlow<Map<String, CharacterInfo>>(emptyMap())
     private val _nameIndex = MutableStateFlow<Map<String, CharacterInfo>>(emptyMap())

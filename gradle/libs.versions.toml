@@ -1,19 +1,19 @@
 [versions]
 # Build Tools
 agp = "8.13.2"
-kotlin = "2.3.0"
+kotlin = "2.3.10"
 
 # AndroidX Core
 coreKtx = "1.17.0"
 coreSplashscreen = "1.2.0"
-activityCompose = "1.12.3"
+activityCompose = "1.12.4"
 kotlinpoet = "2.2.0"
 kotlinpoetKsp = "2.2.0"
 symbolProcessingApi = "2.3.4"
 lifecycle = "2.10.0"
 
 # Compose
-composeBom = "2026.01.01"
+composeBom = "2026.02.00"
 navigationCompose = "2.9.7"
 
 # Dependency Injection

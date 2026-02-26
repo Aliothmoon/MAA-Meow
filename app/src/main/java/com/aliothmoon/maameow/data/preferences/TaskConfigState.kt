@@ -17,6 +17,7 @@ import com.aliothmoon.maameow.data.model.TaskType
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.domain.models.TaskConfigPrefs
 import com.aliothmoon.maameow.domain.models.TaskConfigPrefsSchema
+import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -33,10 +34,7 @@ class TaskConfigState(private val context: Context) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
+    private val json = JsonUtils.common
 
     companion object {
         private val Context.store: DataStore<Preferences> by preferencesDataStore(

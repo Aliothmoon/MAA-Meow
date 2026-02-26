@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.api.await
 import com.aliothmoon.maameow.data.api.model.MirrorChyanResponse
 import com.aliothmoon.maameow.data.model.update.UpdateInfo
+import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -40,11 +41,7 @@ class ResourceDownloader(
     companion object {
         private val VERSION_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
 
-        val json = Json {
-            ignoreUnknownKeys = true
-            isLenient = true
-            encodeDefaults = true
-        }
+        val json = JsonUtils.common
 
         fun compareVersions(v1: String, v2: String): Int {
             return try {

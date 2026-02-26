@@ -2,6 +2,7 @@
 
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.model.LogItem
+import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -25,10 +26,7 @@ class TaskLogWriter(private val pathConfig: MaaPathConfig) {
         private val FILE_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
     }
 
-    private val json = Json {
-        encodeDefaults = true
-        ignoreUnknownKeys = true
-    }
+    private val json = JsonUtils.common
 
     private val mutex = Mutex()
     private var currentLogFile: File? = null

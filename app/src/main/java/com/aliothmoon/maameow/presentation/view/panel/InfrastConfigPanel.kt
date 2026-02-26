@@ -57,6 +57,7 @@ import com.aliothmoon.maameow.domain.enums.InfrastRoomType
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
+import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -307,7 +308,6 @@ private fun CustomInfrastSection(
     onConfigChange: (InfrastConfig) -> Unit
 ) {
     val pathConfig: MaaPathConfig = koinInject()
-    val json = remember { Json { ignoreUnknownKeys = true } }
 
     // 解析后的配置（用于计划下拉框）
     var parsedConfig by remember { mutableStateOf<CustomInfrastConfig?>(null) }
@@ -325,7 +325,8 @@ private fun CustomInfrastSection(
                 val file = File(config.customInfrastFile)
                 if (file.exists()) {
                     val content = file.readText()
-                    val parsed = json.decodeFromString<CustomInfrastConfig>(content)
+                    val parsed = JsonUtils.common
+                        .decodeFromString<CustomInfrastConfig>(content)
                     parsedConfig = parsed
                     parseError = null
                     // 同步时间段数据到 config 用于 toTaskParams 的时间轮换

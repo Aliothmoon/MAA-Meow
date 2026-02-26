@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.data.datasource
 
 import android.content.Context
 import com.aliothmoon.maameow.data.model.AssetManifest
+import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -32,9 +33,7 @@ class AssetExtractor(private val context: Context) {
         cause: Throwable
     ) : Exception("文件 $failedFile 在 $attempts 次尝试后仍失败", cause)
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-    }
+    private val json = JsonUtils.common
 
 
     data class ExtractProgress(

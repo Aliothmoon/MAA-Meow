@@ -59,10 +59,9 @@ class PermissionManager(
         }
         scope.launch {
             state.map { it.shizuku }
+                .filter { it }
                 .collect {
-                    if (it) {
-                        grantAll()
-                    }
+                    grantRequiredPermissions()
                 }
         }
 
@@ -263,7 +262,7 @@ class PermissionManager(
         return granted
     }
 
-    private suspend fun grantAll() {
+    private suspend fun grantRequiredPermissions() {
         if (!ShizukuManager.checkPermissionGranted()) {
             Timber.w("grantAll: Shizuku permission not granted")
             return

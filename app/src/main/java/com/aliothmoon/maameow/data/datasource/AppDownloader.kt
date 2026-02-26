@@ -8,6 +8,7 @@ import com.aliothmoon.maameow.data.api.await
 import com.aliothmoon.maameow.data.api.model.GitHubRelease
 import com.aliothmoon.maameow.data.api.model.MirrorChyanResponse
 import com.aliothmoon.maameow.data.model.update.UpdateInfo
+import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -30,11 +31,7 @@ class AppDownloader(
     }
 
     companion object {
-        private val json = Json {
-            ignoreUnknownKeys = true
-            isLenient = true
-            encodeDefaults = true
-        }
+        private val json = JsonUtils.common
 
         /**
          * 比较语义化版本号，支持 v 前缀和 prerelease

@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.data.api
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotResponse
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotSetResponse
 import com.aliothmoon.maameow.data.model.copilot.PrtsRateResponse
+import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.buildJsonObject
@@ -52,7 +53,7 @@ class CopilotApiService(
             }.toString()
             val response = httpClient.post("${BASE_URL}copilot/rating", body)
             response.use {
-                HttpClientHelper.httpJson.decodeFromString<PrtsRateResponse>(it.body.string())
+                JsonUtils.common.decodeFromString<PrtsRateResponse>(it.body.string())
             }
         }.onFailure {
             Timber.e(it, "$TAG: 评分失败: id=$id, rating=$rating")

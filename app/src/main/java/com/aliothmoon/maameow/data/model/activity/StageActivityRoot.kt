@@ -1,7 +1,6 @@
 package com.aliothmoon.maameow.data.model.activity
 
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 
@@ -11,10 +10,7 @@ import kotlinx.serialization.json.decodeFromJsonElement
  */
 object StageActivityRoot {
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
+    private val json = JsonUtils.common
 
     /**
      * 从 JSON 字符串解析，按 clientType 获取对应的活动数据

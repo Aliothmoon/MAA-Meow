@@ -6,6 +6,7 @@ import com.aliothmoon.maameow.data.model.CopilotConfig
 import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
 import com.aliothmoon.maameow.data.model.copilot.CopilotTaskData
 import com.aliothmoon.maameow.data.repository.CopilotRepository
+import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -46,7 +47,7 @@ class CopilotManager(
      */
     fun parseJson(json: String): Result<CopilotTaskData> {
         return runCatching {
-            HttpClientHelper.httpJson.decodeFromString<CopilotTaskData>(json)
+            JsonUtils.common.decodeFromString<CopilotTaskData>(json)
         }
     }
 
@@ -119,7 +120,7 @@ class CopilotManager(
             if (config.addUserAdditional && config.userAdditional.isNotBlank()) {
                 // Parse user additional JSON array
                 try {
-                    val arr = HttpClientHelper.httpJson.parseToJsonElement(config.userAdditional)
+                    val arr = JsonUtils.common.parseToJsonElement(config.userAdditional)
                     put("user_additional", arr)
                 } catch (e: Exception) {
                     Timber.w(e, "$TAG: 自定义干员 JSON 解析失败")
@@ -166,7 +167,7 @@ class CopilotManager(
             }
             if (config.addUserAdditional && config.userAdditional.isNotBlank()) {
                 try {
-                    val arr = HttpClientHelper.httpJson.parseToJsonElement(config.userAdditional)
+                    val arr = JsonUtils.common.parseToJsonElement(config.userAdditional)
                     put("user_additional", arr)
                 } catch (e: Exception) {
                     Timber.w(e, "$TAG: 自定义干员 JSON 解析失败")

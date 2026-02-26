@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.data.api
 
+import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
@@ -13,11 +14,6 @@ class HttpClientHelper(
 ) {
     companion object {
         val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
-        val httpJson = Json {
-            ignoreUnknownKeys = true
-            isLenient = true
-            encodeDefaults = true
-        }
     }
 
 
@@ -50,7 +46,7 @@ class HttpClientHelper(
         headers: Map<String, String> = emptyMap()
     ): T {
         return get(url, query, headers).use {
-            httpJson.decodeFromString<T>(it.body.string())
+            JsonUtils.common.decodeFromString<T>(it.body.string())
         }
     }
 
