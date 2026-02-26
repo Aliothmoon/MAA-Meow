@@ -18,13 +18,13 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RunMode
@@ -51,12 +51,12 @@ fun ExpandedControlPanel(
     service: MaaCompositionService = koinInject(),
     appSettings: AppSettingsManager = koinInject()
 ) {
-    val uiState by viewModel.state.collectAsState()
-    val maaState by service.state.collectAsState()
-    val runMode by appSettings.runMode.collectAsState()
-    val logs by viewModel.runtimeLogs.collectAsState()
+    val uiState by viewModel.state.collectAsStateWithLifecycle()
+    val maaState by service.state.collectAsStateWithLifecycle()
+    val runMode by appSettings.runMode.collectAsStateWithLifecycle()
+    val logs by viewModel.runtimeLogs.collectAsStateWithLifecycle()
 
-    val tasks by viewModel.taskConfig.taskList.collectAsState()
+    val tasks by viewModel.taskConfig.taskList.collectAsStateWithLifecycle()
 
     val pagerState = rememberPagerState(
         initialPage = uiState.currentTab.ordinal,

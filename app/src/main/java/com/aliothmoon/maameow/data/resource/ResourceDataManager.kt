@@ -127,7 +127,6 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
     }
 
     suspend fun load(clientType: String = "Official") {
-        val start = System.nanoTime()
         withContext(Dispatchers.IO) {
             listOf(
                 async {

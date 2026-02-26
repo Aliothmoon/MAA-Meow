@@ -370,7 +370,9 @@ class HomeViewModel(
                     }
                 }
                 _uiState.update { it.copy(isLoading = true) }
-                val ret = useRemoteService { it.clearForcedDisplaySize() }
+                val ret = withContext(Dispatchers.IO) {
+                    useRemoteService { it.clearForcedDisplaySize() }
+                }
                 Timber.i("onResetResolution: %s", ret)
                 _uiState.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
