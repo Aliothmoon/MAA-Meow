@@ -11,12 +11,13 @@ import com.aliothmoon.maameow.data.model.update.UpdateInfo
 import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import okhttp3.Request
 import timber.log.Timber
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
+import java.util.Locale
 
 class AppDownloader(
     private val context: Context,
@@ -202,7 +203,11 @@ class AppDownloader(
     fun cleanOldApks(keepVersion: String) {
         val keepName = apkFileName(keepVersion)
         context.cacheDir.listFiles()
-            ?.filter { it.name.startsWith("MaaMeow-") && (it.name.endsWith(".apk") || it.name.endsWith(".apk.dl")) }
+            ?.filter {
+                it.name.startsWith("MaaMeow-") && (it.name.endsWith(".apk") || it.name.endsWith(
+                    ".apk.dl"
+                ))
+            }
             ?.filter { it.name != keepName }
             ?.forEach { it.delete() }
     }
@@ -218,7 +223,7 @@ class AppDownloader(
             val response = httpClient.rawClient().newCall(request).await()
 
             if (!response.isSuccessful) {
-                return Result.failure(Exception("HTTP ${response.code}"))
+                return Result.failure(Exception("服务器返回错误 (HTTP ${response.code})"))
             }
 
             val body = response.body
@@ -276,7 +281,7 @@ class AppDownloader(
             Result.success(apkFile)
         } catch (e: Exception) {
             Timber.e(e, "下载 APK 失败")
-            Result.failure(e)
+            Result.failure(Exception(formatDownloadError(e), e))
         }
     }
 
@@ -285,12 +290,25 @@ class AppDownloader(
     private fun formatSpeed(bytesPerSecond: Long): String {
         return when {
             bytesPerSecond >= 1024 * 1024 -> String.format(
+                Locale.US,
                 "%.1f MB/s",
                 bytesPerSecond / (1024.0 * 1024)
             )
 
-            bytesPerSecond >= 1024 -> String.format("%.1f KB/s", bytesPerSecond / 1024.0)
+            bytesPerSecond >= 1024 -> String.format(
+                Locale.US,
+                "%.1f KB/s", bytesPerSecond / 1024.0
+            )
+
             else -> "$bytesPerSecond B/s"
+        }
+    }
+
+
+    private fun formatDownloadError(e: Exception): String {
+        return when (e) {
+            is IOException -> "网络异常，请检查网络连接后重试"
+            else -> e.message ?: "未知错误"
         }
     }
 }

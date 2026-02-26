@@ -10,12 +10,12 @@ import com.aliothmoon.maameow.data.model.update.UpdateInfo
 import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import okhttp3.Request
 import timber.log.Timber
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -142,7 +142,7 @@ class ResourceDownloader(
             val response = httpClient.rawClient().newCall(request).await()
 
             if (!response.isSuccessful) {
-                return Result.failure(Exception("HTTP ${response.code}"))
+                return Result.failure(Exception("服务器返回错误 (HTTP ${response.code})"))
             }
 
             val body = response.body
@@ -191,7 +191,7 @@ class ResourceDownloader(
             Result.success(tempFile)
         } catch (e: Exception) {
             Timber.e(e, "下载文件失败")
-            Result.failure(e)
+            Result.failure(Exception(formatDownloadError(e), e))
         }
     }
 
@@ -205,6 +205,14 @@ class ResourceDownloader(
 
             bytesPerSecond >= 1024 -> String.format("%.1f KB/s", bytesPerSecond / 1024.0)
             else -> "$bytesPerSecond B/s"
+        }
+    }
+
+
+    private fun formatDownloadError(e: Exception): String {
+        return when (e) {
+            is IOException -> "网络异常，请检查网络连接后重试"
+            else -> e.message ?: "未知错误"
         }
     }
 }
