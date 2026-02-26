@@ -11,7 +11,6 @@ import com.aliothmoon.maameow.domain.service.RuntimeLogCenter
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.BuildTaskParamsUseCase
 import com.aliothmoon.maameow.manager.PermissionManager
-import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
 import com.aliothmoon.maameow.presentation.state.BackgroundTaskState
 
@@ -40,12 +39,9 @@ class BackgroundTaskViewModel(
     val runtimeLogs: StateFlow<List<LogItem>> = runtimeLogCenter.logs
 
     private var currentSurface: Surface? = null
-    private var pageActive: Boolean = false
-    private var monitorStartedByPage: Boolean = false
 
     init {
         observeCompositionState()
-        observeRemoteServiceState()
     }
 
     private fun observeCompositionState() {
@@ -63,20 +59,8 @@ class BackgroundTaskViewModel(
         }
     }
 
-    private fun observeRemoteServiceState() {
-        viewModelScope.launch {
-            RemoteServiceManager.state.collect { serviceState ->
-                if (serviceState is RemoteServiceManager.ServiceState.Connected && pageActive) {
-                    currentSurface?.takeIf { it.isValid }?.let { surface ->
-                        Timber.i("Remote service reconnected, rebinding monitor surface")
-                        setRemoteSurface(surface)
-                    }
-                }
-            }
-        }
-    }
-
     private fun setRemoteSurface(surface: Surface?) {
+        Timber.d("setRemoteSurface: %s", surface)
         runCatching {
             runBlocking {
                 useRemoteService { it.setMonitorSurface(surface) }
@@ -108,46 +92,23 @@ class BackgroundTaskViewModel(
         _state.update { it.copy(currentTaskType = taskType) }
     }
 
-    fun onPageEnter() {
-        pageActive = true
-        tryStartMonitorIfReady()
-    }
-
     fun onShizukuGranted() {
-        if (pageActive) {
-            tryStartMonitorIfReady()
-        }
-    }
-
-    fun onPageExit() {
-        pageActive = false
-        monitorStartedByPage = false
-        stopMonitor()
-    }
-
-    private fun tryStartMonitorIfReady() {
-        if (monitorStartedByPage) {
-            return
-        }
-        if (!permissionManager.permissions.shizuku) {
-            return
-        }
-        monitorStartedByPage = true
-        currentSurface?.let { setRemoteSurface(it) }
-    }
-
-    fun stopMonitor() {
-        currentSurface = null
-        setRemoteSurface(null)
+        currentSurface?.takeIf { it.isValid }?.let { setRemoteSurface(it) }
     }
 
     fun onSurfaceAvailable(surface: Surface) {
         currentSurface = surface
+        if (!permissionManager.permissions.shizuku) {
+            return
+        }
         setRemoteSurface(surface)
     }
 
     fun onSurfaceDestroyed() {
         currentSurface = null
+        if (!permissionManager.permissions.shizuku) {
+            return
+        }
         setRemoteSurface(null)
     }
 

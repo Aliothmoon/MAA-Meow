@@ -128,26 +128,7 @@ fun BackgroundTaskView(
             pagerState.scrollToPage(state.currentTab.ordinal)
         }
     }
-
     val context = LocalContext.current
-    LaunchedEffect(state.isFullscreenMonitor) {
-        onFullscreenChanged(state.isFullscreenMonitor)
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.onPageEnter()
-    }
-    LaunchedEffect(Unit) {
-        dispatcher.serviceDiedEvent.collect {
-            Toast.makeText(context, "MaaService 异常关闭，请尝试重新启动", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            viewModel.onPageExit()
-        }
-    }
 
     if (!permissions.shizuku) {
         ShizukuPermissionDialog(
@@ -168,6 +149,18 @@ fun BackgroundTaskView(
             }
         )
     }
+
+
+    LaunchedEffect(state.isFullscreenMonitor) {
+        onFullscreenChanged(state.isFullscreenMonitor)
+    }
+
+    LaunchedEffect(Unit) {
+        dispatcher.serviceDiedEvent.collect {
+            Toast.makeText(context, "MaaService 异常关闭，请尝试重新启动", Toast.LENGTH_SHORT).show()
+        }
+    }
+
 
     var isSurfaceAvailable by remember { mutableStateOf(false) }
     val previewContent = remember {
