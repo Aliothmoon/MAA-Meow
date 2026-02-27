@@ -41,10 +41,6 @@ class MaaResourceLoader(
     suspend fun load(clientType: String = taskConfigState.wakeUpConfig.value.clientType): Result<Unit> {
         _state.value = State.Loading()
         Timber.i("MaaCore resources loading, clientType=$clientType")
-
-        if (clientType == "Bilibili") {
-        }
-
         loadDepsInfo(clientType)
 
         return try {
@@ -142,6 +138,9 @@ class MaaResourceLoader(
             if (!src.exists()) return
             val destDir = File(resourcePath, "tasks").apply { mkdirs() }
             val dest = File(destDir, "tasks.json")
+            if (dest.exists() && dest.length() == src.length() && dest.lastModified() >= src.lastModified()) {
+                return
+            }
             src.copyTo(dest, overwrite = true)
             Timber.d("copyTasksJson: ${src.absolutePath} -> ${dest.absolutePath}")
         } catch (e: Exception) {

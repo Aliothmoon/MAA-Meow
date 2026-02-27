@@ -66,10 +66,6 @@ object VirtualDisplayManager {
 
     fun setMonitorSurface(surface: Surface?) {
         val old = monitorSurface.getAndSet(surface)
-        if (old != null && old !== surface) {
-            runCatching { old.release() }
-                .onFailure { Ln.w("setMonitorSurface: release old surface failed: ${it.message}") }
-        }
         Ln.i("setMonitorSurface: old=${old != null}, new=${surface != null}")
     }
 
@@ -132,10 +128,6 @@ object VirtualDisplayManager {
     private fun releaseResources() {
         virtualDisplay.getAndSet(null)?.release()
         reader.getAndSet(null)?.close()
-        monitorSurface.getAndSet(null)?.let { surface ->
-            runCatching { surface.release() }
-                .onFailure { Ln.w("releaseResources: release monitor surface failed: ${it.message}") }
-        }
         displayId.set(DISPLAY_NONE)
     }
 

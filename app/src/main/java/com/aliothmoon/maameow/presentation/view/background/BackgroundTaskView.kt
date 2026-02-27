@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.graphics.Matrix
 import android.graphics.SurfaceTexture
-import android.view.Surface
 import android.view.TextureView
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -139,9 +138,7 @@ fun BackgroundTaskView(
                     isRequestingShizuku = true
                     val granted = permissionManager.requestShizuku()
                     isRequestingShizuku = false
-                    if (granted) {
-                        viewModel.onShizukuGranted()
-                    } else {
+                    if (!granted) {
                         Toast.makeText(context, "Shizuku 权限未获取，请重试", Toast.LENGTH_SHORT)
                             .show()
                     }
@@ -168,7 +165,6 @@ fun BackgroundTaskView(
             AndroidView(
                 factory = { ctx ->
                     TextureView(ctx).apply {
-                        var currentSurface: Surface? = null
                         surfaceTextureListener = object : TextureView.SurfaceTextureListener {
                             override fun onSurfaceTextureAvailable(
                                 surfaceTexture: SurfaceTexture,
@@ -179,11 +175,8 @@ fun BackgroundTaskView(
                                     DefaultDisplayConfig.WIDTH,
                                     DefaultDisplayConfig.HEIGHT
                                 )
-                                currentSurface?.release()
-                                val surface = Surface(surfaceTexture)
-                                currentSurface = surface
                                 isSurfaceAvailable = true
-                                viewModel.onSurfaceAvailable(surface)
+                                viewModel.onSurfaceAvailable(surfaceTexture)
                                 updateTextureTransform(this@apply, width, height)
                             }
 
@@ -198,8 +191,6 @@ fun BackgroundTaskView(
                             override fun onSurfaceTextureDestroyed(surfaceTexture: SurfaceTexture): Boolean {
                                 isSurfaceAvailable = false
                                 viewModel.onSurfaceDestroyed()
-                                currentSurface?.release()
-                                currentSurface = null
                                 return true
                             }
 
@@ -224,7 +215,7 @@ fun BackgroundTaskView(
         ) {
             if (!state.isFullscreenMonitor) {
                 VirtualDisplayPreview(
-                    isRunning = state.isMonitorRunning,
+                    isRunning = maaState == MaaExecutionState.RUNNING,
                     isSurfaceAvailable = isSurfaceAvailable,
                     onClick = { viewModel.onToggleFullscreenMonitor() },
                     modifier = Modifier
