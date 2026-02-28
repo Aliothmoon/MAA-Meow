@@ -13,6 +13,9 @@ import com.aliothmoon.maameow.third.Ln
 
 object FrameCaptureHelper {
 
+    private val srcRect = Rect()
+    private val dstRect = Rect()
+
     fun processImage(reader: ImageReader, onFrameUse: ((HardwareBuffer) -> Unit)? = null) {
         val image = reader.acquireLatestImage() ?: return
         try {
@@ -44,8 +47,8 @@ object FrameCaptureHelper {
                 try {
                     val bitmap = Bitmap.wrapHardwareBuffer(hb, null)
                     if (bitmap != null) {
-                        val srcRect = Rect(0, 0, bitmap.width, bitmap.height)
-                        val dstRect = Rect(0, 0, canvas.width, canvas.height)
+                        srcRect.set(0, 0, bitmap.width, bitmap.height)
+                        dstRect.set(0, 0, canvas.width, canvas.height)
                         canvas.drawBitmap(bitmap, srcRect, dstRect, null)
                     }
                 } finally {

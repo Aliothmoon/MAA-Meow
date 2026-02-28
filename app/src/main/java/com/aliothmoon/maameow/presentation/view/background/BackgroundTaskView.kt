@@ -2,17 +2,18 @@ package com.aliothmoon.maameow.presentation.view.background
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
+
 import android.graphics.Matrix
 import android.graphics.SurfaceTexture
 import android.view.TextureView
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,7 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -86,10 +86,13 @@ import com.aliothmoon.maameow.presentation.view.panel.fight.FightConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.mall.MallConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.roguelike.RoguelikeConfigPanel
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
+import timber.log.Timber
 
 @Composable
 fun BackgroundTaskView(
@@ -185,6 +188,7 @@ fun BackgroundTaskView(
                                 width: Int,
                                 height: Int
                             ) {
+                                Timber.d("SurfaceTexture size changed to $width x $height")
                                 updateTextureTransform(this@apply, width, height)
                             }
 
@@ -204,6 +208,14 @@ fun BackgroundTaskView(
         }
     }
 
+    val fullscreenProgress = remember { Animatable(0f) }
+
+    LaunchedEffect(state.isFullscreenMonitor) {
+        if (state.isFullscreenMonitor) {
+            fullscreenProgress.snapTo(0f)
+            fullscreenProgress.animateTo(1f, tween(300, easing = FastOutSlowInEasing))
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -350,9 +362,6 @@ fun BackgroundTaskView(
 
             DisposableEffect(Unit) {
                 val window = activity?.window
-                val originalOrientation = activity?.requestedOrientation
-                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-
                 val controller = window?.let {
                     WindowCompat.getInsetsController(it, it.decorView)
                 }
@@ -361,68 +370,71 @@ fun BackgroundTaskView(
                     WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 
                 onDispose {
-                    if (originalOrientation != null) {
-                        activity.requestedOrientation = originalOrientation
-                    }
                     controller?.show(WindowInsetsCompat.Type.systemBars())
                 }
             }
 
-            BackHandler { viewModel.onToggleFullscreenMonitor() }
-
-            // 控件自动隐藏
-            var showControls by remember { mutableStateOf(true) }
-            LaunchedEffect(showControls) {
-                if (showControls) {
-                    delay(3000)
-                    showControls = false
+            DisposableEffect(Unit) {
+                val originalOrientation = activity?.requestedOrientation
+                onDispose {
+                    if (originalOrientation != null) {
+                        activity.requestedOrientation = originalOrientation
+                    }
                 }
             }
+
+            LaunchedEffect(Unit) {
+                delay(200)
+                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            }
+
+            BackHandler { viewModel.onToggleFullscreenMonitor() }
 
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .graphicsLayer {
+                        alpha = fullscreenProgress.value
+                    }
                     .background(Color.Black)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) { showControls = !showControls },
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull() ?: continue
+                                val coords = viewToVirtualDisplay(
+                                    change.position.x, change.position.y,
+                                    size.width, size.height
+                                ) ?: continue
+                                when (event.type) {
+                                    PointerEventType.Press -> viewModel.onTouchDown(coords.first, coords.second)
+                                    PointerEventType.Move -> {
+                                        if (change.pressed) {
+                                            viewModel.onTouchMove(coords.first, coords.second)
+                                        }
+                                    }
+                                    PointerEventType.Release -> viewModel.onTouchUp(coords.first, coords.second)
+                                }
+                                change.consume()
+                            }
+                        }
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 previewContent()
 
-                // 顶部渐变遮罩 + 关闭按钮
-                AnimatedVisibility(
-                    visible = showControls,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                    modifier = Modifier.align(Alignment.TopCenter)
+                IconButton(
+                    onClick = { viewModel.onToggleFullscreenMonitor() },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 8.dp, end = 8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        Color.Black.copy(alpha = 0.5f),
-                                        Color.Transparent
-                                    )
-                                )
-                            )
-                            .padding(top = 8.dp, end = 8.dp, bottom = 24.dp)
-                    ) {
-                        IconButton(
-                            onClick = { viewModel.onToggleFullscreenMonitor() },
-                            modifier = Modifier.align(Alignment.TopEnd)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "关闭",
-                                tint = Color.White,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "关闭",
+                        tint = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.size(28.dp)
+                    )
                 }
             }
         }
@@ -636,4 +648,19 @@ private fun updateTextureTransform(textureView: TextureView, viewWidth: Int, vie
     matrix.postTranslate(offsetX, offsetY)
 
     textureView.setTransform(matrix)
+}
+
+private fun viewToVirtualDisplay(
+    viewX: Float, viewY: Float,
+    viewWidth: Int, viewHeight: Int
+): Pair<Int, Int>? {
+    val bufferW = DefaultDisplayConfig.WIDTH.toFloat()
+    val bufferH = DefaultDisplayConfig.HEIGHT.toFloat()
+    val scale = minOf(viewWidth / bufferW, viewHeight / bufferH)
+    val offsetX = (viewWidth - bufferW * scale) / 2f
+    val offsetY = (viewHeight - bufferH * scale) / 2f
+    val vx = ((viewX - offsetX) / scale).toInt()
+    val vy = ((viewY - offsetY) / scale).toInt()
+    if (vx < 0 || vx >= bufferW.toInt() || vy < 0 || vy >= bufferH.toInt()) return null
+    return vx to vy
 }

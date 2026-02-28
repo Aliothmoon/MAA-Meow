@@ -164,7 +164,7 @@ object RemoteServiceManager {
 
     fun getInstanceOrNull(): RemoteService? {
         val current = _state.value
-        if (current is ServiceState.Connected && currentBinder.get()?.pingBinder() == true) {
+        if (current is ServiceState.Connected) {
             return current.service
         }
         return null

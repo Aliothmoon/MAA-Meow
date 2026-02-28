@@ -8,6 +8,7 @@ import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.bridge.NativeBridgeLib
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.DisplayMode
+import com.aliothmoon.maameow.maa.InputControlUtils
 import com.aliothmoon.maameow.maa.MaaCoreLibrary
 import com.aliothmoon.maameow.remote.internal.PrimaryDisplayManager
 import com.aliothmoon.maameow.remote.internal.VirtualDisplayManager
@@ -167,6 +168,36 @@ class RemoteServiceImpl : RemoteService.Stub() {
         VirtualDisplayManager.setMonitorSurface(surface)
     }
 
+    override fun touchDown(x: Int, y: Int) {
+        if (virtualDisplayMode.get() == DisplayMode.PRIMARY) {
+            return
+        }
+        val displayId = VirtualDisplayManager.getDisplayId()
+        if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
+            InputControlUtils.down(x, y, displayId)
+        }
+    }
+
+    override fun touchMove(x: Int, y: Int) {
+        if (virtualDisplayMode.get() == DisplayMode.PRIMARY) {
+            return
+        }
+        val displayId = VirtualDisplayManager.getDisplayId()
+        if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
+            InputControlUtils.move(x, y, displayId)
+        }
+    }
+
+    override fun touchUp(x: Int, y: Int) {
+        if (virtualDisplayMode.get() == DisplayMode.PRIMARY) {
+            return
+        }
+        val displayId = VirtualDisplayManager.getDisplayId()
+        if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
+            InputControlUtils.up(x, y, displayId)
+        }
+    }
+
     override fun startVirtualDisplay(): Int {
         Ln.i("$TAG: startVirtualDisplay() ${virtualDisplayMode.get()}")
         return when (virtualDisplayMode.get()) {
@@ -184,13 +215,6 @@ class RemoteServiceImpl : RemoteService.Stub() {
         }
     }
 
-    override fun getVirtualDisplayId(): Int {
-        return when (virtualDisplayMode.get()) {
-            DisplayMode.PRIMARY -> PrimaryDisplayManager.DISPLAY_ID
-            DisplayMode.BACKGROUND -> VirtualDisplayManager.getDisplayId()
-            else -> DefaultDisplayConfig.DISPLAY_NONE
-        }
-    }
 
     override fun setVirtualDisplayMode(mode: Int): Boolean {
         when (mode) {

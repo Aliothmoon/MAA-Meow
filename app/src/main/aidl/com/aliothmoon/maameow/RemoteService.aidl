@@ -35,5 +35,9 @@ interface RemoteService {
 
     void stopVirtualDisplay() = 15;
 
-    int getVirtualDisplayId() = 16;
+    oneway void touchDown(int x, int y) = 17;
+
+    oneway void touchMove(int x, int y) = 18;
+
+    oneway void touchUp(int x, int y) = 19;
 }

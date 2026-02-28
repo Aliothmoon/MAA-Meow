@@ -23,8 +23,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicReference
 
@@ -62,9 +62,7 @@ class BackgroundTaskViewModel(
     private fun setRemoteSurface(surface: Surface?) {
         Timber.d("setRemoteSurface: %s", surface)
         runCatching {
-            runBlocking {
-                useRemoteService { it.setMonitorSurface(surface) }
-            }
+            RemoteServiceManager.getInstanceOrNull()?.setMonitorSurface(surface)
         }.onFailure {
             Timber.w(it, "setMonitorSurface failed")
         }
@@ -94,19 +92,41 @@ class BackgroundTaskViewModel(
 
     fun onSurfaceAvailable(surfaceTexture: SurfaceTexture) {
         val surface = Surface(surfaceTexture)
-        if (RemoteServiceManager.state.value !is RemoteServiceManager.ServiceState.Connected) {
-            return
-        }
         surfaceRef.set(surface)
         setRemoteSurface(surface)
     }
 
     fun onSurfaceDestroyed() {
-        if (RemoteServiceManager.state.value !is RemoteServiceManager.ServiceState.Connected) {
-            return
-        }
         setRemoteSurface(null)
         surfaceRef.getAndSet(null)?.release()
+    }
+
+    fun onTouchDown(x: Int, y: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                RemoteServiceManager.getInstanceOrNull()?.touchDown(x, y)
+            }
+        }
+    }
+
+    fun onTouchMove(x: Int, y: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                RemoteServiceManager.getInstanceOrNull()?.touchMove(x, y)
+            }
+        }
+    }
+
+    fun onTouchUp(x: Int, y: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                RemoteServiceManager.getInstanceOrNull()?.touchUp(x, y)
+            }
+        }
+    }
+
+    fun isServiceConnected(): Boolean {
+        return RemoteServiceManager.state.value is RemoteServiceManager.ServiceState.Connected
     }
 
     fun onToggleFullscreenMonitor() {
