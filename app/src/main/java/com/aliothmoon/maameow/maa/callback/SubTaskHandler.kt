@@ -257,6 +257,10 @@ class SubTaskHandler(
 
         when (what) {
             "StageDrops" -> handleStageDrops(subDetails)
+            "AccountSwitch" -> {
+                val accountName = subDetails?.getString("account_name") ?: ""
+                append("${str("AccountSwitch")} -->> $accountName", LogLevel.INFO)
+            }
             "StageInfoError" -> append(str("StageInfoError"), LogLevel.ERROR)
             "StageQueueUnableToAgent" -> {
                 val code = subDetails?.getString("stage_code") ?: ""

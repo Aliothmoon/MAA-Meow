@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,13 +18,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
+import com.aliothmoon.maameow.presentation.components.ITextField
 import org.koin.compose.koinInject
 
 /**
@@ -41,6 +45,7 @@ fun WakeUpConfigPanel(
     val state = compositionService.state.collectAsStateWithLifecycle()
     val isTaskActive =
         state.value == MaaExecutionState.STARTING || state.value == MaaExecutionState.RUNNING
+    val showAccountSwitchInput = config.clientType == "Official" || config.clientType == "Bilibili"
 
     Column(
         modifier = Modifier
@@ -92,6 +97,28 @@ fun WakeUpConfigPanel(
                         )
                     }
                 }
+            }
+        }
+
+        if (showAccountSwitchInput) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                ITextField(
+                    value = config.accountName,
+                    onValueChange = { onConfigChange(config.copy(accountName = it)) },
+                    enabled = !isTaskActive,
+                    label = stringResource(id = R.string.maa_account_switch),
+                    placeholder = "123****4567"
+                )
+
+                Text(
+                    text = stringResource(id = R.string.maa_account_switch_tip),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFF7F7F7), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                )
             }
         }
 

@@ -90,6 +90,8 @@
     <string name="maa_cur_times">当前次数</string>
     <string name="maa_furniture_drop">家具</string>
     <string name="maa_no_drop">无</string>
+    <string name="maa_account_switch">账号切换</string>
+    <string name="maa_account_switch_tip">需要切换至的账号，留空以禁用。输入登录界面显示的内容，例如 123****4567；支持部分匹配。仅支持官服、B服，不支持登录账号。</string>
     <string name="maa_stage_info_error">关卡识别错误</string>
     <string name="maa_stage_queue">关卡队列:</string>
     <string name="maa_unable_to_agent">无法使用代理指挥</string>
