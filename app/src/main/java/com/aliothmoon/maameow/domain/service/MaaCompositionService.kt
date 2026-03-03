@@ -223,9 +223,9 @@ class MaaCompositionService(
         }
     }
 
-    suspend fun startCopilot(params: String): StartResult {
+    suspend fun startCopilot(task: MaaTaskParams): StartResult {
         _state.value = MaaExecutionState.STARTING
-        runtimeLogCenter.startSession(listOf("Copilot"))
+        runtimeLogCenter.startSession(listOf(task.type.value))
         runtimeLogCenter.appendAndWait("开始执行自动战斗", LogLevel.INFO)
         return withContext(Dispatchers.IO) {
             val loaded = resourceLoader.ensureLoaded()
@@ -305,8 +305,8 @@ class MaaCompositionService(
                     return@useRemoteService StartResult.ConnectionError(StartResult.ConnectionError.ConnectPhase.MAA_CONNECT)
                 }
 
-                runtimeLogCenter.appendToFileOnly("[TaskParams] Copilot: $params")
-                maa.AppendTask("Copilot", params)
+                runtimeLogCenter.appendToFileOnly("[TaskParams] ${task.type.value}: ${task.params}")
+                maa.AppendTask(task.type.value, task.params)
                 if (!maa.Start()) {
                     _state.value = MaaExecutionState.ERROR
                     runtimeLogCenter.appendAndWait("MaaCore 启动失败", LogLevel.ERROR)
@@ -318,6 +318,10 @@ class MaaCompositionService(
                 return@useRemoteService StartResult.Success(maa.GetVersion())
             }
         }
+    }
+
+    suspend fun startCopilot(params: String): StartResult {
+        return startCopilot(MaaTaskParams(com.aliothmoon.maameow.maa.task.MaaTaskType.COPILOT, params))
     }
 
     fun buildConnectConfig(width: Int, height: Int, displayId: Int): String {

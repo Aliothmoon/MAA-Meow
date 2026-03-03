@@ -76,6 +76,7 @@ import com.aliothmoon.maameow.presentation.view.panel.PanelDialogUiState
 import com.aliothmoon.maameow.presentation.view.panel.PanelTab
 import com.aliothmoon.maameow.presentation.view.panel.TaskConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.TaskListPanel
+import com.aliothmoon.maameow.presentation.view.panel.AutoBattlePanel
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -307,11 +308,7 @@ fun BackgroundTaskView(
                     }
 
                     1 -> {
-                        PlaceholderContent(
-                            title = "自动战斗",
-                            description = "功能开发中...",
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        AutoBattlePanel(modifier = Modifier.fillMaxSize())
                     }
 
                     2 -> {
@@ -332,38 +329,40 @@ fun BackgroundTaskView(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            if (state.currentTab == PanelTab.TASKS) {
+                Spacer(modifier = Modifier.height(12.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = { viewModel.onStartTasks() },
-                    enabled = maaState != MaaExecutionState.RUNNING
-                            && maaState != MaaExecutionState.STARTING,
-                    modifier = Modifier.weight(1f)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    if (maaState == MaaExecutionState.STARTING) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text("开始任务")
+                    Button(
+                        onClick = { viewModel.onStartTasks() },
+                        enabled = maaState != MaaExecutionState.RUNNING
+                                && maaState != MaaExecutionState.STARTING,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        if (maaState == MaaExecutionState.STARTING) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("开始任务")
+                        }
                     }
-                }
 
-                OutlinedButton(
-                    onClick = { viewModel.onStopTasks() },
-                    enabled = maaState == MaaExecutionState.RUNNING,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("停止任务")
+                    OutlinedButton(
+                        onClick = { viewModel.onStopTasks() },
+                        enabled = maaState == MaaExecutionState.RUNNING,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("停止任务")
+                    }
                 }
             }
         }

@@ -103,11 +103,19 @@ data class CopilotAction(
     val docColor: String = "dark"
 )
 
+@Serializable
+data class SssStageInfo(
+    @SerialName("stage_name")
+    val stageName: String = ""
+)
+
 /**
  * MAA Copilot 作业数据
  */
 @Serializable
 data class CopilotTaskData(
+    @SerialName("type")
+    val type: String = "",
     @SerialName("stage_name")
     val stageName: String = "",
     @SerialName("minimum_required")
@@ -120,6 +128,8 @@ data class CopilotTaskData(
     val groups: List<CopilotGroup> = emptyList(),
     @SerialName("actions")
     val actions: List<CopilotAction> = emptyList(),
+    @SerialName("stages")
+    val stages: List<SssStageInfo> = emptyList(),
     @SerialName("difficulty")
     val difficulty: Int = DifficultyFlags.NONE
 )

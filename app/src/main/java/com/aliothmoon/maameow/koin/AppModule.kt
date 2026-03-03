@@ -28,6 +28,7 @@ import com.aliothmoon.maameow.domain.service.update.AppUpdateHandler
 import com.aliothmoon.maameow.domain.service.update.ResourceUpdateHandler
 import com.aliothmoon.maameow.domain.service.update.UpdateService
 import com.aliothmoon.maameow.maa.callback.ConnectionInfoHandler
+import com.aliothmoon.maameow.maa.callback.CopilotRuntimeStateStore
 import com.aliothmoon.maameow.maa.callback.MaaCallbackDispatcher
 import com.aliothmoon.maameow.maa.callback.MaaExecutionStateHolder
 import com.aliothmoon.maameow.maa.callback.SubTaskHandler
@@ -77,6 +78,7 @@ val appModule = module {
 
     // 回调处理链
     singleOf(::ConnectionInfoHandler)
+    singleOf(::CopilotRuntimeStateStore)
     singleOf(::TaskChainHandler)
     singleOf(::SubTaskHandler)
     singleOf(::MaaCompositionService)

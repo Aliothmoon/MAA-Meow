@@ -12,7 +12,8 @@ import timber.log.Timber
  */
 class TaskChainHandler(
     applicationContext: Context,
-    private val runtimeLogCenter: RuntimeLogCenter
+    private val runtimeLogCenter: RuntimeLogCenter,
+    private val copilotRuntimeStateStore: CopilotRuntimeStateStore
 )  {
     private val resources = applicationContext.resources
     private val packageName = applicationContext.packageName
@@ -68,6 +69,10 @@ class TaskChainHandler(
     private fun handleTaskChainExtraInfo(details: JSONObject) {
         val what = details.getString("what")
         when (what) {
+            "StageDrops-Stars-3", "StageDrops-Stars-Adverse" -> {
+                copilotRuntimeStateStore.markTaskSuccess()
+                runtimeLogCenter.append(str("CompleteCombat"), LogLevel.INFO)
+            }
             "RoutingRestart" -> {
                 val why = details.getString("why")
                 if (why == "TooManyBattlesAhead") {

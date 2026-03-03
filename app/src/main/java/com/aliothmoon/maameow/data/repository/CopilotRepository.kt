@@ -1,6 +1,9 @@
 package com.aliothmoon.maameow.data.repository
 
 import com.aliothmoon.maameow.data.config.MaaPathConfig
+import com.aliothmoon.maameow.data.model.CopilotConfig
+import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
+import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -12,11 +15,16 @@ class CopilotRepository(
     companion object {
         private const val TAG = "CopilotRepository"
         private const val COPILOT_DIR = "copilot"
+        private const val TASK_LIST_FILE = "task_list.json"
+        private const val CONFIG_FILE = "config.json"
     }
 
     private val copilotDir: File by lazy {
         File(pathConfig.rootDir, COPILOT_DIR).also { it.mkdirs() }
     }
+
+    private val taskListFile: File by lazy { File(copilotDir, TASK_LIST_FILE) }
+    private val configFile: File by lazy { File(copilotDir, CONFIG_FILE) }
 
     /**
      * 保存 copilot JSON 到文件
@@ -86,4 +94,42 @@ class CopilotRepository(
      * 获取 copilot 目录路径
      */
     fun getCopilotDir(): String = copilotDir.absolutePath
+
+    suspend fun loadTaskList(): List<CopilotListItem> = withContext(Dispatchers.IO) {
+        runCatching {
+            if (!taskListFile.exists()) {
+                return@runCatching emptyList()
+            }
+            JsonUtils.common.decodeFromString<List<CopilotListItem>>(taskListFile.readText(Charsets.UTF_8))
+        }.onFailure {
+            Timber.e(it, "$TAG: 加载战斗列表失败")
+        }.getOrDefault(emptyList())
+    }
+
+    suspend fun saveTaskList(items: List<CopilotListItem>) = withContext(Dispatchers.IO) {
+        runCatching {
+            taskListFile.writeText(JsonUtils.common.encodeToString(items), Charsets.UTF_8)
+        }.onFailure {
+            Timber.e(it, "$TAG: 保存战斗列表失败")
+        }
+    }
+
+    suspend fun loadConfig(): CopilotConfig? = withContext(Dispatchers.IO) {
+        runCatching {
+            if (!configFile.exists()) {
+                return@runCatching null
+            }
+            JsonUtils.common.decodeFromString<CopilotConfig>(configFile.readText(Charsets.UTF_8))
+        }.onFailure {
+            Timber.e(it, "$TAG: 加载自动战斗配置失败")
+        }.getOrNull()
+    }
+
+    suspend fun saveConfig(config: CopilotConfig) = withContext(Dispatchers.IO) {
+        runCatching {
+            configFile.writeText(JsonUtils.common.encodeToString(config), Charsets.UTF_8)
+        }.onFailure {
+            Timber.e(it, "$TAG: 保存自动战斗配置失败")
+        }
+    }
 }

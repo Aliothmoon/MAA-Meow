@@ -8,6 +8,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import timber.log.Timber
 
 class HttpClientHelper(
     private val okHttpClient: OkHttpClient
@@ -36,7 +37,10 @@ class HttpClientHelper(
                 }
             }
             url(requestUrl)
-        }.apply { headers.forEach { (k, v) -> header(k, v) } }.get().build()
+        }.apply { headers.forEach { (k, v) -> header(k, v) } }
+            .get()
+            .build()
+            .also { Timber.d("GET $it") }
         return okHttpClient.newCall(request).await()
     }
 

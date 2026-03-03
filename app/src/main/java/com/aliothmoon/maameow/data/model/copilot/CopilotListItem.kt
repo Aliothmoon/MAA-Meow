@@ -14,4 +14,6 @@ data class CopilotListItem(
     val isRaid: Boolean = false,    // 是否突袭
     val copilotId: Int = 0,         // PRTS Plus 作业 ID
     val isChecked: Boolean = true,  // 是否勾选执行
+    val tabIndex: Int? = null,      // 作业来源页签，用于严格校验（null 代表旧版遗留项）
+    val source: String = "web",     // web / local / resource
 )

@@ -1,26 +1,50 @@
 package com.aliothmoon.maameow.domain.service
 
 import com.aliothmoon.maameow.data.api.CopilotApiService
-import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.model.CopilotConfig
 import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
 import com.aliothmoon.maameow.data.model.copilot.CopilotTaskData
 import com.aliothmoon.maameow.data.repository.CopilotRepository
+import com.aliothmoon.maameow.maa.task.MaaTaskParams
+import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import timber.log.Timber
+
+data class CopilotSetInfo(
+    val id: Int,
+    val name: String,
+    val description: String,
+    val copilotIds: List<Int>
+)
+
+sealed class CopilotRequestException(message: String, cause: Throwable? = null) :
+    Exception(message, cause) {
+    class InvalidInput(val rawInput: String, val isSet: Boolean) :
+        CopilotRequestException("invalid input: $rawInput")
+
+    class Network(val isSet: Boolean, val detail: String?, cause: Throwable? = null) :
+        CopilotRequestException(detail ?: "network error", cause)
+
+    class NotFound(
+        val id: Int,
+        val isSet: Boolean,
+        val statusCode: Int,
+        val apiMessage: String?
+    ) : CopilotRequestException("not found: id=$id status=$statusCode message=$apiMessage")
+
+    class JsonError(val isSet: Boolean, detail: String?, cause: Throwable? = null) :
+        CopilotRequestException(detail ?: "json error", cause)
+}
 
 class CopilotManager(
     private val apiService: CopilotApiService,
     private val repository: CopilotRepository,
 ) {
-    companion object {
-        private const val TAG = "CopilotManager"
-    }
-
     // ===== 作业解析 =====
 
     /**
@@ -29,14 +53,41 @@ class CopilotManager(
      * @return Triple(copilotId, taskData, originalJsonContent)
      */
     suspend fun parseFromId(idString: String): Result<Triple<Int, CopilotTaskData, String>> {
-        val id = extractCopilotId(idString)
-            ?: return Result.failure(IllegalArgumentException("无效的作业 ID: $idString"))
-        val response = apiService.getCopilot(id).getOrElse { return Result.failure(it) }
+        val trimmed = idString.trim()
+        val id = extractCopilotId(trimmed)
+            ?: return Result.failure(CopilotRequestException.InvalidInput(trimmed, isSet = false))
+        val response = apiService.getCopilot(id).getOrElse {
+            return Result.failure(
+                CopilotRequestException.Network(
+                    isSet = false,
+                    detail = it.message,
+                    cause = it
+                )
+            )
+        }
         if (response.statusCode != 200 || response.data == null) {
-            return Result.failure(Exception("获取作业失败: status=${response.statusCode}"))
+            return Result.failure(
+                CopilotRequestException.NotFound(
+                    id = id,
+                    isSet = false,
+                    statusCode = response.statusCode,
+                    apiMessage = response.message
+                )
+            )
         }
         val content = response.data.content
-        val taskData = parseJson(content).getOrElse { return Result.failure(it) }
+        if (content.isBlank()) {
+            return Result.failure(CopilotRequestException.JsonError(isSet = false, detail = "empty content"))
+        }
+        val taskData = parseJson(content).getOrElse {
+            return Result.failure(
+                CopilotRequestException.JsonError(
+                    isSet = false,
+                    detail = it.message,
+                    cause = it
+                )
+            )
+        }
         // Save to local file
         repository.saveCopilotJson(id, content)
         return Result.success(Triple(id, taskData, content))
@@ -66,14 +117,42 @@ class CopilotManager(
     /**
      * 获取作业集中的所有作业 ID 列表
      */
-    suspend fun getCopilotSetIds(idString: String): Result<List<Int>> {
-        val id = extractCopilotId(idString)
-            ?: return Result.failure(IllegalArgumentException("无效的作业集 ID"))
-        val response = apiService.getCopilotSet(id).getOrElse { return Result.failure(it) }
-        if (response.statusCode != 200 || response.data == null) {
-            return Result.failure(Exception("获取作业集失败: status=${response.statusCode}"))
+    suspend fun getCopilotSetInfo(idString: String): Result<CopilotSetInfo> {
+        val trimmed = idString.trim()
+        val id = extractCopilotId(trimmed)
+            ?: return Result.failure(CopilotRequestException.InvalidInput(trimmed, isSet = true))
+        val response = apiService.getCopilotSet(id).getOrElse {
+            return Result.failure(
+                CopilotRequestException.Network(
+                    isSet = true,
+                    detail = it.message,
+                    cause = it
+                )
+            )
         }
-        return Result.success(response.data.copilotIds)
+        if (response.statusCode != 200 || response.data == null) {
+            return Result.failure(
+                CopilotRequestException.NotFound(
+                    id = id,
+                    isSet = true,
+                    statusCode = response.statusCode,
+                    apiMessage = response.message
+                )
+            )
+        }
+        val data = response.data
+        return Result.success(
+            CopilotSetInfo(
+                id = data.id,
+                name = data.name,
+                description = data.description,
+                copilotIds = data.copilotIds
+            )
+        )
+    }
+
+    suspend fun getCopilotSetIds(idString: String): Result<List<Int>> {
+        return getCopilotSetInfo(idString).map { it.copilotIds }
     }
 
     // ===== PRTS Plus 评分 =====
@@ -89,94 +168,82 @@ class CopilotManager(
 
     // ===== 任务参数构建 =====
 
-    /**
-     * 构建单作业模式的 MAA Core 参数 JSON
-     *
-     * MAA Core 期望格式:
-     * {
-     *   "filename": "/path/to/copilot.json",
-     *   "formation": true,
-     *   "support_unit_usage": 1,
-     *   "add_trust": false,
-     *   "ignore_requirements": false,
-     *   "loop_times": 1,
-     *   "use_sanity_potion": false,
-     *   "formation_index": 0,
-     *   "user_additional": [{"name":"XX","skill":2,"module":0}]
-     * }
-     */
-    fun buildSingleTaskParams(filePath: String, config: CopilotConfig): String {
-        return buildJsonObject {
-            put("filename", filePath)
-            put("formation", config.formation)
-            put("support_unit_usage", if (config.useSupportUnit) config.supportUnitUsage else 0)
-            put("add_trust", config.addTrust)
-            put("ignore_requirements", config.ignoreRequirements)
-            put("loop_times", if (config.loop) config.loopTimes else 1)
-            put("use_sanity_potion", config.useSanityPotion)
-            if (config.useFormation) {
-                put("formation_index", config.formationIndex - 1) // UI 1-based -> Core 0-based
-            }
-            if (config.addUserAdditional && config.userAdditional.isNotBlank()) {
-                // Parse user additional JSON array
-                try {
-                    val arr = JsonUtils.common.parseToJsonElement(config.userAdditional)
-                    put("user_additional", arr)
-                } catch (e: Exception) {
-                    Timber.w(e, "$TAG: 自定义干员 JSON 解析失败")
-                    put("user_additional", JsonArray(emptyList()))
+    fun buildSingleTask(
+        taskType: MaaTaskType,
+        filePath: String,
+        config: CopilotConfig
+    ): MaaTaskParams {
+        if (taskType == MaaTaskType.PARADOX_COPILOT) {
+            return MaaTaskParams(
+                type = MaaTaskType.PARADOX_COPILOT,
+                params = buildJsonObject {
+                    put("filename", filePath)
+                }.toString()
+            )
+        }
+        return MaaTaskParams(
+            type = taskType,
+            params = buildJsonObject {
+                put("filename", filePath)
+                put("formation", config.formation)
+                put("support_unit_usage", if (config.useSupportUnit) config.supportUnitUsage else 0)
+                put("add_trust", config.addTrust)
+                put("ignore_requirements", config.ignoreRequirements)
+                put("loop_times", if (config.loop) config.loopTimes else 1)
+                put("use_sanity_potion", config.useSanityPotion)
+                if (config.useFormation) {
+                    // 与 WPF 一致：1~4 直接透传，0 表示不指定
+                    put("formation_index", config.formationIndex)
                 }
-            } else {
-                put("user_additional", JsonArray(emptyList()))
-            }
-        }.toString()
+                put("user_additional", parseUserAdditional(config))
+            }.toString()
+        )
     }
 
-    /**
-     * 构建多作业列表模式的 MAA Core 参数 JSON
-     *
-     * MAA Core 期望格式:
-     * {
-     *   "copilot_list": [
-     *     {"filename": "/path/1.json", "stage_name": "1-7", "is_raid": false},
-     *     ...
-     *   ],
-     *   "formation": true,
-     *   ...
-     * }
-     */
-    fun buildListTaskParams(items: List<CopilotListItem>, config: CopilotConfig): String {
+    fun buildListTask(
+        tabIndex: Int,
+        items: List<CopilotListItem>,
+        config: CopilotConfig
+    ): MaaTaskParams {
         val checkedItems = items.filter { it.isChecked }
-        return buildJsonObject {
-            put("copilot_list", buildJsonArray {
-                checkedItems.forEach { item ->
-                    add(buildJsonObject {
-                        put("filename", item.filePath)
-                        put("stage_name", item.name)
-                        put("is_raid", item.isRaid)
+        if (tabIndex == 2) {
+            return MaaTaskParams(
+                type = MaaTaskType.PARADOX_COPILOT,
+                params = buildJsonObject {
+                    put("list", buildJsonArray {
+                        checkedItems.forEach { item ->
+                            add(JsonPrimitive(item.filePath))
+                        }
                     })
+                }.toString()
+            )
+        }
+
+        return MaaTaskParams(
+            type = MaaTaskType.COPILOT,
+            params = buildJsonObject {
+                put("copilot_list", buildJsonArray {
+                    checkedItems.forEach { item ->
+                        add(buildJsonObject {
+                            put("filename", item.filePath)
+                            put("stage_name", item.name)
+                            put("is_raid", item.isRaid)
+                        })
+                    }
+                })
+                put("formation", config.formation)
+                put("support_unit_usage", if (config.useSupportUnit) config.supportUnitUsage else 0)
+                put("add_trust", config.addTrust)
+                put("ignore_requirements", config.ignoreRequirements)
+                // 与 WPF 一致：战斗列表模式固定单次消费，不复用单作业循环次数配置
+                put("loop_times", 1)
+                put("use_sanity_potion", config.useSanityPotion)
+                if (config.useFormation) {
+                    put("formation_index", config.formationIndex)
                 }
-            })
-            put("formation", config.formation)
-            put("support_unit_usage", if (config.useSupportUnit) config.supportUnitUsage else 0)
-            put("add_trust", config.addTrust)
-            put("ignore_requirements", config.ignoreRequirements)
-            put("use_sanity_potion", config.useSanityPotion)
-            if (config.useFormation) {
-                put("formation_index", config.formationIndex - 1)
-            }
-            if (config.addUserAdditional && config.userAdditional.isNotBlank()) {
-                try {
-                    val arr = JsonUtils.common.parseToJsonElement(config.userAdditional)
-                    put("user_additional", arr)
-                } catch (e: Exception) {
-                    Timber.w(e, "$TAG: 自定义干员 JSON 解析失败")
-                    put("user_additional", JsonArray(emptyList()))
-                }
-            } else {
-                put("user_additional", JsonArray(emptyList()))
-            }
-        }.toString()
+                put("user_additional", parseUserAdditional(config))
+            }.toString()
+        )
     }
 
     // ===== 工具方法 =====
@@ -216,5 +283,10 @@ class CopilotManager(
             parts.add("备选组: ${data.groups.joinToString(", ") { it.name }}")
         }
         return parts.joinToString("\n")
+    }
+
+    private fun parseUserAdditional(_config: CopilotConfig): JsonElement {
+        // TODO: 恢复并重构“追加自定义干员”逻辑。
+        return JsonArray(emptyList())
     }
 }

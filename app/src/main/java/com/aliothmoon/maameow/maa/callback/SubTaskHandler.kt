@@ -13,7 +13,8 @@ import timber.log.Timber
  */
 class SubTaskHandler(
     applicationContext: Context,
-    private val runtimeLogCenter: RuntimeLogCenter
+    private val runtimeLogCenter: RuntimeLogCenter,
+    private val copilotRuntimeStateStore: CopilotRuntimeStateStore
 ) {
     private val resources = applicationContext.resources
     private val packageName = applicationContext.packageName
@@ -210,6 +211,7 @@ class SubTaskHandler(
 
             "StageDrops-Stars-3", "StageDrops-Stars-Adverse" -> {
                 append(str("CompleteCombat"), LogLevel.INFO)
+                copilotRuntimeStateStore.markTaskSuccess()
             }
 
             else -> {
@@ -375,9 +377,16 @@ class SubTaskHandler(
                 val name = subDetails?.getString("oper_name") ?: ""
                 val reqType = subDetails?.getString("requirement_type") ?: ""
                 append(str("BattleFormationOperUnavailable", name, reqType), LogLevel.ERROR)
+                copilotRuntimeStateStore.markRequirementIgnored()
             }
 
             "CopilotAction" -> handleCopilotAction(subDetails)
+            "CopilotListLoadTaskFileSuccess" -> {
+                val fileName = subDetails?.getString("file_name") ?: ""
+                val stageName = subDetails?.getString("stage_name") ?: ""
+                append("Parse $fileName[$stageName] Success", LogLevel.INFO)
+                copilotRuntimeStateStore.resetRequirementIgnored()
+            }
             "SSSStage" -> {
                 val stage = subDetails?.getString("stage") ?: ""
                 append(str("CurrentStage", stage), LogLevel.INFO)

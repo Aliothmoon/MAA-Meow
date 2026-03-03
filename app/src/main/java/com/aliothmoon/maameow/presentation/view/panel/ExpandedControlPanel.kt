@@ -150,11 +150,7 @@ fun ExpandedControlPanel(
                         }
 
                         1 -> { // PanelTab.AUTO_BATTLE
-                            PlaceholderContent(
-                                title = "自动战斗",
-                                description = "功能开发中...",
-                                modifier = Modifier.fillMaxSize()
-                            )
+                            AutoBattlePanel(modifier = Modifier.fillMaxSize())
                         }
 
                         2 -> { // PanelTab.TOOLS
@@ -175,19 +171,21 @@ fun ExpandedControlPanel(
                     }
                 }
 
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 6.dp),
-                    thickness = 1.dp,
-                    color = Color.LightGray
-                )
-                // 底部按钮
-                BottomButtons(
-                    onClose = { onClose() },
-                    onStart = {
-                        viewModel.onStartTasks()
-                    },
-                    isStarting = maaState == MaaExecutionState.STARTING
-                )
+                if (uiState.currentTab == PanelTab.TASKS) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 6.dp),
+                        thickness = 1.dp,
+                        color = Color.LightGray
+                    )
+                    // 底部按钮（仅一键长草）
+                    BottomButtons(
+                        onClose = { onClose() },
+                        onStart = {
+                            viewModel.onStartTasks()
+                        },
+                        isStarting = maaState == MaaExecutionState.STARTING
+                    )
+                }
             }
         }
 

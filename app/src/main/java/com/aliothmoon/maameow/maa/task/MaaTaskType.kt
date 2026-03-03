@@ -25,6 +25,7 @@ enum class MaaTaskType(val value: String) {
     // 辅助任务
     COPILOT("Copilot"),
     SSS_COPILOT("SSSCopilot"),
+    PARADOX_COPILOT("ParadoxCopilot"),
 
     // 识别任务
     DEPOT("Depot"),
