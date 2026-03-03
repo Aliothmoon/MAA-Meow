@@ -1,28 +1,40 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -33,15 +45,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.aliothmoon.maameow.data.model.TaskChainNode
+import com.aliothmoon.maameow.data.model.TaskParamProvider
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import sh.calvin.reorderable.ReorderableColumn
 
 /**
- * 左侧任务列表（支持拖拽排序、添加、删除、复制、重命名）
+ * 左侧任务列表（支持拖拽排序、勾选、编辑弹窗管理任务）
  */
 @Composable
 fun TaskListPanel(
@@ -52,93 +67,88 @@ fun TaskListPanel(
     onNodeMove: (Int, Int) -> Unit,
     onAddNode: (TaskTypeInfo) -> Unit,
     onRemoveNode: (String) -> Unit,
-    onDuplicateNode: (String) -> Unit,
     onRenameNode: (String, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showAddMenu by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
 
-    ReorderableColumn(
-        list = nodes,
-        onSettle = { fromIndex, toIndex -> onNodeMove(fromIndex, toIndex) },
-        modifier = modifier
-            .width(IntrinsicSize.Max)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) { _, node, _ ->
-        key(node.id) {
-            ReorderableItem {
-                TaskNodeRow(
-                    node = node,
-                    isSelected = selectedNodeId == node.id,
-                    onEnabledChange = { enabled -> onNodeEnabledChange(node.id, enabled) },
-                    onSelected = { onNodeSelected(node.id) },
-                    onRemove = { onRemoveNode(node.id) },
-                    onDuplicate = { onDuplicateNode(node.id) },
-                    onRename = { newName -> onRenameNode(node.id, newName) },
-                    modifier = Modifier.longPressDraggableHandle()
+    Column(modifier = modifier.width(IntrinsicSize.Max)) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp)
+                .clickable { showEditDialog = true },
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary
                 )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    "编辑任务",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        ReorderableColumn(
+            list = nodes,
+            onSettle = { fromIndex, toIndex -> onNodeMove(fromIndex, toIndex) },
+            modifier = Modifier
+                .width(IntrinsicSize.Max)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) { _, node, _ ->
+            key(node.id) {
+                ReorderableItem {
+                    TaskNodeRow(
+                        node = node,
+                        isSelected = selectedNodeId == node.id,
+                        onEnabledChange = { enabled -> onNodeEnabledChange(node.id, enabled) },
+                        onSelected = { onNodeSelected(node.id) },
+                        modifier = Modifier.longPressDraggableHandle()
+                    )
+                }
             }
         }
     }
 
-    // 添加任务按钮
-    Box {
-        TextButton(
-            onClick = { showAddMenu = true },
-            modifier = Modifier.padding(start = 4.dp, top = 4.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text("添加任务", style = MaterialTheme.typography.bodySmall)
-        }
-
-        DropdownMenu(
-            expanded = showAddMenu,
-            onDismissRequest = { showAddMenu = false }
-        ) {
-            TaskTypeInfo.entries.forEach { typeInfo ->
-                DropdownMenuItem(
-                    text = { Text(typeInfo.displayName) },
-                    onClick = {
-                        onAddNode(typeInfo)
-                        showAddMenu = false
-                    }
-                )
-            }
-        }
+    if (showEditDialog) {
+        TaskEditDialog(
+            nodes = nodes,
+            onAddNode = onAddNode,
+            onRemoveNode = onRemoveNode,
+            onRenameNode = onRenameNode,
+            onDismiss = { showEditDialog = false }
+        )
     }
 }
 
-/**
- * 任务节点行
- */
 @Composable
 private fun TaskNodeRow(
     node: TaskChainNode,
     isSelected: Boolean,
     onEnabledChange: (Boolean) -> Unit,
     onSelected: () -> Unit,
-    onRemove: () -> Unit,
-    onDuplicate: () -> Unit,
-    onRename: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showMenu by remember { mutableStateOf(false) }
-    var showRenameDialog by remember { mutableStateOf(false) }
-
     Card(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                Color(0xfff2f3f5)
-            } else Color.White
+            containerColor = if (isSelected) Color(0xfff2f3f5) else Color.White
         ),
     ) {
         Row(
@@ -153,9 +163,7 @@ private fun TaskNodeRow(
                 onCheckedChange = onEnabledChange,
                 modifier = Modifier.size(20.dp)
             )
-
             Spacer(modifier = Modifier.width(6.dp))
-
             Text(
                 text = node.name,
                 style = MaterialTheme.typography.bodyMedium,
@@ -164,92 +172,203 @@ private fun TaskNodeRow(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
+        }
+    }
+}
 
-            Box {
-                IconButton(
-                    onClick = { showMenu = true },
-                    modifier = Modifier.size(20.dp)
+private fun getTypeDisplayName(config: TaskParamProvider): String {
+    return TaskTypeInfo.entries
+        .first { it.defaultConfig()::class == config::class }
+        .displayName
+}
+
+@Composable
+private fun TaskEditDialog(
+    nodes: List<TaskChainNode>,
+    onAddNode: (TaskTypeInfo) -> Unit,
+    onRemoveNode: (String) -> Unit,
+    onRenameNode: (String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var addExpanded by remember { mutableStateOf(false) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = Color.White,
+            shadowElevation = 4.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                Text(
+                    "编辑任务列表",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color(0xFF1f2937)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = Color(0xFFe5e7eb))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 300.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    nodes.forEach { node ->
+                        key(node.id) {
+                            TaskEditRow(
+                                node = node,
+                                onRename = { newName -> onRenameNode(node.id, newName) },
+                                onRemove = { onRemoveNode(node.id) }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = Color(0xFFe5e7eb))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { addExpanded = !addExpanded }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "更多操作",
-                        modifier = Modifier.size(16.dp)
+                        imageVector = if (addExpanded)
+                            Icons.Default.KeyboardArrowUp
+                        else
+                            Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = Color(0xFF6b7280)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        "添加任务",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF374151)
                     )
                 }
 
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
+                AnimatedVisibility(visible = addExpanded) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        TaskTypeInfo.entries.chunked(2).forEach { row ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                row.forEach { typeInfo ->
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = Color(0xFFf9fafb),
+                                        border = BorderStroke(1.dp, Color(0xFFe5e7eb)),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable {
+                                                onAddNode(typeInfo)
+                                                addExpanded = false
+                                            }
+                                    ) {
+                                        Text(
+                                            text = typeInfo.displayName,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color(0xFF374151),
+                                            modifier = Modifier.padding(
+                                                horizontal = 12.dp,
+                                                vertical = 10.dp
+                                            )
+                                        )
+                                    }
+                                }
+                                if (row.size < 2) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.End),
+                    shape = RoundedCornerShape(6.dp)
                 ) {
-                    DropdownMenuItem(
-                        text = { Text("重命名") },
-                        onClick = {
-                            showMenu = false
-                            showRenameDialog = true
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("复制") },
-                        onClick = {
-                            showMenu = false
-                            onDuplicate()
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("删除") },
-                        onClick = {
-                            showMenu = false
-                            onRemove()
-                        }
-                    )
+                    Text("完成")
                 }
             }
         }
-    }
-
-    if (showRenameDialog) {
-        RenameDialog(
-            currentName = node.name,
-            onConfirm = { newName ->
-                onRename(newName)
-                showRenameDialog = false
-            },
-            onDismiss = { showRenameDialog = false }
-        )
     }
 }
 
 @Composable
-private fun RenameDialog(
-    currentName: String,
-    onConfirm: (String) -> Unit,
-    onDismiss: () -> Unit
+private fun TaskEditRow(
+    node: TaskChainNode,
+    onRename: (String) -> Unit,
+    onRemove: () -> Unit
 ) {
-    var text by remember { mutableStateOf(currentName) }
+    val nameState = remember(node.id) { TextFieldState(node.name) }
 
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("重命名") },
-        text = {
-            androidx.compose.material3.OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = getTypeDisplayName(node.config),
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color(0xFF6b7280),
+            modifier = Modifier.width(72.dp)
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        OutlinedTextField(
+            state = nameState,
+            lineLimits = TextFieldLineLimits.SingleLine,
+            textStyle = MaterialTheme.typography.bodyMedium,
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color(0xFFd1d5db),
+                focusedBorderColor = Color(0xFF3b82f6)
+            ),
+            shape = RoundedCornerShape(6.dp),
+            modifier = Modifier
+                .weight(1f)
+                .onFocusChanged { focusState ->
+                    val current = nameState.text.toString().trim()
+                    if (!focusState.isFocused
+                        && current.isNotBlank()
+                        && current != node.name
+                    ) {
+                        onRename(current)
+                    }
+                }
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        IconButton(
+            onClick = onRemove,
+            modifier = Modifier.size(24.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "删除",
+                modifier = Modifier.size(16.dp),
+                tint = Color(0xFFef4444)
             )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { if (text.isNotBlank()) onConfirm(text.trim()) },
-                enabled = text.isNotBlank()
-            ) {
-                Text("确定")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
         }
-    )
+    }
 }
+ 

@@ -130,7 +130,6 @@ fun ExpandedControlPanel(
                                     onNodeMove = viewModel::onNodeMove,
                                     onAddNode = viewModel::onAddNode,
                                     onRemoveNode = viewModel::onRemoveNode,
-                                    onDuplicateNode = viewModel::onDuplicateNode,
                                     onRenameNode = viewModel::onRenameNode,
                                     modifier = Modifier
                                         .fillMaxHeight()

@@ -1,14 +1,28 @@
 package com.aliothmoon.maameow.data.model
 
+import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
-import com.aliothmoon.maameow.data.model.TaskParamProvider
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import org.koin.core.context.GlobalContext
 
 /**
- * 刷理智配置
+ * 未开放关卡重置策略
+ *
+ * 迁移自 WPF FightStageResetMode
+ * - CURRENT: 关卡不在列表中时重置为 ""（当前/上次）
+ * - IGNORE: 保持原值不变
+ */
+@Serializable
+enum class StageResetMode {
+    CURRENT,
+    IGNORE
+}
+
+/**
+ * 理智作战配置
  *
  * 完整迁移自 WPF FightSettingsUserControlModel.cs
  * 包含常规设置和高级设置的全部配置项
@@ -126,14 +140,6 @@ data class FightConfig(
      */
     val stage4: String = "",
 
-    /**
-     * 剩余理智关卡
-     *
-     * 由 UseRemainingSanityStage 控制显示
-     * 可选 "不使用" 或关卡代码
-     */
-    val remainingSanityStage: String = "",
-
     // ============ 高级设置 - 剿灭相关 ============
 
     /**
@@ -174,14 +180,6 @@ data class FightConfig(
      */
     val useAlternateStage: Boolean = false,
 
-    /**
-     * 使用剩余理智关卡
-     *
-     * 默认值: true（WPF 第246行）
-     * 控制常规设置中的剩余理智关卡是否显示
-     */
-    val useRemainingSanityStage: Boolean = true,
-
     // ============ 高级设置 - 保存与显示 ============
 
     /**
@@ -206,6 +204,15 @@ data class FightConfig(
      * 与 UseAlternateStage 互斥
      */
     val hideUnavailableStage: Boolean = true,
+
+    /**
+     * 未开放关卡重置策略
+     *
+     * 迁移自 WPF FightTask.StageResetMode
+     * HideUnavailableStage=true 时强制 CURRENT
+     * UseAlternateStage=true 时强制 IGNORE
+     */
+    val stageResetMode: StageResetMode = StageResetMode.CURRENT,
 
     /**
      * 隐藏代理倍率选择
@@ -240,11 +247,28 @@ data class FightConfig(
         // 如果不使用备选关卡，直接返回首选关卡
         if (!useAlternateStage) return stage1
 
-        // TODO: 实现关卡开放状态检查逻辑
-        // 在  WPFGUI 6.0.0 后逻辑发生了变化，备选关卡被调整了
-        // 当前简化实现: 按优先级返回非空关卡
-        return listOf(stage1, stage2, stage3, stage4)
-            .firstOrNull { it.isNotEmpty() } ?: stage1
+        var candidates = listOf(stage1, stage2, stage3, stage4).filter { it.isNotEmpty() }
+
+        val activityManager = GlobalContext.getOrNull()?.getOrNull<ActivityManager>()
+        if (activityManager != null) {
+            val stageList = activityManager.getMergedStageList(filterByToday = false)
+
+            // customStageCode 手动输入时跳过此检查
+            if (!customStageCode && stageResetMode == StageResetMode.CURRENT) {
+                candidates = candidates.filter { code ->
+                    stageList.any { it.code == code }
+                }
+            }
+
+            // 参考 WPF GetFightStage: 优先选今日开放的关卡
+            val openStage = candidates.firstOrNull { code ->
+                stageList.any { it.code == code && it.isOpenToday }
+            }
+            if (openStage != null) return openStage
+        }
+
+        // 全不开放则回退第一条候选，无候选则返回 ""
+        return candidates.firstOrNull() ?: ""
     }
 
     /**

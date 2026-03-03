@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.data.model.FightConfig
+import com.aliothmoon.maameow.data.model.StageResetMode
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.StageAliasMapper
@@ -60,20 +61,20 @@ fun FightConfigPanel(
     config: FightConfig,
     onConfigChange: (FightConfig) -> Unit,
     modifier: Modifier = Modifier,
-    resourceManager: ActivityManager = koinInject(),
+    activityManager: ActivityManager = koinInject(),
     itemHelper: ItemHelper = koinInject()
 ) {
     // 资源收集
-    val resourceCollectionInfo by resourceManager.resourceCollection.collectAsState()
+    val resourceCollectionInfo by activityManager.resourceCollection.collectAsState()
     val isResourceCollectionOpen = resourceCollectionInfo?.isOpen == true
 
     val dropItemsList by itemHelper.dropItems.collectAsState()
-    val allStageItems = remember { resourceManager.getMergedStageList(filterByToday = false) }
-    val stageTips = remember { resourceManager.getStageTips() }
+    val allStageItems = remember { activityManager.getMergedStageList(filterByToday = false) }
+    val stageTips = remember { activityManager.getStageTips() }
 
     // 分组列表 -- 依赖 hideUnavailableStage
     val stageGroups = remember(config.hideUnavailableStage) {
-        resourceManager.getMergedStageGroups(config.hideUnavailableStage)
+        activityManager.getMergedStageGroups(config.hideUnavailableStage)
     }
 
 
@@ -221,28 +222,14 @@ fun FightConfigPanel(
                                     onConfigChange(
                                         config.copy(
                                             useAlternateStage = it,
-                                            // 启用备选关卡时，自动禁用隐藏不可用关卡
-                                            hideUnavailableStage = if (it) false else config.hideUnavailableStage
+                                            // 启用备选关卡时，自动禁用隐藏不可用关卡，重置策略设为 IGNORE
+                                            hideUnavailableStage = if (it) false else config.hideUnavailableStage,
+                                            stageResetMode = if (it) StageResetMode.IGNORE else config.stageResetMode
                                         )
                                     )
                                 },
                                 label = "使用备选关卡",
                                 tipText = "首选关卡不可用时自动使用备选关卡"
-                            )
-                        }
-                        item {
-                            // 使用剩余理智关卡
-                            CheckBoxWithExpandableTip(
-                                checked = config.useRemainingSanityStage,
-                                onCheckedChange = {
-                                    onConfigChange(
-                                        config.copy(
-                                            useRemainingSanityStage = it
-                                        )
-                                    )
-                                },
-                                label = "使用剩余理智关卡",
-                                tipText = "主要关卡刷完后，将剩余理智用于指定关卡"
                             )
                         }
                         // TODO 暂时关闭 源石使用
@@ -267,14 +254,19 @@ fun FightConfigPanel(
                                     onConfigChange(
                                         config.copy(
                                             hideUnavailableStage = it,
-                                            // 启用隐藏不可用关卡时，自动禁用使用备选关卡
-                                            useAlternateStage = if (it) false else config.useAlternateStage
+                                            // 启用隐藏不可用关卡时，自动禁用使用备选关卡，重置策略设为 CURRENT
+                                            useAlternateStage = if (it) false else config.useAlternateStage,
+                                            stageResetMode = if (it) StageResetMode.CURRENT else config.stageResetMode
                                         )
                                     )
                                 },
                                 label = "隐藏不可用关卡",
                                 tipText = "在关卡列表中隐藏当前不可用的关卡"
                             )
+                        }
+                        item {
+                            // 未开放关卡重置策略
+                            StageResetModeSection(config, onConfigChange)
                         }
                         item {
                             // 隐藏代理倍率
@@ -380,6 +372,59 @@ private fun SeriesSection(
 }
 
 /**
+ * 未开放关卡重置策略选择
+ * 迁移自 WPF FightStageResetMode 下拉框
+ */
+@Composable
+private fun StageResetModeSection(
+    config: FightConfig,
+    onConfigChange: (FightConfig) -> Unit
+) {
+    val options = listOf(
+        StageResetMode.CURRENT to "当前/上次",
+        StageResetMode.IGNORE to "不切换"
+    )
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = "未开放关卡重置为",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium
+        )
+
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            options.forEach { (mode, label) ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .width(100.dp)
+                        .clickable { onConfigChange(config.copy(stageResetMode = mode)) }
+                ) {
+                    RadioButton(
+                        selected = config.stageResetMode == mode,
+                        onClick = { onConfigChange(config.copy(stageResetMode = mode)) },
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
  * 分组关卡选择区域（新版）
  * 支持活动关卡和常驻关卡分组显示
  *
@@ -400,11 +445,6 @@ private fun GroupedStageSelectionSection(
         stageGroups.flatMap { group -> group.stages.map { it.code } }
     }
 
-    // 完整关卡代码列表（用于剩余理智关卡，排除「当前/上次」选项）
-    val allStageCodes = remember(allStageItems) {
-        allStageItems.filter { it.code.isNotEmpty() }.map { it.code }
-    }
-
     // 构建关卡代码到 StageItem 的映射
     val stageMap = remember(allStageItems) {
         allStageItems.associateBy { it.code }
@@ -414,21 +454,6 @@ private fun GroupedStageSelectionSection(
     fun isStageOpenToday(stageCode: String): Boolean {
         if (stageCode.isBlank()) return true
         return stageMap[stageCode]?.isOpenToday ?: true
-    }
-
-    // 剩余理智关卡列表（使用完整列表 + "不使用"选项）
-    // 注意：这里的空字符串表示「不使用」，与首选关卡的空字符串（当前/上次）含义不同
-    val remainingStageCodes = remember(allStageCodes) {
-        listOf("") + allStageCodes
-    }
-
-    // 关卡代码到显示名称的映射函数
-    val stageDisplayMapper: (String) -> String = { code ->
-        if (code.isEmpty()) {
-            "不使用"
-        } else {
-            stageMap[code]?.displayName ?: code
-        }
     }
 
     // 检查首选关卡开放状态
@@ -476,7 +501,12 @@ private fun GroupedStageSelectionSection(
                 label = "首选关卡",
                 selectedValue = config.stage1,
                 stageGroups = stageGroups,
-                onItemSelected = { onConfigChange(config.copy(stage1 = it)) }
+                onItemSelected = { onConfigChange(config.copy(stage1 = it)) },
+                annihilationDisplayName = if (config.useCustomAnnihilation) {
+                    UiUsageConstants.annihilations
+                        .firstOrNull { it.second == config.annihilationStage }
+                        ?.first
+                } else null
             )
         }
 
@@ -543,41 +573,6 @@ private fun GroupedStageSelectionSection(
             }
         }
 
-        // 剩余理智关卡（UseRemainingSanityStage 启用时显示）
-        if (config.useRemainingSanityStage) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = Color(0xFFE3F2FD),
-                shape = RoundedCornerShape(4.dp)
-            ) {
-                Text(
-                    text = "在完成主任务后刷取指定关卡，不使用理智药/碎石",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF1976D2),
-                    modifier = Modifier.padding(8.dp)
-                )
-            }
-
-            if (config.customStageCode) {
-                StageInputField(
-                    value = config.remainingSanityStage,
-                    onValueChange = { onConfigChange(config.copy(remainingSanityStage = it)) },
-                    label = "剩余理智关卡",
-                    placeholder = "留空表示不使用",
-                    stageCodes = stageCodes
-                )
-            } else {
-                // 剩余理智关卡使用扁平列表（带"不使用"选项）
-                StageButtonGroup(
-                    label = "剩余理智关卡",
-                    selectedValue = config.remainingSanityStage,
-                    items = remainingStageCodes,
-                    onItemSelected = { onConfigChange(config.copy(remainingSanityStage = it)) },
-                    displayMapper = stageDisplayMapper,
-                    isOpenCheck = ::isStageOpenToday
-                )
-            }
-        }
     }
 }
 
@@ -591,7 +586,8 @@ private fun GroupedStageButtonGroup(
     selectedValue: String,
     stageGroups: List<StageGroup>,
     onItemSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    annihilationDisplayName: String? = null
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -635,7 +631,11 @@ private fun GroupedStageButtonGroup(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Text(
-                            text = stage.displayName,
+                            text = if (stage.code == "Annihilation" && annihilationDisplayName != null) {
+                                annihilationDisplayName
+                            } else {
+                                stage.displayName
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = when {
                                 isSelected -> Color.White

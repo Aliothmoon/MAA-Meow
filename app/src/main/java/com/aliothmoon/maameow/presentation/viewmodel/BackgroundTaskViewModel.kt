@@ -105,12 +105,6 @@ class BackgroundTaskViewModel(
         }
     }
 
-    fun onDuplicateNode(nodeId: String) {
-        viewModelScope.launch {
-            chainState.duplicateNode(nodeId)
-        }
-    }
-
     fun onRenameNode(nodeId: String, newName: String) {
         viewModelScope.launch {
             chainState.renameNode(nodeId, newName)

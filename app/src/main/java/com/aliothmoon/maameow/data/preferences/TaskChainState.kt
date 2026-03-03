@@ -84,21 +84,6 @@ class TaskChainState(private val context: Context) {
         Timber.d("Removed node: %s", nodeId)
     }
 
-    suspend fun duplicateNode(nodeId: String) {
-        val current = chain.value.toMutableList()
-        val index = current.indexOfFirst { it.id == nodeId }
-        if (index < 0) return
-        val source = current[index]
-        val copy = source.copy(
-            id = UUID.randomUUID().toString(),
-            name = "${source.name} (副本)"
-        )
-        current.add(index + 1, copy)
-        reindex(current)
-        setChain(current)
-        Timber.d("Duplicated node: %s -> %s", nodeId, copy.id)
-    }
-
     suspend fun renameNode(nodeId: String, newName: String) {
         val current = chain.value.map { node ->
             if (node.id == nodeId) node.copy(name = newName) else node
