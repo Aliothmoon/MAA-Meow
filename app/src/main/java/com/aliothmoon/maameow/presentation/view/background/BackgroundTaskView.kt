@@ -14,8 +14,6 @@ import android.view.TextureView
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,7 +58,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
@@ -74,6 +71,7 @@ import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.presentation.components.PlaceholderContent
 import com.aliothmoon.maameow.presentation.components.ShizukuPermissionDialog
+import com.aliothmoon.maameow.presentation.view.panel.PanelHeader
 import com.aliothmoon.maameow.presentation.view.panel.LogPanel
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogUiState
@@ -257,11 +255,12 @@ fun BackgroundTaskView(
                     .fillMaxWidth()
                     .weight(7f)
             ) {
-                BackgroundPanelHeader(
+                PanelHeader(
                     selectedTab = state.currentTab,
                     onTabSelected = { tab ->
                         viewModel.onTabChange(tab)
-                    }
+                    },
+                    showActions = false
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -272,7 +271,7 @@ fun BackgroundTaskView(
                         .fillMaxWidth()
                         .weight(1f),
                     userScrollEnabled = true,
-                    beyondViewportPageCount = 1
+                    beyondViewportPageCount = PanelTab.entries.size - 1
                 ) { page ->
                     when (page) {
                         0 -> {
@@ -478,41 +477,6 @@ fun BackgroundTaskView(
                 dialog = dialog,
                 onDismiss = viewModel::onDialogDismiss,
                 onConfirm = viewModel::onDialogConfirm
-            )
-        }
-    }
-}
-
-@Composable
-private fun BackgroundPanelHeader(
-    selectedTab: PanelTab,
-    onTabSelected: (PanelTab) -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        PanelTab.entries.forEach { tab ->
-            Text(
-                text = tab.displayName,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (selectedTab == tab)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (selectedTab == tab)
-                    FontWeight.Bold
-                else
-                    FontWeight.Normal,
-                modifier = Modifier
-                    .padding(vertical = 8.dp)
-                    .then(
-                        Modifier.clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) { onTabSelected(tab) }
-                    )
             )
         }
     }

@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -59,10 +60,7 @@ fun SettingsView(
     val autoCheckUpdate by viewModel.autoCheckUpdate.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
 
-    // 重新初始化确认弹窗
     var showReInitConfirm by remember { mutableStateOf(false) }
-
-    // 调试模式确认弹窗
     var showDebugModeConfirm by remember { mutableStateOf(false) }
 
     if (showReInitConfirm) {
@@ -108,7 +106,6 @@ fun SettingsView(
         )
     }
 
-    // 解压进度弹窗
     val context = LocalContext.current
     if (resourceInitState is ResourceInitState.Extracting) {
         ResourceInitDialog(
@@ -126,6 +123,9 @@ fun SettingsView(
             )
         }
     ) { paddingValues ->
+        val tertiaryContent = MaterialTheme.colorScheme.onTertiaryContainer
+        val primaryContent = MaterialTheme.colorScheme.onPrimaryContainer
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -133,184 +133,53 @@ fun SettingsView(
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             item {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                InfoCard(
+                    title = "",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = tertiaryContent
                 ) {
-            // 资源管理部分
-            InfoCard(
-                title = "",
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-            ) {
-                Text(
-                    text = "资源管理",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
+                    Text(
+                        text = "资源管理",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = tertiaryContent,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showReInitConfirm = true }
-                        .padding(vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text(
-                            text = "重新初始化资源",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                        Text(
-                            text = "从内置资源包重新解压",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                        )
+                    SettingClickItem("重新初始化资源", "从内置资源包重新解压", tertiaryContent) {
+                        showReInitConfirm = true
                     }
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f)
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { navController.navigate("log_history") }
-                        .padding(vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text(
-                            text = "历史日志",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                        Text(
-                            text = "查看任务执行日志",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                        )
+                    SettingsDivider(tertiaryContent)
+                    SettingClickItem("历史日志", "查看任务执行日志", tertiaryContent) {
+                        navController.navigate("log_history")
                     }
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f)
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { navController.navigate("error_log") }
-                        .padding(vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text(
-                            text = "错误日志",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                        Text(
-                            text = "查看应用异常和错误记录",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                        )
+                    SettingsDivider(tertiaryContent)
+                    SettingClickItem("错误日志", "查看应用异常和错误记录", tertiaryContent) {
+                        navController.navigate("error_log")
                     }
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f)
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            coroutineScope.launch {
-                                val intent = logExportService.exportAllLogs()
-                                if (intent != null) {
-                                    context.startActivity(Intent.createChooser(intent, "导出日志"))
-                                }
+                    SettingsDivider(tertiaryContent)
+                    SettingClickItem("导出日志压缩包", "打包所有日志为 ZIP 文件分享", tertiaryContent) {
+                        coroutineScope.launch {
+                            val intent = logExportService.exportAllLogs()
+                            if (intent != null) {
+                                context.startActivity(Intent.createChooser(intent, "导出日志"))
                             }
                         }
-                        .padding(vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text(
-                            text = "导出日志压缩包",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                        Text(
-                            text = "打包所有日志为 ZIP 文件分享",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                        )
                     }
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f)
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "启动时检查更新",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                        Text(
-                            text = "启动应用时自动检查应用和资源更新",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                        )
-                    }
-                    Switch(
+                    SettingsDivider(tertiaryContent)
+                    SettingSwitchItem(
+                        title = "启动时检查更新",
+                        description = "启动应用时自动检查应用和资源更新",
+                        contentColor = tertiaryContent,
                         checked = autoCheckUpdate,
                         onCheckedChange = { viewModel.setAutoCheckUpdate(it) }
                     )
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f)
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "调试模式",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                        Text(
-                            text = "启用后记录详细日志信息",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                        )
-                    }
-                    Switch(
+                    SettingsDivider(tertiaryContent)
+                    SettingSwitchItem(
+                        title = "调试模式",
+                        description = "启用后记录详细日志信息",
+                        contentColor = tertiaryContent,
                         checked = debugMode,
                         onCheckedChange = { enabled ->
                             if (enabled) {
@@ -323,66 +192,122 @@ fun SettingsView(
                 }
             }
 
-            // 关于部分
-            InfoCard(
-                title = "",
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) {
-                Text(
-                    text = "关于",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+            item {
+                InfoCard(
+                    title = "",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = primaryContent
                 ) {
                     Text(
-                        text = "版本",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        text = "关于",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = primaryContent,
+                        modifier = Modifier.padding(bottom = 16.dp)
                     )
-                    Text(
-                        text = BuildConfig.VERSION_NAME,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    )
-                }
 
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f)
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "开发者",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Text(
-                        text = "Aliothmoon",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    )
+                    SettingInfoRow("版本", BuildConfig.VERSION_NAME, primaryContent)
+                    SettingsDivider(primaryContent)
+                    SettingInfoRow("开发者", "Aliothmoon", primaryContent)
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-                }
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
+}
+
+@Composable
+private fun SettingClickItem(
+    title: String,
+    description: String,
+    contentColor: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = contentColor
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = contentColor.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingSwitchItem(
+    title: String,
+    description: String,
+    contentColor: Color,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = contentColor
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = contentColor.copy(alpha = 0.7f)
+            )
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun SettingInfoRow(
+    label: String,
+    value: String,
+    contentColor: Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = contentColor
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            color = contentColor.copy(alpha = 0.7f)
+        )
+    }
+}
+
+@Composable
+private fun SettingsDivider(contentColor: Color) {
+    HorizontalDivider(
+        modifier = Modifier.padding(vertical = 8.dp),
+        color = contentColor.copy(alpha = 0.1f)
+    )
 }

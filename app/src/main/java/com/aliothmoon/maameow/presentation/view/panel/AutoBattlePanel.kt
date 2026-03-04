@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
@@ -32,7 +34,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -53,8 +54,8 @@ import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
 import org.koin.compose.koinInject
-import sh.calvin.reorderable.ReorderableColumn
 import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @Composable
 fun AutoBattlePanel(
@@ -90,7 +91,7 @@ fun AutoBattlePanel(
                         color = if (selected) {
                             MaterialTheme.colorScheme.primaryContainer
                         } else {
-                            Color(0xFFF3F3F3)
+                            MaterialTheme.colorScheme.surfaceVariant
                         },
                         modifier = Modifier
                             .weight(1f)
@@ -106,7 +107,8 @@ fun AutoBattlePanel(
                             Text(
                                 text = title,
                                 style = MaterialTheme.typography.labelMedium,
-                                color = if (selected) MaterialTheme.colorScheme.primary else Color.Gray,
+                                color = if (selected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -136,7 +138,7 @@ fun AutoBattlePanel(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(6.dp),
-                color = Color(0xFFF5F5F5)
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Row(
                     modifier = Modifier.padding(10.dp),
@@ -433,27 +435,40 @@ fun AutoBattlePanel(
                 Spacer(modifier = Modifier.height(4.dp))
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = Color(0xFFF8F8F8),
-                    modifier = Modifier.fillMaxWidth()
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 300.dp)
                 ) {
                     if (state.taskList.isEmpty()) {
                         Text(
                             "暂无条目",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(8.dp)
                         )
                     } else {
-                        ReorderableColumn(
-                            list = state.taskList,
-                            onSettle = { from, to -> viewModel.onReorderList(from, to) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
+                        val lazyListState = rememberLazyListState()
+                        val reorderableState = rememberReorderableLazyListState(
+                            lazyListState = lazyListState,
+                            onMove = { from, to ->
+                                viewModel.onReorderList(from.index, to.index)
+                            }
+                        )
+                        LazyColumn(
+                            state = lazyListState,
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(8.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) { index, item, isDragging ->
-                            key("${item.filePath}-${item.name}-$index") {
-                                ReorderableItem {
+                        ) {
+                            itemsIndexed(
+                                state.taskList,
+                                key = { index, item -> "${item.filePath}-${item.name}-$index" }
+                            ) { index, item ->
+                                ReorderableItem(
+                                    reorderableState,
+                                    key = "${item.filePath}-${item.name}-$index"
+                                ) { isDragging ->
                                     Surface(
                                         tonalElevation = if (isDragging) 4.dp else 0.dp,
                                         shape = RoundedCornerShape(6.dp),
@@ -540,7 +555,7 @@ fun AutoBattlePanel(
             var expanded by remember { mutableStateOf(false) }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("小提示", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    Text("小提示", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     ExpandableTipIcon(expanded = expanded, onExpandedChange = { expanded = it })
                 }
                 ExpandableTipContent(

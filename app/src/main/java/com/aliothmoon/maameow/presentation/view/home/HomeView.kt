@@ -58,6 +58,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.datasource.ResourceDownloader
+import com.aliothmoon.maameow.data.permission.PermissionState
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.state.ResourceInitState
@@ -244,528 +245,93 @@ fun HomeView(
                 modifier = Modifier
                     .fillMaxSize()
                     .weight(1f),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 16.dp,
+                    bottom = 8.dp
+                ),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                // 屏幕分辨率显示
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ScreenInfoCard(
+                        screenWidth = width,
+                        screenHeight = height,
+                        resourceVersion = resourceVersion,
+                        serviceStatusColor = uiState.serviceStatusColor,
+                        serviceStatusText = uiState.serviceStatusText,
+                        serviceStatusLoading = uiState.serviceStatusLoading
                     )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "屏幕分辨率",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "$width × $height",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "资源版本",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = resourceVersion.ifBlank { "未安装" },
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (resourceVersion.isBlank())
-                                    MaterialTheme.colorScheme.error
-                                else
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        // 服务状态（组合显示）
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "服务状态",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            val statusColor = when (uiState.serviceStatusColor) {
-                                StatusColorType.PRIMARY -> MaterialTheme.colorScheme.primary
-                                StatusColorType.WARNING -> Color(0xFFFF9800)
-                                StatusColorType.ERROR -> MaterialTheme.colorScheme.error
-                                StatusColorType.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(statusColor)
-                                )
-                                Text(
-                                    text = uiState.serviceStatusText,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = statusColor
-                                )
-                                if (uiState.serviceStatusLoading) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(12.dp),
-                                        strokeWidth = 1.5.dp,
-                                        color = statusColor
-                                    )
-                                }
-                            }
-                        }
-                    }
                 }
 
-                // 运行模式切换
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                item {
+                    RunModeCard(
+                        runMode = uiState.runMode,
+                        onRunModeChange = { viewModel.onRunModeChange(it) },
+                        changeEnabled = viewModel.checkRunModeChangeEnabled()
                     )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "运行模式",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            Text(
-                                text = when (uiState.runMode) {
-                                    RunMode.FOREGROUND -> "前台模式：悬浮窗控制"
-                                    RunMode.BACKGROUND -> "后台模式：应用内运行"
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                            )
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = uiState.runMode.displayName,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            Switch(
-                                checked = uiState.runMode == RunMode.BACKGROUND,
-                                enabled = viewModel.checkRunModeChangeEnabled(),
-                                onCheckedChange = { isBackground ->
-                                    viewModel.onRunModeChange(isBackground)
-                                }
-                            )
-                        }
-                    }
                 }
 
-                // 更新管理卡片（应用更新 + 资源更新）
-                UpdateCard()
-
-                // 权限管理卡片
-                var expandedPermissions by remember { mutableStateOf(false) }
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(0.dp)
-                    ) {
-                        Text(
-                            text = "权限管理",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(bottom = 6.dp)
-                        )
-
-                        // Shizuku权限 - 始终显示
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(32.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Shizuku权限",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            TextButton(
-                                onClick = { viewModel.onRequestShizuku(context) },
-                                enabled = !permissionState.shizuku && !uiState.isGranting,
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                            ) {
-                                if (uiState.isGranting) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(16.dp),
-                                        strokeWidth = 2.dp
-                                    )
-                                } else {
-                                    Text(text = if (permissionState.shizuku) "已授权" else "请求权限")
-                                }
-                            }
-                        }
-
-                        // 展开/折叠按钮
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { expandedPermissions = !expandedPermissions }
-                                .padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = if (expandedPermissions) "收起其他权限" else "展开其他权限",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                            )
-                            Icon(
-                                imageVector = if (expandedPermissions) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                            )
-                        }
-
-                        // 折叠区域 - 其他权限
-                        AnimatedVisibility(visible = expandedPermissions) {
-                            Column {
-                                // 悬浮窗权限
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(32.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "悬浮窗权限",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                    TextButton(
-                                        onClick = { viewModel.onRequestOverlay(context) },
-                                        enabled = !permissionState.overlay,
-                                        contentPadding = PaddingValues(
-                                            horizontal = 8.dp,
-                                            vertical = 0.dp
-                                        )
-                                    ) {
-                                        Text(text = if (permissionState.overlay) "已授权" else "请求权限")
-                                    }
-                                }
-
-                                // 存储权限
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(32.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "外部存储权限",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                    TextButton(
-                                        onClick = { viewModel.onRequestStorage(context) },
-                                        enabled = !permissionState.storage,
-                                        contentPadding = PaddingValues(
-                                            horizontal = 8.dp,
-                                            vertical = 0.dp
-                                        )
-                                    ) {
-                                        Text(text = if (permissionState.storage) "已授权" else "请求权限")
-                                    }
-                                }
-
-                                // 电源管理白名单
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(32.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "电源管理白名单",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                    TextButton(
-                                        onClick = { viewModel.onRequestBatteryWhitelist(context) },
-                                        enabled = !permissionState.batteryWhitelist,
-                                        contentPadding = PaddingValues(
-                                            horizontal = 8.dp,
-                                            vertical = 0.dp
-                                        )
-                                    ) {
-                                        Text(text = if (permissionState.batteryWhitelist) "已添加" else "请求权限")
-                                    }
-                                }
-
-                                // 无障碍权限（音量键快捷操作）
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(32.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "无障碍权限",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                    TextButton(
-                                        onClick = {
-                                            viewModel.onRequestAccessibility(context)
-                                        },
-                                        enabled = !permissionState.accessibility,
-                                        contentPadding = PaddingValues(
-                                            horizontal = 8.dp,
-                                            vertical = 0.dp
-                                        )
-                                    ) {
-                                        Text(text = if (permissionState.accessibility) "已授权" else "请求权限")
-                                    }
-                                }
-
-                                // 通知权限
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(32.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "通知权限",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                    TextButton(
-                                        onClick = { viewModel.onRequestNotification(context) },
-                                        enabled = !permissionState.notification,
-                                        contentPadding = PaddingValues(
-                                            horizontal = 8.dp,
-                                            vertical = 0.dp
-                                        )
-                                    ) {
-                                        Text(text = if (permissionState.notification) "已授权" else "请求权限")
-                                    }
-                                }
-                            }
-                        }
-                    }
+                item {
+                    UpdateCard()
                 }
 
+                item {
+                    PermissionCard(
+                        permissionState = permissionState,
+                        isGranting = uiState.isGranting,
+                        onRequestShizuku = { viewModel.onRequestShizuku(context) },
+                        onRequestOverlay = { viewModel.onRequestOverlay(context) },
+                        onRequestStorage = { viewModel.onRequestStorage(context) },
+                        onRequestBatteryWhitelist = { viewModel.onRequestBatteryWhitelist(context) },
+                        onRequestAccessibility = { viewModel.onRequestAccessibility(context) },
+                        onRequestNotification = { viewModel.onRequestNotification(context) }
+                    )
+                }
 
-                // 悬浮窗相关配置
                 if (uiState.runMode == RunMode.FOREGROUND) {
-                    // 分辨率控制按钮
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = {
-                                viewModel.onChangeTo16x9Resolution(context)
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.primary
-                            ),
-                            shape = MaterialTheme.shapes.small
-                        ) {
-                            Text(
-                                text = "调整为适配分辨率",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                viewModel.onResetResolution(context)
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.primary
-                            ),
-                            shape = MaterialTheme.shapes.small
-                        ) {
-                            Text(
-                                text = "重置分辨率",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                    item {
+                        ForegroundModeSection(
+                            overlayControlMode = uiState.overlayControlMode,
+                            isShowControlOverlay = uiState.isShowControlOverlay,
+                            isLoading = uiState.isLoading,
+                            onChangeTo16x9Resolution = { viewModel.onChangeTo16x9Resolution(context) },
+                            onResetResolution = { viewModel.onResetResolution(context) },
+                            onControlOverlayModeChanged = { viewModel.onControlOverlayModeChanged(it) },
+                            onToggleOverlay = {
+                                if (uiState.isShowControlOverlay) {
+                                    Timber.d("关闭悬浮窗")
+                                    viewModel.onStopControlOverlay()
+                                } else {
+                                    Timber.d("开启悬浮窗模式")
+                                    viewModel.onStartControlOverlay()
+                                }
+                            }
                         )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "悬浮窗模式",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer
-                                )
-                                Text(
-                                    text = if (uiState.overlayControlMode == OverlayControlMode.ACCESSIBILITY)
-                                        "音量上下键同时按切换面板"
-                                    else
-                                        "点击悬浮球切换面板",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                                )
-                            }
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = uiState.overlayControlMode.displayName,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer
-                                )
-                                Switch(
-                                    checked = uiState.overlayControlMode == OverlayControlMode.ACCESSIBILITY,
-                                    onCheckedChange = { isAccessibility ->
-                                        viewModel.onControlOverlayModeChanged(
-                                            if (isAccessibility) OverlayControlMode.ACCESSIBILITY
-                                            else OverlayControlMode.FLOAT_BALL
-                                        )
-                                    }
-                                )
-                            }
-                        }
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Button(
+                }
+
+                item {
+                    OutlinedButton(
                         onClick = {
-                            if (uiState.isShowControlOverlay) {
-                                Timber.d("关闭悬浮窗")
-                                viewModel.onStopControlOverlay()
-                            } else {
-                                Timber.d("开启悬浮窗模式")
-                                viewModel.onStartControlOverlay()
-                            }
+                            Timber.d("关闭所有服务")
+                            viewModel.onStopAllServices()
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (uiState.isShowControlOverlay)
-                                MaterialTheme.colorScheme.error
-                            else
-                                MaterialTheme.colorScheme.primary
+                            .height(48.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
                         ),
                         shape = MaterialTheme.shapes.large,
+                        enabled = !uiState.isLoading
                     ) {
-                        if (uiState.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Text(
-                                text = if (uiState.isShowControlOverlay) "关闭操作面板" else "打开操作面板",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // 关闭所有服务按钮
-                OutlinedButton(
-                    onClick = {
-                        Timber.d("关闭所有服务")
-                        viewModel.onStopAllServices()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    ),
-                    shape = MaterialTheme.shapes.large,
-                    enabled = !uiState.isLoading
-                ) {
-                    Text(
-                        text = "关闭所有服务",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "关闭所有服务",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
             }
@@ -820,6 +386,431 @@ fun HomeView(
             }
 
             ShizukuInstallHelper.ShizukuStatus.INSTALLED -> {}
+        }
+    }
+}
+
+@Composable
+private fun ScreenInfoCard(
+    screenWidth: Int,
+    screenHeight: Int,
+    resourceVersion: String,
+    serviceStatusColor: StatusColorType,
+    serviceStatusText: String,
+    serviceStatusLoading: Boolean
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "屏幕分辨率",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "$screenWidth × $screenHeight",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "资源版本",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = resourceVersion.ifBlank { "未安装" },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (resourceVersion.isBlank())
+                        MaterialTheme.colorScheme.error
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "服务状态",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                val statusColor = when (serviceStatusColor) {
+                    StatusColorType.PRIMARY -> MaterialTheme.colorScheme.primary
+                    StatusColorType.WARNING -> Color(0xFFFF9800)
+                    StatusColorType.ERROR -> MaterialTheme.colorScheme.error
+                    StatusColorType.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(statusColor)
+                    )
+                    Text(
+                        text = serviceStatusText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = statusColor
+                    )
+                    if (serviceStatusLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(12.dp),
+                            strokeWidth = 1.5.dp,
+                            color = statusColor
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RunModeCard(
+    runMode: RunMode,
+    onRunModeChange: (Boolean) -> Unit,
+    changeEnabled: Boolean
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "运行模式",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Text(
+                    text = when (runMode) {
+                        RunMode.FOREGROUND -> "前台模式：悬浮窗控制"
+                        RunMode.BACKGROUND -> "后台模式：应用内运行"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = runMode.displayName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Switch(
+                    checked = runMode == RunMode.BACKGROUND,
+                    enabled = changeEnabled,
+                    onCheckedChange = onRunModeChange
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PermissionRow(
+    title: String,
+    granted: Boolean,
+    onClick: () -> Unit,
+    isLoading: Boolean = false,
+    grantedText: String = "已授权",
+    contentColor: Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(32.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyMedium,
+            color = contentColor
+        )
+        TextButton(
+            onClick = onClick,
+            enabled = !granted && !isLoading,
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(text = if (granted) grantedText else "请求权限")
+            }
+        }
+    }
+}
+
+@Composable
+private fun PermissionCard(
+    permissionState: PermissionState,
+    isGranting: Boolean,
+    onRequestShizuku: () -> Unit,
+    onRequestOverlay: () -> Unit,
+    onRequestStorage: () -> Unit,
+    onRequestBatteryWhitelist: () -> Unit,
+    onRequestAccessibility: () -> Unit,
+    onRequestNotification: () -> Unit
+) {
+    var expandedPermissions by remember { mutableStateOf(false) }
+    val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
+            Text(
+                text = "权限管理",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+                color = contentColor,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+
+            PermissionRow(
+                title = "Shizuku权限",
+                granted = permissionState.shizuku,
+                onClick = onRequestShizuku,
+                isLoading = isGranting,
+                contentColor = contentColor
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expandedPermissions = !expandedPermissions }
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (expandedPermissions) "收起其他权限" else "展开其他权限",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor.copy(alpha = 0.7f)
+                )
+                Icon(
+                    imageVector = if (expandedPermissions) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = contentColor.copy(alpha = 0.7f)
+                )
+            }
+
+            AnimatedVisibility(visible = expandedPermissions) {
+                Column {
+                    PermissionRow(
+                        title = "悬浮窗权限",
+                        granted = permissionState.overlay,
+                        onClick = onRequestOverlay,
+                        contentColor = contentColor
+                    )
+                    PermissionRow(
+                        title = "外部存储权限",
+                        granted = permissionState.storage,
+                        onClick = onRequestStorage,
+                        contentColor = contentColor
+                    )
+                    PermissionRow(
+                        title = "电源管理白名单",
+                        granted = permissionState.batteryWhitelist,
+                        onClick = onRequestBatteryWhitelist,
+                        grantedText = "已添加",
+                        contentColor = contentColor
+                    )
+                    PermissionRow(
+                        title = "无障碍权限",
+                        granted = permissionState.accessibility,
+                        onClick = onRequestAccessibility,
+                        contentColor = contentColor
+                    )
+                    PermissionRow(
+                        title = "通知权限",
+                        granted = permissionState.notification,
+                        onClick = onRequestNotification,
+                        contentColor = contentColor
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ForegroundModeSection(
+    overlayControlMode: OverlayControlMode,
+    isShowControlOverlay: Boolean,
+    isLoading: Boolean,
+    onChangeTo16x9Resolution: () -> Unit,
+    onResetResolution: () -> Unit,
+    onControlOverlayModeChanged: (OverlayControlMode) -> Unit,
+    onToggleOverlay: () -> Unit
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = onChangeTo16x9Resolution,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                ),
+                shape = MaterialTheme.shapes.small
+            ) {
+                Text(
+                    text = "调整为适配分辨率",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            OutlinedButton(
+                onClick = onResetResolution,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                ),
+                shape = MaterialTheme.shapes.small
+            ) {
+                Text(
+                    text = "重置分辨率",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "悬浮窗模式",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                    Text(
+                        text = if (overlayControlMode == OverlayControlMode.ACCESSIBILITY)
+                            "音量上下键同时按切换面板"
+                        else
+                            "点击悬浮球切换面板",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = overlayControlMode.displayName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                    Switch(
+                        checked = overlayControlMode == OverlayControlMode.ACCESSIBILITY,
+                        onCheckedChange = { isAccessibility ->
+                            onControlOverlayModeChanged(
+                                if (isAccessibility) OverlayControlMode.ACCESSIBILITY
+                                else OverlayControlMode.FLOAT_BALL
+                            )
+                        }
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Button(
+            onClick = onToggleOverlay,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isShowControlOverlay)
+                    MaterialTheme.colorScheme.error
+                else
+                    MaterialTheme.colorScheme.primary
+            ),
+            shape = MaterialTheme.shapes.large,
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(
+                    text = if (isShowControlOverlay) "关闭操作面板" else "打开操作面板",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
 }

@@ -19,7 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -30,61 +29,76 @@ import androidx.compose.ui.unit.dp
 fun PanelHeader(
     selectedTab: PanelTab = PanelTab.TASKS,
     onTabSelected: (PanelTab) -> Unit = {},
+    showActions: Boolean = true,
     isLocked: Boolean = false,
     onLockToggle: (Boolean) -> Unit = {},
     onHome: () -> Unit = {}
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp),
+        horizontalArrangement = if (showActions) Arrangement.SpaceBetween else Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 左侧 Tab 切换
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(40.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        val tabContent = @Composable {
             PanelTab.entries.forEach { tab ->
                 Text(
                     text = tab.displayName,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (selectedTab == tab) Color(0xFF2196F3) else Color.Gray,
+                    color = if (selectedTab == tab)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = if (selectedTab == tab) FontWeight.Bold else FontWeight.Normal,
-                    modifier = Modifier.clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) { onTabSelected(tab) }
+                    modifier = Modifier
+                        .padding(vertical = 8.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { onTabSelected(tab) }
                 )
             }
         }
 
-        // 右侧按钮组
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = onHome,
-                modifier = Modifier.size(32.dp)
+        if (showActions) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(40.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Home,
-                    contentDescription = "回到主界面",
-                    tint = Color.Gray,
-                    modifier = Modifier.size(20.dp)
-                )
+                tabContent()
             }
 
-            IconButton(
-                onClick = { onLockToggle(!isLocked) },
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = if (isLocked) Icons.Filled.Lock else Icons.Outlined.Lock,
-                    contentDescription = null,
-                    tint = if (isLocked) Color(0xFF2196F3) else Color.Gray,
-                    modifier = Modifier.size(20.dp)
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = onHome,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Home,
+                        contentDescription = "回到主界面",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = { onLockToggle(!isLocked) },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isLocked) Icons.Filled.Lock else Icons.Outlined.Lock,
+                        contentDescription = null,
+                        tint = if (isLocked)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
+        } else {
+            tabContent()
         }
     }
 }
