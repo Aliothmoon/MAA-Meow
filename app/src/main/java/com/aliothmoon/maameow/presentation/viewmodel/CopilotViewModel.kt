@@ -43,8 +43,6 @@ data class CopilotUiState(
     val hasRequirementIgnored: Boolean = false,
     val isLoading: Boolean = false,
     val statusMessage: String = "",
-    val copilotUrl: String = "",
-    val mapUrl: String = "",
     val videoUrl: String = "",
     val operatorSummary: String = "",
 )
@@ -156,7 +154,15 @@ class CopilotViewModel(
         if (input.isEmpty()) return
 
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, statusMessage = "正在解析...") }
+            _state.update {
+                it.copy(
+                    isLoading = true,
+                    statusMessage = "正在解析...",
+                    currentCopilot = null,
+                    operatorSummary = "",
+                    videoUrl = "",
+                )
+            }
             if (forceSet || copilotManager.isSetId(input)) {
                 if (_state.value.tabIndex == TAB_SSS) {
                     _state.update {
@@ -350,10 +356,6 @@ class CopilotViewModel(
         } else {
             resourceDataManager.findMap(data.stageName)?.code ?: data.stageName
         }
-        val copilotUrl =
-            if (copilotId > 0) "https://prts.maa.plus/copilot/query/$copilotId" else ""
-        val mapUrl =
-            if (data.stageName.isNotBlank()) "https://map.ark-nights.com/map/${data.stageName}" else ""
         val videoUrl = extractVideoUrl(data.doc.details)
         val operatorSummary = copilotManager.getOperatorSummary(data)
         _state.update {
@@ -368,8 +370,6 @@ class CopilotViewModel(
                 copilotTaskName = inferredName,
                 isLoading = false,
                 statusMessage = "作业加载成功: $inferredName",
-                copilotUrl = copilotUrl,
-                mapUrl = mapUrl,
                 videoUrl = videoUrl,
                 operatorSummary = operatorSummary,
             )
@@ -544,7 +544,7 @@ class CopilotViewModel(
             return
         }
         val name = _state.value.copilotTaskName.ifBlank {
-            if (tabIndex == TAB_PARADOX) inferParadoxName(current) else current.stageName
+            if (tabIndex == TAB_PARADOX) inferParadoxName(current) else resourceDataManager.findMap(current.stageName)?.code ?: current.stageName
         }
         if (name.isBlank()) {
             _state.update { it.copy(statusMessage = "关卡名无效，无法导航") }
@@ -788,7 +788,7 @@ class CopilotViewModel(
             if (stageName.isBlank() || resourceDataManager.findMap(stageName) == null) {
                 // TODO: 自动触发资源更新 (参考 WPF: UpdateResource -> 重新验证)
                 //  可调用 UpdateViewModel.checkResourceUpdate() 后重新执行验证
-                _state.update { it.copy(statusMessage = "不支持的关卡  $stageName，请尝试更新资源") }
+                _state.update { it.copy(statusMessage = "不支持的关卡 ${resourceDataManager.findMap(stageName)?.code ?: stageName}，请尝试更新资源") }
                 return false
             }
         }

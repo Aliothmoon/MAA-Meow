@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +16,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,7 +50,10 @@ fun PanelHeader(
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (selectedTab == tab) Color(0xFF2196F3) else Color.Gray,
                     fontWeight = if (selectedTab == tab) FontWeight.Bold else FontWeight.Normal,
-                    modifier = Modifier.clickable { onTabSelected(tab) }
+                    modifier = Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onTabSelected(tab) }
                 )
             }
         }

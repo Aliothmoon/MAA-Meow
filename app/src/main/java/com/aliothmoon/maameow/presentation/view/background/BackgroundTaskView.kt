@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.presentation.view.background
 
 import android.app.Activity
+import android.content.res.Configuration
 import android.content.pm.ActivityInfo
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -14,6 +15,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -80,7 +84,6 @@ import com.aliothmoon.maameow.presentation.view.panel.AutoBattlePanel
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -202,9 +205,18 @@ fun BackgroundTaskView(
     }
 
     val fullscreenProgress = remember { Animatable(0f) }
+    val currentOrientation = LocalConfiguration.current.orientation
+    val isLandscapeReady = currentOrientation == Configuration.ORIENTATION_LANDSCAPE
+    var fullscreenAnimTarget by remember { mutableFloatStateOf(0f) }
 
-    LaunchedEffect(state.isFullscreenMonitor) {
-        if (state.isFullscreenMonitor) {
+    LaunchedEffect(state.isFullscreenMonitor, isLandscapeReady) {
+        fullscreenAnimTarget = if (state.isFullscreenMonitor && isLandscapeReady) 1f else 0f
+    }
+
+    LaunchedEffect(fullscreenAnimTarget) {
+        if (fullscreenAnimTarget == 0f) {
+            fullscreenProgress.snapTo(0f)
+        } else {
             fullscreenProgress.snapTo(0f)
             fullscreenProgress.animateTo(1f, tween(300, easing = FastOutSlowInEasing))
         }
@@ -216,152 +228,160 @@ fun BackgroundTaskView(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .padding(horizontal = 16.dp)
-                .padding(top = 8.dp, bottom = 16.dp)
+                .padding(top = 8.dp, bottom = 8.dp)
         ) {
-            if (!state.isFullscreenMonitor) {
-                VirtualDisplayPreview(
-                    isRunning = maaState == MaaExecutionState.RUNNING,
-                    isSurfaceAvailable = isSurfaceAvailable,
-                    onClick = { viewModel.onToggleFullscreenMonitor() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(0.3f)
-                ) {
-                    previewContent()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(3f)
+            ) {
+                if (!state.isFullscreenMonitor) {
+                    VirtualDisplayPreview(
+                        isRunning = maaState == MaaExecutionState.RUNNING,
+                        isSurfaceAvailable = isSurfaceAvailable,
+                        onClick = { viewModel.onToggleFullscreenMonitor() },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        previewContent()
+                    }
+                } else {
+                    Spacer(
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
-            } else {
-                Spacer(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(0.3f)
-                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            BackgroundPanelHeader(
-                selectedTab = state.currentTab,
-                onTabSelected = { tab ->
-                    viewModel.onTabChange(tab)
-                }
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            HorizontalPager(
-                state = pagerState,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.6f),
-                userScrollEnabled = true,
-                beyondViewportPageCount = PanelTab.entries.size - 1
-            ) { page ->
-                when (page) {
-                    0 -> {
-                        Row(modifier = Modifier.fillMaxSize()) {
-                            TaskListPanel(
-                                nodes = nodes,
-                                selectedNodeId = state.selectedNodeId,
-                                onNodeEnabledChange = { nodeId, enabled ->
-                                    viewModel.onNodeEnabledChange(nodeId, enabled)
-                                },
-                                onNodeSelected = { nodeId ->
-                                    viewModel.onNodeSelected(nodeId)
-                                },
-                                onNodeMove = { fromIndex, toIndex ->
-                                    viewModel.onNodeMove(fromIndex, toIndex)
-                                },
-                                onAddNode = { typeInfo ->
-                                    viewModel.onAddNode(typeInfo)
-                                },
-                                onRemoveNode = { nodeId ->
-                                    viewModel.onRemoveNode(nodeId)
-                                },
-                                onRenameNode = { nodeId, newName ->
-                                    viewModel.onRenameNode(nodeId, newName)
-                                },
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                            )
+                    .weight(7f)
+            ) {
+                BackgroundPanelHeader(
+                    selectedTab = state.currentTab,
+                    onTabSelected = { tab ->
+                        viewModel.onTabChange(tab)
+                    }
+                )
 
-                            Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                            Card(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    userScrollEnabled = true,
+                    beyondViewportPageCount = PanelTab.entries.size - 1
+                ) { page ->
+                    when (page) {
+                        0 -> {
+                            Row(modifier = Modifier.fillMaxSize()) {
+                                TaskListPanel(
+                                    nodes = nodes,
+                                    selectedNodeId = state.selectedNodeId,
+                                    onNodeEnabledChange = { nodeId, enabled ->
+                                        viewModel.onNodeEnabledChange(nodeId, enabled)
+                                    },
+                                    onNodeSelected = { nodeId ->
+                                        viewModel.onNodeSelected(nodeId)
+                                    },
+                                    onNodeMove = { fromIndex, toIndex ->
+                                        viewModel.onNodeMove(fromIndex, toIndex)
+                                    },
+                                    onAddNode = { typeInfo ->
+                                        viewModel.onAddNode(typeInfo)
+                                    },
+                                    onRemoveNode = { nodeId ->
+                                        viewModel.onRemoveNode(nodeId)
+                                    },
+                                    onRenameNode = { nodeId, newName ->
+                                        viewModel.onRenameNode(nodeId, newName)
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxHeight()
                                 )
-                            ) {
-                                Column(modifier = Modifier.padding(top = 10.dp)) {
-                                    TaskConfigPanel(
-                                        selectedNode = selectedNode,
-                                        onConfigChange = { config ->
-                                            val nodeId = state.selectedNodeId ?: return@TaskConfigPanel
-                                            viewModel.onNodeConfigChange(nodeId, config)
-                                        }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                Card(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface
                                     )
+                                ) {
+                                    Column(modifier = Modifier.padding(top = 10.dp)) {
+                                        TaskConfigPanel(
+                                            selectedNode = selectedNode,
+                                            onConfigChange = { config ->
+                                                val nodeId = state.selectedNodeId ?: return@TaskConfigPanel
+                                                viewModel.onNodeConfigChange(nodeId, config)
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    1 -> {
-                        AutoBattlePanel(modifier = Modifier.fillMaxSize())
-                    }
+                        1 -> {
+                            AutoBattlePanel(modifier = Modifier.fillMaxSize())
+                        }
 
-                    2 -> {
-                        PlaceholderContent(
-                            title = "小工具",
-                            description = "功能开发中...",
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    3 -> {
-                        LogPanel(
-                            logs = logs,
-                            onClearLogs = viewModel::onClearLogs,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                }
-            }
-
-            if (state.currentTab == PanelTab.TASKS) {
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        onClick = { viewModel.onStartTasks() },
-                        enabled = maaState != MaaExecutionState.RUNNING
-                                && maaState != MaaExecutionState.STARTING,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        if (maaState == MaaExecutionState.STARTING) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
+                        2 -> {
+                            PlaceholderContent(
+                                title = "小工具",
+                                description = "功能开发中...",
+                                modifier = Modifier.fillMaxSize()
                             )
-                        } else {
-                            Text("开始任务")
+                        }
+
+                        3 -> {
+                            LogPanel(
+                                logs = logs,
+                                onClearLogs = viewModel::onClearLogs,
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
                     }
+                }
 
-                    OutlinedButton(
-                        onClick = { viewModel.onStopTasks() },
-                        enabled = maaState == MaaExecutionState.RUNNING,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
+                if (state.currentTab == PanelTab.TASKS) {
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text("停止任务")
+                        Button(
+                            onClick = { viewModel.onStartTasks() },
+                            enabled = maaState != MaaExecutionState.RUNNING
+                                    && maaState != MaaExecutionState.STARTING,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (maaState == MaaExecutionState.STARTING) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("开始任务")
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = { viewModel.onStopTasks() },
+                            enabled = maaState == MaaExecutionState.RUNNING,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Text("停止任务")
+                        }
                     }
                 }
             }
@@ -395,8 +415,10 @@ fun BackgroundTaskView(
             }
 
             LaunchedEffect(Unit) {
-                delay(200)
-                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                val current = activity?.resources?.configuration?.orientation
+                if (current != Configuration.ORIENTATION_LANDSCAPE) {
+                    activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                }
             }
 
             BackHandler { viewModel.onToggleFullscreenMonitor() }
@@ -486,7 +508,10 @@ private fun BackgroundPanelHeader(
                 modifier = Modifier
                     .padding(vertical = 8.dp)
                     .then(
-                        Modifier.clickable { onTabSelected(tab) }
+                        Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { onTabSelected(tab) }
                     )
             )
         }

@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.presentation.view.panel
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,14 +11,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,6 +41,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -73,41 +79,49 @@ fun AutoBattlePanel(
                 "悖论模拟"
             ).mapIndexed { index, title -> index to title }
 
-            Column(
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    tabs.forEach { (index, title) ->
-                        val selected = state.tabIndex == index
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (selected) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                Color(0xFFF3F3F3)
-                            },
+                tabs.forEach { (index, title) ->
+                    val selected = state.tabIndex == index
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (selected) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            Color(0xFFF3F3F3)
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 36.dp)
+                            .clickable { viewModel.onTabChanged(index) }
+                    ) {
+                        Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .clickable { viewModel.onTabChanged(index) }
+                                .fillMaxWidth()
+                                .heightIn(min = 36.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = title,
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.labelMedium,
                                 color = if (selected) MaterialTheme.colorScheme.primary else Color.Gray,
                                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp)
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 6.dp)
                             )
                         }
                     }
                 }
             }
+            Spacer(modifier = Modifier.height(4.dp))
+            HorizontalDivider()
         }
-
-        item { HorizontalDivider() }
 
         item {
             ITextField(
@@ -124,11 +138,23 @@ fun AutoBattlePanel(
                 shape = RoundedCornerShape(6.dp),
                 color = Color(0xFFF5F5F5)
             ) {
-                Text(
-                    text = state.statusMessage.ifBlank { "等待操作..." },
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(10.dp)
-                )
+                Row(
+                    modifier = Modifier.padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (state.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
+                    Text(
+                        text = state.statusMessage.ifBlank { "等待操作..." },
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
 
@@ -149,12 +175,12 @@ fun AutoBattlePanel(
             }
         }
 
-        // 作业详情 + 链接跳转
+        // 作业详情 + 视频链接
         if (state.currentCopilot != null) {
             val doc = state.currentCopilot!!.doc
             val hasDetail = doc.title.isNotBlank() || doc.details.isNotBlank() || state.operatorSummary.isNotBlank()
-            val hasLinks = state.copilotUrl.isNotBlank() || state.mapUrl.isNotBlank() || state.videoUrl.isNotBlank()
-            if (hasDetail || hasLinks) {
+            val hasVideo = state.videoUrl.isNotBlank()
+            if (hasDetail || hasVideo) {
                 item {
                     val uriHandler = LocalUriHandler.current
                     Surface(
@@ -168,58 +194,46 @@ fun AutoBattlePanel(
                                 .padding(10.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            if (doc.title.isNotBlank()) {
-                                Text(
-                                    text = doc.title,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                            if (doc.details.isNotBlank()) {
-                                Text(
-                                    text = doc.details,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                            if (state.operatorSummary.isNotBlank()) {
-                                Text(
-                                    text = state.operatorSummary,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                            if (hasLinks) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    if (state.copilotUrl.isNotBlank()) {
+                            SelectionContainer {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    if (doc.title.isNotBlank()) {
                                         Text(
-                                            text = "作业详情",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary,
+                                            text = doc.title,
+                                            style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Medium,
-                                            modifier = Modifier.clickable { uriHandler.openUri(state.copilotUrl) }
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer
                                         )
                                     }
-                                    if (state.mapUrl.isNotBlank()) {
+                                    if (doc.details.isNotBlank()) {
                                         Text(
-                                            text = "地图",
+                                            text = doc.details,
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.Medium,
-                                            modifier = Modifier.clickable { uriHandler.openUri(state.mapUrl) }
-                                        )
-                                    }
-                                    if (state.videoUrl.isNotBlank()) {
-                                        Text(
-                                            text = "视频",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.Medium,
-                                            modifier = Modifier.clickable { uriHandler.openUri(state.videoUrl) }
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer
                                         )
                                     }
                                 }
+                            }
+                            if (state.operatorSummary.isNotBlank()) {
+                                if (doc.title.isNotBlank() || doc.details.isNotBlank()) {
+                                    HorizontalDivider(
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f)
+                                    )
+                                }
+                                Text(
+                                    text = state.operatorSummary,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            if (hasVideo) {
+                                Text(
+                                    text = "视频",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.clickable { uriHandler.openUri(state.videoUrl) }
+                                )
                             }
                         }
                     }
@@ -520,19 +534,6 @@ fun AutoBattlePanel(
             }
         }
 
-        item {
-            if (state.canLike) {
-                Text(
-                    text = "作业怎么样？评价下吧！",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { viewModel.onRate(true) }) { Text("点赞") }
-                    OutlinedButton(onClick = { viewModel.onRate(false) }) { Text("点踩") }
-                }
-            }
-        }
 
 
         item {
@@ -567,5 +568,3 @@ fun AutoBattlePanel(
 
     }
 }
-
-
