@@ -165,20 +165,23 @@ fun AutoBattlePanel(
                 Button(
                     onClick = viewModel::onParseSingleInput,
                     enabled = !state.isLoading && !isStarting,
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                 ) {
                     Text(if (state.isLoading) "读取中..." else "读取作业")
                 }
                 Button(
                     onClick = viewModel::onParseSetInput,
                     enabled = !state.isLoading && !isStarting && state.tabIndex != 1,
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                 ) {
                     Text("读取作业集")
                 }
                 OutlinedButton(
                     onClick = { uriHandler.openUri("https://zoot.plus") },
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                 ) {
                     Text("作业站")
                 }
