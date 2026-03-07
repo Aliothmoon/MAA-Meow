@@ -29,11 +29,11 @@ private const val TAB_OTHER_ACTIVITY = 3
 private val DIRECT_STAGE_NAME_REGEX = Regex("""^[0-9a-z-]+$""")
 private val STAGE_NAME_REGEX =
     Regex(
-        """(?:[a-z]{0,3})(?:\d{0,2})-(?:(?:A|B|C|D|EX|S|TR|MO)-?)?(?:\d{1,2})""",
+        """[a-z]{0,3}\d{0,2}-(?:(?:A|B|C|D|EX|S|TR|MO)-?)?\d{1,2}""",
         RegexOption.IGNORE_CASE
     )
 private const val MSG_NAVIGATION_NAME_MISMATCH =
-    "\u5f53\u524d\u4f5c\u4e1a\u5173\u5361\u540d\u4e0e\u5bfc\u822a\u5173\u5361\u540d\u4e0d\u4e00\u81f4\uff0c\u8bf7\u786e\u8ba4\u662f\u5426\u4ecd\u53ef\u6b63\u786e\u5bfc\u822a"
+    """当前作业关卡名与导航关卡名不一致，请确认是否仍可正确导航"""
 
 private data class ResolvedStageNavigation(
     val stageCode: String?,

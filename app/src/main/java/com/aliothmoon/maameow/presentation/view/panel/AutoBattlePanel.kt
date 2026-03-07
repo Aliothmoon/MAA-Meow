@@ -42,7 +42,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
@@ -75,11 +77,21 @@ fun AutoBattlePanel(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val maaState by viewModel.maaState.collectAsStateWithLifecycle()
     val isStarting = maaState == MaaExecutionState.STARTING
+    val compactButtonShape = RoundedCornerShape(8.dp)
+    val compactButtonPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+    val tabTitleTextStyle = MaterialTheme.typography.bodySmall.copy(
+        fontSize = 13.sp,
+        lineHeight = 16.sp
+    )
+    val tabSubtitleTextStyle = MaterialTheme.typography.labelSmall.copy(
+        fontSize = 10.5.sp,
+        lineHeight = 12.sp
+    )
     val tabSpecs = remember {
         listOf(
             CopilotTabUiSpec(
                 index = 0,
-                title = "主线/故事集",
+                title = "主线 / 故事集",
                 subtitle = "SideStory",
                 fullLabel = "主线/故事集/SideStory",
                 helperText = "支持单作业、作业集、战斗列表与常规 Copilot 配置，适合主线、故事集和 SideStory。",
@@ -159,19 +171,19 @@ fun AutoBattlePanel(
                                 ),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .heightIn(min = 48.dp)
+                                    .heightIn(min = 56.dp)
                                     .clickable { viewModel.onTabChanged(spec.index) }
                             ) {
                                 Column(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                                        .padding(horizontal = 8.dp, vertical = 6.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
                                     Text(
                                         text = spec.title,
-                                        style = MaterialTheme.typography.labelSmall,
+                                        style = tabTitleTextStyle,
                                         color = if (selected) {
                                             MaterialTheme.colorScheme.onPrimaryContainer
                                         } else {
@@ -179,18 +191,23 @@ fun AutoBattlePanel(
                                         },
                                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                                         textAlign = TextAlign.Center,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.fillMaxWidth(),
                                     )
                                     spec.subtitle?.let { subtitle ->
+                                        Spacer(modifier = Modifier.height(1.dp))
                                         Text(
                                             text = subtitle,
-                                            style = MaterialTheme.typography.labelSmall,
+                                            style = tabSubtitleTextStyle,
                                             color = if (selected) {
                                                 MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                                             } else {
                                                 MaterialTheme.colorScheme.onSurfaceVariant
                                             },
                                             textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
                                             modifier = Modifier.fillMaxWidth(),
                                         )
                                     }
@@ -247,23 +264,23 @@ fun AutoBattlePanel(
                 Button(
                     onClick = viewModel::onParseSingleInput,
                     enabled = !state.isLoading && !isStarting,
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    shape = compactButtonShape,
+                    contentPadding = compactButtonPadding
                 ) {
                     Text(if (state.isLoading) "读取中..." else "读取作业")
                 }
                 Button(
                     onClick = viewModel::onParseSetInput,
                     enabled = !state.isLoading && !isStarting && setImportSupported,
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    shape = compactButtonShape,
+                    contentPadding = compactButtonPadding
                 ) {
                     Text("读取作业集")
                 }
                 OutlinedButton(
                     onClick = { uriHandler.openUri("https://zoot.plus") },
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    shape = compactButtonShape,
+                    contentPadding = compactButtonPadding
                 ) {
                     Text("作业站")
                 }
@@ -573,7 +590,7 @@ fun AutoBattlePanel(
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                                                .padding(start = 8.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                                         ) {
@@ -585,10 +602,8 @@ fun AutoBattlePanel(
                                             )
                                             OutlinedButton(
                                                 onClick = { viewModel.onSelectListItem(index) },
-                                                contentPadding = PaddingValues(
-                                                    horizontal = 8.dp,
-                                                    vertical = 0.dp
-                                                )
+                                                shape = compactButtonShape,
+                                                contentPadding = compactButtonPadding
                                             ) { Text("加载") }
                                             IconButton(
                                                 onClick = { viewModel.onRemoveFromList(index) },
@@ -614,8 +629,8 @@ fun AutoBattlePanel(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedButton(onClick = viewModel::onCleanUnchecked) { Text("清除未勾选") }
-                    OutlinedButton(onClick = viewModel::onClearList) { Text("清空列表") }
+                    OutlinedButton(onClick = viewModel::onCleanUnchecked, shape = compactButtonShape, contentPadding = compactButtonPadding) { Text("清除未勾选") }
+                    OutlinedButton(onClick = viewModel::onClearList, shape = compactButtonShape, contentPadding = compactButtonPadding) { Text("清空列表") }
                 }
             }
         }
