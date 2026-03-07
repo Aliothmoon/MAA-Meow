@@ -34,17 +34,17 @@ conventional_commits = true
 filter_unconventional = false
 split_commits = false
 commit_parsers = [
-  { message = "^feat", group = "<!-- 0 -->新增 | Features" },
-  { message = "^fix", group = "<!-- 1 -->修复 | Bug Fixes" },
-  { message = "^perf", group = "<!-- 2 -->优化 | Performance" },
-  { message = "^refactor|^rft", group = "<!-- 3 -->重构 | Refactor" },
-  { message = "^docs|^doc", group = "<!-- 4 -->文档 | Documentation" },
-  { message = "^style", group = "<!-- 5 -->样式 | Styling" },
-  { message = "^test", group = "<!-- 6 -->测试 | Testing" },
-  { message = "^chore", group = "<!-- 7 -->杂项 | Miscellaneous" },
+  { message = "^feat", group = "<!-- 0 -->✨ 新增 | Features" },
+  { message = "^fix", group = "<!-- 1 -->🐛 修复 | Bug Fixes" },
+  { message = "^perf", group = "<!-- 2 -->⚡ 优化 | Performance" },
+  { message = "^refactor|^rft", group = "<!-- 3 -->♻️ 重构 | Refactor" },
+  { message = "^docs|^doc", group = "<!-- 4 -->📝 文档 | Documentation" },
+  { message = "^style", group = "<!-- 5 -->💄 样式 | Styling" },
+  { message = "^test", group = "<!-- 6 -->✅ 测试 | Testing" },
+  { message = "^chore", group = "<!-- 7 -->🔧 杂项 | Miscellaneous" },
   { message = "^ci|^build", skip = true },
   { message = "^Merge", skip = true },
-  { message = ".*", group = "<!-- 99 -->其他 | Other" },
+  { message = ".*", group = "<!-- 99 -->📦 其他 | Other" },
 ]
 protect_breaking_commits = false
 filter_commits = false
