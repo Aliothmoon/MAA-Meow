@@ -144,7 +144,7 @@ fun ExpandedControlPanel(
                                 TaskConfigPanel(
                                     selectedNode = selectedNode,
                                     onConfigChange = { config ->
-                                        val nodeId = uiState.selectedNodeId ?: return@TaskConfigPanel
+                                        val nodeId = selectedNode?.id ?: return@TaskConfigPanel
                                         viewModel.onNodeConfigChange(nodeId, config)
                                     },
                                     modifier = Modifier

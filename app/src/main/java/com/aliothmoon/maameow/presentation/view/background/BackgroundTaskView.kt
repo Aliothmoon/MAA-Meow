@@ -332,7 +332,7 @@ fun BackgroundTaskView(
                                             selectedNode = selectedNode,
                                             onConfigChange = { config ->
                                                 val nodeId =
-                                                    state.selectedNodeId ?: return@TaskConfigPanel
+                                                    selectedNode?.id ?: return@TaskConfigPanel
                                                 viewModel.onNodeConfigChange(nodeId, config)
                                             }
                                         )
