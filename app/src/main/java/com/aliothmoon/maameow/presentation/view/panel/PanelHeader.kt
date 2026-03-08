@@ -37,7 +37,7 @@ fun PanelHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 8.dp),
+            .padding(bottom = 4.dp),
         horizontalArrangement = if (showActions) Arrangement.SpaceBetween else Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -52,7 +52,7 @@ fun PanelHeader(
                         MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = if (selectedTab == tab) FontWeight.Bold else FontWeight.Normal,
                     modifier = Modifier
-                        .padding(vertical = 8.dp)
+                        .padding(vertical = 4.dp)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null

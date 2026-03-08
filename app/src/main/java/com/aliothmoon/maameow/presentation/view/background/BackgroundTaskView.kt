@@ -280,8 +280,6 @@ fun BackgroundTaskView(
                     showActions = false
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier
