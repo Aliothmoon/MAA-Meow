@@ -199,6 +199,7 @@ class ExpandedControlPanelViewModel(
         }
         Timber.i("=== End Task JSON List ===")
         viewModelScope.launch {
+            chainState.grantGameBatteryExemption()
             val result = compositionService.start(taskParams)
             val message = when (result) {
                 is MaaCompositionService.StartResult.Success ->

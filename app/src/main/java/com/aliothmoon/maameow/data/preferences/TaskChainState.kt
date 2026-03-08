@@ -6,9 +6,13 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import com.aliothmoon.maameow.data.model.TaskParamProvider
+import com.aliothmoon.maameow.data.model.WakeUpConfig
+import com.aliothmoon.maameow.manager.RemoteServiceManager
+import com.aliothmoon.maameow.remote.PermissionGrantRequest
 import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -128,6 +132,24 @@ class TaskChainState(private val context: Context) {
 
     inline fun <reified T : TaskParamProvider> findFirstConfig(): T? {
         return chain.value.firstNotNullOfOrNull { it.config as? T }
+    }
+
+    fun grantGameBatteryExemption() {
+        findFirstConfig<WakeUpConfig>()?.let {
+            val pkg = Packages[it.clientType] ?: return
+            runCatching {
+                RemoteServiceManager.getInstanceOrNull()?.grantPermissions(
+                    PermissionGrantRequest(
+                        packageName = pkg,
+                        uid = 0,
+                        permissions = PermissionGrantRequest.PERM_BATTERY
+                    )
+                )
+                Timber.d("Battery exemption granted for game: %s", pkg)
+            }.onFailure { e ->
+                Timber.w(e, "Failed to grant battery exemption for game")
+            }
+        }
     }
 
     private suspend inline fun updateChain(

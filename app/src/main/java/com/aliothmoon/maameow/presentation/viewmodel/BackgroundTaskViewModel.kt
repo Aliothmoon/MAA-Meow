@@ -197,6 +197,8 @@ class BackgroundTaskViewModel(
             ) {
                 onMuteGameSound()
             }
+            chainState.grantGameBatteryExemption()
+
             val message = when (result) {
                 is MaaCompositionService.StartResult.Success -> null
 
