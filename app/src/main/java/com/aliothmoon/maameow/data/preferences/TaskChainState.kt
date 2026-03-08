@@ -34,22 +34,12 @@ class TaskChainState(private val context: Context) {
         private val CHAIN_KEY = stringPreferencesKey("chain")
     }
 
+    private val defaultChain: List<TaskChainNode> by lazy { buildDefaultChain() }
+
     val chain: StateFlow<List<TaskChainNode>> =
         context.store.data
-            .map { prefs ->
-                val jsonStr = prefs[CHAIN_KEY] ?: ""
-                if (jsonStr.isEmpty()) {
-                    getDefaultChain()
-                } else {
-                    runCatching {
-                        json.decodeFromString<List<TaskChainNode>>(jsonStr)
-                    }.getOrElse {
-                        Timber.w(it, "Failed to decode task chain, using defaults")
-                        getDefaultChain()
-                    }
-                }
-            }
-            .stateIn(scope, SharingStarted.Eagerly, getDefaultChain())
+            .map { prefs -> decodeChain(prefs[CHAIN_KEY]) }
+            .stateIn(scope, SharingStarted.Eagerly, defaultChain)
 
     suspend fun setChain(nodes: List<TaskChainNode>) {
         context.store.edit { prefs ->
@@ -58,64 +48,72 @@ class TaskChainState(private val context: Context) {
     }
 
     suspend fun addNode(typeInfo: TaskTypeInfo, afterIndex: Int = -1) {
-        val current = chain.value.toMutableList()
-        val node = TaskChainNode(
-            id = UUID.randomUUID().toString(),
-            name = typeInfo.displayName,
-            enabled = true,
-            order = 0,
-            config = typeInfo.defaultConfig()
-        )
-        if (afterIndex < 0 || afterIndex >= current.size) {
-            current.add(node)
-        } else {
-            current.add(afterIndex + 1, node)
+        updateChain { current ->
+            val node = TaskChainNode(
+                id = UUID.randomUUID().toString(),
+                name = typeInfo.displayName,
+                enabled = true,
+                config = typeInfo.defaultConfig()
+            )
+            if (afterIndex < 0 || afterIndex >= current.size) {
+                current.add(node)
+            } else {
+                current.add(afterIndex + 1, node)
+            }
+            Timber.d("Added node: %s (%s)", node.name, typeInfo.name)
         }
-        reindex(current)
-        setChain(current)
-        Timber.d("Added node: %s (%s)", node.name, typeInfo.name)
     }
 
     suspend fun removeNode(nodeId: String) {
-        val current = chain.value.toMutableList()
-        current.removeAll { it.id == nodeId }
-        reindex(current)
-        setChain(current)
-        Timber.d("Removed node: %s", nodeId)
+        updateChain { current ->
+            current.removeAll { it.id == nodeId }
+            Timber.d("Removed node: %s", nodeId)
+        }
     }
 
     suspend fun renameNode(nodeId: String, newName: String) {
-        val current = chain.value.map { node ->
-            if (node.id == nodeId) node.copy(name = newName) else node
+        updateChain { current ->
+            val idx = current.indexOfFirst { it.id == nodeId }
+            if (idx >= 0) {
+                current[idx] = current[idx].copy(name = newName)
+                Timber.d("Renamed node %s to: %s", nodeId, newName)
+            } else {
+                Timber.w("renameNode: node %s not found", nodeId)
+            }
         }
-        setChain(current)
-        Timber.d("Renamed node %s to: %s", nodeId, newName)
     }
 
     suspend fun setNodeEnabled(nodeId: String, enabled: Boolean) {
-        val current = chain.value.map { node ->
-            if (node.id == nodeId) node.copy(enabled = enabled) else node
+        updateChain { current ->
+            val idx = current.indexOfFirst { it.id == nodeId }
+            if (idx >= 0) {
+                current[idx] = current[idx].copy(enabled = enabled)
+                Timber.d("Set node %s enabled: %s", nodeId, enabled)
+            } else {
+                Timber.w("setNodeEnabled: node %s not found", nodeId)
+            }
         }
-        setChain(current)
-        Timber.d("Set node %s enabled: %s", nodeId, enabled)
     }
 
     suspend fun updateNodeConfig(nodeId: String, config: TaskParamProvider) {
-        val current = chain.value.map { node ->
-            if (node.id == nodeId) node.copy(config = config) else node
+        updateChain { current ->
+            val idx = current.indexOfFirst { it.id == nodeId }
+            if (idx >= 0) {
+                current[idx] = current[idx].copy(config = config)
+            } else {
+                Timber.w("updateNodeConfig: node %s not found", nodeId)
+            }
         }
-        setChain(current)
     }
 
     suspend fun reorderNodes(fromIndex: Int, toIndex: Int) {
-        val current = chain.value.toMutableList()
-        require(fromIndex in current.indices) { "fromIndex out of bounds: $fromIndex" }
-        require(toIndex in current.indices) { "toIndex out of bounds: $toIndex" }
-        val node = current.removeAt(fromIndex)
-        current.add(toIndex, node)
-        reindex(current)
-        setChain(current)
-        Timber.d("Moved node from %d to %d", fromIndex, toIndex)
+        updateChain { current ->
+            require(fromIndex in current.indices) { "fromIndex out of bounds: $fromIndex" }
+            require(toIndex in current.indices) { "toIndex out of bounds: $toIndex" }
+            val node = current.removeAt(fromIndex)
+            current.add(toIndex, node)
+            Timber.d("Moved node from %d to %d", fromIndex, toIndex)
+        }
     }
 
     inline fun <reified T : TaskParamProvider> firstConfigFlow(): Flow<T?> {
@@ -128,13 +126,34 @@ class TaskChainState(private val context: Context) {
         return chain.value.firstNotNullOfOrNull { it.config as? T }
     }
 
+    private suspend inline fun updateChain(
+        crossinline block: (MutableList<TaskChainNode>) -> Unit
+    ) {
+        context.store.edit { prefs ->
+            val current = decodeChain(prefs[CHAIN_KEY]).toMutableList()
+            block(current)
+            reindex(current)
+            prefs[CHAIN_KEY] = json.encodeToString<List<TaskChainNode>>(current)
+        }
+    }
+
+    private fun decodeChain(raw: String?): List<TaskChainNode> {
+        if (raw.isNullOrEmpty()) return defaultChain
+        return runCatching {
+            json.decodeFromString<List<TaskChainNode>>(raw)
+        }.getOrElse {
+            Timber.w(it, "Failed to decode task chain, using defaults")
+            defaultChain
+        }
+    }
+
     private fun reindex(nodes: MutableList<TaskChainNode>) {
         for (i in nodes.indices) {
             nodes[i] = nodes[i].copy(order = i)
         }
     }
 
-    private fun getDefaultChain(): List<TaskChainNode> {
+    private fun buildDefaultChain(): List<TaskChainNode> {
         return TaskTypeInfo.entries.mapIndexed { index, info ->
             TaskChainNode(
                 name = info.displayName,
