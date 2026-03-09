@@ -80,6 +80,16 @@ class LogExportService(
 
     private fun createZipFile(zipFile: File, logFiles: List<File>, baseDir: File) {
         ZipOutputStream(BufferedOutputStream(FileOutputStream(zipFile))).use { zos ->
+            try {
+                val props = Runtime.getRuntime().exec("getprop").inputStream
+                    .bufferedReader().readText()
+                zos.putNextEntry(ZipEntry("properties.txt"))
+                zos.write(props.toByteArray(Charsets.UTF_8))
+                zos.closeEntry()
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to collect device properties")
+            }
+
             for (file in logFiles) {
                 // 使用相对路径作为 ZIP 中的路径
                 val relativePath = file.relativeTo(baseDir).path
