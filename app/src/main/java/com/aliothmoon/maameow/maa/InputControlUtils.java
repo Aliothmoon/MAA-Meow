@@ -13,7 +13,14 @@ import com.aliothmoon.maameow.third.wrappers.ServiceManager;
 
 public final class InputControlUtils {
 
-    private static final InputManager MANAGER = ServiceManager.getInputManager();
+    private static InputManager manager;
+
+    private static InputManager getManager() {
+        if (manager == null) {
+            manager = ServiceManager.getInputManager();
+        }
+        return manager;
+    }
 
     private static final int DEFAULT_DEVICE_ID = 0;
     private static final int DEFAULT_SOURCE = InputDevice.SOURCE_TOUCHSCREEN;
@@ -65,7 +72,7 @@ public final class InputControlUtils {
             if (!setDisplayId(event, displayId)) {
                 return false;
             }
-            return MANAGER.injectInputEvent(event, mode);
+            return getManager().injectInputEvent(event, mode);
         } finally {
             event.recycle();
         }
@@ -141,7 +148,7 @@ public final class InputControlUtils {
             return false;
         }
 
-        return MANAGER.injectInputEvent(keyEvent, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC);
+        return getManager().injectInputEvent(keyEvent, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC);
     }
 
     public static boolean keyUp(int keyCode, int displayId) {
@@ -152,6 +159,6 @@ public final class InputControlUtils {
             return false;
         }
 
-        return MANAGER.injectInputEvent(keyEvent, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC);
+        return getManager().injectInputEvent(keyEvent, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC);
     }
 }

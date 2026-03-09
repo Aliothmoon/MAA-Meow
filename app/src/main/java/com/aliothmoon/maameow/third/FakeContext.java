@@ -67,7 +67,6 @@ public final class FakeContext extends ContextWrapper {
 
     private FakeContext() {
         super(Workarounds.getSystemContext());
-        Workarounds.apply();
     }
 
     @Override

@@ -10,6 +10,8 @@ import android.os.Looper;
 
 import com.aliothmoon.maameow.constant.AndroidVersions;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -150,7 +152,11 @@ public final class Workarounds {
             return (Context) getSystemContextMethod.invoke(ACTIVITY_THREAD);
         } catch (Throwable throwable) {
             // this is a workaround, so failing is not an error
-            Ln.d("Could not get system context: " + throwable.getMessage());
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            throwable.printStackTrace(pw);
+            pw.flush();
+            Ln.d("Could not get system context: " + sw);
             return null;
         }
     }

@@ -14,8 +14,8 @@ import com.aliothmoon.maameow.maa.InputControlUtils
 import com.aliothmoon.maameow.maa.MaaCoreLibrary
 import com.aliothmoon.maameow.remote.internal.PrimaryDisplayManager
 import com.aliothmoon.maameow.remote.internal.VirtualDisplayManager
-import com.aliothmoon.maameow.third.FakeContext
 import com.aliothmoon.maameow.third.Ln
+import com.aliothmoon.maameow.third.Workarounds
 import com.aliothmoon.maameow.third.wrappers.DisplayControl
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
 import com.aliothmoon.maameow.third.wrappers.SurfaceControl
@@ -117,8 +117,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
                     return false
                 }
             }
-            // call init & class init
-            FakeContext.get()
+            Workarounds.apply()
         }
         return true
     }
