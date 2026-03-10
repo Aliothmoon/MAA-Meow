@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
 import com.aliothmoon.maameow.data.config.MaaPathConfig
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -18,7 +19,8 @@ import java.util.zip.ZipOutputStream
 
 class LogExportService(
     private val context: Context,
-    private val pathConfig: MaaPathConfig
+    private val pathConfig: MaaPathConfig,
+    private val appSettingsManager: AppSettingsManager
 ) {
     companion object {
         private const val EXPORT_DIR = "export"
@@ -80,6 +82,20 @@ class LogExportService(
 
     private fun createZipFile(zipFile: File, logFiles: List<File>, baseDir: File) {
         ZipOutputStream(BufferedOutputStream(FileOutputStream(zipFile))).use { zos ->
+            if (appSettingsManager.debugMode.value) {
+                try {
+                    val process = Runtime.getRuntime().exec("getprop")
+                    zos.putNextEntry(ZipEntry("properties.txt"))
+                    process.inputStream.use { input ->
+                        input.copyTo(zos, bufferSize = 8192)
+                    }
+                    zos.closeEntry()
+                    process.waitFor()
+                } catch (e: Exception) {
+                    Timber.w(e, "Failed to collect device properties")
+                }
+            }
+
             for (file in logFiles) {
                 // 使用相对路径作为 ZIP 中的路径
                 val relativePath = file.relativeTo(baseDir).path
