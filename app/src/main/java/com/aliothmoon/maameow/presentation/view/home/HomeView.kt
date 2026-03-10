@@ -346,7 +346,6 @@ fun HomeView(
         var shizukuStatus by remember {
             mutableStateOf(ShizukuInstallHelper.checkStatus(context))
         }
-        var suiWarningDismissed by remember { mutableStateOf(false) }
         LifecycleResumeEffect(Unit) {
             shizukuStatus = ShizukuInstallHelper.checkStatus(context)
             onPauseOrDispose {}
@@ -414,20 +413,24 @@ fun HomeView(
                 }
 
                 ShizukuInstallHelper.ShizukuStatus.SUI_AVAILABLE -> {
-                    if (!suiWarningDismissed) {
-                        AlertDialog(
-                            onDismissRequest = { suiWarningDismissed = true },
-                            title = { Text("检测到 Sui") },
-                            text = {
-                                Text("当前使用 Sui 提供 Shizuku 服务，Sui 以 Root 权限运行，MaaMeow 可能无法正常工作，请以实际测试为主")
-                            },
-                            confirmButton = {
-                                Button(onClick = { suiWarningDismissed = true }) {
-                                    Text("知道了")
-                                }
+                    AlertDialog(
+                        onDismissRequest = {},
+                        properties = DialogProperties(
+                            dismissOnBackPress = false,
+                            dismissOnClickOutside = false,
+                        ),
+                        title = { Text("检测到 Sui") },
+                        text = {
+                            Text("当前使用 Sui 提供 Shizuku 服务，Sui 以 Root 权限运行，MaaMeow 可能无法正常工作，请以实际测试为主")
+                        },
+                        confirmButton = {
+                            Button(onClick = {
+                                skipScope.launch { appSettingsManager.setSkipShizukuCheck(true) }
+                            }) {
+                                Text("知道了")
                             }
-                        )
-                    }
+                        }
+                    )
                 }
 
                 ShizukuInstallHelper.ShizukuStatus.READY -> {}
