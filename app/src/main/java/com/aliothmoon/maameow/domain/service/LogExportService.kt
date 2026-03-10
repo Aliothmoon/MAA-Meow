@@ -81,11 +81,13 @@ class LogExportService(
     private fun createZipFile(zipFile: File, logFiles: List<File>, baseDir: File) {
         ZipOutputStream(BufferedOutputStream(FileOutputStream(zipFile))).use { zos ->
             try {
-                val props = Runtime.getRuntime().exec("getprop").inputStream
-                    .bufferedReader().readText()
+                val process = Runtime.getRuntime().exec("getprop")
                 zos.putNextEntry(ZipEntry("properties.txt"))
-                zos.write(props.toByteArray(Charsets.UTF_8))
+                process.inputStream.use { input ->
+                    input.copyTo(zos, bufferSize = 8192)
+                }
                 zos.closeEntry()
+                process.waitFor()
             } catch (e: Exception) {
                 Timber.w(e, "Failed to collect device properties")
             }
