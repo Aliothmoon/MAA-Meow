@@ -5,6 +5,5 @@ package com.aliothmoon.maameow.data.model.update
  */
 data class UpdateInfo(
     val version: String,
-    val downloadUrl: String,
     val releaseNote: String? = null,
 )

@@ -185,9 +185,8 @@ fun HomeView(
             confirmButton = {
                 Button(
                     onClick = {
-                        // 两者都有更新时只触发 App 更新
                         if (result.appUpdate != null) {
-                            updateViewModel.confirmAppDownload()
+                            updateViewModel.confirmAppDownload(result.appUpdate.version)
                         } else {
                             updateViewModel.confirmResourceDownload()
                         }

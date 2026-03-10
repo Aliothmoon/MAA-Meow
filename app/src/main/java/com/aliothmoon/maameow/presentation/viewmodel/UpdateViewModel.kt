@@ -8,9 +8,8 @@ import com.aliothmoon.maameow.constant.MaaFiles.VERSION_FILE
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.datasource.ResourceDownloader
 import com.aliothmoon.maameow.data.model.update.StartupUpdateResult
-import com.aliothmoon.maameow.data.model.update.UpdateCheckResult
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
-import com.aliothmoon.maameow.data.model.update.UpdateInfo
+import com.aliothmoon.maameow.data.model.update.UpdateCheckResult
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
@@ -139,18 +138,13 @@ class UpdateViewModel(
 
     fun confirmResourceDownload() {
         viewModelScope.launch {
-            val resourcesDir = pathConfig.resourceDir
-            val file = File(resourcesDir)
-            if (!file.exists()) {
-                file.mkdirs()
-            }
+            val file = File(pathConfig.resourceDir)
 
             val currentVersion = loadResourceVersion()
-            val result = updateService.confirmAndDownloadResource(
+            val result = updateService.downloadResource(
                 source = updateSource.value,
-                cdk = mirrorChyanCdk.value,
                 currentVersion = currentVersion,
-                dir = file
+                target = file
             )
             if (result.isSuccess) {
                 refreshResourceVersion()
@@ -178,16 +172,15 @@ class UpdateViewModel(
             val currentVersion = loadResourceVersion()
 
             // 并行检查
-            val appResultDeferred = async {
-                updateService.checkAppUpdate(
-                    cdk = mirrorChyanCdk.value,
-                    channel = updateChannel.value
-                )
+            val appDeferred = async {
+                updateService.checkAppUpdate(channel = updateChannel.value)
             }
-            val resResult =
-                updateService.checkResourceUpdate(currentVersion, mirrorChyanCdk.value)
+            val resDeferred = async {
+                updateService.checkResourceUpdate(currentVersion)
+            }
 
-            val appResult = appResultDeferred.await()
+            val appResult = appDeferred.await()
+            val resResult = resDeferred.await()
 
             // 聚合结果
             val appAvailable = (appResult as? UpdateCheckResult.Available)?.info
@@ -224,9 +217,7 @@ class UpdateViewModel(
         viewModelScope.launch {
             _appChecking.value = true
             Timber.i("检查 App 更新 (MirrorChyan)")
-            _appCheckResult.value = updateService.checkAppUpdate(
-                channel = updateChannel.value
-            )
+            _appCheckResult.value = updateService.checkAppUpdate(channel = updateChannel.value)
             _appChecking.value = false
         }
     }
@@ -235,12 +226,11 @@ class UpdateViewModel(
         _appCheckResult.value = null
     }
 
-    fun confirmAppDownload() {
-        val version = (_appCheckResult.value as? UpdateCheckResult.Available)?.info?.version ?: return
+    fun confirmAppDownload(version: String) {
+        Timber.i("确认下载 App 更新: version=$version")
         viewModelScope.launch {
-            updateService.confirmAndDownloadApp(
+            updateService.downloadApp(
                 source = updateSource.value,
-                cdk = mirrorChyanCdk.value,
                 version = version,
                 channel = updateChannel.value
             )

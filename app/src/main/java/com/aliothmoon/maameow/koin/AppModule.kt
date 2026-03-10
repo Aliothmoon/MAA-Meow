@@ -4,11 +4,14 @@ import com.aliothmoon.maameow.data.api.CopilotApiService
 import com.aliothmoon.maameow.data.api.ETagCacheManager
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.api.MaaApiService
+import com.aliothmoon.maameow.data.api.MirrorChyanApiClient
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.datasource.AppDownloader
 import com.aliothmoon.maameow.data.datasource.AssetExtractor
 import com.aliothmoon.maameow.data.datasource.ResourceDownloader
 import com.aliothmoon.maameow.data.datasource.ZipExtractor
+import com.aliothmoon.maameow.data.datasource.update.MirrorChyanAppVersionChecker
+import com.aliothmoon.maameow.data.datasource.update.MirrorChyanResourceVersionChecker
 import com.aliothmoon.maameow.data.log.ApplicationLogWriter
 import com.aliothmoon.maameow.data.log.TaskLogWriter
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
@@ -24,9 +27,9 @@ import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.service.RuntimeLogCenter
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
-import com.aliothmoon.maameow.domain.service.update.AppUpdateHandler
-import com.aliothmoon.maameow.domain.service.update.ResourceUpdateHandler
 import com.aliothmoon.maameow.domain.service.update.UpdateService
+import com.aliothmoon.maameow.domain.service.update.checker.AppVersionChecker
+import com.aliothmoon.maameow.domain.service.update.checker.ResourceVersionChecker
 import com.aliothmoon.maameow.maa.callback.ConnectionInfoHandler
 import com.aliothmoon.maameow.maa.callback.CopilotRuntimeStateStore
 import com.aliothmoon.maameow.maa.callback.MaaCallbackDispatcher
@@ -69,9 +72,16 @@ val appModule = module {
     singleOf(::AppDownloader)
     singleOf(::ZipExtractor)
     singleOf(::AssetExtractor)
-    singleOf(::ResourceUpdateHandler)
-    singleOf(::AppUpdateHandler)
+
+    // MirrorChyan API Client
+    singleOf(::MirrorChyanApiClient)
+
+    // Version Checkers
+    single<AppVersionChecker> { MirrorChyanAppVersionChecker(get()) }
+    single<ResourceVersionChecker> { MirrorChyanResourceVersionChecker(get()) }
+
     singleOf(::UpdateService)
+
     singleOf(::ResourceInitService)
     singleOf(::MaaResourceLoader)
     single { RuntimeLogCenter(get()) }

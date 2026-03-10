@@ -190,7 +190,7 @@ fun UpdateCard(
             currentVersion = viewModel.currentAppVersion,
             onConfirm = {
                 viewModel.dismissAppCheckResult()
-                viewModel.confirmAppDownload()
+                viewModel.confirmAppDownload(updateInfo.version)
             },
             onDismiss = {
                 viewModel.dismissAppCheckResult()
@@ -409,7 +409,7 @@ fun UpdateCard(
                                         uriHandler.openUri(
                                             when (source) {
                                                 UpdateSource.GITHUB -> "https://github.com/MaaAssistantArknights/MaaResource"
-                                                UpdateSource.MIRROR_CHYAN -> "https://mirrorchyan.com"
+                                                UpdateSource.MIRROR_CHYAN -> "https://mirrorchyan.com/zh/projects?rid=MAA&os=android&channel=stable&source=maameow"
                                             }
                                         )
                                         showInfoSource = null
