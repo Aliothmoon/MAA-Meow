@@ -26,7 +26,6 @@
 #define LOGW(...) __android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
-// --- 内部前置声明 ---
 static jstring ping(JNIEnv *env, jclass clazz);
 
 static void nativeInitFrameBuffers(JNIEnv *env, jclass clazz, jint width, jint height);
@@ -50,46 +49,49 @@ static void nativeSetPreviewSurface(JNIEnv *env, jclass clazz, jobject jSurface)
 #endif
 
 static void
-ConvertRGBAtoBGR(const uint8_t *src, uint8_t *dst, int width, int height, int srcStride) {
-    if (srcStride == width * 4) {
-        int totalPixels = width * height;
-        int x = 0;
-#if defined(__ARM_NEON)
-        for (; x <= totalPixels - 16; x += 16) {
-            uint8x16x4_t rgba = vld4q_u8(src + x * 4);
-            uint8x16x3_t bgr;
-            bgr.val[0] = rgba.val[2];
-            bgr.val[1] = rgba.val[1];
-            bgr.val[2] = rgba.val[0];
-            vst3q_u8(dst + x * 3, bgr);
-        }
-#endif
-        for (; x < totalPixels; ++x) {
-            dst[x * 3 + 0] = src[x * 4 + 2];
-            dst[x * 3 + 1] = src[x * 4 + 1];
-            dst[x * 3 + 2] = src[x * 4 + 0];
-        }
-        return;
-    }
+ProcessFrameData(const uint8_t *src, uint8_t *dstRGBA, uint8_t *dstBGR, int width, int height,
+                 int srcStride) {
     for (int y = 0; y < height; ++y) {
         const uint8_t *srcLine = src + y * srcStride;
-        uint8_t *dstLine = dst + y * width * 3;
+        uint8_t *dstBGRLine = dstBGR + y * width * 3;
+        uint8_t *dstRGBALine = dstRGBA ? (dstRGBA + y * width * 4) : nullptr;
+
         if (y + 1 < height) __builtin_prefetch(src + (y + 1) * srcStride, 0, 3);
+
         int x = 0;
 #if defined(__ARM_NEON)
         for (; x <= width - 16; x += 16) {
             uint8x16x4_t rgba = vld4q_u8(srcLine + x * 4);
+
+            // 如果需要预览，直接写回 RGBA (此时数据已经在寄存器中，不需要重新加载)
+            if (dstRGBALine) {
+                vst4q_u8(dstRGBALine + x * 4, rgba);
+            }
+
+            // 交换 R 和 B 产出 BGR
             uint8x16x3_t bgr;
-            bgr.val[0] = rgba.val[2];
-            bgr.val[1] = rgba.val[1];
-            bgr.val[2] = rgba.val[0];
-            vst3q_u8(dstLine + x * 3, bgr);
+            bgr.val[0] = rgba.val[2]; // B
+            bgr.val[1] = rgba.val[1]; // G
+            bgr.val[2] = rgba.val[0]; // R
+            vst3q_u8(dstBGRLine + x * 3, bgr);
         }
 #endif
         for (; x < width; ++x) {
-            dstLine[x * 3 + 0] = srcLine[x * 4 + 2];
-            dstLine[x * 3 + 1] = srcLine[x * 4 + 1];
-            dstLine[x * 3 + 2] = srcLine[x * 4 + 0];
+            uint8_t r = srcLine[x * 4 + 0];
+            uint8_t g = srcLine[x * 4 + 1];
+            uint8_t b = srcLine[x * 4 + 2];
+            uint8_t a = srcLine[x * 4 + 3];
+
+            if (dstRGBALine) {
+                dstRGBALine[x * 4 + 0] = r;
+                dstRGBALine[x * 4 + 1] = g;
+                dstRGBALine[x * 4 + 2] = b;
+                dstRGBALine[x * 4 + 3] = a;
+            }
+
+            dstBGRLine[x * 3 + 0] = b;
+            dstBGRLine[x * 3 + 1] = g;
+            dstBGRLine[x * 3 + 2] = r;
         }
     }
 }
@@ -381,23 +383,20 @@ int64_t CopyFrameFromHardwareBuffer(void *env_ptr, void *hardwareBufferObj, int6
         g_bufferStates[GetBufferIndex(target)].store(FRAME_STATE_FREE);
         return -1;
     }
+
     bool needsPreview = false;
     {
         std::lock_guard<std::mutex> lock(g_previewMutex);
         needsPreview = (g_previewWindow != nullptr);
     }
-    int srcStride = desc.stride * 4;
-    if (needsPreview) {
-        if (srcStride == target->stride) memcpy(target->data, srcAddr, target->size);
-        else {
-            int rowBytes = target->width * 4;
-            for (int y = 0; y < target->height; ++y)
-                memcpy(target->data + y * target->stride, (uint8_t *) srcAddr + y * srcStride,
-                       rowBytes);
-        }
-    }
-    ConvertRGBAtoBGR((uint8_t *) srcAddr, target->bgr_data, target->width, target->height,
-                     srcStride);
+
+    ProcessFrameData((uint8_t *) srcAddr,
+                     needsPreview ? target->data : nullptr,
+                     target->bgr_data,
+                     target->width, target->height,
+                     desc.stride * 4
+    );
+
     AHardwareBuffer_unlock(buffer, nullptr);
     target->timestamp = timestampNs;
     target->frameCount = g_frameCount.fetch_add(1) + 1;
@@ -463,7 +462,7 @@ BRIDGE_API int UnlockPixels(FrameInfo info) {
 }
 
 static jstring ping(JNIEnv *env, jclass clazz) {
-    return env->NewStringUTF("LibBridge Optimized v3");
+    return env->NewStringUTF("LibBridge");
 }
 
 static void nativeInitFrameBuffers(JNIEnv *env, jclass clazz, jint width, jint height) {
