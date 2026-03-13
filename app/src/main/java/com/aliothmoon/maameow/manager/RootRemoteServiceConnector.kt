@@ -74,6 +74,16 @@ object RootRemoteServiceConnector : RemoteServiceConnectorBackend {
                     RootServiceBootstrapRegistry.unregister(token)
                     return@onSuccess
                 }
+
+                try {
+                    binder.linkToDeath({
+                        Timber.e("Root process died unexpectedly! Executing emergency cleanup.")
+                        callbacks.onDisconnected(backend)
+                    }, 0)
+                } catch (e: Exception) {
+                    Timber.w(e, "Failed to link to death for root binder")
+                }
+
                 Timber.i("RemoteService connected by root bootstrap")
                 callbacks.onConnected(backend, binder)
             }.onFailure { throwable ->
