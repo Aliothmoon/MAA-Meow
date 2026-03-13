@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -36,13 +35,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
@@ -51,6 +50,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.domain.service.OperatorDisplayItem
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
@@ -83,6 +83,7 @@ fun AutoBattlePanel(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val maaState by viewModel.maaState.collectAsStateWithLifecycle()
     val isStarting = maaState == MaaExecutionState.STARTING
+    val context = LocalContext.current
     val compactButtonShape = RoundedCornerShape(8.dp)
     val compactButtonPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
     val tabTitleTextStyle = MaterialTheme.typography.bodySmall.copy(
@@ -266,7 +267,6 @@ fun AutoBattlePanel(
         }
 
         item {
-            val uriHandler = LocalUriHandler.current
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = viewModel::onParseSingleInput,
@@ -285,7 +285,7 @@ fun AutoBattlePanel(
                     Text("读取作业集")
                 }
                 OutlinedButton(
-                    onClick = { uriHandler.openUri("https://zoot.plus") },
+                    onClick = { Misc.openUriSafely(context, "https://zoot.plus") },
                     shape = compactButtonShape,
                     contentPadding = compactButtonPadding
                 ) {
@@ -301,7 +301,6 @@ fun AutoBattlePanel(
             val hasVideo = state.videoUrl.isNotBlank()
             if (hasDetail || hasVideo) {
                 item {
-                    val uriHandler = LocalUriHandler.current
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(6.dp),
@@ -396,7 +395,7 @@ fun AutoBattlePanel(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.clickable { uriHandler.openUri(state.videoUrl) }
+                                    modifier = Modifier.clickable { Misc.openUriSafely(context, state.videoUrl) }
                                 )
                             }
                         }
@@ -406,9 +405,8 @@ fun AutoBattlePanel(
         }
 
         item {
-            val formationVisible = regularCopilotTab
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (formationVisible) {
+                if (regularCopilotTab) {
                     CheckBoxWithExpandableTip(
                         checked = state.config.formation,
                         onCheckedChange = {
@@ -418,7 +416,7 @@ fun AutoBattlePanel(
                         tipText = "自动编队可能无法识别带有 ｢特别关注｣ 标记的干员"
                     )
                 }
-                if (formationVisible && state.config.formation) {
+                if (regularCopilotTab && state.config.formation) {
                     CheckBoxWithLabel(
                         checked = state.config.useFormation,
                         onCheckedChange = { enabled ->

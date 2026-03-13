@@ -44,10 +44,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.constant.MaaApi
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.model.CustomInfrastConfig
@@ -409,7 +411,7 @@ private fun CustomInfrastSection(
         }
 
         // 3. 在线生成器链接
-        val handler = LocalUriHandler.current
+        val context = LocalContext.current
         Text(
             text = "自定义基建排班制作器",
             style = MaterialTheme.typography.bodySmall.copy(
@@ -417,7 +419,7 @@ private fun CustomInfrastSection(
             ),
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.clickable {
-                handler.openUri(MaaApi.BASE_SCHEDULING_SCHEMA)
+                Misc.openUriSafely(context, MaaApi.BASE_SCHEDULING_SCHEMA)
             }
         )
 

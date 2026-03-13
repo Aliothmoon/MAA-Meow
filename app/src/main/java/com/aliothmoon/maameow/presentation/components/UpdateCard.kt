@@ -58,7 +58,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -77,6 +76,7 @@ import com.aliothmoon.maameow.data.model.update.UpdateInfo
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.presentation.viewmodel.UpdateViewModel
+import com.aliothmoon.maameow.utils.Misc
 import dev.jeziellago.compose.markdowntext.MarkdownText
 
 /**
@@ -351,7 +351,6 @@ fun UpdateCard(
             if (!anyUpdating) {
 
                 var showInfoSource by remember { mutableStateOf<UpdateSource?>(null) }
-                val uriHandler = LocalUriHandler.current
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -377,8 +376,9 @@ fun UpdateCard(
                         visible = true,
                         title = "关于 ${source.displayName}",
                         onConfirm = {
-                            uriHandler.openUri(
-                                when (source) {
+                            Misc.openUriSafely(
+                                context = context,
+                                uriString = when (source) {
                                     UpdateSource.GITHUB -> "https://github.com/MaaAssistantArknights/MaaResource"
                                     UpdateSource.MIRROR_CHYAN -> "https://mirrorchyan.com/zh/projects?rid=MAA&os=android&channel=stable&source=maameow"
                                 }
@@ -445,7 +445,7 @@ private fun CdkInputField(
     cdk: String,
     onCdkChange: (String) -> Unit
 ) {
-    val uriHandler = LocalUriHandler.current
+    val context = LocalContext.current
     var passwordVisible by remember { mutableStateOf(false) }
 
     var localCdk by remember { mutableStateOf(cdk) }
@@ -498,7 +498,7 @@ private fun CdkInputField(
         Spacer(modifier = Modifier.height(4.dp))
 
         TextButton(
-            onClick = { uriHandler.openUri("https://mirrorchyan.com/") }
+            onClick = { Misc.openUriSafely(context, "https://mirrorchyan.com/") }
         ) {
             Text(
                 text = "没有CDK? 立即订阅",

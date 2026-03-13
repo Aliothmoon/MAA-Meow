@@ -35,7 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -54,6 +53,7 @@ import com.aliothmoon.maameow.presentation.components.ReInitializeConfirmDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.viewmodel.SettingsViewModel
+import com.aliothmoon.maameow.utils.Misc
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -105,7 +105,6 @@ fun SettingsView(
     }
 
     val context = LocalContext.current
-    val uriHandler = LocalUriHandler.current
     if (resourceInitState is ResourceInitState.Extracting) {
         ResourceInitDialog(
             state = resourceInitState,
@@ -276,7 +275,7 @@ fun SettingsView(
                         description = "遇到问题或有建议？欢迎加群交流反馈",
                         contentColor = primaryContent
                     ) {
-                        uriHandler.openUri("https://qm.qq.com/q/j4CFbeDQXu")
+                        Misc.openUriSafely(context, "https://qm.qq.com/q/j4CFbeDQXu")
                     }
                     SettingsDivider(primaryContent)
                     Text(
@@ -287,7 +286,7 @@ fun SettingsView(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                uriHandler.openUri("https://github.com/Aliothmoon/MAA-Meow")
+                                Misc.openUriSafely(context, "https://github.com/Aliothmoon/MAA-Meow")
                             }
                             .padding(vertical = 8.dp),
                         textAlign = TextAlign.Center

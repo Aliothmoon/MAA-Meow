@@ -7,6 +7,8 @@ import android.os.Process
 import android.util.DisplayMetrics
 import android.view.WindowManager
 import kotlin.system.exitProcess
+import androidx.core.net.toUri
+import timber.log.Timber
 
 object Misc {
 
@@ -82,5 +84,15 @@ object Misc {
         intent?.let { context.startActivity(it) }
         Process.killProcess(Process.myPid())
         exitProcess(0)
+    }
+
+    fun openUriSafely(context: Context, uriString: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, uriString.toUri())
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to open URI: $uriString")
+        }
     }
 }
