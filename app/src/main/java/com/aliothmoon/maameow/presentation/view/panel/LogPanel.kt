@@ -301,7 +301,9 @@ private fun LogDetailDialog(
                 )
 
                 // 详细信息 (tooltip)
-                logItem.tooltip?.let { tooltip ->
+                val richTooltip = logItem.annotatedTooltip
+                val plainTooltip = logItem.tooltip
+                if (richTooltip != null || plainTooltip != null) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = "详细信息",
@@ -312,18 +314,30 @@ private fun LogDetailDialog(
                             shape = RoundedCornerShape(4.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant
                         ) {
-                            Text(
-                                text = tooltip,
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontFamily = FontFamily.Monospace
-                                ),
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier
-                                    .padding(8.dp)
-                                    .fillMaxWidth()
-                                    .heightIn(max = 200.dp)
-                                    .verticalScroll(rememberScrollState())
-                            )
+                            if (richTooltip != null) {
+                                Text(
+                                    text = richTooltip,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier
+                                        .padding(8.dp)
+                                        .fillMaxWidth()
+                                        .heightIn(max = 200.dp)
+                                        .verticalScroll(rememberScrollState())
+                                )
+                            } else {
+                                Text(
+                                    text = plainTooltip!!,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontFamily = FontFamily.Monospace
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier
+                                        .padding(8.dp)
+                                        .fillMaxWidth()
+                                        .heightIn(max = 200.dp)
+                                        .verticalScroll(rememberScrollState())
+                                )
+                            }
                         }
                     }
                 }

@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.model
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.ZoneId
@@ -26,6 +27,8 @@ data class LogItem(
     val showTime: Boolean = true,
     /** 工具提示（点击查看详情） */
     val tooltip: String? = null,
+    /** 富文本工具提示（带颜色标注，优先于 tooltip 展示） */
+    val annotatedTooltip: AnnotatedString? = null,
     /** 附加截图路径（用于错误截图） */
     val screenshotPath: String? = null
     // TODO: 实现截图缩略图支持（错误时截图）
@@ -47,5 +50,5 @@ data class LogItem(
 
     /** 是否有详情可查看 */
     val hasDetails: Boolean
-        get() = tooltip != null || screenshotPath != null
+        get() = tooltip != null || annotatedTooltip != null || screenshotPath != null
 }

@@ -2,9 +2,16 @@
 
 import android.content.Context
 import com.alibaba.fastjson2.JSONObject
+import com.aliothmoon.maameow.data.model.LogItem
 import com.aliothmoon.maameow.data.model.LogLevel
+import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.RuntimeLogCenter
 import com.aliothmoon.maameow.maa.AsstMsg
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import timber.log.Timber
 
 /**
@@ -14,7 +21,8 @@ import timber.log.Timber
 class SubTaskHandler(
     applicationContext: Context,
     private val runtimeLogCenter: RuntimeLogCenter,
-    private val copilotRuntimeStateStore: CopilotRuntimeStateStore
+    private val copilotRuntimeStateStore: CopilotRuntimeStateStore,
+    private val resourceDataManager: ResourceDataManager
 ) {
     private val resources = applicationContext.resources
     private val packageName = applicationContext.packageName
@@ -263,6 +271,7 @@ class SubTaskHandler(
                 val accountName = subDetails?.getString("account_name") ?: ""
                 append("${str("AccountSwitch")} -->> $accountName", LogLevel.INFO)
             }
+
             "StageInfoError" -> append(str("StageInfoError"), LogLevel.ERROR)
             "StageQueueUnableToAgent" -> {
                 val code = subDetails?.getString("stage_code") ?: ""
@@ -310,9 +319,26 @@ class SubTaskHandler(
                 append("${str("RecruitingResults")}\n$tags", LogLevel.TRACE)
             }
 
+            "RecruitSpecialTag" -> {
+                val tag = subDetails?.getString("tag") ?: ""
+                append("${str("RecruitingTips")}\n$tag", LogLevel.RARE)
+            }
+
+            "RecruitRobotTag" -> {
+                val tag = subDetails?.getString("tag") ?: ""
+                append("${str("RecruitingTips")}\n$tag", LogLevel.RECRUIT_ROBOT)
+            }
+
             "RecruitResult" -> {
                 val level = subDetails?.getIntValue("level") ?: 0
-                append("$level ★", if (level >= 5) LogLevel.RARE else LogLevel.INFO)
+                val annotatedTooltip = buildRecruitResultTooltip(subDetails)
+                runtimeLogCenter.append(
+                    LogItem(
+                        content = "$level ★ Tags",
+                        level = if (level >= 5) LogLevel.RARE else LogLevel.INFO,
+                        annotatedTooltip = annotatedTooltip
+                    )
+                )
             }
 
             "RecruitSupportOperator" -> {
@@ -387,6 +413,7 @@ class SubTaskHandler(
                 append("Parse $fileName[$stageName] Success", LogLevel.INFO)
                 copilotRuntimeStateStore.resetRequirementIgnored()
             }
+
             "SSSStage" -> {
                 val stage = subDetails?.getString("stage") ?: ""
                 append(str("CurrentStage", stage), LogLevel.INFO)
@@ -493,6 +520,59 @@ class SubTaskHandler(
         if (elapsedTime >= 0) {
             append(str("ElapsedTime", elapsedTime), LogLevel.MESSAGE)
         }
+    }
+
+    // ==================== 公招干员信息解析 ====================
+
+    /**
+     * 解析 RecruitResult 回调中的 tag 组合与匹配干员信息，生成带颜色标注的富文本。
+     * 参考 WPF ToolboxViewModel.UpdateRecruitResult 逻辑。
+     *
+     * JSON 结构：details.result = [{ level, tags[], opers[{ id, name, level }] }, ...]
+     */
+    private fun buildRecruitResultTooltip(details: JSONObject?): AnnotatedString? {
+        val resultArray = details?.getJSONArray("result") ?: return null
+        if (resultArray.isEmpty()) return null
+
+        val defaultColor = LogLevel.MESSAGE.color
+
+        return buildAnnotatedString {
+            for (i in 0 until resultArray.size) {
+                val comb = resultArray.getJSONObject(i) ?: continue
+                val tagLevel = comb.getIntValue("level")
+                val tags = comb.getJSONArray("tags")?.joinToString("  ") ?: ""
+
+                // tag 组合标题行：按组合星级着色
+                withStyle(SpanStyle(color = LogLevel.forRecruitStar(tagLevel).color, fontWeight = FontWeight.Bold)) {
+                    append("$tagLevel★ Tags:  $tags")
+                }
+
+                // 干员列表：星标着色，干员名黑色，每个干员独占一行
+                val opers = comb.getJSONArray("opers")
+                if (opers != null && opers.isNotEmpty()) {
+                    val operList = (0 until opers.size).mapNotNull { j ->
+                        val oper = opers.getJSONObject(j) ?: return@mapNotNull null
+                        val operName = oper.getString("name") ?: return@mapNotNull null
+                        val operLevel = oper.getIntValue("level")
+                        val localizedName =
+                            resourceDataManager.getLocalizedCharacterName(operName) ?: operName
+                        operLevel to localizedName
+                    }.sortedByDescending { it.first }
+
+                    for ((star, name) in operList) {
+                        append("\n  ")
+                        withStyle(SpanStyle(color = LogLevel.forRecruitStar(star).color)) {
+                            append("★".repeat(star))
+                        }
+                        withStyle(SpanStyle(color = defaultColor)) {
+                            append(" $name")
+                        }
+                    }
+                }
+
+                if (i < resultArray.size - 1) append("\n\n")
+            }
+        }.takeIf { it.isNotEmpty() }
     }
 
     // ==================== 字符串资源辅助方法 ====================
