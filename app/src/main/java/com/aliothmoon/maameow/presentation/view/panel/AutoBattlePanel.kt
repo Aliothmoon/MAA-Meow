@@ -340,15 +340,15 @@ fun AutoBattlePanel(
                                 }
                                 val textMeasurer = rememberTextMeasurer()
                                 val labelStyle = MaterialTheme.typography.labelSmall
+                                val density = LocalDensity.current
                                 val nameColumnWidth = remember(summary) {
                                     val allNames = summary.operators.map { it.name } +
                                             summary.groups.flatMap { (_, opers) -> opers.map { it.name } }
                                     val maxTextWidth = allNames.maxOfOrNull { name ->
                                         textMeasurer.measure(name, labelStyle).size.width
                                     } ?: 0
-                                    maxTextWidth
+                                    maxTextWidth + with(density) { 8.dp.roundToPx() }
                                 }
-                                val density = LocalDensity.current
                                 val nameWidth = remember(nameColumnWidth) {
                                     with(density) { nameColumnWidth.toDp() }
                                 }
@@ -363,7 +363,7 @@ fun AutoBattlePanel(
                                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                                             )
                                             summary.operators.forEach { oper ->
-                                                OperatorRow(oper, nameWidth = nameWidth, modifier = Modifier.padding(start = 8.dp))
+                                                OperatorRow(oper, nameWidth = nameWidth)
                                             }
                                         }
                                     }
@@ -377,7 +377,7 @@ fun AutoBattlePanel(
                                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                                             )
                                             opers.forEach { oper ->
-                                                OperatorRow(oper, nameWidth = nameWidth, modifier = Modifier.padding(start = 8.dp))
+                                                OperatorRow(oper, nameWidth = nameWidth)
                                             }
                                         }
                                     }
@@ -746,7 +746,7 @@ private fun OperatorRow(
                 modifier = Modifier
                     .width(nameWidth)
                     .padding(horizontal = 4.dp, vertical = 1.dp),
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Start
             )
         }
         FlowRow(

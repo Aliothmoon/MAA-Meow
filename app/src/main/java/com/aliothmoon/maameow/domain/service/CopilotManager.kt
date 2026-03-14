@@ -332,7 +332,7 @@ class CopilotManager(
         }
         tags.add("技能 $skill")
         if (req != null && req.skillLevel in 1..10) {
-            tags.add("Lv.${req.skillLevel}")
+            tags.add("技能 Lv.${req.skillLevel}")
         }
         if (req != null && req.module >= 0) {
             val moduleNames = arrayOf("χ", "γ", "α", "Δ")
