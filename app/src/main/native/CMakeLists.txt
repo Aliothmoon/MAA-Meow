@@ -9,6 +9,7 @@ add_compile_options(-Os -flto -ffunction-sections -fdata-sections -fvisibility=h
 add_link_options(-flto -Wl,--exclude-libs,ALL -Wl,--gc-sections -Wl,--strip-all)
 
 add_library(bridge SHARED bridge.cpp bridge.h misc.cpp)
+set_source_files_properties(bridge.cpp PROPERTIES COMPILE_OPTIONS "-O2")
 add_executable(launcher launcher.c)
 set_target_properties(launcher PROPERTIES
         OUTPUT_NAME "liblauncher"

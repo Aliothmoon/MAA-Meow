@@ -80,106 +80,55 @@ static void ProcessFrameDataV2(
         int width,
         int height,
         int srcStride) {
+
     if (dstRGBA) {
-        for (int y = 0; y < height; ++y) {
-            const uint8_t *s = src + y * srcStride;
-            uint8_t *d4 = dstRGBA + y * width * 4;
-            uint8_t *d3 = dstBGR + y * width * 3;
-
-            int x = 0;
-
-#if defined(__ARM_NEON)
-            for (; x <= width - 16; x += 16) {
-                uint8x16x4_t rgba = vld4q_u8(s);
-                s += 64;
-
-                vst4q_u8(d4, rgba);
-                d4 += 64;
-
-                uint8x16x3_t bgr;
-                bgr.val[0] = rgba.val[2];
-                bgr.val[1] = rgba.val[1];
-                bgr.val[2] = rgba.val[0];
-                vst3q_u8(d3, bgr);
-                d3 += 48;
-            }
-
-            for (; x <= width - 8; x += 8) {
-                uint8x8x4_t rgba = vld4_u8(s);
-                s += 32;
-
-                vst4_u8(d4, rgba);
-                d4 += 32;
-
-                uint8x8x3_t bgr;
-                bgr.val[0] = rgba.val[2];
-                bgr.val[1] = rgba.val[1];
-                bgr.val[2] = rgba.val[0];
-                vst3_u8(d3, bgr);
-                d3 += 24;
-            }
-#endif
-
-            for (; x < width; ++x) {
-                uint8_t r = s[0];
-                uint8_t g = s[1];
-                uint8_t b = s[2];
-                uint8_t a = s[3];
-
-                d4[0] = r;
-                d4[1] = g;
-                d4[2] = b;
-                d4[3] = a;
-                d3[0] = b;
-                d3[1] = g;
-                d3[2] = r;
-
-                s += 4;
-                d4 += 4;
-                d3 += 3;
-            }
+        int rowBytes = width * 4;
+        if (srcStride == rowBytes) {
+            memcpy(dstRGBA, src, (size_t) rowBytes * height);
+        } else {
+            for (int y = 0; y < height; ++y)
+                memcpy(dstRGBA + y * rowBytes, src + (size_t) y * srcStride, rowBytes);
         }
-    } else {
-        for (int y = 0; y < height; ++y) {
-            const uint8_t *s = src + y * srcStride;
-            uint8_t *d3 = dstBGR + y * width * 3;
+    }
 
-            int x = 0;
+    for (int y = 0; y < height; ++y) {
+        const uint8_t *s = src + (size_t) y * srcStride;
+        uint8_t *d3 = dstBGR + y * width * 3;
+
+        int x = 0;
 
 #if defined(__ARM_NEON)
-            for (; x <= width - 16; x += 16) {
-                uint8x16x4_t rgba = vld4q_u8(s);
-                s += 64;
+        for (; x <= width - 16; x += 16) {
+            uint8x16x4_t rgba = vld4q_u8(s);
+            s += 64;
 
-                uint8x16x3_t bgr;
-                bgr.val[0] = rgba.val[2];
-                bgr.val[1] = rgba.val[1];
-                bgr.val[2] = rgba.val[0];
-                vst3q_u8(d3, bgr);
-                d3 += 48;
-            }
+            uint8x16x3_t bgr;
+            bgr.val[0] = rgba.val[2];
+            bgr.val[1] = rgba.val[1];
+            bgr.val[2] = rgba.val[0];
+            vst3q_u8(d3, bgr);
+            d3 += 48;
+        }
 
-            for (; x <= width - 8; x += 8) {
-                uint8x8x4_t rgba = vld4_u8(s);
-                s += 32;
+        for (; x <= width - 8; x += 8) {
+            uint8x8x4_t rgba = vld4_u8(s);
+            s += 32;
 
-                uint8x8x3_t bgr;
-                bgr.val[0] = rgba.val[2];
-                bgr.val[1] = rgba.val[1];
-                bgr.val[2] = rgba.val[0];
-                vst3_u8(d3, bgr);
-                d3 += 24;
-            }
+            uint8x8x3_t bgr;
+            bgr.val[0] = rgba.val[2];
+            bgr.val[1] = rgba.val[1];
+            bgr.val[2] = rgba.val[0];
+            vst3_u8(d3, bgr);
+            d3 += 24;
+        }
 #endif
+        for (; x < width; ++x) {
+            d3[0] = s[2];
+            d3[1] = s[1];
+            d3[2] = s[0];
 
-            for (; x < width; ++x) {
-                d3[0] = s[2];
-                d3[1] = s[1];
-                d3[2] = s[0];
-
-                s += 4;
-                d3 += 3;
-            }
+            s += 4;
+            d3 += 3;
         }
     }
 }
@@ -187,6 +136,7 @@ static void ProcessFrameDataV2(
 static ANativeWindow *g_previewWindow = nullptr;
 static jobject g_previewSurfaceObj = nullptr;
 static std::mutex g_previewMutex;
+static std::atomic<bool> g_hasPreview{false};
 static std::atomic<int> g_targetWidth{0};
 static std::atomic<int> g_targetHeight{0};
 
@@ -213,6 +163,7 @@ static void nativeSetPreviewSurface(JNIEnv *env, jclass clazz, jobject jSurface)
             LOGI("Preview connected: %p", g_previewWindow);
         }
     }
+    g_hasPreview.store(g_previewWindow != nullptr, std::memory_order_release);
 }
 
 static void DispatchPreview(const FrameBuffer *target) {
@@ -275,6 +226,8 @@ static bool g_frameBuffersInitialized = false;
 #ifndef NDEBUG
 static int64_t g_nativeCopyFrameWindowTotalNs = 0;
 static int g_nativeCopyFrameWindowCount = 0;
+static int64_t g_processFrameWindowTotalNs = 0;
+static int g_processFrameWindowCount = 0;
 #endif
 
 static constexpr auto DRIVE_CLAZZ = "com/aliothmoon/maameow/maa/DriverClass";
@@ -478,11 +431,7 @@ int64_t CopyFrameFromHardwareBuffer(void *env_ptr, void *hardwareBufferObj, int6
         return -1;
     }
 
-    bool needsPreview = false;
-    {
-        std::lock_guard<std::mutex> lock(g_previewMutex);
-        needsPreview = (g_previewWindow != nullptr);
-    }
+    bool needsPreview = g_hasPreview.load(std::memory_order_acquire);
 
 #ifndef NDEBUG
     auto processFrameStart = std::chrono::steady_clock::now();

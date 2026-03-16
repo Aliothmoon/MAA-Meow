@@ -5,7 +5,6 @@ import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
 import android.os.Build
 import android.os.Handler
-import android.os.SystemClock
 import android.view.Surface
 import com.aliothmoon.maameow.bridge.NativeBridgeLib
 import com.aliothmoon.maameow.constant.AndroidVersions
@@ -56,7 +55,6 @@ object VirtualDisplayManager {
     private val virtualDisplay = AtomicReference<VirtualDisplay?>()
     private val reader = AtomicReference<ImageReader?>()
 
-    private var lastPreviewTime = 0L
     private val monitorSurface = AtomicReference<Surface?>()
 
     private val handler: Handler by lazy {
