@@ -4,12 +4,15 @@ import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import com.aliothmoon.maameow.MainActivity
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
@@ -40,10 +43,10 @@ class ScheduleExecutionService : Service() {
     private val alarmManager: ScheduleAlarmManager by inject()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    override fun onBind(intent: android.content.Intent?): IBinder? = null
+    override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(
-        intent: android.content.Intent?,
+        intent: Intent?,
         flags: Int,
         startId: Int,
     ): Int {
@@ -169,11 +172,22 @@ class ScheduleExecutionService : Service() {
         }
     }
 
+    private fun buildContentIntent(): PendingIntent {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        return PendingIntent.getActivity(
+            this, 0, intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+    }
+
     private fun buildPreparingNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher_foreground)
             .setContentTitle("定时任务")
             .setContentText("正在准备拉起界面...")
+            .setContentIntent(buildContentIntent())
             .setOngoing(true)
             .setSilent(true)
             .build()
@@ -184,6 +198,7 @@ class ScheduleExecutionService : Service() {
             .setSmallIcon(R.mipmap.ic_launcher_foreground)
             .setContentTitle(title)
             .setContentText(text)
+            .setContentIntent(buildContentIntent())
             .setAutoCancel(true)
             .build()
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

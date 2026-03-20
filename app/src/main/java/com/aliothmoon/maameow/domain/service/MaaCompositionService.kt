@@ -60,6 +60,11 @@ class MaaCompositionService(
 
     private fun setRunState(state: MaaExecutionState) {
         _state.value = state
+        when (state) {
+            MaaExecutionState.STARTING -> TaskExecutionService.start(applicationContext)
+            MaaExecutionState.IDLE, MaaExecutionState.ERROR -> TaskExecutionService.stop(applicationContext)
+            else -> {}
+        }
     }
 
     private val callbackDispatcher: MaaCallbackDispatcher by inject(MaaCallbackDispatcher::class.java)
@@ -117,7 +122,7 @@ class MaaCompositionService(
                 setRunState(MaaExecutionState.ERROR)
                 runtimeLogCenter.completeSessionAndWait(
                     "SERVICE_DIED",
-                    "远程服务异常终止",
+                    "MAA服务异常终止",
                     LogLevel.ERROR
                 )
             }

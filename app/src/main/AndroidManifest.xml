@@ -119,6 +119,17 @@
                 android:value="Scheduled MAA task execution via Shizuku privileged service" />
         </service>
 
+        <!-- 后台任务执行进度通知服务 -->
+        <service
+            android:name=".domain.service.TaskExecutionService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            tools:ignore="ForegroundServicePermission">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Background MAA task execution progress notification" />
+        </service>
+
         <provider
             android:name="rikka.shizuku.ShizukuProvider"
             android:authorities="${applicationId}.shizuku"

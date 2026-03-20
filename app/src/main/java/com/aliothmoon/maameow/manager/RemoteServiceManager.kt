@@ -2,28 +2,23 @@ package com.aliothmoon.maameow.manager
 
 import android.content.Context
 import android.os.IBinder
+import android.os.Process
 import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 object RemoteServiceManager {
-
-    private const val HEARTBEAT_INTERVAL_MS = 5_000L
 
     sealed class ServiceState {
         data object Disconnected : ServiceState()
@@ -44,8 +39,6 @@ object RemoteServiceManager {
     )
 
     private var boundBackend: RemoteBackend? = null
-    @Volatile
-    private var heartbeatJob: Job? = null
 
     val state: StateFlow<ServiceState> = _state.asStateFlow()
 
@@ -74,7 +67,6 @@ object RemoteServiceManager {
                 return
             }
             Timber.e(throwable, "RemoteService connection failed: %s", backend)
-            cancelHeartbeat()
             clearCurrentBinder()
             boundBackend = null
             _state.value = ServiceState.Error(throwable)
@@ -103,18 +95,16 @@ object RemoteServiceManager {
         boundBackend = backend
         val service = RemoteService.Stub.asInterface(binder)
         _state.value = ServiceState.Connected(service)
-        startHeartbeat(service)
+        service.heartbeat(Process.myPid())
     }
 
     private fun handleBinderDeath() {
-        cancelHeartbeat()
         clearCurrentBinder()
         boundBackend = null
         _state.value = ServiceState.Died
     }
 
     private fun handleDisconnect() {
-        cancelHeartbeat()
         if (_state.value == ServiceState.Died) {
             return
         }
@@ -161,34 +151,9 @@ object RemoteServiceManager {
     private fun unbindInternal() {
         val backend = boundBackend ?: return
         val binder = currentBinder.get()
-        cancelHeartbeat()
         connectors.getValue(backend).disconnect(binder)
         clearCurrentBinder()
         boundBackend = null
-    }
-
-    private fun startHeartbeat(service: RemoteService) {
-        cancelHeartbeat()
-        heartbeatJob = scope.launch {
-            while (isActive) {
-                val success = runCatching {
-                    service.heartbeat()
-                }.onFailure {
-                    if (isActive) {
-                        Timber.w(it, "RemoteService heartbeat failed")
-                    }
-                }.isSuccess
-                if (!success) {
-                    return@launch
-                }
-                delay(HEARTBEAT_INTERVAL_MS)
-            }
-        }
-    }
-
-    private fun cancelHeartbeat() {
-        heartbeatJob?.cancel()
-        heartbeatJob = null
     }
 
     fun unbind() {
@@ -224,7 +189,7 @@ object RemoteServiceManager {
 
 
     suspend fun <R> useRemoteService(
-        timeoutMs: Long = 5_000,
+        timeoutMs: Long = 12_000,
         action: suspend (RemoteService) -> R
     ): R {
         var accessState = RemoteAccessCoordinator.refresh()

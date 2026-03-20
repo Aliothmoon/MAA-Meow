@@ -182,7 +182,7 @@ fun BackgroundTaskView(
         var isRequestingRemoteAccess by remember { mutableStateOf(false) }
         ShizukuPermissionDialog(
             title = "需要${permissions.startupBackend.display}权限",
-            message = "后台任务页面依赖${permissions.startupBackend.display}远程服务，授权成功前将持续显示该提示。",
+            message = "后台任务页面依赖${permissions.startupBackend.display}服务，授权成功前将持续显示该提示。",
             isRequesting = isRequestingRemoteAccess,
             onConfirm = {
                 if (isRequestingRemoteAccess) return@ShizukuPermissionDialog

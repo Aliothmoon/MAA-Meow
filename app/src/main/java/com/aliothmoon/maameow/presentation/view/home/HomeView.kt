@@ -13,13 +13,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.rounded.Build
@@ -60,7 +57,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.datasource.ResourceDownloader
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
@@ -70,6 +66,7 @@ import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.PermissionManager
+import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
@@ -97,6 +94,7 @@ fun HomeView(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val permissionState by permissionManager.state.collectAsStateWithLifecycle()
     val resourceVersion by updateViewModel.currentResourceVersion.collectAsStateWithLifecycle()
+    val state by RemoteServiceManager.state.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val (width, height) = Misc.getScreenSize(context)
@@ -128,7 +126,7 @@ fun HomeView(
             title = "发现新版本",
             message = buildString {
                 result.appUpdate?.let { append("应用版本: ${it.version}\n") }
-                result.resourceUpdate?.let { 
+                result.resourceUpdate?.let {
                     val display = ResourceDownloader.formatVersionForDisplay(it.version)
                     append("资源版本: $display")
                 }
@@ -258,6 +256,29 @@ fun HomeView(
                     }
                 }
 
+                if (
+                    state !is RemoteServiceManager.ServiceState.Connected
+                    && state !is RemoteServiceManager.ServiceState.Connecting
+                    && permissionState.remoteAccessGranted
+                ) {
+                    item {
+                        OutlinedButton(
+                            onClick = { viewModel.onReloadServices() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = MaterialTheme.shapes.large,
+                            enabled = !uiState.isLoading
+                        ) {
+                            Text(
+                                text = "重新加载服务",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+
                 item {
                     OutlinedButton(
                         onClick = {
@@ -270,7 +291,10 @@ fun HomeView(
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.error
                         ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f)),
+                        border = BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
+                        ),
                         shape = MaterialTheme.shapes.large,
                         enabled = !uiState.isLoading
                     ) {

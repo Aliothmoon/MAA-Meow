@@ -1,7 +1,6 @@
 package com.aliothmoon.maameow.remote
 
 import android.os.Process
-import android.os.SystemClock
 import android.view.Surface
 import com.aliothmoon.maameow.ITouchEventCallback
 import com.aliothmoon.maameow.MaaCoreService
@@ -19,10 +18,10 @@ import com.aliothmoon.maameow.remote.internal.ScreenManager
 import com.aliothmoon.maameow.remote.internal.VirtualDisplayManager
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.Workarounds
+import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
 import kotlin.system.exitProcess
 
 class RemoteServiceImpl : RemoteService.Stub() {
@@ -30,7 +29,6 @@ class RemoteServiceImpl : RemoteService.Stub() {
     companion object {
         private const val TAG = "RemoteService"
         private const val HEARTBEAT_INTERVAL_MS = 5_000L
-        private const val HEARTBEAT_TIMEOUT_MS = 15_000L
         private val trackedAudioPackages = ConcurrentHashMap.newKeySet<String>()
 
         @JvmStatic
@@ -54,7 +52,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
     }
 
     private val virtualDisplayMode = AtomicInteger(DisplayMode.PRIMARY)
-    private val lastHeartbeatAt = AtomicLong(0L)
+    private val appPid = AtomicInteger(0)
     private val destroyed = AtomicBoolean(false)
     private var setup = false
 
@@ -243,8 +241,9 @@ class RemoteServiceImpl : RemoteService.Stub() {
         }
     }
 
-    override fun heartbeat() {
-        lastHeartbeatAt.set(SystemClock.elapsedRealtime())
+    override fun heartbeat(pid: Int) {
+        appPid.set(pid)
+        Ln.i("$TAG: heartbeat received, app pid=$pid")
     }
 
     override fun startActivity(intent: Intent): Boolean {
@@ -281,13 +280,12 @@ class RemoteServiceImpl : RemoteService.Stub() {
                 } catch (_: InterruptedException) {
                     return@Thread
                 }
-                val lastBeat = lastHeartbeatAt.get()
-                if (lastBeat <= 0L) {
+                val pid = appPid.get()
+                if (pid <= 0) {
                     continue
                 }
-                val elapsed = SystemClock.elapsedRealtime() - lastBeat
-                if (elapsed > HEARTBEAT_TIMEOUT_MS) {
-                    Ln.w("$TAG: app heartbeat timed out, destroying remote service")
+                if (!File("/proc/$pid").exists()) {
+                    Ln.w("$TAG: app process (pid=$pid) no longer exists, destroying remote service")
                     destroy()
                     return@Thread
                 }

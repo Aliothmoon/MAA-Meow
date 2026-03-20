@@ -303,6 +303,24 @@ class HomeViewModel(
         }
     }
 
+    fun onReloadServices() {
+        viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(isLoading = true) }
+
+                RemoteServiceManager.unbind()
+                RemoteServiceManager.bind()
+
+                Timber.i("onReloadServices: Services reloaded")
+                _uiState.update { it.copy(isLoading = false) }
+            } catch (e: Exception) {
+                Timber.e(e, "Error reloading services")
+                _uiState.update { it.copy(isLoading = false) }
+                Toast.makeText(application, "重新加载服务失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     fun onStopAllServices() {
         viewModelScope.launch {
             try {
