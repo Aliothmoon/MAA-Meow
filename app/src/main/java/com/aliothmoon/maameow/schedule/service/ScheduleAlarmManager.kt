@@ -100,7 +100,7 @@ class ScheduleAlarmManager(private val context: Context) {
             now
         }
 
-        for (dayOffset in 0..6) {
+        for (dayOffset in 0..7) {
             val candidate = baseline.toLocalDate().plusDays(dayOffset.toLong())
             if (candidate.dayOfWeek !in strategy.daysOfWeek) continue
 
