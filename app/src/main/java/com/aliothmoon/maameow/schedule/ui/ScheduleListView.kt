@@ -19,10 +19,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -139,7 +141,7 @@ fun ScheduleListView(
             AlertDialog(
                 onDismissRequest = { deleteConfirmId = null },
                 title = { Text("删除策略") },
-                text = { Text("确定要删除该定时策略吗？关联的闹钟也会被取消。") },
+                text = { Text("确定要删除该定时策略吗？") },
                 confirmButton = {
                     TextButton(onClick = {
                         viewModel.onDeleteStrategy(deleteConfirmId!!)
@@ -237,6 +239,14 @@ private fun StrategyCard(
                         ),
                     )
                 }
+            }
+
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = "删除策略",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             Switch(
