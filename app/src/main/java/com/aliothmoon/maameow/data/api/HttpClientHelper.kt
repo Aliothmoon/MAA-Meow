@@ -40,7 +40,7 @@ class HttpClientHelper(
         }.apply { headers.forEach { (k, v) -> header(k, v) } }
             .get()
             .build()
-            .also { Timber.d("GET $it") }
+            .also { Timber.d("GET ${it.url.host}") }
         return okHttpClient.newCall(request).await()
     }
 

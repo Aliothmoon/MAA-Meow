@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.home
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -105,6 +106,14 @@ fun HomeView(
     LaunchedEffect(Unit) {
         viewModel.checkAndInitResource()
     }
+
+    // 自动下载失败时弹 Toast
+    LaunchedEffect(Unit) {
+        updateViewModel.toastMessage.collect { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
+
     // 资源初始化完成后刷新版本号
     LaunchedEffect(uiState.resourceInitState) {
         if (uiState.resourceInitState is ResourceInitState.Ready) {

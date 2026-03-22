@@ -149,6 +149,21 @@ class AppSettingsManager(private val context: Context) {
         }
     }
 
+    // 启动时自动下载更新
+    val autoDownloadUpdate: StateFlow<Boolean> = settings
+        .map { it.autoDownloadUpdate.toBooleanStrictOrNull() ?: false }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            initialSettings.autoDownloadUpdate.toBooleanStrictOrNull() ?: false
+        )
+
+    suspend fun setAutoDownloadUpdate(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[autoDownloadUpdate] = enabled.toString() }
+        }
+    }
+
     // 远程服务启动模式
     val startupBackend: StateFlow<RemoteBackend> = settings
         .map {

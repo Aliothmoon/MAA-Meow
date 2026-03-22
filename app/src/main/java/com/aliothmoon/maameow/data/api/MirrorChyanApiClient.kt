@@ -18,9 +18,13 @@ class MirrorChyanApiClient(private val httpClient: HttpClientHelper) {
      * 调用 MirrorChyan latest API
      * @throws MirrorChyanBizException 业务错误（CDK 无效、资源不存在等）
      */
-    suspend fun getLatest(apiUrl: String, query: Map<String, String>): Result<MirrorChyanData> {
+    suspend fun getLatest(
+        api: String,
+        query: Map<String, String>,
+        fetchVersion: Boolean = false
+    ): Result<MirrorChyanData> {
         return runCatching {
-            val response = httpClient.get(apiUrl, query = query)
+            val response = httpClient.get(api, query = query)
 
             if (response.code == 500) {
                 throw MirrorChyanBizException(500, "更新服务不可用")
@@ -30,19 +34,20 @@ class MirrorChyanApiClient(private val httpClient: HttpClientHelper) {
                 json.decodeFromString<MirrorChyanResponse>(response.body.string())
             }.getOrDefault(MirrorChyanResponse.UNKNOWN_ERR)
 
-            if (body.code != 0) {
+            if (body.code != 0 && !fetchVersion) {
                 throw MirrorChyanBizException(body.code, body.msg)
             }
 
             body.data ?: throw MirrorChyanBizException(-1, "数据为空")
         }.onFailure { e ->
-            Timber.e(e, "MirrorChyan API 请求失败: $apiUrl")
+            Timber.e(e, "MirrorChyan API 请求失败: $api")
         }
     }
 }
 
 /** MirrorChyan 业务异常，携带业务错误码 */
-class MirrorChyanBizException(val bizCode: Int, override val message: String?) : Exception(message) {
+class MirrorChyanBizException(val bizCode: Int, override val message: String?) :
+    Exception(message) {
     fun toUpdateError(): UpdateError = UpdateError.fromCode(bizCode, message)
 }
 

@@ -10,6 +10,7 @@ import com.aliothmoon.maameow.data.datasource.ResourceDownloader
 import com.aliothmoon.maameow.data.model.update.StartupUpdateResult
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.model.update.UpdateCheckResult
+import com.aliothmoon.maameow.data.model.update.UpdateInfo
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
@@ -17,10 +18,16 @@ import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.service.update.UpdateService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -30,9 +37,7 @@ import okio.source
 import timber.log.Timber
 import java.io.File
 
-/**
- * 更新 ViewModel
- */
+@OptIn(FlowPreview::class)
 class UpdateViewModel(
     private val updateService: UpdateService,
     private val appSettingsManager: AppSettingsManager,
@@ -53,6 +58,9 @@ class UpdateViewModel(
 
     val updateChannel: StateFlow<UpdateChannel> = appSettingsManager.updateChannel
 
+    private val _toastMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val toastMessage: SharedFlow<String> = _toastMessage.asSharedFlow()
+
     // 检查状态
     private val _appChecking = MutableStateFlow(false)
     val appChecking: StateFlow<Boolean> = _appChecking.asStateFlow()
@@ -71,10 +79,13 @@ class UpdateViewModel(
         viewModelScope.launch {
             refreshResourceVersion()
         }
-        // 切换更新渠道时自动检查 App 更新
-        updateChannel
+        mirrorChyanCdk
             .drop(1)
-            .onEach { checkAppUpdate() }
+            .filter { it.isNotBlank() }
+            .debounce(1000L)
+            .onEach {
+                updateService.checkAppUpdate(channel = updateChannel.value)
+            }
             .launchIn(viewModelScope)
     }
 
@@ -109,14 +120,6 @@ class UpdateViewModel(
             appSettingsManager.setMirrorChyanCdk(cdk)
         }
     }
-
-
-    fun setUpdateChannel(channel: UpdateChannel) {
-        viewModelScope.launch {
-            appSettingsManager.setUpdateChannel(channel)
-        }
-    }
-
 
     fun checkResourceUpdate() {
         val currentState = resourceUpdateState.value
@@ -185,11 +188,51 @@ class UpdateViewModel(
             val appAvailable = (appResult as? UpdateCheckResult.Available)?.info
             val resAvailable = (resResult as? UpdateCheckResult.Available)?.info
 
-            if (appAvailable != null || resAvailable != null) {
+            if (appAvailable == null && resAvailable == null) return@launch
+
+            if (appSettingsManager.autoDownloadUpdate.value) {
+                // 自动下载模式
+                autoDownload(appAvailable, resAvailable)
+            } else {
+                // 手动确认模式（现有行为）
                 _startupUpdateDialog.value = StartupUpdateResult(
                     appUpdate = appAvailable,
                     resourceUpdate = resAvailable
                 )
+            }
+        }
+    }
+
+    private fun autoDownload(appAvailable: UpdateInfo?, resAvailable: UpdateInfo?) {
+        viewModelScope.launch {
+            when {
+                // 两者同时存在 → 仅下载 App,资源等下次启动
+                appAvailable != null -> {
+                    val result = updateService.downloadApp(
+                        source = updateSource.value,
+                        version = appAvailable.version,
+                        channel = updateChannel.value
+                    )
+                    if (result.isFailure) {
+                        _toastMessage.tryEmit("自动下载App更新失败")
+                    }
+                }
+                // 仅资源更新
+                resAvailable != null -> {
+                    val file = File(pathConfig.resourceDir)
+                    val currentVersion = loadResourceVersion()
+                    val result = updateService.downloadResource(
+                        source = updateSource.value,
+                        currentVersion = currentVersion,
+                        target = file
+                    )
+                    if (result.isSuccess) {
+                        refreshResourceVersion()
+                        maaResourceLoader.load()
+                    } else {
+                        _toastMessage.tryEmit("自动下载资源更新失败")
+                    }
+                }
             }
         }
     }

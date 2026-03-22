@@ -83,7 +83,7 @@ val appModule = module {
     singleOf(::MirrorChyanApiClient)
 
     // Version Checkers
-    single<AppVersionChecker> { MirrorChyanAppVersionChecker(get()) }
+    single<AppVersionChecker> { MirrorChyanAppVersionChecker(get(), get()) }
     single<ResourceVersionChecker> { MirrorChyanResourceVersionChecker(get()) }
 
     singleOf(::UpdateService)

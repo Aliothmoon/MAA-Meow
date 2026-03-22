@@ -70,6 +70,7 @@ fun SettingsView(
     val resourceInitState by resourceInitService.state.collectAsStateWithLifecycle()
     val debugMode by viewModel.debugMode.collectAsStateWithLifecycle()
     val autoCheckUpdate by viewModel.autoCheckUpdate.collectAsStateWithLifecycle()
+    val autoDownloadUpdate by viewModel.autoDownloadUpdate.collectAsStateWithLifecycle()
     val startupBackend by viewModel.startupBackend.collectAsStateWithLifecycle()
     val skipShizukuCheck by viewModel.skipShizukuCheck.collectAsStateWithLifecycle()
     val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
@@ -150,6 +151,15 @@ fun SettingsView(
                         contentColor = contentColor,
                         checked = autoCheckUpdate,
                         onCheckedChange = { viewModel.setAutoCheckUpdate(it) }
+                    )
+                    SettingsDivider(contentColor)
+                    SettingSwitchItem(
+                        title = "自动下载更新",
+                        description = "检测到更新后自动下载，无需手动确认",
+                        contentColor = contentColor,
+                        checked = autoDownloadUpdate,
+                        enabled = autoCheckUpdate,
+                        onCheckedChange = { viewModel.setAutoDownloadUpdate(it) }
                     )
                     SettingsDivider(contentColor)
                     SettingChannelItem(

@@ -47,12 +47,18 @@ class UpdateService(
     private val extractor: ZipExtractor,
 ) {
     private val appDownloadResolvers: Map<UpdateSource, AppDownloadUrlResolver> = mapOf(
-        UpdateSource.MIRROR_CHYAN to MirrorChyanAppDownloadUrlResolver(apiClient, appSettingsManager),
+        UpdateSource.MIRROR_CHYAN to MirrorChyanAppDownloadUrlResolver(
+            apiClient,
+            appSettingsManager
+        ),
         UpdateSource.GITHUB to GitHubAppDownloadUrlResolver(httpClient)
     )
 
     private val resourceDownloadResolvers: Map<UpdateSource, ResourceDownloadUrlResolver> = mapOf(
-        UpdateSource.MIRROR_CHYAN to MirrorChyanResourceDownloadUrlResolver(apiClient, appSettingsManager),
+        UpdateSource.MIRROR_CHYAN to MirrorChyanResourceDownloadUrlResolver(
+            apiClient,
+            appSettingsManager
+        ),
         UpdateSource.GITHUB to GitHubResourceDownloadUrlResolver()
     )
 
@@ -150,7 +156,8 @@ class UpdateService(
 
     // ==================== 资源更新 ====================
 
-    private val _resourceProcessState = MutableStateFlow<UpdateProcessState>(UpdateProcessState.Idle)
+    private val _resourceProcessState =
+        MutableStateFlow<UpdateProcessState>(UpdateProcessState.Idle)
     val resourceProcessState: StateFlow<UpdateProcessState> = _resourceProcessState.asStateFlow()
 
     suspend fun checkResourceUpdate(currentVersion: String): UpdateCheckResult {

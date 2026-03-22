@@ -45,6 +45,15 @@ class SettingsViewModel(
         }
     }
 
+    val autoDownloadUpdate: StateFlow<Boolean> = appSettingsManager.autoDownloadUpdate
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun setAutoDownloadUpdate(enabled: Boolean) {
+        viewModelScope.launch {
+            appSettingsManager.setAutoDownloadUpdate(enabled)
+        }
+    }
+
     val startupBackend: StateFlow<RemoteBackend> = appSettingsManager.startupBackend
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), RemoteBackend.SHIZUKU)
 
