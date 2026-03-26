@@ -27,6 +27,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.service.ExternalNotificationService
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
 import com.aliothmoon.maameow.presentation.view.background.BackgroundTaskView
@@ -46,6 +47,7 @@ import org.koin.compose.koinInject
 fun AppNavigation(
     backgroundTaskViewModel: BackgroundTaskViewModel,
     appSettings: AppSettingsManager = koinInject(),
+    notificationService: ExternalNotificationService = koinInject(),
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -83,6 +85,12 @@ fun AppNavigation(
 
     LaunchedEffect(backgroundTaskViewModel) {
         backgroundTaskViewModel.coordinator.feedbackMessages.collect { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(notificationService) {
+        notificationService.feedbackMessages.collect { message ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }

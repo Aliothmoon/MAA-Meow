@@ -48,6 +48,6 @@ class NotificationSettingsViewModel(
     }
 
     fun sendTest() {
-        notificationService.send("测试通知", "这是一条来自 MaaMeow 的测试通知")
+        notificationService.sendTest()
     }
 }

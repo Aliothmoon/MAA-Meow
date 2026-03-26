@@ -45,6 +45,12 @@ import com.aliothmoon.maameow.overlay.OverlayViewModelOwner
 import com.aliothmoon.maameow.overlay.border.BorderOverlayManager
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
+import com.aliothmoon.maameow.data.notification.provider.BarkProvider
+import com.aliothmoon.maameow.data.notification.provider.CustomWebhookProvider
+import com.aliothmoon.maameow.data.notification.provider.DingTalkProvider
+import com.aliothmoon.maameow.data.notification.provider.NotificationProvider
+import com.aliothmoon.maameow.data.notification.provider.ServerChanProvider
+import com.aliothmoon.maameow.data.notification.provider.TelegramProvider
 import com.aliothmoon.maameow.domain.service.ExternalNotificationService
 import com.aliothmoon.maameow.utils.CrashHandler
 import com.aliothmoon.maameow.utils.log.LogTreeHolder
@@ -96,7 +102,12 @@ val appModule = module {
 
     // 外部通知
     singleOf(::NotificationSettingsManager)
-    singleOf(::ExternalNotificationService)
+    single<NotificationProvider> { ServerChanProvider(get(), get()) }
+    single<NotificationProvider> { BarkProvider(get(), get()) }
+    single<NotificationProvider> { TelegramProvider(get(), get()) }
+    single<NotificationProvider> { DingTalkProvider(get(), get()) }
+    single<NotificationProvider> { CustomWebhookProvider(get(), get()) }
+    single { ExternalNotificationService(get(), get(), getAll()) }
 
     // 回调处理链
     singleOf(::ConnectionInfoHandler)

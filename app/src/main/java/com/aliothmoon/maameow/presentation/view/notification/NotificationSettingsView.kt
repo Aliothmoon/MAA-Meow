@@ -114,7 +114,8 @@ fun NotificationSettingsView(
             InfoCard(title = "") {
                 Button(
                     onClick = { viewModel.sendTest() },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = enabledProviders.isNotEmpty()
                 ) {
                     Text("发送测试通知")
                 }
