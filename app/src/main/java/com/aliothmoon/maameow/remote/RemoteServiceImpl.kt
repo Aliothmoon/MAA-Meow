@@ -12,6 +12,7 @@ import com.aliothmoon.maameow.maa.InputControlUtils
 import android.content.Intent
 import com.aliothmoon.maameow.remote.internal.ActivityUtils
 import com.aliothmoon.maameow.remote.internal.AppOpsHelper
+import com.aliothmoon.maameow.remote.internal.PermissionGrantHelper
 import com.aliothmoon.maameow.remote.internal.PowerController
 import com.aliothmoon.maameow.remote.internal.PrimaryDisplayManager
 import com.aliothmoon.maameow.remote.internal.ScreenManager
@@ -144,6 +145,8 @@ class RemoteServiceImpl : RemoteService.Stub() {
                     grantBatteryOptimizationExemption(packageName) else false,
                 storagePermission = if (p and PermissionGrantRequest.PERM_STORAGE != 0)
                     grantStoragePermission(packageName, uid) else false,
+                backgroundUnrestricted = if (p and PermissionGrantRequest.PERM_BACKGROUND != 0)
+                    grantBackgroundUnrestricted(packageName, uid) else false,
             )
         }
     }

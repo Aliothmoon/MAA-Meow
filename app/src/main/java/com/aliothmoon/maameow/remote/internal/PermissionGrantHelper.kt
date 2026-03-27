@@ -1,30 +1,12 @@
-package com.aliothmoon.maameow.remote
+package com.aliothmoon.maameow.remote.internal
 
-import android.content.pm.IPackageManager
 import android.os.Build
-import android.os.IDeviceIdleController
 import android.provider.Settings
 import com.aliothmoon.maameow.third.FakeContext
 import com.aliothmoon.maameow.third.Ln
-import com.android.internal.app.IAppOpsService
-import rikka.shizuku.SystemServiceHelper
 
 object PermissionGrantHelper {
     private const val TAG = "PermissionGrantHelper"
-    private val packageManager: IPackageManager by lazy {
-        val originalBinder = SystemServiceHelper.getSystemService("package")
-        IPackageManager.Stub.asInterface(originalBinder)
-    }
-
-    private val appOpsService: IAppOpsService by lazy {
-        val originalBinder = SystemServiceHelper.getSystemService("appops")
-        IAppOpsService.Stub.asInterface(originalBinder)
-    }
-
-    private val deviceIdleController: IDeviceIdleController by lazy {
-        val originalBinder = SystemServiceHelper.getSystemService("deviceidle")
-        IDeviceIdleController.Stub.asInterface(originalBinder)
-    }
 
     fun grantAccessibilityService(serviceId: String): Boolean {
         if (serviceId == "") {
@@ -70,7 +52,7 @@ object PermissionGrantHelper {
     fun grantFloatingWindowPermission(packageName: String, uid: Int): Boolean {
         return try {
             // OP_SYSTEM_ALERT_WINDOW = 24
-            appOpsService.setMode(24, uid, packageName, 0) // MODE_ALLOWED = 0
+            RemoteUtils.appOpsService.setMode(24, uid, packageName, 0) // MODE_ALLOWED = 0
             Ln.i("$TAG: Floating window permission granted for $packageName")
             true
         } catch (e: Exception) {
@@ -83,11 +65,11 @@ object PermissionGrantHelper {
     fun grantNotificationPermission(packageName: String, uid: Int): Boolean {
         return try {
             // OP_POST_NOTIFICATION = 11
-            appOpsService.setMode(11, uid, packageName, 0) // MODE_ALLOWED = 0
+            RemoteUtils.appOpsService.setMode(11, uid, packageName, 0) // MODE_ALLOWED = 0
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 runCatching {
-                    packageManager.grantRuntimePermission(
+                    RemoteUtils.packageManager.grantRuntimePermission(
                         packageName,
                         "android.permission.POST_NOTIFICATIONS",
                         0
@@ -108,7 +90,7 @@ object PermissionGrantHelper {
 
     fun grantBatteryOptimizationExemption(packageName: String): Boolean {
         return try {
-            deviceIdleController.addPowerSaveWhitelistApp(packageName)
+            RemoteUtils.deviceIdleController.addPowerSaveWhitelistApp(packageName)
             Ln.i("$TAG: Battery optimization exemption granted for $packageName")
             true
         } catch (e: Exception) {
@@ -118,18 +100,41 @@ object PermissionGrantHelper {
     }
 
 
+    fun grantBackgroundUnrestricted(packageName: String, uid: Int): Boolean {
+        return try {
+            // OP_RUN_IN_BACKGROUND = 63, MODE_ALLOWED = 0
+            RemoteUtils.appOpsService.setMode(63, uid, packageName, 0)
+            // OP_RUN_ANY_IN_BACKGROUND = 65, MODE_ALLOWED = 0
+            RemoteUtils.appOpsService.setMode(65, uid, packageName, 0)
+
+            RemoteUtils.shellExec("am set-standby-bucket $packageName active")
+            RemoteUtils.shellExec("am set-inactive $packageName false")
+
+            // set-bg-restriction-level 仅 Android 14+ 可用
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                RemoteUtils.shellExec("am set-bg-restriction-level $packageName unrestricted")
+            }
+
+            Ln.i("$TAG: Background unrestricted for $packageName")
+            true
+        } catch (e: Exception) {
+            Ln.e("$TAG: Failed to grant background unrestricted: $e")
+            false
+        }
+    }
+
     fun grantStoragePermission(packageName: String, uid: Int): Boolean {
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                appOpsService.setMode(92, uid, packageName, 0) // MODE_ALLOWED = 0
+                RemoteUtils.appOpsService.setMode(92, uid, packageName, 0) // MODE_ALLOWED = 0
                 Ln.i("$TAG: MANAGE_EXTERNAL_STORAGE granted for $packageName via AppOps")
             } else {
-                packageManager.grantRuntimePermission(
+                RemoteUtils.packageManager.grantRuntimePermission(
                     packageName,
                     "android.permission.READ_EXTERNAL_STORAGE",
                     0
                 )
-                packageManager.grantRuntimePermission(
+                RemoteUtils.packageManager.grantRuntimePermission(
                     packageName,
                     "android.permission.WRITE_EXTERNAL_STORAGE",
                     0

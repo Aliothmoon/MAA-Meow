@@ -16,7 +16,8 @@ data class PermissionGrantRequest(
         const val PERM_BATTERY = 1 shl 2
         const val PERM_ACCESSIBILITY = 1 shl 3
         const val PERM_NOTIFICATION = 1 shl 4
+        const val PERM_BACKGROUND = 1 shl 5
         const val PERM_ALL = PERM_FLOATING_WINDOW or PERM_STORAGE or
-                PERM_BATTERY or PERM_ACCESSIBILITY or PERM_NOTIFICATION
+                PERM_BATTERY or PERM_ACCESSIBILITY or PERM_NOTIFICATION or PERM_BACKGROUND
     }
 }
