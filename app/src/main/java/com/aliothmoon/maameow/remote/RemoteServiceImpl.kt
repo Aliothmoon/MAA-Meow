@@ -103,10 +103,6 @@ class RemoteServiceImpl : RemoteService.Stub() {
                     return false
                 }
                 Ln.i("MaaCore ${AsstGetVersion()}")
-                if (!AsstSetStaticOption(3, "libbridge.so")) {
-                    Ln.e("$TAG: setup failed - AsstSetStaticOption(3, libbridge.so) returned false")
-                    return false
-                }
             }
             Workarounds.apply()
             setup = true
