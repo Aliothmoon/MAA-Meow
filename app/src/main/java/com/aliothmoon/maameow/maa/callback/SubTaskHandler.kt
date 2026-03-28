@@ -29,8 +29,9 @@ class SubTaskHandler(
 
     // 战斗进度临时暂存（FightTimes/SanityBeforeStage 先于 StartButton2/AnnihilationConfirm 到达）
     private data class PendingFightState(
-        val fightCurrent: Int? = null,
-        val fightTotal: Int? = null,
+        val timesFinished: Int? = null,
+        val series: Int? = null,
+        val sanityCost: Int? = null,
         val sanity: Int? = null,
         val sanityMax: Int? = null,
     )
@@ -156,9 +157,16 @@ class SubTaskHandler(
             "StartButton2", "AnnihilationConfirm" -> {
                 val sb = StringBuilder(str("MissionStart"))
                 val pf = pendingFight
-                if (pf.fightCurrent != null && pf.fightTotal != null)
-                    sb.append(" (${pf.fightCurrent + 1}/${pf.fightTotal})")
-                if (pf.sanity != null)
+                if (pf.timesFinished != null) {
+                    val series = pf.series ?: 1
+                    val times = if (series > 1)
+                        "${pf.timesFinished + 1}~${pf.timesFinished + series}"
+                    else
+                        "${pf.timesFinished + 1}"
+                    val cost = pf.sanityCost?.toString() ?: "???"
+                    sb.append(" $times ($cost)")
+                }
+                if (pf.sanity != null && pf.sanityMax != null)
                     sb.append("  ${str("Sanity")}: ${pf.sanity}/${pf.sanityMax}")
                 append(sb.toString(), LogLevel.INFO)
                 pendingFight = PendingFightState()
@@ -312,15 +320,16 @@ class SubTaskHandler(
         when (what) {
             "FightTimes" -> {
                 pendingFight = pendingFight.copy(
-                    fightCurrent = subDetails?.getIntValue("cur_times"),
-                    fightTotal = subDetails?.getIntValue("total_times"),
+                    timesFinished = subDetails?.getIntValue("times_finished"),
+                    series = subDetails?.getIntValue("series"),
+                    sanityCost = subDetails?.getIntValue("sanity_cost"),
                 )
             }
 
             "SanityBeforeStage" -> {
                 pendingFight = pendingFight.copy(
-                    sanity = subDetails?.getIntValue("current"),
-                    sanityMax = subDetails?.getIntValue("max"),
+                    sanity = subDetails?.getIntValue("current_sanity"),
+                    sanityMax = subDetails?.getIntValue("max_sanity"),
                 )
             }
 

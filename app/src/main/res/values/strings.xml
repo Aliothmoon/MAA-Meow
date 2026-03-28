@@ -166,6 +166,7 @@
     <string name="maa_skill_daemon">开始挂机</string>
 
     <!-- common -->
+    <string name="maa_sanity">理智</string>
     <string name="maa_unit_time">次</string>
     <string name="maa_operator">干员</string>
 
