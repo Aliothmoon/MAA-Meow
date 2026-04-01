@@ -362,6 +362,7 @@ class MaaCompositionService(
 
     private fun buildConnectConfig(width: Int, height: Int, displayId: Int): String {
         return buildJsonObject {
+            put("library_path", "libbridge.so")
             put("screen_resolution", buildJsonObject {
                 put("width", width)
                 put("height", height)
