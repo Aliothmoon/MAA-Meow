@@ -187,23 +187,21 @@ class TaskChainState(private val context: Context) {
         return findFirstConfig<WakeUpConfig>()?.clientType
     }
 
-    fun grantGameBatteryExemption() {
-        getClientTypeOrNull()?.let {
-            val pkg = Packages[it] ?: return
-            runCatching {
-                RemoteServiceManager.getInstanceOrNull()?.grantPermissions(
-                    PermissionGrantRequest(
-                        packageName = pkg,
-                        uid = 0,
-                        permissions =
-                            PermissionGrantRequest.PERM_BATTERY
-                                    or PermissionGrantRequest.PERM_BACKGROUND
-                    )
+    fun grantGameBatteryExemption(clientType: String) {
+        val pkg = Packages[clientType] ?: return
+        runCatching {
+            RemoteServiceManager.getInstanceOrNull()?.grantPermissions(
+                PermissionGrantRequest(
+                    packageName = pkg,
+                    uid = 0,
+                    permissions =
+                        PermissionGrantRequest.PERM_BATTERY
+                                or PermissionGrantRequest.PERM_BACKGROUND
                 )
-                Timber.d("Battery exemption granted for game: %s", pkg)
-            }.onFailure { e ->
-                Timber.w(e, "Failed to grant battery exemption for game")
-            }
+            )
+            Timber.d("Battery exemption granted for game: %s", pkg)
+        }.onFailure { e ->
+            Timber.w(e, "Failed to grant battery exemption for game")
         }
     }
 

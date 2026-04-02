@@ -7,12 +7,15 @@ import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.data.model.LogItem
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import com.aliothmoon.maameow.data.preferences.TaskChainState
-import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
-import com.aliothmoon.maameow.domain.usecase.BuildTaskParamsUseCase
 import com.aliothmoon.maameow.data.model.TaskParamProvider
+import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
+import com.aliothmoon.maameow.domain.usecase.TaskStartAcknowledgement
+import com.aliothmoon.maameow.domain.usecase.TaskStartContext
+import com.aliothmoon.maameow.domain.usecase.TaskStartDecision
+import com.aliothmoon.maameow.domain.usecase.TaskStartMode
 import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.presentation.view.panel.FloatingPanelState
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogConfirmAction
@@ -32,7 +35,7 @@ import timber.log.Timber
 class ExpandedControlPanelViewModel(
     val chainState: TaskChainState,
     private val application: Context,
-    private val buildTaskParams: BuildTaskParamsUseCase,
+    private val prepareTaskStart: PrepareTaskStartUseCase,
     private val compositionService: MaaCompositionService,
     private val overlayController: OverlayController,
     private val sessionLogger: MaaSessionLogger
@@ -41,6 +44,7 @@ class ExpandedControlPanelViewModel(
     private val _state = MutableStateFlow(FloatingPanelState())
     val state: StateFlow<FloatingPanelState> = _state.asStateFlow()
     val runtimeLogs: StateFlow<List<LogItem>> = sessionLogger.logs
+    private var pendingStartContext: TaskStartContext? = null
 
     init {
         viewModelScope.launch {
@@ -189,6 +193,7 @@ class ExpandedControlPanelViewModel(
     }
 
     fun onDialogDismiss() {
+        pendingStartContext = null
         _state.update { it.copy(dialog = null) }
     }
 
@@ -196,6 +201,19 @@ class ExpandedControlPanelViewModel(
         when (state.value.dialog?.confirmAction) {
             PanelDialogConfirmAction.DISMISS_ONLY -> {
                 onDialogDismiss()
+            }
+
+            PanelDialogConfirmAction.CONFIRM_PENDING_START -> {
+                val pendingContext = pendingStartContext
+                _state.update { it.copy(dialog = null) }
+                pendingStartContext = null
+                if (pendingContext != null) {
+                    launchManualStart(
+                        pendingContext.acknowledged(
+                            TaskStartAcknowledgement.GAME_NOT_RUNNING_WITHOUT_WAKE_UP
+                        )
+                    )
+                }
             }
 
             PanelDialogConfirmAction.GO_LOG -> {
@@ -220,78 +238,66 @@ class ExpandedControlPanelViewModel(
     }
 
     fun onStartTasks() {
-        val validateError = buildTaskParams.validate(chainState.chain.value)
-        if (validateError != null) {
-            Timber.w("Validation failed: $validateError")
-            showDialog(
-                PanelDialogUiState(
-                    type = PanelDialogType.WARNING,
-                    title = "提示",
-                    message = validateError,
-                    confirmText = "知道了",
-                    confirmAction = PanelDialogConfirmAction.DISMISS_ONLY
-                )
-            )
-            return
-        }
+        launchManualStart(TaskStartContext(mode = TaskStartMode.MANUAL))
+    }
 
-        val taskParams = buildTaskParams()
-        if (taskParams.isEmpty()) {
-            Timber.w("All tasks filtered (e.g. by weekly schedule)")
-            showDialog(
-                PanelDialogUiState(
-                    type = PanelDialogType.WARNING,
-                    title = "提示",
-                    message = "当前没有可执行的任务（可能被周计划过滤）",
-                    confirmText = "知道了",
-                    confirmAction = PanelDialogConfirmAction.DISMISS_ONLY
-                )
-            )
-            return
-        }
-
-        // 打印任务 JSON 列表
-        Timber.i("=== Task JSON List (%d tasks) ===", taskParams.size)
-        taskParams.forEachIndexed { index, params ->
-            Timber.i("[%d] Type: %s", index, params.type.value)
-            Timber.i("    Params: %s", params.params)
-        }
-        Timber.i("=== End Task JSON List ===")
+    private fun launchManualStart(context: TaskStartContext) {
         viewModelScope.launch {
-            chainState.grantGameBatteryExemption()
-            val result = compositionService.start(taskParams)
-            val message = when (result) {
-                is MaaCompositionService.StartResult.Success ->
-                    "Maa启动成功"
-
-                is MaaCompositionService.StartResult.ResourceError ->
-                    "资源加载失败，请尝试重新初始化资源"
-
-                is MaaCompositionService.StartResult.InitializationError -> when (result.phase) {
-                    MaaCompositionService.StartResult.InitializationError.InitPhase.CREATE_INSTANCE ->
-                        "MaaCore 初始化失败，请重启应用"
-
-                    MaaCompositionService.StartResult.InitializationError.InitPhase.SET_TOUCH_MODE ->
-                        "触控模式设置失败，请重启应用"
+            val plan = when (
+                val decision = prepareTaskStart(
+                    chain = chainState.chain.value,
+                    context = context,
+                )
+            ) {
+                is TaskStartDecision.Ready -> {
+                    pendingStartContext = null
+                    decision.plan
                 }
 
-                is MaaCompositionService.StartResult.PortraitOrientationError ->
-                    "当前屏幕为竖屏，请切换为横屏后启动"
-
-                is MaaCompositionService.StartResult.ConnectionError -> when (result.phase) {
-                    MaaCompositionService.StartResult.ConnectionError.ConnectPhase.DISPLAY_MODE ->
-                        "显示模式设置失败，请重试"
-
-                    MaaCompositionService.StartResult.ConnectionError.ConnectPhase.VIRTUAL_DISPLAY ->
-                        "虚拟屏幕启动失败，请检查服务权限"
-
-                    MaaCompositionService.StartResult.ConnectionError.ConnectPhase.MAA_CONNECT ->
-                        "连接 MaaCore 超时，请重试"
+                is TaskStartDecision.Blocked -> {
+                    pendingStartContext = null
+                    Timber.w("Validation failed: %s", decision.message)
+                    showDialog(
+                        PanelDialogUiState(
+                            type = PanelDialogType.WARNING,
+                            title = "提示",
+                            message = decision.message,
+                            confirmText = "知道了",
+                            confirmAction = PanelDialogConfirmAction.DISMISS_ONLY,
+                        )
+                    )
+                    return@launch
                 }
 
-                is MaaCompositionService.StartResult.StartError ->
-                    "MaaCore 启动失败，请检查任务配置"
+                is TaskStartDecision.RequiresConfirmation -> {
+                    pendingStartContext = context
+                    showDialog(
+                        PanelDialogUiState(
+                            type = PanelDialogType.WARNING,
+                            title = "启动警告",
+                            message = decision.message,
+                            confirmText = "仍然启动",
+                            dismissText = "取消",
+                            confirmAction = PanelDialogConfirmAction.CONFIRM_PENDING_START,
+                        )
+                    )
+                    return@launch
+                }
             }
+
+            Timber.i("=== Task JSON List (%d tasks) ===", plan.params.size)
+            plan.params.forEachIndexed { index, params ->
+                Timber.i("[%d] Type: %s", index, params.type.value)
+                Timber.i("    Params: %s", params.params)
+            }
+            Timber.i("=== End Task JSON List ===")
+
+            chainState.grantGameBatteryExemption(plan.clientType)
+            val result = compositionService.start(
+                tasks = plan.params,
+                clientType = plan.clientType,
+            )
+            val message = formatStartResult(result, "Maa启动成功")
             if (result is MaaCompositionService.StartResult.Success) {
                 // 成功时用 Toast 简短提示
                 withContext(Dispatchers.Main) {
@@ -300,15 +306,7 @@ class ExpandedControlPanelViewModel(
             } else {
                 // 失败时通过 StateFlow 通知 UI 展示 OverlayDialog
                 Timber.w("Start failed: $result")
-                showDialog(
-                    PanelDialogUiState(
-                        type = PanelDialogType.ERROR,
-                        title = "启动失败",
-                        message = message,
-                        confirmText = "查看日志",
-                        confirmAction = PanelDialogConfirmAction.GO_LOG
-                    )
-                )
+                showDialog(createStartFailedDialog(message))
             }
         }
     }

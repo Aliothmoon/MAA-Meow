@@ -26,10 +26,12 @@ import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.CopilotManager
 import com.aliothmoon.maameow.domain.service.LogExportService
+import com.aliothmoon.maameow.domain.service.AppAliveChecker
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaEventNotifier
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.service.AppWatchdog
+import com.aliothmoon.maameow.domain.service.RemoteAppAliveChecker
 import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.domain.service.update.UpdateService
@@ -136,6 +138,7 @@ val appModule = module {
     singleOf(::TaskChainStatusTracker)
     singleOf(::TaskChainHandler)
     singleOf(::SubTaskHandler)
+    single<AppAliveChecker> { RemoteAppAliveChecker() }
     singleOf(::AppWatchdog)
     singleOf(::MaaCompositionService)
     single<MaaExecutionStateHolder> { get<MaaCompositionService>() }

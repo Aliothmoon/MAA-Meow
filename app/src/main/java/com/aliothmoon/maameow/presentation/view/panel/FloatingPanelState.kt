@@ -37,6 +37,7 @@ enum class PanelDialogType {
 
 enum class PanelDialogConfirmAction {
     DISMISS_ONLY,
+    CONFIRM_PENDING_START,
     GO_LOG,
     GO_LOG_AND_STOP
 }

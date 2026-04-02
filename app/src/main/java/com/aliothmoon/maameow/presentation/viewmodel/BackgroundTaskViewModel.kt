@@ -13,7 +13,11 @@ import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
-import com.aliothmoon.maameow.domain.usecase.BuildTaskParamsUseCase
+import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
+import com.aliothmoon.maameow.domain.usecase.TaskStartAcknowledgement
+import com.aliothmoon.maameow.domain.usecase.TaskStartContext
+import com.aliothmoon.maameow.domain.usecase.TaskStartDecision
+import com.aliothmoon.maameow.domain.usecase.TaskStartMode
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.presentation.state.BackgroundTaskState
 import com.aliothmoon.maameow.presentation.state.PreviewTouchMarker
@@ -36,7 +40,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 class BackgroundTaskViewModel(
     val chainState: TaskChainState,
-    private val buildTaskParams: BuildTaskParamsUseCase,
+    private val prepareTaskStart: PrepareTaskStartUseCase,
     private val compositionService: MaaCompositionService,
     private val sessionLogger: MaaSessionLogger,
     private val appSettingsManager: AppSettingsManager,
@@ -62,7 +66,12 @@ class BackgroundTaskViewModel(
 
     private val touchPreviewController = TouchPreviewController(viewModelScope)
     val markers: StateFlow<List<PreviewTouchMarker>> = touchPreviewController.markers
+    private var pendingStart: PendingStart? = null
 
+    private data class PendingStart(
+        val context: TaskStartContext,
+        val request: ScheduledExecutionRequest? = null,
+    )
 
     init {
         Timber.i("BackgroundTaskViewModel inited")
@@ -150,7 +159,10 @@ class BackgroundTaskViewModel(
                     isProfileMode = false,
                 )
             }
-            startTasksInternal(request)
+            startTasksInternal(
+                request = request,
+                context = TaskStartContext(mode = TaskStartMode.SCHEDULED),
+            )
         }
     }
 
@@ -339,9 +351,13 @@ class BackgroundTaskViewModel(
     // ==================== Task Execution ====================
 
     fun onStartTasks() {
+        launchManualStart(TaskStartContext(mode = TaskStartMode.MANUAL))
+    }
+
+    private fun launchManualStart(context: TaskStartContext) {
         viewModelScope.launch {
-            val message = startTasksInternal()
-            if (message != null) {
+            val message = startTasksInternal(context = context)
+            if (message != null && state.value.dialog == null) {
                 showStartFailedDialog(message)
             }
         }
@@ -353,48 +369,62 @@ class BackgroundTaskViewModel(
         }
     }
 
-    private suspend fun startTasksInternal(request: ScheduledExecutionRequest? = null): String? {
+    private suspend fun startTasksInternal(
+        request: ScheduledExecutionRequest? = null,
+        context: TaskStartContext,
+    ): String? {
         doSwitchProfile(request)
 
-        val validateError = buildTaskParams.validate(chainState.chain.value)
-        if (validateError != null) {
-            Timber.w("Validation failed: $validateError")
-            if (request != null) {
-                showStartFailedDialog(validateError)
-            } else {
+        val plan = when (
+            val decision = prepareTaskStart(
+                chain = chainState.chain.value,
+                context = context,
+            )
+        ) {
+            is TaskStartDecision.Ready -> {
+                pendingStart = null
+                decision.plan
+            }
+
+            is TaskStartDecision.Blocked -> {
+                pendingStart = null
+                Timber.w("Validation failed: %s", decision.message)
+                if (request != null) {
+                    showStartFailedDialog(decision.message)
+                } else {
+                    showDialog(
+                        PanelDialogUiState(
+                            type = PanelDialogType.WARNING,
+                            title = "提示",
+                            message = decision.message,
+                            confirmText = "知道了",
+                            confirmAction = PanelDialogConfirmAction.DISMISS_ONLY,
+                        )
+                    )
+                }
+                return decision.message
+            }
+
+            is TaskStartDecision.RequiresConfirmation -> {
+                pendingStart = PendingStart(context, request)
                 showDialog(
                     PanelDialogUiState(
                         type = PanelDialogType.WARNING,
-                        title = "提示",
-                        message = validateError,
-                        confirmText = "知道了",
-                        confirmAction = PanelDialogConfirmAction.DISMISS_ONLY
+                        title = "启动警告",
+                        message = decision.message,
+                        confirmText = "仍然启动",
+                        dismissText = "取消",
+                        confirmAction = PanelDialogConfirmAction.CONFIRM_PENDING_START,
                     )
                 )
+                return decision.message
             }
-            return validateError
         }
 
-        val params = buildTaskParams()
-        if (params.isEmpty()) {
-            val msg = "当前没有可执行的任务（可能被周计划过滤）"
-            Timber.w(msg)
-            if (request != null) {
-                showStartFailedDialog(msg)
-            } else {
-                showDialog(
-                    PanelDialogUiState(
-                        type = PanelDialogType.WARNING,
-                        title = "提示",
-                        message = msg,
-                        confirmText = "知道了",
-                        confirmAction = PanelDialogConfirmAction.DISMISS_ONLY
-                    )
-                )
-            }
-            return msg
-        }
-        val result = compositionService.start(params) {
+        val result = compositionService.start(
+            tasks = plan.params,
+            clientType = plan.clientType,
+        ) {
             if (request != null) {
                 sessionLogger.appendAndWait(
                     "由定时任务「${request.strategyName}」触发",
@@ -404,11 +434,11 @@ class BackgroundTaskViewModel(
         if (result is MaaCompositionService.StartResult.Success
             && appSettingsManager.muteOnGameLaunch.value
         ) {
-            onMuteGameSound()
-            chainState.grantGameBatteryExemption()
+            onMuteGameSound(plan.clientType)
+            chainState.grantGameBatteryExemption(plan.clientType)
         }
 
-        val message = resolveStartFailureMessage(result)
+        val message = resolveTaskStartFailureMessage(result)
         if (message != null) {
             Timber.w("Start failed: $result")
             if (request != null) {
@@ -430,7 +460,11 @@ class BackgroundTaskViewModel(
     }
 
     fun onMuteGameSound() {
-        chainState.getClientTypeOrNull()?.let {
+        onMuteGameSound(chainState.getClientTypeOrNull())
+    }
+
+    private fun onMuteGameSound(clientType: String?) {
+        clientType?.let {
             val pkg = Packages[it] ?: return
             RemoteServiceManager.getInstanceOrNull()
                 ?.setPlayAudioOpAllowed(pkg, false)
@@ -438,57 +472,19 @@ class BackgroundTaskViewModel(
     }
 
     fun onUnmuteGameSound() {
-        chainState.getClientTypeOrNull()?.let {
+        onUnmuteGameSound(chainState.getClientTypeOrNull())
+    }
+
+    private fun onUnmuteGameSound(clientType: String?) {
+        clientType?.let {
             val pkg = Packages[it] ?: return
             RemoteServiceManager.getInstanceOrNull()
                 ?.setPlayAudioOpAllowed(pkg, true)
         }
     }
 
-    private fun resolveStartFailureMessage(result: MaaCompositionService.StartResult): String? {
-        return when (result) {
-            is MaaCompositionService.StartResult.Success -> null
-
-            is MaaCompositionService.StartResult.ResourceError ->
-                "资源加载失败，请尝试重新初始化资源"
-
-            is MaaCompositionService.StartResult.InitializationError -> when (result.phase) {
-                MaaCompositionService.StartResult.InitializationError.InitPhase.CREATE_INSTANCE ->
-                    "MaaCore 初始化失败，请重启应用"
-
-                MaaCompositionService.StartResult.InitializationError.InitPhase.SET_TOUCH_MODE ->
-                    "触控模式设置失败，请重启应用"
-            }
-
-            is MaaCompositionService.StartResult.PortraitOrientationError ->
-                "当前屏幕为竖屏，请切换为横屏后启动"
-
-            is MaaCompositionService.StartResult.ConnectionError -> when (result.phase) {
-                MaaCompositionService.StartResult.ConnectionError.ConnectPhase.DISPLAY_MODE ->
-                    "显示模式设置失败，请重试"
-
-                MaaCompositionService.StartResult.ConnectionError.ConnectPhase.VIRTUAL_DISPLAY ->
-                    "虚拟屏幕启动失败，请检查服务权限"
-
-                MaaCompositionService.StartResult.ConnectionError.ConnectPhase.MAA_CONNECT ->
-                    "连接 MaaCore 超时，请重试"
-            }
-
-            is MaaCompositionService.StartResult.StartError ->
-                "MaaCore 启动失败，请检查任务配置"
-        }
-    }
-
     private fun showStartFailedDialog(message: String) {
-        showDialog(
-            PanelDialogUiState(
-                type = PanelDialogType.ERROR,
-                title = "启动失败",
-                message = message,
-                confirmText = "查看日志",
-                confirmAction = PanelDialogConfirmAction.GO_LOG
-            )
-        )
+        showDialog(createStartFailedDialog(message))
     }
 
     // ==================== Dialog ====================
@@ -498,6 +494,7 @@ class BackgroundTaskViewModel(
     }
 
     fun onDialogDismiss() {
+        pendingStart = null
         _state.update { it.copy(dialog = null) }
     }
 
@@ -505,6 +502,26 @@ class BackgroundTaskViewModel(
         when (state.value.dialog?.confirmAction) {
             PanelDialogConfirmAction.DISMISS_ONLY -> {
                 onDialogDismiss()
+            }
+
+            PanelDialogConfirmAction.CONFIRM_PENDING_START -> {
+                val pending = pendingStart
+                _state.update { it.copy(dialog = null) }
+                pendingStart = null
+                if (pending != null) {
+                    val acked = pending.context.acknowledged(
+                        TaskStartAcknowledgement.GAME_NOT_RUNNING_WITHOUT_WAKE_UP
+                    )
+                    viewModelScope.launch {
+                        val message = startTasksInternal(
+                            request = pending.request,
+                            context = acked,
+                        )
+                        if (message != null && state.value.dialog == null) {
+                            showStartFailedDialog(message)
+                        }
+                    }
+                }
             }
 
             PanelDialogConfirmAction.GO_LOG -> {

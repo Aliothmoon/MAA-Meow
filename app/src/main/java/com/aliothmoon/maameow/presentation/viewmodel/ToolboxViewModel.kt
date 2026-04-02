@@ -163,23 +163,6 @@ class ToolboxViewModel(
     }
 
     private fun handleStartResult(result: MaaCompositionService.StartResult) {
-        _statusMessage.value = when (result) {
-            is MaaCompositionService.StartResult.Success -> "识别任务已启动"
-            is MaaCompositionService.StartResult.ResourceError -> "资源加载失败，请重新初始化资源"
-            is MaaCompositionService.StartResult.InitializationError -> "初始化失败: ${result.phase}"
-            is MaaCompositionService.StartResult.ConnectionError -> "连接失败: ${result.phase}"
-            is MaaCompositionService.StartResult.StartError -> "启动失败"
-            is MaaCompositionService.StartResult.PortraitOrientationError -> "当前为竖屏，无法在前台模式运行"
-        }
+        _statusMessage.value = formatStartResult(result, "识别任务已启动")
     }
 }
-
-internal fun formatStartResult(result: MaaCompositionService.StartResult, successMessage: String): String =
-    when (result) {
-        is MaaCompositionService.StartResult.Success -> successMessage
-        is MaaCompositionService.StartResult.ResourceError -> "资源加载失败，请重新初始化资源"
-        is MaaCompositionService.StartResult.InitializationError -> "初始化失败: ${result.phase}"
-        is MaaCompositionService.StartResult.ConnectionError -> "连接失败: ${result.phase}"
-        is MaaCompositionService.StartResult.StartError -> "启动失败"
-        is MaaCompositionService.StartResult.PortraitOrientationError -> "当前为竖屏，无法在前台模式运行"
-    }

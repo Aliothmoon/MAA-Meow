@@ -2,7 +2,6 @@ package com.aliothmoon.maameow.domain.service
 
 import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.preferences.TaskChainState
-import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.remote.AppAliveStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +20,7 @@ import timber.log.Timber
 
 class AppWatchdog(
     private val chainState: TaskChainState,
+    private val appAliveChecker: AppAliveChecker,
 ) {
     enum class WatchdogState {
         IDLE,
@@ -99,13 +99,7 @@ class AppWatchdog(
         _state.value = WatchdogState.IDLE
     }
 
-    private fun checkAppAliveStatus(packageName: String): Int {
-        return try {
-            val service = RemoteServiceManager.getInstanceOrNull() ?: return AppAliveStatus.UNKNOWN
-            service.isAppAlive(packageName)
-        } catch (e: Exception) {
-            Timber.w(e, "AppWatchdog: isAppAlive call failed")
-            AppAliveStatus.UNKNOWN
-        }
+    private suspend fun checkAppAliveStatus(packageName: String): Int {
+        return appAliveChecker.isAppAlive(packageName)
     }
 }
