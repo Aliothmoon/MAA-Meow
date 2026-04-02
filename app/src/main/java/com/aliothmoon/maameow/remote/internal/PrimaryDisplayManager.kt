@@ -30,10 +30,6 @@ object PrimaryDisplayManager {
     private val displayInfo = AtomicReference<DisplayInfo>()
 
 
-    private val handler by lazy {
-        FrameCaptureHelper.createCaptureHandler("PrimaryCapture")
-    }
-
     private fun getDisplayInfo(): DisplayInfo {
         return ServiceManager.getDisplayManager().getDisplayInfo(DISPLAY_ID)
     }

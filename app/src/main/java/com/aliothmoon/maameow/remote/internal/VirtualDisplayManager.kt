@@ -55,11 +55,6 @@ object VirtualDisplayManager {
 
     private val monitorSurface = AtomicReference<Surface?>()
 
-    private val handler: Handler by lazy {
-        FrameCaptureHelper.createCaptureHandler("VDCapture")
-    }
-
-
     fun setMonitorSurface(surface: Surface?) {
         val old = monitorSurface.getAndSet(surface)
         if (old != null && old != surface) {
