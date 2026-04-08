@@ -123,6 +123,9 @@ class BackgroundTaskViewModel(
         viewModelScope.launch {
             var prev = compositionService.state.value
             compositionService.state.collect { current ->
+                // 仅在任务自然结束（RUNNING → IDLE/ERROR）时关闭游戏；
+                // 手动停止走 RUNNING → STOPPING → IDLE，prev 为 STOPPING 不会匹配，
+                // 这是预期行为：手动停止说明用户可能还要继续操作，不应自动关闭游戏。
                 if (prev == MaaExecutionState.RUNNING
                     && (current == MaaExecutionState.IDLE || current == MaaExecutionState.ERROR)
                     && appSettingsManager.closeAppOnTaskEnd.value

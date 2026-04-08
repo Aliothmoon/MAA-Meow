@@ -860,7 +860,7 @@ private fun BackgroundMoreActionsOverlay(
                     )
                     SettingSwitchRow(
                         icon = Icons.Filled.Cancel,
-                        label = "任务结束时关闭游戏",
+                        label = "任务自动结束时关闭游戏",
                         checked = closeAppOnTaskEnd,
                         onCheckedChange = {
                             coroutineScope.launch { appSettingsManager.setCloseAppOnTaskEnd(it) }
