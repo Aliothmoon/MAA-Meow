@@ -264,6 +264,10 @@ bool WriteHardwareBufferToFrame(AHardwareBuffer *buffer) {
     return true;
 }
 
+int64_t GetFrameCount() {
+    return g_frame_count.load(std::memory_order_acquire);
+}
+
 BRIDGE_API FrameInfo GetLockedPixels() {
     FrameInfo result = {0};
     const FrameBuffer *frame = LockCurrentFrame();

@@ -1,9 +1,12 @@
 package com.aliothmoon.maameow.maa;
 
 
+import com.aliothmoon.maameow.bridge.NativeBridgeLib;
 import com.aliothmoon.maameow.remote.internal.ActivityUtils;
 import com.aliothmoon.maameow.remote.internal.PrimaryDisplayManager;
 import com.aliothmoon.maameow.third.Ln;
+
+import timber.log.Timber;
 
 /**
  * upcall driver
@@ -11,6 +14,8 @@ import com.aliothmoon.maameow.third.Ln;
 public final class DriverClass {
 
     private static final String TAG = "DriverClass";
+    private static final int FRAME_WAIT_TIMEOUT_MS = 5000;
+    private static final int FRAME_WAIT_INTERVAL_MS = 50;
 
     private DriverClass() {
     }
@@ -19,7 +24,28 @@ public final class DriverClass {
         if (displayId == PrimaryDisplayManager.DISPLAY_ID) {
             return ActivityUtils.startApp(packageName, displayId, forceStop);
         }
-        return ActivityUtils.startApp(packageName, displayId, forceStop, true);
+        boolean ret = ActivityUtils.startApp(packageName, displayId, forceStop, true);
+        if (ret) {
+            awaitFirstFrame();
+        }
+        return ret;
+    }
+
+    private static void awaitFirstFrame() {
+        long baseline = NativeBridgeLib.getFrameCount();
+        int elapsed = 0;
+        while (NativeBridgeLib.getFrameCount() <= baseline && elapsed < FRAME_WAIT_TIMEOUT_MS) {
+            try {
+                Thread.sleep(FRAME_WAIT_INTERVAL_MS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+            elapsed += FRAME_WAIT_INTERVAL_MS;
+        }
+        if (elapsed >= FRAME_WAIT_TIMEOUT_MS) {
+            Ln.w(TAG + ": awaitFirstFrame timed out after " + FRAME_WAIT_TIMEOUT_MS + "ms");
+        }
     }
 
     public static boolean touchDown(int x, int y, int displayId) {

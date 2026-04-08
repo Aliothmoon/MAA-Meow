@@ -30,12 +30,19 @@ static void nativeReleaseNativeCapturer(JNIEnv *env, jclass clazz) {
     ReleaseNativeCapturer();
 }
 
+static jlong nativeGetFrameCount(JNIEnv *env, jclass clazz) {
+    (void) env;
+    (void) clazz;
+    return static_cast<jlong>(GetFrameCount());
+}
+
 static JNINativeMethod gMethods[] = {
         {"ping",                  "()Ljava/lang/String;",        reinterpret_cast<void *>(ping)},
         {"setupNativeCapturer",   "(II)Landroid/view/Surface;",  reinterpret_cast<void *>(nativeSetupNativeCapturer)},
         {"releaseNativeCapturer", "()V",                         reinterpret_cast<void *>(nativeReleaseNativeCapturer)},
         {"setPreviewSurface",     "(Ljava/lang/Object;)V",       reinterpret_cast<void *>(nativeSetPreviewSurface)},
         {"getFrameBufferBitmap",  "()Landroid/graphics/Bitmap;", reinterpret_cast<void *>(nativeGetFrameBufferBitmap)},
+        {"getFrameCount",         "()J",                         reinterpret_cast<void *>(nativeGetFrameCount)},
 };
 
 static constexpr char kNativeBridgeClass[] = "com/aliothmoon/maameow/bridge/NativeBridgeLib";

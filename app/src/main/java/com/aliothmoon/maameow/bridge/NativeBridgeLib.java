@@ -36,4 +36,7 @@ public class NativeBridgeLib {
      */
     public static native Bitmap getFrameBufferBitmap();
 
+    @FastNative
+    public static native long getFrameCount();
+
 }
