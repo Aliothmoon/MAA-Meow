@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.remote.internal
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.os.Build
-import android.os.Handler
 import android.view.Surface
 import com.aliothmoon.maameow.bridge.NativeBridgeLib
 import com.aliothmoon.maameow.constant.AndroidVersions

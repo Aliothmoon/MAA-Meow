@@ -67,25 +67,6 @@ typedef struct {
     size_t capacity;
 } GidList;
 
-typedef int (*setexeccon_fn)(const char *);
-
-typedef int (*setenforce_fn)(int);
-
-static int security_setenforce(int value) {
-    void *handle = dlopen("libselinux.so", RTLD_NOW | RTLD_LOCAL);
-    if (handle == NULL) {
-        return -1;
-    }
-    setenforce_fn fn = (setenforce_fn) dlsym(handle, "security_setenforce");
-    if (fn == NULL) {
-        dlclose(handle);
-        return -1;
-    }
-    int result = fn(value);
-    dlclose(handle);
-    return result;
-}
-
 static bool starts_with(const char *value, const char *prefix) {
     return strncmp(value, prefix, strlen(prefix)) == 0;
 }
@@ -293,31 +274,6 @@ static bool read_shell_dynamic_gids(uid_t uid, GidList *out) {
     return true;
 }
 
-static bool prepare_shell_exec_context(void) {
-    void *handle = dlopen("libselinux.so", RTLD_NOW | RTLD_LOCAL);
-    if (handle == NULL) {
-        LOGE("Failed to load libselinux.so: %s", dlerror());
-        return false;
-    }
-
-    {
-        setexeccon_fn setexeccon_ptr = (setexeccon_fn) dlsym(handle, "setexeccon");
-        int result;
-        if (setexeccon_ptr == NULL) {
-            LOGE("Failed to resolve setexeccon: %s", dlerror());
-            dlclose(handle);
-            return false;
-        }
-
-        result = setexeccon_ptr(kShellContext);
-        dlclose(handle);
-        if (result != 0) {
-            LOGE("setexeccon(%s) failed: %s", kShellContext, strerror(errno));
-            return false;
-        }
-    }
-    return true;
-}
 
 static char *format_arg(const char *prefix, const char *value) {
     size_t size = strlen(prefix) + strlen(value) + 1;
@@ -425,12 +381,6 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-//    if (security_setenforce(0) == 0) {
-//        LOGI("SELinux set to permissive");
-//    } else {
-//        LOGW("setenforce(0) failed: %s (continuing anyway)", strerror(errno));
-//    }
-
     if (!read_shell_identity(&shell_uid, &gids)) {
         LOGI("Proceeding without packages.list static gids");
     }
@@ -454,10 +404,6 @@ int main(int argc, char **argv) {
     }
 
     if (child == 0) {
-        if (!prepare_shell_exec_context()) {
-            _exit(1);
-        }
-
         if (gids.count > 0 && setgroups((int) gids.count, gids.items) != 0) {
             LOGE("setgroups failed: %s", strerror(errno));
             _exit(1);
