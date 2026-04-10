@@ -38,11 +38,13 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.toClipEntry
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import kotlinx.coroutines.launch
@@ -85,8 +87,10 @@ fun OperBoxPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    val tabs =
-                        listOf("已拥有 (${data.owned.size})", "未拥有 (${data.notOwned.size})")
+                    val tabs = listOf(
+                        stringResource(R.string.operators_owned_count, data.owned.size),
+                        stringResource(R.string.operators_not_owned_count, data.notOwned.size)
+                    )
                     tabs.forEachIndexed { index, label ->
                         Text(
                             text = label,
@@ -111,9 +115,9 @@ fun OperBoxPanel(
                         val entry = ClipData.newPlainText("label", text).toClipEntry()
                         clipboard.setClipEntry(entry)
                     }
-                    Toast.makeText(context, "已复制干员数据", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.operators_data_copied), Toast.LENGTH_SHORT).show()
                 }) {
-                    Text("导出", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.export), style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -134,15 +138,15 @@ private fun OperBoxEmptyState(modifier: Modifier, statusMessage: String) {
     ) {
         Spacer(Modifier.height(48.dp))
         Text(
-            text = "干员识别",
+            text = stringResource(R.string.maa_oper_box),
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.ExtraBold
         )
         Spacer(Modifier.height(16.dp))
-        OperBoxHintRow("点击下方「开始任务」扫描已拥有的干员信息。")
+        OperBoxHintRow(stringResource(R.string.oper_box_hint_scan))
         Spacer(Modifier.height(12.dp))
-        OperBoxHintRow("识别完成后可查看已拥有 / 未拥有干员，支持导出。")
+        OperBoxHintRow(stringResource(R.string.oper_box_hint_export))
         if (statusMessage.isNotBlank()) {
             Spacer(Modifier.height(16.dp))
             Text(
@@ -218,7 +222,7 @@ private fun OperatorRow(oper: OperBoxOperator) {
             }
             if (oper.own) {
                 Text(
-                    text = "E${oper.elite} Lv${oper.level} 潜${oper.potential}",
+                    text = stringResource(R.string.oper_level_summary, oper.elite, oper.level, oper.potential),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

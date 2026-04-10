@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
+import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,11 +45,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.AwardConfig
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.InfrastConfig
@@ -116,10 +120,10 @@ fun TaskConfigPanel(
             // 编辑模式：未选中
             isEditMode -> {
                 EmptyStateHint(
-                    title = "编辑模式",
+                    title = stringResource(R.string.edit_mode_title),
                     descriptions = listOf(
-                        "选择左侧任务进行重命名、删除等操作。",
-                        "点击左侧 ｢新增任务｣ 往脚本末尾添加新功能。"
+                        stringResource(R.string.edit_mode_hint_1),
+                        stringResource(R.string.edit_mode_hint_2)
                     )
                 )
             }
@@ -175,8 +179,8 @@ fun TaskConfigPanel(
             // 普通模式：未选中
             else -> {
                 EmptyStateHint(
-                    title = "配置任务",
-                    descriptions = listOf("从左侧选择一个任务项，即可在此调整执行参数。")
+                    title = stringResource(R.string.configure_task_title),
+                    descriptions = listOf(stringResource(R.string.configure_task_hint))
                 )
             }
         }
@@ -211,7 +215,7 @@ private fun EmptyStateHint(
         }
 
         if (showReorderHint) {
-            HintItem(Icons.Default.Info, "长按左侧任务项并拖拽，可自由调整执行顺序。")
+            HintItem(Icons.Default.Info, stringResource(R.string.task_reorder_hint))
         }
     }
 }
@@ -248,7 +252,7 @@ private fun TaskGalleryView(onAddNode: (TaskTypeInfo) -> Unit) {
             .padding(12.dp)
     ) {
         Text(
-            "选择任务类型",
+            stringResource(R.string.select_task_type),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(bottom = 12.dp)
@@ -291,8 +295,9 @@ private fun TaskManagementView(
     onRename: (String) -> Unit,
     onRemove: () -> Unit
 ) {
+    val context = LocalContext.current
     var text by remember(node.id) { mutableStateOf(node.name) }
-    val typeDisplayName = remember(node.config) { getTypeDisplayName(node.config) }
+    val typeDisplayName = remember(node.config, context) { getTypeDisplayName(node.config, context) }
 
     val trimmedText = text.trim()
     val isError = trimmedText.isEmpty()
@@ -310,7 +315,7 @@ private fun TaskManagementView(
                 shape = RoundedCornerShape(4.dp)
             ) {
                 Text(
-                    text = "正在编辑",
+                    text = stringResource(R.string.editing),
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -338,14 +343,14 @@ private fun TaskManagementView(
                     onRename(name)
                 }
             },
-            label = "任务名称",
+            label = stringResource(R.string.task_name),
             shape = RoundedCornerShape(4.dp),
             modifier = Modifier.fillMaxWidth(),
             supportingText = {
                 if (isError) {
-                    Text("名称不能为空")
+                    Text(stringResource(R.string.name_cannot_be_empty))
                 } else if (isTooLong) {
-                    Text("名称长度不能超过 20 个字符")
+                    Text(stringResource(R.string.name_too_long))
                 }
             },
             outlineColor = if (isError || isTooLong) MaterialTheme.colorScheme.error else null
@@ -375,13 +380,13 @@ private fun TaskManagementView(
         ) {
             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("删除该任务")
+            Text(stringResource(R.string.delete_task))
         }
     }
 }
 
-private fun getTypeDisplayName(config: TaskParamProvider): String {
+private fun getTypeDisplayName(config: TaskParamProvider, context: Context): String {
     return TaskTypeInfo.entries
         .firstOrNull { it.defaultConfig()::class == config::class }
-        ?.displayName ?: "未知任务"
+        ?.displayName ?: context.getString(R.string.unknown_task)
 }

@@ -9,7 +9,7 @@ data class HomeUiState(
     val isShowControlOverlay: Boolean = false,
     val isLoading: Boolean = false,
     val resourceUpdateState: UpdateProcessState = UpdateProcessState.Idle,
-    val serviceStatusText: String = "未连接",
+    val serviceStatusText: String = "",
     val serviceStatusColor: StatusColorType = StatusColorType.NEUTRAL,
     val serviceStatusLoading: Boolean = false,
     val resourceInitState: ResourceInitState = ResourceInitState.NotChecked,

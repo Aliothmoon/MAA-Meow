@@ -26,9 +26,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.ReclamationConfig
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.ITextField
@@ -52,7 +54,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "常规设置",
+                text = stringResource(R.string.tab_general),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
@@ -61,7 +63,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                 }
             )
             Text(
-                text = "高级设置",
+                text = stringResource(R.string.tab_advanced),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
@@ -70,7 +72,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                 }
             )
             Text(
-                text = "说明",
+                text = stringResource(R.string.instructions),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 2) FontWeight.Bold else FontWeight.Normal,
@@ -102,7 +104,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                     0 -> {
                         item {
                             ReclamationButtonGroup(
-                                label = "主题",
+                                label = stringResource(R.string.theme),
                                 options = ReclamationConfig.THEME_OPTIONS,
                                 selectedValue = config.theme,
                                 onValueChange = { onConfigChange(config.copy(theme = it as String)) }
@@ -110,7 +112,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                         }
                         item {
                             ReclamationButtonGroup(
-                                label = "策略",
+                                label = stringResource(R.string.strategy),
                                 options = ReclamationConfig.MODE_OPTIONS,
                                 selectedValue = config.mode,
                                 onValueChange = { onConfigChange(config.copy(mode = it as Int)) }
@@ -121,7 +123,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                                 CheckBoxWithLabel(
                                     checked = config.clearStore,
                                     onCheckedChange = { onConfigChange(config.copy(clearStore = it)) },
-                                    label = "任务完成后购买商店"
+                                    label = stringResource(R.string.buy_store_after_task)
                                 )
                             }
                         }
@@ -133,7 +135,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                                     shape = RoundedCornerShape(4.dp)
                                 ) {
                                     Text(
-                                        "通过组装支援道具刷生息点数，需要有存档",
+                                        stringResource(R.string.reclamation_archive_mode_tip),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onTertiaryContainer,
                                         modifier = Modifier.padding(8.dp)
@@ -149,7 +151,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                         item {
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(
-                                    "支援道具名称",
+                                    stringResource(R.string.support_tool_name),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -157,12 +159,12 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                                     value = config.toolToCraft,
                                     onValueChange = { onConfigChange(config.copy(toolToCraft = it)) },
                                     modifier = Modifier.fillMaxWidth(),
-                                    placeholder = "荧光棒",
+                                    placeholder = stringResource(R.string.support_tool_placeholder),
                                     singleLine = false,
                                     enabled = isArchiveMode
                                 )
                                 Text(
-                                    "多个道具用分号分隔",
+                                    stringResource(R.string.multiple_tools_semicolon_hint),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -170,7 +172,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                         }
                         item {
                             ReclamationButtonGroup(
-                                label = "增加方式",
+                                label = stringResource(R.string.increment_mode),
                                 options = ReclamationConfig.INCREMENT_MODE_OPTIONS,
                                 selectedValue = config.incrementMode,
                                 onValueChange = { onConfigChange(config.copy(incrementMode = it as Int)) },
@@ -180,7 +182,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                         item {
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(
-                                    "单次最大组装轮数",
+                                    stringResource(R.string.max_craft_rounds_single),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -193,7 +195,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth(),
-                                    placeholder = "16",
+                                    placeholder = stringResource(R.string.default_max_rounds_value),
                                     singleLine = true,
                                     enabled = isArchiveMode
                                 )
@@ -210,7 +212,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                                 shape = RoundedCornerShape(4.dp)
                             ) {
                                 Text(
-                                    "目前生息演算的支持仍处于中期阶段，使用时请注意以下几点。",
+                                    stringResource(R.string.reclamation_notice),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onErrorContainer,
                                     fontWeight = FontWeight.Medium,
@@ -221,32 +223,32 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                         item {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(
-                                    "通过开局刷点数（小心已有存档被删除）",
+                                    stringResource(R.string.reclamation_method_new_run),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    "1. 点数刷满后会输出「任务完成」，自动停止任务",
+                                    stringResource(R.string.reclamation_new_run_note_1),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    "2. 不要在生息演算的编队中有干员的情况下使用",
+                                    stringResource(R.string.reclamation_new_run_note_2),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    "3. 手动确认存档情况并删除，以免 MAA 删除你的珍贵存档",
+                                    stringResource(R.string.reclamation_new_run_note_3),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error
                                 )
                                 Text(
-                                    "4. 导航还没写，不能从生息演算以外的位置开始任务",
+                                    stringResource(R.string.reclamation_new_run_note_4),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    "5. 如果任务过程中报错、点数没刷满就任务完成，请前往 GitHub 提交 Issue",
+                                    stringResource(R.string.reclamation_new_run_note_5),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -255,22 +257,22 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                         item {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(
-                                    "有存档通过制造刷点数（高级设置）",
+                                    stringResource(R.string.reclamation_method_archive),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    "1. 要求是结算后的第一天，且后续三天没有敌袭进入驻扎地",
+                                    stringResource(R.string.reclamation_archive_note_1),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    "2. 必须在进入大地图后的界面开始（能看到驻扎地的界面）",
+                                    stringResource(R.string.reclamation_archive_note_2),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    "3. 如果能制造的数量刚好是 99 的倍数会卡住，在存档前可以先用掉一点",
+                                    stringResource(R.string.reclamation_archive_note_3),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

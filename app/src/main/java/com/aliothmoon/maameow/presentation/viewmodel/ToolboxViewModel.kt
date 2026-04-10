@@ -1,7 +1,10 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
+import android.app.Application
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.ActivityManager
@@ -24,11 +27,11 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
-enum class ToolboxTab(val displayName: String) {
-    MINI_GAME("小游戏"),
-    RECRUIT_CALC("公招识别"),
-    DEPOT("仓库识别"),
-    OPER_BOX("干员识别"),
+enum class ToolboxTab(@StringRes val displayNameRes: Int) {
+    MINI_GAME(R.string.tab_mini_game),
+    RECRUIT_CALC(R.string.tab_recruit_calc),
+    DEPOT(R.string.tab_depot),
+    OPER_BOX(R.string.tab_oper_box),
 }
 
 data class RecruitCalcConfig(
@@ -43,6 +46,7 @@ data class RecruitCalcConfig(
 )
 
 class ToolboxViewModel(
+    private val app: Application,
     private val compositionService: MaaCompositionService,
     val collector: ToolboxResultCollector,
     activityManager: ActivityManager,
@@ -50,7 +54,7 @@ class ToolboxViewModel(
     private val chainState: TaskChainState,
 ) : ViewModel() {
 
-    val miniGame = MiniGameDelegate(activityManager, compositionService, viewModelScope)
+    val miniGame = MiniGameDelegate(activityManager, app, compositionService, viewModelScope)
 
     private val _currentTab = MutableStateFlow(ToolboxTab.MINI_GAME)
     val currentTab: StateFlow<ToolboxTab> = _currentTab.asStateFlow()
@@ -85,10 +89,10 @@ class ToolboxViewModel(
                 if (pkg != null && appAliveChecker.isAppAlive(pkg) == AppAliveStatus.DEAD) {
                     _dialog.value = PanelDialogUiState(
                         type = PanelDialogType.WARNING,
-                        title = "启动警告",
-                        message = GAME_NOT_RUNNING_WARNING,
-                        confirmText = "仍然启动",
-                        dismissText = "取消",
+                        title = app.getString(R.string.launch_warning_title),
+                        message = app.gameNotRunningWarning(),
+                        confirmText = app.getString(R.string.still_launch),
+                        dismissText = app.getString(R.string.cancel),
                         confirmAction = PanelDialogConfirmAction.CONFIRM_PENDING_START,
                     )
                     return@launch
@@ -122,9 +126,9 @@ class ToolboxViewModel(
         when (_currentTab.value) {
             ToolboxTab.MINI_GAME -> miniGame.onStop()
             else -> viewModelScope.launch {
-                _statusMessage.value = "正在停止..."
+                _statusMessage.value = app.getString(R.string.task_stopping)
                 compositionService.stop()
-                _statusMessage.value = "已停止"
+                _statusMessage.value = app.getString(R.string.task_stopped)
             }
         }
     }
@@ -134,7 +138,7 @@ class ToolboxViewModel(
     private fun onStartRecruitCalc() {
         viewModelScope.launch {
             collector.clearRecruit()
-            _statusMessage.value = "正在启动公招识别..."
+            _statusMessage.value = app.getString(R.string.starting_recruit_recognition)
             val cfg = _recruitConfig.value
             val selectList = buildJsonArray {
                 if (cfg.chooseLevel3) add(3)
@@ -167,7 +171,7 @@ class ToolboxViewModel(
     private fun onStartDepot() {
         viewModelScope.launch {
             collector.clearDepot()
-            _statusMessage.value = "正在启动仓库识别..."
+            _statusMessage.value = app.getString(R.string.starting_depot_recognition)
             handleStartResult(
                 compositionService.startCopilot(listOf(MaaTaskParams(MaaTaskType.DEPOT, "{}")))
             )
@@ -179,7 +183,7 @@ class ToolboxViewModel(
     private fun onStartOperBox() {
         viewModelScope.launch {
             collector.clearOperBox()
-            _statusMessage.value = "正在启动干员识别..."
+            _statusMessage.value = app.getString(R.string.starting_oper_box_recognition)
             handleStartResult(
                 compositionService.startCopilot(listOf(MaaTaskParams(MaaTaskType.OPER_BOX, "{}")))
             )
@@ -208,6 +212,6 @@ class ToolboxViewModel(
     }
 
     private fun handleStartResult(result: MaaCompositionService.StartResult) {
-        _statusMessage.value = formatStartResult(result, "识别任务已启动")
+        _statusMessage.value = app.formatStartResult(result, app.getString(R.string.recognition_task_started))
     }
 }

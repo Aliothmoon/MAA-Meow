@@ -14,9 +14,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -51,7 +53,7 @@ fun WakeUpConfigPanel(
     ) {
         // 客户端类型选择
         SelectableChipGroup(
-            label = "客户端类型",
+            label = stringResource(R.string.client_type),
             selectedValue = config.clientType,
             options = WakeUpConfig.CLIENT_TYPE_OPTIONS,
             onSelected = { onConfigChange(config.copy(clientType = it)) },
@@ -65,12 +67,12 @@ fun WakeUpConfigPanel(
                     value = config.accountName,
                     onValueChange = { onConfigChange(config.copy(accountName = it)) },
                     enabled = !isTaskActive,
-                    label = "账号切换",
+                    label = stringResource(R.string.account_switch_label),
                     placeholder = "123****4567"
                 )
 
                 Text(
-                    text = "需要切换至的账号，留空以禁用。输入登录界面显示的内容，例如 123****4567；支持部分匹配。仅支持官服、B服，不支持登录账号。",
+                    text = stringResource(R.string.account_switch_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
@@ -87,7 +89,7 @@ fun WakeUpConfigPanel(
         CheckBoxWithLabel(
             checked = config.startGameEnabled,
             onCheckedChange = { onConfigChange(config.copy(startGameEnabled = it)) },
-            label = "启动游戏"
+            label = stringResource(R.string.start_game)
         )
 
         // TODO 服务器信息

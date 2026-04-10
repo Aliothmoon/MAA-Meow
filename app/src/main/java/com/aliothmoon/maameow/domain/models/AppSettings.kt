@@ -38,4 +38,7 @@ data class AppSettings(
     @PrefKey(default = "WHITE") val themeMode: String = "WHITE",
 
     @PrefKey(default = "DEFAULT") val eventNotificationLevel: String = "DEFAULT",
+
+    /** BCP 47 language tag (e.g. "en", "zh"). Empty string = follow system. */
+    @PrefKey(default = "") val appLanguage: String = "",
 )

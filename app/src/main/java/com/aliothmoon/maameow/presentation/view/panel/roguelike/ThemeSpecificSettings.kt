@@ -10,8 +10,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
@@ -31,14 +33,14 @@ fun ThemeSpecificSettings(
                 modifier = Modifier.padding(vertical = 4.dp)
             )
             Text(
-                "水月专用设置",
+                stringResource(R.string.shuiyue_settings),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
             CheckBoxWithLabel(
                 checked = config.refreshTraderWithDice,
                 onCheckedChange = { onConfigChange(config.copy(refreshTraderWithDice = it)) },
-                label = "刷新商店（指路鳞）"
+                label = stringResource(R.string.refresh_shop_scale)
             )
         }
 
@@ -57,7 +59,7 @@ fun ThemeSpecificSettings(
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
                 Text(
-                    "萨米专用设置",
+                    stringResource(R.string.sami_settings),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
@@ -68,14 +70,14 @@ fun ThemeSpecificSettings(
                 CheckBoxWithLabel(
                     checked = config.firstFloorFoldartal,
                     onCheckedChange = { onConfigChange(config.copy(firstFloorFoldartal = it)) },
-                    label = "凹第一层远见密文板，不进行作战"
+                    label = stringResource(R.string.target_cipher_first_floor)
                 )
 
                 AnimatedVisibility(visible = config.firstFloorFoldartal) {
                     ITextField(
                         value = config.firstFloorFoldartals,
                         onValueChange = { onConfigChange(config.copy(firstFloorFoldartals = it)) },
-                        placeholder = "密文板名称",
+                        placeholder = stringResource(R.string.cipher_name),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -86,7 +88,7 @@ fun ThemeSpecificSettings(
                 CheckBoxWithLabel(
                     checked = config.newSquad2StartingFoldartal,
                     onCheckedChange = { onConfigChange(config.copy(newSquad2StartingFoldartal = it)) },
-                    label = "生活队凹开局密文板"
+                    label = stringResource(R.string.start_cipher_with_life)
                 )
 
                 AnimatedVisibility(visible = config.newSquad2StartingFoldartal) {
@@ -94,7 +96,7 @@ fun ThemeSpecificSettings(
                         ITextField(
                             value = config.newSquad2StartingFoldartals,
                             onValueChange = { onConfigChange(config.copy(newSquad2StartingFoldartals = it)) },
-                            placeholder = "最多写三个，并用英文分号 ; 隔开",
+                            placeholder = stringResource(R.string.max_three_sep),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -112,14 +114,14 @@ fun ThemeSpecificSettings(
             CheckBoxWithLabel(
                 checked = config.startWithSeed,
                 onCheckedChange = { onConfigChange(config.copy(startWithSeed = it)) },
-                label = "使用指定种子开局"
+                label = stringResource(R.string.use_specified_seed)
             )
 
             AnimatedVisibility(visible = config.startWithSeed) {
                 ITextField(
                     value = config.seed,
                     onValueChange = { onConfigChange(config.copy(seed = it)) },
-                    placeholder = "格式: xxx,rogue_x,x",
+                    placeholder = stringResource(R.string.seed_format),
                     modifier = Modifier.fillMaxWidth()
                 )
             }

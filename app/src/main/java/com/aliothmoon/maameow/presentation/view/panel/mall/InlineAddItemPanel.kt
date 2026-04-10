@@ -21,8 +21,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.presentation.components.ITextField
 
 @Composable
@@ -42,7 +44,7 @@ fun InlineAddItemPanel(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                "输入物品名称",
+                stringResource(R.string.enter_item_name),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
@@ -50,7 +52,7 @@ fun InlineAddItemPanel(
                 value = inputText,
                 onValueChange = { inputText = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = "如：招聘许可",
+                placeholder = stringResource(R.string.item_name_placeholder),
                 singleLine = true,
                 onImeAction = {
                     if (inputText.isNotBlank()) {
@@ -63,12 +65,12 @@ fun InlineAddItemPanel(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = onCancel) { Text("取消") }
+                TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(
                     onClick = { onItemAdded(inputText) },
                     enabled = inputText.isNotBlank()
-                ) { Text("添加") }
+                ) { Text(stringResource(R.string.add)) }
             }
         }
     }

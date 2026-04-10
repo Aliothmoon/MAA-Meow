@@ -1,7 +1,9 @@
 package com.aliothmoon.maameow
 
 import android.app.Application
+import android.content.Context
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.utils.LocaleHelper
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.koin.appModule
 import com.aliothmoon.maameow.koin.floatingWindowModule
@@ -18,6 +20,10 @@ import org.koin.core.context.startKoin
 import org.koin.core.logger.Level
 
 class MaaApplication : Application() {
+
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(LocaleHelper.applyLocale(base))
+    }
 
     private val appSettingsManager: AppSettingsManager by inject()
     private val crashHandler: CrashHandler by inject()

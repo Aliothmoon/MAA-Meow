@@ -18,8 +18,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 
 /**
@@ -55,7 +57,7 @@ fun ResourceInitDialog(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "正在初始化资源",
+                            text = stringResource(R.string.initializing_resources),
                             style = MaterialTheme.typography.titleMedium
                         )
 
@@ -89,7 +91,7 @@ fun ResourceInitDialog(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
-                            text = "首次启动需要解压资源文件，请稍候...",
+                            text = stringResource(R.string.first_launch_unpack),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -103,12 +105,12 @@ fun ResourceInitDialog(
             // 失败弹窗
             AdaptiveTaskPromptDialog(
                 visible = true,
-                title = "初始化失败",
-                message = "资源初始化失败: ${state.message}\n\n请检查存储空间是否充足，然后重试。",
+                title = stringResource(R.string.init_failed_title),
+                message = stringResource(R.string.init_failed_msg, state.message),
                 onConfirm = onRetry,
                 onDismissRequest = onDismiss,
-                confirmText = "重试",
-                dismissText = "取消",
+                confirmText = stringResource(R.string.retry),
+                dismissText = stringResource(R.string.cancel),
                 icon = Icons.Rounded.Warning,
                 confirmColor = MaterialTheme.colorScheme.error
             )
@@ -130,12 +132,12 @@ fun ReInitializeConfirmDialog(
 ) {
     AdaptiveTaskPromptDialog(
         visible = true,
-        title = "重新初始化资源",
-        message = "确定要重新初始化资源吗？\n\n这将删除现有资源并重新从内置资源包解压。如果您已更新过资源，更新的内容将被覆盖。",
+        title = stringResource(R.string.reinit_confirm_title),
+        message = stringResource(R.string.reinit_confirm_msg),
         onConfirm = onConfirm,
         onDismissRequest = onDismiss,
-        confirmText = "确认重新初始化",
-        dismissText = "取消",
+        confirmText = stringResource(R.string.confirm_reinit),
+        dismissText = stringResource(R.string.cancel),
         icon = Icons.Rounded.Refresh,
         confirmColor = MaterialTheme.colorScheme.error
     )

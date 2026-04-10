@@ -20,6 +20,7 @@ import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
 import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.presentation.state.HomeUiState
 import com.aliothmoon.maameow.presentation.state.StatusColorType
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.utils.Misc
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,35 +77,35 @@ class HomeViewModel(
                 when {
                     serviceState is RemoteServiceManager.ServiceState.Died ||
                             serviceState is RemoteServiceManager.ServiceState.Error ->
-                        Triple("服务异常", StatusColorType.ERROR, false)
+                        Triple(application.getString(R.string.status_service_error), StatusColorType.ERROR, false)
 
                     serviceState is RemoteServiceManager.ServiceState.Connecting ->
-                        Triple("服务连接中...", StatusColorType.WARNING, true)
+                        Triple(application.getString(R.string.status_connecting), StatusColorType.WARNING, true)
 
                     serviceState is RemoteServiceManager.ServiceState.Disconnected ->
-                        Triple("未连接", StatusColorType.NEUTRAL, false)
+                        Triple(application.getString(R.string.status_disconnected), StatusColorType.NEUTRAL, false)
 
                     resourceState is MaaResourceLoader.State.Loading ||
                             resourceState is MaaResourceLoader.State.Reloading ->
-                        Triple("资源加载中...", StatusColorType.WARNING, true)
+                        Triple(application.getString(R.string.status_resource_loading), StatusColorType.WARNING, true)
 
                     resourceState is MaaResourceLoader.State.Failed ->
-                        Triple("资源加载失败", StatusColorType.ERROR, false)
+                        Triple(application.getString(R.string.status_resource_failed), StatusColorType.ERROR, false)
 
                     resourceState is MaaResourceLoader.State.NotLoaded ->
-                        Triple("资源未加载", StatusColorType.NEUTRAL, false)
+                        Triple(application.getString(R.string.status_resource_not_loaded), StatusColorType.NEUTRAL, false)
 
                     executionState == MaaExecutionState.ERROR ->
-                        Triple("任务异常", StatusColorType.ERROR, false)
+                        Triple(application.getString(R.string.status_task_error), StatusColorType.ERROR, false)
 
                     executionState == MaaExecutionState.STARTING ->
-                        Triple("任务启动中...", StatusColorType.WARNING, true)
+                        Triple(application.getString(R.string.status_task_starting), StatusColorType.WARNING, true)
 
                     executionState == MaaExecutionState.RUNNING ->
-                        Triple("运行中", StatusColorType.PRIMARY, true)
+                        Triple(application.getString(R.string.status_running), StatusColorType.PRIMARY, true)
 
                     else ->
-                        Triple("就绪", StatusColorType.PRIMARY, false)
+                        Triple(application.getString(R.string.status_ready), StatusColorType.PRIMARY, false)
                 }
             }.collect { (text, color, loading) ->
                 _uiState.update {
@@ -176,14 +177,14 @@ class HomeViewModel(
             if (!permissionManager.permissions.isStartupBackendAvailable(backend)) {
                 Toast.makeText(
                     context,
-                    "${backend.display}不可用，请检查对应服务是否启动",
+                    application.getString(R.string.backend_unavailable, backend.display),
                     Toast.LENGTH_SHORT
                 ).show()
                 return@launch
             }
             val granted = permissionManager.requestRemoteAccess()
             if (!granted) {
-                Toast.makeText(context, "${backend.display}授权失败", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, application.getString(R.string.backend_auth_failed, backend.display), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -246,17 +247,17 @@ class HomeViewModel(
                     _uiState.update { it.copy(isLoading = false) }
                     Toast.makeText(
                         application,
-                        "请先授予${state.remotePermissionLabel}",
+                        application.getString(R.string.permission_not_granted, state.remotePermissionLabel),
                         Toast.LENGTH_SHORT
                     ).show()
                     return@launch
                 }
 
                 val missingPermissions = buildList {
-                    if (!state.overlay) add("悬浮窗权限")
-                    if (!state.storage) add("外部存储权限")
+                    if (!state.overlay) add(application.getString(R.string.perm_overlay))
+                    if (!state.storage) add(application.getString(R.string.perm_storage))
                     if (currentMode == OverlayControlMode.ACCESSIBILITY && !state.accessibility) {
-                        add("无障碍权限")
+                        add(application.getString(R.string.perm_accessibility))
                     }
                 }
 
@@ -264,7 +265,7 @@ class HomeViewModel(
                     _uiState.update { it.copy(isLoading = false) }
                     Toast.makeText(
                         application,
-                        "请先授予以下权限: ${missingPermissions.joinToString("、")}",
+                        application.getString(R.string.missing_permissions_msg, missingPermissions.joinToString("、")),
                         Toast.LENGTH_SHORT
                     ).show()
                     return@launch
@@ -281,7 +282,7 @@ class HomeViewModel(
             } catch (e: Exception) {
                 Timber.e(e, "Error starting floating window")
                 _uiState.update { it.copy(isLoading = false) }
-                Toast.makeText(application, "启动悬浮窗失败: ${e.message}", Toast.LENGTH_SHORT)
+                Toast.makeText(application, application.getString(R.string.overlay_launch_failed, e.message), Toast.LENGTH_SHORT)
                     .show()
             }
         }
@@ -297,7 +298,7 @@ class HomeViewModel(
             } catch (e: Exception) {
                 Timber.e(e, "Error stopping floating window")
                 _uiState.update { it.copy(isLoading = false) }
-                Toast.makeText(application, "停止悬浮窗失败: ${e.message}", Toast.LENGTH_SHORT)
+                Toast.makeText(application, application.getString(R.string.overlay_stop_failed, e.message), Toast.LENGTH_SHORT)
                     .show()
             }
         }
@@ -316,7 +317,7 @@ class HomeViewModel(
             } catch (e: Exception) {
                 Timber.e(e, "Error reloading services")
                 _uiState.update { it.copy(isLoading = false) }
-                Toast.makeText(application, "重新加载服务失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(application, application.getString(R.string.service_reload_failed, e.message), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -334,7 +335,7 @@ class HomeViewModel(
             } catch (e: Exception) {
                 Timber.e(e, "Error stopping all services")
                 _uiState.update { it.copy(isLoading = false) }
-                Toast.makeText(application, "关闭服务失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(application, application.getString(R.string.service_close_failed, e.message), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -346,7 +347,7 @@ class HomeViewModel(
                 if (!permissionManager.permissions.remoteAccessGranted) {
                     val ret = permissionManager.requestRemoteAccess()
                     if (!ret) {
-                        Toast.makeText(ctx, "${label}未获取", Toast.LENGTH_SHORT)
+                        Toast.makeText(ctx, application.getString(R.string.item_not_acquired, label), Toast.LENGTH_SHORT)
                             .show()
                         return@launch
                     }
@@ -369,7 +370,7 @@ class HomeViewModel(
             } catch (e: Exception) {
                 Timber.e(e, "onChangeTo16x9Resolution: Error changing resolution")
                 _uiState.update { it.copy(isLoading = false) }
-                Toast.makeText(ctx, "修改分辨率失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(ctx, application.getString(R.string.resolution_change_failed, e.message), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -382,7 +383,7 @@ class HomeViewModel(
                 if (!permissionManager.permissions.remoteAccessGranted) {
                     val ret = permissionManager.requestRemoteAccess()
                     if (!ret) {
-                        Toast.makeText(ctx, "${label}未获取", Toast.LENGTH_SHORT)
+                        Toast.makeText(ctx, application.getString(R.string.item_not_acquired, label), Toast.LENGTH_SHORT)
                             .show()
                         return@launch
                     }
@@ -396,7 +397,7 @@ class HomeViewModel(
             } catch (e: Exception) {
                 Timber.e(e, "Error resetting resolution")
                 _uiState.update { it.copy(isLoading = false) }
-                Toast.makeText(application, "重置分辨率失败: ${e.message}", Toast.LENGTH_SHORT)
+                Toast.makeText(application, application.getString(R.string.resolution_reset_failed, e.message), Toast.LENGTH_SHORT)
                     .show()
             }
         }
@@ -418,7 +419,7 @@ class HomeViewModel(
         if (!isValid) {
             Toast.makeText(
                 application,
-                "当前分辨率不是 16:9，请使用后台任务或调整分辨率",
+                application.getString(R.string.resolution_not_16_9),
                 Toast.LENGTH_LONG
             ).show()
             Timber.w("分辨率检查失败: ${longSide}x${shortSide}, 需要16:9")
@@ -433,7 +434,7 @@ class HomeViewModel(
                 _uiState.update {
                     it.copy(
                         showRunModeUnsupportedDialog = true,
-                        runModeUnsupportedMessage = "Android 10 及以下系统不支持后台模式，请使用前台模式。"
+                        runModeUnsupportedMessage = application.getString(R.string.android_10_bg_mode_unsupported)
                     )
                 }
                 return@launch

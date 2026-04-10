@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.ViewTreeObserver
@@ -21,12 +22,17 @@ import com.aliothmoon.maameow.presentation.navigation.AppNavigation
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.model.ScheduledExecutionRequest
 import com.aliothmoon.maameow.theme.MaaMeowTheme
+import com.aliothmoon.maameow.utils.LocaleHelper
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {
+
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(LocaleHelper.applyLocale(base))
+    }
 
     @Volatile
     private var isUiReady: Boolean = false

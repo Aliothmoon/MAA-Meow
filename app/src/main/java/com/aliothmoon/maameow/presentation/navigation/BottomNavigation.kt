@@ -28,36 +28,38 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 
 sealed class BottomNavTab(
     val route: String,
-    val label: String,
+    val labelRes: Int,
     val icon: ImageVector
 ) {
     data object HOME : BottomNavTab(
         route = Routes.HOME,
-        label = "首页",
+        labelRes = R.string.nav_home,
         icon = Icons.Default.Home
     )
 
     data object BACKGROUND : BottomNavTab(
         route = Routes.BACKGROUND_TASK,
-        label = "后台任务",
+        labelRes = R.string.nav_background_task,
         icon = Icons.Default.PlayArrow
     )
 
     data object SCHEDULE : BottomNavTab(
         route = Routes.SCHEDULE,
-        label = "定时",
+        labelRes = R.string.nav_schedule,
         icon = Icons.Default.DateRange
     )
 
     data object NOTIFICATION : BottomNavTab(
         route = Routes.NOTIFICATION,
-        label = "通知",
+        labelRes = R.string.nav_notification,
         icon = Icons.Default.Notifications
     )
 
@@ -104,12 +106,12 @@ fun AppBottomNavigation(
                     ) {
                         Icon(
                             imageVector = tab.icon,
-                            contentDescription = tab.label,
+                            contentDescription = stringResource(tab.labelRes),
                             modifier = Modifier.size(20.dp),
                             tint = contentColor
                         )
                         Text(
-                            text = tab.label,
+                            text = stringResource(tab.labelRes),
                             style = MaterialTheme.typography.labelMedium,
                             color = contentColor
                         )

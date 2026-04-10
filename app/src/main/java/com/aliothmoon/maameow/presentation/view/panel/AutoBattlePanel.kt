@@ -62,6 +62,8 @@ import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
 import org.koin.compose.koinInject
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import androidx.compose.ui.res.stringResource
+import com.aliothmoon.maameow.R
 
 private data class CopilotTabUiSpec(
     val index: Int,
@@ -94,45 +96,61 @@ fun AutoBattlePanel(
         fontSize = 10.5.sp,
         lineHeight = 12.sp
     )
-    val tabSpecs = remember {
+    val tabSpecs = remember(context) {
         listOf(
             CopilotTabUiSpec(
                 index = 0,
-                title = "主线 / 故事集",
+                title = context.getString(R.string.copilot_tab_main_title),
                 subtitle = "SideStory",
-                fullLabel = "主线/故事集/SideStory",
-                helperText = "支持单作业、作业集、战斗列表与常规 Copilot 配置，适合主线、故事集和 SideStory。",
-                capabilities = listOf("单作业", "作业集", "战斗列表", "自动编队"),
+                fullLabel = context.getString(R.string.copilot_tab_main),
+                helperText = context.getString(R.string.copilot_tab_main_helper),
+                capabilities = listOf(
+                    context.getString(R.string.copilot_cap_single),
+                    context.getString(R.string.copilot_cap_set),
+                    context.getString(R.string.copilot_cap_battle_list),
+                    context.getString(R.string.copilot_cap_formation)
+                ),
                 supportsBattleList = true,
                 supportsSetImport = true,
                 supportsRegularOptions = true,
             ),
             CopilotTabUiSpec(
                 index = 1,
-                title = "保全派驻",
-                fullLabel = "保全派驻",
-                helperText = "使用 resource/copilot 内置作业，建议先手动编队后启动。支持循环次数，不支持作业集和战斗列表。",
-                capabilities = listOf("单作业", "循环次数", "内置作业"),
+                title = context.getString(R.string.copilot_tab_sss),
+                fullLabel = context.getString(R.string.copilot_tab_sss),
+                helperText = context.getString(R.string.copilot_tab_sss_helper),
+                capabilities = listOf(
+                    context.getString(R.string.copilot_cap_single),
+                    context.getString(R.string.copilot_cap_loop),
+                    context.getString(R.string.copilot_cap_builtin)
+                ),
                 supportsBattleList = false,
                 supportsSetImport = false,
                 supportsRegularOptions = false,
             ),
             CopilotTabUiSpec(
                 index = 2,
-                title = "悖论模拟",
-                fullLabel = "悖论模拟",
-                helperText = "适合悖论模拟单作业或战斗列表，请从技能选择或干员列表界面启动。不支持作业集导入和常规编队配置。",
-                capabilities = listOf("单作业", "战斗列表"),
+                title = context.getString(R.string.copilot_tab_paradox),
+                fullLabel = context.getString(R.string.copilot_tab_paradox),
+                helperText = context.getString(R.string.copilot_tab_paradox_helper),
+                capabilities = listOf(
+                    context.getString(R.string.copilot_cap_single),
+                    context.getString(R.string.copilot_cap_battle_list)
+                ),
                 supportsBattleList = true,
                 supportsSetImport = true,
                 supportsRegularOptions = false,
             ),
             CopilotTabUiSpec(
                 index = 3,
-                title = "其他活动",
-                fullLabel = "其他活动",
-                helperText = "用于主线/故事集/SideStory 以外的活动单作业。支持常规 Copilot 配置，不支持作业集和战斗列表。",
-                capabilities = listOf("单作业", "自动编队", "借助战"),
+                title = context.getString(R.string.copilot_tab_other),
+                fullLabel = context.getString(R.string.copilot_tab_other),
+                helperText = context.getString(R.string.copilot_tab_other_helper),
+                capabilities = listOf(
+                    context.getString(R.string.copilot_cap_single),
+                    context.getString(R.string.copilot_cap_formation),
+                    context.getString(R.string.copilot_cap_support_unit)
+                ),
                 supportsBattleList = false,
                 supportsSetImport = false,
                 supportsRegularOptions = true,
@@ -237,8 +255,8 @@ fun AutoBattlePanel(
                 ITextField(
                     value = state.inputText,
                     onValueChange = viewModel::onInputChanged,
-                    label = "作业站神秘代码",
-                    placeholder = "输入 maa://1234、1234",
+                    label = stringResource(R.string.copilot_secret_code_label),
+                    placeholder = stringResource(R.string.copilot_secret_code_placeholder),
                 )
             }
 
@@ -260,7 +278,7 @@ fun AutoBattlePanel(
                             )
                         }
                         Text(
-                            text = state.statusMessage.ifBlank { "等待操作..." },
+                            text = state.statusMessage.ifBlank { stringResource(R.string.copilot_waiting_op) },
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.weight(1f)
                         )
@@ -276,7 +294,7 @@ fun AutoBattlePanel(
                         shape = compactButtonShape,
                         contentPadding = compactButtonPadding
                     ) {
-                        Text(if (state.isLoading) "读取中..." else "读取作业")
+                        Text(if (state.isLoading) stringResource(R.string.copilot_reading) else stringResource(R.string.copilot_read_single))
                     }
                     Button(
                         onClick = viewModel::onParseSetInput,
@@ -284,14 +302,14 @@ fun AutoBattlePanel(
                         shape = compactButtonShape,
                         contentPadding = compactButtonPadding
                     ) {
-                        Text("读取作业集")
+                        Text(stringResource(R.string.copilot_read_set))
                     }
                     OutlinedButton(
                         onClick = { Misc.openUriSafely(context, "https://zoot.plus") },
                         shape = compactButtonShape,
                         contentPadding = compactButtonPadding
                     ) {
-                        Text("作业站")
+                        Text(stringResource(R.string.copilot_job_station))
                     }
                 }
             }
@@ -362,7 +380,7 @@ fun AutoBattlePanel(
                                         if (summary.operators.isNotEmpty()) {
                                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                                 Text(
-                                                    text = "干员",
+                                                    text = stringResource(R.string.copilot_operators_section),
                                                     style = MaterialTheme.typography.labelSmall,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -376,7 +394,7 @@ fun AutoBattlePanel(
                                         summary.groups.forEach { (groupName, opers) ->
                                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                                 Text(
-                                                    text = "干员组: $groupName",
+                                                    text = stringResource(R.string.copilot_operator_group, groupName),
                                                     style = MaterialTheme.typography.labelSmall,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -388,7 +406,7 @@ fun AutoBattlePanel(
                                         }
                                         // 统计
                                         Text(
-                                            text = "共 ${summary.totalCount} 名干员/组",
+                                            text = stringResource(R.string.copilot_total_count_fmt, summary.totalCount),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
                                                 alpha = 0.6f
@@ -398,7 +416,7 @@ fun AutoBattlePanel(
                                 }
                                 if (hasVideo) {
                                     Text(
-                                        text = "视频",
+                                        text = stringResource(R.string.copilot_video_link),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary,
                                         fontWeight = FontWeight.Medium,
@@ -424,8 +442,8 @@ fun AutoBattlePanel(
                             onCheckedChange = {
                                 viewModel.onConfigChanged(state.config.copy(formation = it))
                             },
-                            label = "自动编队",
-                            tipText = "自动编队可能无法识别带有 ｢特别关注｣ 标记的干员"
+                            label = stringResource(R.string.auto_formation),
+                            tipText = stringResource(R.string.auto_formation_tip)
                         )
                         if (state.config.formation) {
                             CheckBoxWithLabel(
@@ -441,7 +459,7 @@ fun AutoBattlePanel(
                                         )
                                     )
                                 },
-                                label = "使用编队"
+                                label = stringResource(R.string.use_formation)
                             )
 
                             if (state.config.useFormation) {
@@ -478,8 +496,8 @@ fun AutoBattlePanel(
                                 onCheckedChange = {
                                     viewModel.onConfigChanged(state.config.copy(ignoreRequirements = it))
                                 },
-                                label = "忽略干员属性要求",
-                                tipText = "某些作业需要特定模组等作为前置条件\n勾选此项将跳过这些检查，但可能导致作业无法正常运行"
+                                label = stringResource(R.string.ignore_requirements),
+                                tipText = stringResource(R.string.ignore_requirements_tip)
                             )
 
                             CheckBoxWithExpandableTip(
@@ -487,13 +505,17 @@ fun AutoBattlePanel(
                                 onCheckedChange = {
                                     viewModel.onConfigChanged(state.config.copy(useSupportUnit = it))
                                 },
-                                label = "借助战",
-                                tipText = "缺一个还能用用，缺两个以上还是换份作业吧"
+                                label = stringResource(R.string.support_unit_label),
+                                tipText = stringResource(R.string.support_unit_tip)
                             )
 
                             if (state.config.useSupportUnit) {
+                                val supportOptions = listOf(
+                                    1 to stringResource(R.string.support_fill),
+                                    3 to stringResource(R.string.support_random)
+                                )
                                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    listOf(1 to "补漏", 3 to "随机").forEach { (value, label) ->
+                                    supportOptions.forEach { (value, label) ->
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             modifier = Modifier.clickable {
@@ -529,7 +551,7 @@ fun AutoBattlePanel(
                                         )
                                     )
                                 },
-                                label = "补充低信赖干员"
+                                label = stringResource(R.string.add_trust)
                             )
                         }
                     }
@@ -542,17 +564,8 @@ fun AutoBattlePanel(
                         CheckBoxWithExpandableTip(
                             checked = state.useCopilotList,
                             onCheckedChange = viewModel::onToggleListMode,
-                            label = "战斗列表",
-                            tipText = """
-仅支持以下模式:
-  1. 主线: 同一章节内导航
-  2. SideStory: 当前页面内导航（普通/EX/S 不能互跳）
-  3. 故事集: 当前页面内导航
-  4. 悖论模拟: 从干员列表启动
-请在对应界面启动，不支持跨章节导航
-
-当 ｢战斗列表｣ 启用后, 选择单个作业时会自动添加到 ｢战斗列表｣
-                            """.trimIndent()
+                            label = stringResource(R.string.battle_list_label),
+                            tipText = stringResource(R.string.battle_list_tip)
                         )
                     }
 
@@ -562,7 +575,7 @@ fun AutoBattlePanel(
                             onCheckedChange = {
                                 viewModel.onConfigChanged(state.config.copy(useSanityPotion = it))
                             },
-                            label = "使用理智药"
+                            label = stringResource(R.string.use_sanity_potion)
                         )
                     }
 
@@ -572,7 +585,7 @@ fun AutoBattlePanel(
                             onCheckedChange = {
                                 viewModel.onConfigChanged(state.config.copy(loop = it))
                             },
-                            label = "循环次数"
+                            label = stringResource(R.string.loop_count)
                         )
                         if (state.config.loop) {
                             ITextField(
@@ -588,7 +601,7 @@ fun AutoBattlePanel(
                                         )
                                     }
                                 },
-                                label = "循环次数",
+                                label = stringResource(R.string.loop_count),
                                 placeholder = "1"
                             )
                         }
@@ -604,7 +617,7 @@ fun AutoBattlePanel(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            "战斗列表",
+                            stringResource(R.string.battle_list_label),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium
                         )
@@ -614,7 +627,7 @@ fun AutoBattlePanel(
                             onExpandedChange = { sequenceTipExpanded = it })
                         ExpandableTipContent(
                             visible = sequenceTipExpanded,
-                            tipText = "标签顺序可拖动"
+                            tipText = stringResource(R.string.drag_reorder_tip)
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
@@ -627,7 +640,7 @@ fun AutoBattlePanel(
                     ) {
                         if (state.taskList.isEmpty()) {
                             Text(
-                                "暂无条目",
+                                stringResource(R.string.no_entries),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(8.dp)
@@ -681,21 +694,21 @@ fun AutoBattlePanel(
                                                             index
                                                         )
                                                     },
-                                                    label = item.name + if (item.isRaid) " (突袭)" else "",
+                                                    label = item.name + if (item.isRaid) stringResource(R.string.copilot_added_raid_suffix) else "",
                                                     modifier = Modifier.weight(1f)
                                                 )
                                                 OutlinedButton(
                                                     onClick = { viewModel.onSelectListItem(index) },
                                                     shape = compactButtonShape,
                                                     contentPadding = compactButtonPadding
-                                                ) { Text("加载") }
+                                                ) { Text(stringResource(R.string.load_job)) }
                                                 IconButton(
                                                     onClick = { viewModel.onRemoveFromList(index) },
                                                     modifier = Modifier.size(32.dp)
                                                 ) {
                                                     Icon(
                                                         Icons.Default.Delete,
-                                                        contentDescription = "删除",
+                                                        contentDescription = stringResource(R.string.delete),
                                                         tint = MaterialTheme.colorScheme.error,
                                                         modifier = Modifier.size(18.dp)
                                                     )
@@ -717,12 +730,12 @@ fun AutoBattlePanel(
                             onClick = viewModel::onCleanUnchecked,
                             shape = compactButtonShape,
                             contentPadding = compactButtonPadding
-                        ) { Text("清除未勾选") }
+                        ) { Text(stringResource(R.string.clear_unchecked)) }
                         OutlinedButton(
                             onClick = viewModel::onClearList,
                             shape = compactButtonShape,
                             contentPadding = compactButtonPadding
-                        ) { Text("清空列表") }
+                        ) { Text(stringResource(R.string.clear_list)) }
                     }
                 }
             }
@@ -735,7 +748,7 @@ fun AutoBattlePanel(
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            "小提示",
+                            stringResource(R.string.tips_label),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -743,24 +756,7 @@ fun AutoBattlePanel(
                     }
                     ExpandableTipContent(
                         visible = expanded,
-                        tipText = """
-1. 使用前请确认作业与所选的关卡类型一致。
-2. 主线、故事集、SideStory: 请在关卡界面的右下角存在 ｢开始行动｣ 按钮界面启动。
-3. 保全派驻: resource/copilot 文件夹内置多份作业。请先手动编队，在右下角存在 ｢开始部署｣ 按钮界面启动，可配合 ｢循环次数｣。
-4. 悖论模拟: 选好技能后，在技能选择界面存在 ｢开始模拟｣ 按钮界面启动，1/2 星干员（无技能）在右下角存在 ｢开始模拟｣ 按钮界面开始。若使用 ｢战斗列表｣，请从干员列表 ｢等级/稀有度｣ 筛选下启动。
-5. 其他活动: 仅支持单作业与常规 Copilot 配置，请在目标活动关卡界面直接启动，不支持作业集和战斗列表。
-6. 使用好友助战时，请关闭 ｢自动编队｣ 和 ｢战斗列表｣，手动选择干员后，在编队界面右下角存在 ｢开始行动｣ 按钮界面启动。
-7. 干员若被标记为 ｢特别关注｣，可能影响 ｢自动编队｣ 的识别与选择。建议使用 ｢自动编队｣ 时移除关注，或在报错后关闭 ｢自动编队｣，根据提示手动补充缺失的干员。
-8. Copilot 作业站的神秘代码可在输入框输入后读取：
-● 点击「读取作业」= 读取单作业。
-● 点击「读取作业集」= 导入作业集（仅主线/故事集/SideStory、悖论模拟）。
-9. 战斗列表:
-● 选择作业后，检查下方关卡名是否正确 (例: CV-EX-1)。
-● 可通过「添加普通/添加突袭」按钮添加任务（突袭仅主线）。
-● 可通过「清空列表/清除未勾选」按钮快速整理任务。
-● 请在能看到目标关卡名的界面启动，不支持跨章节导航。
-● 遇到理智不足、战斗失败、未能三星结算时将自动中止。
-                        """.trimIndent()
+                        tipText = stringResource(R.string.copilot_tips_content)
                     )
                 }
             }

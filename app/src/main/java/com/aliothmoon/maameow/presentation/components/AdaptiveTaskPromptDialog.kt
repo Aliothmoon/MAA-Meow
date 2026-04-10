@@ -42,8 +42,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 
 enum class TaskPromptButtonLayout {
@@ -62,8 +64,8 @@ fun AdaptiveTaskPromptDialog(
     message: Any? = null, // 支持 String 或 AnnotatedString
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
-    confirmText: String = "确认",
-    dismissText: String? = "取消",
+    confirmText: String = stringResource(R.string.confirm),
+    dismissText: String? = stringResource(R.string.cancel),
     neutralText: String? = null,
     onNeutralClick: () -> Unit = {},
     icon: ImageVector? = null, // 仅支持 ImageVector

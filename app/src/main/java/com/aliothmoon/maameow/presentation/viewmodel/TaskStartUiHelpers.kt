@@ -1,57 +1,54 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
+import android.content.Context
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogConfirmAction
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogUiState
 
-internal const val GAME_NOT_RUNNING_WARNING =
-    "检测到游戏未运行，继续执行可能直接失败，是否仍然启动？"
+internal fun Context.gameNotRunningWarning(): String =
+    getString(R.string.game_not_running_warning)
 
-internal fun resolveTaskStartFailureMessage(result: MaaCompositionService.StartResult): String? {
+internal fun Context.resolveTaskStartFailureMessage(result: MaaCompositionService.StartResult): String? {
     return when (result) {
         is MaaCompositionService.StartResult.Success -> null
-        is MaaCompositionService.StartResult.ResourceError -> "资源加载失败，请尝试重新初始化资源"
+        is MaaCompositionService.StartResult.ResourceError ->
+            getString(R.string.resource_load_failed_msg)
         is MaaCompositionService.StartResult.InitializationError -> when (result.phase) {
             MaaCompositionService.StartResult.InitializationError.InitPhase.CREATE_INSTANCE ->
-                "MaaCore 初始化失败，请重启应用"
-
+                getString(R.string.maacore_init_failed)
             MaaCompositionService.StartResult.InitializationError.InitPhase.SET_TOUCH_MODE ->
-                "触控模式设置失败，请重启应用"
+                getString(R.string.touch_mode_failed)
         }
-
         is MaaCompositionService.StartResult.PortraitOrientationError ->
-            "当前屏幕为竖屏，请切换为横屏后启动"
-
+            getString(R.string.portrait_orientation_error)
         is MaaCompositionService.StartResult.ConnectionError -> when (result.phase) {
             MaaCompositionService.StartResult.ConnectionError.ConnectPhase.DISPLAY_MODE ->
-                "显示模式设置失败，请重试"
-
+                getString(R.string.display_mode_failed)
             MaaCompositionService.StartResult.ConnectionError.ConnectPhase.VIRTUAL_DISPLAY ->
-                "虚拟屏幕启动失败，请检查服务权限"
-
+                getString(R.string.virtual_display_failed)
             MaaCompositionService.StartResult.ConnectionError.ConnectPhase.MAA_CONNECT ->
-                "连接 MaaCore 超时，请重试"
+                getString(R.string.maacore_connect_timeout)
         }
-
         is MaaCompositionService.StartResult.StartError ->
-            "MaaCore 启动失败，请检查任务配置"
+            getString(R.string.maacore_start_failed)
     }
 }
 
-internal fun formatStartResult(
+internal fun Context.formatStartResult(
     result: MaaCompositionService.StartResult,
     successMessage: String,
 ): String {
     return resolveTaskStartFailureMessage(result) ?: successMessage
 }
 
-internal fun createStartFailedDialog(message: String): PanelDialogUiState {
+internal fun Context.createStartFailedDialog(message: String): PanelDialogUiState {
     return PanelDialogUiState(
         type = PanelDialogType.ERROR,
-        title = "启动失败",
+        title = getString(R.string.launch_failed_title),
         message = message,
-        confirmText = "查看日志",
+        confirmText = getString(R.string.view_log),
         confirmAction = PanelDialogConfirmAction.GO_LOG,
     )
 }

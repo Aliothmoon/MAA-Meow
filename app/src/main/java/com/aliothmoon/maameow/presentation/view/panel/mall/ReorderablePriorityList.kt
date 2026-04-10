@@ -15,8 +15,10 @@ import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import sh.calvin.reorderable.ReorderableColumn
 import sh.calvin.reorderable.ReorderableItem
 
@@ -51,7 +53,7 @@ fun ReorderablePriorityList(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    "暂无优先购买物品\n点击下方按钮添加",
+                    stringResource(R.string.empty_priority),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center

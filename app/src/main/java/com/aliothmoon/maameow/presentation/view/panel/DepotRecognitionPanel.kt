@@ -34,12 +34,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.toClipEntry
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.toolbox.DepotItem
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
@@ -77,7 +79,7 @@ fun DepotRecognitionPanel(
         item(span = { GridItemSpan(maxLineSpan) }) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "共 ${items.size} 种物品",
+                    text = stringResource(R.string.depot_item_count, items.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -92,13 +94,13 @@ fun DepotRecognitionPanel(
                                 val entry = ClipData.newPlainText("label", text).toClipEntry()
                                 clipboard.setClipEntry(entry)
                             }
-                            Toast.makeText(context, "已复制企鹅物流刷图规划格式", Toast.LENGTH_SHORT)
+                            Toast.makeText(context, context.getString(R.string.depot_copied_arkplanner), Toast.LENGTH_SHORT)
                                 .show()
                         },
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(
-                            "导出至企鹅物流刷图规划",
+                            stringResource(R.string.export_to_arkplanner),
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -111,13 +113,13 @@ fun DepotRecognitionPanel(
                                 val entry = ClipData.newPlainText("label", text).toClipEntry()
                                 clipboard.setClipEntry(entry)
                             }
-                            Toast.makeText(context, "已复制明日方舟工具箱格式", Toast.LENGTH_SHORT)
+                            Toast.makeText(context, context.getString(R.string.depot_copied_amtool), Toast.LENGTH_SHORT)
                                 .show()
                         },
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(
-                            "导出至明日方舟工具箱",
+                            stringResource(R.string.export_to_amtool),
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -144,15 +146,15 @@ private fun DepotEmptyState(modifier: Modifier, statusMessage: String) {
     ) {
         Spacer(Modifier.height(48.dp))
         Text(
-            text = "仓库识别",
+            text = stringResource(R.string.depot_title),
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.ExtraBold
         )
         Spacer(Modifier.height(16.dp))
-        HintRow("点击下方「开始任务」扫描当前仓库物品及数量。")
+        HintRow(stringResource(R.string.depot_hint_scan))
         Spacer(Modifier.height(12.dp))
-        HintRow("识别完成后支持导出企鹅物流刷图规划 / 明日方舟工具箱格式。")
+        HintRow(stringResource(R.string.depot_hint_export))
         if (statusMessage.isNotBlank()) {
             Spacer(Modifier.height(16.dp))
             Text(

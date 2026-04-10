@@ -51,9 +51,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.constant.MaaApi
 import com.aliothmoon.maameow.data.config.MaaPathConfig
@@ -98,7 +100,7 @@ fun InfrastConfigPanel(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "常规设置",
+                text = stringResource(R.string.tab_general),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
@@ -108,7 +110,7 @@ fun InfrastConfigPanel(
                     }
                 })
             Text(
-                text = "高级设置",
+                text = stringResource(R.string.tab_advanced),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
@@ -236,18 +238,13 @@ fun InfrastConfigPanel(
 private fun InfrastModeSection(
     config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
 ) {
-    // 模式选项 (对应WPF的InfrastModeList)
-    val modeOptions = listOf(
-        "Normal" to "常规模式", "Rotation" to "轮换模式"
-    )
-
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = "基建模式",
+                text = stringResource(R.string.infrast_mode),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
@@ -281,11 +278,7 @@ private fun InfrastModeSection(
                 shape = RoundedCornerShape(4.dp)
             ) {
                 Text(
-                    text = """
-                        ｢队列轮换｣ 的换班逻辑与游戏内基建右下角的「队列轮换」完全一致：
-                        当当前班次中任意干员心情值为 0 时，会整队替换为下一班干员。
-                        若需自定义轮换班次，请使用「自定义基建配置」
-                    """.trimIndent(),
+                    text = stringResource(R.string.infrast_rotation_mode_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(12.dp)
@@ -369,11 +362,11 @@ private fun CustomInfrastSection(
                     }
                 } else {
                     setCustom(null)
-                    setError("文件不存在")
+                    setError(context.getString(R.string.file_not_found))
                 }
             } catch (e: Exception) {
                 setCustom(null)
-                setError("解析失败: ${e.message}")
+                setError(context.getString(R.string.parse_failed, e.message.orEmpty()))
             }
         }
     }
@@ -430,7 +423,7 @@ private fun CustomInfrastSection(
         // 在线生成器链接
         val context = LocalContext.current
         Text(
-            text = "自定义基建排班制作器", style = MaterialTheme.typography.bodySmall.copy(
+            text = stringResource(R.string.infrast_custom_maker_link), style = MaterialTheme.typography.bodySmall.copy(
                 textDecoration = TextDecoration.Underline
             ), color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable {
                 Misc.openUriSafely(context, MaaApi.BASE_SCHEDULING_SCHEMA)
@@ -443,7 +436,7 @@ private fun CustomInfrastSection(
                     if (filePicker != null) {
                         filePicker.launch(arrayOf("application/json"))
                     } else {
-                        Toast.makeText(context, "请在后台模式下导入自定义配置文件", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.import_config_background_only), Toast.LENGTH_SHORT).show()
                     }
                 } else {
                     val filePath = File(
@@ -489,7 +482,7 @@ private fun PresetButtonGroup(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
-            text = "内置配置",
+            text = stringResource(R.string.infrast_preset_label),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
         )
@@ -549,7 +542,7 @@ private fun PlanSelectButtonGroup(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "排班计划",
+                text = stringResource(R.string.infrast_plan_label),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
@@ -557,8 +550,7 @@ private fun PlanSelectButtonGroup(
                 expanded = tipExpanded, onExpandedChange = { tipExpanded = it })
         }
 
-        val tip =
-            "如「基建计划」存在执行时间，「基建换班」任务开始前或任务运行时不会自动切换，将保持Link Start!时的状态，仅在空闲或任务完成后切换"
+        val tip = stringResource(R.string.infrast_plan_tip)
         ExpandableTipContent(
             visible = tipExpanded, tipText = tip
         )
@@ -575,7 +567,7 @@ private fun PlanSelectButtonGroup(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "根据时间段自动切换 ($currentPlanName)",
+                    text = stringResource(R.string.infrast_auto_by_time, currentPlanName ?: "???"),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -623,7 +615,7 @@ private fun PlanSelectButtonGroup(
         // 部分计划无时间段警告
         if (hasPeriodicPlan && hasNonPeriodicPlan) {
             Text(
-                text = "自定义基建配置仅有部分计划存在时间段，可能会存在预期外的行为。如需设置换班时间段请保证所有计划均设置时间段，否则请全部留空。",
+                text = stringResource(R.string.infrast_partial_period_warning),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error
             )
@@ -643,7 +635,7 @@ private fun UsesOfDronesSection(
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
-            text = "无人机用途",
+            text = stringResource(R.string.infrast_drones_usage),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
         )
@@ -693,7 +685,7 @@ private fun DormThresholdSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "宿舍心情阈值",
+                    text = stringResource(R.string.infrast_dorm_threshold),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
@@ -710,7 +702,7 @@ private fun DormThresholdSection(
 
         ExpandableTipContent(
             visible = tipExpanded,
-            tipText = "若启用自定义换班，该字段仅针对autofill 和使用工员编组的房间有效"
+            tipText = stringResource(R.string.infrast_dorm_threshold_tip)
         )
 
         Slider(
@@ -738,7 +730,7 @@ private fun FacilitiesSection(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "基建设施",
+                text = stringResource(R.string.infrast_facilities),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
@@ -747,7 +739,7 @@ private fun FacilitiesSection(
         }
 
         ExpandableTipContent(
-            visible = tipExpanded, tipText = "勾选需要换班的设施\n设施顺序代表换班优先级"
+            visible = tipExpanded, tipText = stringResource(R.string.infrast_facilities_tip)
         )
 
         // 设施列表（支持拖拽排序 + 勾选）
@@ -767,7 +759,7 @@ private fun FacilitiesSection(
                     )
                 }, modifier = Modifier.weight(1f)
             ) {
-                Text("全选")
+                Text(stringResource(R.string.select_all))
             }
 
             OutlinedButton(
@@ -778,7 +770,7 @@ private fun FacilitiesSection(
                     )
                 }, modifier = Modifier.weight(1f)
             ) {
-                Text("清除")
+                Text(stringResource(R.string.clear_selection))
             }
         }
     }
@@ -861,7 +853,7 @@ private fun DormTrustEnabledSection(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "宿舍空余位置蹭信赖", style = MaterialTheme.typography.bodyMedium
+            text = stringResource(R.string.infrast_dorm_trust), style = MaterialTheme.typography.bodyMedium
         )
     }
 }
@@ -888,14 +880,14 @@ private fun DormFilterNotStationedSection(
                 modifier = Modifier.size(20.dp)
             )
             Text(
-                text = "不将已进驻的干员放入宿舍", style = MaterialTheme.typography.bodyMedium
+                text = stringResource(R.string.infrast_dorm_filter_not_stationed), style = MaterialTheme.typography.bodyMedium
             )
             ExpandableTipIcon(
                 expanded = tipExpanded, onExpandedChange = { tipExpanded = it })
         }
         ExpandableTipContent(
             visible = tipExpanded,
-            tipText = "勾选则不会将艾丽妮等干员从训练室移除，但也会导致加工站干员不能进入宿舍。"
+            tipText = stringResource(R.string.infrast_dorm_filter_tip)
         )
     }
 }
@@ -917,7 +909,7 @@ private fun OriginiumShardAutoReplenishmentSection(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "源石碎片自动补货",
+            text = stringResource(R.string.infrast_originium_shard_auto),
             style = MaterialTheme.typography.bodyMedium,
             lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
         )
@@ -941,7 +933,7 @@ private fun ReceptionMessageBoardReceiveSection(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "会客室信息板收取信用",
+            text = stringResource(R.string.infrast_reception_message_board),
             style = MaterialTheme.typography.bodyMedium,
             lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
         )
@@ -965,7 +957,7 @@ private fun ReceptionClueExchangeSection(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "进行线索交流",
+            text = stringResource(R.string.infrast_clue_exchange),
             style = MaterialTheme.typography.bodyMedium,
             lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
         )
@@ -989,7 +981,7 @@ private fun ReceptionSendClueSection(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "赠送线索",
+            text = stringResource(R.string.infrast_send_clue),
             style = MaterialTheme.typography.bodyMedium,
             lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
         )
@@ -1013,7 +1005,7 @@ private fun ContinueTrainingSection(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "训练完成后继续尝试专精当前技能",
+            text = stringResource(R.string.infrast_continue_training),
             style = MaterialTheme.typography.bodyMedium,
             lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
         )

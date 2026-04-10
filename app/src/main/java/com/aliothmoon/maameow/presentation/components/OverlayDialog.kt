@@ -42,6 +42,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.aliothmoon.maameow.R
 
 /**
  * 悬浮窗专用对话框组件
@@ -52,8 +54,8 @@ fun OverlayDialog(
     onDismissRequest: () -> Unit,
     title: String,
     message: String,
-    confirmText: String = "确认",
-    dismissText: String = "取消",
+    confirmText: String = stringResource(R.string.confirm),
+    dismissText: String = stringResource(R.string.cancel),
     onConfirm: () -> Unit,
     icon: ImageVector? = null,
     iconTint: Color = MaterialTheme.colorScheme.error,

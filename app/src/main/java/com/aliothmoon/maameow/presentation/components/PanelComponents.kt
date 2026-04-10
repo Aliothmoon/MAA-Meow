@@ -18,6 +18,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.res.stringResource
+import com.aliothmoon.maameow.R
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -138,7 +140,7 @@ fun EmptyConfigHint() {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "<- 请选择任务进行配置",
+            text = stringResource(R.string.select_task_hint),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

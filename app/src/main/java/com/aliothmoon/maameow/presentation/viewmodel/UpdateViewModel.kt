@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.alibaba.fastjson2.JSON
@@ -13,6 +14,7 @@ import com.aliothmoon.maameow.data.model.update.UpdateCheckResult
 import com.aliothmoon.maameow.data.model.update.UpdateInfo
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.model.update.UpdateSource
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.service.update.UpdateService
@@ -39,6 +41,7 @@ import java.io.File
 
 @OptIn(FlowPreview::class)
 class UpdateViewModel(
+    private val app: Application,
     private val updateService: UpdateService,
     private val appSettingsManager: AppSettingsManager,
     private val maaResourceLoader: MaaResourceLoader,
@@ -214,7 +217,7 @@ class UpdateViewModel(
                         channel = updateChannel.value
                     )
                     if (result.isFailure) {
-                        _toastMessage.tryEmit("自动下载App更新失败")
+                        _toastMessage.tryEmit(app.getString(R.string.auto_download_app_failed))
                     }
                 }
                 // 仅资源更新
@@ -230,7 +233,7 @@ class UpdateViewModel(
                         refreshResourceVersion()
                         maaResourceLoader.load()
                     } else {
-                        _toastMessage.tryEmit("自动下载资源更新失败")
+                        _toastMessage.tryEmit(app.getString(R.string.auto_download_resource_failed))
                     }
                 }
             }

@@ -4,6 +4,7 @@ import android.view.Surface
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.RemoteService
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.model.LogItem
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
@@ -397,12 +398,13 @@ class BackgroundTaskViewModel(
                 if (request != null) {
                     showStartFailedDialog(decision.message)
                 } else {
+                    val appContext = appSettingsManager.appContext
                     showDialog(
                         PanelDialogUiState(
                             type = PanelDialogType.WARNING,
-                            title = "提示",
+                            title = appContext.getString(R.string.hint),
                             message = decision.message,
-                            confirmText = "知道了",
+                            confirmText = appContext.getString(R.string.got_it),
                             confirmAction = PanelDialogConfirmAction.DISMISS_ONLY,
                         )
                     )
@@ -412,13 +414,14 @@ class BackgroundTaskViewModel(
 
             is TaskStartDecision.RequiresConfirmation -> {
                 pendingStart = PendingStart(context, request)
+                val appContext = appSettingsManager.appContext
                 showDialog(
                     PanelDialogUiState(
                         type = PanelDialogType.WARNING,
-                        title = "启动警告",
+                        title = appContext.getString(R.string.copilot_start_warning_title),
                         message = decision.message,
-                        confirmText = "仍然启动",
-                        dismissText = "取消",
+                        confirmText = appContext.getString(R.string.copilot_start_anyway),
+                        dismissText = appContext.getString(R.string.cancel),
                         confirmAction = PanelDialogConfirmAction.CONFIRM_PENDING_START,
                     )
                 )
@@ -432,7 +435,7 @@ class BackgroundTaskViewModel(
         ) {
             if (request != null) {
                 sessionLogger.appendAndWait(
-                    "由定时任务「${request.strategyName}」触发",
+                    appSettingsManager.appContext.getString(R.string.scheduled_task_trigger, request.strategyName),
                 )
             }
         }

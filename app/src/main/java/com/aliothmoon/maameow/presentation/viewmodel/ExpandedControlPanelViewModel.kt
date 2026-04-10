@@ -16,6 +16,7 @@ import com.aliothmoon.maameow.domain.usecase.TaskStartAcknowledgement
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
 import com.aliothmoon.maameow.domain.usecase.TaskStartDecision
 import com.aliothmoon.maameow.domain.usecase.TaskStartMode
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.presentation.view.panel.FloatingPanelState
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogConfirmAction
@@ -50,25 +51,25 @@ class ExpandedControlPanelViewModel(
         viewModelScope.launch {
             overlayController.signal.collect { endState ->
                 val message = when (endState) {
-                    MaaExecutionState.ERROR -> "任务异常终止，详细信息请查看日志"
-                    else -> "任务已结束，详细信息请查看日志"
+                    MaaExecutionState.ERROR -> application.getString(R.string.task_terminated_error)
+                    else -> application.getString(R.string.task_ended)
                 }
                 Timber.d("Overlay result received: $endState")
                 showDialog(
                     if (endState == MaaExecutionState.ERROR) {
                         PanelDialogUiState(
                             type = PanelDialogType.ERROR,
-                            title = "提示",
+                            title = application.getString(R.string.hint),
                             message = message,
-                            confirmText = "知道了",
+                            confirmText = application.getString(R.string.ok),
                             confirmAction = PanelDialogConfirmAction.GO_LOG_AND_STOP
                         )
                     } else {
                         PanelDialogUiState(
                             type = PanelDialogType.SUCCESS,
-                            title = "任务完成",
+                            title = application.getString(R.string.task_completed_title),
                             message = message,
-                            confirmText = "查看日志",
+                            confirmText = application.getString(R.string.view_log),
                             confirmAction = PanelDialogConfirmAction.GO_LOG
                         )
                     }
@@ -185,7 +186,7 @@ class ExpandedControlPanelViewModel(
 
     fun onTabChange(tab: PanelTab) {
         _state.update { it.copy(currentTab = tab) }
-        Timber.d("Selected tab: %s", tab.displayName)
+        Timber.d("Selected tab: %s", tab.name)
     }
 
     private fun showDialog(dialog: PanelDialogUiState) {
@@ -260,9 +261,9 @@ class ExpandedControlPanelViewModel(
                     showDialog(
                         PanelDialogUiState(
                             type = PanelDialogType.WARNING,
-                            title = "提示",
+                            title = application.getString(R.string.hint),
                             message = decision.message,
-                            confirmText = "知道了",
+                            confirmText = application.getString(R.string.ok),
                             confirmAction = PanelDialogConfirmAction.DISMISS_ONLY,
                         )
                     )
@@ -274,10 +275,10 @@ class ExpandedControlPanelViewModel(
                     showDialog(
                         PanelDialogUiState(
                             type = PanelDialogType.WARNING,
-                            title = "启动警告",
+                            title = application.getString(R.string.launch_warning_title),
                             message = decision.message,
-                            confirmText = "仍然启动",
-                            dismissText = "取消",
+                            confirmText = application.getString(R.string.still_launch),
+                            dismissText = application.getString(R.string.cancel),
                             confirmAction = PanelDialogConfirmAction.CONFIRM_PENDING_START,
                         )
                     )
@@ -297,7 +298,7 @@ class ExpandedControlPanelViewModel(
                 tasks = plan.params,
                 clientType = plan.clientType,
             )
-            val message = formatStartResult(result, "Maa启动成功")
+            val message = application.formatStartResult(result, application.getString(R.string.maa_start_success))
             if (result is MaaCompositionService.StartResult.Success) {
                 // 成功时用 Toast 简短提示
                 withContext(Dispatchers.Main) {
@@ -306,7 +307,7 @@ class ExpandedControlPanelViewModel(
             } else {
                 // 失败时通过 StateFlow 通知 UI 展示 OverlayDialog
                 Timber.w("Start failed: $result")
-                showDialog(createStartFailedDialog(message))
+                showDialog(application.createStartFailedDialog(message))
             }
         }
     }

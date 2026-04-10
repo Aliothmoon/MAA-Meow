@@ -19,8 +19,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
@@ -37,7 +39,7 @@ fun AdvancedRoguelikeSettings(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // 投资相关
         Text(
-            "投资设置",
+            stringResource(R.string.investment_settings),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
         )
@@ -47,7 +49,7 @@ fun AdvancedRoguelikeSettings(
         CheckBoxWithLabel(
             checked = config.investmentEnabled,
             onCheckedChange = { onConfigChange(config.copy(investmentEnabled = it)) },
-            label = "投资源石锭",
+            label = stringResource(R.string.invest_ingots),
             enabled = config.mode != RoguelikeMode.Investment
         )
 
@@ -64,7 +66,7 @@ fun AdvancedRoguelikeSettings(
                             )
                         )
                     },
-                    label = "投资 N 个源石锭后停止任务",
+                    label = stringResource(R.string.invest_limit_n),
                     placeholder = "999",
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -74,7 +76,7 @@ fun AdvancedRoguelikeSettings(
                     CheckBoxWithLabel(
                         checked = config.stopWhenInvestmentFull,
                         onCheckedChange = { onConfigChange(config.copy(stopWhenInvestmentFull = it)) },
-                        label = "储备源石锭达到上限时停止"
+                        label = stringResource(R.string.stop_on_ingot_limit)
                     )
                 }
 
@@ -82,7 +84,7 @@ fun AdvancedRoguelikeSettings(
                     CheckBoxWithLabel(
                         checked = config.investmentWithMoreScore,
                         onCheckedChange = { onConfigChange(config.copy(investmentWithMoreScore = it)) },
-                        label = "投资模式启用购物、招募、进2层"
+                        label = stringResource(R.string.invest_mode_with_shop)
                     )
                 }
             }
@@ -92,7 +94,7 @@ fun AdvancedRoguelikeSettings(
 
         // 助战相关
         Text(
-            "助战设置",
+            stringResource(R.string.support_settings),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
         )
@@ -115,7 +117,7 @@ fun AdvancedRoguelikeSettings(
                         }
                         onConfigChange(newConfig)
                     },
-                    label = "「开局干员」使用助战",
+                    label = stringResource(R.string.use_support_for_start_op),
                     enabled = supportEnabled
                 )
                 Spacer(modifier = Modifier.width(4.dp))
@@ -125,7 +127,7 @@ fun AdvancedRoguelikeSettings(
             }
             ExpandableTipContent(
                 visible = supportTipExpanded,
-                tipText = "需先填写「开局干员」"
+                tipText = stringResource(R.string.start_op_required)
             )
         }
 
@@ -134,7 +136,7 @@ fun AdvancedRoguelikeSettings(
             CheckBoxWithLabel(
                 checked = config.enableNonfriendSupport,
                 onCheckedChange = { onConfigChange(config.copy(enableNonfriendSupport = it)) },
-                label = "可以使用非好友助战"
+                label = stringResource(R.string.allow_non_friend_support)
             )
         }
 
@@ -150,7 +152,7 @@ fun AdvancedRoguelikeSettings(
                     )
                 )
             },
-            label = "开始探索 N 次后停止任务",
+            label = stringResource(R.string.stop_after_n_explorations),
             placeholder = "99999",
             modifier = Modifier.fillMaxWidth()
         )

@@ -1,15 +1,17 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Stable
+import com.aliothmoon.maameow.R
 
 /**
  * 面板 Tab 类型
  */
-enum class PanelTab(val displayName: String) {
-    TASKS("一键长草"),
-    AUTO_BATTLE("自动战斗"),
-    TOOLS("小工具"),
-    LOG("日志");
+enum class PanelTab(@StringRes val displayNameRes: Int) {
+    TASKS(R.string.tab_tasks),
+    AUTO_BATTLE(R.string.tab_auto_battle),
+    TOOLS(R.string.tab_tools),
+    LOG(R.string.tab_log);
 
     companion object {
         fun canShowTaskActions(state: PanelTab): Boolean {
@@ -47,7 +49,7 @@ data class PanelDialogUiState(
     val type: PanelDialogType,
     val title: String,
     val message: String,
-    val confirmText: String = "确认",
-    val dismissText: String = "关闭",
+    val confirmText: String = "",
+    val dismissText: String = "",
     val confirmAction: PanelDialogConfirmAction = PanelDialogConfirmAction.DISMISS_ONLY
 )

@@ -15,7 +15,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.resource.ItemInfo
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
@@ -50,8 +52,8 @@ fun SpecifiedDropsSection(
                     )
                 )
             },
-            label = "指定材料掉落",
-            tipText = "刷到指定数量的材料后停止作战"
+            label = stringResource(R.string.specified_drops),
+            tipText = stringResource(R.string.specified_drops_tip)
         )
 
         // 材料选择和数量输入（启用后显示）
@@ -63,7 +65,7 @@ fun SpecifiedDropsSection(
                 shape = RoundedCornerShape(4.dp)
             ) {
                 Text(
-                    text = "该选项不会自动计算最优关卡，请手动选择关卡",
+                    text = stringResource(R.string.specified_drops_no_optimal),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer,
                     modifier = Modifier.padding(8.dp)
@@ -78,7 +80,7 @@ fun SpecifiedDropsSection(
             }
 
             ItemButtonGroup(
-                label = "材料",
+                label = stringResource(R.string.material_label),
                 selectedValue = config.dropsItemId,
                 items = itemIds,
                 onItemSelected = { onConfigChange(config.copy(dropsItemId = it)) },
@@ -92,7 +94,7 @@ fun SpecifiedDropsSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "目标数量",
+                    text = stringResource(R.string.target_quantity),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f)
                 )

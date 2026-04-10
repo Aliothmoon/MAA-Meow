@@ -82,6 +82,8 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import androidx.compose.ui.res.stringResource
+import com.aliothmoon.maameow.R
 
 
 @Composable
@@ -132,20 +134,22 @@ fun HomeView(
 
     // 发现更新弹窗
     startupDialog?.let { result ->
+        val appVersionFmt = stringResource(R.string.update_app_version)
+        val resourceVersionFmt = stringResource(R.string.update_resource_version_label)
         AdaptiveTaskPromptDialog(
             visible = true,
-            title = "发现新版本",
+            title = stringResource(R.string.update_found_title),
             message = buildString {
-                result.appUpdate?.let { append("应用版本: ${it.version}\n") }
+                result.appUpdate?.let { append(String.format(appVersionFmt, it.version) + "\n") }
                 result.resourceUpdate?.let {
                     val display = ResourceDownloader.formatVersionForDisplay(it.version)
-                    append("资源版本: $display")
+                    append(String.format(resourceVersionFmt, display))
                 }
             },
             icon = Icons.Rounded.Info,
-            confirmText = "下载并更新",
+            confirmText = stringResource(R.string.download_and_update),
             confirmColor = Color(0xFF4CAF50),
-            dismissText = "以后再说",
+            dismissText = stringResource(R.string.later),
             onConfirm = {
                 if (result.appUpdate != null) {
                     updateViewModel.confirmAppDownload(result.appUpdate.version)
@@ -161,9 +165,9 @@ fun HomeView(
     if (uiState.showRunModeUnsupportedDialog) {
         AdaptiveTaskPromptDialog(
             visible = true,
-            title = "模式不支持",
+            title = stringResource(R.string.mode_not_supported_title),
             message = uiState.runModeUnsupportedMessage,
-            confirmText = "我知道了",
+            confirmText = stringResource(R.string.got_it),
             dismissText = null,
             onConfirm = { viewModel.onDismissRunModeUnsupportedDialog() },
             onDismissRequest = { viewModel.onDismissRunModeUnsupportedDialog() }
@@ -186,7 +190,7 @@ fun HomeView(
                     }) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = "设置"
+                            contentDescription = stringResource(R.string.settings)
                         )
                     }
                 },
@@ -282,7 +286,7 @@ fun HomeView(
                             enabled = !uiState.isLoading
                         ) {
                             Text(
-                                text = "重新加载服务",
+                                text = stringResource(R.string.reload_service),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium
                             )
@@ -310,7 +314,7 @@ fun HomeView(
                         enabled = !uiState.isLoading
                     ) {
                         Text(
-                            text = "关闭所有服务",
+                                text = stringResource(R.string.close_all_services),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Medium
                         )
@@ -334,16 +338,16 @@ fun HomeView(
                 ShizukuInstallHelper.ShizukuStatus.NOT_INSTALLED -> {
                     AdaptiveTaskPromptDialog(
                         visible = true,
-                        title = "未检测到 Shizuku",
-                        message = "本应用依赖 Shizuku 服务运行，检测到设备未安装 Shizuku，请先安装。",
+                        title = stringResource(R.string.shizuku_not_found_title),
+                        message = stringResource(R.string.shizuku_not_found_msg),
                         icon = Icons.Rounded.Warning,
-                        confirmText = "快捷安装 Shizuku",
+                        confirmText = stringResource(R.string.quick_install_shizuku),
                         onConfirm = { ShizukuInstallHelper.installShizuku(context) },
-                        neutralText = if (permissionState.rootAvailable) "切换至 Root 模式" else null,
+                        neutralText = if (permissionState.rootAvailable) stringResource(R.string.switch_to_root_mode) else null,
                         onNeutralClick = {
                             skipScope.launch { permissionManager.setStartupBackend(RemoteBackend.ROOT) }
                         },
-                        dismissText = "跳过检查 (不推荐)",
+                        dismissText = stringResource(R.string.skip_check_not_recommended),
                         onDismissRequest = {
                             skipScope.launch { appSettingsManager.setSkipShizukuCheck(true) }
                         },
@@ -354,10 +358,10 @@ fun HomeView(
                 ShizukuInstallHelper.ShizukuStatus.APP_NOT_RUNNING -> {
                     AdaptiveTaskPromptDialog(
                         visible = true,
-                        title = "Shizuku 未启动",
-                        message = "检测到 Shizuku 已安装但服务未启动，请打开 Shizuku 应用并启动服务。",
+                        title = stringResource(R.string.shizuku_not_started_title),
+                        message = stringResource(R.string.shizuku_not_started_msg),
                         icon = Icons.Rounded.Build,
-                        confirmText = "打开 Shizuku",
+                        confirmText = stringResource(R.string.open_shizuku),
                         onConfirm = {
                             runCatching {
                                 val intent =
@@ -365,11 +369,11 @@ fun HomeView(
                                 if (intent != null) context.startActivity(intent)
                             }
                         },
-                        neutralText = if (permissionState.rootAvailable) "切换至 Root 模式" else null,
+                        neutralText = if (permissionState.rootAvailable) stringResource(R.string.switch_to_root_mode) else null,
                         onNeutralClick = {
                             skipScope.launch { permissionManager.setStartupBackend(RemoteBackend.ROOT) }
                         },
-                        dismissText = "跳过检查 (不推荐)",
+                        dismissText = stringResource(R.string.skip_check_not_recommended),
                         onDismissRequest = {
                             skipScope.launch { appSettingsManager.setSkipShizukuCheck(true) }
                         },
@@ -380,10 +384,10 @@ fun HomeView(
                 ShizukuInstallHelper.ShizukuStatus.SUI_AVAILABLE -> {
                     AdaptiveTaskPromptDialog(
                         visible = true,
-                        title = "检测到 Sui",
-                        message = "当前使用 Sui 提供 Shizuku 服务，Sui 以 Root 权限运行，MaaMeow 可能无法正常工作，请以实际测试为主",
+                        title = stringResource(R.string.sui_detected_title),
+                        message = stringResource(R.string.sui_detected_msg),
                         icon = Icons.Rounded.Info,
-                        confirmText = "知道了",
+                        confirmText = stringResource(R.string.got_it),
                         onConfirm = {
                             skipScope.launch { appSettingsManager.setSkipShizukuCheck(true) }
                         },
@@ -428,7 +432,7 @@ private fun ScreenInfoCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "屏幕分辨率",
+                    text = stringResource(R.string.screen_resolution),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
@@ -445,13 +449,13 @@ private fun ScreenInfoCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "资源版本",
+                    text = stringResource(R.string.resource_version_label),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = resourceVersion.ifBlank { "未安装" },
+                    text = resourceVersion.ifBlank { stringResource(R.string.not_installed) },
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (resourceVersion.isBlank())
                         MaterialTheme.colorScheme.error
@@ -465,7 +469,7 @@ private fun ScreenInfoCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "服务状态",
+                    text = stringResource(R.string.service_status),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
@@ -529,15 +533,15 @@ private fun RunModeCard(
         ) {
             Column {
                 Text(
-                    text = "运行模式",
+                    text = stringResource(R.string.run_mode),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = when (runMode) {
-                        RunMode.FOREGROUND -> "前台模式：悬浮窗控制"
-                        RunMode.BACKGROUND -> "后台模式：应用内运行"
+                        RunMode.FOREGROUND -> stringResource(R.string.run_mode_foreground)
+                        RunMode.BACKGROUND -> stringResource(R.string.run_mode_background)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -568,8 +572,8 @@ private fun PermissionRow(
     granted: Boolean,
     onClick: () -> Unit,
     isLoading: Boolean = false,
-    grantedText: String = "已授权",
-    ungrantedText: String = "请求权限",
+    grantedText: String = stringResource(R.string.granted),
+    ungrantedText: String = stringResource(R.string.request_permission),
     contentColor: Color
 ) {
     Row(
@@ -630,7 +634,7 @@ private fun PermissionCard(
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             Text(
-                text = "权限管理",
+                text = stringResource(R.string.permission_management),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Medium,
                 color = contentColor,
@@ -654,7 +658,7 @@ private fun PermissionCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (expandedPermissions) "收起其他权限" else "展开其他权限",
+                    text = if (expandedPermissions) stringResource(R.string.collapse_other_permissions) else stringResource(R.string.expand_other_permissions),
                     style = MaterialTheme.typography.bodySmall,
                     color = contentColor.copy(alpha = 0.7f)
                 )
@@ -669,33 +673,33 @@ private fun PermissionCard(
             AnimatedVisibility(visible = expandedPermissions) {
                 Column {
                     PermissionRow(
-                        title = "悬浮窗权限",
+                        title = stringResource(R.string.perm_overlay),
                         granted = permissionState.overlay,
                         onClick = onRequestOverlay,
                         contentColor = contentColor
                     )
                     PermissionRow(
-                        title = "外部存储权限",
+                        title = stringResource(R.string.perm_storage),
                         granted = permissionState.storage,
                         onClick = onRequestStorage,
                         contentColor = contentColor
                     )
                     PermissionRow(
-                        title = "电源管理白名单",
+                        title = stringResource(R.string.perm_battery_whitelist),
                         granted = permissionState.batteryWhitelist,
                         onClick = onRequestBatteryWhitelist,
-                        grantedText = "已添加",
+                        grantedText = stringResource(R.string.perm_battery_added),
                         contentColor = contentColor
                     )
                     PermissionRow(
-                        title = "无障碍权限",
+                        title = stringResource(R.string.perm_accessibility),
                         granted = permissionState.accessibility,
                         onClick = onRequestAccessibility,
-                        ungrantedText = if (permissionState.remoteAccessGranted) "快捷授权" else "请求权限",
+                        ungrantedText = if (permissionState.remoteAccessGranted) stringResource(R.string.perm_quick_grant) else stringResource(R.string.request_permission),
                         contentColor = contentColor
                     )
                     PermissionRow(
-                        title = "通知权限",
+                        title = stringResource(R.string.perm_notification),
                         granted = permissionState.notification,
                         onClick = onRequestNotification,
                         contentColor = contentColor
@@ -729,7 +733,7 @@ private fun ForegroundModeSection(
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
-                    text = "分辨率调整",
+                    text = stringResource(R.string.resolution_adjustment),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -752,7 +756,7 @@ private fun ForegroundModeSection(
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                     ) {
                         Text(
-                            text = "调整为适配分辨率",
+                            text = stringResource(R.string.adjust_to_fit_resolution),
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
                             maxLines = 1
@@ -770,7 +774,7 @@ private fun ForegroundModeSection(
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                     ) {
                         Text(
-                            text = "重置分辨率",
+                            text = stringResource(R.string.reset_resolution),
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
                             maxLines = 1
@@ -796,16 +800,16 @@ private fun ForegroundModeSection(
             ) {
                 Column {
                     Text(
-                        text = "悬浮窗模式",
+                        text = stringResource(R.string.floating_window_mode),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = if (overlayControlMode == OverlayControlMode.ACCESSIBILITY)
-                            "音量上下键同时按切换面板"
+                            stringResource(R.string.overlay_volume_keys)
                         else
-                            "点击悬浮球切换面板",
+                            stringResource(R.string.overlay_floating_ball),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -853,7 +857,7 @@ private fun ForegroundModeSection(
                 )
             } else {
                 Text(
-                    text = if (isShowControlOverlay) "关闭操作面板" else "打开操作面板",
+                    text = if (isShowControlOverlay) stringResource(R.string.close_panel) else stringResource(R.string.open_panel),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium
                 )

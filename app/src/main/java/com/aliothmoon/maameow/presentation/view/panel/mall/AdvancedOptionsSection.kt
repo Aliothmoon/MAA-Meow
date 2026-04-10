@@ -16,8 +16,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.MallConfig
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
@@ -29,7 +31,7 @@ fun AdvancedOptionsSection(config: MallConfig, onConfigChange: (MallConfig) -> U
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
         Text(
-            "高级选项",
+            stringResource(R.string.advanced_options),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
         )
@@ -44,7 +46,7 @@ fun AdvancedOptionsSection(config: MallConfig, onConfigChange: (MallConfig) -> U
                 CheckBoxWithLabel(
                     checked = config.forceShoppingIfCreditFull,
                     onCheckedChange = { onConfigChange(config.copy(forceShoppingIfCreditFull = it)) },
-                    label = "信用溢出时无视黑名单",
+                    label = stringResource(R.string.ignore_blacklist_on_overflow),
                     enabled = config.shopping
                 )
                 Spacer(modifier = Modifier.width(4.dp))
@@ -54,7 +56,7 @@ fun AdvancedOptionsSection(config: MallConfig, onConfigChange: (MallConfig) -> U
             }
             ExpandableTipContent(
                 visible = forceShoppingTipExpanded,
-                tipText = "信用点即将溢出时，强制购买黑名单物品避免浪费"
+                tipText = stringResource(R.string.ignore_blacklist_tip)
             )
         }
 
@@ -68,7 +70,7 @@ fun AdvancedOptionsSection(config: MallConfig, onConfigChange: (MallConfig) -> U
                 CheckBoxWithLabel(
                     checked = config.onlyBuyDiscount,
                     onCheckedChange = { onConfigChange(config.copy(onlyBuyDiscount = it)) },
-                    label = "只购买打折的信用商品",
+                    label = stringResource(R.string.buy_discount_only),
                     enabled = config.shopping
                 )
                 Spacer(modifier = Modifier.width(4.dp))
@@ -78,7 +80,7 @@ fun AdvancedOptionsSection(config: MallConfig, onConfigChange: (MallConfig) -> U
             }
             ExpandableTipContent(
                 visible = onlyDiscountTipExpanded,
-                tipText = "注意：可能会导致信用点数溢出！仍然会购买未打折的白名单物品！"
+                tipText = stringResource(R.string.buy_discount_only_tip)
             )
         }
 
@@ -92,7 +94,7 @@ fun AdvancedOptionsSection(config: MallConfig, onConfigChange: (MallConfig) -> U
                 CheckBoxWithLabel(
                     checked = config.reserveMaxCredit,
                     onCheckedChange = { onConfigChange(config.copy(reserveMaxCredit = it)) },
-                    label = "信用点低于 300 时停止购买",
+                    label = stringResource(R.string.stop_below_300),
                     enabled = config.shopping
                 )
                 Spacer(modifier = Modifier.width(4.dp))
@@ -102,7 +104,7 @@ fun AdvancedOptionsSection(config: MallConfig, onConfigChange: (MallConfig) -> U
             }
             ExpandableTipContent(
                 visible = reserveCreditTipExpanded,
-                tipText = "低于 300 信用点也仍然会购买白名单物品！"
+                tipText = stringResource(R.string.stop_below_300_tip)
             )
         }
     }

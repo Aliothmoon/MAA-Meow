@@ -39,9 +39,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ITextField
@@ -76,7 +78,7 @@ fun ProfileManagementPanel(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "配置管理",
+                text = stringResource(R.string.profile_management),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -87,7 +89,7 @@ fun ProfileManagementPanel(
                 shape = RoundedCornerShape(4.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
             ) {
-                Text("新建配置", color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.create_profile), color = MaterialTheme.colorScheme.primary)
             }
         }
 
@@ -134,12 +136,12 @@ fun ProfileManagementPanel(
     } ?: ""
     AdaptiveTaskPromptDialog(
         visible = deleteConfirmProfileId != null,
-        title = "确认删除",
-        message = "确定要删除配置「$deleteProfileName」吗？此操作不可撤销。",
+        title = stringResource(R.string.confirm_delete_title),
+        message = stringResource(R.string.profile_delete_confirm, deleteProfileName),
         icon = Icons.Default.Warning,
         confirmColor = MaterialTheme.colorScheme.error,
-        confirmText = "删除",
-        dismissText = "取消",
+        confirmText = stringResource(R.string.delete),
+        dismissText = stringResource(R.string.cancel),
         onConfirm = {
             deleteConfirmProfileId?.let { onDelete(it) }
             deleteConfirmProfileId = null
@@ -217,7 +219,7 @@ private fun ProfileCard(
                 ) {
                     Icon(
                         Icons.Default.Edit,
-                        contentDescription = "重命名",
+                        contentDescription = stringResource(R.string.rename),
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -228,7 +230,7 @@ private fun ProfileCard(
                 ) {
                     Icon(
                         Icons.Default.ContentCopy,
-                        contentDescription = "复制",
+                        contentDescription = stringResource(R.string.copy),
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -240,7 +242,7 @@ private fun ProfileCard(
                 ) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = "删除",
+                        contentDescription = stringResource(R.string.delete),
                         modifier = Modifier.size(16.dp),
                         tint = if (canDelete) {
                             MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
@@ -276,7 +278,7 @@ private fun ProfileCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     TextButton(onClick = onRenameConfirm) {
-                        Text("确定", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.confirm), style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }

@@ -9,6 +9,7 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.manager.PermissionManager
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.utils.Misc
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,10 +54,10 @@ class SettingsViewModel(
         viewModelScope.launch {
             try {
                 configBackupManager.exportTo(outputStream)
-                _backupMessage.value = "配置导出成功"
+                _backupMessage.value = app.getString(R.string.config_export_success)
             } catch (e: Exception) {
                 Timber.e(e, "导出配置失败")
-                _backupMessage.value = "导出失败: ${e.message}"
+                _backupMessage.value = app.getString(R.string.export_failed, e.message)
             }
         }
     }
@@ -68,7 +69,7 @@ class SettingsViewModel(
                 _showRestartDialog.value = true
             } catch (e: Exception) {
                 Timber.e(e, "导入配置失败")
-                _backupMessage.value = "导入失败: ${e.message}"
+                _backupMessage.value = app.getString(R.string.import_failed, e.message)
             }
         }
     }
@@ -150,6 +151,15 @@ class SettingsViewModel(
     fun setThemeMode(mode: AppSettingsManager.ThemeMode) {
         viewModelScope.launch {
             appSettingsManager.setThemeMode(mode)
+        }
+    }
+
+    val appLanguage: StateFlow<String> = appSettingsManager.appLanguage
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    fun setAppLanguage(tag: String) {
+        viewModelScope.launch {
+            appSettingsManager.setAppLanguage(tag)
         }
     }
 }

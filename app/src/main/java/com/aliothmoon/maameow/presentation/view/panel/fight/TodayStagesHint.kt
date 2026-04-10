@@ -27,8 +27,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.StageGroup
 
 /**
@@ -88,9 +90,12 @@ fun TodayStagesHint(
                         )
                     }
                     // 资源收集活动提示
-                    if (isResourceCollectionOpen && activityTips.none { it.contains("资源收集") }) {
+                    if (isResourceCollectionOpen && activityTips.none {
+                            it.contains(stringResource(R.string.resource_collection))
+                        }
+                    ) {
                         Text(
-                            text = "· 资源收集活动进行中（资源本全开放）",
+                            text = "\u00b7 ${stringResource(R.string.resource_collection_hint)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -111,14 +116,18 @@ fun TodayStagesHint(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "今日关卡小提示（$todayName）",
+                        text = stringResource(R.string.today_stage_hint_title, todayName),
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = if (expanded) "收起" else "展开",
+                        contentDescription = if (expanded) {
+                            stringResource(R.string.collapse)
+                        } else {
+                            stringResource(R.string.expand)
+                        },
                         tint = MaterialTheme.colorScheme.onSecondaryContainer,
                         modifier = Modifier.size(20.dp)
                     )
@@ -149,7 +158,7 @@ fun TodayStagesHint(
             } else if (activityTips.isEmpty() && !isResourceCollectionOpen) {
                 // 无活动也无常驻提示时显示标题行
                 Text(
-                    text = "今日关卡小提示（$todayName）",
+                    text = stringResource(R.string.today_stage_hint_title, todayName),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer

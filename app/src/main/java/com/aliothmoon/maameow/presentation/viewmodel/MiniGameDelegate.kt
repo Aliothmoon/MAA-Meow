@@ -1,5 +1,7 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
+import android.app.Application
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.activity.MiniGame
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
@@ -28,6 +30,7 @@ data class MiniGameUiState(
 
 class MiniGameDelegate(
     activityManager: ActivityManager,
+    private val app: Application,
     private val compositionService: MaaCompositionService,
     private val scope: CoroutineScope,
 ) {
@@ -75,23 +78,25 @@ class MiniGameDelegate(
 
     fun onStart() {
         if (findGame(_state.value.selectedTaskName)?.isUnsupported == true) {
-            _state.update { it.copy(statusMessage = "当前版本不支持此任务") }
+            _state.update { it.copy(statusMessage = app.getString(R.string.version_not_supported)) }
             return
         }
 
         scope.launch {
             val task = buildTaskParams()
-            _state.update { it.copy(statusMessage = "正在启动...") }
+            _state.update { it.copy(statusMessage = app.getString(R.string.task_starting)) }
             val result = compositionService.startCopilot(listOf(task))
-            _state.update { it.copy(statusMessage = formatStartResult(result, "小游戏任务已启动")) }
+            _state.update {
+                it.copy(statusMessage = app.formatStartResult(result, app.getString(R.string.mini_game_task_started)))
+            }
         }
     }
 
     fun onStop() {
         scope.launch {
-            _state.update { it.copy(statusMessage = "正在停止...") }
+            _state.update { it.copy(statusMessage = app.getString(R.string.task_stopping)) }
             compositionService.stop()
-            _state.update { it.copy(statusMessage = "已停止") }
+            _state.update { it.copy(statusMessage = app.getString(R.string.task_stopped)) }
         }
     }
 
@@ -110,13 +115,15 @@ class MiniGameDelegate(
         )
     }
 
+    val events: List<Pair<String, String>>
+        get() = listOf(
+            "" to app.getString(R.string.mini_game_event_none),
+            "支援作战平台" to app.getString(R.string.mini_game_event_support_platform),
+            "游侠" to app.getString(R.string.mini_game_event_ranger),
+            "诡影迷踪" to app.getString(R.string.mini_game_event_phantom_tracking),
+        )
+
     companion object {
         val ENDINGS = listOf("A", "B", "C", "D", "E")
-        val EVENTS = listOf(
-            "" to "不选择",
-            "支援作战平台" to "支援作战平台",
-            "游侠" to "游侠",
-            "诡影迷踪" to "诡影迷踪",
-        )
     }
 }

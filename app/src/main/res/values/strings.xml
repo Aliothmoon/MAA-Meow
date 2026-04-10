@@ -179,4 +179,760 @@
     <string name="maa_screencap_cost">截图耗时 min/avg/max(ms): %1$s / %2$s / %3$s (%4$s)</string>
     <string name="maa_sanity_recovery">理智将在 %1$s 回满。(%2$s 后)</string>
 
+    <!-- common ui -->
+    <string name="confirm">确认</string>
+    <string name="cancel">取消</string>
+    <string name="hint">提示</string>
+    <string name="ok">知道了</string>
+    <string name="still_launch">仍然启动</string>
+    <string name="launch_warning_title">启动警告</string>
+    <string name="view_log">查看日志</string>
+    <string name="launch_failed_title">启动失败</string>
+    <string name="task_stopping">正在停止…</string>
+    <string name="task_stopped">已停止</string>
+    <string name="task_starting">正在启动…</string>
+    <string name="navigation">导航</string>
+    <string name="hint_icon_desc">提示</string>
+    <string name="delete">删除</string>
+    <string name="add">添加</string>
+    <string name="done">完成</string>
+    <string name="retry">重试</string>
+    <string name="close">关闭</string>
+    <string name="export">导出</string>
+    <string name="clear">清空</string>
+    <string name="sort_mode">排序</string>
+    <string name="collapse">收起</string>
+    <string name="expand">展开</string>
+    <string name="warning">警告</string>
+    <string name="settings">设置</string>
+    <string name="got_it">知道了</string>
+
+    <!-- service status -->
+    <string name="status_service_error">服务异常</string>
+    <string name="status_connecting">服务连接中…</string>
+    <string name="status_disconnected">未连接</string>
+    <string name="status_resource_loading">资源加载中…</string>
+    <string name="status_resource_failed">资源加载失败</string>
+    <string name="status_resource_not_loaded">资源未加载</string>
+    <string name="status_task_error">任务异常</string>
+    <string name="status_task_starting">任务启动中…</string>
+    <string name="status_running">运行中</string>
+    <string name="status_ready">就绪</string>
+    <string name="backend_unavailable">%1$s不可用，请检查对应服务是否启动</string>
+    <string name="backend_auth_failed">%1$s授权失败</string>
+    <string name="permission_not_granted">请先授予%1$s</string>
+    <string name="perm_overlay">悬浮窗权限</string>
+    <string name="perm_storage">外部存储权限</string>
+    <string name="perm_accessibility">无障碍权限</string>
+    <string name="perm_notification">通知权限</string>
+    <string name="perm_battery_whitelist">电源管理白名单</string>
+    <string name="perm_battery_added">已添加</string>
+    <string name="perm_quick_grant">快捷授权</string>
+    <string name="missing_permissions_msg">请先授予以下权限: %1$s</string>
+    <string name="overlay_launch_failed">启动悬浮窗失败: %1$s</string>
+    <string name="overlay_stop_failed">停止悬浮窗失败: %1$s</string>
+    <string name="service_reload_failed">重新加载服务失败: %1$s</string>
+    <string name="service_close_failed">关闭服务失败: %1$s</string>
+    <string name="item_not_acquired">%1$s未获取</string>
+    <string name="resolution_change_failed">修改分辨率失败: %1$s</string>
+    <string name="resolution_reset_failed">重置分辨率失败: %1$s</string>
+    <string name="resolution_not_16_9">当前分辨率不是 16:9，请使用后台任务或调整分辨率</string>
+    <string name="android_10_bg_mode_unsupported">Android 10 及以下系统不支持后台模式，请使用前台模式。</string>
+
+    <!-- task panel -->
+    <string name="task_terminated_error">任务异常终止，详细信息请查看日志</string>
+    <string name="task_ended">任务已结束，详细信息请查看日志</string>
+    <string name="task_completed_title">任务完成</string>
+    <string name="maa_start_success">Maa启动成功</string>
+
+    <!-- mini game / toolbox -->
+    <string name="version_not_supported">当前版本不支持此任务</string>
+    <string name="mini_game_task_started">小游戏任务已启动</string>
+    <string name="no_selection">不选择</string>
+    <string name="tab_mini_game">小游戏</string>
+    <string name="tab_recruit_calc">公招识别</string>
+    <string name="tab_depot">仓库识别</string>
+    <string name="tab_oper_box">干员识别</string>
+    <string name="recognition_task_started">识别任务已启动</string>
+    <string name="starting_recruit_recognition">正在启动公招识别…</string>
+    <string name="starting_depot_recognition">正在启动仓库识别…</string>
+    <string name="starting_oper_box_recognition">正在启动干员识别…</string>
+
+    <!-- settings / backup -->
+    <string name="config_export_success">配置导出成功</string>
+    <string name="export_failed">导出失败: %1$s</string>
+    <string name="import_failed">导入失败: %1$s</string>
+    <string name="auto_download_app_failed">自动下载App更新失败</string>
+    <string name="auto_download_resource_failed">自动下载资源更新失败</string>
+
+    <!-- task start errors -->
+    <string name="game_not_running_warning">检测到游戏未运行，继续执行可能直接失败，是否仍然启动？</string>
+    <string name="resource_load_failed_msg">资源加载失败，请尝试重新初始化资源</string>
+    <string name="maacore_init_failed">MaaCore 初始化失败，请重启应用</string>
+    <string name="touch_mode_failed">触控模式设置失败，请重启应用</string>
+    <string name="portrait_orientation_error">当前屏幕为竖屏，请切换为横屏后启动</string>
+    <string name="display_mode_failed">显示模式设置失败，请重试</string>
+    <string name="virtual_display_failed">虚拟屏幕启动失败，请检查服务权限</string>
+    <string name="maacore_connect_timeout">连接 MaaCore 超时，请重试</string>
+    <string name="maacore_start_failed">MaaCore 启动失败，请检查任务配置</string>
+
+    <!-- home view -->
+    <string name="update_found_title">发现新版本</string>
+    <string name="update_app_version">应用版本: %1$s</string>
+    <string name="update_resource_version_label">资源版本: %1$s</string>
+    <string name="download_and_update">下载并更新</string>
+    <string name="later">以后再说</string>
+    <string name="mode_not_supported_title">模式不支持</string>
+    <string name="shizuku_not_found_title">未检测到 Shizuku</string>
+    <string name="shizuku_not_found_msg">本应用依赖 Shizuku 服务运行，检测到设备未安装 Shizuku，请先安装。</string>
+    <string name="quick_install_shizuku">快捷安装 Shizuku</string>
+    <string name="switch_to_root_mode">切换至 Root 模式</string>
+    <string name="skip_check_not_recommended">跳过检查 (不推荐)</string>
+    <string name="shizuku_not_started_title">Shizuku 未启动</string>
+    <string name="shizuku_not_started_msg">检测到 Shizuku 已安装但服务未启动，请打开 Shizuku 应用并启动服务。</string>
+    <string name="open_shizuku">打开 Shizuku</string>
+    <string name="sui_detected_title">检测到 Sui</string>
+    <string name="sui_detected_msg">当前使用 Sui 提供 Shizuku 服务，Sui 以 Root 权限运行，MaaMeow 可能无法正常工作，请以实际测试为主</string>
+    <string name="screen_resolution">屏幕分辨率</string>
+    <string name="resource_version_label">资源版本</string>
+    <string name="not_installed">未安装</string>
+    <string name="service_status">服务状态</string>
+    <string name="run_mode">运行模式</string>
+    <string name="run_mode_foreground">前台模式：悬浮窗控制</string>
+    <string name="run_mode_background">后台模式：应用内运行</string>
+    <string name="granted">已授权</string>
+    <string name="request_permission">请求权限</string>
+    <string name="permission_management">权限管理</string>
+    <string name="collapse_other_permissions">收起其他权限</string>
+    <string name="expand_other_permissions">展开其他权限</string>
+    <string name="resolution_adjustment">分辨率调整</string>
+    <string name="adjust_to_fit_resolution">调整为适配分辨率</string>
+    <string name="reset_resolution">重置分辨率</string>
+    <string name="floating_window_mode">悬浮窗模式</string>
+    <string name="overlay_volume_keys">音量上下键同时按切换面板</string>
+    <string name="overlay_floating_ball">点击悬浮球切换面板</string>
+    <string name="close_panel">关闭操作面板</string>
+    <string name="open_panel">打开操作面板</string>
+    <string name="reload_service">重新加载服务</string>
+    <string name="close_all_services">关闭所有服务</string>
+    <string name="close_floating_window">关闭悬浮窗</string>
+    <string name="open_floating_window_mode">开启悬浮窗模式</string>
+
+    <!-- notification settings -->
+    <string name="channel_serverchan">Server酱</string>
+    <string name="channel_dingtalk">钉钉机器人</string>
+    <string name="channel_custom_webhook">自定义 Webhook</string>
+    <string name="notification_settings_title">通知设置</string>
+    <string name="internal_notification">内部通知</string>
+    <string name="notification_reminder_title">通知提醒</string>
+    <string name="notification_toast_title">弹出提示</string>
+    <string name="test_notification_content">这是一条测试通知</string>
+    <string name="send_test_notification">发送测试通知</string>
+    <string name="external_notification">外部通知</string>
+    <string name="notify_on_task_complete">任务完成时通知</string>
+    <string name="notify_on_task_error">任务出错时通知</string>
+    <string name="notify_on_service_crash">服务异常终止时通知</string>
+    <string name="include_log_details">附带日志详情</string>
+    <string name="notification_channel_section">通知渠道</string>
+    <string name="server_address">服务器地址</string>
+    <string name="optional">可选</string>
+    <string name="optional_signing_key">可选，加签密钥</string>
+    <string name="use_ssl">使用 SSL</string>
+    <string name="require_auth">需要认证</string>
+    <string name="optional_when_auth">可选，开启认证时必填</string>
+    <string name="request_body_template">请求体模板</string>
+    <string name="placeholder_hint">支持占位符: {title} {content} {time}</string>
+
+    <!-- background task view -->
+    <string name="needs_permission_title">需要%1$s权限</string>
+    <string name="needs_permission_msg">后台任务页面依赖%1$s服务，授权成功前将持续显示该提示。</string>
+    <string name="permission_not_acquired_retry">%1$s未获取，请重试</string>
+    <string name="maa_service_crashed">MaaService 异常关闭，请尝试重新启动</string>
+    <string name="game_process_died">游戏进程未启动或被异常关闭</string>
+    <string name="start_task">开始任务</string>
+    <string name="stop_task">停止任务</string>
+    <string name="more_actions">更多操作</string>
+    <string name="confirm_close_title">确认关闭</string>
+    <string name="confirm_close_msg">任务正在运行中，确认关闭应用吗？</string>
+    <string name="quick_actions">快捷操作</string>
+    <string name="screen_off_idle">熄屏挂机</string>
+    <string name="close_game">关闭游戏</string>
+    <string name="game_muted">游戏已静音</string>
+    <string name="mute_game_sound">关闭游戏声音</string>
+    <string name="auto_settings">自动设置</string>
+    <string name="mute_on_game_launch">游戏启动时关闭游戏声音</string>
+    <string name="close_game_on_task_end">任务自动结束时关闭游戏</string>
+    <string name="screen_off_on_idle">熄屏挂机时关闭屏幕</string>
+    <string name="show_touch_preview">显示触摸预览</string>
+    <string name="confirm_hardware_screen_off_title">确认开启硬件熄屏？</string>
+    <string name="confirm_hardware_screen_off_msg">开启后屏幕将完全熄灭，进入极致省电状态。\n• 唤醒说明：需按两次电源键（先亮锁屏，再解锁定）。\n• 屏保模式：不开启则显示屏保时钟，可随时查看任务进度与电量。</string>
+
+    <!-- virtual display preview -->
+    <string name="pending">待执行</string>
+    <string name="waiting_for_screen">等待画面中…</string>
+    <string name="game_running">游戏运行中</string>
+    <string name="game_terminated">游戏终止</string>
+    <string name="standby">待机</string>
+
+    <!-- settings view -->
+    <string name="import_success_title">导入成功</string>
+    <string name="import_success_msg">配置已导入完成，需要重启应用以使所有设置生效。</string>
+    <string name="restart_now">立即重启</string>
+    <string name="restart_later">稍后重启</string>
+    <string name="enable_debug_mode_title">启用调试模式</string>
+    <string name="enable_debug_mode_msg">启用调试模式后将重启服务以记录详细日志。\n\n请在重启后重新操作以复现问题，相关日志将被完整记录。</string>
+    <string name="confirm_restart">确认重启</string>
+    <string name="settings_title">设置</string>
+    <string name="update_management">更新管理</string>
+    <string name="reinit_resources">重新初始化资源</string>
+    <string name="reinit_resources_desc">从内置资源包重新解压</string>
+    <string name="auto_check_update_title">启动时检查更新</string>
+    <string name="auto_check_update_desc">启动应用时自动检查应用和资源更新</string>
+    <string name="auto_download_update_title">自动下载更新</string>
+    <string name="auto_download_update_desc">检测到更新后自动下载，无需手动确认</string>
+    <string name="logs_section">日志</string>
+    <string name="log_history">历史日志</string>
+    <string name="log_history_desc">查看任务执行日志</string>
+    <string name="error_log">错误日志</string>
+    <string name="error_log_desc">查看应用异常和错误记录</string>
+    <string name="export_log_zip">导出日志压缩包</string>
+    <string name="export_log_zip_desc">打包所有日志为 ZIP 文件分享</string>
+    <string name="export_logs">导出日志</string>
+    <string name="debug_mode_title">调试模式</string>
+    <string name="debug_mode_desc">启用后记录详细日志信息</string>
+    <string name="other_settings">其他设置</string>
+    <string name="skip_shizuku_check">跳过 Shizuku 检查</string>
+    <string name="data_management">数据管理</string>
+    <string name="export_config">导出配置</string>
+    <string name="export_config_desc">将所有设置和任务配置导出为文件</string>
+    <string name="import_config">导入配置</string>
+    <string name="import_config_desc">从文件恢复设置和任务配置</string>
+    <string name="about_section">关于</string>
+    <string name="version">版本</string>
+    <string name="developer">开发者</string>
+    <string name="qq_group_title">问题反馈 QQ 群</string>
+    <string name="qq_group_desc">遇到问题或有建议？欢迎加群交流反馈</string>
+    <string name="give_star">⭐ 喜欢就给个 Star 吧</string>
+    <string name="theme_mode">主题模式</string>
+    <string name="theme_white">白色</string>
+    <string name="theme_dark">暗色</string>
+    <string name="theme_pure_dark">纯黑</string>
+    <string name="update_channel_section">更新渠道</string>
+    <string name="update_channel_section_desc">选择接收稳定版或公测版更新</string>
+    <string name="startup_mode_section">启动模式</string>
+    <string name="startup_mode_section_desc">选择应用获取系统权限的方式</string>
+    <string name="language_section">语言</string>
+    <string name="language_system">跟随系统</string>
+    <string name="language_zh">中文</string>
+    <string name="language_en">English</string>
+
+    <!-- fight panel -->
+    <string name="tab_general">常规设置</string>
+    <string name="tab_advanced">高级设置</string>
+    <string name="bulong_tai_mode">博朗台模式</string>
+    <string name="bulong_tai_tip">等待理智恢复后再开始行动，在理智即将溢出时开始作战（无限吃药时不生效）</string>
+    <string name="custom_stage_code">自定义关卡代码</string>
+    <string name="custom_stage_tip">启用后可手动输入关卡代码，支持简写（如\"龙门币\"→\"CE-6\"）</string>
+    <string name="use_alternate_stage">使用备选关卡</string>
+    <string name="use_alternate_stage_tip">首选关卡不可用时自动使用备选关卡</string>
+    <string name="use_expiring_medicine">使用即将过期的理智药</string>
+    <string name="use_expiring_medicine_tip">优先使用48小时内过期的理智药</string>
+    <string name="hide_unavailable_stages">隐藏不可用关卡</string>
+    <string name="hide_unavailable_stages_tip">在关卡列表中隐藏当前不可用的关卡</string>
+    <string name="hide_proxy_ratio">隐藏代理倍率</string>
+    <string name="auto_reconnect">游戏掉线时自动重连</string>
+    <string name="auto_reconnect_tip">检测到游戏掉线时会自动尝试重连并继续作战</string>
+    <string name="proxy_ratio">代理倍率</string>
+    <string name="proxy_ratio_tip">• AUTO:\n自动识别关卡最大代理倍率, 保持最大代理倍率且使用理智药后理智不溢出\n\n• 数值 (1~6):\n按设定倍率执行代理\n若当前理智不足完成设定倍率 (如仅够 5 次 but 设为 6 倍), 则无法进入战斗\n 或者\n战斗次数不足完成设定倍率 (如仅够 5 次 but 设为 6 倍), 也将无法进入战斗\n\n• 不切换:\n不调整游戏内代理倍率设定</string>
+    <string name="stage_reset_current">当前/上次</string>
+    <string name="stage_reset_ignore">不切换</string>
+    <string name="unopened_stage_fallback">未开放关卡重置为</string>
+    <string name="stage_selection">关卡选择</string>
+    <string name="stage_manual_input_tip">可手动输入关卡代码，支持简写\n例如：龙门币→CE-6，经验→LS-6</string>
+    <string name="preferred_stage">首选关卡</string>
+    <string name="preferred_stage_placeholder">例如: CE-6 或 龙门币</string>
+    <string name="stage_not_open_today">「%1$s」今日不开放</string>
+    <string name="will_use_alternate">，将使用备选关卡</string>
+    <string name="alternate_stage_2">备选关卡2</string>
+    <string name="alternate_stage_2_placeholder">例如: CE-5</string>
+    <string name="alternate_stage_3">备选关卡3</string>
+    <string name="alternate_stage_3_placeholder">例如: CE-4</string>
+    <string name="alternate_stage_4">备选关卡4</string>
+    <string name="alternate_stage_4_placeholder">例如: CE-3</string>
+    <string name="permanent_stages">常驻关卡</string>
+    <string name="use_custom_annihilation">使用自定义剿灭</string>
+    <string name="annihilation_stage">剿灭关卡</string>
+    <string name="will_convert_to">将转换为: %1$s</string>
+    <string name="day_mon">周一</string>
+    <string name="day_tue">周二</string>
+    <string name="day_wed">周三</string>
+    <string name="day_thu">周四</string>
+    <string name="day_fri">周五</string>
+    <string name="day_sat">周六</string>
+    <string name="day_sun">周日</string>
+    <string name="enable_weekly_plan">启用周计划</string>
+    <string name="enable_weekly_plan_tip">启用后仅在勾选的日期执行该任务（使用游戏服务器时间，04:00 换日）</string>
+    <string name="use_medicine">使用理智药</string>
+    <string name="medicine_max_n">最多使用 N 个理智药</string>
+    <string name="specify_times">指定次数</string>
+    <string name="fight_n_times">战斗 N 次后停止</string>
+    <string name="fight_times_not_divisible">战斗次数 %1$s 无法被代理倍率 %2$s 整除，可能无法完全消耗理智</string>
+    <string name="specified_drops">指定材料掉落</string>
+    <string name="specified_drops_tip">刷到指定数量的材料后停止作战</string>
+    <string name="specified_drops_no_optimal">该选项不会自动计算最优关卡，请手动选择关卡</string>
+    <string name="material_label">材料</string>
+    <string name="target_quantity">目标数量</string>
+    <string name="allow_stone_use">允许保存源石使用</string>
+    <string name="stone_warning_msg">启用此选项后，源石使用设置将被保存。\n这可能导致意外消耗源石，请谨慎操作！</string>
+    <string name="confirm_enable">确认启用</string>
+    <string name="stone_not_saved_tip">此设置不会被保存，下次启动时将重置为关闭状态</string>
+    <string name="use_stone">使用源石</string>
+    <string name="resource_collection">资源收集</string>
+    <string name="resource_collection_hint">· 资源收集活动进行中（资源本全开放）</string>
+    <string name="today_stage_hint_title">今日关卡小提示（%1$s）</string>
+
+    <!-- mall panel -->
+    <string name="visit_friends">访问好友</string>
+    <string name="auto_shopping">信用交易所自动购物</string>
+    <string name="auto_shopping_tip">自动使用信用点购买商店中的物品</string>
+    <string name="credit_fight_tip">访问好友后借助战打一把 OF-1 赚 30 信用。\n关卡选择为 ｢当前/上次｣ 时此功能无效。\n别传 ｢火蓝之心｣ 关卡OF-1未解锁时请勿勾选。</string>
+    <string name="invalid_stage_warning">当前存在无法解析有效关卡的理智作战任务，本次不会借助战打一把 OF-1。</string>
+    <string name="credit_fight_requires_friend">借助战需要好友支援，确保好友列表有可用支援干员</string>
+    <string name="use_formation">使用编队</string>
+    <string name="priority_buy_section">优先购买物品</string>
+    <string name="drag_to_sort_tip">拖动调整购买优先级，越靠上优先级越高</string>
+    <string name="sort_mode_hint">当前处于排序模式，长按列表项可调整优先级，完成后点击勾选按钮退出</string>
+    <string name="normal_mode_hint">开启排序模式可调整优先级顺序，点击×删除</string>
+    <string name="enable_shopping_first">请先启用「购买信用商店物品」功能</string>
+    <string name="add_item">添加物品</string>
+    <string name="priority_buy_note1">* 优先购买列表中的物品会按顺序优先购买</string>
+    <string name="priority_buy_note2">* 黑名单物品不会被购买（除非信用溢出且启用强制购买）</string>
+    <string name="priority_buy_note3">* 借助战每日可获得额外信用点，但需要消耗好友支援次数</string>
+    <string name="blacklist_section">黑名单（不购买）</string>
+    <string name="blacklist_tip">黑名单中的物品不会被购买（除非启用「溢出时无视黑名单」）</string>
+    <string name="delete_item_hint">点击×删除物品</string>
+    <string name="empty_blacklist">暂无黑名单物品</string>
+    <string name="add_blacklist">添加黑名单</string>
+    <string name="empty_priority">暂无优先购买物品\n点击下方按钮添加</string>
+    <string name="drag_sort">拖动排序</string>
+    <string name="advanced_options">高级选项</string>
+    <string name="ignore_blacklist_on_overflow">信用溢出时无视黑名单</string>
+    <string name="ignore_blacklist_tip">信用点即将溢出时，强制购买黑名单物品避免浪费</string>
+    <string name="buy_discount_only">只购买打折的信用商品</string>
+    <string name="buy_discount_only_tip">注意：可能会导致信用点数溢出！仍然会购买未打折的白名单物品！</string>
+    <string name="stop_below_300">信用点低于 300 时停止购买</string>
+    <string name="stop_below_300_tip">低于 300 信用点也仍然会购买白名单物品！</string>
+    <string name="enter_item_name">输入物品名称</string>
+    <string name="item_name_placeholder">如：招聘许可</string>
+    <string name="enter_blacklist_item">输入不想购买的物品名称</string>
+    <string name="blacklist_placeholder">如：家具零件</string>
+
+    <!-- reclamation panel -->
+    <string name="instructions">说明</string>
+    <string name="theme">主题</string>
+    <string name="buy_store_after_task">任务完成后购买商店</string>
+    <string name="reclamation_archive_mode_tip">通过组装支援道具刷生息点数，需要有存档</string>
+    <string name="support_tool_name">支援道具名称</string>
+    <string name="support_tool_placeholder">荧光棒</string>
+    <string name="multiple_tools_semicolon_hint">多个道具用分号分隔</string>
+    <string name="increment_mode">增加方式</string>
+    <string name="max_craft_rounds_single">单次最大组装轮数</string>
+    <string name="default_max_rounds_value">16</string>
+    <string name="reclamation_notice">目前生息演算的支持仍处于中期阶段，使用时请注意以下几点。</string>
+    <string name="reclamation_method_new_run">通过开局刷点数（小心已有存档被删除）</string>
+    <string name="reclamation_new_run_note_1">1. 点数刷满后会输出「任务完成」，自动停止任务</string>
+    <string name="reclamation_new_run_note_2">2. 不要在生息演算的编队中有干员的情况下使用</string>
+    <string name="reclamation_new_run_note_3">3. 手动确认存档情况并删除，以免 MAA 删除你的珍贵存档</string>
+    <string name="reclamation_new_run_note_4">4. 导航还没写，不能从生息演算以外的位置开始任务</string>
+    <string name="reclamation_new_run_note_5">5. 如果任务过程中报错、点数没刷满就任务完成，请前往 GitHub 提交 Issue</string>
+    <string name="reclamation_method_archive">有存档通过制造刷点数（高级设置）</string>
+    <string name="reclamation_archive_note_1">1. 要求是结算后的第一天，且后续三天没有敌袭进入驻扎地</string>
+    <string name="reclamation_archive_note_2">2. 必须在进入大地图后的界面开始（能看到驻扎地的界面）</string>
+    <string name="reclamation_archive_note_3">3. 如果能制造的数量刚好是 99 的倍数会卡住，在存档前可以先用掉一点</string>
+
+    <!-- roguelike panel -->
+    <string name="investment_settings">投资设置</string>
+    <string name="invest_ingots">投资源石锭</string>
+    <string name="invest_limit_n">投资 N 个源石锭后停止任务</string>
+    <string name="stop_on_ingot_limit">储备源石锭达到上限时停止</string>
+    <string name="invest_mode_with_shop">投资模式启用购物、招募、进2层</string>
+    <string name="support_settings">助战设置</string>
+    <string name="use_support_for_start_op">「开局干员」使用助战</string>
+    <string name="start_op_required">需先填写「开局干员」</string>
+    <string name="allow_non_friend_support">可以使用非好友助战</string>
+    <string name="stop_after_n_explorations">开始探索 N 次后停止任务</string>
+    <string name="level_up_mode_settings">刷等级模式设置</string>
+    <string name="pause_before_boss_5">在第五层 BOSS 前暂停</string>
+    <string name="auto_stop_on_max_level">满级后自动停止</string>
+    <string name="open_start_mode_settings">刷开局模式设置</string>
+    <string name="boil_water_squad">烧水使用分队</string>
+    <string name="open_start_shopping">刷开局模式启用购物</string>
+    <string name="target_elite2_start_op">凹「开局干员」直升精二</string>
+    <string name="target_elite2_only">只凹「开局干员」直升精二，不进行作战</string>
+    <string name="open_start_expected_reward">刷开局期望奖励</string>
+    <string name="monthly_team_settings">月度小队模式设置</string>
+    <string name="monthly_team_auto_switch">月度小队自动切换</string>
+    <string name="monthly_team_comms">月度小队通讯</string>
+    <string name="deep_exploration_settings">深入调查模式设置</string>
+    <string name="deep_exploration_auto_switch">深入调查自动切换</string>
+    <string name="collapse_paradigm_settings">刷坍缩范式设置</string>
+    <string name="collapse_paradigm_list">坍缩范式列表</string>
+    <string name="collapse_paradigm_placeholder">用英文分号 ; 隔开，留空将使用默认列表。</string>
+    <string name="changlo_node_settings">刷常乐节点设置</string>
+    <string name="target_changlo_node">目标常乐节点</string>
+    <string name="roguelike_theme">肉鸽主题</string>
+    <string name="default_squad">指挥分队</string>
+    <string name="default_roles">稳扎稳打</string>
+    <string name="difficulty">难度</string>
+    <string name="strategy">策略</string>
+    <string name="opening_squad">开局分队</string>
+    <string name="opening_job_group">开局职业组</string>
+    <string name="shuiyue_settings">水月专用设置</string>
+    <string name="refresh_shop_scale">刷新商店（指路鳞）</string>
+    <string name="sami_settings">萨米专用设置</string>
+    <string name="target_cipher_first_floor">凹第一层远见密文板，不进行作战</string>
+    <string name="cipher_name">密文板名称</string>
+    <string name="start_cipher_with_life">生活队凹开局密文板</string>
+    <string name="max_three_sep">最多写三个，并用英文分号 ; 隔开</string>
+    <string name="use_specified_seed">使用指定种子开局</string>
+    <string name="seed_format">格式: xxx,rogue_x,x</string>
+
+    <!-- task list panel -->
+    <string name="edit_config">编辑配置</string>
+    <string name="edit_task">编辑任务</string>
+    <string name="add_task">新增任务</string>
+
+    <!-- wake up panel -->
+    <string name="client_type">客户端类型</string>
+    <string name="account_switch_label">账号切换</string>
+    <string name="account_switch_hint">需要切换至的账号，留空以禁用。输入登录界面显示的内容，例如 123****4567；支持部分匹配。仅支持官服、B服，不支持登录账号。</string>
+    <string name="start_game">启动游戏</string>
+
+    <!-- recruit panel -->
+    <string name="auto_use_expedited_permit">自动使用加急许可</string>
+    <string name="use_expedited_tip">此选项不会被保存，每次任务开始前需重新勾选</string>
+    <string name="recruit_times">招募次数</string>
+    <string name="recruit_times_tip">单次任务最多进行的公招次数</string>
+    <string name="select_extra_tags_strategy">公招多选 Tag 的策略</string>
+    <string name="extra_tags_default_none">默认不选额外标签</string>
+    <string name="extra_tags_select_more">选择额外标签</string>
+    <string name="extra_tags_rare_only">仅选择稀有标签</string>
+    <string name="three_star_tag_tendency">3 星 Tag 倾向</string>
+    <string name="three_star_tag_tip">当只能匹配 3 星干员时，会尽可能多地选择倾向的 Tag</string>
+    <string name="selected_count">已选 %1$d 个</string>
+    <string name="auto_refresh_3star_tags">自动刷新3星Tags</string>
+    <string name="continue_refresh_no_permit">无招聘许可时继续尝试刷新 Tags</string>
+    <string name="manual_confirm_1star">手动确认 1 星</string>
+    <string name="manual_confirm_1star_tip">勾选时识别到1星词条时跳过该次招募，未勾选时将忽略1星词条</string>
+    <string name="auto_confirm_3star">自动确认 3 星</string>
+    <string name="auto_confirm_4star">自动确认 4 星</string>
+    <string name="auto_confirm_5star">自动确认 5 星</string>
+
+    <!-- error log / log history -->
+    <string name="confirm_clear_title">确认清空</string>
+    <string name="confirm_clear_msg">确定要清空所有错误日志吗？此操作不可撤销。</string>
+    <string name="error_log_title">错误日志</string>
+    <string name="no_error_logs">暂无错误日志</string>
+    <string name="log_detail">日志详情</string>
+    <string name="details_section">详细信息</string>
+    <string name="screenshot">截图</string>
+    <string name="confirm_delete_title">确认删除</string>
+    <string name="confirm_delete_msg">确定要删除日志文件 %1$s 吗？</string>
+    <string name="log_history_title">历史日志</string>
+    <string name="clean_30_days">清理30天前</string>
+    <string name="no_history_logs">暂无历史日志</string>
+    <string name="task_start_divider">========== 任务开始 ==========</string>
+    <string name="task_end_divider">========== 任务结束 ==========</string>
+    <string name="task_count_with_size">%1$d 个任务 | %2$s</string>
+    <string name="label_time">时间: %1$s</string>
+    <string name="label_task">任务: %1$s</string>
+    <string name="label_end_time">结束时间: %1$s</string>
+    <string name="label_status">状态: %1$s</string>
+
+    <!-- components -->
+    <string name="initializing_resources">正在初始化资源</string>
+    <string name="first_launch_unpack">首次启动需要解压资源文件，请稍候…</string>
+    <string name="init_failed_title">初始化失败</string>
+    <string name="init_failed_msg">资源初始化失败: %1$s\n\n请检查存储空间是否充足，然后重试。</string>
+    <string name="reinit_confirm_title">重新初始化资源</string>
+    <string name="reinit_confirm_msg">确定要重新初始化资源吗？\n\n这将删除现有资源并重新从内置资源包解压。如果您已更新过资源，更新的内容将被覆盖。</string>
+    <string name="confirm_reinit">确认重新初始化</string>
+    <string name="authorizing">授权中…</string>
+    <string name="authorize_now">立即授权</string>
+    <string name="select_task_hint">&lt;- 请选择任务进行配置</string>
+    <string name="opener_operator">开局干员</string>
+    <string name="recommended">推荐</string>
+    <string name="operator_name_optional">干员名称（可选）</string>
+    <string name="operator_not_found">未找到该干员，输入不会生效</string>
+
+    <!-- update card -->
+    <string name="resource_up_to_date">资源已是最新版本</string>
+    <string name="check_resource_update_failed">检查资源更新失败: %1$s</string>
+    <string name="app_up_to_date">应用已是最新版本</string>
+    <string name="check_app_update_failed">检查应用更新失败: %1$s</string>
+    <string name="resource_update_failed_msg">资源更新失败: %1$s</string>
+    <string name="resource_update_complete">资源更新完成</string>
+    <string name="apk_download_complete">APK 下载完成，请完成安装</string>
+    <string name="update_management_section">更新管理</string>
+    <string name="app_body">App本体</string>
+    <string name="check_update">检查更新</string>
+    <string name="maa_resources_label">MAA资源</string>
+    <string name="download_source">下载源</string>
+    <string name="github_desc">从 GitHub 官方仓库下载资源。适合网络环境良好的用户，可直接获取最新版本。</string>
+    <string name="mirror_chyan_desc">Mirror酱是独立的第三方加速下载服务，需要付费使用，并非「MAA」收费。
+
+其运营成本由订阅收入支撑，部分收益将回馈项目开发者。欢迎订阅 CDK 享受高速下载，同时支持项目持续开发。
+
+选择 Mirror酱 作为下载源时需要填写 CDK。</string>
+    <string name="mirror_chyan">Mirror酱</string>
+    <string name="no_cdk_subscribe">没有CDK? 立即订阅</string>
+    <string name="app_downloading">应用下载中 %1$d%%</string>
+    <string name="starting_install">正在启动安装…</string>
+    <string name="resource_downloading">资源下载中 %1$d%%</string>
+    <string name="extracting">解压中 %1$d%%</string>
+    <string name="about_source">关于%1$s</string>
+    <string name="update_now">立即更新</string>
+    <string name="later_update">稍后再说</string>
+    <string name="update_failed_title">更新失败</string>
+    <string name="mirror_cdk_label">Mirror酱 CDK</string>
+    <string name="enter_cdk">请输入 CDK</string>
+
+    <!-- copilot view model -->
+    <string name="copilot_nav_name_mismatch">当前作业关卡名与导航关卡名不一致，请确认是否仍可正确导航</string>
+    <string name="copilot_empty">作业为空</string>
+    <string name="copilot_type_mismatch">当前选择的作业与页签不匹配</string>
+    <string name="copilot_not_found">未找到对应作业！</string>
+    <string name="copilot_not_found_id">未找到对应作业！:%1$s</string>
+    <string name="copilot_set_not_found">未找到对应作业集！</string>
+    <string name="copilot_set_not_found_id">未找到对应作业集！  %1$s</string>
+    <string name="copilot_network_error">请求网络服务错误！</string>
+    <string name="copilot_json_error">解析作业文件错误！</string>
+    <string name="copilot_empty_list">正在使用 ｢战斗列表｣, 但未添加任何作业</string>
+    <string name="copilot_mixed_list">正在使用 ｢战斗列表｣，不支持混用不同类型作业</string>
+    <string name="copilot_task_name_empty">存在关卡名为空的作业</string>
+    <string name="copilot_rate_failed">出现错误，评价失败 : &lt;</string>
+    <string name="copilot_rate_success">感谢评价！\n网页已经开放评论区，欢迎前往留下你的评论！</string>
+    <string name="copilot_single_from_list">正在使用 ｢战斗列表｣ 执行单个作业, 不推荐此行为。 单个作业请直接运行</string>
+    <string name="copilot_parsing">正在解析…</string>
+    <string name="copilot_tab_no_set_import">%1$s不支持作业集导入</string>
+    <string name="copilot_local_file_unsupported">暂不支持本地文件路径，请输入神秘代码</string>
+    <string name="copilot_importing_set">正在导入作业集(%1$d 个)…</string>
+    <string name="copilot_set_empty">作业集为空</string>
+    <string name="copilot_imported_with_failures">已导入 %1$d 条作业（来自 %2$d 个神秘代码，%3$d 个读取失败）</string>
+    <string name="copilot_imported">已导入 %1$d 条作业（来自 %2$d 个神秘代码）</string>
+    <string name="copilot_loaded">作业加载成功: %1$s</string>
+    <string name="copilot_added_to_list">已添加 %1$d 条作业到战斗列表</string>
+    <string name="copilot_unknown_operator">未知干员</string>
+    <string name="copilot_added_prefix">已添加: </string>
+    <string name="copilot_added_raid_suffix"> (突袭)</string>
+    <string name="copilot_tab_no_list">%1$s不支持战斗列表</string>
+    <string name="copilot_enable_list_first">请先启用战斗列表</string>
+    <string name="copilot_invalid_stage">关卡名无效，无法导航</string>
+    <string name="copilot_selected_item">已选中列表作业: %1$s</string>
+    <string name="copilot_file_read_failed">读取文件失败：%1$s</string>
+    <string name="copilot_start_warning_title">启动警告</string>
+    <string name="copilot_start_anyway">仍然启动</string>
+    <string name="copilot_starting">正在启动…</string>
+    <string name="copilot_started">自动战斗已启动</string>
+    <string name="copilot_resource_load_failed">资源加载失败，请重新初始化资源</string>
+    <string name="copilot_init_failed">初始化失败: %1$s</string>
+    <string name="copilot_connect_failed">连接失败: %1$s</string>
+    <string name="copilot_file_read_error">读取文件失败！</string>
+    <string name="copilot_portrait_mode_error">当前为竖屏,无法在前台模式运行</string>
+    <string name="copilot_stopping">正在停止…</string>
+    <string name="copilot_stopped">已停止</string>
+    <string name="hint">提示</string>
+    <string name="copilot_empty_task_msg">作业为空，请先读取作业</string>
+    <string name="copilot_not_found_path">未找到对应作业！%1$s</string>
+    <string name="copilot_unsupported_stage">不支持的关卡 %1$s，请尝试更新资源</string>
+    <string name="copilot_invalid_operator">错误的干员: %1$s</string>
+    <string name="copilot_completed">已完成: %1$s</string>
+    <string name="copilot_tab_main">主线/故事集/SideStory</string>
+    <string name="copilot_tab_sss">保全派驻</string>
+    <string name="copilot_tab_paradox">悖论模拟</string>
+    <string name="copilot_tab_other">其他活动</string>
+
+    <!-- auto battle panel - tab specs -->
+    <string name="copilot_tab_main_title">主线 / 故事集</string>
+    <string name="copilot_tab_main_helper">支持单作业、作业集、战斗列表与常规 Copilot 配置，适合主线、故事集和 SideStory。</string>
+    <string name="copilot_tab_sss_helper">使用 resource/copilot 内置作业，建议先手动编队后启动。支持循环次数，不支持作业集和战斗列表。</string>
+    <string name="copilot_tab_paradox_helper">适合悖论模拟单作业或战斗列表，请从技能选择或干员列表界面启动。不支持作业集导入和常规编队配置。</string>
+    <string name="copilot_tab_other_helper">用于主线/故事集/SideStory 以外的活动单作业。支持常规 Copilot 配置，不支持作业集和战斗列表。</string>
+    <string name="copilot_cap_single">单作业</string>
+    <string name="copilot_cap_set">作业集</string>
+    <string name="copilot_cap_battle_list">战斗列表</string>
+    <string name="copilot_cap_formation">自动编队</string>
+    <string name="copilot_cap_loop">循环次数</string>
+    <string name="copilot_cap_builtin">内置作业</string>
+    <string name="copilot_cap_support_unit">借助战</string>
+    <!-- auto battle panel - input / status -->
+    <string name="copilot_secret_code_label">作业站神秘代码</string>
+    <string name="copilot_secret_code_placeholder">输入 maa://1234、1234</string>
+    <string name="copilot_waiting_op">等待操作…</string>
+    <string name="copilot_reading">读取中…</string>
+    <string name="copilot_read_single">读取作业</string>
+    <string name="copilot_read_set">读取作业集</string>
+    <string name="copilot_job_station">作业站</string>
+    <!-- auto battle panel - summary -->
+    <string name="copilot_operators_section">干员</string>
+    <string name="copilot_operator_group">干员组: %1$s</string>
+    <string name="copilot_total_count_fmt">共 %1$d 名干员/组</string>
+    <string name="copilot_video_link">视频</string>
+    <!-- auto battle panel - config options -->
+    <string name="auto_formation">自动编队</string>
+    <string name="auto_formation_tip">自动编队可能无法识别带有 ｢特别关注｣ 标记的干员</string>
+    <string name="ignore_requirements">忽略干员属性要求</string>
+    <string name="ignore_requirements_tip">某些作业需要特定模组等作为前置条件\n勾选此项将跳过这些检查，但可能导致作业无法正常运行</string>
+    <string name="support_unit_label">借助战</string>
+    <string name="support_unit_tip">缺一个还能用用，缺两个以上还是换份作业吧</string>
+    <string name="support_fill">补漏</string>
+    <string name="support_random">随机</string>
+    <string name="add_trust">补充低信赖干员</string>
+    <string name="battle_list_label">战斗列表</string>
+    <string name="battle_list_tip">仅支持以下模式:\n  1. 主线: 同一章节内导航\n  2. SideStory: 当前页面内导航（普通/EX/S 不能互跳）\n  3. 故事集: 当前页面内导航\n  4. 悖论模拟: 从干员列表启动\n请在对应界面启动，不支持跨章节导航\n\n当 ｢战斗列表｣ 启用后, 选择单个作业时会自动添加到 ｢战斗列表｣</string>
+    <string name="use_sanity_potion">使用理智药</string>
+    <string name="loop_count">循环次数</string>
+    <!-- auto battle panel - battle list section -->
+    <string name="drag_reorder_tip">标签顺序可拖动</string>
+    <string name="no_entries">暂无条目</string>
+    <string name="load_job">加载</string>
+    <string name="delete">删除</string>
+    <string name="clear_unchecked">清除未勾选</string>
+    <string name="clear_list">清空列表</string>
+    <string name="tips_label">小提示</string>
+    <string name="copilot_tips_content">1. 使用前请确认作业与所选的关卡类型一致。\n2. 主线、故事集、SideStory: 请在关卡界面的右下角存在 ｢开始行动｣ 按钮界面启动。\n3. 保全派驻: resource/copilot 文件夹内置多份作业。请先手动编队，在右下角存在 ｢开始部署｣ 按钮界面启动，可配合 ｢循环次数｣。\n4. 悖论模拟: 选好技能后，在技能选择界面存在 ｢开始模拟｣ 按钮界面启动，1/2 星干员（无技能）在右下角存在 ｢开始模拟｣ 按钮界面开始。若使用 ｢战斗列表｣，请从干员列表 ｢等级/稀有度｣ 筛选下启动。\n5. 其他活动: 仅支持单作业与常规 Copilot 配置，请在目标活动关卡界面直接启动，不支持作业集和战斗列表。\n6. 使用好友助战时，请关闭 ｢自动编队｣ 和 ｢战斗列表｣，手动选择干员后，在编队界面右下角存在 ｢开始行动｣ 按钮界面启动。\n7. 干员若被标记为 ｢特别关注｣，可能影响 ｢自动编队｣ 的识别与选择。建议使用 ｢自动编队｣ 时移除关注，或在报错后关闭 ｢自动编队｣，根据提示手动补充缺失的干员。\n8. Copilot 作业站的神秘代码可在输入框输入后读取：\n● 点击「读取作业」= 读取单作业。\n● 点击「读取作业集」= 导入作业集（仅主线/故事集/SideStory、悖论模拟）。\n9. 战斗列表:\n● 选择作业后，检查下方关卡名是否正确 (例: CV-EX-1)。\n● 可通过「添加普通/添加突袭」按钮添加任务（突袭仅主线）。\n● 可通过「清空列表/清除未勾选」按钮快速整理任务。\n● 请在能看到目标关卡名的界面启动，不支持跨章节导航。\n● 遇到理智不足、战斗失败、未能三星结算时将自动中止。</string>
+
+    <!-- panel tabs -->
+    <string name="tab_tasks">一键长草</string>
+    <string name="tab_auto_battle">自动战斗</string>
+    <string name="tab_tools">小工具</string>
+    <string name="tab_log">日志</string>
+    <string name="back_to_main">回到主界面</string>
+
+    <!-- section headers -->
+    <string name="test_section">测试</string>
+
+    <!-- navigation -->
+    <string name="nav_home">首页</string>
+    <string name="nav_background_task">后台任务</string>
+    <string name="nav_schedule">定时</string>
+    <string name="nav_notification">通知</string>
+    <string name="foreground_mode_switch_hint">当前是前台模式，请先切换到后台模式</string>
+
+    <!-- bottom buttons -->
+    <string name="hide">隐藏</string>
+    <string name="starting">启动中</string>
+    <string name="start">启动</string>
+
+    <!-- log panel -->
+    <string name="task_log">任务日志</string>
+    <string name="resume_auto_scroll">恢复自动滚动</string>
+    <string name="view_details">查看详情</string>
+
+    <!-- mini game panel -->
+    <string name="mini_game">小游戏</string>
+    <string name="mini_game_name">小游戏名称</string>
+    <string name="ending">结局</string>
+    <string name="priority_event">优先系列事件</string>
+    <string name="mini_game_event_none">不选择</string>
+    <string name="mini_game_event_support_platform">支援作战平台</string>
+    <string name="mini_game_event_ranger">游侠</string>
+    <string name="mini_game_event_phantom_tracking">诡影迷踪</string>
+
+    <!-- recruit calc panel -->
+    <string name="auto_set_recruit_time">自动设置招募时间</string>
+    <string name="auto_select_level_tags">自动选择 %1$d★ Tags</string>
+    <string name="detected_tags">检测到的标签</string>
+    <string name="recruit_calc_hint">点击「开始任务」识别当前公招标签并计算可能的干员组合</string>
+
+    <!-- oper box panel -->
+    <string name="operators_owned_count">已拥有 (%1$d)</string>
+    <string name="operators_not_owned_count">未拥有 (%1$d)</string>
+    <string name="operators_data_copied">已复制干员数据</string>
+    <string name="oper_level_summary">E%1$d Lv%2$d 潜%3$d</string>
+    <string name="oper_box_hint_scan">点击下方「开始任务」扫描已拥有的干员信息。</string>
+    <string name="oper_box_hint_export">识别完成后可查看已拥有 / 未拥有干员，支持导出。</string>
+
+    <!-- award panel -->
+    <string name="award_daily_weekly">领取每日/每周任务奖励</string>
+    <string name="award_mail">领取所有邮件奖励</string>
+    <string name="award_free_gacha">进行限定池赠送的每日免费单抽</string>
+    <string name="award_free_gacha_tip">若不存在免费单抽，则不会抽取</string>
+    <string name="award_orundum">领取幸运墙的每日合成玉奖励</string>
+    <string name="award_mining">领取限时开采许可的每日合成玉奖励</string>
+    <string name="award_special_access">领取周年赠送月卡奖励</string>
+
+    <!-- configuration panel -->
+    <string name="edit_mode_title">编辑模式</string>
+    <string name="edit_mode_hint_1">选择左侧任务进行重命名、删除等操作。</string>
+    <string name="edit_mode_hint_2">点击左侧 ｢新增任务｣ 往脚本末尾添加新功能。</string>
+    <string name="task_reorder_hint">长按左侧任务项并拖拽，可自由调整执行顺序。</string>
+    <string name="configure_task_title">配置任务</string>
+    <string name="configure_task_hint">从左侧选择一个任务项，即可在此调整执行参数。</string>
+    <string name="select_task_type">选择任务类型</string>
+    <string name="editing">正在编辑</string>
+    <string name="task_name">任务名称</string>
+    <string name="name_cannot_be_empty">名称不能为空</string>
+    <string name="name_too_long">名称长度不能超过 20 个字符</string>
+    <string name="delete_task">删除该任务</string>
+    <string name="unknown_task">未知任务</string>
+
+    <!-- depot recognition panel -->
+    <string name="depot_item_count">共 %1$d 种物品</string>
+    <string name="depot_copied_arkplanner">已复制企鹅物流刷图规划格式</string>
+    <string name="export_to_arkplanner">导出至企鹅物流刷图规划</string>
+    <string name="depot_copied_amtool">已复制明日方舟工具箱格式</string>
+    <string name="export_to_amtool">导出至明日方舟工具箱</string>
+    <string name="depot_title">仓库识别</string>
+    <string name="depot_hint_scan">点击下方「开始任务」扫描当前仓库物品及数量。</string>
+    <string name="depot_hint_export">识别完成后支持导出企鹅物流刷图规划 / 明日方舟工具箱格式。</string>
+
+    <!-- infrast config panel -->
+    <string name="infrast_mode">基建模式</string>
+    <string name="infrast_rotation_mode_hint">｢队列轮换｣ 的换班逻辑与游戏内基建右下角的「队列轮换」完全一致：按照设施图标顺序从左到右循环，跳过当前效率最高的设施。使用自定义配置请联系开发者。</string>
+    <string name="infrast_custom_maker_link">自定义基建排班制作器</string>
+    <string name="infrast_preset_label">内置配置</string>
+    <string name="infrast_plan_label">排班计划</string>
+    <string name="infrast_plan_tip">如「基建计划」存在执行时间，「基建换班」任务开始前会检查当前时间是否在计划执行时间内</string>
+    <string name="infrast_auto_by_time">根据时间段自动切换 (%1$s)</string>
+    <string name="infrast_partial_period_warning">自定义基建配置仅有部分计划存在时间段，可能会存在预期外的行为。</string>
+    <string name="infrast_drones_usage">无人机用途</string>
+    <string name="infrast_dorm_threshold">宿舍心情阈值</string>
+    <string name="infrast_dorm_threshold_tip">若启用自定义换班，该字段仅针对 autofill 和使用工员编组的房间有效</string>
+    <string name="infrast_facilities">基建设施</string>
+    <string name="infrast_facilities_tip">勾选需要换班的设施\n设施顺序代表换班优先级</string>
+    <string name="select_all">全选</string>
+    <string name="clear_selection">清除</string>
+    <string name="infrast_dorm_trust">宿舍空余位置蹭信赖</string>
+    <string name="infrast_dorm_filter_not_stationed">不将已进驻的干员放入宿舍</string>
+    <string name="infrast_dorm_filter_tip">勾选则不会将艾丽妮等干员从训练室移除，但也会导致加工站干员不能进入宿舍。</string>
+    <string name="infrast_originium_shard_auto">源石碎片自动补货</string>
+    <string name="infrast_reception_message_board">会客室信息板收取信用</string>
+    <string name="infrast_clue_exchange">进行线索交流</string>
+    <string name="infrast_send_clue">赠送线索</string>
+    <string name="infrast_continue_training">训练完成后继续尝试专精当前技能</string>
+    <string name="file_not_found">文件不存在</string>
+    <string name="parse_failed">解析失败: %1$s</string>
+    <string name="import_config_background_only">请在后台模式下导入自定义配置文件</string>
+
+    <!-- profile management panel -->
+    <string name="profile_management">配置管理</string>
+    <string name="create_profile">新建配置</string>
+    <string name="profile_delete_confirm">确定要删除配置「%1$s」吗？此操作不可撤销。</string>
+    <string name="rename">重命名</string>
+    <string name="copy">复制</string>
+
+    <!-- update confirm dialog -->
+    <string name="resource_update_found">发现资源更新</string>
+    <string name="resource_update_message">检测到新版本资源: %1$s\n\n建议立即更新以获取最新的任务配置和功能支持。</string>
+    <string name="download_now">立即下载</string>
+
+    <!-- password field -->
+    <string name="hide_password">隐藏</string>
+    <string name="show_password">显示</string>
+    <string name="visit_official_website">前往官网</string>
+
+    <!-- scheduled task -->
+    <string name="scheduled_task_trigger">由定时任务「%1$s」触发</string>
+
 </resources>

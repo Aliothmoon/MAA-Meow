@@ -27,6 +27,9 @@ import kotlinx.coroutines.runBlocking
 
 class AppSettingsManager(private val context: Context) {
 
+    val appContext: Context
+        get() = context
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {
@@ -333,6 +336,18 @@ class AppSettingsManager(private val context: Context) {
     suspend fun setEventNotificationLevel(level: EventNotificationLevel) {
         with(AppSettingsSchema) {
             context.dataStore.edit { it[eventNotificationLevel] = level.name }
+        }
+    }
+
+    // 应用语言
+    val appLanguage: StateFlow<String> = settings
+        .map { it.appLanguage }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.appLanguage)
+
+    suspend fun setAppLanguage(tag: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[appLanguage] = tag }
         }
     }
 

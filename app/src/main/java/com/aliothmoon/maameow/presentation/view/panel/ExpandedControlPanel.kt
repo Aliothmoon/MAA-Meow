@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -34,6 +35,7 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType.ERROR
@@ -235,8 +237,8 @@ fun ExpandedControlPanel(
             },
             iconTint = confirmColor,
             confirmColor = confirmColor,
-            confirmText = dialog?.confirmText ?: "确认",
-            dismissText = dialog?.dismissText ?: "关闭",
+            confirmText = dialog?.confirmText?.takeIf { it.isNotBlank() } ?: stringResource(R.string.confirm),
+            dismissText = dialog?.dismissText?.takeIf { it.isNotBlank() } ?: stringResource(R.string.close),
             onConfirm = viewModel::onDialogConfirm,
         )
     }

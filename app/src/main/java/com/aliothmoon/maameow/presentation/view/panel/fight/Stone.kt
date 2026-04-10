@@ -26,8 +26,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
@@ -56,7 +58,7 @@ private fun AllowUseStoneSaveSection(
                     onConfigChange(config.copy(allowUseStoneSave = false))
                 }
             },
-            label = "允许保存源石使用"
+            label = stringResource(R.string.allow_stone_use)
         )
 
         // 内嵌式警告确认面板
@@ -76,13 +78,13 @@ private fun AllowUseStoneSaveSection(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "警告",
+                        text = stringResource(R.string.warning),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
                     Text(
-                        text = "启用此选项后，源石使用设置将被保存。\n这可能导致意外消耗源石，请谨慎操作！",
+                        text = stringResource(R.string.stone_warning_msg),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
@@ -95,7 +97,7 @@ private fun AllowUseStoneSaveSection(
                             modifier = Modifier.height(32.dp),
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
                         ) {
-                            Text("取消", style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.cancel), style = MaterialTheme.typography.bodySmall)
                         }
                         Button(
                             onClick = {
@@ -108,7 +110,7 @@ private fun AllowUseStoneSaveSection(
                                 containerColor = MaterialTheme.colorScheme.error
                             )
                         ) {
-                            Text("确认启用", style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.confirm_enable), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
@@ -129,7 +131,7 @@ private fun UseStoneSection(
     modifier: Modifier = Modifier
 ) {
     var tipExpanded by remember { mutableStateOf(false) }
-    val tipText = "此设置不会被保存，下次启动时将重置为关闭状态"
+    val tipText = stringResource(R.string.stone_not_saved_tip)
 
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -151,7 +153,7 @@ private fun UseStoneSection(
                         )
                     )
                 },
-                label = "使用源石"
+                label = stringResource(R.string.use_stone)
             )
             // 未保存设置时显示小i图标
             if (!config.allowUseStoneSave) {

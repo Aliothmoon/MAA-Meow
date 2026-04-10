@@ -7,8 +7,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.domain.enums.RoguelikeBoskySubNodeType
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
@@ -24,7 +26,7 @@ fun ModeSpecificSettings(
     when (config.mode) {
         RoguelikeMode.Exp -> {
             Text(
-                "刷等级模式设置",
+                stringResource(R.string.level_up_mode_settings),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
@@ -33,13 +35,13 @@ fun ModeSpecificSettings(
                 CheckBoxWithLabel(
                     checked = config.stopAtFinalBoss,
                     onCheckedChange = { onConfigChange(config.copy(stopAtFinalBoss = it)) },
-                    label = "在第五层 BOSS 前暂停"
+                    label = stringResource(R.string.pause_before_boss_5)
                 )
             }
             CheckBoxWithLabel(
                 checked = config.stopAtMaxLevel,
                 onCheckedChange = { onConfigChange(config.copy(stopAtMaxLevel = it)) },
-                label = "满级后自动停止"
+                label = stringResource(R.string.auto_stop_on_max_level)
             )
         }
 
@@ -49,13 +51,13 @@ fun ModeSpecificSettings(
 
         RoguelikeMode.Collectible -> {
             Text(
-                "刷开局模式设置",
+                stringResource(R.string.open_start_mode_settings),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
 
             RoguelikeSquadButtonGroup(
-                label = "烧水使用分队",
+                label = stringResource(R.string.boil_water_squad),
                 selectedValue = config.collectibleModeSquad,
                 theme = config.theme,
                 mode = config.mode,
@@ -65,7 +67,7 @@ fun ModeSpecificSettings(
             CheckBoxWithLabel(
                 checked = config.collectibleModeShopping,
                 onCheckedChange = { onConfigChange(config.copy(collectibleModeShopping = it)) },
-                label = "刷开局模式启用购物"
+                label = stringResource(R.string.open_start_shopping)
             )
 
             // WPF: Visibility="RoguelikeSquadIsProfessional AND (Mizuki OR Sami)" (line 205)
@@ -89,7 +91,7 @@ fun ModeSpecificSettings(
                         }
                         onConfigChange(newConfig)
                     },
-                    label = "凹「开局干员」直升精二"
+                    label = stringResource(R.string.target_elite2_start_op)
                 )
 
                 // WPF: Visibility="StartWithEliteTwo AND mode==Collectible AND (Mizuki OR Sami)" (line 216)
@@ -97,7 +99,7 @@ fun ModeSpecificSettings(
                     CheckBoxWithLabel(
                         checked = config.onlyStartWithEliteTwo,
                         onCheckedChange = { onConfigChange(config.copy(onlyStartWithEliteTwo = it)) },
-                        label = "只凹「开局干员」直升精二，不进行作战"
+                        label = stringResource(R.string.target_elite2_only)
                     )
                 }
             }
@@ -108,7 +110,7 @@ fun ModeSpecificSettings(
             if (!computedOnlyEliteTwo) {
                 val awardOptions = RoguelikeUi.getCollectibleAwardOptions(config.theme)
                 Text(
-                    "刷开局期望奖励",
+                    stringResource(R.string.open_start_expected_reward),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium
                 )
@@ -132,49 +134,49 @@ fun ModeSpecificSettings(
 
         RoguelikeMode.Squad -> {
             Text(
-                "月度小队模式设置",
+                stringResource(R.string.monthly_team_settings),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
             CheckBoxWithLabel(
                 checked = config.monthlySquadAutoIterate,
                 onCheckedChange = { onConfigChange(config.copy(monthlySquadAutoIterate = it)) },
-                label = "月度小队自动切换"
+                label = stringResource(R.string.monthly_team_auto_switch)
             )
             // WPF: Visibility="RoguelikeMonthlySquadAutoIterate" (line 357)
             if (config.monthlySquadAutoIterate) {
                 CheckBoxWithLabel(
                     checked = config.monthlySquadCheckComms,
                     onCheckedChange = { onConfigChange(config.copy(monthlySquadCheckComms = it)) },
-                    label = "月度小队通讯"
+                    label = stringResource(R.string.monthly_team_comms)
                 )
             }
         }
 
         RoguelikeMode.Exploration -> {
             Text(
-                "深入调查模式设置",
+                stringResource(R.string.deep_exploration_settings),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
             CheckBoxWithLabel(
                 checked = config.deepExplorationAutoIterate,
                 onCheckedChange = { onConfigChange(config.copy(deepExplorationAutoIterate = it)) },
-                label = "深入调查自动切换"
+                label = stringResource(R.string.deep_exploration_auto_switch)
             )
         }
 
         RoguelikeMode.CLP_PDS -> {
             Text(
-                "刷坍缩范式设置",
+                stringResource(R.string.collapse_paradigm_settings),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
             ITextField(
                 value = config.expectedCollapsalParadigms,
                 onValueChange = { onConfigChange(config.copy(expectedCollapsalParadigms = it)) },
-                label = "坍缩范式列表",
-                placeholder = "用英文分号 ; 隔开，留空将使用默认列表。",
+                label = stringResource(R.string.collapse_paradigm_list),
+                placeholder = stringResource(R.string.collapse_paradigm_placeholder),
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -182,12 +184,12 @@ fun ModeSpecificSettings(
         RoguelikeMode.FindPlaytime -> {
             if (config.theme == "JieGarden") {
                 Text(
-                    "刷常乐节点设置",
+                    stringResource(R.string.changlo_node_settings),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
                 RoguelikeButtonGroup(
-                    label = "目标常乐节点",
+                    label = stringResource(R.string.target_changlo_node),
                     selectedValue = config.findPlaytimeTarget.name,
                     options = RoguelikeUi.PLAYTIME_TARGET_OPTIONS,
                     onValueChange = {

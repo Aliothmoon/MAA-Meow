@@ -1,7 +1,9 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.CopilotConfig
 import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
 import com.aliothmoon.maameow.data.model.copilot.CopilotTaskData
@@ -62,9 +64,6 @@ private fun getCopilotTypeFromStageId(stageId: String?): CopilotType {
     }
 }
 
-private const val MSG_NAVIGATION_NAME_MISMATCH =
-    """当前作业关卡名与导航关卡名不一致，请确认是否仍可正确导航"""
-
 private data class ResolvedStageNavigation(
     val stageCode: String?,
     val stageId: String?,
@@ -97,6 +96,7 @@ data class CopilotUiState(
 )
 
 class CopilotViewModel(
+    private val app: Application,
     private val copilotManager: CopilotManager,
     private val compositionService: MaaCompositionService,
     private val repository: CopilotRepository,
@@ -108,21 +108,6 @@ class CopilotViewModel(
 
     companion object {
         private const val TAG = "CopilotViewModel"
-
-        private const val MSG_COPILOT_EMPTY = "作业为空"
-        private const val MSG_TYPE_MISMATCH = "当前选择的作业与页签不匹配"
-        private const val MSG_COPILOT_NOT_FOUND = "未找到对应作业！"
-        private const val MSG_COPILOT_SET_NOT_FOUND = "未找到对应作业集！"
-        private const val MSG_NETWORK_SERVICE_ERROR = "请求网络服务错误！"
-        private const val MSG_COPILOT_JSON_ERROR = "解析作业文件错误！"
-        private const val MSG_EMPTY_LIST = "正在使用 ｢战斗列表｣, 但未添加任何作业"
-        private const val MSG_MIXED_LIST =
-            "正在使用 ｢战斗列表｣，不支持混用不同类型作业"
-        private const val MSG_TASK_NAME_EMPTY = "存在关卡名为空的作业"
-        private const val MSG_RATE_FAILED = "出现错误，评价失败 : <"
-        private const val MSG_RATE_SUCCESS = "感谢评价！\n网页已经开放评论区，欢迎前往留下你的评论！"
-        private const val MSG_SINGLE_LIST_WARN =
-            "正在使用 ｢战斗列表｣ 执行单个作业, 不推荐此行为。 单个作业请直接运行"
     }
 
     private val _state = MutableStateFlow(CopilotUiState())
@@ -190,7 +175,7 @@ class CopilotViewModel(
             _state.update {
                 it.copy(
                     isLoading = true,
-                    statusMessage = "正在解析...",
+                    statusMessage = app.getString(R.string.copilot_parsing),
                     currentCopilot = null,
                     operatorSummary = null,
                     videoUrl = "",
@@ -202,7 +187,7 @@ class CopilotViewModel(
                     _state.update {
                         it.copy(
                             isLoading = false,
-                            statusMessage = "${getCopilotTabName(tabIndex)}不支持作业集导入"
+                            statusMessage = app.getString(R.string.copilot_tab_no_set_import, getCopilotTabName(tabIndex))
                         )
                     }
                     return@launch
@@ -239,7 +224,7 @@ class CopilotViewModel(
                     it.copy(
                         isLoading = false,
                         statusMessage = if (unsupportedLocalPath) {
-                            "暂不支持本地文件路径，请输入神秘代码"
+                            app.getString(R.string.copilot_local_file_unsupported)
                         } else {
                             mapSingleCopilotRequestError(input, remoteErr)
                         }
@@ -255,7 +240,7 @@ class CopilotViewModel(
         result.fold(
             onSuccess = { setInfo ->
                 val ids = setInfo.copilotIds
-                _state.update { it.copy(statusMessage = "正在导入作业集(${ids.size} 个)...") }
+                _state.update { it.copy(statusMessage = app.getString(R.string.copilot_importing_set, ids.size)) }
 
                 if (ids.isEmpty()) {
                     _state.update {
@@ -264,7 +249,7 @@ class CopilotViewModel(
                             statusMessage = buildSetStatusMessage(
                                 setName = setInfo.name,
                                 setDescription = setInfo.description,
-                                summary = "作业集为空"
+                                summary = app.getString(R.string.copilot_set_empty)
                             )
                         )
                     }
@@ -301,14 +286,14 @@ class CopilotViewModel(
                 }
                 val summary = if (failedCount > 0) {
                     buildString {
-                        append("已导入 ${newItems.size} 条作业（来自 ${ids.size} 个神秘代码，${failedCount} 个读取失败）")
+                        append(app.getString(R.string.copilot_imported_with_failures, newItems.size, ids.size, failedCount))
                         if (!firstFailureReason.isNullOrBlank()) {
                             append("\n")
                             append(firstFailureReason)
                         }
                     }
                 } else {
-                    "已导入 ${newItems.size} 条作业（来自 ${ids.size} 个神秘代码）"
+                    app.getString(R.string.copilot_imported, newItems.size, ids.size)
                 }
                 val previousTabIndex = _state.value.tabIndex
                 _state.update { current ->
@@ -345,29 +330,30 @@ class CopilotViewModel(
 
     private fun mapSingleCopilotRequestError(input: String, error: Throwable): String {
         return when (error) {
-            is CopilotRequestException.InvalidInput -> "$MSG_COPILOT_NOT_FOUND:${error.rawInput}"
-            is CopilotRequestException.NotFound -> "$MSG_COPILOT_NOT_FOUND:${error.id}"
+            is CopilotRequestException.InvalidInput -> app.getString(R.string.copilot_not_found_id, error.rawInput)
+            is CopilotRequestException.NotFound -> app.getString(R.string.copilot_not_found_id, error.id)
             is CopilotRequestException.Network -> buildNetworkErrorMessage(error.detail)
-            is CopilotRequestException.JsonError -> MSG_COPILOT_JSON_ERROR
-            else -> "$MSG_COPILOT_NOT_FOUND:${input.trim()}"
+            is CopilotRequestException.JsonError -> app.getString(R.string.copilot_json_error)
+            else -> app.getString(R.string.copilot_not_found_id, input.trim())
         }
     }
 
     private fun mapCopilotSetRequestError(input: String, error: Throwable): String {
         return when (error) {
-            is CopilotRequestException.InvalidInput -> "$MSG_COPILOT_SET_NOT_FOUND  ${error.rawInput}"
-            is CopilotRequestException.NotFound -> "$MSG_COPILOT_SET_NOT_FOUND  ${error.id}"
+            is CopilotRequestException.InvalidInput -> app.getString(R.string.copilot_set_not_found_id, error.rawInput)
+            is CopilotRequestException.NotFound -> app.getString(R.string.copilot_set_not_found_id, error.id)
             is CopilotRequestException.Network -> buildNetworkErrorMessage(error.detail)
-            is CopilotRequestException.JsonError -> MSG_COPILOT_JSON_ERROR
-            else -> "$MSG_COPILOT_SET_NOT_FOUND  ${input.trim()}"
+            is CopilotRequestException.JsonError -> app.getString(R.string.copilot_json_error)
+            else -> app.getString(R.string.copilot_set_not_found_id, input.trim())
         }
     }
 
     private fun buildNetworkErrorMessage(detail: String?): String {
+        val error = app.getString(R.string.copilot_network_error)
         return if (detail.isNullOrBlank()) {
-            MSG_NETWORK_SERVICE_ERROR
+            error
         } else {
-            "$MSG_NETWORK_SERVICE_ERROR\n$detail"
+            "$error\n$detail"
         }
     }
 
@@ -412,7 +398,7 @@ class CopilotViewModel(
                 currentFilePath = filePath,
                 copilotTaskName = inferredName,
                 isLoading = false,
-                statusMessage = "作业加载成功: $inferredName",
+                statusMessage = app.getString(R.string.copilot_loaded, inferredName),
                 videoUrl = videoUrl,
                 operatorSummary = operatorSummary,
             )
@@ -446,7 +432,7 @@ class CopilotViewModel(
             val item = newItems.first()
             buildAddToListStatus(name = item.name, isRaid = item.isRaid)
         } else {
-            "已添加 ${newItems.size} 条作业到战斗列表"
+            app.getString(R.string.copilot_added_to_list, newItems.size)
         }
         _state.update {
             it.copy(taskList = it.taskList + newItems, statusMessage = status)
@@ -619,7 +605,7 @@ class CopilotViewModel(
             data.opers.firstOrNull()?.name,
             data.stageName
         )
-        return candidates.firstOrNull { !it.isNullOrBlank() } ?: "未知干员"
+        return candidates.firstOrNull { !it.isNullOrBlank() } ?: app.getString(R.string.copilot_unknown_operator)
     }
 
     private fun extractParadoxCodeName(stageId: String?): String? {
@@ -639,14 +625,14 @@ class CopilotViewModel(
         hasNavigateNameOverride: Boolean = false
     ): String {
         return buildString {
-            append("已添加: ")
+            append(app.getString(R.string.copilot_added_prefix))
             append(name)
             if (isRaid) {
-                append(" (突袭)")
+                append(app.getString(R.string.copilot_added_raid_suffix))
             }
             if (hasNavigateNameOverride) {
                 append("\n")
-                append(MSG_NAVIGATION_NAME_MISMATCH)
+                append(app.getString(R.string.copilot_nav_name_mismatch))
             }
         }
     }
@@ -663,7 +649,7 @@ class CopilotViewModel(
     fun onToggleListMode(enabled: Boolean) {
         val tab = _state.value.tabIndex
         if (enabled && !supportsBattleList(tab)) {
-            _state.update { it.copy(statusMessage = "当前页签不支持战斗列表") }
+            _state.update { it.copy(statusMessage = app.getString(R.string.copilot_tab_no_list, getCopilotTabName(tab))) }
             return
         }
         _state.update {
@@ -677,18 +663,18 @@ class CopilotViewModel(
 
     fun onAddToList(isRaid: Boolean = false) {
         if (!_state.value.useCopilotList) {
-            _state.update { it.copy(statusMessage = "请先启用战斗列表") }
+            _state.update { it.copy(statusMessage = app.getString(R.string.copilot_enable_list_first)) }
             return
         }
         val current = _state.value.currentCopilot
         val filePath = _state.value.currentFilePath
         if (current == null || filePath.isBlank()) {
-            _state.update { it.copy(statusMessage = MSG_COPILOT_EMPTY) }
+            _state.update { it.copy(statusMessage = app.getString(R.string.copilot_empty)) }
             return
         }
         val tabIndex = _state.value.tabIndex
         if (!supportsBattleList(tabIndex)) {
-            _state.update { it.copy(statusMessage = "${getCopilotTabName(tabIndex)}不支持战斗列表") }
+            _state.update { it.copy(statusMessage = app.getString(R.string.copilot_tab_no_list, getCopilotTabName(tabIndex))) }
             return
         }
         val manualTaskName = _state.value.copilotTaskName
@@ -699,12 +685,12 @@ class CopilotViewModel(
             navigation.navigateName
         }
         if (name.isBlank()) {
-            _state.update { it.copy(statusMessage = "关卡名无效，无法导航") }
+            _state.update { it.copy(statusMessage = app.getString(R.string.copilot_invalid_stage)) }
             return
         }
         if (tabIndex != TAB_PARADOX && navigation.hasNavigateNameOverride) {
             Timber.w(
-                "$TAG: $MSG_NAVIGATION_NAME_MISMATCH, stageCode=%s, navigateName=%s",
+                "$TAG: " + app.getString(R.string.copilot_nav_name_mismatch) + ", stageCode=%s, navigateName=%s",
                 navigation.stageCode,
                 navigation.navigateName
             )
@@ -750,7 +736,7 @@ class CopilotViewModel(
                             currentFilePath = item.filePath,
                             copilotTaskName = item.name.ifBlank { inferLoadedCopilotName(data) },
                             useCopilotList = if (disableListMode) false else base.useCopilotList,
-                            statusMessage = "已选中列表作业: ${item.name}"
+                            statusMessage = app.getString(R.string.copilot_selected_item, item.name)
                         )
                     }
                     if (previousTabIndex != targetTabIndex) {
@@ -758,7 +744,7 @@ class CopilotViewModel(
                     }
                 },
                 onFailure = { e ->
-                    _state.update { it.copy(statusMessage = "读取文件失败：${e.message}") }
+                    _state.update { it.copy(statusMessage = app.getString(R.string.copilot_file_read_failed, e.message)) }
                 }
             )
         }
@@ -833,10 +819,10 @@ class CopilotViewModel(
                 if (pkg != null && appAliveChecker.isAppAlive(pkg) == AppAliveStatus.DEAD) {
                     _dialog.value = PanelDialogUiState(
                         type = PanelDialogType.WARNING,
-                        title = "启动警告",
-                        message = GAME_NOT_RUNNING_WARNING,
-                        confirmText = "仍然启动",
-                        dismissText = "取消",
+                        title = app.getString(R.string.copilot_start_warning_title),
+                        message = app.gameNotRunningWarning(),
+                        confirmText = app.getString(R.string.copilot_start_anyway),
+                        dismissText = app.getString(R.string.cancel),
                         confirmAction = PanelDialogConfirmAction.CONFIRM_PENDING_START,
                     )
                     return@launch
@@ -856,30 +842,30 @@ class CopilotViewModel(
             }
 
             runtimeStateStore.resetRequirementIgnored()
-            _state.update { it.copy(statusMessage = "正在启动...") }
+            _state.update { it.copy(statusMessage = app.getString(R.string.copilot_starting)) }
             when (val result = compositionService.startCopilot(tasks)) {
                 is MaaCompositionService.StartResult.Success -> {
-                    _state.update { it.copy(statusMessage = "自动战斗已启动") }
+                    _state.update { it.copy(statusMessage = app.getString(R.string.copilot_started)) }
                 }
 
                 is MaaCompositionService.StartResult.ResourceError -> {
-                    _state.update { it.copy(statusMessage = "资源加载失败，请重新初始化资源") }
+                    _state.update { it.copy(statusMessage = app.getString(R.string.copilot_resource_load_failed)) }
                 }
 
                 is MaaCompositionService.StartResult.InitializationError -> {
-                    _state.update { it.copy(statusMessage = "初始化失败: ${result.phase}") }
+                    _state.update { it.copy(statusMessage = app.getString(R.string.copilot_init_failed, result.phase)) }
                 }
 
                 is MaaCompositionService.StartResult.ConnectionError -> {
-                    _state.update { it.copy(statusMessage = "连接失败: ${result.phase}") }
+                    _state.update { it.copy(statusMessage = app.getString(R.string.copilot_connect_failed, result.phase)) }
                 }
 
                 is MaaCompositionService.StartResult.StartError -> {
-                    _state.update { it.copy(statusMessage = "读取文件失败！") }
+                    _state.update { it.copy(statusMessage = app.getString(R.string.copilot_file_read_error)) }
                 }
 
                 is MaaCompositionService.StartResult.PortraitOrientationError -> {
-                    _state.update { it.copy(statusMessage = "当前为竖屏,无法在前台模式运行") }
+                    _state.update { it.copy(statusMessage = app.getString(R.string.copilot_portrait_mode_error)) }
                 }
             }
         }
@@ -887,9 +873,9 @@ class CopilotViewModel(
 
     fun onStop() {
         viewModelScope.launch {
-            _state.update { it.copy(statusMessage = "正在停止...") }
+            _state.update { it.copy(statusMessage = app.getString(R.string.copilot_stopping)) }
             compositionService.stop()
-            _state.update { it.copy(statusMessage = "已停止") }
+            _state.update { it.copy(statusMessage = app.getString(R.string.copilot_stopped)) }
         }
     }
 
@@ -908,9 +894,9 @@ class CopilotViewModel(
         if (snapshot.currentCopilot == null || snapshot.currentFilePath.isBlank()) {
             _dialog.value = PanelDialogUiState(
                 type = PanelDialogType.WARNING,
-                title = "提示",
-                message = "作业为空，请先读取作业",
-                confirmText = "知道了",
+                title = app.getString(R.string.hint),
+                message = app.getString(R.string.copilot_empty_task_msg),
+                confirmText = app.getString(R.string.got_it),
                 confirmAction = PanelDialogConfirmAction.DISMISS_ONLY,
             )
             return false
@@ -920,7 +906,7 @@ class CopilotViewModel(
         if ((taskType == MaaTaskType.SSS_COPILOT && snapshot.tabIndex != TAB_SSS) ||
             (taskType != MaaTaskType.SSS_COPILOT && snapshot.tabIndex == TAB_SSS)
         ) {
-            _state.update { it.copy(statusMessage = MSG_TYPE_MISMATCH) }
+            _state.update { it.copy(statusMessage = app.getString(R.string.copilot_type_mismatch)) }
             return false
         }
 
@@ -932,7 +918,7 @@ class CopilotViewModel(
     ): Boolean {
         val selected = taskList.filter { it.isChecked }
         if (selected.isEmpty()) {
-            _state.update { it.copy(statusMessage = MSG_EMPTY_LIST) }
+            _state.update { it.copy(statusMessage = app.getString(R.string.copilot_empty_list)) }
             return false
         }
 
@@ -951,7 +937,7 @@ class CopilotViewModel(
         }
 
         if (types.size > 1) {
-            _state.update { it.copy(statusMessage = MSG_MIXED_LIST) }
+            _state.update { it.copy(statusMessage = app.getString(R.string.copilot_mixed_list)) }
             return false
         }
 
@@ -969,17 +955,17 @@ class CopilotViewModel(
     private suspend fun verifyCopilotListTask(items: List<CopilotListItem>): Boolean {
         when (items.size) {
             0 -> {
-                _state.update { it.copy(statusMessage = MSG_EMPTY_LIST) }
+                _state.update { it.copy(statusMessage = app.getString(R.string.copilot_empty_list)) }
                 return false
             }
 
             1 -> {
-                _state.update { it.copy(statusMessage = MSG_SINGLE_LIST_WARN) }
+                _state.update { it.copy(statusMessage = app.getString(R.string.copilot_single_from_list)) }
             }
         }
 
         if (items.any { it.name.trim().isEmpty() }) {
-            _state.update { it.copy(statusMessage = MSG_TASK_NAME_EMPTY) }
+            _state.update { it.copy(statusMessage = app.getString(R.string.copilot_task_name_empty)) }
             return false
         }
 
@@ -987,7 +973,7 @@ class CopilotViewModel(
         for (path in uniquePaths) {
             val parsed = copilotManager.parseFromFile(path)
             if (parsed.isFailure) {
-                _state.update { it.copy(statusMessage = "未找到对应作业！$path") }
+                _state.update { it.copy(statusMessage = app.getString(R.string.copilot_not_found_path, path)) }
                 return false
             }
             val stageName = parsed.getOrThrow().first.stageName
@@ -996,11 +982,10 @@ class CopilotViewModel(
                 //  可调用 UpdateViewModel.checkResourceUpdate() 后重新执行验证
                 _state.update {
                     it.copy(
-                        statusMessage = "不支持的关卡 ${
-                            resourceDataManager.findMap(
-                                stageName
-                            )?.code ?: stageName
-                        }，请尝试更新资源"
+                        statusMessage = app.getString(
+                            R.string.copilot_unsupported_stage,
+                            resourceDataManager.findMap(stageName)?.code ?: stageName
+                        )
                     )
                 }
                 return false
@@ -1016,7 +1001,7 @@ class CopilotViewModel(
                 resourceDataManager.getLocalizedCharacterName(item.name, "zh-cn")
                     ?: item.name
             if (normalizedName !in operatorNames) {
-                _state.update { it.copy(statusMessage = "错误的干员: ${item.name}") }
+                _state.update { it.copy(statusMessage = app.getString(R.string.copilot_invalid_operator, item.name)) }
                 return false
             }
         }
@@ -1085,7 +1070,7 @@ class CopilotViewModel(
             it[index] = completed.copy(isChecked = false)
         }
         _state.update {
-            it.copy(taskList = updated, statusMessage = "已完成: ${completed.name}")
+            it.copy(taskList = updated, statusMessage = app.getString(R.string.copilot_completed, completed.name))
         }
         repository.saveTaskList(updated)
 
@@ -1108,10 +1093,10 @@ class CopilotViewModel(
                 if (success) {
                     recentlyRatedCopilotIds.add(id)
                     if (updateStatusMessage) {
-                        _state.update { it.copy(statusMessage = MSG_RATE_SUCCESS) }
+                        _state.update { it.copy(statusMessage = app.getString(R.string.copilot_rate_success)) }
                     }
                 } else if (updateStatusMessage) {
-                    _state.update { it.copy(statusMessage = MSG_RATE_FAILED) }
+                    _state.update { it.copy(statusMessage = app.getString(R.string.copilot_rate_failed)) }
                 }
             } finally {
                 ratingInFlightCopilotIds.remove(id)
@@ -1122,10 +1107,10 @@ class CopilotViewModel(
 
     private fun getCopilotTabName(tabIndex: Int): String {
         return when (tabIndex) {
-            TAB_MAIN -> "主线/故事集/SideStory"
-            TAB_SSS -> "保全派驻"
-            TAB_PARADOX -> "悖论模拟"
-            TAB_OTHER_ACTIVITY -> "其他活动"
+            TAB_MAIN -> app.getString(R.string.copilot_tab_main)
+            TAB_SSS -> app.getString(R.string.copilot_tab_sss)
+            TAB_PARADOX -> app.getString(R.string.copilot_tab_paradox)
+            TAB_OTHER_ACTIVITY -> app.getString(R.string.copilot_tab_other)
             else -> tabIndex.toString()
         }
     }

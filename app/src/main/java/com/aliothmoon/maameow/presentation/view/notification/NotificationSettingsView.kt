@@ -43,18 +43,21 @@ import com.aliothmoon.maameow.theme.MaaDesignTokens
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
+import com.aliothmoon.maameow.R
 
-private val PROVIDERS = listOf(
-    "ServerChan" to "Server酱",
-    "Telegram" to "Telegram",
-    "Discord" to "Discord",
-    "DingTalk" to "钉钉机器人",
-    "Discord Webhook" to "Discord Webhook",
-    "SMTP" to "SMTP",
-    "Bark" to "Bark",
-    "Qmsg" to "Qmsg",
-    "Gotify" to "Gotify",
-    "CustomWebhook" to "自定义 Webhook",
+private val PROVIDER_IDS = listOf(
+    "ServerChan",
+    "Telegram",
+    "Discord",
+    "DingTalk",
+    "Discord Webhook",
+    "SMTP",
+    "Bark",
+    "Qmsg",
+    "Gotify",
+    "CustomWebhook",
 )
 
 @Composable
@@ -72,9 +75,11 @@ fun NotificationSettingsView(
     val eventNotificationLevel by appSettingsManager.eventNotificationLevel.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
 
+    val context = LocalContext.current
+
     Scaffold(
         topBar = {
-            TopAppBar(title = "通知设置")
+            TopAppBar(title = stringResource(R.string.notification_settings_title))
         }
     ) { paddingValues ->
     val contentColor = MaterialTheme.colorScheme.onSurface
@@ -88,10 +93,10 @@ fun NotificationSettingsView(
         // 内部通知
         item {
             val isEnabled = eventNotificationLevel != EventNotificationLevel.OFF
-            SectionHeader("内部通知")
+            SectionHeader(stringResource(R.string.internal_notification))
             InfoCard(title = "") {
                 SwitchItem(
-                    title = "通知提醒",
+                    title = stringResource(R.string.notification_reminder_title),
                     checked = isEnabled,
                     contentColor = contentColor
                 ) { enabled ->
@@ -105,7 +110,7 @@ fun NotificationSettingsView(
                     Column {
                         SettingsDivider(contentColor)
                         SwitchItem(
-                            title = "弹出提示",
+                            title = stringResource(R.string.notification_toast_title),
                             checked = eventNotificationLevel == EventNotificationLevel.HIGH,
                             contentColor = contentColor
                         ) { popup ->
@@ -118,14 +123,14 @@ fun NotificationSettingsView(
                         SettingsDivider(contentColor)
                         val eventNotifier: MaaEventNotifier = koinInject()
                         Button(
-                            onClick = { eventNotifier.notifyAllTasksCompleted("这是一条测试通知") },
+                            onClick = { eventNotifier.notifyAllTasksCompleted(context.getString(R.string.test_notification_content)) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = MaaDesignTokens.Spacing.sm),
                             shape = MaterialTheme.shapes.small,
                             contentPadding = ButtonDefaults.ContentPadding
                         ) {
-                            Text("发送测试通知")
+                            Text(stringResource(R.string.send_test_notification))
                         }
                     }
                 }
@@ -135,21 +140,21 @@ fun NotificationSettingsView(
         // 外部通知 - 触发条件
         item {
             Spacer(Modifier.height(MaaDesignTokens.Spacing.sectionGap))
-            SectionHeader("外部通知")
+            SectionHeader(stringResource(R.string.external_notification))
             InfoCard(title = "") {
-                SwitchItem("任务完成时通知", sendOnComplete, contentColor) {
+                SwitchItem(stringResource(R.string.notify_on_task_complete), sendOnComplete, contentColor) {
                     viewModel.updateSettings { copy(sendOnComplete = it.toString()) }
                 }
                 SettingsDivider(contentColor)
-                SwitchItem("任务出错时通知", sendOnError, contentColor) {
+                SwitchItem(stringResource(R.string.notify_on_task_error), sendOnError, contentColor) {
                     viewModel.updateSettings { copy(sendOnError = it.toString()) }
                 }
                 SettingsDivider(contentColor)
-                SwitchItem("服务异常终止时通知", sendOnServiceDied, contentColor) {
+                SwitchItem(stringResource(R.string.notify_on_service_crash), sendOnServiceDied, contentColor) {
                     viewModel.updateSettings { copy(sendOnServiceDied = it.toString()) }
                 }
                 SettingsDivider(contentColor)
-                SwitchItem("附带日志详情", includeLogDetails, contentColor) {
+                SwitchItem(stringResource(R.string.include_log_details), includeLogDetails, contentColor) {
                     viewModel.updateSettings { copy(includeLogDetails = it.toString()) }
                 }
             }
@@ -158,12 +163,18 @@ fun NotificationSettingsView(
         // 通知渠道
         item {
             Spacer(Modifier.height(MaaDesignTokens.Spacing.sectionGap))
-            SectionHeader("通知渠道")
+            SectionHeader(stringResource(R.string.notification_channel_section))
         }
 
-        PROVIDERS.forEach { (id, displayName) ->
+        PROVIDER_IDS.forEach { id ->
             item(key = id) {
                 val enabled = id in enabledProviders
+                val displayName = when (id) {
+                    "ServerChan" -> stringResource(R.string.channel_serverchan)
+                    "DingTalk" -> stringResource(R.string.channel_dingtalk)
+                    "CustomWebhook" -> stringResource(R.string.channel_custom_webhook)
+                    else -> id
+                }
                 Spacer(Modifier.height(MaaDesignTokens.Spacing.sm))
                 InfoCard(
                     title = "",
@@ -202,7 +213,7 @@ fun NotificationSettingsView(
         // 测试
         item {
             Spacer(Modifier.height(MaaDesignTokens.Spacing.sectionGap))
-            SectionHeader("测试")
+            SectionHeader(stringResource(R.string.test_section))
             InfoCard(title = "") {
                 Button(
                     onClick = { viewModel.sendTest() },
@@ -211,7 +222,7 @@ fun NotificationSettingsView(
                     shape = MaterialTheme.shapes.small,
                     contentPadding = ButtonDefaults.ContentPadding
                 ) {
-                    Text("发送测试通知")
+                    Text(stringResource(R.string.send_test_notification))
                 }
             }
         }
@@ -229,6 +240,7 @@ private fun ProviderConfig(
     viewModel: NotificationSettingsViewModel
 ) {
     val contentColor = MaterialTheme.colorScheme.onSurface
+    val optional = stringResource(R.string.optional)
 
     when (id) {
         "ServerChan" -> {
@@ -244,7 +256,7 @@ private fun ProviderConfig(
             ITextField(
                 value = settings.barkServer,
                 onValueChange = { viewModel.updateSettings { copy(barkServer = it) } },
-                label = "服务器地址",
+                label = stringResource(R.string.server_address),
                 placeholder = "https://api.day.app"
             )
             Spacer(Modifier.height(MaaDesignTokens.Spacing.sm))
@@ -272,7 +284,7 @@ private fun ProviderConfig(
                 value = settings.telegramTopicId,
                 onValueChange = { viewModel.updateSettings { copy(telegramTopicId = it) } },
                 label = "Topic ID",
-                placeholder = "可选"
+                placeholder = optional
             )
         }
 
@@ -301,7 +313,7 @@ private fun ProviderConfig(
                 value = settings.dingTalkSecret,
                 onValueChange = { viewModel.updateSettings { copy(dingTalkSecret = it) } },
                 label = "Secret",
-                placeholder = "可选，加签密钥"
+                placeholder = stringResource(R.string.optional_signing_key)
             )
         }
 
@@ -330,14 +342,14 @@ private fun ProviderConfig(
             )
             Spacer(Modifier.height(MaaDesignTokens.Spacing.sm))
             SwitchItem(
-                title = "使用 SSL",
+                title = stringResource(R.string.use_ssl),
                 checked = settings.smtpUseSsl.toBooleanStrictOrNull() ?: false,
                 contentColor = contentColor,
                 onCheckedChange = { viewModel.updateSettings { copy(smtpUseSsl = it.toString()) } }
             )
             SettingsDivider(contentColor)
             SwitchItem(
-                title = "需要认证",
+                title = stringResource(R.string.require_auth),
                 checked = settings.smtpRequireAuthentication.toBooleanStrictOrNull() ?: false,
                 contentColor = contentColor,
                 onCheckedChange = { viewModel.updateSettings { copy(smtpRequireAuthentication = it.toString()) } }
@@ -347,14 +359,14 @@ private fun ProviderConfig(
                 value = settings.smtpUser,
                 onValueChange = { viewModel.updateSettings { copy(smtpUser = it) } },
                 label = "SMTP User",
-                placeholder = "可选，开启认证时必填"
+                placeholder = stringResource(R.string.optional_when_auth)
             )
             Spacer(Modifier.height(MaaDesignTokens.Spacing.sm))
             ITextField(
                 value = settings.smtpPassword,
                 onValueChange = { viewModel.updateSettings { copy(smtpPassword = it) } },
                 label = "SMTP Password",
-                placeholder = "可选，开启认证时必填"
+                placeholder = stringResource(R.string.optional_when_auth)
             )
             Spacer(Modifier.height(MaaDesignTokens.Spacing.sm))
             ITextField(
@@ -396,7 +408,7 @@ private fun ProviderConfig(
                 value = settings.qmsgBot,
                 onValueChange = { viewModel.updateSettings { copy(qmsgBot = it) } },
                 label = "Bot",
-                placeholder = "可选"
+                placeholder = optional
             )
         }
 
@@ -426,12 +438,12 @@ private fun ProviderConfig(
             ITextField(
                 value = settings.customWebhookBody,
                 onValueChange = { viewModel.updateSettings { copy(customWebhookBody = it) } },
-                label = "请求体模板",
+                label = stringResource(R.string.request_body_template),
                 singleLine = false,
                 placeholder = """{"title":"{title}","content":"{content}"}"""
             )
             Text(
-                text = "支持占位符: {title} {content} {time}",
+                text = stringResource(R.string.placeholder_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 modifier = Modifier.padding(top = MaaDesignTokens.Spacing.xs)
