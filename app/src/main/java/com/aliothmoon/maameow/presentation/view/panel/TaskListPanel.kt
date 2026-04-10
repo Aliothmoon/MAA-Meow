@@ -21,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
@@ -82,7 +83,7 @@ fun TaskListPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = if (isProfileMode) Icons.Default.Check else Icons.Default.List,
+                    imageVector = if (isProfileMode) Icons.Default.Check else Icons.AutoMirrored.Filled.List,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
                     tint = if (isProfileMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
