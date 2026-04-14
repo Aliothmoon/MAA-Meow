@@ -1,5 +1,7 @@
 package com.aliothmoon.maameow.data.resource
 
+import android.content.Context
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.MaaApiService
 import com.aliothmoon.maameow.data.model.activity.ActivityStage
 import com.aliothmoon.maameow.data.model.activity.ClientStageActivity
@@ -34,6 +36,7 @@ import kotlin.collections.plus
  * see StageManager
  */
 class ActivityManager(
+    private val context: Context,
     private val chainState: TaskChainState,
     private val maaApiService: MaaApiService,
     private val itemHelper: ItemHelper,
@@ -265,7 +268,8 @@ class ActivityManager(
         // 2. 常驻关卡分组
         // InitializeDefaultStages()     固定关卡（剿灭等）
         val defaultStageItem = StageItem(
-            code = "", displayName = "当前/上次", isActivityStage = false, isOpenToday = true
+            code = "", displayName = context.getString(R.string.panel_fight_stage_reset_current),
+            isActivityStage = false, isOpenToday = true
         )
 
         // AddPermanentStages()          常驻关卡（主线/资源本等）
@@ -288,7 +292,13 @@ class ActivityManager(
         }
 
         if (filteredPermanent.isNotEmpty()) {
-            groups.add(StageGroup(title = "常驻关卡", stages = filteredPermanent))
+            groups.add(
+                StageGroup(
+                    title = context.getString(R.string.panel_fight_stage_group_permanent),
+                    stages = filteredPermanent,
+                    isPermanent = true,
+                )
+            )
         }
 
         return groups

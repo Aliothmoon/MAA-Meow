@@ -25,8 +25,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -137,13 +139,17 @@ fun CoreCharSelector(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "开局干员",
+                text = stringResource(R.string.core_char_selector_title),
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium
             )
             if (recommendedChars.isNotEmpty()) {
                 Text(
-                    text = if (showSuggestions) "收起" else "推荐",
+                    text = if (showSuggestions) {
+                        stringResource(R.string.core_char_selector_collapse)
+                    } else {
+                        stringResource(R.string.core_char_selector_recommended)
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clickable {
@@ -163,7 +169,7 @@ fun CoreCharSelector(
                 onValueChange = { newValue ->
                     handleInputChange(newValue)
                 },
-                placeholder = "干员名称（可选）",
+                placeholder = stringResource(R.string.core_char_selector_placeholder),
                 outlineColor = if (!isValid && !isValidating) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -177,7 +183,7 @@ fun CoreCharSelector(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "未找到该干员，输入不会生效",
+                    text = stringResource(R.string.core_char_selector_not_found),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)

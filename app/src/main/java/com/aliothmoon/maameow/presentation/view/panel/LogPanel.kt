@@ -45,11 +45,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.LogItem
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 
@@ -99,7 +101,7 @@ fun LogPanel(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "任务日志",
+                    text = stringResource(R.string.panel_log_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -109,14 +111,14 @@ fun LogPanel(
                 IconButton(onClick = onClearLogs) {
                     Icon(
                         imageVector = Icons.Rounded.Delete,
-                        contentDescription = "清空",
+                        contentDescription = stringResource(R.string.common_clear),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 IconButton(onClick = onClose) {
                     Icon(
                         imageVector = Icons.Rounded.Close,
-                        contentDescription = "关闭",
+                        contentDescription = stringResource(R.string.common_close),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -157,7 +159,7 @@ fun LogPanel(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Info,
-                        contentDescription = "恢复自动滚动",
+                        contentDescription = stringResource(R.string.panel_log_resume_auto_scroll),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(20.dp)
                     )
@@ -240,7 +242,7 @@ private fun LogLine(
                 Spacer(modifier = Modifier.width(4.dp))
                 Icon(
                     imageVector = Icons.Outlined.Info,
-                    contentDescription = "查看详情",
+                    contentDescription = stringResource(R.string.panel_log_view_details),
                     modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -259,10 +261,10 @@ private fun LogDetailDialog(
 ) {
     AdaptiveTaskPromptDialog(
         visible = true,
-        title = "日志详情",
+        title = stringResource(R.string.log_detail_title),
         onConfirm = onDismiss,
         onDismissRequest = onDismiss,
-        confirmText = "确定",
+        confirmText = stringResource(R.string.common_confirm),
         dismissText = null,
         icon = Icons.Rounded.Info,
         iconTint = logItem.color,
@@ -306,7 +308,7 @@ private fun LogDetailDialog(
                 if (richTooltip != null || plainTooltip != null) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = "详细信息",
+                            text = stringResource(R.string.panel_log_details_section),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -346,7 +348,7 @@ private fun LogDetailDialog(
                 logItem.screenshotPath?.let { path ->
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = "截图",
+                            text = stringResource(R.string.panel_log_screenshot_section),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

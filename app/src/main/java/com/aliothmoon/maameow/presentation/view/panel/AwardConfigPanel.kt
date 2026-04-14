@@ -16,7 +16,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.AwardConfig
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
@@ -42,13 +44,13 @@ fun AwardConfigPanel(
         CheckBoxWithLabel(
             checked = config.award,
             onCheckedChange = { onConfigChange(config.copy(award = it)) },
-            label = "领取每日/每周任务奖励"
+            label = stringResource(R.string.panel_award_daily_weekly)
         )
 
         CheckBoxWithLabel(
             checked = config.mail,
             onCheckedChange = { onConfigChange(config.copy(mail = it)) },
-            label = "领取所有邮件奖励"
+            label = stringResource(R.string.panel_award_mail)
         )
 
         // 免费单抽（带提示）
@@ -60,7 +62,7 @@ fun AwardConfigPanel(
                 CheckBoxWithLabel(
                     checked = config.freeGacha,
                     onCheckedChange = { onConfigChange(config.copy(freeGacha = it)) },
-                    label = "进行限定池赠送的每日免费单抽"
+                    label = stringResource(R.string.panel_award_free_gacha)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 ExpandableTipIcon(
@@ -70,26 +72,26 @@ fun AwardConfigPanel(
             }
             ExpandableTipContent(
                 visible = freeGachaTipExpanded,
-                tipText = "若不存在免费单抽，则不会抽取"
+                tipText = stringResource(R.string.panel_award_free_gacha_tip)
             )
         }
 
         CheckBoxWithLabel(
             checked = config.orundum,
             onCheckedChange = { onConfigChange(config.copy(orundum = it)) },
-            label = "领取幸运墙的每日合成玉奖励"
+            label = stringResource(R.string.panel_award_orundum)
         )
 
         CheckBoxWithLabel(
             checked = config.mining,
             onCheckedChange = { onConfigChange(config.copy(mining = it)) },
-            label = "领取限时开采许可的每日合成玉奖励"
+            label = stringResource(R.string.panel_award_mining)
         )
 
         CheckBoxWithLabel(
             checked = config.specialAccess,
             onCheckedChange = { onConfigChange(config.copy(specialAccess = it)) },
-            label = "领取周年赠送月卡奖励"
+            label = stringResource(R.string.panel_award_special_access)
         )
     }
 }

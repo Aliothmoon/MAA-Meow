@@ -16,23 +16,18 @@ import java.time.DayOfWeek
 class AnalyzeTaskChainUseCase(
     private val taskChainState: TaskChainState,
 ) {
-    companion object {
-        const val EMPTY_PARAMS_MESSAGE = "当前没有可执行的任务（可能被周计划过滤）"
-    }
-
     operator fun invoke(chain: List<TaskChainNode>): AnalyzeTaskChainResult {
         val enabledNodes = chain.filter { it.enabled }.sortedBy { it.order }
         if (enabledNodes.isEmpty()) {
             return AnalyzeTaskChainResult.Blocked(
-                reason = AnalyzeTaskChainFailureReason.INVALID_CHAIN,
-                message = "请先选择要执行的任务",
+                reason = AnalyzeTaskChainFailureReason.NO_TASK_SELECTED,
             )
         }
 
-        validateClientTypeConsistency(enabledNodes)?.let { message ->
+        validateClientTypeConsistency(enabledNodes)?.let { clientTypes ->
             return AnalyzeTaskChainResult.Blocked(
-                reason = AnalyzeTaskChainFailureReason.INVALID_CHAIN,
-                message = message,
+                reason = AnalyzeTaskChainFailureReason.CONFLICTING_CLIENT_TYPES,
+                clientTypes = clientTypes,
             )
         }
 
@@ -52,7 +47,6 @@ class AnalyzeTaskChainUseCase(
         if (params.isEmpty()) {
             return AnalyzeTaskChainResult.Blocked(
                 reason = AnalyzeTaskChainFailureReason.NO_EXECUTABLE_TASKS,
-                message = EMPTY_PARAMS_MESSAGE,
             )
         }
 
@@ -69,12 +63,12 @@ class AnalyzeTaskChainUseCase(
         )
     }
 
-    private fun validateClientTypeConsistency(nodes: List<TaskChainNode>): String? {
+    private fun validateClientTypeConsistency(nodes: List<TaskChainNode>): List<String>? {
         val clientTypes = nodes
             .mapNotNull { (it.config as? WakeUpConfig)?.clientType }
             .distinct()
         if (clientTypes.size > 1) {
-            return "任务链中存在多个不同的客户端类型（${clientTypes.joinToString("、")}），请保持一致"
+            return clientTypes
         }
         return null
     }
@@ -130,7 +124,8 @@ data class TaskChainPlan(
 )
 
 enum class AnalyzeTaskChainFailureReason {
-    INVALID_CHAIN,
+    NO_TASK_SELECTED,
+    CONFLICTING_CLIENT_TYPES,
     NO_EXECUTABLE_TASKS,
 }
 
@@ -139,6 +134,6 @@ sealed interface AnalyzeTaskChainResult {
 
     data class Blocked(
         val reason: AnalyzeTaskChainFailureReason,
-        val message: String,
+        val clientTypes: List<String> = emptyList(),
     ) : AnalyzeTaskChainResult
 }

@@ -16,7 +16,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 
 @Composable
 fun BlacklistItemRow(item: String, enabled: Boolean, onRemove: () -> Unit) {
@@ -52,7 +54,7 @@ fun BlacklistItemRow(item: String, enabled: Boolean, onRemove: () -> Unit) {
             ) {
                 Icon(
                     Icons.Default.Close,
-                    contentDescription = "删除",
+                    contentDescription = stringResource(R.string.common_delete),
                     modifier = Modifier.size(16.dp),
                     tint = if (enabled) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant
                 )

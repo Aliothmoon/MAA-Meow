@@ -13,17 +13,6 @@ class PrepareTaskStartUseCase(
     private val appSettings: AppSettingsManager,
     private val isPackageInstalled: (String) -> Boolean = { true },
 ) {
-    companion object {
-        const val NO_WAKE_UP_WARNING_MESSAGE =
-            "当前任务链不会启动游戏，且检测到游戏未运行。继续执行可能直接失败，是否仍要启动？"
-        const val SCHEDULED_NO_WAKE_UP_FAILURE_MESSAGE =
-            "未配置开始唤醒且游戏未运行，已取消本次定时执行"
-        const val GAME_NOT_INSTALLED_WARNING_MESSAGE =
-            "未检测到当前客户端类型对应的游戏安装包，请检查「开始唤醒」中的客户端类型设置是否正确。是否仍要启动？"
-        const val SCHEDULED_GAME_NOT_INSTALLED_MESSAGE =
-            "未检测到当前客户端类型对应的游戏安装包，请检查「开始唤醒」中的客户端类型设置，已取消本次定时执行"
-    }
-
     suspend operator fun invoke(
         chain: List<TaskChainNode>,
         context: TaskStartContext,
@@ -33,7 +22,7 @@ class PrepareTaskStartUseCase(
             is AnalyzeTaskChainResult.Blocked -> {
                 return TaskStartDecision.Blocked(
                     reason = analyzeResult.reason.toDecisionReason(),
-                    message = analyzeResult.message,
+                    clientTypes = analyzeResult.clientTypes,
                 )
             }
         }
@@ -47,12 +36,10 @@ class PrepareTaskStartUseCase(
             return when (context.mode) {
                 TaskStartMode.MANUAL -> TaskStartDecision.RequiresConfirmation(
                     reason = TaskStartDecisionReason.GAME_NOT_INSTALLED,
-                    message = GAME_NOT_INSTALLED_WARNING_MESSAGE,
                     acknowledgement = TaskStartAcknowledgement.GAME_NOT_INSTALLED,
                 )
                 TaskStartMode.SCHEDULED -> TaskStartDecision.Blocked(
                     reason = TaskStartDecisionReason.GAME_NOT_INSTALLED,
-                    message = SCHEDULED_GAME_NOT_INSTALLED_MESSAGE,
                 )
             }
         }
@@ -78,7 +65,6 @@ class PrepareTaskStartUseCase(
                     TaskStartMode.MANUAL -> {
                         TaskStartDecision.RequiresConfirmation(
                             reason = TaskStartDecisionReason.GAME_NOT_RUNNING_WITHOUT_WAKE_UP,
-                            message = NO_WAKE_UP_WARNING_MESSAGE,
                             acknowledgement = TaskStartAcknowledgement.GAME_NOT_RUNNING_WITHOUT_WAKE_UP,
                         )
                     }
@@ -86,7 +72,6 @@ class PrepareTaskStartUseCase(
                     TaskStartMode.SCHEDULED -> {
                         TaskStartDecision.Blocked(
                             reason = TaskStartDecisionReason.GAME_NOT_RUNNING_WITHOUT_WAKE_UP,
-                            message = SCHEDULED_NO_WAKE_UP_FAILURE_MESSAGE,
                         )
                     }
                 }
@@ -123,7 +108,8 @@ enum class TaskStartAcknowledgement {
 }
 
 enum class TaskStartDecisionReason {
-    INVALID_CHAIN,
+    NO_TASK_SELECTED,
+    CONFLICTING_CLIENT_TYPES,
     NO_EXECUTABLE_TASKS,
     GAME_NOT_RUNNING_WITHOUT_WAKE_UP,
     GAME_NOT_INSTALLED,
@@ -134,19 +120,23 @@ sealed interface TaskStartDecision {
 
     data class RequiresConfirmation(
         val reason: TaskStartDecisionReason,
-        val message: String,
         val acknowledgement: TaskStartAcknowledgement,
+        val clientTypes: List<String> = emptyList(),
     ) : TaskStartDecision
 
     data class Blocked(
         val reason: TaskStartDecisionReason,
-        val message: String,
+        val clientTypes: List<String> = emptyList(),
     ) : TaskStartDecision
 }
 
 private fun AnalyzeTaskChainFailureReason.toDecisionReason(): TaskStartDecisionReason {
     return when (this) {
-        AnalyzeTaskChainFailureReason.INVALID_CHAIN -> TaskStartDecisionReason.INVALID_CHAIN
+        AnalyzeTaskChainFailureReason.NO_TASK_SELECTED -> TaskStartDecisionReason.NO_TASK_SELECTED
+        AnalyzeTaskChainFailureReason.CONFLICTING_CLIENT_TYPES -> {
+            TaskStartDecisionReason.CONFLICTING_CLIENT_TYPES
+        }
+
         AnalyzeTaskChainFailureReason.NO_EXECUTABLE_TASKS -> TaskStartDecisionReason.NO_EXECUTABLE_TASKS
     }
 }

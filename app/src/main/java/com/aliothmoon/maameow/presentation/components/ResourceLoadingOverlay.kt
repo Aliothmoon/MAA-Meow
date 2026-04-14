@@ -22,9 +22,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
+import com.aliothmoon.maameow.utils.i18n.resourceLoaderMessage
 import org.koin.compose.koinInject
 
 /**
@@ -38,6 +40,7 @@ fun ResourceLoadingOverlay(
 ) {
 
     val state by loader.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val isVisible = state is MaaResourceLoader.State.Loading
             || state is MaaResourceLoader.State.Reloading
 
@@ -74,11 +77,7 @@ fun ResourceLoadingOverlay(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = when (state) {
-                            is MaaResourceLoader.State.Loading -> (state as MaaResourceLoader.State.Loading).message
-                            is MaaResourceLoader.State.Reloading -> (state as MaaResourceLoader.State.Reloading).message
-                            else -> ""
-                        },
+                        text = context.resourceLoaderMessage(state),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )

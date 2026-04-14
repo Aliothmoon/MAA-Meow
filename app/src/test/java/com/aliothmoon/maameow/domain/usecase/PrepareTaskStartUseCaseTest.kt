@@ -42,7 +42,6 @@ class PrepareTaskStartUseCaseTest {
         assertEquals(
             TaskStartDecision.RequiresConfirmation(
                 reason = TaskStartDecisionReason.GAME_NOT_RUNNING_WITHOUT_WAKE_UP,
-                message = PrepareTaskStartUseCase.NO_WAKE_UP_WARNING_MESSAGE,
                 acknowledgement = TaskStartAcknowledgement.GAME_NOT_RUNNING_WITHOUT_WAKE_UP,
             ),
             result
@@ -65,7 +64,6 @@ class PrepareTaskStartUseCaseTest {
         assertEquals(
             TaskStartDecision.Blocked(
                 reason = TaskStartDecisionReason.GAME_NOT_RUNNING_WITHOUT_WAKE_UP,
-                message = PrepareTaskStartUseCase.SCHEDULED_NO_WAKE_UP_FAILURE_MESSAGE,
             ),
             result
         )
@@ -145,8 +143,7 @@ class PrepareTaskStartUseCaseTest {
 
         assertEquals(
             TaskStartDecision.Blocked(
-                reason = TaskStartDecisionReason.INVALID_CHAIN,
-                message = "请先选择要执行的任务",
+                reason = TaskStartDecisionReason.NO_TASK_SELECTED,
             ),
             result
         )
@@ -169,7 +166,6 @@ class PrepareTaskStartUseCaseTest {
         assertEquals(
             TaskStartDecision.RequiresConfirmation(
                 reason = TaskStartDecisionReason.GAME_NOT_INSTALLED,
-                message = PrepareTaskStartUseCase.GAME_NOT_INSTALLED_WARNING_MESSAGE,
                 acknowledgement = TaskStartAcknowledgement.GAME_NOT_INSTALLED,
             ),
             result
@@ -193,7 +189,6 @@ class PrepareTaskStartUseCaseTest {
         assertEquals(
             TaskStartDecision.Blocked(
                 reason = TaskStartDecisionReason.GAME_NOT_INSTALLED,
-                message = PrepareTaskStartUseCase.SCHEDULED_GAME_NOT_INSTALLED_MESSAGE,
             ),
             result
         )

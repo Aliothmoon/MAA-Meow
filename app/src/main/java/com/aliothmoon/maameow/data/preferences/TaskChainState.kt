@@ -15,6 +15,7 @@ import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.remote.PermissionGrantRequest
 import com.aliothmoon.maameow.utils.JsonUtils
+import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -30,7 +31,10 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.UUID
 
-class TaskChainState(private val context: Context) {
+class TaskChainState(
+    private val context: Context,
+    private val appSettings: AppSettingsManager,
+) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val json = JsonUtils.common
@@ -48,9 +52,7 @@ class TaskChainState(private val context: Context) {
         private const val MAX_PROFILE_NAME_LENGTH = 20
     }
 
-    private val defaultChain: List<TaskChainNode> by lazy { buildDefaultChain() }
-
-    private val _chain = MutableStateFlow(defaultChain)
+    private val _chain = MutableStateFlow(buildDefaultChain())
     val chain: StateFlow<List<TaskChainNode>> = _chain.asStateFlow()
 
     private val _profiles = MutableStateFlow<List<TaskProfile>>(emptyList())
@@ -104,7 +106,7 @@ class TaskChainState(private val context: Context) {
         updateChain { current ->
             val node = TaskChainNode(
                 id = UUID.randomUUID().toString(),
-                name = typeInfo.displayName,
+                name = defaultTaskName(typeInfo),
                 enabled = true,
                 config = typeInfo.defaultConfig()
             )
@@ -259,7 +261,7 @@ class TaskChainState(private val context: Context) {
         }
         val newProfile = TaskProfile(
             name = nextProfileName(savedProfiles),
-            chain = defaultChain
+            chain = buildDefaultChain()
         )
         val updatedProfiles = savedProfiles + newProfile
         // 切换到新 Profile
@@ -364,12 +366,12 @@ class TaskChainState(private val context: Context) {
     }
 
     private fun decodeChain(raw: String?): List<TaskChainNode> {
-        if (raw.isNullOrEmpty()) return defaultChain
+        if (raw.isNullOrEmpty()) return buildDefaultChain()
         return runCatching {
             json.decodeFromString<List<TaskChainNode>>(raw)
         }.getOrElse {
             Timber.w(it, "Failed to decode task chain, using defaults")
-            defaultChain
+            buildDefaultChain()
         }
     }
 
@@ -401,7 +403,7 @@ class TaskChainState(private val context: Context) {
     private fun buildDefaultChain(): List<TaskChainNode> {
         return TaskTypeInfo.entries.mapIndexed { index, info ->
             TaskChainNode(
-                name = info.displayName,
+                name = defaultTaskName(info),
                 enabled = false,
                 order = index,
                 config = info.defaultConfig()
@@ -409,10 +411,14 @@ class TaskChainState(private val context: Context) {
         }
     }
 
+    private fun defaultTaskName(typeInfo: TaskTypeInfo): String {
+        return typeInfo.defaultName(resolveSelectedLanguage(appSettings.language.value))
+    }
+
     suspend fun importProfiles(profiles: List<TaskProfile>, activeId: String) {
         val resolvedActiveId = profiles.find { it.id == activeId }?.id
             ?: profiles.firstOrNull()?.id ?: return
-        val activeChain = profiles.find { it.id == resolvedActiveId }?.chain ?: defaultChain
+        val activeChain = profiles.find { it.id == resolvedActiveId }?.chain ?: buildDefaultChain()
         _profiles.value = profiles
         _activeProfileId.value = resolvedActiveId
         _chain.value = activeChain

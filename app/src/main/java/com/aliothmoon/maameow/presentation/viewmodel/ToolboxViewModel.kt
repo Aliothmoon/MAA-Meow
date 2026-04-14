@@ -1,7 +1,10 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
+import android.content.Context
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.ActivityManager
@@ -14,6 +17,8 @@ import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogConfirmAction
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogUiState
+import com.aliothmoon.maameow.utils.i18n.UiText
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,11 +29,11 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
-enum class ToolboxTab(val displayName: String) {
-    MINI_GAME("小游戏"),
-    RECRUIT_CALC("公招识别"),
-    DEPOT("仓库识别"),
-    OPER_BOX("干员识别"),
+enum class ToolboxTab(@field:StringRes val labelRes: Int) {
+    MINI_GAME(R.string.toolbox_tab_mini_game),
+    RECRUIT_CALC(R.string.toolbox_tab_recruit_calc),
+    DEPOT(R.string.maa_depot),
+    OPER_BOX(R.string.panel_operbox_title),
 }
 
 data class RecruitCalcConfig(
@@ -43,6 +48,7 @@ data class RecruitCalcConfig(
 )
 
 class ToolboxViewModel(
+    private val appContext: Context,
     private val compositionService: MaaCompositionService,
     val collector: ToolboxResultCollector,
     activityManager: ActivityManager,
@@ -50,13 +56,13 @@ class ToolboxViewModel(
     private val chainState: TaskChainState,
 ) : ViewModel() {
 
-    val miniGame = MiniGameDelegate(activityManager, compositionService, viewModelScope)
+    val miniGame = MiniGameDelegate(appContext, activityManager, compositionService, viewModelScope)
 
     private val _currentTab = MutableStateFlow(ToolboxTab.MINI_GAME)
     val currentTab: StateFlow<ToolboxTab> = _currentTab.asStateFlow()
 
-    private val _statusMessage = MutableStateFlow("")
-    val statusMessage: StateFlow<String> = _statusMessage.asStateFlow()
+    private val _statusMessage = MutableStateFlow<UiText>(UiText.Empty)
+    val statusMessage: StateFlow<UiText> = _statusMessage.asStateFlow()
 
     private val _dialog = MutableStateFlow<PanelDialogUiState?>(null)
     val dialog: StateFlow<PanelDialogUiState?> = _dialog.asStateFlow()
@@ -85,10 +91,10 @@ class ToolboxViewModel(
                 if (pkg != null && appAliveChecker.isAppAlive(pkg) == AppAliveStatus.DEAD) {
                     _dialog.value = PanelDialogUiState(
                         type = PanelDialogType.WARNING,
-                        title = "启动警告",
-                        message = GAME_NOT_RUNNING_WARNING,
-                        confirmText = "仍然启动",
-                        dismissText = "取消",
+                        title = uiTextOf(R.string.toolbox_dialog_start_warning_title),
+                        message = appContext.resolveGameNotRunningWarningMessage(),
+                        confirmText = uiTextOf(R.string.toolbox_dialog_start_anyway),
+                        dismissText = uiTextOf(R.string.common_cancel),
                         confirmAction = PanelDialogConfirmAction.CONFIRM_PENDING_START,
                     )
                     return@launch
@@ -122,9 +128,9 @@ class ToolboxViewModel(
         when (_currentTab.value) {
             ToolboxTab.MINI_GAME -> miniGame.onStop()
             else -> viewModelScope.launch {
-                _statusMessage.value = "正在停止..."
+                _statusMessage.value = uiTextOf(R.string.toolbox_status_stopping)
                 compositionService.stop()
-                _statusMessage.value = "已停止"
+                _statusMessage.value = uiTextOf(R.string.toolbox_status_stopped)
             }
         }
     }
@@ -134,7 +140,7 @@ class ToolboxViewModel(
     private fun onStartRecruitCalc() {
         viewModelScope.launch {
             collector.clearRecruit()
-            _statusMessage.value = "正在启动公招识别..."
+            _statusMessage.value = uiTextOf(R.string.toolbox_status_starting_recruit_calc)
             val cfg = _recruitConfig.value
             val selectList = buildJsonArray {
                 if (cfg.chooseLevel3) add(3)
@@ -167,7 +173,7 @@ class ToolboxViewModel(
     private fun onStartDepot() {
         viewModelScope.launch {
             collector.clearDepot()
-            _statusMessage.value = "正在启动仓库识别..."
+            _statusMessage.value = uiTextOf(R.string.toolbox_status_starting_depot)
             handleStartResult(
                 compositionService.startCopilot(listOf(MaaTaskParams(MaaTaskType.DEPOT, "{}")))
             )
@@ -179,7 +185,7 @@ class ToolboxViewModel(
     private fun onStartOperBox() {
         viewModelScope.launch {
             collector.clearOperBox()
-            _statusMessage.value = "正在启动干员识别..."
+            _statusMessage.value = uiTextOf(R.string.toolbox_status_starting_oper_box)
             handleStartResult(
                 compositionService.startCopilot(listOf(MaaTaskParams(MaaTaskType.OPER_BOX, "{}")))
             )
@@ -202,12 +208,15 @@ class ToolboxViewModel(
     fun exportOperBox(): String {
         val result = collector.operBoxResult.value ?: return "[]"
         val all = result.owned + result.notOwned
-        return "[${all.joinToString(",") { op ->
-            """{"id":"${op.id}","name":"${op.name}","own":${op.own},"rarity":${op.rarity},"elite":${op.elite},"level":${op.level},"potential":${op.potential}}"""
-        }}]"
+        return "[${
+            all.joinToString(",") { op ->
+                """{"id":"${op.id}","name":"${op.name}","own":${op.own},"rarity":${op.rarity},"elite":${op.elite},"level":${op.level},"potential":${op.potential}}"""
+            }
+        }]"
     }
 
     private fun handleStartResult(result: MaaCompositionService.StartResult) {
-        _statusMessage.value = formatStartResult(result, "识别任务已启动")
+        _statusMessage.value =
+            appContext.formatStartResult(result, uiTextOf(R.string.toolbox_status_started))
     }
 }

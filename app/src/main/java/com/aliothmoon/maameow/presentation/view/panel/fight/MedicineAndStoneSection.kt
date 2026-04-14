@@ -11,7 +11,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.INumericField
@@ -36,14 +38,14 @@ fun MedicineAndStoneSection(
                     )
                 )
             },
-            label = "使用理智药",
+            label = stringResource(R.string.panel_fight_use_medicine),
             enabled = !config.useStone,
         )
         AnimatedVisibility(visible = config.useMedicine) {
             INumericField(
                 value = config.medicineNumber,
                 onValueChange = { onConfigChange(config.copy(medicineNumber = it)) },
-                label = "最多使用 N 个理智药",
+                label = stringResource(R.string.panel_fight_use_medicine_count),
                 minimum = 0,
                 maximum = 999,
                 enabled = !config.useStone,
@@ -60,14 +62,14 @@ fun MedicineAndStoneSection(
         CheckBoxWithLabel(
             checked = config.hasTimesLimited,
             onCheckedChange = { onConfigChange(config.copy(hasTimesLimited = it)) },
-            label = "指定次数",
+            label = stringResource(R.string.panel_fight_limit_times),
         )
         AnimatedVisibility(visible = config.hasTimesLimited) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 INumericField(
                     value = config.maxTimes,
                     onValueChange = { onConfigChange(config.copy(maxTimes = it)) },
-                    label = "战斗 N 次后停止",
+                    label = stringResource(R.string.panel_fight_stop_after_times),
                     minimum = 0,
                     maximum = 999,
                     modifier = Modifier
@@ -85,7 +87,7 @@ fun MedicineAndStoneSection(
                         shape = RoundedCornerShape(4.dp)
                     ) {
                         Text(
-                            text = "战斗次数 ${config.maxTimes} 无法被代理倍率 ${config.series} 整除，可能无法完全消耗理智",
+                            text = stringResource(R.string.panel_fight_series_warning, config.maxTimes, config.series),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onTertiaryContainer,
                             modifier = Modifier.padding(8.dp)

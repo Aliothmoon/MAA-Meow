@@ -58,13 +58,16 @@ import android.os.Build
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.schedule.model.ScheduleType
+import com.aliothmoon.maameow.utils.i18n.asString
 import org.koin.androidx.compose.koinViewModel
 import java.time.DayOfWeek
 import java.time.Instant
@@ -80,6 +83,7 @@ fun ScheduleEditView(
     viewModel: ScheduleEditViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val errorMessage = state.errorMessage.asString()
     val snackbarHostState = remember { SnackbarHostState() }
     var showTimePicker by remember { mutableStateOf(false) }
     var editingTime by remember { mutableStateOf<LocalTime?>(null) }
@@ -100,9 +104,9 @@ fun ScheduleEditView(
         }
     }
 
-    LaunchedEffect(state.errorMessage) {
-        state.errorMessage?.let {
-            snackbarHostState.showSnackbar(it)
+    LaunchedEffect(errorMessage) {
+        if (errorMessage.isNotBlank()) {
+            snackbarHostState.showSnackbar(errorMessage)
             viewModel.onDismissError()
         }
     }
@@ -110,7 +114,11 @@ fun ScheduleEditView(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = if (state.isNew) "新建策略" else "编辑策略",
+                title = if (state.isNew) {
+                    stringResource(R.string.schedule_edit_title_new)
+                } else {
+                    stringResource(R.string.schedule_edit_title_edit)
+                },
                 navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
                 onNavigationClick = { navController.popBackStack() },
                 actions = {
@@ -123,7 +131,7 @@ fun ScheduleEditView(
                         )
                     } else {
                         TextButton(onClick = { viewModel.onSave() }) {
-                            Text("保存")
+                            Text(stringResource(R.string.schedule_save))
                         }
                     }
                 }
@@ -137,7 +145,7 @@ fun ScheduleEditView(
                 .padding(padding)
         ) {
             item {
-                SectionHeader("基本信息")
+                SectionHeader(stringResource(R.string.schedule_section_basic_info))
             }
             if (!state.isNew && state.strategyId != null) {
                 item {
@@ -153,8 +161,8 @@ fun ScheduleEditView(
                 OutlinedTextField(
                     value = state.name,
                     onValueChange = viewModel::onNameChanged,
-                    label = { Text("策略名称") },
-                    placeholder = { Text("如：日常任务") },
+                    label = { Text(stringResource(R.string.schedule_name)) },
+                    placeholder = { Text(stringResource(R.string.schedule_name_placeholder)) },
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -163,7 +171,7 @@ fun ScheduleEditView(
             }
 
             item {
-                SectionHeader("调度类型")
+                SectionHeader(stringResource(R.string.schedule_section_type))
             }
             item {
                 SingleChoiceSegmentedButtonRow(
@@ -183,8 +191,8 @@ fun ScheduleEditView(
                         ) {
                             Text(
                                 when (type) {
-                                    ScheduleType.FIXED_TIME -> "固定时间"
-                                    ScheduleType.INTERVAL -> "间隔执行"
+                                    ScheduleType.FIXED_TIME -> stringResource(R.string.schedule_type_fixed_time)
+                                    ScheduleType.INTERVAL -> stringResource(R.string.schedule_type_interval)
                                 }
                             )
                         }
@@ -195,7 +203,7 @@ fun ScheduleEditView(
             when (state.scheduleType) {
                 ScheduleType.FIXED_TIME -> {
                     item {
-                        SectionHeader("执行日期")
+                        SectionHeader(stringResource(R.string.schedule_section_days))
                     }
                     item {
                         FlowRow(
@@ -212,14 +220,14 @@ fun ScheduleEditView(
                             FilterChip(
                                 selected = allSelected,
                                 onClick = { viewModel.onToggleAllDays() },
-                                label = { Text("每天") },
+                                label = { Text(stringResource(R.string.schedule_every_day)) },
                                 colors = chipColors
                             )
                             DayOfWeek.entries.forEach { day ->
                                 FilterChip(
                                     selected = day in state.daysOfWeek,
                                     onClick = { viewModel.onToggleDay(day) },
-                                    label = { Text(dayDisplayName(day)) },
+                                    label = { Text(scheduleDayChipLabel(day)) },
                                     colors = chipColors
                                 )
                             }
@@ -227,7 +235,7 @@ fun ScheduleEditView(
                     }
 
                     item {
-                        SectionHeader("执行时间")
+                        SectionHeader(stringResource(R.string.schedule_section_times))
                     }
                     item {
                         val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -252,7 +260,7 @@ fun ScheduleEditView(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Close,
-                                                contentDescription = "删除",
+                                                contentDescription = stringResource(R.string.common_delete),
                                                 modifier = Modifier.size(14.dp)
                                             )
                                         }
@@ -264,7 +272,7 @@ fun ScheduleEditView(
                                     editingTime = null
                                     showTimePicker = true
                                 },
-                                label = { Text("添加时间") },
+                                label = { Text(stringResource(R.string.schedule_add_time)) },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Default.Add,
@@ -279,7 +287,7 @@ fun ScheduleEditView(
 
                 ScheduleType.INTERVAL -> {
                     item {
-                        SectionHeader("开始时间")
+                        SectionHeader(stringResource(R.string.schedule_section_start_time))
                     }
                     item {
                         var showDatePicker by remember { mutableStateOf(false) }
@@ -290,13 +298,13 @@ fun ScheduleEditView(
                         val displayText = state.startTimeMs?.let { ms ->
                             val zdt = Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault())
                             zdt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
-                        } ?: "点击选择"
+                        } ?: stringResource(R.string.schedule_tap_to_choose)
 
                         OutlinedTextField(
                             value = displayText,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("首次执行时间") },
+                            label = { Text(stringResource(R.string.schedule_first_execution_time)) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp),
@@ -323,10 +331,10 @@ fun ScheduleEditView(
                                         pendingDateMs = datePickerState.selectedDateMillis
                                         showDatePicker = false
                                         showStartTimePicker = true
-                                    }) { Text("下一步") }
+                                    }) { Text(stringResource(R.string.schedule_next_step)) }
                                 },
                                 dismissButton = {
-                                    TextButton(onClick = { showDatePicker = false }) { Text("取消") }
+                                    TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.common_cancel)) }
                                 }
                             ) {
                                 DatePicker(state = datePickerState)
@@ -357,7 +365,7 @@ fun ScheduleEditView(
                     }
 
                     item {
-                        SectionHeader("执行间隔")
+                        SectionHeader(stringResource(R.string.schedule_section_interval))
                     }
                     item {
                         Row(
@@ -370,7 +378,7 @@ fun ScheduleEditView(
                             OutlinedTextField(
                                 value = if (state.intervalDays > 0) state.intervalDays.toString() else "",
                                 onValueChange = { viewModel.onIntervalDaysChanged(it.toIntOrNull() ?: 0) },
-                                label = { Text("天") },
+                                label = { Text(stringResource(R.string.schedule_days_unit)) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
                                 modifier = Modifier.width(80.dp)
@@ -378,7 +386,7 @@ fun ScheduleEditView(
                             OutlinedTextField(
                                 value = if (state.intervalHours > 0) state.intervalHours.toString() else "",
                                 onValueChange = { viewModel.onIntervalHoursChanged(it.toIntOrNull() ?: 0) },
-                                label = { Text("小时") },
+                                label = { Text(stringResource(R.string.schedule_hours_unit)) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
                                 modifier = Modifier.width(80.dp)
@@ -386,7 +394,7 @@ fun ScheduleEditView(
                             val totalMinutes = state.intervalDays * 24 * 60 + state.intervalHours * 60
                             if (totalMinutes > 0) {
                                 Text(
-                                    text = "= ${totalMinutes / 60} 小时",
+                                    text = stringResource(R.string.schedule_total_hours, totalMinutes / 60),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -397,12 +405,12 @@ fun ScheduleEditView(
             }
 
             item {
-                SectionHeader("任务配置")
+                SectionHeader(stringResource(R.string.schedule_section_task_config))
             }
             item {
                 if (state.profiles.isEmpty()) {
                     Text(
-                        text = "请先在操作面板中创建任务配置",
+                        text = stringResource(R.string.schedule_no_profiles),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp)
@@ -433,7 +441,7 @@ fun ScheduleEditView(
                         ?.joinToString("、") { it.name }
                     if (!enabledTasks.isNullOrEmpty()) {
                         Text(
-                            text = "已启用: $enabledTasks",
+                            text = stringResource(R.string.schedule_enabled_tasks, enabledTasks),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp)
@@ -443,7 +451,7 @@ fun ScheduleEditView(
             }
 
             item {
-                SectionHeader("高级选项")
+                SectionHeader(stringResource(R.string.schedule_section_advanced))
                 val (expanded, setExpanded) = remember { mutableStateOf(false) }
                 Row(
                     modifier = Modifier
@@ -456,7 +464,7 @@ fun ScheduleEditView(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("强制启动", style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(R.string.schedule_force_start), style = MaterialTheme.typography.bodyLarge)
                         ExpandableTipIcon(
                             modifier = Modifier.padding(start = 8.dp),
                             expanded = expanded,
@@ -469,7 +477,7 @@ fun ScheduleEditView(
                 }
                 ExpandableTipContent(
                     visible = expanded,
-                    tipText = "强制启动任务，会中断正在运行的游戏和任务",
+                    tipText = stringResource(R.string.schedule_force_start_tip),
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
@@ -495,17 +503,22 @@ fun ScheduleEditView(
     if (showPermissionDialog) {
         val context = LocalContext.current
         val tips = buildList {
-            if (state.needBatteryOptimization) add("关闭电池优化")
-            if (state.needExactAlarm) add("允许精确闹钟")
+            if (state.needBatteryOptimization) add(stringResource(R.string.schedule_permission_tip_battery_optimization))
+            if (state.needExactAlarm) add(stringResource(R.string.schedule_permission_tip_exact_alarm))
         }
         AlertDialog(
             onDismissRequest = {
                 showPermissionDialog = false
                 navController.popBackStack()
             },
-            title = { Text("权限提示") },
+            title = { Text(stringResource(R.string.schedule_permission_title)) },
             text = {
-                Text("为确保定时任务正常触发，请前往系统设置${tips.joinToString("、")}。")
+                Text(
+                    stringResource(
+                        R.string.schedule_permission_message,
+                        tips.joinToString(stringResource(R.string.common_enumeration_separator))
+                    )
+                )
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -527,13 +540,13 @@ fun ScheduleEditView(
                     }
                     showPermissionDialog = false
                     navController.popBackStack()
-                }) { Text("前往设置") }
+                }) { Text(stringResource(R.string.schedule_go_to_settings)) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     showPermissionDialog = false
                     navController.popBackStack()
-                }) { Text("稍后") }
+                }) { Text(stringResource(R.string.schedule_later)) }
             }
         )
     }
@@ -572,7 +585,7 @@ private fun TimePickerDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "选择时间",
+                    text = stringResource(R.string.schedule_time_picker_title),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
@@ -590,26 +603,22 @@ private fun TimePickerDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = { showDial = !showDial }) {
-                        Text(if (showDial) "键盘输入" else "表盘选择")
+                        Text(
+                            if (showDial) {
+                                stringResource(R.string.schedule_time_picker_keyboard_input)
+                            } else {
+                                stringResource(R.string.schedule_time_picker_dial_selection)
+                            }
+                        )
                     }
                     Row {
-                        TextButton(onClick = onDismiss) { Text("取消") }
+                        TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
                         TextButton(onClick = {
                             onConfirm(LocalTime.of(timePickerState.hour, timePickerState.minute))
-                        }) { Text("确认") }
+                        }) { Text(stringResource(R.string.common_confirm)) }
                     }
                 }
             }
         }
     }
-}
-
-private fun dayDisplayName(day: DayOfWeek): String = when (day) {
-    DayOfWeek.MONDAY -> "周一"
-    DayOfWeek.TUESDAY -> "周二"
-    DayOfWeek.WEDNESDAY -> "周三"
-    DayOfWeek.THURSDAY -> "周四"
-    DayOfWeek.FRIDAY -> "周五"
-    DayOfWeek.SATURDAY -> "周六"
-    DayOfWeek.SUNDAY -> "周日"
 }

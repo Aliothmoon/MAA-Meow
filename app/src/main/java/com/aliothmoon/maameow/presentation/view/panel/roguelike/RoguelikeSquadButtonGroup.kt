@@ -20,13 +20,13 @@ fun RoguelikeSquadButtonGroup(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val options = RoguelikeUi.getSquadOptionsForTheme(theme, mode)
-    val displayValue = selectedValue.ifEmpty { options.firstOrNull() ?: "" }
+    val options = localizedRoguelikeSquadOptions(theme, mode)
+    val rawValue = selectedValue.ifEmpty { options.firstOrNull()?.first.orEmpty() }
 
     SelectableChipGroup(
         label = label,
-        selectedValue = displayValue,
-        options = options.map { it to it },
+        selectedValue = rawValue,
+        options = options,
         onSelected = onValueChange,
         modifier = modifier,
         labelFontWeight = FontWeight.Medium

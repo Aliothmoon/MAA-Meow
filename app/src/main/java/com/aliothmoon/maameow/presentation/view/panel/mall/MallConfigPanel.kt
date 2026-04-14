@@ -51,6 +51,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.stringResource
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.MallConfig
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.models.resolveMallCreditFightAvailability
@@ -83,7 +85,7 @@ fun MallConfigPanel(config: MallConfig, onConfigChange: (MallConfig) -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "常规设置",
+                text = stringResource(R.string.common_tab_general),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
@@ -92,7 +94,7 @@ fun MallConfigPanel(config: MallConfig, onConfigChange: (MallConfig) -> Unit) {
                 }
             )
             Text(
-                text = "高级设置",
+                text = stringResource(R.string.common_tab_advanced),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
@@ -190,7 +192,7 @@ private fun BasicMallSettings(config: MallConfig, onConfigChange: (MallConfig) -
                 CheckBoxWithLabel(
                     checked = config.visitFriends,
                     onCheckedChange = { onConfigChange(config.copy(visitFriends = it)) },
-                    label = "访问好友"
+                    label = stringResource(R.string.panel_mall_visit_friends)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
             }
@@ -205,7 +207,7 @@ private fun BasicMallSettings(config: MallConfig, onConfigChange: (MallConfig) -
                 CheckBoxWithLabel(
                     checked = config.shopping,
                     onCheckedChange = { onConfigChange(config.copy(shopping = it)) },
-                    label = "信用交易所自动购物"
+                    label = stringResource(R.string.panel_mall_shopping)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 ExpandableTipIcon(
@@ -214,7 +216,7 @@ private fun BasicMallSettings(config: MallConfig, onConfigChange: (MallConfig) -
             }
             ExpandableTipContent(
                 visible = shoppingTipExpanded,
-                tipText = "自动使用信用点购买商店中的物品"
+                tipText = stringResource(R.string.panel_mall_shopping_tip)
             )
         }
 
@@ -227,7 +229,7 @@ private fun BasicMallSettings(config: MallConfig, onConfigChange: (MallConfig) -
                 CheckBoxWithLabel(
                     checked = config.creditFight,
                     onCheckedChange = { onConfigChange(config.copy(creditFight = it)) },
-                    label = "借助战打 OF-1 赚信用"
+                    label = stringResource(R.string.panel_mall_credit_fight)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 ExpandableTipIcon(
@@ -236,7 +238,7 @@ private fun BasicMallSettings(config: MallConfig, onConfigChange: (MallConfig) -
             }
             ExpandableTipContent(
                 visible = creditFightTipExpanded,
-                tipText = "访问好友后借助战打一把 OF-1 赚 30 信用。\n关卡选择为 ｢当前/上次｣ 时此功能无效。\n别传 ｢火蓝之心｣ 关卡OF-1未解锁时请勿勾选。"
+                tipText = stringResource(R.string.panel_mall_credit_fight_tip)
             )
         }
 
@@ -248,7 +250,7 @@ private fun BasicMallSettings(config: MallConfig, onConfigChange: (MallConfig) -
             ) {
                 Text(
                     text = creditFightAvailability.warningMessage
-                        ?: "当前存在无法解析有效关卡的理智作战任务，本次不会借助战打一把 OF-1。",
+                        ?: stringResource(R.string.panel_mall_credit_fight_unavailable),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer,
                     modifier = Modifier.padding(8.dp)
@@ -268,7 +270,7 @@ private fun BasicMallSettings(config: MallConfig, onConfigChange: (MallConfig) -
                 shape = RoundedCornerShape(4.dp)
             ) {
                 Text(
-                    "借助战需要好友支援，确保好友列表有可用支援干员",
+                    stringResource(R.string.panel_mall_credit_fight_notice),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier.padding(8.dp)
@@ -283,7 +285,7 @@ private fun FormationSelector(selectedFormation: Int, onFormationChange: (Int) -
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text("使用编队", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+        Text(stringResource(R.string.panel_mall_use_formation), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -333,7 +335,7 @@ private fun PriorityItemsSection(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    "优先购买物品",
+                    stringResource(R.string.panel_mall_priority_title),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.weight(1f)
@@ -350,7 +352,11 @@ private fun PriorityItemsSection(
                     ) {
                         Icon(
                             if (isReorderMode) Icons.Default.Done else Icons.Default.SwapVert,
-                            contentDescription = if (isReorderMode) "完成" else "排序",
+                            contentDescription = if (isReorderMode) {
+                                stringResource(R.string.common_done)
+                            } else {
+                                stringResource(R.string.common_sort)
+                            },
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -362,11 +368,15 @@ private fun PriorityItemsSection(
             }
             ExpandableTipContent(
                 visible = tipExpanded,
-                tipText = "拖动调整购买优先级，越靠上优先级越高"
+                tipText = stringResource(R.string.panel_mall_priority_reorder_tip)
             )
         }
         Text(
-            if (isReorderMode) "当前处于排序模式，长按列表项可调整优先级，完成后点击勾选按钮退出" else "开启排序模式可调整优先级顺序，点击×删除",
+            if (isReorderMode) {
+                stringResource(R.string.panel_mall_priority_mode_active)
+            } else {
+                stringResource(R.string.panel_mall_priority_mode_inactive)
+            },
             style = MaterialTheme.typography.bodySmall,
             color = if (isReorderMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -377,7 +387,7 @@ private fun PriorityItemsSection(
                 shape = RoundedCornerShape(4.dp)
             ) {
                 Text(
-                    "请先启用「购买信用商店物品」功能",
+                    stringResource(R.string.panel_mall_enable_shopping_first),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer,
                     modifier = Modifier.padding(8.dp)
@@ -415,7 +425,15 @@ private fun PriorityItemsSection(
                     containerColor = MaterialTheme.colorScheme.primary
                 ),
                 shape = RoundedCornerShape(8.dp)
-            ) { Text(if (showAddPanel) "收起" else "添加物品") }
+            ) {
+                Text(
+                    if (showAddPanel) {
+                        stringResource(R.string.common_collapse)
+                    } else {
+                        stringResource(R.string.panel_mall_add_item)
+                    }
+                )
+            }
         }
 
         // 内联添加面板（输入框形式）
@@ -442,17 +460,17 @@ private fun PriorityItemsSection(
 private fun MallInfoText() {
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(
-            "* 优先购买列表中的物品会按顺序优先购买",
+            stringResource(R.string.panel_mall_info_line_priority),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            "* 黑名单物品不会被购买（除非信用溢出且启用强制购买）",
+            stringResource(R.string.panel_mall_info_line_blacklist),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            "* 借助战每日可获得额外信用点，但需要消耗好友支援次数",
+            stringResource(R.string.panel_mall_info_line_credit_fight),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -474,7 +492,7 @@ private fun BlacklistSection(config: MallConfig, onConfigChange: (MallConfig) ->
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    "黑名单（不购买）",
+                    stringResource(R.string.panel_mall_blacklist_title),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
@@ -482,12 +500,12 @@ private fun BlacklistSection(config: MallConfig, onConfigChange: (MallConfig) ->
             }
             ExpandableTipContent(
                 visible = tipExpanded,
-                tipText = "黑名单中的物品不会被购买（除非启用「溢出时无视黑名单」）"
+                tipText = stringResource(R.string.panel_mall_blacklist_tip)
             )
         }
 
         Text(
-            "点击×删除物品",
+            stringResource(R.string.panel_mall_blacklist_delete_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -499,7 +517,7 @@ private fun BlacklistSection(config: MallConfig, onConfigChange: (MallConfig) ->
                 shape = RoundedCornerShape(4.dp)
             ) {
                 Text(
-                    "请先启用「购买信用商店物品」功能",
+                    stringResource(R.string.panel_mall_enable_shopping_first),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer,
                     modifier = Modifier.padding(8.dp)
@@ -523,7 +541,7 @@ private fun BlacklistSection(config: MallConfig, onConfigChange: (MallConfig) ->
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        "暂无黑名单物品",
+                        stringResource(R.string.panel_mall_blacklist_empty),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -559,7 +577,15 @@ private fun BlacklistSection(config: MallConfig, onConfigChange: (MallConfig) ->
                     alpha = 0.8f
                 )
             )
-        ) { Text(if (showAddPanel) "收起" else "添加黑名单") }
+        ) {
+            Text(
+                if (showAddPanel) {
+                    stringResource(R.string.common_collapse)
+                } else {
+                    stringResource(R.string.panel_mall_add_blacklist)
+                }
+            )
+        }
 
         AnimatedVisibility(
             visible = showAddPanel,

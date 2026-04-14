@@ -40,9 +40,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.RecruitConfig
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.presentation.components.INumericField
@@ -84,7 +86,7 @@ fun RecruitConfigPanel(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "常规设置",
+                text = stringResource(R.string.common_tab_general),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
@@ -95,7 +97,7 @@ fun RecruitConfigPanel(
                 }
             )
             Text(
-                text = "高级设置",
+                text = stringResource(R.string.common_tab_advanced),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
@@ -199,7 +201,7 @@ private fun UseExpeditedSection(
             )
 
             Text(
-                text = "自动使用加急许可",
+                text = stringResource(R.string.panel_recruit_use_expedited),
                 style = MaterialTheme.typography.bodyMedium
             )
 
@@ -210,7 +212,7 @@ private fun UseExpeditedSection(
         }
         ExpandableTipContent(
             visible = tipExpanded,
-            tipText = "此选项不会被保存，每次任务开始前需重新勾选"
+            tipText = stringResource(R.string.panel_recruit_use_expedited_tip)
         )
     }
 }
@@ -223,7 +225,7 @@ private fun RecruitMaxTimesSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            text = "招募次数",
+            text = stringResource(R.string.panel_recruit_max_times_title),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
         )
@@ -238,7 +240,7 @@ private fun RecruitMaxTimesSection(
         )
 
         Text(
-            text = "单次任务最多进行的公招次数",
+            text = stringResource(R.string.panel_recruit_max_times_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -258,15 +260,15 @@ private fun SelectExtraTagsSection(
 ) {
     // 选项列表（AutoRecruitSelectExtraTagsList）
     val options = listOf(
-        "0" to "默认不选额外标签",
-        "1" to "选择额外标签",
-        "2" to "仅选择稀有标签"
+        "0" to stringResource(R.string.panel_recruit_extra_tags_none),
+        "1" to stringResource(R.string.panel_recruit_extra_tags_select),
+        "2" to stringResource(R.string.panel_recruit_extra_tags_rare_only)
     )
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             modifier = Modifier.padding(vertical = 2.dp),
-            text = "公招多选 Tag 的策略",
+            text = stringResource(R.string.panel_recruit_extra_tags_strategy),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
         )
@@ -317,7 +319,7 @@ private fun AutoRecruitFirstListSection(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "3 星 Tag 倾向",
+                text = stringResource(R.string.panel_recruit_level3_preference),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
@@ -330,7 +332,7 @@ private fun AutoRecruitFirstListSection(
 
         ExpandableTipContent(
             visible = tipExpanded,
-            tipText = "当只能匹配 3 星干员时，会尽可能多地选择倾向的 Tag"
+            tipText = stringResource(R.string.panel_recruit_level3_preference_tip)
         )
 
         // 多选标签面板 - 使用 FlowRow 自动换行布局
@@ -395,7 +397,7 @@ private fun AutoRecruitFirstListSection(
                 // 已选择计数
                 if (config.autoRecruitFirstList.isNotEmpty()) {
                     Text(
-                        text = "已选 ${config.autoRecruitFirstList.size} 个",
+                        text = stringResource(R.string.panel_recruit_selected_count, config.autoRecruitFirstList.size),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -425,7 +427,7 @@ private fun RefreshLevel3Section(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "自动刷新3星Tags",
+            text = stringResource(R.string.panel_recruit_refresh_level3),
             style = MaterialTheme.typography.bodyMedium
         )
     }
@@ -454,7 +456,7 @@ private fun ForceRefreshSection(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "无招聘许可时继续尝试刷新 Tags",
+            text = stringResource(R.string.panel_recruit_force_refresh),
             style = MaterialTheme.typography.bodyMedium
         )
     }
@@ -485,7 +487,7 @@ private fun NotChooseLevel1Section(
                 modifier = Modifier.size(20.dp)
             )
             Text(
-                text = "手动确认 1 星",
+                text = stringResource(R.string.panel_recruit_not_choose_level1),
                 style = MaterialTheme.typography.bodyMedium
             )
             ExpandableTipIcon(
@@ -495,7 +497,7 @@ private fun NotChooseLevel1Section(
         }
         ExpandableTipContent(
             visible = tipExpanded,
-            tipText = "勾选时识别到1星词条时跳过该次招募，未勾选时将忽略1星词条"
+            tipText = stringResource(R.string.panel_recruit_not_choose_level1_tip)
         )
     }
 }
@@ -522,7 +524,7 @@ private fun ChooseLevel3Section(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "自动确认 3 星",
+                text = stringResource(R.string.panel_recruit_choose_level3),
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -562,7 +564,7 @@ private fun ChooseLevel4Section(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "自动确认 4 星",
+                text = stringResource(R.string.panel_recruit_choose_level4),
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -601,7 +603,7 @@ private fun ChooseLevel5Section(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "自动确认 5 星",
+                text = stringResource(R.string.panel_recruit_choose_level5),
                 style = MaterialTheme.typography.bodyMedium
             )
         }

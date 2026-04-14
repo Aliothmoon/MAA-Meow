@@ -42,12 +42,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.viewmodel.ErrorLogViewModel
@@ -70,9 +72,10 @@ fun ErrorLogView(
     val context = LocalContext.current
 
     // 处理导出 Intent
+    val exportChooserTitle = stringResource(R.string.settings_log_export_chooser_title)
     LaunchedEffect(exportIntent) {
         exportIntent?.let { intent ->
-            context.startActivity(Intent.createChooser(intent, "导出日志"))
+            context.startActivity(Intent.createChooser(intent, exportChooserTitle))
             viewModel.clearExportIntent()
         }
     }
@@ -116,15 +119,15 @@ private fun ErrorLogFileListView(
     if (showCleanupConfirm) {
         AdaptiveTaskPromptDialog(
             visible = true,
-            title = "确认清空",
-            message = "确定要清空所有错误日志吗？此操作不可撤销。",
+            title = stringResource(R.string.dialog_clear_error_log_title),
+            message = stringResource(R.string.dialog_clear_error_log_message),
             onConfirm = {
                 onCleanup()
                 showCleanupConfirm = false
             },
             onDismissRequest = { showCleanupConfirm = false },
-            confirmText = "清空",
-            dismissText = "取消",
+            confirmText = stringResource(R.string.log_cleanup_all),
+            dismissText = stringResource(R.string.common_cancel),
             icon = Icons.Rounded.Delete,
             confirmColor = MaterialTheme.colorScheme.error
         )
@@ -133,19 +136,19 @@ private fun ErrorLogFileListView(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = "错误日志",
+                title = stringResource(R.string.settings_log_error_title),
                 navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
                 onNavigationClick = onBack,
                 actions = {
                     IconButton(onClick = onExport) {
                         Icon(
                             imageVector = Icons.Default.Share,
-                            contentDescription = "导出",
+                            contentDescription = stringResource(R.string.common_export),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
                     TextButton(onClick = { showCleanupConfirm = true }) {
-                        Text("清空", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.log_cleanup_all), color = MaterialTheme.colorScheme.error)
                     }
                 }
             )
@@ -163,7 +166,7 @@ private fun ErrorLogFileListView(
                 )
             } else if (logFiles.isEmpty()) {
                 Text(
-                    text = "暂无错误日志",
+                    text = stringResource(R.string.log_empty_error),
                     modifier = Modifier.align(Alignment.Center),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -248,7 +251,7 @@ private fun ErrorLogDetailView(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = "日志详情",
+                title = stringResource(R.string.log_detail_title),
                 navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
                 onNavigationClick = onBack
             )

@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -59,7 +60,7 @@ fun ToolboxPanel(
                     modifier = Modifier.clickable { viewModel.onTabChange(tab) }
                 ) {
                     Text(
-                        text = tab.displayName,
+                        text = stringResource(tab.labelRes),
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                         color = if (selected)
                             MaterialTheme.colorScheme.onPrimaryContainer

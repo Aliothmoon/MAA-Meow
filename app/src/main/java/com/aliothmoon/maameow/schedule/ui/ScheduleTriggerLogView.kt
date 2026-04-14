@@ -40,9 +40,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.schedule.model.TriggerLogEntry
@@ -77,13 +79,13 @@ fun ScheduleTriggerLogView(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = "触发日志",
+                title = stringResource(R.string.schedule_trigger_log_title),
                 navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
                 onNavigationClick = { navController.popBackStack() },
                 actions = {
                     if (summaries.isNotEmpty()) {
                         IconButton(onClick = { showClearConfirm = true }) {
-                            Icon(Icons.Rounded.Delete, contentDescription = "清空日志")
+                            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.schedule_log_clear_title))
                         }
                     }
                 }
@@ -118,7 +120,7 @@ fun ScheduleTriggerLogView(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            "暂无触发记录",
+                            stringResource(R.string.schedule_log_empty_state),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -148,16 +150,16 @@ fun ScheduleTriggerLogView(
         if (showClearConfirm) {
             AlertDialog(
                 onDismissRequest = { showClearConfirm = false },
-                title = { Text("清空日志") },
-                text = { Text("确定要清空所有触发日志吗？") },
+                title = { Text(stringResource(R.string.schedule_log_clear_title)) },
+                text = { Text(stringResource(R.string.schedule_log_clear_message)) },
                 confirmButton = {
                     TextButton(onClick = {
                         viewModel.clearAll()
                         showClearConfirm = false
-                    }) { Text("清空", color = MaterialTheme.colorScheme.error) }
+                    }) { Text(stringResource(R.string.schedule_log_clear_title), color = MaterialTheme.colorScheme.error) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showClearConfirm = false }) { Text("取消") }
+                    TextButton(onClick = { showClearConfirm = false }) { Text(stringResource(R.string.common_cancel)) }
                 }
             )
         }
@@ -165,16 +167,16 @@ fun ScheduleTriggerLogView(
         if (deleteConfirmFileName != null) {
             AlertDialog(
                 onDismissRequest = { deleteConfirmFileName = null },
-                title = { Text("删除日志") },
-                text = { Text("确定要删除该触发日志吗？") },
+                title = { Text(stringResource(R.string.schedule_log_delete_title)) },
+                text = { Text(stringResource(R.string.schedule_log_delete_message)) },
                 confirmButton = {
                     TextButton(onClick = {
                         viewModel.deleteLog(deleteConfirmFileName!!)
                         deleteConfirmFileName = null
-                    }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                    }) { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { deleteConfirmFileName = null }) { Text("取消") }
+                    TextButton(onClick = { deleteConfirmFileName = null }) { Text(stringResource(R.string.common_cancel)) }
                 }
             )
         }
@@ -191,7 +193,8 @@ private fun SummaryCard(
 ) {
     val resultColor = summary.footer?.result?.let { resultColor(it) }
         ?: MaterialTheme.colorScheme.onSurfaceVariant
-    val resultLabel = summary.footer?.result?.let { resultLabel(it) } ?: "进行中..."
+    val resultLabel = summary.footer?.result?.let { scheduleExecutionResultLabel(it) }
+        ?: stringResource(R.string.schedule_result_in_progress)
 
     ElevatedCard(
         modifier = Modifier
@@ -222,13 +225,19 @@ private fun SummaryCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 Row {
                     Text(
-                        text = "预定: ${formatTime(summary.header.scheduledTimeMs)}",
+                        text = stringResource(
+                            R.string.schedule_log_scheduled_time,
+                            formatTime(summary.header.scheduledTimeMs)
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "触发: ${formatTime(summary.header.actualTimeMs)}",
+                        text = stringResource(
+                            R.string.schedule_log_triggered_time,
+                            formatTime(summary.header.actualTimeMs)
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -245,7 +254,7 @@ private fun SummaryCard(
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Outlined.Delete,
-                    contentDescription = "删除",
+                    contentDescription = stringResource(R.string.common_delete),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -265,7 +274,7 @@ private fun DetailView(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = header?.strategyName ?: "触发详情",
+                title = header?.strategyName ?: stringResource(R.string.schedule_log_detail_title),
                 navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
                 onNavigationClick = onBack,
             )
@@ -282,12 +291,18 @@ private fun DetailView(
                 when (entry) {
                     is TriggerLogEntry.Header -> {
                         Text(
-                            text = "预定: ${formatTimeFull(entry.scheduledTimeMs)}",
+                            text = stringResource(
+                                R.string.schedule_log_scheduled_time,
+                                formatTimeFull(entry.scheduledTimeMs)
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "触发: ${formatTimeFull(entry.actualTimeMs)}",
+                            text = stringResource(
+                                R.string.schedule_log_triggered_time,
+                                formatTimeFull(entry.actualTimeMs)
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -319,7 +334,10 @@ private fun DetailView(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "结果: ${resultLabel(entry.result)}",
+                                text = stringResource(
+                                    R.string.schedule_log_result,
+                                    scheduleExecutionResultLabel(entry.result)
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = resultColor(entry.result)
                             )
@@ -351,16 +369,6 @@ private fun resultColor(result: ExecutionResult) = when (result) {
     ExecutionResult.FAILED_VALIDATION,
     ExecutionResult.FAILED_START,
     ExecutionResult.FAILED_UI_LAUNCH -> MaterialTheme.colorScheme.error
-}
-
-private fun resultLabel(result: ExecutionResult) = when (result) {
-    ExecutionResult.STARTED -> "已启动"
-    ExecutionResult.FAILED_VALIDATION -> "校验失败"
-    ExecutionResult.FAILED_START -> "启动失败"
-    ExecutionResult.FAILED_UI_LAUNCH -> "拉起失败"
-    ExecutionResult.SKIPPED_BUSY -> "繁忙跳过"
-    ExecutionResult.SKIPPED_LOCKED -> "锁屏跳过"
-    ExecutionResult.CANCELLED -> "已取消"
 }
 
 private val dateTimeFormatter = DateTimeFormatter.ofPattern("MM-dd HH:mm:ss")

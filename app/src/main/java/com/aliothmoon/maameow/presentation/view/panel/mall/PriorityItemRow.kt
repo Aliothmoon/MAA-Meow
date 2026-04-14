@@ -23,7 +23,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 
 @Composable
 fun PriorityItemRow(
@@ -69,7 +71,7 @@ fun PriorityItemRow(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.Menu,
-                        "拖动排序",
+                        stringResource(R.string.panel_mall_drag_reorder),
                         modifier = Modifier
                             .size(28.dp)
                             .padding(5.dp),
@@ -94,7 +96,7 @@ fun PriorityItemRow(
                 ) {
                     Icon(
                         Icons.Default.Close,
-                        contentDescription = "删除",
+                        contentDescription = stringResource(R.string.common_delete),
                         modifier = Modifier.size(16.dp),
                         tint = if (enabled) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant
                     )

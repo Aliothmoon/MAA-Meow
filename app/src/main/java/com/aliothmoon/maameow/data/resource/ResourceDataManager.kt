@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.resource
 
 import com.aliothmoon.maameow.data.config.MaaPathConfig
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -124,16 +125,22 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
             "YoStarJP" to "ja-jp",
             "YoStarKR" to "ko-kr"
         )
+
+        fun displayLanguageCode(appLanguage: AppSettingsManager.AppLanguage): String =
+            when (appLanguage) {
+                AppSettingsManager.AppLanguage.EN -> "en-us"
+                else -> "zh-cn"
+            }
     }
 
-    suspend fun load(clientType: String = "Official") {
+    suspend fun load(clientType: String = "Official", displayLanguage: String = "zh-cn") {
         withContext(Dispatchers.IO) {
             listOf(
                 async {
-                    doLoadRecruitTags(clientType = clientType)
+                    doLoadRecruitTags(clientType = clientType, displayLanguage = displayLanguage)
                 },
                 async {
-                    doLoadCharacters(clientType = clientType)
+                    doLoadCharacters(displayLanguage = displayLanguage, clientType = clientType)
                 },
                 async {
                     doLoadRoguelikeThemes(clientType = clientType)
@@ -143,6 +150,16 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
                 }
             )
         }.awaitAll()
+    }
+
+    suspend fun refreshDisplayLanguage(
+        clientType: String = "Official",
+        displayLanguage: String = "zh-cn"
+    ) {
+        withContext(Dispatchers.IO) {
+            doLoadRecruitTags(clientType = clientType, displayLanguage = displayLanguage)
+            doLoadCharacters(displayLanguage = displayLanguage, clientType = clientType)
+        }
     }
 
     fun isValidCharacterName(name: String): Boolean {

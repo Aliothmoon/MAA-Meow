@@ -41,6 +41,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.stringResource
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.StageResetMode
 import com.aliothmoon.maameow.data.resource.ActivityManager
@@ -101,7 +103,7 @@ fun FightConfigPanel(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "常规设置",
+                text = stringResource(R.string.common_tab_general),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
@@ -112,7 +114,7 @@ fun FightConfigPanel(
                 }
             )
             Text(
-                text = "高级设置",
+                text = stringResource(R.string.common_tab_advanced),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
@@ -206,8 +208,8 @@ fun FightConfigPanel(
                             CheckBoxWithExpandableTip(
                                 checked = config.isDrGrandet,
                                 onCheckedChange = { onConfigChange(config.copy(isDrGrandet = it)) },
-                                label = "博朗台模式",
-                                tipText = "等待理智恢复后再开始行动，在理智即将溢出时开始作战（无限吃药时不生效）"
+                                label = stringResource(R.string.panel_fight_dr_grandet),
+                                tipText = stringResource(R.string.panel_fight_dr_grandet_tip)
                             )
                         }
                         item {
@@ -215,8 +217,8 @@ fun FightConfigPanel(
                             CheckBoxWithExpandableTip(
                                 checked = config.customStageCode,
                                 onCheckedChange = { onConfigChange(config.copy(customStageCode = it)) },
-                                label = "自定义关卡代码",
-                                tipText = "启用后可手动输入关卡代码，支持简写（如\"龙门币\"→\"CE-6\"）"
+                                label = stringResource(R.string.panel_fight_custom_stage_code),
+                                tipText = stringResource(R.string.panel_fight_custom_stage_code_tip)
                             )
                         }
                         item {
@@ -233,8 +235,8 @@ fun FightConfigPanel(
                                         )
                                     )
                                 },
-                                label = "使用备选关卡",
-                                tipText = "首选关卡不可用时自动使用备选关卡"
+                                label = stringResource(R.string.panel_fight_use_alternate_stage),
+                                tipText = stringResource(R.string.panel_fight_use_alternate_stage_tip)
                             )
                         }
                         // TODO 暂时关闭 源石使用
@@ -247,8 +249,8 @@ fun FightConfigPanel(
                             CheckBoxWithExpandableTip(
                                 checked = config.useExpiringMedicine,
                                 onCheckedChange = { onConfigChange(config.copy(useExpiringMedicine = it)) },
-                                label = "使用即将过期的理智药",
-                                tipText = "优先使用48小时内过期的理智药"
+                                label = stringResource(R.string.panel_fight_use_expiring_medicine),
+                                tipText = stringResource(R.string.panel_fight_use_expiring_medicine_tip)
                             )
                         }
                         item {
@@ -265,8 +267,8 @@ fun FightConfigPanel(
                                         )
                                     )
                                 },
-                                label = "隐藏不可用关卡",
-                                tipText = "在关卡列表中隐藏当前不可用的关卡"
+                                label = stringResource(R.string.panel_fight_hide_unavailable_stage),
+                                tipText = stringResource(R.string.panel_fight_hide_unavailable_stage_tip)
                             )
                         }
                         item {
@@ -278,7 +280,7 @@ fun FightConfigPanel(
                             CheckBoxWithLabel(
                                 checked = config.hideSeries,
                                 onCheckedChange = { onConfigChange(config.copy(hideSeries = it)) },
-                                label = "隐藏代理倍率"
+                                label = stringResource(R.string.panel_fight_hide_series)
                             )
                         }
                         item {
@@ -286,8 +288,8 @@ fun FightConfigPanel(
                             CheckBoxWithExpandableTip(
                                 checked = config.autoRestartOnDrop,
                                 onCheckedChange = { onConfigChange(config.copy(autoRestartOnDrop = it)) },
-                                label = "游戏掉线时自动重连",
-                                tipText = "检测到游戏掉线时会自动尝试重连并继续作战"
+                                label = stringResource(R.string.panel_fight_auto_restart_on_drop),
+                                tipText = stringResource(R.string.panel_fight_auto_restart_on_drop_tip)
                             )
                         }
                         item {
@@ -310,19 +312,7 @@ private fun SeriesSection(
     onConfigChange: (FightConfig) -> Unit
 ) {
     var tipExpanded by remember { mutableStateOf(false) }
-    val seriesTipText = """
-• AUTO:
-自动识别关卡最大代理倍率, 保持最大代理倍率且使用理智药后理智不溢出
-
-• 数值 (1~6):
-按设定倍率执行代理
-若当前理智不足完成设定倍率 (如仅够 5 次 but 设为 6 倍), 则无法进入战斗
- 或者
-战斗次数不足完成设定倍率 (如仅够 5 次 but 设为 6 倍), 也将无法进入战斗
-
-• 不切换:
-不调整游戏内代理倍率设定
-    """.trimIndent()
+    val seriesTipText = stringResource(R.string.panel_fight_series_tip)
 
 
 
@@ -335,7 +325,7 @@ private fun SeriesSection(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "代理倍率",
+                text = stringResource(R.string.panel_fight_series_title),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
@@ -356,6 +346,11 @@ private fun SeriesSection(
             modifier = Modifier.fillMaxWidth()
         ) {
             UiUsageConstants.seriesOptions.forEach { (value, label) ->
+                val displayLabel = if (value == -1) {
+                    stringResource(R.string.panel_fight_series_no_switch)
+                } else {
+                    label
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -368,7 +363,7 @@ private fun SeriesSection(
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = label,
+                        text = displayLabel,
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.weight(1f)
@@ -389,8 +384,8 @@ private fun StageResetModeSection(
     onConfigChange: (FightConfig) -> Unit
 ) {
     val options = listOf(
-        StageResetMode.CURRENT to "当前/上次",
-        StageResetMode.IGNORE to "不切换"
+        StageResetMode.CURRENT to stringResource(R.string.panel_fight_stage_reset_current),
+        StageResetMode.IGNORE to stringResource(R.string.panel_fight_stage_reset_ignore)
     )
 
     Column(
@@ -398,7 +393,7 @@ private fun StageResetModeSection(
         modifier = Modifier.fillMaxWidth()
     ) {
         Text(
-            text = "未开放关卡重置为",
+            text = stringResource(R.string.panel_fight_stage_reset_title),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
         )
@@ -466,6 +461,7 @@ private fun GroupedStageSelectionSection(
 
     // 检查首选关卡开放状态
     val stage1Open = isStageOpenToday(config.stage1)
+    val annihilationOptions = localizedAnnihilationOptions()
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -474,7 +470,7 @@ private fun GroupedStageSelectionSection(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "关卡选择",
+                    text = stringResource(R.string.panel_fight_stage_selection_title),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
@@ -488,7 +484,7 @@ private fun GroupedStageSelectionSection(
             if (config.customStageCode) {
                 ExpandableTipContent(
                     visible = tipExpanded,
-                    tipText = "可手动输入关卡代码，支持简写\n例如：龙门币→CE-6，经验→LS-6"
+                    tipText = stringResource(R.string.panel_fight_stage_selection_tip)
                 )
             }
         }
@@ -499,19 +495,19 @@ private fun GroupedStageSelectionSection(
             StageInputField(
                 value = config.stage1,
                 onValueChange = { onConfigChange(config.copy(stage1 = it)) },
-                label = "首选关卡",
-                placeholder = "例如: CE-6 或 龙门币",
+                label = stringResource(R.string.panel_fight_primary_stage_label),
+                placeholder = stringResource(R.string.panel_fight_primary_stage_placeholder),
                 stageCodes = stageCodes
             )
         } else {
             // 分组按钮选择模式
             GroupedStageButtonGroup(
-                label = "首选关卡",
+                label = stringResource(R.string.panel_fight_primary_stage_label),
                 selectedValue = config.stage1,
                 stageGroups = stageGroups,
                 onItemSelected = { onConfigChange(config.copy(stage1 = it)) },
                 annihilationDisplayName = if (config.useCustomAnnihilation) {
-                    UiUsageConstants.annihilations
+                    annihilationOptions
                         .firstOrNull { it.second == config.annihilationStage }
                         ?.first
                 } else null
@@ -526,8 +522,14 @@ private fun GroupedStageSelectionSection(
                 shape = RoundedCornerShape(4.dp)
             ) {
                 Text(
-                    text = "「${config.stage1}」今日不开放" +
-                            if (config.useAlternateStage) "，将使用备选关卡" else "",
+                    text = if (config.useAlternateStage) {
+                        stringResource(
+                            R.string.panel_fight_primary_stage_closed_with_alternate,
+                            config.stage1
+                        )
+                    } else {
+                        stringResource(R.string.panel_fight_primary_stage_closed, config.stage1)
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.padding(8.dp)
@@ -541,39 +543,39 @@ private fun GroupedStageSelectionSection(
                 StageInputField(
                     value = config.stage2,
                     onValueChange = { onConfigChange(config.copy(stage2 = it)) },
-                    label = "备选关卡2",
-                    placeholder = "例如: CE-5",
+                    label = stringResource(R.string.panel_fight_alternate_stage2_label),
+                    placeholder = stringResource(R.string.panel_fight_alternate_stage2_placeholder),
                     stageCodes = stageCodes
                 )
                 StageInputField(
                     value = config.stage3,
                     onValueChange = { onConfigChange(config.copy(stage3 = it)) },
-                    label = "备选关卡3",
-                    placeholder = "例如: CE-4",
+                    label = stringResource(R.string.panel_fight_alternate_stage3_label),
+                    placeholder = stringResource(R.string.panel_fight_alternate_stage3_placeholder),
                     stageCodes = stageCodes
                 )
                 StageInputField(
                     value = config.stage4,
                     onValueChange = { onConfigChange(config.copy(stage4 = it)) },
-                    label = "备选关卡4",
-                    placeholder = "例如: CE-3",
+                    label = stringResource(R.string.panel_fight_alternate_stage4_label),
+                    placeholder = stringResource(R.string.panel_fight_alternate_stage4_placeholder),
                     stageCodes = stageCodes
                 )
             } else {
                 GroupedStageButtonGroup(
-                    label = "备选关卡2",
+                    label = stringResource(R.string.panel_fight_alternate_stage2_label),
                     selectedValue = config.stage2,
                     stageGroups = stageGroups,
                     onItemSelected = { onConfigChange(config.copy(stage2 = it)) }
                 )
                 GroupedStageButtonGroup(
-                    label = "备选关卡3",
+                    label = stringResource(R.string.panel_fight_alternate_stage3_label),
                     selectedValue = config.stage3,
                     stageGroups = stageGroups,
                     onItemSelected = { onConfigChange(config.copy(stage3 = it)) }
                 )
                 GroupedStageButtonGroup(
-                    label = "备选关卡4",
+                    label = stringResource(R.string.panel_fight_alternate_stage4_label),
                     selectedValue = config.stage4,
                     stageGroups = stageGroups,
                     onItemSelected = { onConfigChange(config.copy(stage4 = it)) }
@@ -609,12 +611,19 @@ private fun GroupedStageButtonGroup(
 
         // 显示每个分组
         stageGroups.forEach { group ->
+            // TODO: i18n — 用 group.isPermanent 替代硬编码字符串比较
+            val displayTitle = if (group.isPermanent) {
+                stringResource(R.string.panel_fight_stage_group_permanent)
+            } else {
+                group.title
+            }
             // 分组标题
             Text(
-                text = group.title,
+                text = displayTitle,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Medium,
-                color = if (group.title == "常驻关卡") Color(0xFF388E3C) else Color(0xFFE65100),
+                // TODO: i18n — 用 group.isPermanent 替代硬编码字符串比较
+                color = if (group.isPermanent) Color(0xFF388E3C) else Color(0xFFE65100),
                 modifier = Modifier.padding(top = 4.dp)
             )
 
@@ -673,7 +682,7 @@ private fun CustomAnnihilationSection(
         CheckBoxWithLabel(
             checked = config.useCustomAnnihilation,
             onCheckedChange = { onConfigChange(config.copy(useCustomAnnihilation = it)) },
-            label = "使用自定义剿灭"
+            label = stringResource(R.string.panel_fight_use_custom_annihilation)
         )
 
         // 剿灭关卡选择（启用时显示）
@@ -684,7 +693,7 @@ private fun CustomAnnihilationSection(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "剿灭关卡",
+                    text = stringResource(R.string.panel_fight_annihilation_title),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
@@ -693,7 +702,7 @@ private fun CustomAnnihilationSection(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    UiUsageConstants.annihilations.forEach { (displayName, value) ->
+                    localizedAnnihilationOptions().forEach { (displayName, value) ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -765,21 +774,21 @@ private fun StageInputField(
             placeholder = placeholder,
             singleLine = true,
             supportingText = if (showConvertedHint) {
-                { Text("将转换为: $convertedCode", color = MaterialTheme.colorScheme.primary) }
+                { Text(stringResource(R.string.panel_fight_converted_prefix, convertedCode), color = MaterialTheme.colorScheme.primary) }
             } else null
         )
     }
 }
 
-private val WEEK_DAYS = listOf(
-    "MONDAY" to "周一",
-    "TUESDAY" to "周二",
-    "WEDNESDAY" to "周三",
-    "THURSDAY" to "周四",
-    "FRIDAY" to "周五",
-    "SATURDAY" to "周六",
-    "SUNDAY" to "周日",
-)
+@Composable
+private fun localizedAnnihilationOptions(): List<Pair<String, String>> {
+    return listOf(
+        stringResource(R.string.panel_fight_annihilation_current) to "Annihilation",
+        stringResource(R.string.panel_fight_annihilation_chernobog) to "Chernobog@Annihilation",
+        stringResource(R.string.panel_fight_annihilation_outskirts) to "LungmenOutskirts@Annihilation",
+        stringResource(R.string.panel_fight_annihilation_downtown) to "LungmenDowntown@Annihilation",
+    )
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -787,12 +796,21 @@ private fun WeeklyScheduleSection(
     config: FightConfig,
     onConfigChange: (FightConfig) -> Unit
 ) {
+    val weekDays = listOf(
+        "MONDAY" to stringResource(R.string.panel_fight_weekday_monday),
+        "TUESDAY" to stringResource(R.string.panel_fight_weekday_tuesday),
+        "WEDNESDAY" to stringResource(R.string.panel_fight_weekday_wednesday),
+        "THURSDAY" to stringResource(R.string.panel_fight_weekday_thursday),
+        "FRIDAY" to stringResource(R.string.panel_fight_weekday_friday),
+        "SATURDAY" to stringResource(R.string.panel_fight_weekday_saturday),
+        "SUNDAY" to stringResource(R.string.panel_fight_weekday_sunday),
+    )
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         CheckBoxWithExpandableTip(
             checked = config.useWeeklySchedule,
             onCheckedChange = { onConfigChange(config.copy(useWeeklySchedule = it)) },
-            label = "启用周计划",
-            tipText = "启用后仅在勾选的日期执行该任务（使用游戏服务器时间，04:00 换日）"
+            label = stringResource(R.string.panel_fight_weekly_schedule),
+            tipText = stringResource(R.string.panel_fight_weekly_schedule_tip)
         )
         AnimatedVisibility(
             visible = config.useWeeklySchedule,
@@ -804,7 +822,7 @@ private fun WeeklyScheduleSection(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.padding(start = 4.dp)
             ) {
-                WEEK_DAYS.forEach { (key, display) ->
+                weekDays.forEach { (key, display) ->
                     val selected = config.weeklySchedule[key] != false
                     Surface(
                         onClick = {

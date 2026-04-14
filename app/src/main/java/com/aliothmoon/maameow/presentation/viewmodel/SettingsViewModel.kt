@@ -1,17 +1,25 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
 import android.app.Application
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.BuildConfig
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
+import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.utils.Misc
+import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
+import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.toLocaleList
+import com.aliothmoon.maameow.utils.i18n.UiText
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -27,12 +35,14 @@ class SettingsViewModel(
     private val appSettingsManager: AppSettingsManager,
     private val permissionManager: PermissionManager,
     private val configBackupManager: ConfigBackupManager,
+    private val taskChainState: TaskChainState,
+    private val resourceDataManager: ResourceDataManager,
 ) : ViewModel() {
 
     // ========== 导入导出 ==========
 
-    private val _backupMessage = MutableStateFlow<String?>(null)
-    val backupMessage: StateFlow<String?> = _backupMessage.asStateFlow()
+    private val _backupMessage = MutableStateFlow<UiText?>(null)
+    val backupMessage: StateFlow<UiText?> = _backupMessage.asStateFlow()
 
     private val _showRestartDialog = MutableStateFlow(false)
     val showRestartDialog: StateFlow<Boolean> = _showRestartDialog.asStateFlow()
@@ -54,10 +64,10 @@ class SettingsViewModel(
         viewModelScope.launch {
             try {
                 configBackupManager.exportTo(outputStream)
-                _backupMessage.value = "配置导出成功"
+                _backupMessage.value = uiTextOf(R.string.settings_export_success)
             } catch (e: Exception) {
-                Timber.e(e, "导出配置失败")
-                _backupMessage.value = "导出失败: ${e.message}"
+                Timber.e(e, "export config failed")
+                _backupMessage.value = uiTextOf(R.string.settings_export_failed, e.message.orEmpty())
             }
         }
     }
@@ -68,8 +78,8 @@ class SettingsViewModel(
                 configBackupManager.importFrom(inputStream)
                 _showRestartDialog.value = true
             } catch (e: Exception) {
-                Timber.e(e, "导入配置失败")
-                _backupMessage.value = "导入失败: ${e.message}"
+                Timber.e(e, "import config failed")
+                _backupMessage.value = uiTextOf(R.string.settings_import_failed, e.message.orEmpty())
             }
         }
     }
@@ -165,6 +175,25 @@ class SettingsViewModel(
     fun setBackgroundResolution(pref: DefaultDisplayConfig.ResolutionPreference) {
         viewModelScope.launch {
             appSettingsManager.setBackgroundResolution(pref)
+        }
+    }
+
+    val language: StateFlow<AppSettingsManager.AppLanguage> = appSettingsManager.language
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            AppSettingsManager.AppLanguage.SYSTEM
+        )
+
+    fun setLanguage(lang: AppSettingsManager.AppLanguage) {
+        viewModelScope.launch {
+            val resolved = resolveSelectedLanguage(lang)
+            appSettingsManager.setLanguage(resolved)
+            AppCompatDelegate.setApplicationLocales(resolved.toLocaleList())
+            resourceDataManager.refreshDisplayLanguage(
+                clientType = taskChainState.getClientType(),
+                displayLanguage = ResourceDataManager.displayLanguageCode(resolved)
+            )
         }
     }
 }

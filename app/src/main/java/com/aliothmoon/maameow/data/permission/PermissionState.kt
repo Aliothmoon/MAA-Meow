@@ -29,7 +29,4 @@ data class PermissionState(
             RemoteBackend.SHIZUKU -> shizuku
             RemoteBackend.ROOT -> root
         }
-
-    val remotePermissionLabel: String
-        get() = startupBackend.permissionLabel
 }

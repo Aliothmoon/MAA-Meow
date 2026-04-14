@@ -22,8 +22,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
@@ -60,7 +62,7 @@ fun RoguelikeConfigPanel(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "常规设置",
+                text = stringResource(R.string.common_tab_general),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
@@ -69,7 +71,7 @@ fun RoguelikeConfigPanel(
                 }
             )
             Text(
-                text = "高级设置",
+                text = stringResource(R.string.common_tab_advanced),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
@@ -117,22 +119,21 @@ private fun BasicRoguelikeSettings(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // 主题选择 - 使用按钮组
         RoguelikeButtonGroup(
-            label = "肉鸽主题",
+            label = stringResource(R.string.panel_roguelike_theme),
             selectedValue = config.theme,
-            options = RoguelikeUi.THEME_OPTIONS,
+            options = localizedRoguelikeThemeOptions(),
             onValueChange = { newTheme ->
                 // 切换主题时重置分队和模式（如果当前值不在新主题支持列表中）
                 // WPF: UpdateRoguelikeSquadList (line 244-275)
                 val newSquads = RoguelikeUi.getSquadOptionsForTheme(newTheme, config.mode)
                 val newSquad =
-                    if (config.squad in newSquads) config.squad else "指挥分队"
+                    if (config.squad in newSquads) config.squad else RoguelikeUi.DEFAULT_SQUAD
 
                 // 验证当前模式是否在新主题支持的模式列表中
                 val newMode = if (RoguelikeUi.isModeValidForTheme(config.mode, newTheme)) {
                     config.mode
                 } else {
-                    val fallbackName =
-                        RoguelikeUi.getModeOptionsForTheme(newTheme).firstOrNull()?.first ?: "Exp"
+                    val fallbackName = RoguelikeUi.getModeKeysForTheme(newTheme).firstOrNull() ?: "Exp"
                     RoguelikeMode.valueOf(fallbackName)
                 }
 
@@ -143,14 +144,14 @@ private fun BasicRoguelikeSettings(
                 ) {
                     config.difficulty
                 } else {
-                    -1  // WPF: 超出范围时重置为"不切换"
+                    -1  // WPF: reset to the no-switch sentinel when out of range
                 }
 
                 // 验证当前阵容是否在新主题支持的阵容列表中
                 // WPF: UpdateRoguelikeRolesList (line 165)
-                val newRolesList = RoguelikeUi.getRolesOptionsForTheme(newTheme)
+                val newRolesList = RoguelikeUi.getRoleKeysForTheme(newTheme)
                 val newRoles =
-                    if (newRolesList.any { it.first == config.roles }) config.roles else "稳扎稳打"
+                    if (config.roles in newRolesList) config.roles else RoguelikeUi.DEFAULT_ROLE
 
                 // WPF: CollectibleModeSquad 验证 (line 274)
                 val newCollectibleModeSquad =
@@ -158,7 +159,7 @@ private fun BasicRoguelikeSettings(
                     else newSquad
 
                 // 过滤掉新主题不支持的开局奖励
-                val validAwardKeys = RoguelikeUi.getCollectibleAwardOptions(newTheme).map { it.first }.toSet()
+                val validAwardKeys = RoguelikeUi.getCollectibleAwardKeys(newTheme).toSet()
                 val newCollectibleStartAwards = config.collectibleStartAwards.intersect(validAwardKeys)
 
                 onConfigChange(
@@ -177,7 +178,7 @@ private fun BasicRoguelikeSettings(
 
         // 难度选择 - 使用按钮组
         RoguelikeDifficultyButtonGroup(
-            label = "难度",
+            label = stringResource(R.string.panel_roguelike_difficulty),
             selectedValue = config.difficulty,
             theme = config.theme,
             onValueChange = { onConfigChange(config.copy(difficulty = it)) }
@@ -186,9 +187,9 @@ private fun BasicRoguelikeSettings(
         // 策略模式选择 - 使用按钮组（根据主题动态变化）
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             RoguelikeButtonGroup(
-                label = "策略",
+                label = stringResource(R.string.panel_roguelike_strategy),
                 selectedValue = config.mode.name,
-                options = RoguelikeUi.getModeOptionsForTheme(config.theme),
+                options = localizedRoguelikeModeOptionsForTheme(config.theme),
                 onValueChange = {
                     val newMode = RoguelikeMode.valueOf(it)
                     var newConfig = config.copy(mode = newMode)
@@ -198,7 +199,8 @@ private fun BasicRoguelikeSettings(
                     }
                     // WPF: Mode setter (line 422) 切换模式时验证分队有效性
                     val newSquads = RoguelikeUi.getSquadOptionsForTheme(config.theme, newMode)
-                    val newSquad = if (newConfig.squad in newSquads) newConfig.squad else "指挥分队"
+                    val newSquad =
+                        if (newConfig.squad in newSquads) newConfig.squad else RoguelikeUi.DEFAULT_SQUAD
                     val newCollectibleSquad = if (newConfig.collectibleModeSquad in newSquads) newConfig.collectibleModeSquad else newSquad
                     newConfig = newConfig.copy(squad = newSquad, collectibleModeSquad = newCollectibleSquad)
                     onConfigChange(newConfig)
@@ -206,8 +208,7 @@ private fun BasicRoguelikeSettings(
             )
 
             // 模式说明 - 紧跟在策略按钮组下方
-            val modeDescription =
-                RoguelikeUi.MODE_OPTIONS.find { it.first == config.mode.name }?.second ?: ""
+            val modeDescription = localizedRoguelikeModeDescription(config.mode)
             if (modeDescription.isNotEmpty()) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -226,7 +227,7 @@ private fun BasicRoguelikeSettings(
 
         // 分队选择 - 使用按钮组
         RoguelikeSquadButtonGroup(
-            label = "开局分队",
+            label = stringResource(R.string.panel_roguelike_squad),
             selectedValue = config.squad,
             theme = config.theme,
             mode = config.mode,
@@ -235,9 +236,9 @@ private fun BasicRoguelikeSettings(
 
         // 职业阵容 - 使用按钮组（根据主题动态变化）
         RoguelikeButtonGroup(
-            label = "开局职业组",
+            label = stringResource(R.string.panel_roguelike_roles),
             selectedValue = config.roles,
-            options = RoguelikeUi.getRolesOptionsForTheme(config.theme),
+            options = localizedRoguelikeRoleOptionsForTheme(config.theme),
             onValueChange = { onConfigChange(config.copy(roles = it)) }
         )
 

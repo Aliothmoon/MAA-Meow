@@ -14,15 +14,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
+import com.aliothmoon.maameow.utils.i18n.wakeUpClientTypeDisplayName
 import org.koin.compose.koinInject
 
 /**
@@ -37,6 +41,7 @@ fun WakeUpConfigPanel(
     onConfigChange: (WakeUpConfig) -> Unit,
     compositionService: MaaCompositionService = koinInject()
 ) {
+    val context = LocalContext.current
     val state = compositionService.state.collectAsStateWithLifecycle()
     val isTaskActive =
         state.value == MaaExecutionState.STARTING || state.value == MaaExecutionState.RUNNING
@@ -51,9 +56,9 @@ fun WakeUpConfigPanel(
     ) {
         // 客户端类型选择
         SelectableChipGroup(
-            label = "客户端类型",
+            label = stringResource(R.string.panel_wakeup_client_type),
             selectedValue = config.clientType,
-            options = WakeUpConfig.CLIENT_TYPE_OPTIONS,
+            options = WakeUpConfig.CLIENT_TYPES.map { it to context.wakeUpClientTypeDisplayName(it) },
             onSelected = { onConfigChange(config.copy(clientType = it)) },
             enabled = !isTaskActive,
             labelFontWeight = FontWeight.Medium
@@ -65,12 +70,12 @@ fun WakeUpConfigPanel(
                     value = config.accountName,
                     onValueChange = { onConfigChange(config.copy(accountName = it)) },
                     enabled = !isTaskActive,
-                    label = "账号切换",
+                    label = stringResource(R.string.panel_wakeup_account_switch),
                     placeholder = "123****4567"
                 )
 
                 Text(
-                    text = "需要切换至的账号，留空以禁用。输入登录界面显示的内容，例如 123****4567；支持部分匹配。仅支持官服、B服，不支持登录账号。",
+                    text = stringResource(R.string.panel_wakeup_account_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
@@ -87,26 +92,7 @@ fun WakeUpConfigPanel(
         CheckBoxWithLabel(
             checked = config.startGameEnabled,
             onCheckedChange = { onConfigChange(config.copy(startGameEnabled = it)) },
-            label = "启动游戏"
+            label = stringResource(R.string.panel_wakeup_launch_game)
         )
-
-        // TODO 服务器信息
-//        Row(
-//            modifier = Modifier.fillMaxWidth(),
-//            horizontalArrangement = Arrangement.spacedBy(8.dp),
-//            verticalAlignment = Alignment.CenterVertically
-//        ) {
-//            Text(
-//                text = "服务器:",
-//                style = MaterialTheme.typography.bodySmall,
-//                color = MaterialTheme.colorScheme.onSurfaceVariant
-//            )
-//            Text(
-//                text = config.getServerType(),
-//                style = MaterialTheme.typography.bodySmall,
-//                fontWeight = FontWeight.Medium,
-//                color = MaterialTheme.colorScheme.primary
-//            )
-//        }
     }
 }

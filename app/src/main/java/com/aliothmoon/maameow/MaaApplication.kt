@@ -10,6 +10,7 @@ import com.aliothmoon.maameow.koin.viewModelModule
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.utils.CrashHandler
+import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap
 import com.aliothmoon.maameow.utils.log.LogTreeHolder
 import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
@@ -33,6 +34,8 @@ class MaaApplication : Application() {
             androidContext(app)
             modules(appModule, useCaseModule, viewModelModule, floatingWindowModule)
         }
+
+        LocaleBootstrap.applyPersisted(appSettingsManager)
 
         postCreateApplication()
     }

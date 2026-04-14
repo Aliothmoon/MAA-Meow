@@ -25,9 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aliothmoon.maameow.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RunMode
@@ -41,6 +43,7 @@ import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType.SUCCESS
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.ExpandedControlPanelViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
+import com.aliothmoon.maameow.utils.i18n.asString
 import org.koin.compose.koinInject
 
 
@@ -219,6 +222,10 @@ fun ExpandedControlPanel(
         }
 
         val dialog = uiState.dialog
+        val dialogTitle = dialog?.title.asString()
+        val dialogMessage = dialog?.message.asString()
+        val dialogConfirmText = dialog?.confirmText.asString()
+        val dialogDismissText = dialog?.dismissText.asString()
         val confirmColor = when (dialog?.type) {
             SUCCESS -> MaterialTheme.colorScheme.primary
             ERROR -> MaterialTheme.colorScheme.error
@@ -227,16 +234,18 @@ fun ExpandedControlPanel(
         AdaptiveTaskPromptDialog(
             visible = dialog != null,
             onDismissRequest = viewModel::onDialogDismiss,
-            title = dialog?.title ?: "",
-            message = AnnotatedString(dialog?.message ?: ""),
+            title = dialogTitle,
+            message = AnnotatedString(dialogMessage),
             icon = when (dialog?.type) {
                 SUCCESS -> Icons.Filled.CheckCircle
                 else -> Icons.Filled.Warning
             },
             iconTint = confirmColor,
             confirmColor = confirmColor,
-            confirmText = dialog?.confirmText ?: "确认",
-            dismissText = dialog?.dismissText ?: "关闭",
+            confirmText = dialogConfirmText.takeIf { it.isNotBlank() }
+                ?: stringResource(R.string.common_confirm),
+            dismissText = dialogDismissText.takeIf { it.isNotBlank() }
+                ?: stringResource(R.string.common_close),
             onConfirm = viewModel::onDialogConfirm,
         )
     }

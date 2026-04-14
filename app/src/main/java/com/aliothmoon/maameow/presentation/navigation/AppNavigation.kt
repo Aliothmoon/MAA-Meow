@@ -20,15 +20,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
-import com.aliothmoon.maameow.domain.service.ExternalNotificationService
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.service.ExternalNotificationService
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
 import com.aliothmoon.maameow.presentation.view.background.BackgroundTaskView
 import com.aliothmoon.maameow.presentation.view.home.HomeView
@@ -71,6 +73,7 @@ fun AppNavigation(
 
     // 判断是否显示底部导航
     val showBottomBar = !isFullscreen && isOnMainTab
+    val switchBackgroundModeMessage = stringResource(R.string.navigation_toast_switch_background_mode)
 
     LaunchedEffect(pendingScheduledExecution?.requestId) {
         if (pendingScheduledExecution != null && currentNavRoute != Routes.BACKGROUND_TASK) {
@@ -112,7 +115,7 @@ fun AppNavigation(
                             if (tab.route == Routes.BACKGROUND_TASK && runMode == RunMode.FOREGROUND) {
                                 Toast.makeText(
                                     context,
-                                    "当前是前台模式，请先切换到后台模式",
+                                    switchBackgroundModeMessage,
                                     Toast.LENGTH_SHORT
                                 ).show()
                                 return@AppBottomNavigation

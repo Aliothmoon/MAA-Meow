@@ -43,12 +43,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.log.LogEntry
 import com.aliothmoon.maameow.data.log.LogFileInfo
 import com.aliothmoon.maameow.domain.service.LogExportService
@@ -98,7 +100,12 @@ fun LogHistoryView(
                 coroutineScope.launch {
                     val intent = logExportService.exportAllLogs()
                     if (intent != null) {
-                        context.startActivity(Intent.createChooser(intent, "导出日志"))
+                        context.startActivity(
+                            Intent.createChooser(
+                                intent,
+                                context.getString(R.string.settings_log_export_chooser_title)
+                            )
+                        )
                     }
                 }
             },
@@ -123,15 +130,15 @@ private fun LogFileListView(
     showDeleteConfirm?.let { logFile ->
         AdaptiveTaskPromptDialog(
             visible = true,
-            title = "确认删除",
-            message = "确定要删除日志文件 ${logFile.displayTime} 吗？",
+            title = stringResource(R.string.dialog_delete_log_title),
+            message = stringResource(R.string.dialog_delete_log_message, logFile.displayTime),
             onConfirm = {
                 onFileDelete(logFile)
                 showDeleteConfirm = null
             },
             onDismissRequest = { showDeleteConfirm = null },
-            confirmText = "删除",
-            dismissText = "取消",
+            confirmText = stringResource(R.string.common_delete),
+            dismissText = stringResource(R.string.common_cancel),
             icon = Icons.Rounded.Delete,
             confirmColor = MaterialTheme.colorScheme.error
         )
@@ -140,19 +147,19 @@ private fun LogFileListView(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = "历史日志",
+                title = stringResource(R.string.settings_log_history_title),
                 navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
                 onNavigationClick = onBack,
                 actions = {
                     IconButton(onClick = onExport) {
                         Icon(
                             imageVector = Icons.Default.Share,
-                            contentDescription = "导出",
+                            contentDescription = stringResource(R.string.common_export),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
                     TextButton(onClick = onCleanup) {
-                        Text("清理30天前", color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.log_cleanup_30_days), color = MaterialTheme.colorScheme.primary)
                     }
                 }
             )
@@ -170,7 +177,7 @@ private fun LogFileListView(
                 )
             } else if (logFiles.isEmpty()) {
                 Text(
-                    text = "暂无历史日志",
+                    text = stringResource(R.string.log_empty_history),
                     modifier = Modifier.align(Alignment.Center),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -225,7 +232,11 @@ private fun LogFileItem(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${logFile.taskCount} 个任务 | ${formatFileSize(logFile.fileSize)}",
+                    text = stringResource(
+                        R.string.log_list_meta,
+                        logFile.taskCount,
+                        formatFileSize(logFile.fileSize)
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -233,7 +244,7 @@ private fun LogFileItem(
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "删除",
+                    contentDescription = stringResource(R.string.common_delete),
                     tint = MaterialTheme.colorScheme.error
                 )
             }
@@ -250,7 +261,7 @@ private fun LogDetailView(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = "日志详情",
+                title = stringResource(R.string.log_detail_title),
                 navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
                 onNavigationClick = onBack
             )
@@ -278,18 +289,24 @@ private fun LogDetailView(
                     is LogEntry.Header -> {
                         Column {
                             Text(
-                                text = "========== 任务开始 ==========",
+                                text = stringResource(R.string.log_detail_task_start),
                                 color = MaterialTheme.colorScheme.primary,
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp
                             )
                             Text(
-                                text = "时间: ${formatTime(entry.startTime)}",
+                                text = stringResource(
+                                    R.string.log_detail_time,
+                                    formatTime(entry.startTime)
+                                ),
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp
                             )
                             Text(
-                                text = "任务: ${entry.tasks.joinToString(", ")}",
+                                text = stringResource(
+                                    R.string.log_detail_tasks,
+                                    entry.tasks.joinToString(", ")
+                                ),
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp
                             )
@@ -315,18 +332,21 @@ private fun LogDetailView(
                         Column {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "========== 任务结束 ==========",
+                                text = stringResource(R.string.log_detail_task_end),
                                 color = MaterialTheme.colorScheme.primary,
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp
                             )
                             Text(
-                                text = "结束时间: ${formatTime(entry.endTime)}",
+                                text = stringResource(
+                                    R.string.log_detail_end_time,
+                                    formatTime(entry.endTime)
+                                ),
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp
                             )
                             Text(
-                                text = "状态: ${entry.status}",
+                                text = stringResource(R.string.log_detail_status, entry.status),
                                 color = if (entry.status == "COMPLETED") Color(0xFF4CAF50) else Color(0xFFF44336),
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp

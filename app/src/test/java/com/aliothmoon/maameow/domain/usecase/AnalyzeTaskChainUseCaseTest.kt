@@ -28,8 +28,7 @@ class AnalyzeTaskChainUseCaseTest {
 
         assertEquals(
             AnalyzeTaskChainResult.Blocked(
-                reason = AnalyzeTaskChainFailureReason.INVALID_CHAIN,
-                message = "请先选择要执行的任务",
+                reason = AnalyzeTaskChainFailureReason.NO_TASK_SELECTED,
             ),
             result
         )
@@ -56,8 +55,8 @@ class AnalyzeTaskChainUseCaseTest {
 
         assertEquals(
             AnalyzeTaskChainResult.Blocked(
-                reason = AnalyzeTaskChainFailureReason.INVALID_CHAIN,
-                message = "任务链中存在多个不同的客户端类型（Official、Bilibili），请保持一致",
+                reason = AnalyzeTaskChainFailureReason.CONFLICTING_CLIENT_TYPES,
+                clientTypes = listOf("Official", "Bilibili"),
             ),
             result
         )
@@ -91,7 +90,6 @@ class AnalyzeTaskChainUseCaseTest {
         assertEquals(
             AnalyzeTaskChainResult.Blocked(
                 reason = AnalyzeTaskChainFailureReason.NO_EXECUTABLE_TASKS,
-                message = AnalyzeTaskChainUseCase.EMPTY_PARAMS_MESSAGE,
             ),
             result
         )

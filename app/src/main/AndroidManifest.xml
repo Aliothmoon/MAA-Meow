@@ -47,13 +47,14 @@
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:localeConfig="@xml/locales_config"
         android:preserveLegacyExternalStorage="true"
         android:requestLegacyExternalStorage="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MaaMeow"
         android:windowSoftInputMode="adjustResize"
-        tools:targetApi="30">
+        tools:targetApi="33">
 
         <profileable
             android:shell="true"

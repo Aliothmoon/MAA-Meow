@@ -6,12 +6,15 @@ import android.os.Build
 import android.os.PowerManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import com.aliothmoon.maameow.schedule.model.ScheduleType
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
+import com.aliothmoon.maameow.utils.i18n.UiText
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,7 +46,7 @@ data class ScheduleEditUiState(
     val saveSuccess: Boolean = false,
     val needBatteryOptimization: Boolean = false,
     val needExactAlarm: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: UiText? = null
 )
 
 class ScheduleEditViewModel(
@@ -93,7 +96,10 @@ class ScheduleEditViewModel(
             }
             // 新建策略 — 默认选中当前活跃 Profile
             existingStrategy = null
-            val defaultName = "定时任务-${repository.strategies.value.size + 1}"
+            val defaultName = context.getString(
+                R.string.schedule_default_name,
+                repository.strategies.value.size + 1
+            )
             _state.value = ScheduleEditUiState(
                 name = defaultName,
                 profiles = profiles,
@@ -175,32 +181,32 @@ class ScheduleEditViewModel(
     fun onSave() {
         val current = _state.value
         if (current.name.isBlank()) {
-            _state.update { it.copy(errorMessage = "请输入策略名称") }
+            _state.update { it.copy(errorMessage = uiTextOf(R.string.schedule_error_name_required)) }
             return
         }
         if (current.selectedProfileId == null) {
-            _state.update { it.copy(errorMessage = "请选择任务配置") }
+            _state.update { it.copy(errorMessage = uiTextOf(R.string.schedule_error_profile_required)) }
             return
         }
         when (current.scheduleType) {
             ScheduleType.FIXED_TIME -> {
                 if (current.daysOfWeek.isEmpty()) {
-                    _state.update { it.copy(errorMessage = "请选择执行日期") }
+                    _state.update { it.copy(errorMessage = uiTextOf(R.string.schedule_error_days_required)) }
                     return
                 }
                 if (current.executionTimes.isEmpty()) {
-                    _state.update { it.copy(errorMessage = "请添加执行时间") }
+                    _state.update { it.copy(errorMessage = uiTextOf(R.string.schedule_error_times_required)) }
                     return
                 }
             }
             ScheduleType.INTERVAL -> {
                 if (current.startTimeMs == null) {
-                    _state.update { it.copy(errorMessage = "请选择开始时间") }
+                    _state.update { it.copy(errorMessage = uiTextOf(R.string.schedule_error_start_time_required)) }
                     return
                 }
                 val totalMinutes = current.intervalDays * 24 * 60 + current.intervalHours * 60
                 if (totalMinutes < 60) {
-                    _state.update { it.copy(errorMessage = "执行间隔不能小于 1 小时") }
+                    _state.update { it.copy(errorMessage = uiTextOf(R.string.schedule_error_interval_too_short)) }
                     return
                 }
             }
@@ -261,7 +267,15 @@ class ScheduleEditViewModel(
                     )
                 }
             }.onFailure { e ->
-                _state.update { it.copy(isSaving = false, errorMessage = "保存失败: ${e.message}") }
+                _state.update {
+                    it.copy(
+                        isSaving = false,
+                        errorMessage = uiTextOf(
+                            R.string.schedule_error_save_failed,
+                            e.message ?: ""
+                        )
+                    )
+                }
             }
         }
     }

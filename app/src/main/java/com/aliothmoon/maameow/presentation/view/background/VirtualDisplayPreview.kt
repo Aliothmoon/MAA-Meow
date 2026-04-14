@@ -23,8 +23,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.service.AppWatchdog
 import org.koin.compose.koinInject
 
@@ -75,7 +77,7 @@ fun VirtualDisplayPreview(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "待执行",
+                                text = stringResource(R.string.virtual_display_pending),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -90,7 +92,7 @@ fun VirtualDisplayPreview(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "等待画面中...",
+                                text = stringResource(R.string.virtual_display_waiting_surface),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -100,9 +102,17 @@ fun VirtualDisplayPreview(
 
                 // 看门狗状态指示器
                 val (dotColor, label) = when (watchdogState) {
-                    AppWatchdog.WatchdogState.WATCHING -> Color(0xFF4CAF50) to "游戏运行中"
-                    AppWatchdog.WatchdogState.APP_DIED -> Color(0xFFF44336) to "游戏终止"
-                    AppWatchdog.WatchdogState.IDLE -> Color(0xFF9E9E9E) to "待机"
+                    AppWatchdog.WatchdogState.WATCHING -> {
+                        Color(0xFF4CAF50) to stringResource(R.string.virtual_display_game_running)
+                    }
+
+                    AppWatchdog.WatchdogState.APP_DIED -> {
+                        Color(0xFFF44336) to stringResource(R.string.virtual_display_game_stopped)
+                    }
+
+                    AppWatchdog.WatchdogState.IDLE -> {
+                        Color(0xFF9E9E9E) to stringResource(R.string.virtual_display_idle)
+                    }
                 }
                 Row(
                     modifier = Modifier

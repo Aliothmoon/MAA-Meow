@@ -4,12 +4,13 @@ import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.state.ResourceInitState
+import com.aliothmoon.maameow.utils.i18n.UiText
 
 data class HomeUiState(
     val isShowControlOverlay: Boolean = false,
     val isLoading: Boolean = false,
     val resourceUpdateState: UpdateProcessState = UpdateProcessState.Idle,
-    val serviceStatusText: String = "未连接",
+    val serviceStatusText: UiText = UiText.Empty,
     val serviceStatusColor: StatusColorType = StatusColorType.NEUTRAL,
     val serviceStatusLoading: Boolean = false,
     val resourceInitState: ResourceInitState = ResourceInitState.NotChecked,
@@ -17,6 +18,6 @@ data class HomeUiState(
     val overlayControlMode: OverlayControlMode = OverlayControlMode.FLOAT_BALL,
     val isGranting: Boolean = false,
     val showRunModeUnsupportedDialog: Boolean = false,
-    val runModeUnsupportedMessage: String = ""
+    val runModeUnsupportedMessage: UiText = UiText.Empty
 )
 

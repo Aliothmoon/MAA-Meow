@@ -48,14 +48,14 @@ object UiUsageConstants {
     )
 
     // see UsesOfDronesList
-    val dronesUsages = listOf(
-        "_NotUse" to "不使用无人机",
-        "Money" to "贸易站-龙门币",
-        "SyntheticJade" to "贸易站-合成玉",
-        "CombatRecord" to "制造站-经验书",
-        "PureGold" to "制造站-赤金",
-        "OriginStone" to "制造站-源石碎片",
-        "Chip" to "制造站-芯片组"
+    val droneUsageValues = listOf(
+        "_NotUse",
+        "Money",
+        "SyntheticJade",
+        "CombatRecord",
+        "PureGold",
+        "OriginStone",
+        "Chip"
     )
 
     /**
@@ -63,57 +63,31 @@ object UiUsageConstants {
      * 迁移自 RoguelikeConfig.companion / WPF RoguelikeSettingsUserControlModel
      */
     object Roguelike {
-        // 主题列表
-        val THEME_OPTIONS = listOf(
-            "Phantom" to "傀影",
-            "Mizuki" to "水月",
-            "Sami" to "萨米",
-            "Sarkaz" to "萨卡兹",
-            "JieGarden" to "界园"
-        )
+        val THEMES = listOf("Phantom", "Mizuki", "Sami", "Sarkaz", "JieGarden")
 
-        // 策略模式列表（含描述）
-        val MODE_OPTIONS = listOf(
-            "Exp" to "刷等级，尽可能稳定地打更多层数",
-            "Investment" to "刷源石锭，投资完成后自动退出",
-            "Collectible" to "刷开局，刷取热水壶或精二干员开局",
-            "Squad" to "刷月度小队，尽可能稳定地打更多层数",
-            "Exploration" to "刷深入调查，尽可能稳定地打更多层数",
-            "CLP_PDS" to "刷坍缩范式，遇到非稀有坍缩范式后直接重开",
-            "FindPlaytime" to "刷常乐节点，第一层进洞，找不到需要的节点就重开"
-        )
+        const val DEFAULT_SQUAD = "指挥分队"
+        const val DEFAULT_ROLE = "稳扎稳打"
+        const val ROLE_FIRST_MOVE_ADVANTAGE = "先手必胜"
+        const val ROLE_OVERCOMING_WEAKNESSES = "取长补短"
+        const val ROLE_FLEXIBLE_DEPLOYMENT = "灵活部署"
+        const val ROLE_UNBREAKABLE = "坚不可摧"
+        const val ROLE_AS_YOUR_HEART_DESIRES = "随心所欲"
 
-        // 简短模式名称（用于下拉框）
-        val MODE_SHORT_OPTIONS = listOf(
-            "Exp" to "刷等级",
-            "Investment" to "刷源石锭",
-            "Collectible" to "刷开局",
-            "Squad" to "月度小队",
-            "Exploration" to "深入调查",
-            "CLP_PDS" to "刷坍缩",
-            "FindPlaytime" to "刷常乐"
-        )
-
-        // 目标常乐节点
-        val PLAYTIME_TARGET_OPTIONS = listOf(
-            "Ling" to "令 - 掷地有声",
-            "Shu" to "黍 - 种因得果",
-            "Nian" to "年 - 三缺一"
-        )
+        val PLAYTIME_TARGETS = listOf("Ling", "Shu", "Nian")
 
         // 职业阵容列表（按主题动态变化）
         // WPF: UpdateRoguelikeRolesList (lines 145-166)
-        fun getRolesOptionsForTheme(theme: String): List<Pair<String, String>> {
+        fun getRoleKeysForTheme(theme: String): List<String> {
             val list = mutableListOf(
-                "先手必胜" to "先手必胜（先锋、狙击、特种）",
-                "稳扎稳打" to "稳扎稳打（重装、术师、狙击）",
-                "取长补短" to "取长补短（近卫、辅助、医疗）",
+                ROLE_FIRST_MOVE_ADVANTAGE,
+                DEFAULT_ROLE,
+                ROLE_OVERCOMING_WEAKNESSES,
             )
             if (theme == "JieGarden") {
-                list.add("灵活部署" to "灵活部署（先锋、辅助、特种）")
-                list.add("坚不可摧" to "坚不可摧（重装、术师、医疗）")
+                list.add(ROLE_FLEXIBLE_DEPLOYMENT)
+                list.add(ROLE_UNBREAKABLE)
             }
-            list.add("随心所欲" to "随心所欲（三张随机）")
+            list.add(ROLE_AS_YOUR_HEART_DESIRES)
             return list
         }
 
@@ -129,15 +103,15 @@ object UiUsageConstants {
 
         // 难度选项 - WPF: DifficultyList (lines 80-92)
         // 顺序: 不切换(-1) → MAX → maxDiff...0
-        fun getDifficultyOptions(theme: String): List<Pair<Int, String>> {
+        fun getDifficultyValues(theme: String): List<Int> {
             val maxDiff = getMaxDifficultyForTheme(theme)
             return buildList {
-                add(-1 to "不切换 (-1)")
-                add(Int.MAX_VALUE to "MAX ($maxDiff)")
+                add(-1)
+                add(Int.MAX_VALUE)
                 for (i in maxDiff downTo 1) {
-                    add(i to "$i")
+                    add(i)
                 }
-                add(0 to "MIN (0)")
+                add(0)
             }
         }
 
@@ -167,64 +141,35 @@ object UiUsageConstants {
         const val MULTI_TASKS_SHARE_TIP = "以下选项为多任务共用"
 
         // 策略模式列表（按主题动态变化）
-        fun getModeOptionsForTheme(theme: String): List<Pair<String, String>> = when (theme) {
-            "JieGarden" -> listOf(
-                "Exp" to "刷等级",
-                "Investment" to "刷源石锭",
-                "Collectible" to "刷开局",
-                "FindPlaytime" to "刷常乐"
-            )
-
-            "Sami" -> listOf(
-                "Exp" to "刷等级",
-                "Investment" to "刷源石锭",
-                "Collectible" to "刷开局",
-                "Squad" to "月度小队",
-                "Exploration" to "深入调查",
-                "CLP_PDS" to "刷坍缩"
-            )
-
-            else -> listOf(
-                "Exp" to "刷等级",
-                "Investment" to "刷源石锭",
-                "Collectible" to "刷开局",
-                "Squad" to "月度小队",
-                "Exploration" to "深入调查"
-            )
+        fun getModeKeysForTheme(theme: String): List<String> = when (theme) {
+            "JieGarden" -> listOf("Exp", "Investment", "Collectible", "FindPlaytime")
+            "Sami" -> listOf("Exp", "Investment", "Collectible", "Squad", "Exploration", "CLP_PDS")
+            else -> listOf("Exp", "Investment", "Collectible", "Squad", "Exploration")
         }
 
         // 验证模式是否对当前主题有效
         fun isModeValidForTheme(mode: RoguelikeMode, theme: String): Boolean {
-            return getModeOptionsForTheme(theme).any { it.first == mode.name }
+            return getModeKeysForTheme(theme).any { it == mode.name }
         }
 
         // 开局奖励选项 - WPF: UpdateRoguelikeStartWithAllDict (line 556-588)
-        // key 是发送给 MaaCore 的参数名, value 是显示名称
-        private val BASE_COLLECTIBLE_AWARDS = listOf(
-            "hot_water" to "热水壶",
-            "shield" to "盾",
-            "ingot" to "锭",
-            "hope" to "希望",
-            "random" to "随机奖励",
-        )
-
-        fun getCollectibleAwardOptions(theme: String): List<Pair<String, String>> {
+        fun getCollectibleAwardKeys(theme: String): List<String> {
             return buildList {
-                addAll(BASE_COLLECTIBLE_AWARDS)
+                addAll(listOf("hot_water", "shield", "ingot", "hope", "random"))
                 when (theme) {
                     "Mizuki" -> {
-                        add("key" to "钥匙")
-                        add("dice" to "骰子")
+                        add("key")
+                        add("dice")
                     }
 
                     "Sarkaz" -> {
-                        add("ideas" to "构想")
+                        add("ideas")
                     }
 
                     "JieGarden" -> {
                         // 界园移除希望，添加票券
-                        removeAll { it.first == "hope" }
-                        add("ticket" to "票券")
+                        remove("hope")
+                        add("ticket")
                     }
                 }
             }

@@ -1,0 +1,1221 @@
+<resources>
+    <string name="app_name">MaaMeow</string>
+    <string name="volume_key_service_description">Double-tap volume down to toggle the control panel</string>
+    <string name="accessibility_helper_service_description">Accessibility helper: double-tap volume down to toggle the control panel</string>
+    <string name="common_confirm">Confirm</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_restart_now">Restart Now</string>
+    <string name="common_restart_later">Later</string>
+    <string name="common_confirm_restart">Confirm Restart</string>
+    <string name="common_got_it">Got it</string>
+    <string name="common_i_got_it">Got it</string>
+    <string name="common_close">Close</string>
+    <string name="common_add">Add</string>
+    <string name="common_load">Load</string>
+    <string name="common_clear">Clear</string>
+    <string name="common_export">Export</string>
+    <string name="common_select_all">Select All</string>
+    <string name="common_delete">Delete</string>
+    <string name="dialog_import_success_title">Import Successful</string>
+    <string name="dialog_import_success_message">Configuration imported successfully. Restart the app for all settings to take effect.</string>
+    <string name="dialog_enable_debug_title">Enable Debug Mode</string>
+    <string name="dialog_enable_debug_message">Enabling debug mode will restart the service to record detailed logs.\n\nPlease reproduce the issue after restart; all related logs will be captured.</string>
+    <string name="settings_export_success">Configuration exported successfully</string>
+    <string name="settings_export_failed">Export failed: %1$s</string>
+    <string name="settings_import_failed">Import failed: %1$s</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_update">Updates</string>
+    <string name="settings_reinit_resource_title">Reinitialize Resources</string>
+    <string name="settings_reinit_resource_desc">Re-extract from the bundled resource pack</string>
+    <string name="settings_auto_check_update_title">Check for updates on startup</string>
+    <string name="settings_auto_check_update_desc">Automatically check for app and resource updates at launch</string>
+    <string name="settings_auto_download_update_title">Auto-download updates</string>
+    <string name="settings_auto_download_update_desc">Download updates automatically when detected</string>
+    <string name="settings_update_channel_title">Update Channel</string>
+    <string name="settings_update_channel_desc">Choose stable or beta release channel</string>
+    <string name="settings_section_log">Logs</string>
+    <string name="settings_log_history_title">Task History</string>
+    <string name="settings_log_history_desc">View task execution logs</string>
+    <string name="settings_log_error_title">Error Logs</string>
+    <string name="settings_log_error_desc">View application exceptions and errors</string>
+    <string name="settings_log_export_title">Export Log Archive</string>
+    <string name="settings_log_export_desc">Package all logs into a ZIP file to share</string>
+    <string name="settings_log_export_chooser_title">Export Logs</string>
+    <string name="settings_debug_mode_title">Debug Mode</string>
+    <string name="settings_debug_mode_desc">Record detailed log information when enabled</string>
+    <string name="settings_section_other">Other</string>
+    <string name="settings_startup_backend_title">Startup Mode</string>
+    <string name="settings_startup_backend_desc">Choose how the app obtains system permissions</string>
+    <string name="settings_theme_title">Theme</string>
+    <string name="settings_theme_white">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_pure_dark">Pure Black</string>
+    <string name="settings_language_title">Language</string>
+    <string name="settings_language_system">Follow System</string>
+    <string name="settings_language_zh">中文</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_background_resolution_title">Background Resolution</string>
+    <string name="settings_background_resolution_desc">Background mode only</string>
+    <string name="settings_skip_shizuku_check">Skip Shizuku Check</string>
+    <string name="settings_section_data">Data Management</string>
+    <string name="settings_export_config_title">Export Configuration</string>
+    <string name="settings_export_config_desc">Export all settings and task configurations to a file</string>
+    <string name="settings_import_config_title">Import Configuration</string>
+    <string name="settings_import_config_desc">Restore settings and task configurations from a file</string>
+    <!-- home: top bar & app title -->
+    <string name="home_app_title">MAA</string>
+    <string name="home_cd_open_settings">Settings</string>
+
+    <!-- home: screen info card -->
+    <string name="home_screen_resolution">Screen Resolution</string>
+    <string name="home_resource_version_label">Resource Version</string>
+    <string name="home_resource_not_installed">Not Installed</string>
+    <string name="home_service_status">Service Status</string>
+
+    <!-- home: run mode card -->
+    <string name="home_run_mode_title">Run Mode</string>
+    <string name="home_run_mode_foreground">Foreground Mode</string>
+    <string name="home_run_mode_background">Background Mode</string>
+
+    <!-- home: permission card -->
+    <string name="home_permission_section">Permissions</string>
+    <string name="home_permission_granted">Granted</string>
+    <string name="home_permission_request">Request</string>
+    <string name="home_permission_expand">Show more permissions</string>
+    <string name="home_permission_collapse">Hide more permissions</string>
+    <string name="home_permission_overlay">Overlay Permission</string>
+    <string name="home_permission_storage">Storage Permission</string>
+    <string name="home_permission_battery">Battery Whitelist</string>
+    <string name="home_permission_battery_added">Added</string>
+    <string name="home_permission_accessibility">Accessibility</string>
+    <string name="home_permission_quick_grant">Quick Grant</string>
+    <string name="home_permission_notification">Notification</string>
+
+    <!-- home: foreground-mode section -->
+    <string name="home_resolution_title">Resolution Adjustment</string>
+    <string name="home_resolution_apply_16_9">Apply 16:9 Resolution</string>
+    <string name="home_resolution_reset">Reset Resolution</string>
+    <string name="home_overlay_mode_title">Overlay Mode</string>
+    <string name="home_overlay_mode_accessibility_desc">Press volume up + down together to toggle the panel</string>
+    <string name="home_overlay_mode_floatball_desc">Tap the floating ball to toggle the panel</string>
+    <string name="home_overlay_mode_accessibility">Shortcut Mode</string>
+    <string name="home_overlay_mode_float_ball">Floating Ball Mode</string>
+    <string name="home_overlay_open">Open Control Panel</string>
+    <string name="home_overlay_close">Close Control Panel</string>
+
+    <!-- home: action buttons -->
+    <string name="home_btn_reload_services">Reload Services</string>
+    <string name="home_btn_stop_all_services">Stop All Services</string>
+
+    <!-- home: service status strings -->
+    <string name="home_status_service_error">Service Error</string>
+    <string name="home_status_service_connecting">Connecting…</string>
+    <string name="home_status_disconnected">Disconnected</string>
+    <string name="home_status_resource_loading">Loading Resources…</string>
+    <string name="home_status_resource_failed">Resource Load Failed</string>
+    <string name="home_status_resource_not_loaded">Resources Not Loaded</string>
+    <string name="home_status_task_error">Task Error</string>
+    <string name="home_status_task_starting">Starting Task…</string>
+    <string name="home_status_task_running">Running</string>
+    <string name="home_status_ready">Ready</string>
+    <string name="remote_backend_permission_label">%1$s Permission</string>
+    <string name="resource_loader_loading_message">Loading MAA resources. Please wait…</string>
+    <string name="resource_loader_reloading_message">Reloading MAA resources. Please wait…</string>
+
+    <!-- home: toast messages -->
+    <string name="home_toast_backend_unavailable">%1$s is unavailable. Please check that the corresponding service is running</string>
+    <string name="home_toast_backend_auth_failed">%1$s authorization failed</string>
+    <string name="home_toast_backend_not_acquired">%1$s not acquired</string>
+    <string name="home_toast_grant_permission">Please grant %1$s first</string>
+    <string name="home_toast_missing_permissions">Please grant the following permissions: %1$s</string>
+    <string name="home_toast_missing_permissions_separator">, </string>
+    <string name="home_toast_start_overlay_failed">Failed to start overlay: %1$s</string>
+    <string name="home_toast_stop_overlay_failed">Failed to stop overlay: %1$s</string>
+    <string name="home_toast_reload_services_failed">Failed to reload services: %1$s</string>
+    <string name="home_toast_stop_services_failed">Failed to stop services: %1$s</string>
+    <string name="home_toast_change_resolution_failed">Failed to change resolution: %1$s</string>
+    <string name="home_toast_reset_resolution_failed">Failed to reset resolution: %1$s</string>
+    <string name="home_toast_not_16_9_resolution">Current resolution is not 16:9. Please use background task or adjust the resolution</string>
+
+    <!-- dialog: update found -->
+    <string name="dialog_update_found_title">Update Available</string>
+    <string name="dialog_update_app_version_line">App version: %1$s\n</string>
+    <string name="dialog_update_resource_version_line">Resource version: %1$s</string>
+    <string name="dialog_update_confirm">Download and Update</string>
+    <string name="dialog_update_dismiss">Later</string>
+
+    <!-- dialog: run mode unsupported -->
+    <string name="dialog_run_mode_unsupported_title">Mode Not Supported</string>
+    <string name="dialog_run_mode_unsupported_message_pre_q">Background mode requires Android 11 or later. Please use foreground mode.</string>
+
+    <!-- log pages -->
+    <string name="log_empty_history">No history logs</string>
+    <string name="log_empty_error">No error logs</string>
+    <string name="log_cleanup_30_days">Clean up 30+ days</string>
+    <string name="log_cleanup_all">Clear All</string>
+    <string name="log_detail_title">Log Detail</string>
+
+    <!-- dialogs for logs -->
+    <string name="dialog_delete_log_title">Confirm Delete</string>
+    <string name="dialog_delete_log_message">Delete log file %1$s?</string>
+    <string name="dialog_clear_error_log_title">Confirm Clear</string>
+    <string name="dialog_clear_error_log_message">Clear all error logs? This action cannot be undone.</string>
+
+    <!-- panel: bottom buttons (expanded control panel) -->
+    <string name="panel_bottom_hide">Hide</string>
+    <string name="panel_bottom_start">Start</string>
+    <string name="panel_bottom_starting">Starting</string>
+
+    <!-- panel: configuration (rename/delete) -->
+    <string name="panel_config_name_empty">Name cannot be empty</string>
+    <string name="panel_config_name_too_long">Name must be at most 20 characters</string>
+    <string name="panel_config_delete_task">Delete Task</string>
+
+    <!-- panel: profile management -->
+    <string name="panel_new_profile">New Profile</string>
+
+    <!-- panel: auto battle (Copilot) -->
+    <string name="panel_autobattle_read_set">Load Copilot Set</string>
+    <string name="panel_autobattle_station">Copilot Hub</string>
+    <string name="panel_autobattle_clear_unchecked">Remove Unchecked</string>
+    <string name="panel_autobattle_clear_list">Clear List</string>
+    <string name="copilot_navigation_name_mismatch">The current stage name differs from the navigation stage name. Verify that navigation will still work correctly.</string>
+    <string name="copilot_tab_main_story_side_story">Main Theme / Story Collection / Side Story</string>
+    <string name="copilot_status_parsing">Parsing…</string>
+    <string name="copilot_set_import_unsupported">%1$s does not support Copilot set import</string>
+    <string name="copilot_local_path_unsupported">Local file paths are not supported yet. Please enter a Copilot code</string>
+    <string name="copilot_status_importing_set">Importing Copilot Set (%1$d items)…</string>
+    <string name="copilot_set_empty">The Copilot set is empty</string>
+    <string name="copilot_status_imported_set_partial">Imported %1$d tasks from %2$d Copilot codes (%3$d failed to load)</string>
+    <string name="copilot_status_imported_set">Imported %1$d tasks from %2$d Copilot codes</string>
+    <string name="copilot_not_found">No corresponding file found! %1$s</string>
+    <string name="copilot_set_not_found">No corresponding Copilot set found! %1$s</string>
+    <string name="copilot_json_error">Copilot Json Error!</string>
+    <string name="copilot_network_service_error">Request to the network service failed!</string>
+    <string name="copilot_status_loaded">Copilot loaded: %1$s</string>
+    <string name="copilot_status_added_multi">Added %1$d tasks to the battle list</string>
+    <string name="copilot_unknown_operator">Unknown Operator</string>
+    <string name="copilot_status_added">Added: %1$s</string>
+    <string name="copilot_current_tab_battle_list_unsupported">The current tab does not support battle list</string>
+    <string name="copilot_enable_battle_list_first">Enable battle list first</string>
+    <string name="copilot_battle_list_unsupported">%1$s does not support battle list</string>
+    <string name="copilot_invalid_stage_name_for_navigation">Invalid stage name for navigation</string>
+    <string name="copilot_status_selected_list_item">Selected task from the battle list: %1$s</string>
+    <string name="copilot_file_read_error">Failed to read file!</string>
+    <string name="copilot_file_read_error_with_detail">Failed to read file: %1$s</string>
+    <string name="copilot_status_started">Copilot started</string>
+    <string name="copilot_empty_load_first">Copilot is empty. Load a homework first</string>
+    <string name="copilot_type_mismatch">The selected Copilot does not match the current tab</string>
+    <string name="copilot_empty_list">Using &quot;Battle list&quot;, but no tasks have been added</string>
+    <string name="copilot_mixed_list">Using &quot;Battle list&quot;, mixing different Copilot types is not supported</string>
+    <string name="copilot_task_name_empty">Copilot tasks with empty names exist</string>
+    <string name="copilot_single_list_warning">You\'re using &quot;Battle list&quot; to execute a single task, which is not recommended. For single tasks, run them directly instead.</string>
+    <string name="copilot_unsupported_stage">Unsupported stage %1$s. Try updating resources</string>
+    <string name="copilot_invalid_operator">Invalid operator: %1$s</string>
+    <string name="copilot_status_completed">Completed: %1$s</string>
+    <string name="copilot_rate_failed">Something went wrong. Rating failed : &lt;</string>
+    <string name="copilot_rate_success">Thanks for the rating!\nComments are now open on the website. Feel free to leave one there.</string>
+
+    <!-- panel: fight config -->
+    <string name="panel_fight_converted_prefix">Will convert to: %1$s</string>
+
+    <!-- panel: stone (medicine) -->
+    <string name="panel_stone_enable_confirm">Enable</string>
+
+    <!-- panel: mall -->
+    <string name="panel_mall_use_formation">Use Formation</string>
+
+    <!-- background task: permission & toast -->
+    <string name="bg_shizuku_permission_title">%1$s Permission Required</string>
+    <string name="bg_shizuku_permission_message">The background task page depends on the %1$s service. This prompt will keep showing until access is granted.</string>
+    <string name="bg_toast_permission_not_acquired">%1$s not acquired, please try again</string>
+    <string name="bg_toast_service_died">MaaService terminated unexpectedly. Please try restarting</string>
+    <string name="bg_toast_app_died">Game process is not running or was killed unexpectedly</string>
+
+    <!-- task action buttons -->
+    <string name="task_btn_start">Start Task</string>
+    <string name="task_btn_stop">Stop Task</string>
+    <string name="task_more_actions_cd">More actions</string>
+    <string name="task_close_preview_cd">Close preview</string>
+
+    <!-- dialog: close app confirm -->
+    <string name="dialog_close_app_title">Confirm Close</string>
+    <string name="dialog_close_app_message">A task is running. Close the app anyway?</string>
+    <string name="dialog_close_app_confirm">Close Anyway</string>
+
+    <!-- background: more actions overlay -->
+    <string name="bg_actions_title">Quick Actions</string>
+    <string name="bg_action_screen_off">Screen Off</string>
+    <string name="bg_action_close_game">Close Game</string>
+    <string name="bg_action_game_muted">Game Muted</string>
+    <string name="bg_action_mute_game">Mute Game</string>
+    <string name="bg_auto_settings_title">Automation</string>
+    <string name="bg_auto_mute_on_launch">Mute game audio on launch</string>
+    <string name="bg_auto_close_on_end">Close game when task ends</string>
+    <string name="bg_auto_hardware_screen_off">Turn off screen when AFK</string>
+    <string name="bg_auto_show_touch_preview">Show touch preview</string>
+
+    <!-- dialog: hardware screen off -->
+    <string name="dialog_hardware_screen_off_title">Enable hardware screen-off?</string>
+    <string name="dialog_hardware_screen_off_message">When enabled, the screen will fully turn off for maximum power saving.\n• Wake-up: press the power button twice (the lock screen lights up first, then unlock).\n• Screen-saver mode: if disabled, a screen-saver clock is shown so you can monitor task progress and battery at any time.</string>
+
+    <!-- update card -->
+    <string name="update_card_title">Updates</string>
+    <string name="update_card_app">App</string>
+    <string name="update_card_resource">MAA Resources</string>
+    <string name="update_card_check_button">Check</string>
+    <string name="update_card_source_label">Source</string>
+    <string name="update_source_github">GitHub</string>
+    <string name="update_source_mirror_chyan">MirrorChyan</string>
+    <string name="update_channel_stable">Stable</string>
+    <string name="update_channel_beta">Beta</string>
+    <string name="update_card_about_title">About %1$s</string>
+    <string name="update_card_visit_site">Visit Website</string>
+    <string name="update_card_github_desc">Download resources from the official GitHub repository. Suitable for users with a stable network connection; always serves the latest version.</string>
+    <string name="update_card_mirror_brand">MirrorChyan</string>
+    <string name="update_card_mirror_desc">is an independent third-party acceleration service. It is a paid service, not charged by MAA.\n\nIts operating cost is covered by subscription revenue; part of the revenue supports project development. Subscribing to a CDK unlocks high-speed downloads and helps sustain development.\n\nA CDK is required when Mirror酱 is selected as the source.</string>
+    <string name="update_card_about_source_cd">About %1$s</string>
+
+    <!-- update cdk input -->
+    <string name="update_cdk_label">Mirror酱 CDK</string>
+    <string name="update_cdk_placeholder">Enter CDK</string>
+    <string name="update_cdk_clear_cd">Clear</string>
+    <string name="update_cdk_show_cd">Show</string>
+    <string name="update_cdk_hide_cd">Hide</string>
+    <string name="update_cdk_subscribe">No CDK? Subscribe now</string>
+
+    <!-- update progress -->
+    <string name="update_progress_app_downloading">Downloading app %1$s%%</string>
+    <string name="update_progress_app_installing">Launching installer…</string>
+    <string name="update_progress_resource_downloading">Downloading resources %1$s%%</string>
+    <string name="update_progress_resource_extracting">Extracting %1$s%%</string>
+
+    <!-- update toasts -->
+    <string name="update_toast_resource_up_to_date">Resources are already up to date</string>
+    <string name="update_toast_app_up_to_date">App is already up to date</string>
+    <string name="update_toast_resource_update_complete">Resource update complete</string>
+    <string name="update_toast_apk_download_complete">APK downloaded, please finish installation</string>
+    <string name="update_toast_check_resource_failed">Failed to check resource updates: %1$s</string>
+    <string name="update_toast_check_app_failed">Failed to check app updates: %1$s</string>
+    <string name="update_toast_resource_update_failed">Resource update failed: %1$s</string>
+
+    <!-- dialog: app update confirm -->
+    <string name="dialog_update_now">Update Now</string>
+    <string name="dialog_update_later">Later</string>
+    <string name="dialog_update_failed_title">Update Failed</string>
+
+    <!-- dialog: Shizuku / Sui -->
+    <string name="dialog_shizuku_not_installed_title">Shizuku Not Installed</string>
+    <string name="dialog_shizuku_not_installed_message">This app depends on the Shizuku service. Shizuku was not detected on your device; please install it first.</string>
+    <string name="dialog_shizuku_install_confirm">Install Shizuku</string>
+    <string name="dialog_shizuku_switch_to_root">Switch to Root</string>
+    <string name="dialog_shizuku_skip_check">Skip Check (not recommended)</string>
+    <string name="dialog_shizuku_not_running_title">Shizuku Not Running</string>
+    <string name="dialog_shizuku_not_running_message">Shizuku is installed but the service is not running. Please open Shizuku and start the service.</string>
+    <string name="dialog_shizuku_open_app">Open Shizuku</string>
+    <string name="dialog_sui_detected_title">Sui Detected</string>
+    <string name="dialog_sui_detected_message">Sui is providing the Shizuku service with root privileges. MaaMeow may not work correctly; please verify by actual testing.</string>
+
+    <string name="settings_section_about">About</string>
+    <string name="settings_about_version">Version</string>
+    <string name="settings_about_developer">Developer</string>
+    <string name="settings_about_qq_group_title">Feedback QQ Group</string>
+    <string name="settings_about_qq_group_desc">Got issues or suggestions? Join the QQ group to discuss</string>
+    <string name="settings_about_star">⭐ Star us if you like it</string>
+
+    <!-- ============================================================
+         maa_* entries below are generated by
+         scripts/translate_maa_strings.py from MAA WPF en-us.xaml.
+         Do not edit by hand; rerun the script to regenerate.
+         ============================================================ -->
+    <string name="maa_resolution_not_supported">Emulator resolution not supported, please set a resolution of at least 1280x720 with a 16:9 aspect ratio; 1280x720 or 1920x1080 is recommended</string>
+    <string name="maa_resolution_acquisition_failure">Failed to obtain emulator resolution. It is recommended to restart the emulator and ADB, or restart the computer, or consider switching to another emulator</string>
+    <string name="maa_reconnect_success">Reconnection succeeded. Continuing the task</string>
+    <string name="maa_reconnect_failed">Reconnection failed. The connection is down!</string>
+    <string name="maa_screencap_failed">Screencap failed. If it happens repeatedly, try to restart or change the emulator!</string>
+    <string name="maa_touch_mode_not_available">Touch mode is not available, please go to ｢Settings - Connection｣ to switch to a different touch mode.</string>
+    <string name="maa_try_to_reconnect">Emulator disconnected, trying to reconnect</string>
+    <string name="maa_fastest_way_to_screencap">Screenshot test tasks: %1$sms (%2$s)</string>
+    <string name="maa_task_error">Task error: </string>
+    <string name="maa_combat_error">Combat error</string>
+    <string name="maa_start_task">Start task: </string>
+    <string name="maa_complete_task">Complete task: </string>
+    <string name="maa_task_stopped">Has stopped</string>
+    <string name="maa_all_tasks_complete">All task(s) completed!\n(in %1$s)</string>
+    <string name="maa_routing_restart_too_many_battles">Too many battles ahead: %1$s, restarting route</string>
+    <string name="maa_ends_with_script">Ends with Script</string>
+    <string name="maa_fight">Combat</string>
+    <string name="maa_recruit">Auto Recruit</string>
+    <string name="maa_infrast">Base</string>
+    <string name="maa_mall">Credit Store</string>
+    <string name="maa_award">Collect Rewards</string>
+    <string name="maa_roguelike">Auto I.S.</string>
+    <string name="maa_copilot">Copilot</string>
+    <string name="maa_sss_copilot">SSS Copilot</string>
+    <string name="maa_reclamation">Reclamation Algorithm</string>
+    <string name="maa_custom">Custom Task</string>
+    <string name="maa_close_down">Shutdown</string>
+    <string name="maa_start_up">Login</string>
+    <string name="maa_depot">Depot</string>
+    <string name="maa_oper_box">Operator</string>
+    <string name="maa_failed_to_open_client">Failed to open the client. Please check the configuration file</string>
+    <string name="maa_close_arknights_failed">Shutdown Arknights failed</string>
+    <string name="maa_has_returned">Has returned</string>
+    <string name="maa_error_occurred">Error occurred</string>
+    <string name="maa_drop_recognition_error">Drops recognition error</string>
+    <string name="maa_give_up_uploading_penguins">Abort upload to Penguin Statistics</string>
+    <string name="maa_the_ex">No bonus stage, stopped</string>
+    <string name="maa_missing_operators">Operators of the following Operator groups are missing: </string>
+    <string name="maa_copilot_user_additional_name_invalid">Additional custom Operator name invalid: %1$s, please check spelling</string>
+    <string name="maa_mission_start">Mission started</string>
+    <string name="maa_stone_used">Originite Prime used</string>
+    <string name="maa_acting_command_error">PRTS error</string>
+    <string name="maa_fight_mission_failed_and_stop">Proxy failed too many times, task stopped</string>
+    <string name="maa_labels_refreshed">Labels refreshed</string>
+    <string name="maa_recruit_confirm">Recruit confirm</string>
+    <string name="maa_infrast_dorm_double_confirmed">Operator conflict</string>
+    <string name="maa_exploration_abandoned">Abandoned this Exploration</string>
+    <string name="maa_fight_completed">Combat completed</string>
+    <string name="maa_fight_failed">Combat failed</string>
+    <string name="maa_trader">Node: Rogue Trader</string>
+    <string name="maa_safe_house">Node: Safe House</string>
+    <string name="maa_filter_truth">Node: Idea Filter</string>
+    <string name="maa_combat_ops">Node: Combat Operation</string>
+    <string name="maa_emergency_ops">Stage: Emergency Operation</string>
+    <string name="maa_dreadful_foe">Stage: Dreadful Foe</string>
+    <string name="maa_upper_limit">Investment limit reached</string>
+    <string name="maa_game_drop">Game disconnected, pending reconnect</string>
+    <string name="maa_game_drop_no_restart">Game disconnected, not restarting, stopping</string>
+    <string name="maa_roguelike_game_pass">Exploration completed! Congratulations!</string>
+    <string name="maa_roguelike_special_item_bought">Special Item Purchased!</string>
+    <string name="maa_deep_exploration_not_unlocked_complain">Deep Investigation not unlocked yet</string>
+    <string name="maa_reclamation_pns_mode_error">Currently using no-save task mode. Please manually delete existing save and try again. If you wish to keep the save, please consider switching modes.</string>
+    <string name="maa_reclamation_pis_mode_error">Current task mode requires you to have a save with craftable items. Please consider switching modes.</string>
+    <string name="maa_complete_combat">Complete combat</string>
+    <string name="maa_clue_exchange_unlocked">Clue Exchange Unlocked</string>
+    <string name="maa_begun_to_explore">Exploration started</string>
+    <string name="maa_credit_fight">Combat with Support to earn Credits</string>
+    <string name="maa_visiting">Visit Friends</string>
+    <string name="maa_total_drop">Total Drops: </string>
+    <string name="maa_cur_times">Current times</string>
+    <string name="maa_furniture_drop">Furniture</string>
+    <string name="maa_no_drop">Nothing</string>
+    <string name="maa_account_switch">Account Switch</string>
+    <string name="maa_stage_info_error">Stage recognition error</string>
+    <string name="maa_stage_queue">Stage Queue: </string>
+    <string name="maa_unable_to_agent">Unable to use PRTS</string>
+    <string name="maa_this_facility">Current Facility: </string>
+    <string name="maa_product_incorrect">Product does NOT match the configuration.</string>
+    <string name="maa_product_unknown">Unknown Product</string>
+    <string name="maa_product_changed">Product has changed</string>
+    <string name="maa_room_groups_match">Match Group: </string>
+    <string name="maa_room_groups_match_failed">Failed to match Operator groups, group list: </string>
+    <string name="maa_room_operators">Preferred Operators: </string>
+    <string name="maa_training_idle">Training room is vacant</string>
+    <string name="maa_training_completed">Training completed</string>
+    <string name="maa_training_level">Skill Rank</string>
+    <string name="maa_training_time_left">Remaining Time</string>
+    <string name="maa_recruiting_results">Recruitment Results: </string>
+    <string name="maa_choose">Choose</string>
+    <string name="maa_refreshed">Refreshed</string>
+    <string name="maa_continue_refresh">No recruitment permit, trying to refresh Tags</string>
+    <string name="maa_no_recruitment_permit">No recruitment permit, returned</string>
+    <string name="maa_not_enough_staff">Insufficient Operators</string>
+    <string name="maa_recruit_support_operator">Add support unit: %1$s</string>
+    <string name="maa_credit_full_only_buy_discount">Doctor! \nPurchasing only discounted items has caused an overflow in credits! \nBe cautious of wasting credits!\nRemaining credits: </string>
+    <string name="maa_start_combat">Start combat: </string>
+    <string name="maa_medicine_used">Medicine used</string>
+    <string name="maa_expiring_medicine_used">Expiring medicine used</string>
+    <string name="maa_fight_times_unused">Completed %1$s battles, will execute %2$s multiplier proxy next time, will complete %3$s battles after entering, exceeds %4$s limit, will not enter battle</string>
+    <string name="maa_algorithm_finish">Algorithm Finish</string>
+    <string name="maa_algorithm_badge">Algorithm Badge</string>
+    <string name="maa_algorithm_construction_point">Algorithm Construction Point</string>
+    <string name="maa_algorithm_done_smelt_gold">Forging Red Gold</string>
+    <string name="maa_battle_formation">Start formation</string>
+    <string name="maa_battle_formation_parse_failed">Formation parse failed</string>
+    <string name="maa_battle_formation_selected">Selected: </string>
+    <string name="maa_battle_formation_oper_unavailable">Operator unavailable: %1$s, reason: %2$s</string>
+    <string name="maa_current_steps">Step: %1$s %2$s</string>
+    <string name="maa_elapsed_time">Elapsed time: %1$sms</string>
+    <string name="maa_current_stage">Current Stage: %1$s</string>
+    <string name="maa_sss_game_pass">Game cleared! congratulations!</string>
+    <string name="maa_unsupported_level">Unsupported stage, please check the stage name or go to ｢Settings - Update - Resource update｣ and try updating the resource version!</string>
+    <string name="maa_mfg">Factory</string>
+    <string name="maa_trade">Trading Post</string>
+    <string name="maa_power">Power Plant</string>
+    <string name="maa_control">Control Center</string>
+    <string name="maa_reception">Reception Room</string>
+    <string name="maa_office">Office</string>
+    <string name="maa_dorm">Dormitory</string>
+    <string name="maa_training">Training Room</string>
+    <string name="maa_deploy">Deploy</string>
+    <string name="maa_retreat">Retreat</string>
+    <string name="maa_skill">Use Skill</string>
+    <string name="maa_skill_usage">Switch Skill Usage</string>
+    <string name="maa_speed_up">Switch Speed</string>
+    <string name="maa_bullet_time">Enter Bullet Time</string>
+    <string name="maa_output">Print Description</string>
+    <string name="maa_skill_daemon">Start Auto</string>
+    <string name="maa_sanity">Sanity</string>
+    <string name="maa_unit_time">times</string>
+    <string name="maa_operator">Operator</string>
+    <string name="maa_current_sanity">Sanity: %1$s/%2$s  </string>
+    <string name="maa_medicine_used_times">Medicine: %1$s  </string>
+    <string name="maa_medicine_used_times_with_expiring">Medicine: %1$s,%2$s(Expiring)  </string>
+    <string name="maa_stone_used_times">Stone: %1$s  </string>
+    <string name="maa_mission_start_fight_task">Mission started %1$s times (-%2$s Sanity)</string>
+    <string name="maa_screencap_cost">Screencap Cost min/avg/max(ms): {0:#,#} / {1:#,#} / {2:#,#} (%4$s)</string>
+    <string name="maa_sanity_recovery">Sanity will be full at %1$s (in %2$s)</string>
+
+    <!-- common: additional -->
+    <string name="common_tab_general">General</string>
+    <string name="common_tab_advanced">Advanced</string>
+    <string name="common_done">Done</string>
+    <string name="common_sort">Sort</string>
+    <string name="common_rename">Rename</string>
+    <string name="common_copy">Copy</string>
+    <string name="common_warning">Warning</string>
+    <string name="common_collapse">Collapse</string>
+    <string name="common_video">Video</string>
+
+    <!-- panel: configuration -->
+    <string name="panel_config_empty_edit_title">Edit Mode</string>
+    <string name="panel_config_empty_edit_desc_primary">Select a task on the left to rename it, delete it, and more.</string>
+    <string name="panel_config_empty_edit_desc_add">Use \"Add Task\" on the left to append a new action to the end of the script.</string>
+    <string name="panel_config_empty_view_title">Task Settings</string>
+    <string name="panel_config_empty_view_desc">Select a task on the left to adjust its execution parameters here.</string>
+    <string name="panel_config_reorder_hint">Long-press and drag task items on the left to reorder them freely.</string>
+    <string name="panel_config_select_type">Select Task Type</string>
+    <string name="panel_config_editing_badge">Editing</string>
+    <string name="panel_config_task_name_label">Task Name</string>
+    <string name="panel_config_unknown_task_type">Unknown Task</string>
+    <string name="panel_task_type_wake_up">Startup</string>
+    <string name="panel_task_type_recruiting">Auto Recruit</string>
+    <string name="panel_task_type_base">Base Shift</string>
+    <string name="panel_task_type_combat">Combat</string>
+    <string name="panel_task_type_mall">Credit Related</string>
+    <string name="panel_task_type_mission">Claim Rewards</string>
+    <string name="panel_task_type_auto_roguelike">Auto I.S.</string>
+    <string name="panel_task_type_reclamation">Reclamation Algorithm</string>
+
+    <!-- panel: profile -->
+    <string name="panel_profile_title">Profile Management</string>
+    <string name="panel_profile_delete_title">Confirm Delete</string>
+    <string name="panel_profile_delete_message">Delete profile \"%1$s\"? This action cannot be undone.</string>
+
+    <!-- panel: oper box -->
+    <string name="panel_operbox_tab_owned">Owned (%1$d)</string>
+    <string name="panel_operbox_tab_not_owned">Not Owned (%1$d)</string>
+    <string name="panel_operbox_copy_toast">Operator data copied</string>
+    <string name="panel_operbox_title">Operator Recognition</string>
+    <string name="panel_operbox_hint_scan">Tap \"Start Task\" below to scan owned operator data.</string>
+    <string name="panel_operbox_hint_results">After recognition, you can review owned / not owned operators and export the result.</string>
+    <string name="panel_operbox_owned_meta">E%1$d Lv%2$d Pot%3$d</string>
+
+    <!-- panel: auto battle -->
+    <string name="panel_autobattle_tab_mainline">Main Theme / Story Collection</string>
+    <string name="panel_autobattle_tab_mainline_subtitle">Side Story</string>
+    <string name="panel_autobattle_tab_security">SSS</string>
+    <string name="panel_autobattle_tab_paradox">Paradox Simulation</string>
+    <string name="panel_autobattle_tab_other">Other Activities</string>
+    <string name="panel_autobattle_station_code_label">Copilot Code</string>
+    <string name="panel_autobattle_station_code_placeholder">Enter maa://1234 or 1234</string>
+    <string name="panel_autobattle_waiting">Waiting for input…</string>
+    <string name="panel_autobattle_loading">Loading…</string>
+    <string name="panel_autobattle_read_single">Load Copilot</string>
+    <string name="panel_autobattle_operator_header">Operators</string>
+    <string name="panel_autobattle_group_header">Group: %1$s</string>
+    <string name="panel_autobattle_summary_count">Total %1$d operators / groups</string>
+    <string name="panel_autobattle_auto_formation">Auto Squad</string>
+    <string name="panel_autobattle_auto_formation_tip">\"Favorite\" marked operators may not be recognized</string>
+    <string name="panel_autobattle_use_formation">Use formation</string>
+    <string name="panel_autobattle_ignore_requirements">Ignore operator requirements</string>
+    <string name="panel_autobattle_ignore_requirements_tip">Some homework requires specific modules or other prerequisites.\nEnabling this option skips those checks, but may cause the homework to fail.</string>
+    <string name="panel_autobattle_support_unit">Support Unit</string>
+    <string name="panel_autobattle_support_unit_tip">Using one substitute is fine. Missing two or more usually means you should switch homework.</string>
+    <string name="panel_autobattle_support_fill_gaps">Fill Gaps</string>
+    <string name="panel_autobattle_support_random">Random</string>
+    <string name="panel_autobattle_add_trust">Add low-trust operators</string>
+    <string name="panel_autobattle_battle_list">Battle list</string>
+    <string name="panel_autobattle_battle_list_tip">Only supported in the following modes:\n  1. Main Theme: Navigate within the same chapter\n  2. Side Story: Navigate within the current page (Normal / EX / S cannot jump across pages)\n  3. Story Collection: Navigate within the current page\n  4. Paradox Simulation: Start from the operator list\nPlease start from the corresponding screen. Cross-chapter navigation is not supported.\n\nWhen \"Battle list\" is enabled, selecting a single homework automatically adds it to the list.</string>
+    <string name="panel_autobattle_use_sanity_potion">Use Sanity Potion</string>
+    <string name="panel_autobattle_loop">Loop Times</string>
+    <string name="panel_autobattle_sequence_tip">Tag order can be dragged</string>
+    <string name="panel_autobattle_empty_entries">No entries yet</string>
+    <string name="panel_autobattle_raid_suffix"> (Challenge)</string>
+    <string name="panel_autobattle_tips_title">Tips</string>
+    <string name="panel_autobattle_tips_body">1. Make sure the loaded homework matches the selected stage type before starting.\n2. Main Theme, Story Collection, Side Story: start from the screen with the blue \"Start\" button in the bottom right.\n3. SSS: multiple built-in homework files are in resource/copilot. Form your squad manually first, then start from the screen with the \"Start Deployment\" button in the bottom right. It can be used together with \"Loop Times\".\n4. Paradox Simulation: after selecting skills, start from the skill selection screen with the \"Start Simulation\" button. For ½-star operators without skills, start from the screen with the bottom-right \"Start Simulation\" button. If using \"Battle list\", start from the operator list page.\n5. Other Activities: only single homework and regular Copilot settings are supported. Start directly from the target stage screen. Set import and battle list are not supported.\n6. When using support units, turn off \"Auto Squad\" and \"Battle list\". Select operators manually, then start from the squad screen with the \"Mission Start\" button.\n7. Operators marked as \"Favorite\" may affect \"Auto Squad\" recognition and selection. Consider removing favorites before using Auto Squad, or turn it off and add missing operators manually if prompted.\n8. Copilot codes can be entered in the input box:\n● Tap \"Read Homework\" to load a single homework.\n● Tap \"Read Set\" to import a homework set (Main Theme / Story Collection / Side Story, Paradox Simulation).\n9. Battle list:\n● After loading homework, check that the stage name below is correct (for example, CV-EX-1).\n● The add normal / add challenge buttons can be used to append tasks (challenge is only for Main Theme).\n● Use \"Clear List\" / \"Clear Unchecked\" to tidy the queue quickly.\n● Start from a screen where the target stage name is visible. Cross-chapter navigation is not supported.\n● The queue stops automatically if sanity is insufficient, battle fails, or the clear is not 3-star.</string>
+
+    <!-- panel: mall -->
+    <string name="panel_mall_visit_friends">Visit Friends</string>
+    <string name="panel_mall_shopping">Credit shopping</string>
+    <string name="panel_mall_shopping_tip">Automatically spend credits on items in the Credit Store.</string>
+    <string name="panel_mall_credit_fight">Combat with Support to earn Credits</string>
+    <string name="panel_mall_credit_fight_tip">Combat with Support Unit in OF-1 after Visit Friends to earn 30 credits.\nThis function is invalid when the stage is selected as \"Cur/Last\".\nDo not enable it if OF-1 from Heart of Surging Flame is not unlocked.</string>
+    <string name="panel_mall_credit_fight_unavailable">No valid combat stage could be resolved from the current combat task. Support OF-1 will be skipped this time.</string>
+    <string name="panel_mall_credit_fight_notice">Support combat requires an available support unit in your friend list.</string>
+    <string name="panel_mall_priority_title">Priority Items</string>
+    <string name="panel_mall_priority_reorder_tip">Drag to adjust purchase priority. Items closer to the top are bought first.</string>
+    <string name="panel_mall_priority_mode_active">Reorder mode is enabled. Long-press list items to change priority, then tap the check button to exit.</string>
+    <string name="panel_mall_priority_mode_inactive">Enable reorder mode to change priority order. Tap × to remove an item.</string>
+    <string name="panel_mall_enable_shopping_first">Please enable \"Credit shopping\" first.</string>
+    <string name="panel_mall_add_item">Add Item</string>
+    <string name="panel_mall_info_line_priority">* Items in the priority list are purchased in order.</string>
+    <string name="panel_mall_info_line_blacklist">* Blacklisted items will not be purchased unless overflow purchase is enabled.</string>
+    <string name="panel_mall_info_line_credit_fight">* Support combat grants extra daily credits, but consumes friend support chances.</string>
+    <string name="panel_mall_blacklist_title">Blacklist (Do not buy)</string>
+    <string name="panel_mall_blacklist_tip">Blacklisted items will not be purchased unless \"Ignore blacklist if credits overflow\" is enabled.</string>
+    <string name="panel_mall_blacklist_delete_hint">Tap × to remove an item.</string>
+    <string name="panel_mall_blacklist_empty">No blacklisted items yet</string>
+    <string name="panel_mall_add_blacklist">Add Blacklist Item</string>
+    <string name="panel_mall_add_item_title">Enter item name</string>
+    <string name="panel_mall_add_item_placeholder">For example: Recruitment Permit</string>
+    <string name="panel_mall_add_blacklist_title">Enter an item name you do not want to buy</string>
+    <string name="panel_mall_add_blacklist_placeholder">For example: Furniture Parts</string>
+
+    <!-- panel: fight -->
+    <string name="panel_fight_dr_grandet">Dr. Grandet Mode</string>
+    <string name="panel_fight_dr_grandet_tip">Wait for sanity recovery before acting, then start when sanity is close to overflowing. Ineffective if sanity potion use is unlimited.</string>
+    <string name="panel_fight_custom_stage_code">Manual entry of stage names</string>
+    <string name="panel_fight_custom_stage_code_tip">Support manual stage code entry and common aliases (for example, Lungmen Dollars → CE-6).</string>
+    <string name="panel_fight_use_alternate_stage">Use alternative stage</string>
+    <string name="panel_fight_use_alternate_stage_tip">Automatically use an alternative stage when the primary stage is unavailable.</string>
+    <string name="panel_fight_use_expiring_medicine">Unlimited use of expiring (&lt;48h) sanity potion</string>
+    <string name="panel_fight_use_expiring_medicine_tip">Prioritize sanity potions that expire within 48 hours.</string>
+    <string name="panel_fight_hide_unavailable_stage">Hide today not-open stages</string>
+    <string name="panel_fight_hide_unavailable_stage_tip">Hide stages that are currently unavailable from the stage list.</string>
+    <string name="panel_fight_hide_series">Hide proxy rate</string>
+    <string name="panel_fight_auto_restart_on_drop">Reconnect automatically on disconnect</string>
+    <string name="panel_fight_auto_restart_on_drop_tip">When the game disconnects, MAA will try to reconnect automatically and continue the battle.</string>
+    <string name="panel_fight_series_title">Proxy Rate</string>
+    <string name="panel_fight_series_tip">• AUTO:\nAutomatically detect the maximum proxy multiplier for the stage while keeping sanity potion usage from overflowing sanity.\n\n• Numeric (1~6):\nExecute with the configured multiplier.\nIf current sanity is insufficient to complete the configured multiplier (for example, only enough for 5 runs but set to 6), battle cannot start.\nLikewise, if remaining run count is insufficient for the configured multiplier, battle cannot start.\n\n• Do not switch:\nDo not change the in-game proxy multiplier setting.</string>
+    <string name="panel_fight_series_no_switch">Do not switch</string>
+    <string name="panel_fight_stage_reset_current">Cur/Last</string>
+    <string name="panel_fight_stage_reset_ignore">Do not switch</string>
+    <string name="panel_fight_stage_reset_title">When stage is closed, reset to</string>
+    <string name="panel_fight_stage_selection_title">Stage</string>
+    <string name="panel_fight_stage_selection_tip">Manual stage code entry supports common aliases.\nFor example: Lungmen Dollars → CE-6, EXP → LS-6.</string>
+    <string name="panel_fight_primary_stage_label">Primary Stage</string>
+    <string name="panel_fight_primary_stage_placeholder">For example: CE-6 or Lungmen Dollars</string>
+    <string name="panel_fight_primary_stage_closed">%1$s is not open today</string>
+    <string name="panel_fight_primary_stage_closed_with_alternate">%1$s is not open today. An alternative stage will be used.</string>
+    <string name="panel_fight_alternate_stage2_label">Alternative Stage 2</string>
+    <string name="panel_fight_alternate_stage2_placeholder">For example: CE-5</string>
+    <string name="panel_fight_alternate_stage3_label">Alternative Stage 3</string>
+    <string name="panel_fight_alternate_stage3_placeholder">For example: CE-4</string>
+    <string name="panel_fight_alternate_stage4_label">Alternative Stage 4</string>
+    <string name="panel_fight_alternate_stage4_placeholder">For example: CE-3</string>
+    <string name="panel_fight_stage_group_permanent">Permanent Stages</string>
+    <string name="panel_fight_use_custom_annihilation">Custom Annihilation Stage</string>
+    <string name="panel_fight_annihilation_title">Annihilation Stage</string>
+    <string name="panel_fight_annihilation_current">Current Annihilation</string>
+    <string name="panel_fight_annihilation_chernobog">Chernobog</string>
+    <string name="panel_fight_annihilation_outskirts">Lungmen Outskirts</string>
+    <string name="panel_fight_annihilation_downtown">Lungmen Downtown</string>
+    <string name="panel_fight_weekday_monday">Monday</string>
+    <string name="panel_fight_weekday_tuesday">Tuesday</string>
+    <string name="panel_fight_weekday_wednesday">Wednesday</string>
+    <string name="panel_fight_weekday_thursday">Thursday</string>
+    <string name="panel_fight_weekday_friday">Friday</string>
+    <string name="panel_fight_weekday_saturday">Saturday</string>
+    <string name="panel_fight_weekday_sunday">Sunday</string>
+    <string name="panel_fight_weekly_schedule">Weekly Schedule</string>
+    <string name="panel_fight_weekly_schedule_tip">When enabled, this task only runs on selected days (based on server time, with reset at 04:00).</string>
+
+    <!-- panel: stone -->
+    <string name="panel_stone_allow_save">Save \"Use Originium\"</string>
+    <string name="panel_stone_warning_message">After enabling this option, the Originium usage setting will be saved.\nThis may cause accidental Originium consumption, so use it carefully.</string>
+    <string name="panel_stone_unsaved_tip">This setting is not saved and will reset to off the next time the app starts.</string>
+    <string name="panel_stone_use">Use Originium</string>
+
+    <!-- panel: infrast -->
+    <string name="panel_infrast_mode_title">Base Mode</string>
+    <string name="panel_infrast_mode_normal">Normal Mode</string>
+    <string name="panel_infrast_mode_custom">Custom Infrastructure Config</string>
+    <string name="panel_infrast_mode_rotation">Queue Rotation</string>
+    <string name="panel_infrast_mode_rotation_tip">The shift rotation logic is exactly the same as the in-game \"Queue Rotation\" button at the bottom right of the base.\nWhen any operator in the current shift reaches 0 mood, the entire shift switches to the next one.\nUse \"Custom Infrastructure Config\" if you need a custom rotation schedule.</string>
+    <string name="panel_infrast_file_not_found">File not found</string>
+    <string name="panel_infrast_parse_failed">Failed to parse: %1$s</string>
+    <string name="panel_infrast_scheduler_builder">Custom Infrastructure Scheduler Builder</string>
+    <string name="panel_infrast_import_background_only">Please import custom configuration files in background mode.</string>
+    <string name="panel_infrast_presets_title">Built-in Presets</string>
+    <string name="panel_infrast_preset_user_defined">User defined</string>
+    <string name="panel_infrast_preset_153_3x">153, 3 shifts per day</string>
+    <string name="panel_infrast_preset_153_4x">153, 4 shifts per day</string>
+    <string name="panel_infrast_preset_243_3x">243, 3 shifts per day</string>
+    <string name="panel_infrast_preset_243_4x">243, 4 shifts per day</string>
+    <string name="panel_infrast_preset_333_3x">333, 3 shifts per day</string>
+    <string name="panel_infrast_plan_title">Schedule Plan</string>
+    <string name="panel_infrast_plan_tip">If \"Base Schedule\" has execution time configured, it will not switch automatically before the \"Base Shift\" task starts or during task execution. It stays in the state at Link Start! and only switches when idle or after the task is completed.</string>
+    <string name="panel_infrast_plan_auto_switch">Auto switch by time (%1$s)</string>
+    <string name="panel_infrast_plan_missing_period_warning">Only some plans in this custom infrastructure config have time periods configured, which may cause unexpected behavior. If you want time-based shift switching, make sure every plan has a period configured; otherwise leave them all empty.</string>
+    <string name="panel_infrast_drones_title">Drone Usage</string>
+    <string name="panel_infrast_drones_not_use">Do not use Drones</string>
+    <string name="panel_infrast_drones_money">LMD</string>
+    <string name="panel_infrast_drones_synthetic_jade">Orundums</string>
+    <string name="panel_infrast_drones_combat_record">Battle Records</string>
+    <string name="panel_infrast_drones_pure_gold">Pure Gold</string>
+    <string name="panel_infrast_drones_origin_stone">Originium Shards</string>
+    <string name="panel_infrast_drones_chip">Chip Packs</string>
+    <string name="panel_infrast_dorm_threshold_title">Dorm Mood Threshold</string>
+    <string name="panel_infrast_dorm_threshold_tip">When custom shift switching is enabled, this field only applies to autofill and rooms that use worker groups.</string>
+    <string name="panel_infrast_facilities_title">Facilities</string>
+    <string name="panel_infrast_facilities_tip">Check the facilities that should be swapped.\nThe order of facilities represents shift priority.</string>
+    <string name="panel_infrast_room_mfg">Factory</string>
+    <string name="panel_infrast_room_trade">Trading Post</string>
+    <string name="panel_infrast_room_control">Control Center</string>
+    <string name="panel_infrast_room_power">Power Plant</string>
+    <string name="panel_infrast_room_reception">Reception Room</string>
+    <string name="panel_infrast_room_office">Office</string>
+    <string name="panel_infrast_room_dorm">Dormitory</string>
+    <string name="panel_infrast_room_processing">Workshop</string>
+    <string name="panel_infrast_room_training">Training Room</string>
+    <string name="panel_infrast_dorm_trust">Use free dorm slots for trust</string>
+    <string name="panel_infrast_dorm_filter_not_stationed">Do not move stationed operators into dorms</string>
+    <string name="panel_infrast_dorm_filter_not_stationed_tip">When enabled, operators such as Irene will not be removed from the Training Room, but Workshop operators also will not enter dorms.</string>
+    <string name="panel_infrast_originium_shard_auto_replenishment">Auto replenish Originium Shards</string>
+    <string name="panel_infrast_reception_message_board">Credit collection from message board in Reception Room</string>
+    <string name="panel_infrast_reception_clue_exchange">Exchange clues</string>
+    <string name="panel_infrast_reception_send_clue">Send clues</string>
+    <string name="panel_infrast_continue_training">Continue skill training after completion</string>
+
+    <!-- logs: detail/list -->
+    <string name="log_list_meta">%1$d tasks | %2$s</string>
+    <string name="log_detail_task_start">========== TASK START ==========</string>
+    <string name="log_detail_time">Time: %1$s</string>
+    <string name="log_detail_tasks">Tasks: %1$s</string>
+    <string name="log_detail_task_end">========== TASK END ==========</string>
+    <string name="log_detail_end_time">End Time: %1$s</string>
+    <string name="log_detail_status">Status: %1$s</string>
+
+    <!-- navigation -->
+    <string name="bottom_nav_home">Home</string>
+    <string name="bottom_nav_background_task">Tasks</string>
+    <string name="bottom_nav_schedule">Schedule</string>
+    <string name="bottom_nav_notification">Push</string>
+    <string name="navigation_toast_switch_background_mode">Current mode is foreground. Switch to background mode first.</string>
+
+    <!-- shared panel / toolbox -->
+    <string name="common_expand">Expand</string>
+    <string name="panel_tab_tasks">Tasks</string>
+    <string name="panel_tab_auto_battle">Auto Battle</string>
+    <string name="panel_tab_tools">Tools</string>
+    <string name="panel_tab_log">Logs</string>
+    <string name="panel_cd_go_home">Go to home screen</string>
+    <string name="toolbox_tab_mini_game">Mini Games</string>
+    <string name="toolbox_tab_recruit_calc">Recruit Calc</string>
+    <string name="toolbox_dialog_start_warning_title">Start Warning</string>
+    <string name="toolbox_dialog_start_anyway">Start Anyway</string>
+    <string name="toolbox_status_stopping">Stopping…</string>
+    <string name="toolbox_status_stopped">Stopped</string>
+    <string name="toolbox_status_starting_recruit_calc">Starting Recruit Calc…</string>
+    <string name="toolbox_status_starting_depot">Starting Depot Recognition…</string>
+    <string name="toolbox_status_starting_oper_box">Starting Operator Recognition…</string>
+    <string name="toolbox_status_started">Recognition task started</string>
+
+    <!-- panel: award -->
+    <string name="panel_award_daily_weekly">Collect daily and weekly mission rewards</string>
+    <string name="panel_award_mail">Collect all mail rewards</string>
+    <string name="panel_award_free_gacha">Conduct the daily free single pull from the limited banner</string>
+    <string name="panel_award_free_gacha_tip">If no free pull is available, it will be skipped</string>
+    <string name="panel_award_orundum">Collect the daily Orundum reward from the Lucky Strips</string>
+    <string name="panel_award_mining">Collect the daily Orundum reward from the mining permit</string>
+    <string name="panel_award_special_access">Collect Special Access rewards</string>
+
+    <!-- panel: depot -->
+    <string name="panel_depot_item_count">%1$d item types</string>
+    <string name="panel_depot_copy_penguin">Penguin Stats planner format copied</string>
+    <string name="panel_depot_export_penguin">Export to Penguin Stats planner</string>
+    <string name="panel_depot_copy_toolbox">Arknights Toolbox format copied</string>
+    <string name="panel_depot_export_toolbox">Export to Arknights Toolbox</string>
+    <string name="panel_depot_hint_scan">Tap Start to scan the current depot items and quantities.</string>
+    <string name="panel_depot_hint_results">After recognition, you can export to Penguin Stats planner / Arknights Toolbox format.</string>
+
+    <!-- panel: mini game -->
+    <string name="panel_mini_game_title">Mini Games</string>
+    <string name="panel_mini_game_name">Mini Game</string>
+    <string name="panel_mini_game_ending">Ending</string>
+    <string name="panel_mini_game_preferred_events">Preferred Event Series</string>
+
+    <!-- panel: task list -->
+    <string name="panel_task_list_edit_config">Edit Config</string>
+    <string name="panel_task_list_edit_tasks">Edit Tasks</string>
+    <string name="panel_task_list_add">Add Task</string>
+
+    <!-- panel: log -->
+    <string name="panel_log_title">Task Logs</string>
+    <string name="panel_log_resume_auto_scroll">Resume auto-scroll</string>
+    <string name="panel_log_view_details">View details</string>
+    <string name="panel_log_details_section">Details</string>
+    <string name="panel_log_screenshot_section">Screenshot</string>
+
+    <!-- panel: recruit calc -->
+    <string name="panel_recruit_calc_auto_time">Auto-set recruit time</string>
+    <string name="panel_recruit_calc_auto_select_tags">Auto-select %1$d★ Tags</string>
+    <string name="panel_recruit_calc_detected_tags">Detected tags</string>
+    <string name="panel_recruit_calc_empty_hint">Tap Start to recognize current recruitment tags and calculate possible operator combinations</string>
+
+    <!-- panel: wake up -->
+    <string name="panel_wakeup_client_type">Client Type</string>
+    <string name="panel_wakeup_client_official">Official</string>
+    <string name="panel_wakeup_client_bilibili">Bilibili</string>
+    <string name="panel_wakeup_client_yostar_en">YoStarEN</string>
+    <string name="panel_wakeup_client_yostar_jp">YoStarJP</string>
+    <string name="panel_wakeup_client_yostar_kr">YoStarKR</string>
+    <string name="panel_wakeup_client_txwy">txwy</string>
+    <string name="panel_wakeup_account_switch">Account Switch</string>
+    <string name="panel_wakeup_account_hint">Target account to switch to. Leave blank to disable. Enter the text shown on the login screen, for example 123****4567; partial match is supported. Only Official and Bilibili servers are supported. Login-account switching is not supported.</string>
+    <string name="panel_wakeup_launch_game">Launch Game</string>
+
+    <!-- panel: fight -->
+    <string name="panel_fight_use_medicine">Use sanity potions</string>
+    <string name="panel_fight_use_medicine_count">Use up to N sanity potions</string>
+    <string name="panel_fight_limit_times">Specify Times</string>
+    <string name="panel_fight_stop_after_times">Stop after N battles</string>
+    <string name="panel_fight_series_warning">Battle count %1$d is not divisible by proxy multiplier %2$d, so sanity may not be fully consumed</string>
+    <string name="panel_fight_specified_drops">Specified Drops</string>
+    <string name="panel_fight_specified_drops_tip">Stop combat after collecting the target amount of material</string>
+    <string name="panel_fight_specified_drops_stage_tip">This feature does not automatically calculate the optimal stage. Please choose the stage manually.</string>
+    <string name="panel_fight_material">Material</string>
+    <string name="panel_fight_target_count">Target Amount</string>
+    <string name="panel_fight_resource_collection_open_tip">· Resource collection event is active (all resource stages are open)</string>
+    <string name="panel_fight_today_stage_hint_title">Today\'s stage tips (%1$s)</string>
+
+    <!-- panel: mall -->
+    <string name="panel_mall_advanced_options">Advanced Options</string>
+    <string name="panel_mall_force_shopping_if_full">Ignore blacklist when credits are about to overflow</string>
+    <string name="panel_mall_force_shopping_if_full_tip">When credits are about to overflow, force-buy blacklisted items to avoid waste</string>
+    <string name="panel_mall_only_discount">Only buy discounted credit shop items</string>
+    <string name="panel_mall_only_discount_tip">Note: This may still cause credit overflow. Non-discounted whitelisted items will still be bought.</string>
+    <string name="panel_mall_reserve_credit">Stop buying when credits drop below 300</string>
+    <string name="panel_mall_reserve_credit_tip">Whitelisted items will still be bought even below 300 credits.</string>
+    <string name="panel_mall_drag_reorder">Drag to reorder</string>
+    <string name="panel_mall_priority_empty">No priority items yet\nTap the button below to add one</string>
+
+    <!-- common -->
+    <string name="common_description">Description</string>
+
+    <!-- panel: recruit -->
+    <string name="panel_recruit_use_expedited">Auto-use expedited plans</string>
+    <string name="panel_recruit_use_expedited_tip">This option is not saved and must be checked again before each run</string>
+    <string name="panel_recruit_max_times_title">Recruit Max Times</string>
+    <string name="panel_recruit_max_times_desc">Maximum number of recruitments per task run</string>
+    <string name="panel_recruit_extra_tags_strategy">Strategy for Additional Tags</string>
+    <string name="panel_recruit_extra_tags_none">Additional Tags are not selected by default</string>
+    <string name="panel_recruit_extra_tags_select">If higher ★ tags appear, always select 3 tags</string>
+    <string name="panel_recruit_extra_tags_rare_only">Pick as many high-star Tags as possible</string>
+    <string name="panel_recruit_level3_preference">Preference for 3★ Tags</string>
+    <string name="panel_recruit_level3_preference_tip">When only 3★ operators can be matched, as many preferred tags as possible will be selected</string>
+    <string name="panel_recruit_selected_count">%1$d selected</string>
+    <string name="panel_recruit_refresh_level3">Auto-refresh 3★ Tags</string>
+    <string name="panel_recruit_force_refresh">Continue trying to refresh Tags without recruitment permit</string>
+    <string name="panel_recruit_not_choose_level1">Manual confirm for 1★</string>
+    <string name="panel_recruit_not_choose_level1_tip">If enabled, 1★ tags will skip this recruitment; if disabled, 1★ tags will be ignored</string>
+    <string name="panel_recruit_choose_level3">Auto-confirm 3★</string>
+    <string name="panel_recruit_choose_level4">Auto-confirm 4★</string>
+    <string name="panel_recruit_choose_level5">Auto-confirm 5★</string>
+
+    <!-- panel: reclamation -->
+    <string name="panel_reclamation_theme">Theme</string>
+    <string name="panel_reclamation_strategy">Strategy</string>
+    <string name="panel_reclamation_clear_store">Clear store after completion</string>
+    <string name="panel_reclamation_archive_tip">Farm prosperity points by crafting support props; an existing save is required</string>
+    <string name="panel_reclamation_tool_name">Support prop name</string>
+    <string name="panel_reclamation_tool_placeholder">Glow Stick</string>
+    <string name="panel_reclamation_tool_separator_tip">Separate multiple props with semicolons</string>
+    <string name="panel_reclamation_increment_mode">Increment Mode</string>
+    <string name="panel_reclamation_max_craft_count">Max Craft Count Per Round</string>
+    <string name="panel_reclamation_notice">Support for Reclamation Algorithm is still under development. Please keep the following in mind.</string>
+    <string name="panel_reclamation_no_save_title">Farm points by repeatedly entering and exiting stages (existing saves may be deleted)</string>
+    <string name="panel_reclamation_no_save_line1">1. The task stops automatically after max points are reached and outputs \"Task completed\"</string>
+    <string name="panel_reclamation_no_save_line2">2. Do not use this when there are operators in the Reclamation squad</string>
+    <string name="panel_reclamation_no_save_line3">3. Check and delete save data manually to avoid MAA deleting a valuable save</string>
+    <string name="panel_reclamation_no_save_line4">4. Navigation is not implemented yet, so the task cannot start outside Reclamation mode</string>
+    <string name="panel_reclamation_no_save_line5">5. If an error occurs or the task completes before max points are reached, please submit a GitHub issue</string>
+    <string name="panel_reclamation_with_save_title">Farm points through crafting with an existing save (Advanced Settings)</string>
+    <string name="panel_reclamation_with_save_line1">1. It must be the first day after settlement, and there must be no enemy attacks entering the stationed area for the next three days</string>
+    <string name="panel_reclamation_with_save_line2">2. You must start from the overworld screen where the stationed area is visible</string>
+    <string name="panel_reclamation_with_save_line3">3. If the craftable amount is exactly a multiple of 99, it may get stuck. Use some materials before saving</string>
+    <string name="panel_reclamation_theme_tales">Tales Within the Sand</string>
+    <string name="panel_reclamation_theme_fire">Fire Within the Sand (Closed)</string>
+    <string name="panel_reclamation_mode_no_save">No save (farm prosperity by entering and exiting stages)</string>
+    <string name="panel_reclamation_mode_with_save">Existing save (farm prosperity by crafting props)</string>
+    <string name="panel_reclamation_increment_click">Click</string>
+    <string name="panel_reclamation_increment_hold">Hold</string>
+
+    <!-- panel: roguelike -->
+    <string name="panel_roguelike_theme">I.S. Theme</string>
+    <string name="panel_roguelike_difficulty">Difficulty</string>
+    <string name="panel_roguelike_strategy">Strategy</string>
+    <string name="panel_roguelike_squad">Starting Squad</string>
+    <string name="panel_roguelike_roles">Starting Class Group</string>
+    <string name="panel_roguelike_investment_settings">Investment Settings</string>
+    <string name="panel_roguelike_investment_enabled">Invest Originium Ingots</string>
+    <string name="panel_roguelike_invest_count">Stop after investing N Originium Ingots</string>
+    <string name="panel_roguelike_stop_when_invest_full">Stop when the ingot storage reaches the cap</string>
+    <string name="panel_roguelike_investment_more_score">Investment mode enables shopping, recruitment, and entering floor 2</string>
+    <string name="panel_roguelike_support_settings">Support Unit Settings</string>
+    <string name="panel_roguelike_use_support">Use a support unit for the starting operator</string>
+    <string name="panel_roguelike_use_support_tip">Enter the starting operator first</string>
+    <string name="panel_roguelike_nonfriend_support">Allow non-friend support units</string>
+    <string name="panel_roguelike_starts_count">Stop after starting exploration N times</string>
+    <string name="panel_roguelike_exp_settings">Experience Mode Settings</string>
+    <string name="panel_roguelike_stop_before_boss">Stop before the floor 5 boss</string>
+    <string name="panel_roguelike_stop_at_max_level">Stop when max level is reached</string>
+    <string name="panel_roguelike_collectible_settings">Collectible Mode Settings</string>
+    <string name="panel_roguelike_collectible_squad">Squad for collectible runs</string>
+    <string name="panel_roguelike_collectible_shopping">Enable shopping in collectible mode</string>
+    <string name="panel_roguelike_start_with_elite_two">Repeat for the starting operator to reach Elite 2</string>
+    <string name="panel_roguelike_only_start_with_elite_two">Only repeat for the starting operator to reach Elite 2, without battle</string>
+    <string name="panel_roguelike_collectible_rewards">Expected rewards for collectible mode</string>
+    <string name="panel_roguelike_monthly_squad_settings">Monthly Squad Mode Settings</string>
+    <string name="panel_roguelike_monthly_squad_auto_iterate">Monthly Squad Auto-Switch</string>
+    <string name="panel_roguelike_monthly_squad_comms">Monthly Squad Communication</string>
+    <string name="panel_roguelike_exploration_settings">Deep Investigation Mode Settings</string>
+    <string name="panel_roguelike_exploration_auto_iterate">Deep Investigation Auto-Switch</string>
+    <string name="panel_roguelike_collapse_settings">Collapse Paradigm Mode Settings</string>
+    <string name="panel_roguelike_collapse_list">Collapse Paradigm List</string>
+    <string name="panel_roguelike_collapse_list_placeholder">Separate with English semicolons (;). Leave blank to use the default list.</string>
+    <string name="panel_roguelike_playtime_settings">Playtime Node Mode Settings</string>
+    <string name="panel_roguelike_playtime_target">Target Playtime Node</string>
+    <string name="panel_roguelike_mizuki_settings">Mizuki-Specific Settings</string>
+    <string name="panel_roguelike_refresh_trader_with_dice">Refresh shop with dice</string>
+    <string name="panel_roguelike_sami_settings">Sami-Specific Settings</string>
+    <string name="panel_roguelike_first_floor_foldartal">Repeat the first-floor foreseed foldartal without battle</string>
+    <string name="panel_roguelike_foldartal_placeholder">Foldartal name</string>
+    <string name="panel_roguelike_new_squad_foldartal">Start with Life Prioritizing Squad and acquire the cypherboard</string>
+    <string name="panel_roguelike_new_squad_foldartal_placeholder">Write up to three items and separate them with English semicolons (;)</string>
+    <string name="panel_roguelike_start_with_seed">Start with a specified seed</string>
+    <string name="panel_roguelike_seed_placeholder">Format: xxx,rogue_x,x</string>
+    <string name="common_not_switch">Don\'t Switch</string>
+    <string name="panel_roguelike_difficulty_max">MAX (%1$d)</string>
+    <string name="panel_roguelike_difficulty_min">MIN (0)</string>
+    <string name="panel_roguelike_theme_phantom">Phantom</string>
+    <string name="panel_roguelike_theme_mizuki">Mizuki</string>
+    <string name="panel_roguelike_theme_sami">Sami</string>
+    <string name="panel_roguelike_theme_sarkaz">Sarkaz</string>
+    <string name="panel_roguelike_theme_jiegarden">JieGarden</string>
+    <string name="panel_roguelike_mode_exp">Gain XP</string>
+    <string name="panel_roguelike_mode_investment">Invest Ingots</string>
+    <string name="panel_roguelike_mode_collectible">Collectible Start</string>
+    <string name="panel_roguelike_mode_squad">Monthly Squad</string>
+    <string name="panel_roguelike_mode_exploration">Deep Investigation</string>
+    <string name="panel_roguelike_mode_clp_pds">Collapse Paradigm</string>
+    <string name="panel_roguelike_mode_find_playtime">Playtime Node</string>
+    <string name="panel_roguelike_mode_desc_exp">Gain Experience Points, clear as many nodes as possible</string>
+    <string name="panel_roguelike_mode_desc_investment">Invest coins and exit automatically after the investment is complete</string>
+    <string name="panel_roguelike_mode_desc_collectible">Grind to obtain Hot Water Kettle or an Elite 2 starting operator</string>
+    <string name="panel_roguelike_mode_desc_squad">Grind Monthly Squad and clear as far as possible</string>
+    <string name="panel_roguelike_mode_desc_exploration">Grind Deep Investigation and clear as far as possible</string>
+    <string name="panel_roguelike_mode_desc_clp_pds">Farm collapse paradigms and restart immediately after encountering a non-rare collapse paradigm</string>
+    <string name="panel_roguelike_mode_desc_find_playtime">Farm Playtime Nodes, enter the cave on floor 1, and restart if the target node does not appear</string>
+    <string name="panel_roguelike_role_first_move_advantage">First Move Advantage</string>
+    <string name="panel_roguelike_role_slow_and_steady">Slow and Steady Wins the Race</string>
+    <string name="panel_roguelike_role_overcoming_weaknesses">Overcoming Your Weaknesses</string>
+    <string name="panel_roguelike_role_as_your_heart_desires">As Your Heart Desires</string>
+    <string name="panel_roguelike_role_flexible_deployment">Flexible Deployment</string>
+    <string name="panel_roguelike_role_unbreakable">Unbreakable</string>
+    <string name="panel_roguelike_playtime_target_ling">Ling</string>
+    <string name="panel_roguelike_playtime_target_shu">Shu</string>
+    <string name="panel_roguelike_playtime_target_nian">Nian</string>
+    <string name="panel_roguelike_reward_hot_water">Hot Water Kettle</string>
+    <string name="panel_roguelike_reward_shield">Shield</string>
+    <string name="panel_roguelike_reward_ingot">Ingot</string>
+    <string name="panel_roguelike_reward_hope">Hope</string>
+    <string name="panel_roguelike_reward_random">Random Reward</string>
+    <string name="panel_roguelike_reward_key">Key</string>
+    <string name="panel_roguelike_reward_dice">Dice</string>
+    <string name="panel_roguelike_reward_ideas">Thought</string>
+    <string name="panel_roguelike_reward_ticket">Ticket</string>
+    <string name="panel_roguelike_squad_leader">Leader Squad</string>
+    <string name="panel_roguelike_squad_support">Support Squad</string>
+    <string name="panel_roguelike_squad_tactical_assault">Tactical Assault Squad</string>
+    <string name="panel_roguelike_squad_tactical_fortification">Tactical Fortification Squad</string>
+    <string name="panel_roguelike_squad_tactical_ranged">Tactical Ranged Squad</string>
+    <string name="panel_roguelike_squad_tactical_destruction">Tactical Destruction Squad</string>
+    <string name="panel_roguelike_squad_first_class">First-Class Squad</string>
+    <string name="panel_roguelike_squad_gathering">Gathering Squad</string>
+    <string name="panel_roguelike_squad_spearhead">Spearhead Squad</string>
+    <string name="panel_roguelike_squad_research">Research Squad</string>
+    <string name="panel_roguelike_squad_mind_over_matter">Mind Over Matter Squad</string>
+    <string name="panel_roguelike_squad_resourceful">Resourceful Squad</string>
+    <string name="panel_roguelike_squad_people_oriented">People-Oriented Squad</string>
+    <string name="panel_roguelike_squad_eternal_hunting">Eternal Hunting Squad</string>
+    <string name="panel_roguelike_squad_life_prioritizing">Life Prioritizing Squad</string>
+    <string name="panel_roguelike_squad_scientific_thinking">Scientific Thinking Squad</string>
+    <string name="panel_roguelike_squad_special_training">Special Training Squad</string>
+    <string name="panel_roguelike_squad_soul_escort">Soul Escort Squad</string>
+    <string name="panel_roguelike_squad_erudite">Erudite Squad</string>
+    <string name="panel_roguelike_squad_blueprint">Blueprint Squad</string>
+    <string name="panel_roguelike_squad_improvisation">Improvisation Squad</string>
+    <string name="panel_roguelike_squad_mimic">Mimic Squad</string>
+    <string name="panel_roguelike_squad_ingots">Ingots Squad</string>
+    <string name="panel_roguelike_squad_collection">Collection Squad</string>
+    <string name="panel_roguelike_squad_top_gun">Top Gun Squad</string>
+    <string name="panel_roguelike_squad_special_service">Special Service Squad</string>
+    <string name="panel_roguelike_squad_high_ground_breakthrough">High Ground Breakthrough Squad</string>
+    <string name="panel_roguelike_squad_ground_breakthrough">Ground Breakthrough Squad</string>
+    <string name="panel_roguelike_squad_tourist">Tourist Squad</string>
+    <string name="panel_roguelike_squad_sisuitai">Sisuitai Squad</string>
+    <string name="panel_roguelike_squad_tianshifu">Tianshifu Squad</string>
+    <string name="panel_roguelike_squad_splendid_blossoms">Splendid Blossoms Squad</string>
+    <string name="panel_roguelike_squad_risky_gambit">Risky Gambit Squad</string>
+    <string name="panel_roguelike_squad_echo_of_ages">Echo of Ages Squad</string>
+    <string name="panel_roguelike_squad_agent">Agent Squad</string>
+    <string name="panel_roguelike_squad_scholarly">Scholarly Squad</string>
+    <string name="panel_roguelike_squad_merchant">Merchant Squad</string>
+    <!-- i18n: shared helpers -->
+    <string name="common_enumeration_separator">, </string>
+
+    <!-- i18n: resource init -->
+    <string name="resource_init_in_progress_title">Initializing resources</string>
+    <string name="resource_init_in_progress_message">First launch needs to extract resource files. Please wait…</string>
+    <string name="resource_init_failed_title">Initialization failed</string>
+    <string name="resource_init_failed_message">Resource initialization failed: %1$s\n\nCheck available storage space and try again.</string>
+    <string name="resource_init_retry">Retry</string>
+    <string name="resource_init_reinitialize_title">Reinitialize resources</string>
+    <string name="resource_init_reinitialize_message">Reinitialize resources now?\n\nThis deletes existing resources and extracts them again from the bundled package. If you previously updated resources, those updates will be overwritten.</string>
+    <string name="resource_init_reinitialize_confirm">Reinitialize</string>
+
+    <!-- i18n: notifications -->
+    <string name="notification_settings_title">Notifications</string>
+    <string name="notification_section_internal">Internal notifications</string>
+    <string name="notification_enable">Enable notifications</string>
+    <string name="notification_popup">Pop-up alerts</string>
+    <string name="notification_test_message">This is a test notification</string>
+    <string name="notification_send_test">Send test notification</string>
+    <string name="notification_section_external">External notifications</string>
+    <string name="notification_send_on_complete">Send notification when complete</string>
+    <string name="notification_send_on_error">Send notification when task fails</string>
+    <string name="notification_send_on_service_died">Send notification when service dies</string>
+    <string name="notification_include_log_details">Include log details</string>
+    <string name="notification_section_channels">Channels</string>
+    <string name="notification_section_test">Test</string>
+    <string name="notification_provider_server_chan">Server Chan</string>
+    <string name="notification_provider_telegram">Telegram</string>
+    <string name="notification_provider_discord">Discord</string>
+    <string name="notification_provider_ding_talk">DingTalk</string>
+    <string name="notification_provider_discord_webhook">Discord Webhook</string>
+    <string name="notification_provider_smtp">SMTP</string>
+    <string name="notification_provider_bark">Bark</string>
+    <string name="notification_provider_qmsg">Qmsg</string>
+    <string name="notification_provider_gotify">Gotify</string>
+    <string name="notification_provider_custom_webhook">Custom Webhook</string>
+    <string name="notification_label_send_key">Send Key</string>
+    <string name="notification_label_server_url">Server URL</string>
+    <string name="notification_label_bark_send_key">Bark Send Key</string>
+    <string name="notification_label_bot_token">Bot Token</string>
+    <string name="notification_label_chat_id">Chat ID</string>
+    <string name="notification_label_topic_id">Topic ID</string>
+    <string name="notification_placeholder_optional">Optional</string>
+    <string name="notification_label_user_id">User ID</string>
+    <string name="notification_label_access_token">Access Token</string>
+    <string name="notification_label_secret">Secret</string>
+    <string name="notification_placeholder_optional_signing_secret">Optional, signing secret</string>
+    <string name="notification_label_webhook_url">Webhook URL</string>
+    <string name="notification_label_smtp_server">SMTP Server</string>
+    <string name="notification_label_smtp_port">Port</string>
+    <string name="notification_use_ssl">Use SSL</string>
+    <string name="notification_requires_auth">Authentication Required</string>
+    <string name="notification_label_smtp_user">Username</string>
+    <string name="notification_placeholder_optional_required_when_auth">Optional, required when authentication is enabled</string>
+    <string name="notification_label_smtp_password">Password</string>
+    <string name="notification_label_from">Sender</string>
+    <string name="notification_label_to">Recipient</string>
+    <string name="notification_label_qmsg_server">Qmsg Server</string>
+    <string name="notification_label_qmsg_key">Qmsg Key</string>
+    <string name="notification_label_user_qq">User QQ</string>
+    <string name="notification_label_bot_qq">Bot QQ</string>
+    <string name="notification_label_server">Server</string>
+    <string name="notification_label_application_token">Application Token</string>
+    <string name="notification_label_request_body_template">Message body template</string>
+    <string name="notification_supported_placeholders">Placeholders: {title}, {content}, {time}</string>
+    <string name="notification_event_channel_silent_name">Task Events (Silent)</string>
+    <string name="notification_event_channel_silent_desc">Silent notifications for task completion, errors, and high-rarity recruitment events</string>
+    <string name="notification_event_channel_popup_name">Task Events (Popup)</string>
+    <string name="notification_event_channel_popup_desc">Popup notifications for task completion, errors, and high-rarity recruitment events</string>
+    <string name="notification_event_all_tasks_completed">All Tasks Completed</string>
+    <string name="notification_event_task_error">Task Error</string>
+    <string name="notification_event_recruit_tip">Recruitment Tip</string>
+    <string name="notification_event_recruit_special_tag">Rare tag found: %1$s</string>
+    <string name="notification_event_recruit_robot_tag">Robot tag found: %1$s</string>
+    <string name="notification_event_recruit_high_rarity">Found a %1$d-star combination</string>
+    <string name="notification_event_subtask_failure">Subtask Error</string>
+
+    <!-- i18n: accessibility -->
+    <string name="accessibility_navigation">Navigation</string>
+    <string name="accessibility_tip">Tip</string>
+
+    <!-- i18n: dialogs -->
+    <string name="update_confirm_title_resource">Resource update</string>
+    <string name="update_confirm_message_resource">A new resource version is available: %1$s\n\nUpdating now is recommended to get the latest task configs and feature support.</string>
+    <string name="update_confirm_download_now">Download now</string>
+    <string name="shizuku_auth_requesting">Requesting…</string>
+    <string name="shizuku_auth_grant_now">Grant now</string>
+
+    <!-- i18n: virtual display -->
+    <string name="virtual_display_pending">Pending</string>
+    <string name="virtual_display_waiting_surface">Waiting for surface…</string>
+    <string name="virtual_display_game_running">Game running</string>
+    <string name="virtual_display_game_stopped">Game stopped</string>
+    <string name="virtual_display_idle">Idle</string>
+
+    <!-- i18n: task start -->
+    <string name="task_start_warning_game_not_running">The game is not running. Continuing may fail immediately. Start anyway?</string>
+    <string name="task_start_warning_game_not_installed">The game package for the current client type was not detected. Check the client type in Wake Up. Start anyway?</string>
+    <string name="task_start_error_no_task_selected">Please select the tasks to run first</string>
+    <string name="task_start_error_conflicting_client_types">The task chain contains different client types (%1$s). Please keep them consistent</string>
+    <string name="task_start_error_no_executable_tasks">There are no executable tasks in the current task chain</string>
+    <string name="task_start_error_scheduled_no_wakeup">Wake Up is not configured and the game is not running. This scheduled run was cancelled</string>
+    <string name="task_start_error_scheduled_game_not_installed">The game package for the current client type was not detected. Check the client type in Wake Up. This scheduled run was cancelled</string>
+    <string name="task_start_error_resource_load_failed">Resource loading failed. Try reinitializing resources</string>
+    <string name="task_start_error_maa_create_instance">MaaCore initialization failed. Restart the app</string>
+    <string name="task_start_error_set_touch_mode">Failed to set touch mode. Restart the app</string>
+    <string name="task_start_error_portrait_orientation">The screen is in portrait mode. Switch to landscape before starting</string>
+    <string name="task_start_error_display_mode">Failed to set display mode. Please try again</string>
+    <string name="task_start_error_virtual_display">Failed to start the virtual display. Check service permissions</string>
+    <string name="task_start_error_connect_timeout">Timed out while connecting to MaaCore. Please try again</string>
+    <string name="task_start_error_start_failed">MaaCore failed to start. Check the task configuration</string>
+    <string name="task_start_success">MAA started successfully</string>
+    <string name="task_start_dialog_failed_title">Start failed</string>
+    <string name="task_start_dialog_view_log">View logs</string>
+    <string name="task_start_dialog_info_title">Info</string>
+    <string name="task_start_dialog_ack">Got it</string>
+    <string name="task_start_execution_aborted_message">The task aborted unexpectedly. Check logs for details</string>
+    <string name="task_start_execution_finished_message">The task has ended. Check logs for details</string>
+    <string name="task_start_execution_completed_title">Task completed</string>
+    <string name="task_start_triggered_by_schedule">Triggered by scheduled task \"%1$s\"</string>
+
+    <!-- i18n: toolbox / mini game -->
+    <string name="toolbox_status_starting">Starting…</string>
+    <string name="panel_mini_game_not_supported">This task is not supported in the current version</string>
+    <string name="panel_mini_game_started">Mini game task started</string>
+    <string name="panel_empty_config_hint">&lt;- Select a task to configure</string>
+    <string name="core_char_selector_title">Starting operator</string>
+    <string name="core_char_selector_collapse">Collapse</string>
+    <string name="core_char_selector_recommended">Recommended</string>
+    <string name="core_char_selector_placeholder">Operator name (optional)</string>
+    <string name="core_char_selector_not_found">Operator not found. This input will not take effect</string>
+
+    <!-- i18n: schedule -->
+    <string name="schedule_title">Schedule</string>
+    <string name="schedule_trigger_log_title">Trigger log</string>
+    <string name="schedule_create_strategy">New schedule</string>
+    <string name="schedule_empty_state">No schedules yet</string>
+    <string name="schedule_empty_hint_add">Tap the button in the lower-right corner to add one</string>
+    <string name="schedule_delete_strategy_title">Delete schedule</string>
+    <string name="schedule_delete_strategy_message">Delete this schedule?</string>
+    <string name="schedule_auto_start_permission_title">Auto-start permission</string>
+    <string name="schedule_auto_start_permission_message">To ensure scheduled tasks can wake up normally from the background, allow this app to auto-start in system settings.</string>
+    <string name="schedule_next_trigger">Next: %1$s</string>
+    <string name="schedule_last_result">Last: %1$s</string>
+    <string name="schedule_edit_title_new">New schedule</string>
+    <string name="schedule_edit_title_edit">Edit schedule</string>
+    <string name="schedule_save">Save</string>
+    <string name="schedule_section_basic_info">Basic information</string>
+    <string name="schedule_name">Schedule name</string>
+    <string name="schedule_name_placeholder">For example: Daily tasks</string>
+    <string name="schedule_section_type">Schedule type</string>
+    <string name="schedule_type_fixed_time">Fixed time</string>
+    <string name="schedule_type_interval">Interval</string>
+    <string name="schedule_section_days">Execution days</string>
+    <string name="schedule_every_day">Every day</string>
+    <string name="schedule_section_times">Execution times</string>
+    <string name="schedule_add_time">Add time</string>
+    <string name="schedule_section_start_time">Start time</string>
+    <string name="schedule_tap_to_choose">Tap to choose</string>
+    <string name="schedule_first_execution_time">First execution time</string>
+    <string name="schedule_next_step">Next</string>
+    <string name="schedule_section_interval">Execution interval</string>
+    <string name="schedule_days_unit">Days</string>
+    <string name="schedule_hours_unit">Hours</string>
+    <string name="schedule_total_hours">= %1$d hours</string>
+    <string name="schedule_section_task_config">Task configuration</string>
+    <string name="schedule_no_profiles">Create a task profile in the control panel first</string>
+    <string name="schedule_enabled_tasks">Enabled: %1$s</string>
+    <string name="schedule_section_advanced">Advanced options</string>
+    <string name="schedule_force_start">Force scheduled start</string>
+    <string name="schedule_force_start_tip">Stop the current task, restart the game, and start the new tasks</string>
+    <string name="schedule_permission_tip_battery_optimization">Disable battery optimization</string>
+    <string name="schedule_permission_tip_exact_alarm">Allow exact alarms</string>
+    <string name="schedule_permission_title">Permission reminder</string>
+    <string name="schedule_permission_message">To ensure scheduled tasks trigger correctly, handle the following items in system settings: %1$s</string>
+    <string name="schedule_go_to_settings">Go to settings</string>
+    <string name="schedule_later">Later</string>
+    <string name="schedule_time_picker_title">Choose time</string>
+    <string name="schedule_time_picker_keyboard_input">Keyboard input</string>
+    <string name="schedule_time_picker_dial_selection">Dial selection</string>
+    <string name="schedule_default_name">Schedule-%1$d</string>
+    <string name="schedule_error_name_required">Enter a schedule name</string>
+    <string name="schedule_error_profile_required">Select a task profile</string>
+    <string name="schedule_error_days_required">Select execution days</string>
+    <string name="schedule_error_times_required">Add at least one execution time</string>
+    <string name="schedule_error_start_time_required">Select a start time</string>
+    <string name="schedule_error_interval_too_short">The execution interval must be at least 1 hour</string>
+    <string name="schedule_error_save_failed">Save failed: %1$s</string>
+    <string name="schedule_log_clear_title">Clear logs</string>
+    <string name="schedule_log_empty_state">No trigger history yet</string>
+    <string name="schedule_log_clear_message">Clear all trigger logs?</string>
+    <string name="schedule_log_delete_title">Delete log</string>
+    <string name="schedule_log_delete_message">Delete this trigger log?</string>
+    <string name="schedule_result_in_progress">In progress…</string>
+    <string name="schedule_log_scheduled_time">Scheduled: %1$s</string>
+    <string name="schedule_log_triggered_time">Triggered: %1$s</string>
+    <string name="schedule_log_detail_title">Trigger details</string>
+    <string name="schedule_log_result">Result: %1$s</string>
+    <string name="schedule_day_full_monday">Monday</string>
+    <string name="schedule_day_full_tuesday">Tuesday</string>
+    <string name="schedule_day_full_wednesday">Wednesday</string>
+    <string name="schedule_day_full_thursday">Thursday</string>
+    <string name="schedule_day_full_friday">Friday</string>
+    <string name="schedule_day_full_saturday">Saturday</string>
+    <string name="schedule_day_full_sunday">Sunday</string>
+    <string name="schedule_day_short_monday">Mon</string>
+    <string name="schedule_day_short_tuesday">Tue</string>
+    <string name="schedule_day_short_wednesday">Wed</string>
+    <string name="schedule_day_short_thursday">Thu</string>
+    <string name="schedule_day_short_friday">Fri</string>
+    <string name="schedule_day_short_saturday">Sat</string>
+    <string name="schedule_day_short_sunday">Sun</string>
+    <string name="schedule_result_started">Started</string>
+    <string name="schedule_result_failed_validation">Validation failed</string>
+    <string name="schedule_result_failed_start">Start failed</string>
+    <string name="schedule_result_failed_ui_launch">UI launch failed</string>
+    <string name="schedule_result_skipped_busy">System busy</string>
+    <string name="schedule_result_skipped_locked">Skipped while locked</string>
+    <string name="schedule_result_cancelled">Cancelled</string>
+    <string name="schedule_interval_every_days_hours">Every %1$d day(s) %2$d hour(s)</string>
+    <string name="schedule_interval_every_days">Every %1$d day(s)</string>
+    <string name="schedule_interval_every_hours">Every %1$d hour(s)</string>
+    <string name="schedule_interval_starts_from">Starts from %1$s</string>
+    <string name="schedule_countdown_title">Scheduled task is about to start</string>
+    <string name="schedule_countdown_seconds_to_start">seconds until auto-start</string>
+    <string name="schedule_countdown_start_now">Start now</string>
+
+    <!-- i18n: notification channels & service -->
+    <string name="notification_channel_task_execution">Task Execution</string>
+    <string name="notification_channel_task_execution_desc">Background task execution progress notifications</string>
+    <string name="notification_task_running_title">Task Running</string>
+    <string name="notification_task_starting">Starting…</string>
+    <string name="notification_task_stopping">Stopping…</string>
+    <string name="notification_task_running">Running</string>
+    <string name="notification_task_completed">Task Completed</string>
+    <string name="notification_task_error">Task Error</string>
+    <string name="notification_channel_schedule">Scheduled Tasks</string>
+    <string name="notification_channel_schedule_desc">Scheduled task execution and result notifications</string>
+    <string name="notification_schedule_title">Scheduled Task</string>
+    <string name="notification_schedule_preparing">Preparing to launch…</string>
+    <string name="notification_schedule_skipped">Scheduled Task Skipped</string>
+    <string name="notification_schedule_failed">Scheduled Task Failed</string>
+    <string name="notification_schedule_device_locked">Device is locked</string>
+    <string name="notification_schedule_detail">\"%1$s\": %2$s</string>
+
+    <!-- i18n: notification level -->
+    <string name="notification_level_off">Off</string>
+    <string name="notification_level_default">Silent</string>
+    <string name="notification_level_high">Popup</string>
+
+    <!-- i18n: update -->
+    <string name="update_toast_auto_download_app_failed">Failed to auto-download the app update</string>
+    <string name="update_toast_auto_download_resource_failed">Failed to auto-download the resource update</string>
+</resources>

@@ -24,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.presentation.components.ITextField
 
 /**
@@ -46,7 +48,7 @@ fun InlineBlacklistAddPanel(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                "输入不想购买的物品名称",
+                stringResource(R.string.panel_mall_add_blacklist_title),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
@@ -54,7 +56,7 @@ fun InlineBlacklistAddPanel(
                 value = inputText,
                 onValueChange = { inputText = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = "如：家具零件",
+                placeholder = stringResource(R.string.panel_mall_add_blacklist_placeholder),
                 singleLine = true,
                 onImeAction = {
                     if (inputText.isNotBlank()) {
@@ -67,13 +69,13 @@ fun InlineBlacklistAddPanel(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = onCancel) { Text("取消") }
+                TextButton(onClick = onCancel) { Text(stringResource(R.string.common_cancel)) }
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(
                     onClick = { onItemAdded(inputText) },
                     enabled = inputText.isNotBlank(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("添加") }
+                ) { Text(stringResource(R.string.common_add)) }
             }
         }
     }

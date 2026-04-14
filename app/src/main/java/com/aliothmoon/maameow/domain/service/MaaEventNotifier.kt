@@ -5,7 +5,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
+import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.aliothmoon.maameow.MainActivity
@@ -35,53 +35,78 @@ class MaaEventNotifier(
         ensureChannels()
     }
 
+    private fun string(@StringRes resId: Int, vararg args: Any): String =
+        appContext.getString(resId, *args)
+
     private fun ensureChannels() {
         val channels = listOf(
             NotificationChannel(
                 CHANNEL_DEFAULT,
-                "任务事件（静默）",
+                string(R.string.notification_event_channel_silent_name),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "任务完成、出错、公招高星等事件通知（静默，不弹出）"
+                description = string(R.string.notification_event_channel_silent_desc)
                 setSound(null, null)
                 enableVibration(false)
             },
             NotificationChannel(
                 CHANNEL_HIGH,
-                "任务事件（弹出）",
+                string(R.string.notification_event_channel_popup_name),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "任务完成、出错、公招高星等事件通知（弹出横幅）"
+                description = string(R.string.notification_event_channel_popup_desc)
             }
         )
         manager.createNotificationChannels(channels)
     }
 
     fun notifyAllTasksCompleted(summary: String) {
-        send("全部任务完成", summary, ID_TASK_STATUS)
+        send(R.string.notification_event_all_tasks_completed, summary, ID_TASK_STATUS)
     }
 
     fun notifyTaskError(taskName: String) {
-        send("任务出错", taskName, ID_TASK_STATUS)
+        send(R.string.notification_event_task_error, taskName, ID_TASK_STATUS, isError = true)
     }
 
     fun notifyRecruitSpecialTag(tag: String) {
-        send("招募提示", "发现稀有 Tag: $tag", eventIdGenerator.getAndIncrement())
+        send(
+            R.string.notification_event_recruit_tip,
+            string(R.string.notification_event_recruit_special_tag, tag),
+            eventIdGenerator.getAndIncrement()
+        )
     }
 
     fun notifyRecruitRobotTag(tag: String) {
-        send("招募提示", "发现小车 Tag: $tag", eventIdGenerator.getAndIncrement())
+        send(
+            R.string.notification_event_recruit_tip,
+            string(R.string.notification_event_recruit_robot_tag, tag),
+            eventIdGenerator.getAndIncrement()
+        )
     }
 
     fun notifyRecruitHighRarity(level: Int) {
-        send("招募提示", "发现 $level ★ 组合", eventIdGenerator.getAndIncrement())
+        send(
+            R.string.notification_event_recruit_tip,
+            string(R.string.notification_event_recruit_high_rarity, level),
+            eventIdGenerator.getAndIncrement()
+        )
     }
 
     fun notifySubTaskFailure(message: String) {
-        send("子任务异常", message, eventIdGenerator.getAndIncrement())
+        send(
+            R.string.notification_event_subtask_failure,
+            message,
+            eventIdGenerator.getAndIncrement(),
+            isError = true
+        )
     }
 
-    private fun send(title: String, text: String, notifyId: Int) {
+    private fun send(
+        @StringRes titleRes: Int,
+        text: String,
+        notifyId: Int,
+        isError: Boolean = false,
+    ) {
         val level = appSettingsManager.eventNotificationLevel.value
         if (level == EventNotificationLevel.OFF) return
 
@@ -107,6 +132,7 @@ class MaaEventNotifier(
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        val title = string(titleRes)
         val notification = NotificationCompat.Builder(appContext, channelId)
             .setSmallIcon(R.mipmap.ic_launcher_foreground)
             .setContentTitle(title)
@@ -119,8 +145,7 @@ class MaaEventNotifier(
                 if (level == EventNotificationLevel.HIGH) {
                     setDefaults(NotificationCompat.DEFAULT_ALL)
                 }
-                // 出错类通知增加红色装饰色，增强视觉提示
-                if (title.contains("出错") || title.contains("异常")) {
+                if (isError) {
                     color = 0xFFD32F2F.toInt()
                 }
             }

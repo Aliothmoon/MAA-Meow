@@ -22,6 +22,7 @@ import com.aliothmoon.maameow.presentation.view.panel.PanelDialogConfirmAction
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogUiState
 import com.aliothmoon.maameow.presentation.view.panel.PanelTab
+import com.aliothmoon.maameow.utils.i18n.resolve
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,30 +50,8 @@ class ExpandedControlPanelViewModel(
     init {
         viewModelScope.launch {
             overlayController.signal.collect { endState ->
-                val message = when (endState) {
-                    MaaExecutionState.ERROR -> "任务异常终止，详细信息请查看日志"
-                    else -> "任务已结束，详细信息请查看日志"
-                }
                 Timber.d("Overlay result received: $endState")
-                showDialog(
-                    if (endState == MaaExecutionState.ERROR) {
-                        PanelDialogUiState(
-                            type = PanelDialogType.ERROR,
-                            title = "提示",
-                            message = message,
-                            confirmText = "知道了",
-                            confirmAction = PanelDialogConfirmAction.GO_LOG_AND_STOP
-                        )
-                    } else {
-                        PanelDialogUiState(
-                            type = PanelDialogType.SUCCESS,
-                            title = "任务完成",
-                            message = message,
-                            confirmText = "查看日志",
-                            confirmAction = PanelDialogConfirmAction.GO_LOG
-                        )
-                    }
-                )
+                showDialog(application.createExecutionEndDialog(endState))
             }
         }
     }
@@ -185,7 +164,7 @@ class ExpandedControlPanelViewModel(
 
     fun onTabChange(tab: PanelTab) {
         _state.update { it.copy(currentTab = tab) }
-        Timber.d("Selected tab: %s", tab.displayName)
+        Timber.d("Selected tab: %s", tab.name)
     }
 
     private fun showDialog(dialog: PanelDialogUiState) {
@@ -256,29 +235,17 @@ class ExpandedControlPanelViewModel(
 
                 is TaskStartDecision.Blocked -> {
                     pendingStartContext = null
-                    Timber.w("Validation failed: %s", decision.message)
-                    showDialog(
-                        PanelDialogUiState(
-                            type = PanelDialogType.WARNING,
-                            title = "提示",
-                            message = decision.message,
-                            confirmText = "知道了",
-                            confirmAction = PanelDialogConfirmAction.DISMISS_ONLY,
-                        )
-                    )
+                    val message = application.resolveTaskStartDecisionMessage(decision)
+                    Timber.w("Validation failed: %s", message.resolve(application))
+                    showDialog(application.createStartBlockedDialog(message))
                     return@launch
                 }
 
                 is TaskStartDecision.RequiresConfirmation -> {
                     pendingStartContext = context
                     showDialog(
-                        PanelDialogUiState(
-                            type = PanelDialogType.WARNING,
-                            title = "启动警告",
-                            message = decision.message,
-                            confirmText = "仍然启动",
-                            dismissText = "取消",
-                            confirmAction = PanelDialogConfirmAction.CONFIRM_PENDING_START,
+                        application.createStartWarningDialog(
+                            application.resolveTaskStartDecisionMessage(decision)
                         )
                     )
                     return@launch
@@ -297,16 +264,20 @@ class ExpandedControlPanelViewModel(
                 tasks = plan.params,
                 clientType = plan.clientType,
             )
-            val message = formatStartResult(result, "Maa启动成功")
+            val message = application.formatStartResult(result)
             if (result is MaaCompositionService.StartResult.Success) {
                 // 成功时用 Toast 简短提示
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(application, message, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        application,
+                        message.resolve(application),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             } else {
                 // 失败时通过 StateFlow 通知 UI 展示 OverlayDialog
-                Timber.w("Start failed: $result")
-                showDialog(createStartFailedDialog(message))
+                Timber.w("Start failed: %s", message.resolve(application))
+                showDialog(application.createStartFailedDialog(message))
             }
         }
     }

@@ -48,16 +48,15 @@ data class WakeUpConfig(
 ) : TaskParamProvider {
     companion object {
         /**
-         * 客户端类型选项列表
-         * value to displayName
+         * 客户端类型选项值列表
          */
-        val CLIENT_TYPE_OPTIONS = listOf(
-            "Official" to "官服",
-            "Bilibili" to "B服",
-            "YoStarEN" to "国际服(YoStarEN)",
-            "YoStarJP" to "日服(YoStarJP)",
-            "YoStarKR" to "韩服(YoStarKR)",
-            "txwy" to "繁中服(txwy)"
+        val CLIENT_TYPES = listOf(
+            "Official",
+            "Bilibili",
+            "YoStarEN",
+            "YoStarJP",
+            "YoStarKR",
+            "txwy"
         )
 
         /**

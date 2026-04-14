@@ -78,12 +78,14 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
@@ -99,6 +101,7 @@ import com.aliothmoon.maameow.presentation.view.panel.TaskConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.TaskListPanel
 import com.aliothmoon.maameow.presentation.view.panel.AutoBattlePanel
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
+import com.aliothmoon.maameow.utils.i18n.remoteBackendPermissionLabel
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
@@ -108,6 +111,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.Dp
 import com.aliothmoon.maameow.domain.service.AppWatchdog
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
+import com.aliothmoon.maameow.utils.i18n.asString
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -184,8 +188,8 @@ fun BackgroundTaskView(
     if (!permissions.remoteAccessGranted) {
         var isRequestingRemoteAccess by remember { mutableStateOf(false) }
         ShizukuPermissionDialog(
-            title = "需要${permissions.startupBackend.display}权限",
-            message = "后台任务页面依赖${permissions.startupBackend.display}服务，授权成功前将持续显示该提示。",
+            title = stringResource(R.string.bg_shizuku_permission_title, permissions.startupBackend.display),
+            message = stringResource(R.string.bg_shizuku_permission_message, permissions.startupBackend.display),
             isRequesting = isRequestingRemoteAccess,
             onConfirm = {
                 if (isRequestingRemoteAccess) return@ShizukuPermissionDialog
@@ -196,7 +200,10 @@ fun BackgroundTaskView(
                     if (!granted) {
                         Toast.makeText(
                             context,
-                            "${permissions.remotePermissionLabel}未获取，请重试",
+                            context.getString(
+                                R.string.bg_toast_permission_not_acquired,
+                                context.remoteBackendPermissionLabel(permissions.startupBackend)
+                            ),
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -219,13 +226,21 @@ fun BackgroundTaskView(
 
     LaunchedEffect(Unit) {
         dispatcher.serviceDiedEvent.collect {
-            Toast.makeText(context, "MaaService 异常关闭，请尝试重新启动", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                context.getString(R.string.bg_toast_service_died),
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
     LaunchedEffect(Unit) {
         appWatchdog.appDiedEvent.collect {
-            Toast.makeText(context, "游戏进程未启动或被异常关闭", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                context.getString(R.string.bg_toast_app_died),
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
@@ -493,7 +508,7 @@ fun BackgroundTaskView(
                                                 strokeWidth = 2.dp
                                             )
                                         } else {
-                                            Text("开始任务")
+                                            Text(stringResource(R.string.task_btn_start))
                                         }
                                     }
 
@@ -520,7 +535,7 @@ fun BackgroundTaskView(
                                                 strokeWidth = 2.dp
                                             )
                                         } else {
-                                            Text("停止任务")
+                                            Text(stringResource(R.string.task_btn_stop))
                                         }
                                     }
 
@@ -530,7 +545,7 @@ fun BackgroundTaskView(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Filled.MoreVert,
-                                            contentDescription = "更多操作"
+                                            contentDescription = stringResource(R.string.task_more_actions_cd)
                                         )
                                     }
                                 }
@@ -657,7 +672,7 @@ fun BackgroundTaskView(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "关闭",
+                        contentDescription = stringResource(R.string.task_close_preview_cd),
                         tint = Color.White.copy(alpha = 0.7f),
                         modifier = Modifier.size(28.dp)
                     )
@@ -679,14 +694,22 @@ fun BackgroundTaskView(
                 PanelDialogType.WARNING -> MaterialTheme.colorScheme.tertiary
                 PanelDialogType.ERROR -> MaterialTheme.colorScheme.error
             }
+            val dialogTitle = dialog.title.asString()
+            val dialogMessage = dialog.message.asString()
+            val dialogConfirmText = dialog.confirmText.asString()
+            val dialogDismissText = dialog.dismissText.asString()
             AdaptiveTaskPromptDialog(
                 visible = true,
-                title = dialog.title,
-                message = AnnotatedString(dialog.message),
+                title = dialogTitle,
+                message = AnnotatedString(dialogMessage),
                 onDismissRequest = onDismiss,
                 onConfirm = onConfirm,
-                confirmText = dialog.confirmText,
-                dismissText = dialog.dismissText,
+                confirmText = dialogConfirmText.ifBlank {
+                    stringResource(R.string.common_confirm)
+                },
+                dismissText = dialogDismissText.ifBlank {
+                    stringResource(R.string.common_close)
+                },
                 icon = when (dialog.type) {
                     PanelDialogType.SUCCESS -> Icons.Filled.CheckCircle
                     else -> Icons.Filled.Warning
@@ -699,15 +722,15 @@ fun BackgroundTaskView(
         if (showCloseConfirm) {
             AdaptiveTaskPromptDialog(
                 visible = true,
-                title = "确认关闭",
-                message = AnnotatedString("任务正在运行中，确认关闭应用吗？"),
+                title = stringResource(R.string.dialog_close_app_title),
+                message = AnnotatedString(stringResource(R.string.dialog_close_app_message)),
                 onDismissRequest = { showCloseConfirm = false },
                 onConfirm = {
                     showCloseConfirm = false
                     coroutineScope.launch { compositionService.stopVirtualDisplay() }
                 },
-                confirmText = "确认关闭",
-                dismissText = "取消",
+                confirmText = stringResource(R.string.dialog_close_app_confirm),
+                dismissText = stringResource(R.string.common_cancel),
                 icon = Icons.Filled.Warning,
                 iconTint = MaterialTheme.colorScheme.error,
                 confirmColor = MaterialTheme.colorScheme.error,
@@ -787,7 +810,7 @@ private fun BackgroundMoreActionsOverlay(
                 Column(modifier = Modifier.padding(10.dp)) {
                     // 标题与快速操作组
                     Text(
-                        text = "快捷操作",
+                        text = stringResource(R.string.bg_actions_title),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
@@ -801,7 +824,7 @@ private fun BackgroundMoreActionsOverlay(
                     ) {
                         ActionTile(
                             icon = Icons.Filled.PowerSettingsNew,
-                            label = "熄屏挂机",
+                            label = stringResource(R.string.bg_action_screen_off),
                             onClick = {
                                 if (useHardwareScreenOff) onScreenOff() else onShowScreenSaver()
                             },
@@ -811,7 +834,7 @@ private fun BackgroundMoreActionsOverlay(
                         )
                         ActionTile(
                             icon = Icons.AutoMirrored.Filled.ExitToApp,
-                            label = "关闭游戏",
+                            label = stringResource(R.string.bg_action_close_game),
                             onClick = onCloseApp,
                             modifier = Modifier.weight(1f),
                             containerColor = MaterialTheme.colorScheme.error,
@@ -827,7 +850,10 @@ private fun BackgroundMoreActionsOverlay(
                     ) {
                         ActionTile(
                             icon = if (isGameMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                            label = if (isGameMuted) "游戏已静音" else "关闭游戏声音",
+                            label = if (isGameMuted)
+                                stringResource(R.string.bg_action_game_muted)
+                            else
+                                stringResource(R.string.bg_action_mute_game),
                             onClick = onToggleGameSound,
                             modifier = Modifier.weight(1f),
                             containerColor = if (isGameMuted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary,
@@ -843,7 +869,7 @@ private fun BackgroundMoreActionsOverlay(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "自动设置",
+                        text = stringResource(R.string.bg_auto_settings_title),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
@@ -853,7 +879,7 @@ private fun BackgroundMoreActionsOverlay(
 
                     SettingSwitchRow(
                         icon = Icons.Filled.NotificationsPaused,
-                        label = "游戏启动时关闭游戏声音",
+                        label = stringResource(R.string.bg_auto_mute_on_launch),
                         checked = muteOnGameLaunch,
                         onCheckedChange = {
                             coroutineScope.launch { appSettingsManager.setMuteOnGameLaunch(it) }
@@ -861,7 +887,7 @@ private fun BackgroundMoreActionsOverlay(
                     )
                     SettingSwitchRow(
                         icon = Icons.Filled.Cancel,
-                        label = "任务自动结束时关闭游戏",
+                        label = stringResource(R.string.bg_auto_close_on_end),
                         checked = closeAppOnTaskEnd,
                         onCheckedChange = {
                             coroutineScope.launch { appSettingsManager.setCloseAppOnTaskEnd(it) }
@@ -869,7 +895,7 @@ private fun BackgroundMoreActionsOverlay(
                     )
                     SettingSwitchRow(
                         icon = Icons.Filled.StayCurrentPortrait,
-                        label = "熄屏挂机时关闭屏幕",
+                        label = stringResource(R.string.bg_auto_hardware_screen_off),
                         checked = useHardwareScreenOff,
                         onCheckedChange = { checked ->
                             if (checked) {
@@ -885,7 +911,7 @@ private fun BackgroundMoreActionsOverlay(
                     )
                     SettingSwitchRow(
                         icon = Icons.Filled.TouchApp,
-                        label = "显示触摸预览",
+                        label = stringResource(R.string.bg_auto_show_touch_preview),
                         checked = showTouchPreview,
                         onCheckedChange = {
                             coroutineScope.launch { appSettingsManager.setShowTouchPreview(it) }
@@ -898,15 +924,15 @@ private fun BackgroundMoreActionsOverlay(
     if (showHardwareScreenOffConfirm) {
         AdaptiveTaskPromptDialog(
             visible = true,
-            title = "确认开启硬件熄屏？",
-            message = AnnotatedString("开启后屏幕将完全熄灭，进入极致省电状态。\n• 唤醒说明：需按两次电源键（先亮锁屏，再解锁定）。\n• 屏保模式：不开启则显示屏保时钟，可随时查看任务进度与电量。"),
+            title = stringResource(R.string.dialog_hardware_screen_off_title),
+            message = AnnotatedString(stringResource(R.string.dialog_hardware_screen_off_message)),
             onDismissRequest = { showHardwareScreenOffConfirm = false },
             onConfirm = {
                 showHardwareScreenOffConfirm = false
                 coroutineScope.launch { appSettingsManager.setUseHardwareScreenOff(true) }
             },
-            confirmText = "确认",
-            dismissText = "取消",
+            confirmText = stringResource(R.string.common_confirm),
+            dismissText = stringResource(R.string.common_cancel),
             icon = Icons.Filled.PowerSettingsNew,
             iconTint = MaterialTheme.colorScheme.primary,
             confirmColor = MaterialTheme.colorScheme.primary,

@@ -44,11 +44,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.AwardConfig
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.InfrastConfig
@@ -116,10 +118,10 @@ fun TaskConfigPanel(
             // 编辑模式：未选中
             isEditMode -> {
                 EmptyStateHint(
-                    title = "编辑模式",
+                    title = stringResource(R.string.panel_config_empty_edit_title),
                     descriptions = listOf(
-                        "选择左侧任务进行重命名、删除等操作。",
-                        "点击左侧 ｢新增任务｣ 往脚本末尾添加新功能。"
+                        stringResource(R.string.panel_config_empty_edit_desc_primary),
+                        stringResource(R.string.panel_config_empty_edit_desc_add)
                     )
                 )
             }
@@ -175,8 +177,8 @@ fun TaskConfigPanel(
             // 普通模式：未选中
             else -> {
                 EmptyStateHint(
-                    title = "配置任务",
-                    descriptions = listOf("从左侧选择一个任务项，即可在此调整执行参数。")
+                    title = stringResource(R.string.panel_config_empty_view_title),
+                    descriptions = listOf(stringResource(R.string.panel_config_empty_view_desc))
                 )
             }
         }
@@ -211,7 +213,7 @@ private fun EmptyStateHint(
         }
 
         if (showReorderHint) {
-            HintItem(Icons.Default.Info, "长按左侧任务项并拖拽，可自由调整执行顺序。")
+            HintItem(Icons.Default.Info, stringResource(R.string.panel_config_reorder_hint))
         }
     }
 }
@@ -248,7 +250,7 @@ private fun TaskGalleryView(onAddNode: (TaskTypeInfo) -> Unit) {
             .padding(12.dp)
     ) {
         Text(
-            "选择任务类型",
+            stringResource(R.string.panel_config_select_type),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(bottom = 12.dp)
@@ -272,7 +274,7 @@ private fun TaskGalleryView(onAddNode: (TaskTypeInfo) -> Unit) {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = typeInfo.displayName,
+                            text = taskTypeLabel(typeInfo),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                             textAlign = TextAlign.Center,
@@ -292,7 +294,8 @@ private fun TaskManagementView(
     onRemove: () -> Unit
 ) {
     var text by remember(node.id) { mutableStateOf(node.name) }
-    val typeDisplayName = remember(node.config) { getTypeDisplayName(node.config) }
+    val typeDisplayName = taskTypeInfoForConfig(node.config)?.let { taskTypeLabel(it) }
+        ?: stringResource(R.string.panel_config_unknown_task_type)
 
     val trimmedText = text.trim()
     val isError = trimmedText.isEmpty()
@@ -310,7 +313,7 @@ private fun TaskManagementView(
                 shape = RoundedCornerShape(4.dp)
             ) {
                 Text(
-                    text = "正在编辑",
+                    text = stringResource(R.string.panel_config_editing_badge),
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -338,14 +341,14 @@ private fun TaskManagementView(
                     onRename(name)
                 }
             },
-            label = "任务名称",
+            label = stringResource(R.string.panel_config_task_name_label),
             shape = RoundedCornerShape(4.dp),
             modifier = Modifier.fillMaxWidth(),
             supportingText = {
                 if (isError) {
-                    Text("名称不能为空")
+                    Text(stringResource(R.string.panel_config_name_empty))
                 } else if (isTooLong) {
-                    Text("名称长度不能超过 20 个字符")
+                    Text(stringResource(R.string.panel_config_name_too_long))
                 }
             },
             outlineColor = if (isError || isTooLong) MaterialTheme.colorScheme.error else null
@@ -375,13 +378,25 @@ private fun TaskManagementView(
         ) {
             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("删除该任务")
+            Text(stringResource(R.string.panel_config_delete_task))
         }
     }
 }
 
-private fun getTypeDisplayName(config: TaskParamProvider): String {
-    return TaskTypeInfo.entries
-        .firstOrNull { it.defaultConfig()::class == config::class }
-        ?.displayName ?: "未知任务"
+private fun taskTypeInfoForConfig(config: TaskParamProvider): TaskTypeInfo? {
+    return TaskTypeInfo.entries.firstOrNull { it.defaultConfig()::class == config::class }
+}
+
+@Composable
+private fun taskTypeLabel(typeInfo: TaskTypeInfo): String {
+    return when (typeInfo) {
+        TaskTypeInfo.WAKE_UP -> stringResource(R.string.panel_task_type_wake_up)
+        TaskTypeInfo.RECRUITING -> stringResource(R.string.panel_task_type_recruiting)
+        TaskTypeInfo.BASE -> stringResource(R.string.panel_task_type_base)
+        TaskTypeInfo.COMBAT -> stringResource(R.string.panel_task_type_combat)
+        TaskTypeInfo.MALL -> stringResource(R.string.panel_task_type_mall)
+        TaskTypeInfo.MISSION -> stringResource(R.string.panel_task_type_mission)
+        TaskTypeInfo.AUTO_ROGUELIKE -> stringResource(R.string.panel_task_type_auto_roguelike)
+        TaskTypeInfo.RECLAMATION -> stringResource(R.string.panel_task_type_reclamation)
+    }
 }

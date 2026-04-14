@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.BuildConfig
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
@@ -60,6 +62,8 @@ import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.viewmodel.SettingsViewModel
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.Misc
+import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
+import com.aliothmoon.maameow.utils.i18n.resolve
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -80,6 +84,7 @@ fun SettingsView(
     val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val backgroundResolution by viewModel.backgroundResolution.collectAsStateWithLifecycle()
+    val language by viewModel.language.collectAsStateWithLifecycle()
     val backupMessage by viewModel.backupMessage.collectAsStateWithLifecycle()
     val showRestartDialog by viewModel.showRestartDialog.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
@@ -100,7 +105,7 @@ fun SettingsView(
     }
 
     backupMessage?.let { msg ->
-        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, msg.resolve(context), Toast.LENGTH_SHORT).show()
         viewModel.clearBackupMessage()
     }
 
@@ -110,11 +115,11 @@ fun SettingsView(
     if (showRestartDialog) {
         AdaptiveTaskPromptDialog(
             visible = true,
-            title = "导入成功",
-            message = "配置已导入完成，需要重启应用以使所有设置生效。",
+            title = stringResource(R.string.dialog_import_success_title),
+            message = stringResource(R.string.dialog_import_success_message),
             icon = Icons.Rounded.Build,
-            confirmText = "立即重启",
-            dismissText = "稍后重启",
+            confirmText = stringResource(R.string.common_restart_now),
+            dismissText = stringResource(R.string.common_restart_later),
             onConfirm = { viewModel.confirmRestart() },
             onDismissRequest = { viewModel.dismissRestartDialog() }
         )
@@ -135,15 +140,15 @@ fun SettingsView(
     if (showDebugModeConfirm) {
         AdaptiveTaskPromptDialog(
             visible = true,
-            title = "启用调试模式",
-            message = "启用调试模式后将重启服务以记录详细日志。\n\n请在重启后重新操作以复现问题，相关日志将被完整记录。",
+            title = stringResource(R.string.dialog_enable_debug_title),
+            message = stringResource(R.string.dialog_enable_debug_message),
             onConfirm = {
                 showDebugModeConfirm = false
                 viewModel.setDebugMode(true)
             },
             onDismissRequest = { showDebugModeConfirm = false },
-            confirmText = "确认重启",
-            dismissText = "取消",
+            confirmText = stringResource(R.string.common_confirm_restart),
+            dismissText = stringResource(R.string.common_cancel),
             icon = Icons.Rounded.Build
         )
     }
@@ -158,7 +163,7 @@ fun SettingsView(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = "设置",
+                title = stringResource(R.string.settings_title),
                 navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() }
             )
@@ -174,27 +179,31 @@ fun SettingsView(
         ) {
             // 更新管理
             item {
-                SectionHeader("更新管理")
+                SectionHeader(stringResource(R.string.settings_section_update))
                 InfoCard(
                     title = "",
                     modifier = Modifier.padding(horizontal = 16.dp),
                     contentColor = contentColor
                 ) {
-                    SettingClickItem("重新初始化资源", "从内置资源包重新解压", contentColor) {
+                    SettingClickItem(
+                        title = stringResource(R.string.settings_reinit_resource_title),
+                        description = stringResource(R.string.settings_reinit_resource_desc),
+                        contentColor = contentColor
+                    ) {
                         showReInitConfirm = true
                     }
                     SettingsDivider(contentColor)
                     SettingSwitchItem(
-                        title = "启动时检查更新",
-                        description = "启动应用时自动检查应用和资源更新",
+                        title = stringResource(R.string.settings_auto_check_update_title),
+                        description = stringResource(R.string.settings_auto_check_update_desc),
                         contentColor = contentColor,
                         checked = autoCheckUpdate,
                         onCheckedChange = { viewModel.setAutoCheckUpdate(it) }
                     )
                     SettingsDivider(contentColor)
                     SettingSwitchItem(
-                        title = "自动下载更新",
-                        description = "检测到更新后自动下载，无需手动确认",
+                        title = stringResource(R.string.settings_auto_download_update_title),
+                        description = stringResource(R.string.settings_auto_download_update_desc),
                         contentColor = contentColor,
                         checked = autoDownloadUpdate,
                         enabled = autoCheckUpdate,
@@ -211,32 +220,45 @@ fun SettingsView(
 
             // 日志
             item {
-                SectionHeader("日志")
+                SectionHeader(stringResource(R.string.settings_section_log))
                 InfoCard(
                     title = "",
                     modifier = Modifier.padding(horizontal = 16.dp),
                     contentColor = contentColor
                 ) {
-                    SettingClickItem("历史日志", "查看任务执行日志", contentColor) {
+                    SettingClickItem(
+                        title = stringResource(R.string.settings_log_history_title),
+                        description = stringResource(R.string.settings_log_history_desc),
+                        contentColor = contentColor
+                    ) {
                         navController.navigate("log_history")
                     }
                     SettingsDivider(contentColor)
-                    SettingClickItem("错误日志", "查看应用异常和错误记录", contentColor) {
+                    SettingClickItem(
+                        title = stringResource(R.string.settings_log_error_title),
+                        description = stringResource(R.string.settings_log_error_desc),
+                        contentColor = contentColor
+                    ) {
                         navController.navigate("error_log")
                     }
                     SettingsDivider(contentColor)
-                    SettingClickItem("导出日志压缩包", "打包所有日志为 ZIP 文件分享", contentColor) {
+                    val logExportChooserTitle = stringResource(R.string.settings_log_export_chooser_title)
+                    SettingClickItem(
+                        title = stringResource(R.string.settings_log_export_title),
+                        description = stringResource(R.string.settings_log_export_desc),
+                        contentColor = contentColor
+                    ) {
                         coroutineScope.launch {
                             val intent = logExportService.exportAllLogs()
                             if (intent != null) {
-                                context.startActivity(Intent.createChooser(intent, "导出日志"))
+                                context.startActivity(Intent.createChooser(intent, logExportChooserTitle))
                             }
                         }
                     }
                     SettingsDivider(contentColor)
                     SettingSwitchItem(
-                        title = "调试模式",
-                        description = "启用后记录详细日志信息",
+                        title = stringResource(R.string.settings_debug_mode_title),
+                        description = stringResource(R.string.settings_debug_mode_desc),
                         contentColor = contentColor,
                         checked = debugMode,
                         onCheckedChange = { enabled ->
@@ -252,7 +274,7 @@ fun SettingsView(
 
             // 其他设置
             item {
-                SectionHeader("其他设置")
+                SectionHeader(stringResource(R.string.settings_section_other))
                 InfoCard(
                     title = "",
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -270,13 +292,19 @@ fun SettingsView(
                         onModeSelected = { viewModel.setThemeMode(it) }
                     )
                     SettingsDivider(contentColor)
+                    SettingLanguageItem(
+                        contentColor = contentColor,
+                        selectedLanguage = language,
+                        onLanguageSelected = { viewModel.setLanguage(it) }
+                    )
+                    SettingsDivider(contentColor)
                     SettingBackgroundResolutionItem(
                         contentColor = contentColor,
                         selectedPreference = backgroundResolution,
                         onPreferenceSelected = { viewModel.setBackgroundResolution(it) }
                     )
                     SettingSwitchItem(
-                        title = "跳过 Shizuku 检查",
+                        title = stringResource(R.string.settings_skip_shizuku_check),
                         contentColor = contentColor,
                         checked = skipShizukuCheck,
                         enabled = startupBackend == RemoteBackend.SHIZUKU,
@@ -287,17 +315,25 @@ fun SettingsView(
 
             // 数据管理
             item {
-                SectionHeader("数据管理")
+                SectionHeader(stringResource(R.string.settings_section_data))
                 InfoCard(
                     title = "",
                     modifier = Modifier.padding(horizontal = 16.dp),
                     contentColor = contentColor
                 ) {
-                    SettingClickItem("导出配置", "将所有设置和任务配置导出为文件", contentColor) {
+                    SettingClickItem(
+                        title = stringResource(R.string.settings_export_config_title),
+                        description = stringResource(R.string.settings_export_config_desc),
+                        contentColor = contentColor
+                    ) {
                         exportLauncher.launch("maameow_config.json")
                     }
                     SettingsDivider(contentColor)
-                    SettingClickItem("导入配置", "从文件恢复设置和任务配置", contentColor) {
+                    SettingClickItem(
+                        title = stringResource(R.string.settings_import_config_title),
+                        description = stringResource(R.string.settings_import_config_desc),
+                        contentColor = contentColor
+                    ) {
                         importLauncher.launch(arrayOf("application/json"))
                     }
                 }
@@ -305,27 +341,35 @@ fun SettingsView(
 
             // 关于
             item {
-                SectionHeader("关于")
+                SectionHeader(stringResource(R.string.settings_section_about))
                 InfoCard(
                     title = "",
                     modifier = Modifier.padding(horizontal = 16.dp),
                     contentColor = contentColor
                 ) {
 
-                    SettingInfoRow("版本", BuildConfig.VERSION_NAME, contentColor)
+                    SettingInfoRow(
+                        label = stringResource(R.string.settings_about_version),
+                        value = BuildConfig.VERSION_NAME,
+                        contentColor = contentColor
+                    )
                     SettingsDivider(contentColor)
-                    SettingInfoRow("开发者", "Aliothmoon", contentColor)
+                    SettingInfoRow(
+                        label = stringResource(R.string.settings_about_developer),
+                        value = "Aliothmoon",
+                        contentColor = contentColor
+                    )
                     SettingsDivider(contentColor)
                     SettingClickItem(
-                        title = "问题反馈 QQ 群",
-                        description = "遇到问题或有建议？欢迎加群交流反馈",
+                        title = stringResource(R.string.settings_about_qq_group_title),
+                        description = stringResource(R.string.settings_about_qq_group_desc),
                         contentColor = contentColor
                     ) {
                         Misc.openUriSafely(context, "https://qm.qq.com/q/j4CFbeDQXu")
                     }
                     SettingsDivider(contentColor)
                     Text(
-                        text = "⭐ 喜欢就给个 Star 吧",
+                        text = stringResource(R.string.settings_about_star),
                         style = MaterialTheme.typography.bodyMedium,
                         color = contentColor,
                         fontWeight = FontWeight.Medium,
@@ -362,7 +406,7 @@ private fun SettingThemeModeItem(
     ) {
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                text = "主题模式",
+                text = stringResource(R.string.settings_theme_title),
                 style = MaterialTheme.typography.bodyLarge,
                 color = contentColor
             )
@@ -372,9 +416,9 @@ private fun SettingThemeModeItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             val modes = listOf(
-                AppSettingsManager.ThemeMode.WHITE to "白色",
-                AppSettingsManager.ThemeMode.DARK to "暗色",
-                AppSettingsManager.ThemeMode.PURE_DARK to "纯黑"
+                AppSettingsManager.ThemeMode.WHITE to stringResource(R.string.settings_theme_white),
+                AppSettingsManager.ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
+                AppSettingsManager.ThemeMode.PURE_DARK to stringResource(R.string.settings_theme_pure_dark)
             )
             modes.forEach { (mode, label) ->
                 Row(
@@ -537,12 +581,12 @@ private fun SettingChannelItem(
     ) {
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                text = "更新渠道",
+                text = stringResource(R.string.settings_update_channel_title),
                 style = MaterialTheme.typography.bodyLarge,
                 color = contentColor
             )
             Text(
-                text = "选择接收稳定版或公测版更新",
+                text = stringResource(R.string.settings_update_channel_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = contentColor.copy(alpha = 0.7f)
             )
@@ -552,6 +596,7 @@ private fun SettingChannelItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             UpdateChannel.entries.forEach { channel ->
+                val channelName = stringResource(channel.resId)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -568,7 +613,7 @@ private fun SettingChannelItem(
                     )
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
-                        text = channel.displayName,
+                        text = channelName,
                         style = MaterialTheme.typography.bodyMedium,
                         color = contentColor
                     )
@@ -593,12 +638,12 @@ private fun SettingBackgroundResolutionItem(
     ) {
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                text = "后台分辨率",
+                text = stringResource(R.string.settings_background_resolution_title),
                 style = MaterialTheme.typography.bodyLarge,
                 color = contentColor
             )
             Text(
-                text = "仅后台模式生效",
+                text = stringResource(R.string.settings_background_resolution_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = contentColor.copy(alpha = 0.6f)
             )
@@ -639,6 +684,63 @@ private fun SettingBackgroundResolutionItem(
 }
 
 @Composable
+private fun SettingLanguageItem(
+    contentColor: Color,
+    selectedLanguage: AppSettingsManager.AppLanguage,
+    onLanguageSelected: (AppSettingsManager.AppLanguage) -> Unit
+) {
+    val effectiveSelectedLanguage = resolveSelectedLanguage(selectedLanguage)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_language_title),
+                style = MaterialTheme.typography.bodyLarge,
+                color = contentColor
+            )
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val options = listOf(
+                AppSettingsManager.AppLanguage.ZH to stringResource(R.string.settings_language_zh),
+                AppSettingsManager.AppLanguage.EN to stringResource(R.string.settings_language_en)
+            )
+            options.forEach { (lang, label) ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .selectable(
+                            selected = lang == effectiveSelectedLanguage,
+                            onClick = { onLanguageSelected(lang) },
+                            role = Role.RadioButton
+                        )
+                ) {
+                    RadioButton(
+                        selected = lang == effectiveSelectedLanguage,
+                        onClick = null
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = contentColor
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun SettingRemoteBackendItem(
     contentColor: Color,
     selectedBackend: RemoteBackend,
@@ -653,12 +755,12 @@ private fun SettingRemoteBackendItem(
     ) {
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                text = "启动模式",
+                text = stringResource(R.string.settings_startup_backend_title),
                 style = MaterialTheme.typography.bodyLarge,
                 color = contentColor
             )
             Text(
-                text = "选择应用获取系统权限的方式",
+                text = stringResource(R.string.settings_startup_backend_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = contentColor.copy(alpha = 0.7f)
             )

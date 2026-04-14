@@ -40,4 +40,6 @@ data class AppSettings(
     @PrefKey(default = "DEFAULT") val eventNotificationLevel: String = "DEFAULT",
 
     @PrefKey(default = "P720") val backgroundResolution: String = "P720",
+
+    @PrefKey(default = "SYSTEM") val language: String = "SYSTEM",
 )

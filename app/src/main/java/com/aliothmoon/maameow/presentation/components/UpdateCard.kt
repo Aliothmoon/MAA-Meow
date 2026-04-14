@@ -57,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -69,6 +70,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.update.UpdateCheckResult
 import com.aliothmoon.maameow.data.model.update.UpdateInfo
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
@@ -104,12 +106,19 @@ fun UpdateCard(
     LaunchedEffect(resourceCheckResult) {
         when (val result = resourceCheckResult) {
             is UpdateCheckResult.UpToDate -> {
-                Toast.makeText(context, "资源已是最新版本", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.update_toast_resource_up_to_date),
+                    Toast.LENGTH_SHORT
+                ).show()
                 viewModel.dismissResourceCheckResult()
             }
 
             is UpdateCheckResult.Error -> {
-                resourceErrorMessage = "检查资源更新失败: ${result.error.message}"
+                resourceErrorMessage = context.getString(
+                    R.string.update_toast_check_resource_failed,
+                    result.error.message.orEmpty()
+                )
                 viewModel.dismissResourceCheckResult()
             }
 
@@ -122,12 +131,19 @@ fun UpdateCard(
     LaunchedEffect(appCheckResult) {
         when (val result = appCheckResult) {
             is UpdateCheckResult.UpToDate -> {
-                Toast.makeText(context, "应用已是最新版本", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.update_toast_app_up_to_date),
+                    Toast.LENGTH_SHORT
+                ).show()
                 viewModel.dismissAppCheckResult()
             }
 
             is UpdateCheckResult.Error -> {
-                appErrorMessage = "检查应用更新失败: ${result.error.message}"
+                appErrorMessage = context.getString(
+                    R.string.update_toast_check_app_failed,
+                    result.error.message.orEmpty()
+                )
                 viewModel.dismissAppCheckResult()
             }
 
@@ -140,11 +156,18 @@ fun UpdateCard(
     LaunchedEffect(resourceUpdateState) {
         when (val state = resourceUpdateState) {
             is UpdateProcessState.Failed -> {
-                resourceErrorMessage = "资源更新失败: ${state.error.message}"
+                resourceErrorMessage = context.getString(
+                    R.string.update_toast_resource_update_failed,
+                    state.error.message.orEmpty()
+                )
             }
 
             is UpdateProcessState.Success -> {
-                Toast.makeText(context, "资源更新完成", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.update_toast_resource_update_complete),
+                    Toast.LENGTH_SHORT
+                ).show()
                 viewModel.reset()
             }
 
@@ -155,11 +178,15 @@ fun UpdateCard(
     LaunchedEffect(appUpdateState) {
         when (val state = appUpdateState) {
             is UpdateProcessState.Failed -> {
-                appErrorMessage = "${state.error.message}"
+                appErrorMessage = state.error.message.orEmpty()
             }
 
             is UpdateProcessState.Success -> {
-                Toast.makeText(context, "APK 下载完成，请完成安装", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.update_toast_apk_download_complete),
+                    Toast.LENGTH_SHORT
+                ).show()
                 viewModel.resetAppUpdate()
             }
 
@@ -250,7 +277,7 @@ fun UpdateCard(
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
-                text = "更新管理",
+                text = stringResource(R.string.update_card_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface
@@ -269,7 +296,7 @@ fun UpdateCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "App本体",
+                        text = stringResource(R.string.update_card_app),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
@@ -288,7 +315,7 @@ fun UpdateCard(
                                     strokeWidth = 2.dp
                                 )
                             } else {
-                                Text("检查更新", fontSize = 14.sp)
+                                Text(stringResource(R.string.update_card_check_button), fontSize = 14.sp)
                             }
                         }
                     }
@@ -312,7 +339,7 @@ fun UpdateCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "MAA资源",
+                        text = stringResource(R.string.update_card_resource),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onTertiaryContainer,
                         modifier = Modifier.weight(1f)
@@ -331,7 +358,7 @@ fun UpdateCard(
                                     strokeWidth = 2.dp
                                 )
                             } else {
-                                Text("检查更新", fontSize = 14.sp)
+                                Text(stringResource(R.string.update_card_check_button), fontSize = 14.sp)
                             }
                         }
                     }
@@ -358,7 +385,7 @@ fun UpdateCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "下载源",
+                        text = stringResource(R.string.update_card_source_label),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onTertiaryContainer
                     )
@@ -372,9 +399,10 @@ fun UpdateCard(
 
                 // 更新源说明弹窗
                 showInfoSource?.let { source ->
+                    val sourceName = stringResource(source.resId)
                     AdaptiveTaskPromptDialog(
                         visible = true,
-                        title = "关于 ${source.displayName}",
+                        title = stringResource(R.string.update_card_about_title, sourceName),
                         onConfirm = {
                             Misc.openUriSafely(
                                 context = context,
@@ -386,8 +414,8 @@ fun UpdateCard(
                             showInfoSource = null
                         },
                         onDismissRequest = { showInfoSource = null },
-                        confirmText = "前往官网",
-                        dismissText = "关闭",
+                        confirmText = stringResource(R.string.update_card_visit_site),
+                        dismissText = stringResource(R.string.common_close),
                         icon = Icons.Rounded.Info,
                         content = {
                             Column(
@@ -397,28 +425,32 @@ fun UpdateCard(
                             ) {
                                 when (source) {
                                     UpdateSource.GITHUB -> Text(
-                                        text = "从 GitHub 官方仓库下载资源。适合网络环境良好的用户，可直接获取最新版本。",
+                                        text = stringResource(R.string.update_card_github_desc),
                                         style = MaterialTheme.typography.bodyMedium,
                                         textAlign = TextAlign.Center
                                     )
 
-                                    UpdateSource.MIRROR_CHYAN -> Text(
-                                        text = buildAnnotatedString {
-                                            withStyle(
-                                                SpanStyle(
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            ) {
-                                                append("Mirror酱")
-                                            }
-                                            append("是独立的第三方加速下载服务，需要付费使用，并非「MAA」收费。\n\n")
-                                            append("其运营成本由订阅收入支撑，部分收益将回馈项目开发者。欢迎订阅 CDK 享受高速下载，同时支持项目持续开发。\n\n")
-                                            append("选择 Mirror酱 作为下载源时需要填写 CDK。")
-                                        },
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        textAlign = TextAlign.Center
-                                    )
+                                    UpdateSource.MIRROR_CHYAN -> {
+                                        val mirrorBrand = stringResource(R.string.update_card_mirror_brand)
+                                        val mirrorDesc = stringResource(R.string.update_card_mirror_desc)
+                                        val primary = MaterialTheme.colorScheme.primary
+                                        Text(
+                                            text = buildAnnotatedString {
+                                                withStyle(
+                                                    SpanStyle(
+                                                        color = primary,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                ) {
+                                                    append(mirrorBrand)
+                                                }
+                                                append(" ")
+                                                append(mirrorDesc)
+                                            },
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -462,8 +494,8 @@ private fun CdkInputField(
                 localCdk = newValue
                 onCdkChange(newValue)
             },
-            label = { Text("Mirror酱 CDK") },
-            placeholder = { Text("请输入 CDK") },
+            label = { Text(stringResource(R.string.update_cdk_label)) },
+            placeholder = { Text(stringResource(R.string.update_cdk_placeholder)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             visualTransformation = if (passwordVisible) {
@@ -481,14 +513,17 @@ private fun CdkInputField(
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Clear,
-                                contentDescription = "清空"
+                                contentDescription = stringResource(R.string.update_cdk_clear_cd)
                             )
                         }
                     }
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
                             imageVector = if (passwordVisible) Icons.Outlined.Lock else Icons.Filled.Lock,
-                            contentDescription = if (passwordVisible) "隐藏" else "显示"
+                            contentDescription = if (passwordVisible)
+                                stringResource(R.string.update_cdk_hide_cd)
+                            else
+                                stringResource(R.string.update_cdk_show_cd)
                         )
                     }
                 }
@@ -501,7 +536,7 @@ private fun CdkInputField(
             onClick = { Misc.openUriSafely(context, "https://mirrorchyan.com/") }
         ) {
             Text(
-                text = "没有CDK? 立即订阅",
+                text = stringResource(R.string.update_cdk_subscribe),
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -519,7 +554,7 @@ private fun AppUpdateProgress(appUpdateState: UpdateProcessState) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "应用下载中 ${appUpdateState.progress}%",
+                        text = stringResource(R.string.update_progress_app_downloading, appUpdateState.progress.toString()),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onTertiaryContainer
                     )
@@ -548,7 +583,7 @@ private fun AppUpdateProgress(appUpdateState: UpdateProcessState) {
                     strokeWidth = 2.dp
                 )
                 Text(
-                    text = "正在启动安装...",
+                    text = stringResource(R.string.update_progress_app_installing),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer
                 )
@@ -572,7 +607,7 @@ private fun ResourceUpdateProgress(resourceUpdateState: UpdateProcessState) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "资源下载中 ${resourceUpdateState.progress}%",
+                        text = stringResource(R.string.update_progress_resource_downloading, resourceUpdateState.progress.toString()),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onTertiaryContainer
                     )
@@ -597,7 +632,7 @@ private fun ResourceUpdateProgress(resourceUpdateState: UpdateProcessState) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "解压中 ${resourceUpdateState.progress}%",
+                        text = stringResource(R.string.update_progress_resource_extracting, resourceUpdateState.progress.toString()),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onTertiaryContainer
                     )
@@ -635,6 +670,7 @@ private fun UpdateSourceButtonGroup(
         verticalAlignment = Alignment.CenterVertically
     ) {
         UpdateSource.entries.forEach { source ->
+            val sourceName = stringResource(source.resId)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -651,13 +687,13 @@ private fun UpdateSourceButtonGroup(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = source.displayName,
+                    text = sourceName,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Icon(
                     imageVector = Icons.Outlined.Info,
-                    contentDescription = "关于${source.displayName}",
+                    contentDescription = stringResource(R.string.update_card_about_source_cd, sourceName),
                     modifier = Modifier
                         .padding(start = 2.dp)
                         .size(16.dp)
@@ -681,12 +717,12 @@ private fun AppUpdateConfirmDialog(
 ) {
     AdaptiveTaskPromptDialog(
         visible = true,
-        title = "发现新版本",
+        title = stringResource(R.string.dialog_update_found_title),
         onConfirm = onConfirm,
         onDismissRequest = onDismiss,
-        confirmText = "立即更新",
+        confirmText = stringResource(R.string.dialog_update_now),
         confirmColor = Color(0xFF4CAF50),
-        dismissText = "稍后再说",
+        dismissText = stringResource(R.string.dialog_update_later),
         icon = Icons.Rounded.Info,
         content = {
             Column {
@@ -723,11 +759,11 @@ private fun ErrorDialog(
 ) {
     AdaptiveTaskPromptDialog(
         visible = true,
-        title = "更新失败",
+        title = stringResource(R.string.dialog_update_failed_title),
         message = message,
         onConfirm = onDismiss,
         onDismissRequest = onDismiss,
-        confirmText = "确定",
+        confirmText = stringResource(R.string.common_confirm),
         dismissText = null,
         icon = Icons.Rounded.Warning,
         confirmColor = MaterialTheme.colorScheme.error

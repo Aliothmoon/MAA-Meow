@@ -39,9 +39,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 
 /**
  * 悬浮窗专用对话框组件
@@ -52,13 +54,16 @@ fun OverlayDialog(
     onDismissRequest: () -> Unit,
     title: String,
     message: String,
-    confirmText: String = "确认",
-    dismissText: String = "取消",
+    confirmText: String? = null,
+    dismissText: String? = null,
     onConfirm: () -> Unit,
     icon: ImageVector? = null,
     iconTint: Color = MaterialTheme.colorScheme.error,
     confirmColor: Color = MaterialTheme.colorScheme.primary,
 ) {
+    val resolvedConfirmText = confirmText ?: stringResource(R.string.common_confirm)
+    val resolvedDismissText = dismissText ?: stringResource(R.string.common_cancel)
+
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(animationSpec = tween(200)),
@@ -157,7 +162,7 @@ fun OverlayDialog(
                                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             ) {
-                                Text(text = dismissText)
+                                Text(text = resolvedDismissText)
                             }
 
                             // 确认按钮
@@ -172,7 +177,7 @@ fun OverlayDialog(
                                     contentColor = MaterialTheme.colorScheme.onPrimary
                                 )
                             ) {
-                                Text(text = confirmText)
+                                Text(text = resolvedConfirmText)
                             }
                         }
                     }

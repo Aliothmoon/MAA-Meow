@@ -107,12 +107,16 @@ class ScheduleExecutionService : Service() {
             Timber.i("$TAG: 设备锁屏中，跳过本次定时执行: %s", strategy.name)
             triggerLogger.append("设备锁屏，跳过本次执行")
             triggerLogger.end(ExecutionResult.SKIPPED_LOCKED, "设备处于锁屏状态")
+            val lockedMsg = getString(R.string.notification_schedule_device_locked)
             repository.recordExecutionResult(
                 strategyId = strategy.id,
                 result = ExecutionResult.SKIPPED_LOCKED,
-                message = "设备处于锁屏状态",
+                message = lockedMsg,
             )
-            showResultNotification("定时任务跳过", "「${strategy.name}」: 设备处于锁屏状态")
+            showResultNotification(
+                getString(R.string.notification_schedule_skipped),
+                getString(R.string.notification_schedule_detail, strategy.name, lockedMsg)
+            )
             alarmManager.scheduleNext(strategy, scheduledTimeMs)
             shutdownService()
             return
@@ -162,7 +166,10 @@ class ScheduleExecutionService : Service() {
             result = ExecutionResult.FAILED_UI_LAUNCH,
             message = message,
         )
-        showResultNotification("定时任务失败", "「${strategy.name}」: $message")
+        showResultNotification(
+            getString(R.string.notification_schedule_failed),
+            getString(R.string.notification_schedule_detail, strategy.name, message)
+        )
         alarmManager.scheduleNext(strategy, scheduledTimeMs)
         shutdownService()
     }
@@ -171,10 +178,10 @@ class ScheduleExecutionService : Service() {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "定时任务",
+            getString(R.string.notification_channel_schedule),
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
-            description = "定时任务执行与结果通知"
+            description = getString(R.string.notification_channel_schedule_desc)
         }
         manager.createNotificationChannel(channel)
     }
@@ -204,8 +211,8 @@ class ScheduleExecutionService : Service() {
     private fun buildPreparingNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher_foreground)
-            .setContentTitle("定时任务")
-            .setContentText("正在准备拉起界面...")
+            .setContentTitle(getString(R.string.notification_schedule_title))
+            .setContentText(getString(R.string.notification_schedule_preparing))
             .setContentIntent(buildContentIntent())
             .setOngoing(true)
             .setSilent(true)

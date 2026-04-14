@@ -19,8 +19,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 
 /**
  * 面板标题栏
@@ -44,7 +46,7 @@ fun PanelHeader(
         val tabContent = @Composable {
             PanelTab.entries.forEach { tab ->
                 Text(
-                    text = tab.displayName,
+                    text = stringResource(tab.labelRes),
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (selectedTab == tab)
                         MaterialTheme.colorScheme.primary
@@ -76,7 +78,7 @@ fun PanelHeader(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Home,
-                        contentDescription = "回到主界面",
+                        contentDescription = stringResource(R.string.panel_cd_go_home),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )

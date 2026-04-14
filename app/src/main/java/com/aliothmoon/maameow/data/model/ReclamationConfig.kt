@@ -22,21 +22,10 @@ data class ReclamationConfig(
     val clearStore: Boolean = true
 ) : TaskParamProvider {
     companion object {
-        // TODO 需要跟随更新
-        val THEME_OPTIONS = listOf(
-            "Tales" to "沙洲遗闻",
-            "Fire" to "沙中之火 (已关闭)"
-        )
-
-        val MODE_OPTIONS = listOf(
-            0 to "无存档 (进出关卡刷点数)",
-            1 to "有存档 (组装道具刷点数)"
-        )
-
-        val INCREMENT_MODE_OPTIONS = listOf(
-            0 to "连点",
-            1 to "长按"
-        )
+        val THEME_KEYS = listOf("Tales", "Fire")
+        val MODE_VALUES = listOf(0, 1)
+        val INCREMENT_MODE_VALUES = listOf(0, 1)
+        const val DEFAULT_TOOL_TO_CRAFT = "荧光棒"
     }
 
     override fun toTaskParams(): MaaTaskParams {
@@ -47,7 +36,7 @@ data class ReclamationConfig(
             put("num_craft_batches", maxCraftCountPerRound)
             put("clear_store", clearStore)
             putJsonArray("tools_to_craft") {
-                val toolName = toolToCraft.ifBlank { "荧光棒" }
+                val toolName = toolToCraft.ifBlank { DEFAULT_TOOL_TO_CRAFT }
                 toolName.split(";", "；").map { it.trim() }.filter { it.isNotEmpty() }.forEach {
                     add(JsonPrimitive(it))
                 }

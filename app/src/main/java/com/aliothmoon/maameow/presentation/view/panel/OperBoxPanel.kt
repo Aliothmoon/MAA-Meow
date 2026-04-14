@@ -43,8 +43,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.stringResource
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
+import com.aliothmoon.maameow.utils.i18n.asString
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -55,16 +58,18 @@ fun OperBoxPanel(
 ) {
     val result by viewModel.collector.operBoxResult.collectAsStateWithLifecycle()
     val statusMessage by viewModel.statusMessage.collectAsStateWithLifecycle()
+    val resolvedStatusMessage = statusMessage.asString()
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val copyToastMessage = stringResource(R.string.panel_operbox_copy_toast)
 
     // 0 = 已拥有, 1 = 未拥有
     var selectedTab by remember { mutableIntStateOf(0) }
 
     val data = result
     if (data == null) {
-        OperBoxEmptyState(modifier, statusMessage)
+        OperBoxEmptyState(modifier, resolvedStatusMessage)
         return
     }
 
@@ -85,8 +90,10 @@ fun OperBoxPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    val tabs =
-                        listOf("已拥有 (${data.owned.size})", "未拥有 (${data.notOwned.size})")
+                    val tabs = listOf(
+                        stringResource(R.string.panel_operbox_tab_owned, data.owned.size),
+                        stringResource(R.string.panel_operbox_tab_not_owned, data.notOwned.size)
+                    )
                     tabs.forEachIndexed { index, label ->
                         Text(
                             text = label,
@@ -111,9 +118,13 @@ fun OperBoxPanel(
                         val entry = ClipData.newPlainText("label", text).toClipEntry()
                         clipboard.setClipEntry(entry)
                     }
-                    Toast.makeText(context, "已复制干员数据", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        copyToastMessage,
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }) {
-                    Text("导出", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.common_export), style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -134,15 +145,15 @@ private fun OperBoxEmptyState(modifier: Modifier, statusMessage: String) {
     ) {
         Spacer(Modifier.height(48.dp))
         Text(
-            text = "干员识别",
+            text = stringResource(R.string.panel_operbox_title),
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.ExtraBold
         )
         Spacer(Modifier.height(16.dp))
-        OperBoxHintRow("点击下方「开始任务」扫描已拥有的干员信息。")
+        OperBoxHintRow(stringResource(R.string.panel_operbox_hint_scan))
         Spacer(Modifier.height(12.dp))
-        OperBoxHintRow("识别完成后可查看已拥有 / 未拥有干员，支持导出。")
+        OperBoxHintRow(stringResource(R.string.panel_operbox_hint_results))
         if (statusMessage.isNotBlank()) {
             Spacer(Modifier.height(16.dp))
             Text(
@@ -218,7 +229,12 @@ private fun OperatorRow(oper: OperBoxOperator) {
             }
             if (oper.own) {
                 Text(
-                    text = "E${oper.elite} Lv${oper.level} 潜${oper.potential}",
+                    text = stringResource(
+                        R.string.panel_operbox_owned_meta,
+                        oper.elite,
+                        oper.level,
+                        oper.potential
+                    ),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

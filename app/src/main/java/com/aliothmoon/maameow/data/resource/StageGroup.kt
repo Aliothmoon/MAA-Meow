@@ -7,5 +7,6 @@ package com.aliothmoon.maameow.data.resource
 data class StageGroup(
     val title: String,           // 分组标题
     val stages: List<StageItem>, // 关卡列表
-    val daysLeftText: String? = null  // 剩余天数文本（活动关卡分组）
+    val daysLeftText: String? = null,  // 剩余天数文本（活动关卡分组）
+    val isPermanent: Boolean = false,  // 是否为常驻关卡分组
 )

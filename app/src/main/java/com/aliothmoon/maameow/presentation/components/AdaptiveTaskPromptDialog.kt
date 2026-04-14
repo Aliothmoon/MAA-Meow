@@ -37,11 +37,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
@@ -62,8 +64,8 @@ fun AdaptiveTaskPromptDialog(
     message: Any? = null, // 支持 String 或 AnnotatedString
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
-    confirmText: String = "确认",
-    dismissText: String? = "取消",
+    confirmText: String? = null,
+    dismissText: String? = null,
     neutralText: String? = null,
     onNeutralClick: () -> Unit = {},
     icon: ImageVector? = null, // 仅支持 ImageVector
@@ -78,6 +80,8 @@ fun AdaptiveTaskPromptDialog(
 
     val resolvedConfirmColor = confirmColor ?: MaterialTheme.colorScheme.primary
     val resolvedIconTint = iconTint ?: resolvedConfirmColor
+    val resolvedConfirmText = confirmText ?: stringResource(R.string.common_confirm)
+    val resolvedDismissText = dismissText ?: stringResource(R.string.common_cancel)
 
     if (LocalFloatingWindowContext.current) {
         FloatingTaskPromptDialog(
@@ -85,8 +89,8 @@ fun AdaptiveTaskPromptDialog(
             message = message,
             onDismissRequest = onDismissRequest,
             onConfirm = onConfirm,
-            confirmText = confirmText,
-            dismissText = dismissText,
+            confirmText = resolvedConfirmText,
+            dismissText = resolvedDismissText,
             neutralText = neutralText,
             onNeutralClick = onNeutralClick,
             icon = icon,
@@ -103,8 +107,8 @@ fun AdaptiveTaskPromptDialog(
             message = message,
             onDismissRequest = onDismissRequest,
             onConfirm = onConfirm,
-            confirmText = confirmText,
-            dismissText = dismissText,
+            confirmText = resolvedConfirmText,
+            dismissText = resolvedDismissText,
             neutralText = neutralText,
             onNeutralClick = onNeutralClick,
             icon = icon,

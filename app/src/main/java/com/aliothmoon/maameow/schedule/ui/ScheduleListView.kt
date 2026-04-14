@@ -41,20 +41,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.schedule.service.AutoStartHelper
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
-import com.aliothmoon.maameow.schedule.model.ScheduleType
 import org.koin.androidx.compose.koinViewModel
-import java.time.DayOfWeek
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import androidx.core.content.edit
 
 @Composable
@@ -84,12 +81,12 @@ fun ScheduleListView(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = "定时任务",
+                title = stringResource(R.string.schedule_title),
                 actions = {
                     IconButton(onClick = { navController.navigate(Routes.SCHEDULE_TRIGGER_LOG) }) {
                         Icon(
                             Icons.AutoMirrored.Filled.List,
-                            contentDescription = "触发日志"
+                            contentDescription = stringResource(R.string.schedule_trigger_log_title)
                         )
                     }
                 }
@@ -99,7 +96,7 @@ fun ScheduleListView(
             FloatingActionButton(
                 onClick = { navController.navigate("schedule_edit/new") }
             ) {
-                Icon(Icons.Default.Add, contentDescription = "新建策略")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.schedule_create_strategy))
             }
         }
     ) { padding ->
@@ -119,12 +116,12 @@ fun ScheduleListView(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "暂无定时策略",
+                        stringResource(R.string.schedule_empty_state),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        "点击右下角添加",
+                        stringResource(R.string.schedule_empty_hint_add),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
@@ -155,16 +152,16 @@ fun ScheduleListView(
         if (deleteConfirmId != null) {
             AlertDialog(
                 onDismissRequest = { deleteConfirmId = null },
-                title = { Text("删除策略") },
-                text = { Text("确定要删除该定时策略吗？") },
+                title = { Text(stringResource(R.string.schedule_delete_strategy_title)) },
+                text = { Text(stringResource(R.string.schedule_delete_strategy_message)) },
                 confirmButton = {
                     TextButton(onClick = {
                         viewModel.onDeleteStrategy(deleteConfirmId!!)
                         deleteConfirmId = null
-                    }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+                    }) { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { deleteConfirmId = null }) { Text("取消") }
+                    TextButton(onClick = { deleteConfirmId = null }) { Text(stringResource(R.string.common_cancel)) }
                 }
             )
         }
@@ -172,18 +169,18 @@ fun ScheduleListView(
         if (showAutoStartGuide) {
             AlertDialog(
                 onDismissRequest = { showAutoStartGuide = false },
-                title = { Text("自启动权限") },
-                text = { Text("为确保定时任务从后台正常唤起，请在系统设置中允许本应用自启动。") },
+                title = { Text(stringResource(R.string.schedule_auto_start_permission_title)) },
+                text = { Text(stringResource(R.string.schedule_auto_start_permission_message)) },
                 confirmButton = {
                     TextButton(onClick = {
                         AutoStartHelper.getAutoStartIntent(context)?.let {
                             runCatching { context.startActivity(it) }
                         }
                         showAutoStartGuide = false
-                    }) { Text("前往设置") }
+                    }) { Text(stringResource(R.string.schedule_go_to_settings)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showAutoStartGuide = false }) { Text("稍后") }
+                    TextButton(onClick = { showAutoStartGuide = false }) { Text(stringResource(R.string.schedule_later)) }
                 }
             )
         }
@@ -213,11 +210,8 @@ private fun StrategyCard(
                 Text(strategy.name, style = MaterialTheme.typography.titleMedium)
 
                 Spacer(modifier = Modifier.height(4.dp))
-                val summary = buildString {
-                    append(scheduleStrategyScheduleSummary(strategy))
-                }
                 Text(
-                    text = summary,
+                    text = localizedScheduleStrategySummary(strategy),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -231,7 +225,7 @@ private fun StrategyCard(
 
                 if (strategy.enabled && nextTrigger != null) {
                     Text(
-                        text = "下次: $nextTrigger",
+                        text = stringResource(R.string.schedule_next_trigger, nextTrigger),
                         modifier = Modifier.padding(top = 2.dp),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
@@ -259,7 +253,7 @@ private fun StrategyCard(
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Outlined.Delete,
-                    contentDescription = "删除策略",
+                    contentDescription = stringResource(R.string.common_delete),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -272,51 +266,18 @@ private fun StrategyCard(
     }
 }
 
-private fun scheduleDayDisplayName(day: DayOfWeek): String = when (day) {
-    DayOfWeek.MONDAY -> "一"
-    DayOfWeek.TUESDAY -> "二"
-    DayOfWeek.WEDNESDAY -> "三"
-    DayOfWeek.THURSDAY -> "四"
-    DayOfWeek.FRIDAY -> "五"
-    DayOfWeek.SATURDAY -> "六"
-    DayOfWeek.SUNDAY -> "日"
-}
-
-private fun scheduleStrategyScheduleSummary(strategy: ScheduleStrategy): String {
-    return when (strategy.scheduleType) {
-        ScheduleType.FIXED_TIME -> {
-            val days = strategy.daysOfWeek.sorted().joinToString(" ") { "周${scheduleDayDisplayName(it)}" }
-            val times = strategy.executionTimes.joinToString(" ") {
-                it.format(DateTimeFormatter.ofPattern("HH:mm"))
-            }
-            "$days $times"
-        }
-        ScheduleType.INTERVAL -> {
-            val totalMinutes = strategy.intervalMinutes ?: 0
-            val days = totalMinutes / (24 * 60)
-            val hours = (totalMinutes % (24 * 60)) / 60
-            val intervalText = when {
-                days > 0 && hours > 0 -> "每 ${days} 天 ${hours} 小时"
-                days > 0 -> "每 ${days} 天"
-                else -> "每 ${hours} 小时"
-            }
-            val startText = strategy.startTimeMs?.let { ms ->
-                val zdt = Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault())
-                "从 ${zdt.format(DateTimeFormatter.ofPattern("MM-dd HH:mm"))} 起"
-            } ?: ""
-            "$intervalText $startText"
-        }
-    }
-}
-
+@Composable
 private fun formatExecutionResult(result: ExecutionResult, message: String?): String {
     val label = when (result) {
-        ExecutionResult.STARTED -> "上次: 已启动"
-        ExecutionResult.FAILED_VALIDATION -> "上次: 校验失败"
-        ExecutionResult.FAILED_START -> "上次: 启动失败"
-        ExecutionResult.FAILED_UI_LAUNCH -> "上次: 拉起界面失败"
-        ExecutionResult.SKIPPED_BUSY -> "上次: 系统繁忙"
-        ExecutionResult.CANCELLED -> "上次: 已取消"
+        ExecutionResult.STARTED,
+        ExecutionResult.FAILED_VALIDATION,
+        ExecutionResult.FAILED_START,
+        ExecutionResult.FAILED_UI_LAUNCH,
+        ExecutionResult.SKIPPED_BUSY,
+        ExecutionResult.CANCELLED -> {
+            stringResource(R.string.schedule_last_result, scheduleExecutionResultLabel(result))
+        }
+
         else -> return ""
     }
     return if (message.isNullOrBlank()) label else "$label · $message"

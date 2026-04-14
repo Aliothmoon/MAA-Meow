@@ -4,6 +4,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.aliothmoon.maameow.R
 
 @Composable
 fun ShizukuPermissionDialog(
@@ -19,7 +21,11 @@ fun ShizukuPermissionDialog(
         onConfirm = onConfirm,
         onDismissRequest = {}, // 不允许通过关闭请求取消
         dismissOnOutsideClick = false,
-        confirmText = if (isRequesting) "授权中..." else "立即授权",
+        confirmText = if (isRequesting) {
+            stringResource(R.string.shizuku_auth_requesting)
+        } else {
+            stringResource(R.string.shizuku_auth_grant_now)
+        },
         dismissText = null,
         icon = Icons.Rounded.Build,
         confirmColor = MaterialTheme.colorScheme.primary

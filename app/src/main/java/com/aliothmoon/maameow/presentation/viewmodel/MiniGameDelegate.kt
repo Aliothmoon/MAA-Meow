@@ -1,10 +1,14 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
+import android.content.Context
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.activity.MiniGame
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
+import com.aliothmoon.maameow.utils.i18n.UiText
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,10 +27,11 @@ data class MiniGameUiState(
     val selectedTaskName: String = DEFAULT_TASK_NAME,
     val selectedEnding: String = "A",
     val selectedEvent: String = "",
-    val statusMessage: String = "",
+    val statusMessage: UiText = UiText.Empty,
 )
 
 class MiniGameDelegate(
+    private val appContext: Context,
     activityManager: ActivityManager,
     private val compositionService: MaaCompositionService,
     private val scope: CoroutineScope,
@@ -75,23 +80,32 @@ class MiniGameDelegate(
 
     fun onStart() {
         if (findGame(_state.value.selectedTaskName)?.isUnsupported == true) {
-            _state.update { it.copy(statusMessage = "当前版本不支持此任务") }
+            _state.update {
+                it.copy(statusMessage = uiTextOf(R.string.panel_mini_game_not_supported))
+            }
             return
         }
 
         scope.launch {
             val task = buildTaskParams()
-            _state.update { it.copy(statusMessage = "正在启动...") }
+            _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_starting)) }
             val result = compositionService.startCopilot(listOf(task))
-            _state.update { it.copy(statusMessage = formatStartResult(result, "小游戏任务已启动")) }
+            _state.update {
+                it.copy(
+                    statusMessage = appContext.formatStartResult(
+                        result,
+                        uiTextOf(R.string.panel_mini_game_started),
+                    ),
+                )
+            }
         }
     }
 
     fun onStop() {
         scope.launch {
-            _state.update { it.copy(statusMessage = "正在停止...") }
+            _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_stopping)) }
             compositionService.stop()
-            _state.update { it.copy(statusMessage = "已停止") }
+            _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_stopped)) }
         }
     }
 

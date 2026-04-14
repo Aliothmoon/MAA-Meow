@@ -54,7 +54,7 @@ class TaskExecutionService : Service() {
     override fun onCreate() {
         super.onCreate()
         ensureNotificationChannel()
-        startAsForeground(buildNotification("正在启动..."))
+        startAsForeground(buildNotification(getString(R.string.notification_task_starting)))
         observeProgress()
     }
 
@@ -70,28 +70,31 @@ class TaskExecutionService : Service() {
                 when (state) {
                     MaaExecutionState.IDLE, MaaExecutionState.ERROR -> {
                         Timber.i("TaskExecutionService: state=$state, stopping")
-                        val title = if (state == MaaExecutionState.IDLE) "任务完成" else "任务异常"
+                        val title = getString(
+                            if (state == MaaExecutionState.IDLE) R.string.notification_task_completed
+                            else R.string.notification_task_error
+                        )
                         showResultNotification(title, latestLog ?: "")
                         stopSelf()
                     }
 
                     MaaExecutionState.STARTING -> {
-                        updateNotification("正在启动...")
+                        updateNotification(getString(R.string.notification_task_starting))
                     }
 
                     MaaExecutionState.STOPPING -> {
-                        updateNotification("正在停止...")
+                        updateNotification(getString(R.string.notification_task_stopping))
                     }
 
                     MaaExecutionState.RUNNING -> {
                         val now = System.currentTimeMillis()
                         if (now - lastUpdateTime >= MIN_UPDATE_INTERVAL_MS) {
                             lastUpdateTime = now
-                            updateNotification(latestLog ?: "运行中")
+                            updateNotification(latestLog ?: getString(R.string.notification_task_running))
                         } else {
                             delay(MIN_UPDATE_INTERVAL_MS - (now - lastUpdateTime))
                             lastUpdateTime = System.currentTimeMillis()
-                            updateNotification(latestLog ?: "运行中")
+                            updateNotification(latestLog ?: getString(R.string.notification_task_running))
                         }
                     }
                 }
@@ -103,10 +106,10 @@ class TaskExecutionService : Service() {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "任务执行",
+            getString(R.string.notification_channel_task_execution),
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = "后台任务执行进度通知"
+            description = getString(R.string.notification_channel_task_execution_desc)
             setShowBadge(false)
         }
         manager.createNotificationChannel(channel)
@@ -127,7 +130,7 @@ class TaskExecutionService : Service() {
     private fun buildNotification(contentText: String): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher_foreground)
-            .setContentTitle("任务执行中")
+            .setContentTitle(getString(R.string.notification_task_running_title))
             .setContentText(contentText)
             .setContentIntent(buildContentIntent())
             .setOngoing(true)

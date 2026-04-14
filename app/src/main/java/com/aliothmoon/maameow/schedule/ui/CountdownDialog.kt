@@ -15,8 +15,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.schedule.model.CountdownState
 
 @Composable
@@ -27,7 +29,7 @@ fun CountdownDialog(
 ) {
     AlertDialog(
         onDismissRequest = { /* 不可关闭 */ },
-        title = { Text("定时任务即将执行") },
+        title = { Text(stringResource(R.string.schedule_countdown_title)) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -54,7 +56,7 @@ fun CountdownDialog(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "秒后自动开始",
+                    text = stringResource(R.string.schedule_countdown_seconds_to_start),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -62,12 +64,12 @@ fun CountdownDialog(
         },
         confirmButton = {
             Button(onClick = onStartNow) {
-                Text("立即开始")
+                Text(stringResource(R.string.schedule_countdown_start_now))
             }
         },
         dismissButton = {
             OutlinedButton(onClick = onCancel) {
-                Text("取消")
+                Text(stringResource(R.string.common_cancel))
             }
         }
     )

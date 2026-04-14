@@ -37,15 +37,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.toolbox.RecruitCalcResult
 import com.aliothmoon.maameow.presentation.components.INumericField
 import com.aliothmoon.maameow.presentation.components.RecruitTimeSelector
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
+import com.aliothmoon.maameow.utils.i18n.asString
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -57,6 +60,7 @@ fun RecruitCalcPanel(
     val tags by viewModel.collector.recruitTags.collectAsStateWithLifecycle()
     val results by viewModel.collector.recruitResults.collectAsStateWithLifecycle()
     val statusMessage by viewModel.statusMessage.collectAsStateWithLifecycle()
+    val resolvedStatusMessage = statusMessage.asString()
     val config by viewModel.recruitConfig.collectAsStateWithLifecycle()
 
     LazyColumn(
@@ -75,7 +79,7 @@ fun RecruitCalcPanel(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "自动设置招募时间",
+                    text = stringResource(R.string.panel_recruit_calc_auto_time),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
@@ -126,7 +130,7 @@ fun RecruitCalcPanel(
                     modifier = Modifier.padding(end = 8.dp)
                 )
                 Text(
-                    text = "自动选择 ${level}★ Tags",
+                    text = stringResource(R.string.panel_recruit_calc_auto_select_tags, level),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f)
                 )
@@ -157,7 +161,7 @@ fun RecruitCalcPanel(
                 Spacer(Modifier.height(4.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "检测到的标签",
+                        text = stringResource(R.string.panel_recruit_calc_detected_tags),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -206,7 +210,9 @@ fun RecruitCalcPanel(
         if (tags.isEmpty() && results.isEmpty()) {
             item {
                 Text(
-                    text = statusMessage.ifBlank { "点击「开始任务」识别当前公招标签并计算可能的干员组合" },
+                    text = resolvedStatusMessage.ifBlank {
+                        stringResource(R.string.panel_recruit_calc_empty_hint)
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,

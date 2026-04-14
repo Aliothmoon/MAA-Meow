@@ -10,7 +10,9 @@ import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.manager.LogcatServiceManager
+import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
+import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -23,6 +25,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 
 class MaaResourceLoader(
     private val pathConfig: MaaPathConfig,
@@ -32,11 +35,12 @@ class MaaResourceLoader(
     private val resourceDataManager: ResourceDataManager,
     private val activityManager: ActivityManager
 ) {
+    private val fullReloadInProgress = AtomicBoolean(false)
 
     sealed class State {
         data object NotLoaded : State()
-        data class Loading(val message: String = "正在加载MAA资源, 请稍等 ...") : State()
-        data class Reloading(val message: String = "正在重新加载MAA资源, 请稍等 ...") : State()
+        data class Loading(val message: String = "") : State()
+        data class Reloading(val message: String = "") : State()
         data object Ready : State()
         data class Failed(val message: String) : State()
     }
@@ -110,10 +114,13 @@ class MaaResourceLoader(
     }
 
     private suspend fun loadDepsInfo(clientType: String) {
+        val displayLanguage = ResourceDataManager.displayLanguageCode(
+            resolveSelectedLanguage(appSettings.language.value)
+        )
         withTimeout(30_000) {
             withContext(Dispatchers.IO) {
                 listOf(
-                    async { resourceDataManager.load(clientType) },
+                    async { resourceDataManager.load(clientType, displayLanguage) },
                     async { itemHelper.load() },
                     async { activityManager.load(clientType) }
                 )
@@ -155,6 +162,10 @@ class MaaResourceLoader(
     }
 
     fun reset() {
+        if (fullReloadInProgress.get()) {
+            Timber.i("Skip resource reset while full reload is in progress")
+            return
+        }
         _state.value = State.NotLoaded
     }
 

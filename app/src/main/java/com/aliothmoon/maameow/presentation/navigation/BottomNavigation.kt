@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.navigation
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -26,38 +27,39 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 
 sealed class BottomNavTab(
     val route: String,
-    val label: String,
+    @param:StringRes val labelRes: Int,
     val icon: ImageVector
 ) {
     data object HOME : BottomNavTab(
         route = Routes.HOME,
-        label = "首页",
+        labelRes = R.string.bottom_nav_home,
         icon = Icons.Default.Home
     )
 
     data object BACKGROUND : BottomNavTab(
         route = Routes.BACKGROUND_TASK,
-        label = "后台任务",
+        labelRes = R.string.bottom_nav_background_task,
         icon = Icons.Default.PlayArrow
     )
 
     data object SCHEDULE : BottomNavTab(
         route = Routes.SCHEDULE,
-        label = "定时",
+        labelRes = R.string.bottom_nav_schedule,
         icon = Icons.Default.DateRange
     )
 
     data object NOTIFICATION : BottomNavTab(
         route = Routes.NOTIFICATION,
-        label = "通知",
+        labelRes = R.string.bottom_nav_notification,
         icon = Icons.Default.Notifications
     )
 
@@ -86,6 +88,7 @@ fun AppBottomNavigation(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 BottomNavTab.all.forEach { tab ->
+                    val label = stringResource(tab.labelRes)
                     val selected = currentRoute == tab.route
                     val contentColor = if (selected)
                         MaterialTheme.colorScheme.primary
@@ -104,12 +107,12 @@ fun AppBottomNavigation(
                     ) {
                         Icon(
                             imageVector = tab.icon,
-                            contentDescription = tab.label,
+                            contentDescription = label,
                             modifier = Modifier.size(20.dp),
                             tint = contentColor
                         )
                         Text(
-                            text = tab.label,
+                            text = label,
                             style = MaterialTheme.typography.labelMedium,
                             color = contentColor
                         )
