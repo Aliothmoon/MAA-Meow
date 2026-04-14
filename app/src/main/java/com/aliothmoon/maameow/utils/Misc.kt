@@ -2,8 +2,10 @@ package com.aliothmoon.maameow.utils
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Process
+import android.provider.OpenableColumns
 import android.util.DisplayMetrics
 import android.view.WindowManager
 import kotlin.system.exitProcess
@@ -84,6 +86,15 @@ object Misc {
         intent?.let { context.startActivity(it) }
         Process.killProcess(Process.myPid())
         exitProcess(0)
+    }
+
+    fun queryFileName(context: Context, uri: Uri): String? {
+        return context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (idx >= 0) cursor.getString(idx) else null
+            } else null
+        }
     }
 
     fun openUriSafely(context: Context, uriString: String) {

@@ -184,6 +184,10 @@
     <string name="copilot_status_parsing">Parsing…</string>
     <string name="copilot_set_import_unsupported">%1$s does not support Copilot set import</string>
     <string name="copilot_local_path_unsupported">Local file paths are not supported yet. Please enter a Copilot code</string>
+    <string name="copilot_import_file">Import</string>
+    <string name="copilot_import_float_hint">Please import files from the Background Task page</string>
+    <string name="copilot_import_failed">Import failed: unable to parse file</string>
+    <string name="copilot_import_success">Successfully imported %1$d copilot(s)</string>
     <string name="copilot_status_importing_set">Importing Copilot Set (%1$d items)…</string>
     <string name="copilot_set_empty">The Copilot set is empty</string>
     <string name="copilot_status_imported_set_partial">Imported %1$d tasks from %2$d Copilot codes (%3$d failed to load)</string>

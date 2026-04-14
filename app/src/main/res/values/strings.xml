@@ -381,6 +381,10 @@
     <string name="copilot_status_parsing">正在解析…</string>
     <string name="copilot_set_import_unsupported">%1$s不支持作业集导入</string>
     <string name="copilot_local_path_unsupported">暂不支持本地文件路径，请输入神秘代码</string>
+    <string name="copilot_import_file">导入文件</string>
+    <string name="copilot_import_float_hint">请在后台管理页面导入文件</string>
+    <string name="copilot_import_failed">导入失败: 无法解析文件</string>
+    <string name="copilot_import_success">成功导入 %1$d 个作业</string>
     <string name="copilot_status_importing_set">正在导入作业集（%1$d 个）…</string>
     <string name="copilot_set_empty">作业集为空</string>
     <string name="copilot_status_imported_set_partial">已导入 %1$d 条作业（来自 %2$d 个神秘代码，%3$d 个读取失败）</string>

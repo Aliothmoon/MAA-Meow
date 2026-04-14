@@ -1,5 +1,8 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -38,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,8 +57,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.domain.service.OperatorDisplayItem
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
@@ -85,9 +93,37 @@ fun AutoBattlePanel(
     val maaState by viewModel.maaState.collectAsStateWithLifecycle()
     val isStarting = maaState == MaaExecutionState.STARTING
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val isInFloatingWindow = LocalFloatingWindowContext.current
     val statusMessage = state.statusMessage.asString()
     val compactButtonShape = RoundedCornerShape(8.dp)
     val compactButtonPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+    val importFloatHint = stringResource(R.string.copilot_import_float_hint)
+
+    // SAF 文件选择器（浮窗环境下不可用）
+    val filePicker = if (!isInFloatingWindow) {
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.OpenMultipleDocuments()
+        ) { uris ->
+            if (uris.isEmpty()) return@rememberLauncherForActivityResult
+            scope.launch {
+                val files = withContext(Dispatchers.IO) {
+                    uris.mapNotNull { uri ->
+                        val name = Misc.queryFileName(context, uri)
+                            ?: uri.lastPathSegment
+                            ?: "copilot_${System.currentTimeMillis()}.json"
+                        val json = context.contentResolver.openInputStream(uri)?.use {
+                            it.bufferedReader().readText()
+                        } ?: return@mapNotNull null
+                        name to json
+                    }
+                }
+                if (files.isNotEmpty()) {
+                    viewModel.onImportLocalFiles(files)
+                }
+            }
+        }
+    } else null
     val tabTitleTextStyle = MaterialTheme.typography.bodySmall.copy(
         fontSize = 13.sp,
         lineHeight = 16.sp
@@ -259,7 +295,10 @@ fun AutoBattlePanel(
             }
 
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Button(
                         onClick = viewModel::onParseSingleInput,
                         enabled = !state.isLoading && !isStarting,
@@ -281,6 +320,20 @@ fun AutoBattlePanel(
                         contentPadding = compactButtonPadding
                     ) {
                         Text(stringResource(R.string.panel_autobattle_read_set))
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            if (filePicker != null) {
+                                filePicker.launch(arrayOf("application/json", "application/octet-stream"))
+                            } else {
+                                Toast.makeText(context, importFloatHint, Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        enabled = !state.isLoading && !isStarting,
+                        shape = compactButtonShape,
+                        contentPadding = compactButtonPadding
+                    ) {
+                        Text(stringResource(R.string.copilot_import_file))
                     }
                     OutlinedButton(
                         onClick = { Misc.openUriSafely(context, "https://zoot.plus") },

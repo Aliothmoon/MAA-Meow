@@ -36,7 +36,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import android.net.Uri
-import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -1089,11 +1088,4 @@ private fun ContinueTrainingSection(
     }
 }
 
-private fun queryFileName(context: Context, uri: Uri): String? {
-    return context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-        if (cursor.moveToFirst()) {
-            val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-            if (idx >= 0) cursor.getString(idx) else null
-        } else null
-    }
-}
+private fun queryFileName(context: Context, uri: Uri): String? = Misc.queryFileName(context, uri)

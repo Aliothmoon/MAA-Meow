@@ -208,6 +208,77 @@ class CopilotViewModel(
         parseInput(forceSet = true)
     }
 
+    /**
+     * 从本地文件导入作业
+     * @param files 文件名与 JSON 内容的列表
+     */
+    fun onImportLocalFiles(files: List<Pair<String, String>>) {
+        if (files.isEmpty()) return
+        viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    isLoading = true,
+                    statusMessage = text(R.string.copilot_status_parsing),
+                    currentCopilot = null,
+                    operatorSummary = null,
+                    videoUrl = "",
+                )
+            }
+            var successCount = 0
+            var lastData: CopilotTaskData? = null
+            var lastFilePath = ""
+            var lastJson = ""
+
+            for ((fileName, json) in files) {
+                val data = copilotManager.parseJson(json).getOrElse { e ->
+                    Timber.w(e, "$TAG: 解析本地文件失败: $fileName")
+                    continue
+                }
+                val filePath = repository.saveCopilotJsonByName(fileName, json)
+                successCount++
+                lastData = data
+                lastFilePath = filePath
+                lastJson = json
+
+                if (files.size > 1 || _state.value.useCopilotList) {
+                    autoAddLoadedCopilotToListIfNeeded(
+                        data = data,
+                        filePath = filePath,
+                        copilotId = 0,
+                        source = "local"
+                    )
+                }
+            }
+
+            if (successCount == 0) {
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        statusMessage = text(R.string.copilot_import_failed)
+                    )
+                }
+                return@launch
+            }
+
+            if (files.size == 1 && !_state.value.useCopilotList) {
+                applyLoadedCopilot(
+                    data = lastData!!,
+                    json = lastJson,
+                    filePath = lastFilePath,
+                    copilotId = 0,
+                    fromWeb = false
+                )
+            } else {
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        statusMessage = text(R.string.copilot_import_success, successCount)
+                    )
+                }
+            }
+        }
+    }
+
     private fun parseInput(forceSet: Boolean) {
         val input = _state.value.inputText.trim()
         if (input.isEmpty()) return
