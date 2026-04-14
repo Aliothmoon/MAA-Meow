@@ -46,10 +46,13 @@ class CopilotRepository(
      * @return 保存的文件绝对路径
      */
     suspend fun saveCopilotJsonByName(fileName: String, json: String): String = withContext(Dispatchers.IO) {
-        val safeName = fileName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        val nameWithoutExt = fileName.substringBeforeLast(".")
+        val ext = fileName.substringAfterLast(".", "json")
+        val hash = Integer.toHexString(nameWithoutExt.hashCode()).takeLast(6)
+        val safeName = "${nameWithoutExt}_${hash}.${ext}".replace(Regex("[^a-zA-Z0-9._-]"), "_")
         val file = File(copilotDir, safeName)
         file.writeText(json, Charsets.UTF_8)
-        Timber.d("$TAG: 作业已保存: ${file.absolutePath}")
+        Timber.d("$TAG: 作业已保存: ${file.absolutePath} (原始: $fileName)")
         file.absolutePath
     }
 

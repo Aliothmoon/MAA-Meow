@@ -309,8 +309,13 @@ private fun CustomInfrastSection(
             scope.launch {
                 withContext(Dispatchers.IO) {
                     val destDir = File(pathConfig.rootDir, "custom_infrast").apply { mkdirs() }
-                    val fileName = queryFileName(context, uri) ?: "user_infrast.json"
-                    val destFile = File(destDir, fileName)
+                    val rawName = queryFileName(context, uri) ?: "user_infrast.json"
+                    val nameWithoutExt = rawName.substringBeforeLast(".")
+                    val ext = rawName.substringAfterLast(".", "json")
+                    val hash = Integer.toHexString(nameWithoutExt.hashCode()).takeLast(6)
+                    val safeName = "${nameWithoutExt}_${hash}.${ext}"
+                        .replace(Regex("[^a-zA-Z0-9._-]"), "_")
+                    val destFile = File(destDir, safeName)
                     context.contentResolver.openInputStream(uri)?.use { input ->
                         destFile.outputStream().use { output -> input.copyTo(output) }
                     }
@@ -329,6 +334,8 @@ private fun CustomInfrastSection(
     // 解析后的配置（用于计划下拉框）
     val (custom, setCustom) = remember { mutableStateOf<CustomInfrastConfig?>(null) }
     val (error, setError) = remember { mutableStateOf<String?>(null) }
+    val fileNotFoundMsg = stringResource(R.string.panel_infrast_file_not_found)
+    val parseFailedFmt = stringResource(R.string.panel_infrast_parse_failed, "%s")
 
     // 当文件路径变化时解析配置
     LaunchedEffect(config.customInfrastFile) {
@@ -362,16 +369,11 @@ private fun CustomInfrastSection(
                     }
                 } else {
                     setCustom(null)
-                    setError(context.getString(R.string.panel_infrast_file_not_found))
+                    setError(fileNotFoundMsg)
                 }
             } catch (e: Exception) {
                 setCustom(null)
-                setError(
-                    context.getString(
-                        R.string.panel_infrast_parse_failed,
-                        e.message.orEmpty()
-                    )
-                )
+                setError(parseFailedFmt.format(e.message.orEmpty()))
             }
         }
     }
