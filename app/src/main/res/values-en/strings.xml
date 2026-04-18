@@ -308,6 +308,9 @@
     <string name="dialog_update_later">Later</string>
     <string name="dialog_update_failed_title">Update Failed</string>
 
+    <!-- dialog: changelog -->
+    <string name="dialog_changelog_title">What\'s New</string>
+
     <!-- dialog: Shizuku / Sui -->
     <string name="dialog_shizuku_not_installed_title">Shizuku Not Installed</string>
     <string name="dialog_shizuku_not_installed_message">This app depends on the Shizuku service. Shizuku was not detected on your device; please install it first.</string>

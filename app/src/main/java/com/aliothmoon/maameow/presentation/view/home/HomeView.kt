@@ -74,6 +74,7 @@ import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.components.ChangelogDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.UpdateCard
 import com.aliothmoon.maameow.presentation.state.StatusColorType
@@ -127,6 +128,7 @@ fun HomeView(
     LaunchedEffect(uiState.resourceInitState) {
         if (uiState.resourceInitState is ResourceInitState.Ready) {
             updateViewModel.refreshResourceVersion()
+            updateViewModel.checkPendingChangelog()
             updateViewModel.checkUpdatesOnStartup()
         }
     }
@@ -136,6 +138,15 @@ fun HomeView(
         state = uiState.resourceInitState,
         onRetry = { viewModel.onTryResourceInit() }
     )
+
+    // 更新公告弹窗
+    val changelogDialog by updateViewModel.changelogDialog.collectAsStateWithLifecycle()
+    changelogDialog?.let {
+        ChangelogDialog(
+            content = it,
+            onDismiss = { updateViewModel.dismissChangelog() }
+        )
+    }
 
     // 发现更新弹窗
     startupDialog?.let { result ->

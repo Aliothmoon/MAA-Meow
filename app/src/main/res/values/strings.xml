@@ -505,6 +505,9 @@
     <string name="dialog_update_later">稍后再说</string>
     <string name="dialog_update_failed_title">更新失败</string>
 
+    <!-- dialog: changelog -->
+    <string name="dialog_changelog_title">更新公告</string>
+
     <!-- dialog: Shizuku / Sui -->
     <string name="dialog_shizuku_not_installed_title">未检测到 Shizuku</string>
     <string name="dialog_shizuku_not_installed_message">本应用依赖 Shizuku 服务运行，检测到设备未安装 Shizuku，请先安装。</string>

@@ -383,4 +383,33 @@ class AppSettingsManager(private val context: Context) {
         }
     }
 
+    // 待展示的更新公告
+    val pendingChangelogVersion: StateFlow<String> = settings
+        .map { it.pendingChangelogVersion }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.pendingChangelogVersion)
+
+    val pendingChangelogContent: StateFlow<String> = settings
+        .map { it.pendingChangelogContent }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.pendingChangelogContent)
+
+    suspend fun savePendingChangelog(version: String, content: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                it[pendingChangelogVersion] = version
+                it[pendingChangelogContent] = content
+            }
+        }
+    }
+
+    suspend fun clearPendingChangelog() {
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                it[pendingChangelogVersion] = ""
+                it[pendingChangelogContent] = ""
+            }
+        }
+    }
+
 }

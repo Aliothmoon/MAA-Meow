@@ -42,4 +42,7 @@ data class AppSettings(
     @PrefKey(default = "P720") val backgroundResolution: String = "P720",
 
     @PrefKey(default = "SYSTEM") val language: String = "SYSTEM",
+
+    @PrefKey(default = "") val pendingChangelogVersion: String = "",
+    @PrefKey(default = "") val pendingChangelogContent: String = "",
 )

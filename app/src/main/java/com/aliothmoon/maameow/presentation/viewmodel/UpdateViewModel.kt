@@ -193,6 +193,8 @@ class UpdateViewModel(
 
             if (appAvailable == null && resAvailable == null) return@launch
 
+            saveAppChangelog(appAvailable)
+
             if (appSettingsManager.autoDownloadUpdate.value) {
                 // 自动下载模式
                 autoDownload(appAvailable, resAvailable)
@@ -262,7 +264,9 @@ class UpdateViewModel(
         viewModelScope.launch {
             _appChecking.value = true
             Timber.i("检查 App 更新 (MirrorChyan)")
-            _appCheckResult.value = updateService.checkAppUpdate(channel = updateChannel.value)
+            val result = updateService.checkAppUpdate(channel = updateChannel.value)
+            saveAppChangelog((result as? UpdateCheckResult.Available)?.info)
+            _appCheckResult.value = result
             _appChecking.value = false
         }
     }
@@ -284,5 +288,33 @@ class UpdateViewModel(
 
     fun resetAppUpdate() {
         updateService.resetAppProcess()
+    }
+
+    // ==================== 更新公告 ====================
+
+    private val _changelogDialog = MutableStateFlow<String?>(null)
+    val changelogDialog: StateFlow<String?> = _changelogDialog.asStateFlow()
+
+    fun checkPendingChangelog() {
+        val version = appSettingsManager.pendingChangelogVersion.value
+        val content = appSettingsManager.pendingChangelogContent.value
+        val isNewVersion = version == BuildConfig.VERSION_NAME
+        if (version.isNotEmpty() && content.isNotEmpty() && isNewVersion) {
+            _changelogDialog.value = content
+        }
+    }
+
+    fun dismissChangelog() {
+        _changelogDialog.value = null
+        viewModelScope.launch {
+            appSettingsManager.clearPendingChangelog()
+        }
+    }
+
+    private fun saveAppChangelog(appInfo: UpdateInfo?) {
+        if (appInfo == null || appInfo.releaseNote.isNullOrBlank()) return
+        viewModelScope.launch {
+            appSettingsManager.savePendingChangelog(appInfo.version, appInfo.releaseNote)
+        }
     }
 }
