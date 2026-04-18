@@ -7,4 +7,8 @@ object AppOpsHelper {
         val op = if (isAllowed) "allow" else "deny"
         return RemoteUtils.shellExec("appops set $packageName PLAY_AUDIO $op") == 0
     }
+    fun resetAppops(packageName: String?): Boolean {
+        if (packageName.isNullOrBlank()) return false
+        return RemoteUtils.shellExec("appops reset $packageName") == 0
+    }
 }

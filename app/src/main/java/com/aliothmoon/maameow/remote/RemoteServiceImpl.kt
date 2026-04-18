@@ -48,7 +48,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
         private fun restoreTrackedAudioPackages() {
             trackedAudioPackages.forEach { packageName ->
-                AppOpsHelper.setPlayAudioOpAllowed(packageName, true)
+                AppOpsHelper.resetAppops(packageName)
             }
         }
     }
