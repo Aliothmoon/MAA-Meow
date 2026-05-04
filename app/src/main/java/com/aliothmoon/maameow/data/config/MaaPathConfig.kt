@@ -75,7 +75,7 @@ class MaaPathConfig(private val context: Context) {
     val isResourceReady: Boolean
         get() = versionFile.exists()
                 && isAppVersionCurrent()
-                && !isBundledResourceNewer()
+//                && !isBundledResourceNewer()
 
     private fun isBundledResourceNewer(): Boolean {
         val bundled = bundledResourceVersion ?: return false
