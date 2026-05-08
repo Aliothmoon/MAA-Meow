@@ -2,8 +2,11 @@
 
 import android.content.Context
 import com.alibaba.fastjson2.JSONObject
+import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.LogItem
 import com.aliothmoon.maameow.data.model.LogLevel
+import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
@@ -28,6 +31,8 @@ class SubTaskHandler(
     private val resourceDataManager: ResourceDataManager,
     private val toolboxResultCollector: ToolboxResultCollector,
     private val notificationCenter: MaaNotificationCenter,
+    private val chainState: TaskChainState,
+    private val activityManager: ActivityManager,
 ) {
     private val resources = applicationContext.resources
     private val packageName = applicationContext.packageName
@@ -321,7 +326,9 @@ class SubTaskHandler(
                     append("${str("BegunToExplore")} $times ${str("UnitTime")}", LogLevel.INFO)
                 }
 
-                "Mall" if task == "EndOfActionThenStop" -> {
+                // 上游 dev-v2 22f3175b4: Core 移除 EndOfActionThenStop 任务,
+                // OF-1 信用战完成现在会触发 Copilot@StageDrops-Stars-3
+                "Mall" if task == "StageDrops-Stars-3" -> {
                     append("${str("CompleteTask")}${str("CreditFight")}", LogLevel.TRACE)
                 }
 
@@ -627,8 +634,13 @@ class SubTaskHandler(
         when {
             count == -1 -> append("${str("MedicineUsed")} Unknown times", LogLevel.ERROR)
             isExpiring -> {
-                val days = subDetails.getIntValue("expire_days")
-                val prefix = if (days > 0) str("ExpiringMedicineUsedDays", days) else str("ExpiringMedicineUsed")
+                // 上游 dev-v2 925ff331a: 回调不带 expire_days, 反查当前 active fight config 计算小时数
+                val hours = computeExpireHoursFromActiveConfig()
+                val prefix = if (hours > 0) {
+                    str("ExpiringMedicineUsedHours", hours)
+                } else {
+                    str("ExpiringMedicineUsed")
+                }
                 append("$prefix (+$count, ${str("Total")}: $medicineUsedTotal)", LogLevel.INFO)
             }
 
@@ -637,6 +649,26 @@ class SubTaskHandler(
                 LogLevel.INFO
             )
         }
+    }
+
+    /**
+     * 反查当前任务链中第一个启用过期药的 FightConfig, 计算最终过期小时数
+     * 算法对齐上游 WPF: max(用户配置天数, 活动结束前两天时距本周末天数) * 24
+     * 同一时刻通常只有一个 fight 在执行, 此简化是安全的
+     */
+    private fun computeExpireHoursFromActiveConfig(): Int {
+        val fight = chainState.chain.value
+            .mapNotNull { it.config as? FightConfig }
+            .firstOrNull { it.useExpiringMedicine }
+            ?: return 0
+
+        val userDays = fight.medicineExpireDays.coerceIn(1, 7)
+        val activityDays = if (fight.useExpireMedicineForActivity) {
+            activityManager.getActivityAwareExpireDays()
+        } else {
+            0
+        }
+        return maxOf(userDays, activityDays) * 24
     }
 
     private fun handleReclamationReport(subDetails: JSONObject?) {

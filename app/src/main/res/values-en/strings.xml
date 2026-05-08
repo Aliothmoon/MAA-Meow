@@ -435,7 +435,7 @@
     <string name="maa_start_combat">Start combat: </string>
     <string name="maa_medicine_used">Medicine used</string>
     <string name="maa_expiring_medicine_used">Expiring medicine used</string>
-    <string name="maa_expiring_medicine_used_days">Used sanity potion expiring within %1$d day(s)</string>
+    <string name="maa_expiring_medicine_used_hours">Expiring medicine (in %1$d hours) used</string>
     <string name="maa_fight_times_unused">Completed %1$s battles, will execute %2$s multiplier proxy next time, will complete %3$s battles after entering, exceeds %4$s limit, will not enter battle</string>
     <string name="maa_algorithm_finish">Algorithm Finish</string>
     <string name="maa_algorithm_badge">Algorithm Badge</string>

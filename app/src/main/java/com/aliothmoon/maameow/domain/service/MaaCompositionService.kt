@@ -15,7 +15,6 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.maa.AsstMsg
 import com.aliothmoon.maameow.maa.MaaInstanceOptions.ANDROID
-import com.aliothmoon.maameow.maa.MaaInstanceOptions.CLIENT_TYPE
 import com.aliothmoon.maameow.maa.MaaInstanceOptions.TOUCH_MODE
 import com.aliothmoon.maameow.maa.callback.MaaCallbackDispatcher
 import com.aliothmoon.maameow.maa.callback.MaaExecutionStateHolder
@@ -289,9 +288,6 @@ class MaaCompositionService(
                 buildConnectConfig(r.width, r.height, displayId)
             }
         }
-        // 在连接前传 ClientType, 让 Core 自动解析正确的游戏包名 (v6.9.0+)
-        // 旧 Core 不识别 key=6 时返回 false, 仅记录日志, 不阻断流程
-        maa.SetInstanceOption(CLIENT_TYPE, clientType)
         return asyncConnect(maa, config)
     }
 
