@@ -57,7 +57,7 @@
     <string name="settings_background_resolution_title">Background Resolution</string>
     <string name="settings_background_resolution_desc">Background mode only</string>
     <string name="settings_skip_shizuku_check">Skip Shizuku Check</string>
-    <string name="settings_deployment_with_pause">Auto-battle Deploy with Pause</string>
+    <string name="settings_deployment_with_pause">Deploy operators while paused</string>
     <string name="settings_deployment_with_pause_tip">Hold ESC to pause the game while deploying operators for higher precision. Disable if ESC injection misbehaves or some operators are not placed correctly; deployment will fall back to plain swipe</string>
     <string name="settings_section_data">Data Management</string>
     <string name="settings_export_config_title">Export Configuration</string>
