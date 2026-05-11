@@ -185,7 +185,18 @@ data class InfrastConfig(
      * 结构: plans[planIndex] -> periods -> [startTime, endTime]
      */
     @Transient
-    val customPlanPeriods: List<List<List<String>>> = emptyList()
+    val customPlanPeriods: List<List<List<String>>> = emptyList(),
+
+    /**
+     * 自定义基建计划名称列表（持久化）
+     *
+     * 由 UI 层解析 customInfrastFile 后写入，用于任务完成回调自动切换下一个计划时：
+     * - list.size 提供 plan 总数（对应 WPF InfrastTask.InfrastPlan.Count）
+     * - 元素提供切换后的 plan 名称用于日志输出
+     *
+     * 列表为空表示 UI 尚未成功解析配置文件，此时自动切换流程会跳过。
+     */
+    val customPlanNames: List<String> = emptyList()
 ) : TaskParamProvider {
 
     /**

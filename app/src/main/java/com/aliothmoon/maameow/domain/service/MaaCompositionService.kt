@@ -307,7 +307,7 @@ class MaaCompositionService(
             sessionLogger.appendToFileOnly("[TaskParams] ${t.type.value}: ${t.params}")
             val taskId = maa.AppendTask(t.type.value, t.params)
             if (taskId > 0) {
-                taskChainStatusTracker.register(taskId, t.type.value)
+                taskChainStatusTracker.register(taskId, t.type.value, t.nodeId)
             }
         }
         if (!maa.Start()) {

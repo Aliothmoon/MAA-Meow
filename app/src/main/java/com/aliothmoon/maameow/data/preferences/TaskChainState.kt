@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.aliothmoon.maameow.constant.Packages
+import com.aliothmoon.maameow.data.model.InfrastConfig
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
@@ -161,6 +162,36 @@ class TaskChainState(
                 Timber.w("updateNodeConfig: node %s not found", nodeId)
             }
         }
+    }
+
+    /**
+     * 自定义基建任务链完成后，将目标节点的 planSelect 自动切到下一个计划。
+     *
+     * 对齐 WPF `InfrastSettingsUserControlModel.IncreaseCustomInfrastPlanIndex`:
+     * - 仅 Custom 模式生效
+     * - planSelect == -1(时间轮换)不切
+     * - planSelect 越界或计划列表未就绪直接放弃
+     * - 自增后超出范围回环到 0
+     *
+     * 返回 Pair(新索引, 新计划名)，若未满足切换条件返回 null。
+     */
+    suspend fun incrementCustomInfrastPlanSelect(nodeId: String): Pair<Int, String?>? {
+        val node = _chain.value.firstOrNull { it.id == nodeId } ?: run {
+            Timber.d("incrementCustomInfrastPlanSelect: node %s not found", nodeId)
+            return null
+        }
+        val cfg = node.config as? InfrastConfig ?: return null
+        if (cfg.mode != com.aliothmoon.maameow.domain.enums.InfrastMode.Custom) return null
+        if (cfg.customInfrastPlanSelect < 0) return null
+        val count = cfg.customPlanNames.size
+        if (count <= 0) {
+            Timber.d("incrementCustomInfrastPlanSelect: plan names empty for node %s", nodeId)
+            return null
+        }
+        if (cfg.customInfrastPlanSelect >= count) return null
+        val next = (cfg.customInfrastPlanSelect + 1) % count
+        updateNodeConfig(nodeId, cfg.copy(customInfrastPlanSelect = next))
+        return next to cfg.customPlanNames.getOrNull(next)
     }
 
     suspend fun reorderNodes(fromIndex: Int, toIndex: Int) {

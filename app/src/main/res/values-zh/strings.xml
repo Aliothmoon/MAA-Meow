@@ -103,6 +103,7 @@
     <string name="maa_product_changed">产物已切换</string>
     <string name="maa_room_groups_match">匹配编组: </string>
     <string name="maa_room_groups_match_failed">匹配干员编组失败，编组列表: </string>
+    <string name="maa_custom_infrast_plan_index_auto_switch">已自动切换至下一套自定义基建方案，下次运行生效</string>
     <string name="maa_room_operators">首选干员: </string>
     <string name="maa_training_idle">训练室空闲中</string>
     <string name="maa_training_completed">训练完成</string>
