@@ -59,9 +59,6 @@ object ActivityUtils {
         if (excludeFromRecents) {
             flag = flag or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
         }
-        if (displayId != 0) {
-            flag = flag or Intent.FLAG_ACTIVITY_MULTIPLE_TASK
-        }
         intent.addFlags(flag)
 
         if (forceStop) {

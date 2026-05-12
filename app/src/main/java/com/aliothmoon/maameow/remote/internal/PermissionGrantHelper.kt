@@ -115,10 +115,34 @@ object PermissionGrantHelper {
                 RemoteUtils.shellExec("am set-bg-restriction-level $packageName unrestricted")
             }
 
+            disablePhantomProcessKiller()
+
             Ln.i("$TAG: Background unrestricted for $packageName")
             true
         } catch (e: Exception) {
             Ln.e("$TAG: Failed to grant background unrestricted: $e")
+            false
+        }
+    }
+
+    /**
+     * 禁用 Android 12+ 的 Phantom Process Killer
+     */
+    fun disablePhantomProcessKiller(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            return true
+        }
+        return try {
+            // Android 12L & 13+
+            RemoteUtils.shellExec("device_config put activity_manager max_phantom_processes 2147483647")
+            // Android 12 Beta
+            RemoteUtils.shellExec("settings put global settings_config_disable_monitor_phantom_procs true")
+            // Android 11+
+            RemoteUtils.shellExec("settings put global phantom_process_killer_enable false")
+            Ln.i("$TAG: Phantom process killer disabled")
+            true
+        } catch (e: Exception) {
+            Ln.e("$TAG: Failed to disable phantom process killer: $e")
             false
         }
     }
