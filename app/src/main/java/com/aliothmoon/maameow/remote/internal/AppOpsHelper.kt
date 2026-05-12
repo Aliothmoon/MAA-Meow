@@ -4,11 +4,11 @@ object AppOpsHelper {
 
     fun setPlayAudioOpAllowed(packageName: String?, isAllowed: Boolean): Boolean {
         if (packageName.isNullOrBlank()) return false
-        val op = if (isAllowed) "allow" else "deny"
+        val op = if (isAllowed) "allow" else "ignore"
         return RemoteUtils.shellExec("appops set $packageName PLAY_AUDIO $op") == 0
     }
-    fun resetAppops(packageName: String?): Boolean {
+    fun resetPlayAudioOp(packageName: String?): Boolean {
         if (packageName.isNullOrBlank()) return false
-        return RemoteUtils.shellExec("appops reset $packageName") == 0
+        return RemoteUtils.shellExec("appops set $packageName PLAY_AUDIO default") == 0
     }
 }
