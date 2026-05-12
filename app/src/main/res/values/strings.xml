@@ -103,6 +103,7 @@
     <string name="maa_product_changed">产物已切换</string>
     <string name="maa_room_groups_match">匹配编组: </string>
     <string name="maa_room_groups_match_failed">匹配干员编组失败，编组列表: </string>
+    <string name="maa_custom_infrast_plan_index_auto_switch">已自动切换至下一套自定义基建方案，下次运行生效</string>
     <string name="maa_room_operators">首选干员: </string>
     <string name="maa_training_idle">训练室空闲中</string>
     <string name="maa_training_completed">训练完成</string>
@@ -128,7 +129,7 @@
     <string name="maa_start_combat">开始战斗: </string>
     <string name="maa_medicine_used">已使用理智药</string>
     <string name="maa_expiring_medicine_used">已使用过期的理智药</string>
-    <string name="maa_expiring_medicine_used_days">已使用 %1$d 天内过期的理智药</string>
+    <string name="maa_expiring_medicine_used_hours">已使用 %1$d H内过期理智药</string>
     <string name="maa_fight_times_unused">已完成 %1$s 次战斗, 下次将执行 %2$s 倍率代理, 进入后将完成 %3$s 次战斗, 超过 %4$s 次限制, 不进入战斗</string>
 
     <!-- subtask_extra_reclamation -->
@@ -254,6 +255,8 @@
     <string name="settings_background_resolution_title">后台分辨率</string>
     <string name="settings_background_resolution_desc">仅后台模式生效</string>
     <string name="settings_skip_shizuku_check">跳过 Shizuku 检查</string>
+    <string name="settings_deployment_with_pause">暂停时部署干员</string>
+    <string name="settings_deployment_with_pause_tip">部署干员前模拟按住 ESC 暂停游戏，提高部署精确度。如遇 ESC 注入异常或部分干员部署不到位，可关闭改用普通滑动</string>
 
     <!-- settings: data section -->
     <string name="settings_section_data">数据管理</string>

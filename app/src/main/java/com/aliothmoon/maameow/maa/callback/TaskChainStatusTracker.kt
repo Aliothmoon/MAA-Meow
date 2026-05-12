@@ -20,7 +20,8 @@ enum class TaskRunStatus {
 data class TaskRunInfo(
     val taskId: Int,
     val taskChain: String,
-    val status: TaskRunStatus
+    val status: TaskRunStatus,
+    val nodeId: String? = null,
 )
 
 /**
@@ -39,8 +40,8 @@ class TaskChainStatusTracker {
 
     private val taskMap = LinkedHashMap<Int, TaskRunInfo>()
 
-    fun register(taskId: Int, taskChain: String) {
-        taskMap[taskId] = TaskRunInfo(taskId, taskChain, TaskRunStatus.PENDING)
+    fun register(taskId: Int, taskChain: String, nodeId: String? = null) {
+        taskMap[taskId] = TaskRunInfo(taskId, taskChain, TaskRunStatus.PENDING, nodeId)
         emit()
     }
 
@@ -48,6 +49,8 @@ class TaskChainStatusTracker {
         taskMap.computeIfPresent(taskId) { _, info -> info.copy(status = status) }
         emit()
     }
+
+    fun getNodeId(taskId: Int): String? = taskMap[taskId]?.nodeId
 
     fun clear() {
         taskMap.clear()

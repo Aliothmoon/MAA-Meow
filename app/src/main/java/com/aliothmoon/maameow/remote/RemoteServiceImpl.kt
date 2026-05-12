@@ -129,7 +129,12 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun grantPermissions(request: PermissionGrantRequest): PermissionStateInfo {
         val packageName = request.packageName
-        val uid = request.uid
+        val uid = if (request.uid > 0) request.uid else runCatching {
+            FakeContext.get().packageManager.getApplicationInfo(packageName, 0).uid
+        }.getOrElse {
+            Ln.w("$TAG: Failed to resolve UID for $packageName")
+            request.uid
+        }
         val p = request.permissions
 
         with(PermissionGrantHelper) {

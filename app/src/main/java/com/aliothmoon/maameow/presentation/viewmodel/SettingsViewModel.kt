@@ -142,6 +142,15 @@ class SettingsViewModel(
         }
     }
 
+    val deploymentWithPause: StateFlow<Boolean> = appSettingsManager.deploymentWithPause
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun setDeploymentWithPause(enabled: Boolean) {
+        viewModelScope.launch {
+            appSettingsManager.setDeploymentWithPause(enabled)
+        }
+    }
+
     val updateChannel: StateFlow<UpdateChannel> = appSettingsManager.updateChannel
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UpdateChannel.STABLE)
 

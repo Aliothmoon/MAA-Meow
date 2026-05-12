@@ -130,12 +130,15 @@ class TaskExecutionService : Service() {
     private fun buildNotification(contentText: String): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher_foreground)
-            .setContentTitle(getString(R.string.notification_task_running_title))
-            .setContentText(contentText)
+            .setContentTitle(contentText)
+            .setContentText(getString(R.string.notification_task_running))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
             .setContentIntent(buildContentIntent())
             .setOngoing(true)
+            .setRequestPromotedOngoing(true)
             .setSilent(true)
             .setOnlyAlertOnce(true)
+            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .build()
     }
 

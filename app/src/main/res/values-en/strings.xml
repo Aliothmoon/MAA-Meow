@@ -57,6 +57,8 @@
     <string name="settings_background_resolution_title">Background Resolution</string>
     <string name="settings_background_resolution_desc">Background mode only</string>
     <string name="settings_skip_shizuku_check">Skip Shizuku Check</string>
+    <string name="settings_deployment_with_pause">Deploy operators while paused</string>
+    <string name="settings_deployment_with_pause_tip">Hold ESC to pause the game while deploying operators for higher precision. Disable if ESC injection misbehaves or some operators are not placed correctly; deployment will fall back to plain swipe</string>
     <string name="settings_section_data">Data Management</string>
     <string name="settings_export_config_title">Export Configuration</string>
     <string name="settings_export_config_desc">Export all settings and task configurations to a file</string>
@@ -419,6 +421,7 @@
     <string name="maa_product_changed">Product has changed</string>
     <string name="maa_room_groups_match">Match Group: </string>
     <string name="maa_room_groups_match_failed">Failed to match Operator groups, group list: </string>
+    <string name="maa_custom_infrast_plan_index_auto_switch">Auto-switched to the next custom infrast plan, effective next run</string>
     <string name="maa_room_operators">Preferred Operators: </string>
     <string name="maa_training_idle">Training room is vacant</string>
     <string name="maa_training_completed">Training completed</string>
@@ -435,7 +438,7 @@
     <string name="maa_start_combat">Start combat: </string>
     <string name="maa_medicine_used">Medicine used</string>
     <string name="maa_expiring_medicine_used">Expiring medicine used</string>
-    <string name="maa_expiring_medicine_used_days">Used sanity potion expiring within %1$d day(s)</string>
+    <string name="maa_expiring_medicine_used_hours">Expiring medicine (in %1$d hours) used</string>
     <string name="maa_fight_times_unused">Completed %1$s battles, will execute %2$s multiplier proxy next time, will complete %3$s battles after entering, exceeds %4$s limit, will not enter battle</string>
     <string name="maa_algorithm_finish">Algorithm Finish</string>
     <string name="maa_algorithm_badge">Algorithm Badge</string>

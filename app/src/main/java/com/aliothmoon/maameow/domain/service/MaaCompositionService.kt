@@ -15,7 +15,7 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.maa.AsstMsg
 import com.aliothmoon.maameow.maa.MaaInstanceOptions.ANDROID
-import com.aliothmoon.maameow.maa.MaaInstanceOptions.CLIENT_TYPE
+import com.aliothmoon.maameow.maa.MaaInstanceOptions.DEPLOYMENT_WITH_PAUSE
 import com.aliothmoon.maameow.maa.MaaInstanceOptions.TOUCH_MODE
 import com.aliothmoon.maameow.maa.callback.MaaCallbackDispatcher
 import com.aliothmoon.maameow.maa.callback.MaaExecutionStateHolder
@@ -289,9 +289,13 @@ class MaaCompositionService(
                 buildConnectConfig(r.width, r.height, displayId)
             }
         }
-        // 在连接前传 ClientType, 让 Core 自动解析正确的游戏包名 (v6.9.0+)
-        // 旧 Core 不识别 key=6 时返回 false, 仅记录日志, 不阻断流程
-        maa.SetInstanceOption(CLIENT_TYPE, clientType)
+        // 在 MAA 连接（含 force_stop 重启游戏）之前提前授予电池优化豁免与后台不受限权限，
+        // 让新进程一启动就处于受保护状态
+        taskChainState.grantGameBatteryExemption(clientType)
+        // 每次连接前同步「干员部署按住-暂停」开关 (对应 Core ControlFeat::SWIPE_WITH_PAUSE),
+        // 用户改了设置下次启动任务即生效
+        val pauseEnabled = appSettings.deploymentWithPause.value
+        maa.SetInstanceOption(DEPLOYMENT_WITH_PAUSE, if (pauseEnabled) "1" else "0")
         return asyncConnect(maa, config)
     }
 
@@ -306,7 +310,7 @@ class MaaCompositionService(
             sessionLogger.appendToFileOnly("[TaskParams] ${t.type.value}: ${t.params}")
             val taskId = maa.AppendTask(t.type.value, t.params)
             if (taskId > 0) {
-                taskChainStatusTracker.register(taskId, t.type.value)
+                taskChainStatusTracker.register(taskId, t.type.value, t.nodeId)
             }
         }
         if (!maa.Start()) {

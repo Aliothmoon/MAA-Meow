@@ -438,10 +438,10 @@ class BackgroundTaskViewModel(
                 )
             }
         }
-        if (result is MaaCompositionService.StartResult.Success
-            && appSettingsManager.muteOnGameLaunch.value
-        ) {
-            onMuteGameSound(plan.clientType)
+        if (result is MaaCompositionService.StartResult.Success) {
+            if (appSettingsManager.muteOnGameLaunch.value) {
+                onMuteGameSound(plan.clientType)
+            }
             chainState.grantGameBatteryExemption(plan.clientType)
         }
 

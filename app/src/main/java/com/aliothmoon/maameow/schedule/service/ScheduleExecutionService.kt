@@ -209,12 +209,15 @@ class ScheduleExecutionService : Service() {
     }
 
     private fun buildPreparingNotification(): Notification {
+        val contentText = getString(R.string.notification_schedule_preparing)
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher_foreground)
             .setContentTitle(getString(R.string.notification_schedule_title))
-            .setContentText(getString(R.string.notification_schedule_preparing))
+            .setContentText(contentText)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
             .setContentIntent(buildContentIntent())
             .setOngoing(true)
+            .setRequestPromotedOngoing(true)
             .setSilent(true)
             .build()
     }

@@ -230,6 +230,21 @@ class AppSettingsManager(private val context: Context) {
         }
     }
 
+    // 自动战斗干员部署「按住-暂停」(SWIPE_WITH_PAUSE)
+    val deploymentWithPause: StateFlow<Boolean> = settings
+        .map { it.deploymentWithPause.toBooleanStrictOrNull() ?: true }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            initialSettings.deploymentWithPause.toBooleanStrictOrNull() ?: true
+        )
+
+    suspend fun setDeploymentWithPause(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[deploymentWithPause] = enabled.toString() }
+        }
+    }
+
     val useHardwareScreenOff: StateFlow<Boolean> = settings
         .map { it.useHardwareScreenOff.toBooleanStrictOrNull() ?: false }
         .distinctUntilChanged()

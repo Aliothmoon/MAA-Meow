@@ -81,6 +81,7 @@ fun SettingsView(
     val autoDownloadUpdate by viewModel.autoDownloadUpdate.collectAsStateWithLifecycle()
     val startupBackend by viewModel.startupBackend.collectAsStateWithLifecycle()
     val skipShizukuCheck by viewModel.skipShizukuCheck.collectAsStateWithLifecycle()
+    val deploymentWithPause by viewModel.deploymentWithPause.collectAsStateWithLifecycle()
     val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val backgroundResolution by viewModel.backgroundResolution.collectAsStateWithLifecycle()
@@ -322,6 +323,14 @@ fun SettingsView(
                         checked = skipShizukuCheck,
                         enabled = startupBackend == RemoteBackend.SHIZUKU,
                         onCheckedChange = { viewModel.setSkipShizukuCheck(it) }
+                    )
+                    SettingsDivider(contentColor)
+                    SettingSwitchItem(
+                        title = stringResource(R.string.settings_deployment_with_pause),
+                        description = stringResource(R.string.settings_deployment_with_pause_tip),
+                        contentColor = contentColor,
+                        checked = deploymentWithPause,
+                        onCheckedChange = { viewModel.setDeploymentWithPause(it) }
                     )
                 }
             }

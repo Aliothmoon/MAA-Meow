@@ -89,7 +89,7 @@ class AnalyzeTaskChainUseCase(
         creditFightAvailability: MallCreditFightAvailability,
         clientType: String,
     ): MaaTaskParams {
-        return when (val config = node.config) {
+        val base = when (val config = node.config) {
             is MallConfig -> {
                 config.toTaskParams(
                     creditFightEnabled = config.creditFight && creditFightAvailability.isAvailable,
@@ -97,8 +97,9 @@ class AnalyzeTaskChainUseCase(
                 )
             }
 
-            else -> config.toTaskParams()
+            else -> node.config.toTaskParams()
         }
+        return base.copy(nodeId = node.id)
     }
 
     private fun logCreditFightWarning(

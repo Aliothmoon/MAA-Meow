@@ -266,7 +266,6 @@ class ExpandedControlPanelViewModel(
             }
             Timber.i("=== End Task JSON List ===")
 
-            chainState.grantGameBatteryExemption(plan.clientType)
             val result = compositionService.start(
                 tasks = plan.params,
                 clientType = plan.clientType,

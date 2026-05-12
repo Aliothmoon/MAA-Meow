@@ -352,17 +352,24 @@ private fun CustomInfrastSection(
                     val parsed = JsonUtils.common.decodeFromString<CustomInfrastConfig>(content)
                     setCustom(parsed)
                     setError(null)
-                    // 同步时间段数据 + 排班计划存在时自动选中第一个
+                    // 同步时间段数据 + 计划名列表 + 排班计划存在时自动选中第一个
                     val periods = parsed.plans.map { it.period }
+                    val names = parsed.plans.mapIndexed { index, plan ->
+                        plan.name ?: "Plan ${('A' + index)}"
+                    }
                     val hasPeriodicPlan = parsed.plans.any { it.period.isNotEmpty() }
                     val autoSelect = !hasPeriodicPlan
                             && config.customInfrastPlanSelect == -1
                             && parsed.plans.isNotEmpty()
-                    if (autoSelect || periods != config.customPlanPeriods) {
+                    if (autoSelect
+                        || periods != config.customPlanPeriods
+                        || names != config.customPlanNames
+                    ) {
                         val planIndex = if (autoSelect) 0 else config.customInfrastPlanSelect
                         onConfigChange(
                             config.copy(
                                 customPlanPeriods = periods,
+                                customPlanNames = names,
                                 customInfrastPlanSelect = planIndex
                             )
                         )

@@ -3,9 +3,14 @@ package com.aliothmoon.maameow.maa.callback
 import android.content.Context
 import com.alibaba.fastjson2.JSONObject
 import com.aliothmoon.maameow.data.model.LogLevel
+import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.maa.AsstMsg
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.time.Instant
 import java.time.ZoneId
@@ -17,11 +22,14 @@ import java.time.format.DateTimeFormatter
 class TaskChainHandler(
     applicationContext: Context,
     private val sessionLogger: MaaSessionLogger,
-    private val copilotRuntimeStateStore: CopilotRuntimeStateStore,
     private val statusTracker: TaskChainStatusTracker,
     private val notificationCenter: MaaNotificationCenter,
     private val subTaskHandler: SubTaskHandler,
+    private val taskChainState: TaskChainState,
 ) {
+    // 回调路径用于 suspend 的 TaskChainState 更新；独立于任一生命周期
+    private val callbackScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     private val resources = applicationContext.resources
     private val packageName = applicationContext.packageName
 
@@ -88,6 +96,26 @@ class TaskChainHandler(
         val taskchain = details.getString("taskchain") ?: "Unknown"
         val taskName = str(taskchain)
         sessionLogger.append("${str("CompleteTask")}$taskName", LogLevel.SUCCESS)
+
+        if (taskchain == "Infrast") {
+            val taskId = details.getIntValue("taskid", 0)
+            val nodeId = statusTracker.getNodeId(taskId)
+            if (nodeId != null) {
+                callbackScope.launch {
+                    val result = taskChainState.incrementCustomInfrastPlanSelect(nodeId)
+                        ?: return@launch
+                    val (newIndex, newName) = result
+                    sessionLogger.append(
+                        str("CustomInfrastPlanIndexAutoSwitch"),
+                        LogLevel.MESSAGE
+                    )
+                    sessionLogger.append(
+                        newName ?: "Plan ${('A' + newIndex)}",
+                        LogLevel.MESSAGE
+                    )
+                }
+            }
+        }
     }
 
     /**

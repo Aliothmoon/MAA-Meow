@@ -6,7 +6,7 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 data class PermissionGrantRequest(
     val packageName: String,
-    val uid: Int,
+    val uid: Int = 0,
     val accessibilityServiceId: String = "",
     val permissions: Int = PERM_ALL
 ) : Parcelable {
