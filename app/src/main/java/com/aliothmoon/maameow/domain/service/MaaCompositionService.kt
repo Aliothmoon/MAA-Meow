@@ -211,8 +211,8 @@ class MaaCompositionService(
         return result
     }
 
-    private suspend fun checkPreconditions(mode: RunMode): StartResult? {
-        activityManager.runIfDirty { resourceLoader.load() }
+    private suspend fun checkPreconditions(mode: RunMode, clientType: String): StartResult? {
+        activityManager.runIfDirty { resourceLoader.load(clientType) }
         val loaded = resourceLoader.ensureLoaded()
         if (loaded.isFailure) {
             return failStart(
@@ -339,7 +339,7 @@ class MaaCompositionService(
 
         val mode = appSettings.runMode.value
         return withContext(Dispatchers.IO) {
-            checkPreconditions(mode)?.let { return@withContext it }
+            checkPreconditions(mode, clientType)?.let { return@withContext it }
 
             useRemoteService { service ->
                 val maa = service.maaCoreService

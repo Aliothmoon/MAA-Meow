@@ -220,6 +220,7 @@ class TaskChainState(
 
     fun getClientTypeOrNull(): String? {
         return findFirstEnabledConfig<WakeUpConfig>()?.clientType
+            ?: findFirstConfig<WakeUpConfig>()?.clientType
             ?: _lastUsedClientType.value
     }
 
