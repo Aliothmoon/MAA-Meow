@@ -104,8 +104,6 @@ class RemoteServiceImpl : RemoteService.Stub() {
                     return false
                 }
                 Ln.i("MaaCore ${AsstGetVersion()}")
-                // TODO 使用fw control unit需要删除
-                AsstSetStaticOption(3, "libbridge.so")
             }
             Workarounds.apply()
             PermissionGrantHelper.disablePhantomProcessKiller()
