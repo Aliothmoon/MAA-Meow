@@ -15,7 +15,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import dev.jeziellago.compose.markdowntext.MarkdownText
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -153,14 +157,14 @@ fun HomeView(
         val appVersionLine = result.appUpdate?.let {
             stringResource(R.string.dialog_update_app_version_line, it.version)
         }.orEmpty()
-        val resourceVersionLine = result.resourceUpdate?.let {
+        val resourceMessage = result.resourceUpdate?.let {
             val display = ResourceDownloader.formatVersionForDisplay(it.version)
-            stringResource(R.string.dialog_update_resource_version_line, display)
+            stringResource(R.string.update_confirm_message_resource, display)
         }.orEmpty()
+        val releaseNote = result.appUpdate?.releaseNote
         AdaptiveTaskPromptDialog(
             visible = true,
             title = stringResource(R.string.dialog_update_found_title),
-            message = appVersionLine + resourceVersionLine,
             icon = Icons.Rounded.Info,
             confirmText = stringResource(R.string.dialog_update_confirm),
             confirmColor = Color(0xFF4CAF50),
@@ -173,7 +177,27 @@ fun HomeView(
                 }
                 updateViewModel.dismissStartupDialog()
             },
-            onDismissRequest = { updateViewModel.dismissStartupDialog() }
+            onDismissRequest = { updateViewModel.dismissStartupDialog() },
+            content = {
+                Column {
+                    Text(
+                        text = appVersionLine + resourceMessage,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (!releaseNote.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        MarkdownText(
+                            markdown = releaseNote,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 200.dp)
+                                .verticalScroll(rememberScrollState()),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+            }
         )
     }
 

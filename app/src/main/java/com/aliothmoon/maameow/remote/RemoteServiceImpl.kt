@@ -48,7 +48,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
         private fun restoreTrackedAudioPackages() {
             trackedAudioPackages.forEach { packageName ->
-                AppOpsHelper.resetAppops(packageName)
+                AppOpsHelper.resetPlayAudioOp(packageName)
             }
         }
     }
@@ -108,6 +108,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
                 AsstSetStaticOption(3, "libbridge.so")
             }
             Workarounds.apply()
+            PermissionGrantHelper.disablePhantomProcessKiller()
             setup = true
         }
         return true
