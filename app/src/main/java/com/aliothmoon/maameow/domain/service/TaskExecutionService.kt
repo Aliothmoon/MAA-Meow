@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.domain.service
 
-import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -42,6 +41,8 @@ class TaskExecutionService : Service() {
         private const val RESULT_NOTIFICATION_ID = 9004
         private const val MIN_UPDATE_INTERVAL_MS = 1000L
         private const val PROGRESS_STYLE_MAX = 1000
+        private const val PERMISSION_POST_PROMOTED_NOTIFICATIONS =
+            "android.permission.POST_PROMOTED_NOTIFICATIONS"
 
         private const val PROGRESS_COLOR_COMPLETED = 0xFF4CAF50.toInt()
         private const val PROGRESS_COLOR_ACTIVE = 0xFF2196F3.toInt()
@@ -239,7 +240,7 @@ class TaskExecutionService : Service() {
             .setStyle(style)
             .setContentIntent(buildContentIntent())
             .setOngoing(true)
-            .setRequestPromotedOngoing(canRequestPromotedOngoing())
+            .apply { requestPromotedOngoingCompat(this) }
             .setSilent(true)
             .setOnlyAlertOnce(true)
             .setCategory(Notification.CATEGORY_PROGRESS)
@@ -348,10 +349,21 @@ class TaskExecutionService : Service() {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
             ContextCompat.checkSelfPermission(
                 this,
-                Manifest.permission.POST_PROMOTED_NOTIFICATIONS,
+                PERMISSION_POST_PROMOTED_NOTIFICATIONS,
             ) == PackageManager.PERMISSION_GRANTED
         } else {
             true
+        }
+    }
+
+    private fun requestPromotedOngoingCompat(builder: Notification.Builder) {
+        if (!canRequestPromotedOngoing()) return
+        runCatching {
+            Notification.Builder::class.java
+                .getMethod("setRequestPromotedOngoing", Boolean::class.javaPrimitiveType)
+                .invoke(builder, true)
+        }.onFailure {
+            Timber.d(it, "Promoted ongoing notifications are not available on this SDK")
         }
     }
 
