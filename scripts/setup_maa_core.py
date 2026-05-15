@@ -29,7 +29,7 @@ if sys.platform == "win32":
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 # ── Config ──────────────────────────────────────────────
-GITHUB_REPO = "Aliothmoon/MaaAssistantArknights"
+GITHUB_REPO = "MaaAssistantArknights/MaaAssistantArknights"
 API_BASE = f"https://api.github.com/repos/{GITHUB_REPO}"
 
 # ABI mapping: release asset keyword -> jniLibs subdirectory
