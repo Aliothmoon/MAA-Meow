@@ -2,14 +2,22 @@ package com.aliothmoon.maameow.remote.internal
 
 import android.os.Build
 import com.aliothmoon.maameow.constant.AndroidVersions
+import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.wrappers.DisplayControl
+import com.aliothmoon.maameow.third.wrappers.ServiceManager
 import com.aliothmoon.maameow.third.wrappers.SurfaceControl
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 object PowerController {
     private const val TAG = "PowerController"
+    private const val USER_ACTIVITY_INTERVAL_MS = 4_000L
     private val file = File("/data/local/tmp/maa_power_off_flag")
+
+    private val keepAliveDisplayId = AtomicInteger(DefaultDisplayConfig.DISPLAY_NONE)
+    private val keepAliveRunning = AtomicBoolean(false)
 
     var flag: Boolean
         get() = runCatching { file.exists() }.getOrDefault(false)
@@ -74,7 +82,38 @@ object PowerController {
         return SurfaceControl.setDisplayPowerMode(d, mode)
     }
 
+    fun startUserActivityKeepAlive(displayId: Int) {
+        keepAliveDisplayId.set(displayId)
+        if (!keepAliveRunning.compareAndSet(false, true)) return
+        Thread {
+            Ln.i("$TAG: userActivity keep-alive started, displayId=$displayId")
+            while (true) {
+                val id = keepAliveDisplayId.get()
+                if (id == DefaultDisplayConfig.DISPLAY_NONE) break
+                try {
+                    Thread.sleep(USER_ACTIVITY_INTERVAL_MS)
+                } catch (_: InterruptedException) {
+                    break
+                }
+                val currentId = keepAliveDisplayId.get()
+                if (currentId == DefaultDisplayConfig.DISPLAY_NONE) break
+                runCatching { ServiceManager.getPowerManager().userActivity(currentId) }
+                    .onFailure { Ln.e("$TAG: userActivity failed", it) }
+            }
+            keepAliveRunning.set(false)
+            Ln.i("$TAG: userActivity keep-alive stopped")
+        }.apply {
+            name = "power-user-activity-keepalive"
+            isDaemon = true
+        }.start()
+    }
+
+    fun stopUserActivityKeepAlive() {
+        keepAliveDisplayId.set(DefaultDisplayConfig.DISPLAY_NONE)
+    }
+
     fun destroy() {
+        stopUserActivityKeepAlive()
         if (flag) {
             Ln.i("$TAG: Emergency recovering screen power...")
             runCatching {

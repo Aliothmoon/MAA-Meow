@@ -858,6 +858,8 @@
     <string name="panel_reclamation_with_save_line3">3. If the craftable amount is exactly a multiple of 99, it may get stuck. Use some materials before saving</string>
     <string name="panel_reclamation_theme_tales">Tales Within the Sand</string>
     <string name="panel_reclamation_theme_fire">Fire Within the Sand (Closed)</string>
+    <string name="panel_reclamation_theme_relaunch_anchor">RELAUNCH ANCHOR</string>
+    <string name="panel_reclamation_relaunch_anchor_tip">Relaunch Anchor - Assisted Construction Mode:\n\nReward estimate: ~159 tokens + coordination points per run, ~3 min per round\n\nPrerequisite (complete once manually):\n1. Manually enter RA-1, complete the tutorial, and return to the map\n2. After that, the task can be started when \"Start Construction\" appears at the bottom-right after clicking RA-1\n\nTask flow:\nAutomatically executes farming, construction, resource delivery, and settlement loop</string>
     <string name="panel_reclamation_mode_no_save">No save (farm prosperity by entering and exiting stages)</string>
     <string name="panel_reclamation_mode_with_save">Existing save (farm prosperity by crafting props)</string>
     <string name="panel_reclamation_increment_click">Click</string>

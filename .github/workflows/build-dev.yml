@@ -11,9 +11,9 @@ on:
   workflow_dispatch:
     inputs:
       maa_tag:
-        description: 'MAA Core release tag (留空则用 latest)'
+        description: 'MAA Core release tag'
         required: false
-        default: ''
+        default: 'v6.10.0-beta.1'
 
 jobs:
   build:
@@ -52,11 +52,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_ARG=""
-          if [ -n "${{ github.event.inputs.maa_tag }}" ]; then
-            TAG_ARG="--tag ${{ github.event.inputs.maa_tag }}"
-          fi
-          python scripts/setup_maa_core.py --clean $TAG_ARG
+          MAA_TAG="${{ github.event.inputs.maa_tag }}"
+          MAA_TAG="${MAA_TAG:-v6.10.0-beta.1}"
+          python scripts/setup_maa_core.py --clean --tag "$MAA_TAG"
 
       - name: Print MAA Resource version
         run: cat app/src/main/assets/MaaSync/MaaResource/version.json

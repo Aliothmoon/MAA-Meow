@@ -912,6 +912,8 @@
     <string name="panel_reclamation_with_save_line3">3. 如果能制造的数量刚好是 99 的倍数会卡住，在存档前可以先用掉一点</string>
     <string name="panel_reclamation_theme_tales">沙洲遗闻</string>
     <string name="panel_reclamation_theme_fire">沙中之火（已关闭）</string>
+    <string name="panel_reclamation_theme_relaunch_anchor">重启锚点</string>
+    <string name="panel_reclamation_relaunch_anchor_tip">重启锚点 - 辅助建设模式\n\n收益参考：每把约 159 代币 + 统筹点数，单轮耗时约 3 分钟\n\n前置步骤（手动完成一次）：\n1. 手动进入 RA-1，完成新手教程，直到回到大地图\n2. 之后每次任务均可在 RA-1 右下角出现「开启建设」时启动\n\n任务流程：\n自动执行精耕细作、建设、交付资源、结算循环</string>
     <string name="panel_reclamation_mode_no_save">无存档（进出关卡刷点数）</string>
     <string name="panel_reclamation_mode_with_save">有存档（组装道具刷点数）</string>
     <string name="panel_reclamation_increment_click">连点</string>

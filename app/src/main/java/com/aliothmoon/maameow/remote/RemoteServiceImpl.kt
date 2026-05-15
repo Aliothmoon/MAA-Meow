@@ -197,7 +197,11 @@ class RemoteServiceImpl : RemoteService.Stub() {
         Ln.i("$TAG: startVirtualDisplay() ${virtualDisplayMode.get()}")
         return when (virtualDisplayMode.get()) {
             DisplayMode.PRIMARY -> PrimaryDisplayManager.start()
-            DisplayMode.BACKGROUND -> VirtualDisplayManager.start()
+            DisplayMode.BACKGROUND -> VirtualDisplayManager.start().also { displayId ->
+                if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
+                    PowerController.startUserActivityKeepAlive(displayId)
+                }
+            }
             else -> DefaultDisplayConfig.DISPLAY_NONE
         }
     }
@@ -206,7 +210,10 @@ class RemoteServiceImpl : RemoteService.Stub() {
         Ln.i("$TAG: stopVirtualDisplay() ${virtualDisplayMode.get()}")
         when (virtualDisplayMode.get()) {
             DisplayMode.PRIMARY -> PrimaryDisplayManager.stop()
-            DisplayMode.BACKGROUND -> VirtualDisplayManager.stop()
+            DisplayMode.BACKGROUND -> {
+                PowerController.stopUserActivityKeepAlive()
+                VirtualDisplayManager.stop()
+            }
         }
         restoreTrackedAudioPackages()
     }
