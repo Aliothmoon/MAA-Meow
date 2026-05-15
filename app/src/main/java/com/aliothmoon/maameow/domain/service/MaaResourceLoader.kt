@@ -4,13 +4,11 @@ import android.os.Process
 import com.aliothmoon.maameow.MaaCoreService
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
-import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.manager.LogcatServiceManager
-import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
 import kotlinx.coroutines.CoroutineScope
@@ -20,7 +18,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
@@ -50,11 +47,11 @@ class MaaResourceLoader(
 
     suspend fun load(clientType: String = chainState.getClientType()): Result<Unit> {
         _state.value = State.Loading()
-        Timber.i("MaaCore resources loading, clientType=$clientType")
+        Timber.i("MaaCore resources loading, client type=$clientType")
         try {
-            loadDepsInfo(clientType)
+            doLoadDepsInfo(clientType)
         } catch (e: Exception) {
-            Timber.e(e, "loadDepsInfo error")
+            Timber.e(e, "doLoadDepsInfo error")
         }
 
         return try {
@@ -113,7 +110,7 @@ class MaaResourceLoader(
         }
     }
 
-    private suspend fun loadDepsInfo(clientType: String) {
+    private suspend fun doLoadDepsInfo(clientType: String) {
         val displayLanguage = ResourceDataManager.displayLanguageCode(
             resolveSelectedLanguage(appSettings.language.value)
         )
