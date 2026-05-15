@@ -182,7 +182,7 @@ class MaaCompositionService(
 
     suspend fun start(
         tasks: List<MaaTaskParams>,
-        clientType: String = taskChainState.getClientType(),
+        clientType: String,
         onSessionStarted: (suspend () -> Unit)? = null
     ): StartResult = executeStart(
         tasks = tasks,

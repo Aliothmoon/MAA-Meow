@@ -238,7 +238,7 @@ class TaskChainState(
     inline fun <reified T : TaskParamProvider> firstEnabledConfigFlow(): Flow<T?> {
         return chain.map { nodes ->
             nodes.filter { it.enabled }.firstNotNullOfOrNull { it.config as? T }
-        }.distinctUntilChanged()
+        }
     }
 
     fun grantGameBatteryExemption(clientType: String) {
