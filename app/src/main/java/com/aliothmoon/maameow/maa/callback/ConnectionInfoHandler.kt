@@ -25,7 +25,7 @@ class ConnectionInfoHandler(
 
         when (what) {
             "Connected" -> {
-                Timber.i("MaaCore 已连接: ${innerDetails?.getString("address")}")
+                Timber.i("MaaCore Connected: $innerDetails")
             }
 
             "UnsupportedResolution" -> {
