@@ -9,11 +9,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
-import android.graphics.Color
-import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.graphics.drawable.IconCompat
 import androidx.core.content.ContextCompat
 import com.aliothmoon.maameow.MainActivity
 import com.aliothmoon.maameow.R
@@ -201,51 +200,7 @@ class TaskExecutionService : Service() {
         val progressInfo = buildProgressInfo(snapshot)
         val contentText = buildContentText(statusText, progressInfo)
 
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
-            buildProgressStyleNotification(statusText, contentText, progressInfo)
-        } else {
-            buildCompatProgressNotification(statusText, contentText, progressInfo)
-        }
-    }
-
-    private fun buildProgressStyleNotification(
-        statusText: String,
-        contentText: String,
-        progressInfo: TaskProgressInfo,
-    ): Notification {
-        val style = Notification.ProgressStyle()
-            .setStyledByProgress(true)
-            .setProgressIndeterminate(progressInfo.totalCount == 0)
-            .setProgressTrackerIcon(Icon.createWithResource(this, R.drawable.point_yu))
-
-        if (progressInfo.totalCount > 0) {
-            style.setProgress(progressInfo.progress)
-        }
-
-        progressInfo.segments.forEach { segment ->
-            style.addProgressSegment(
-                Notification.ProgressStyle.Segment(segment.length).setColor(segment.color)
-            )
-        }
-        progressInfo.points.forEach { point ->
-            style.addProgressPoint(
-                Notification.ProgressStyle.Point(point.position).setColor(point.color)
-            )
-        }
-
-        return Notification.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher_foreground)
-            .setContentTitle(getString(R.string.notification_task_running_title))
-            .setContentText(contentText)
-            .setStyle(style)
-            .setContentIntent(buildContentIntent())
-            .setOngoing(true)
-            .apply { requestPromotedOngoingCompat(this) }
-            .setSilent(true)
-            .setOnlyAlertOnce(true)
-            .setCategory(Notification.CATEGORY_PROGRESS)
-            .setSubText(statusText)
-            .build()
+        return buildCompatProgressNotification(statusText, contentText, progressInfo)
     }
 
     private fun buildCompatProgressNotification(
@@ -253,17 +208,38 @@ class TaskExecutionService : Service() {
         contentText: String,
         progressInfo: TaskProgressInfo,
     ): Notification {
+        val style = NotificationCompat.ProgressStyle()
+            .setStyledByProgress(true)
+            .setProgressIndeterminate(progressInfo.totalCount == 0)
+            .setProgressTrackerIcon(IconCompat.createWithResource(this, R.drawable.point_yu))
+
+        if (progressInfo.totalCount > 0) {
+            style.setProgress(progressInfo.progress)
+        }
+
+        progressInfo.segments.forEach { segment ->
+            style.addProgressSegment(
+                NotificationCompat.ProgressStyle.Segment(segment.length).setColor(segment.color)
+            )
+        }
+        progressInfo.points.forEach { point ->
+            style.addProgressPoint(
+                NotificationCompat.ProgressStyle.Point(point.position).setColor(point.color)
+            )
+        }
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher_foreground)
             .setContentTitle(getString(R.string.notification_task_running_title))
             .setContentText(contentText)
-            .setStyle(NotificationCompat.BigTextStyle().bigText("$contentText\n$statusText"))
+            .setStyle(style)
             .setContentIntent(buildContentIntent())
             .setOngoing(true)
             .setRequestPromotedOngoing(canRequestPromotedOngoing())
             .setSilent(true)
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+            .setSubText(statusText)
             .setProgress(progressInfo.max, progressInfo.progress, progressInfo.totalCount == 0)
             .build()
     }
@@ -325,7 +301,7 @@ class TaskExecutionService : Service() {
         var position = 0
         return segments.dropLast(1).map { segment ->
             position += segment.length
-            ProgressPointInfo(position, Color.WHITE)
+            ProgressPointInfo(position, PROGRESS_COLOR_PENDING)
         }
     }
 
@@ -353,17 +329,6 @@ class TaskExecutionService : Service() {
             ) == PackageManager.PERMISSION_GRANTED
         } else {
             true
-        }
-    }
-
-    private fun requestPromotedOngoingCompat(builder: Notification.Builder) {
-        if (!canRequestPromotedOngoing()) return
-        runCatching {
-            Notification.Builder::class.java
-                .getMethod("setRequestPromotedOngoing", Boolean::class.javaPrimitiveType)
-                .invoke(builder, true)
-        }.onFailure {
-            Timber.d(it, "Promoted ongoing notifications are not available on this SDK")
         }
     }
 
