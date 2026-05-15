@@ -47,6 +47,7 @@ class TaskChainState(
         private val CHAIN_KEY = stringPreferencesKey("chain")
         private val PROFILES_KEY = stringPreferencesKey("profiles")
         private val ACTIVE_PROFILE_KEY = stringPreferencesKey("active_profile_id")
+        private val LAST_USED_CLIENT_TYPE_KEY = stringPreferencesKey("last_used_client_type")
 
         private const val PROFILE_NAME_PREFIX = "配置-"
         private const val MAX_PROFILES = 10
@@ -98,6 +99,7 @@ class TaskChainState(
                 persistProfiles(listOf(profile), profile.id)
             }
             _isLoaded.value = true
+            _lastUsedClientType.value = prefs[LAST_USED_CLIENT_TYPE_KEY]
         }
     }
 
@@ -220,7 +222,6 @@ class TaskChainState(
 
     fun getClientTypeOrNull(): String? {
         return findFirstEnabledConfig<WakeUpConfig>()?.clientType
-            ?: findFirstConfig<WakeUpConfig>()?.clientType
             ?: _lastUsedClientType.value
     }
 
@@ -228,6 +229,11 @@ class TaskChainState(
 
     fun saveLastUsedClientType(clientType: String) {
         _lastUsedClientType.value = clientType
+        scope.launch {
+            context.store.edit { prefs ->
+                prefs[LAST_USED_CLIENT_TYPE_KEY] = clientType
+            }
+        }
     }
 
     inline fun <reified T : TaskParamProvider> findFirstEnabledConfig(): T? {
