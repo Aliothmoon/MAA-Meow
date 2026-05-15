@@ -22,7 +22,7 @@ data class ReclamationConfig(
     val clearStore: Boolean = true
 ) : TaskParamProvider {
     companion object {
-        val THEME_KEYS = listOf("Tales", "Fire")
+        val THEME_KEYS = listOf("Tales", "Fire", "RelaunchAnchor")
         val MODE_VALUES = listOf(0, 1)
         val INCREMENT_MODE_VALUES = listOf(0, 1)
         const val DEFAULT_TOOL_TO_CRAFT = "荧光棒"

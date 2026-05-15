@@ -102,24 +102,35 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                 when (page) {
                     // 常规设置 Tab
                     0 -> {
+                        val isRelaunchAnchor = config.theme == "RelaunchAnchor"
                         item {
                             ReclamationButtonGroup(
                                 label = stringResource(R.string.panel_reclamation_theme),
                                 options = localizedReclamationThemeOptions(),
                                 selectedValue = config.theme,
-                                onValueChange = { onConfigChange(config.copy(theme = it as String)) }
+                                onValueChange = {
+                                    val theme = it as String
+                                    val updated = if (theme == "RelaunchAnchor") {
+                                        config.copy(theme = theme, mode = 0, clearStore = false)
+                                    } else {
+                                        config.copy(theme = theme)
+                                    }
+                                    onConfigChange(updated)
+                                }
                             )
                         }
                         item {
-                            ReclamationButtonGroup(
-                                label = stringResource(R.string.panel_reclamation_strategy),
-                                options = localizedReclamationModeOptions(),
-                                selectedValue = config.mode,
-                                onValueChange = { onConfigChange(config.copy(mode = it as Int)) }
-                            )
+                            AnimatedVisibility(visible = !isRelaunchAnchor) {
+                                ReclamationButtonGroup(
+                                    label = stringResource(R.string.panel_reclamation_strategy),
+                                    options = localizedReclamationModeOptions(),
+                                    selectedValue = config.mode,
+                                    onValueChange = { onConfigChange(config.copy(mode = it as Int)) }
+                                )
+                            }
                         }
                         item {
-                            AnimatedVisibility(visible = config.mode == 0) {
+                            AnimatedVisibility(visible = !isRelaunchAnchor && config.mode == 0) {
                                 CheckBoxWithLabel(
                                     checked = config.clearStore,
                                     onCheckedChange = { onConfigChange(config.copy(clearStore = it)) },
@@ -128,7 +139,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                             }
                         }
                         item {
-                            AnimatedVisibility(visible = config.mode == 1) {
+                            AnimatedVisibility(visible = !isRelaunchAnchor && config.mode == 1) {
                                 Surface(
                                     modifier = Modifier.fillMaxWidth(),
                                     color = MaterialTheme.colorScheme.tertiaryContainer,
@@ -205,77 +216,94 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
 
                     // 说明 Tab
                     2 -> {
-                        item {
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = MaterialTheme.colorScheme.errorContainer,
-                                shape = RoundedCornerShape(4.dp)
-                            ) {
-                                Text(
-                                    stringResource(R.string.panel_reclamation_notice),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
-                                    fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.padding(8.dp)
-                                )
+                        if (config.theme == "RelaunchAnchor") {
+                            item {
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        stringResource(R.string.panel_reclamation_relaunch_anchor_tip),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                        modifier = Modifier.padding(8.dp)
+                                    )
+                                }
                             }
-                        }
-                        item {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(
-                                    stringResource(R.string.panel_reclamation_no_save_title),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    stringResource(R.string.panel_reclamation_no_save_line1),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    stringResource(R.string.panel_reclamation_no_save_line2),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    stringResource(R.string.panel_reclamation_no_save_line3),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                                Text(
-                                    stringResource(R.string.panel_reclamation_no_save_line4),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    stringResource(R.string.panel_reclamation_no_save_line5),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                        } else {
+                            item {
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = MaterialTheme.colorScheme.errorContainer,
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        stringResource(R.string.panel_reclamation_notice),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer,
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier.padding(8.dp)
+                                    )
+                                }
                             }
-                        }
-                        item {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(
-                                    stringResource(R.string.panel_reclamation_with_save_title),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    stringResource(R.string.panel_reclamation_with_save_line1),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    stringResource(R.string.panel_reclamation_with_save_line2),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    stringResource(R.string.panel_reclamation_with_save_line3),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            item {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(
+                                        stringResource(R.string.panel_reclamation_no_save_title),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        stringResource(R.string.panel_reclamation_no_save_line1),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        stringResource(R.string.panel_reclamation_no_save_line2),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        stringResource(R.string.panel_reclamation_no_save_line3),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                    Text(
+                                        stringResource(R.string.panel_reclamation_no_save_line4),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        stringResource(R.string.panel_reclamation_no_save_line5),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            item {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(
+                                        stringResource(R.string.panel_reclamation_with_save_title),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        stringResource(R.string.panel_reclamation_with_save_line1),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        stringResource(R.string.panel_reclamation_with_save_line2),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        stringResource(R.string.panel_reclamation_with_save_line3),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
@@ -309,6 +337,7 @@ private fun localizedReclamationThemeOptions(): List<Pair<Any, String>> {
         theme to when (theme) {
             "Tales" -> stringResource(R.string.panel_reclamation_theme_tales)
             "Fire" -> stringResource(R.string.panel_reclamation_theme_fire)
+            "RelaunchAnchor" -> stringResource(R.string.panel_reclamation_theme_relaunch_anchor)
             else -> theme
         }
     }
