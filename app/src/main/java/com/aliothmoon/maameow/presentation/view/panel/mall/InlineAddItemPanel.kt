@@ -20,7 +20,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -36,7 +35,7 @@ fun InlineAddItemPanel(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color(0xFFE3F2FD),
+        color = MaterialTheme.colorScheme.secondaryContainer,
         shape = RoundedCornerShape(8.dp)
     ) {
         Column(
