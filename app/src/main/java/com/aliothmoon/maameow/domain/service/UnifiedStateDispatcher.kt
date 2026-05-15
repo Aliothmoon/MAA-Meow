@@ -107,11 +107,11 @@ class UnifiedStateDispatcher(
         // 切换客户端时就要重新加载资源
         scope.launch {
             chainState.firstEnabledConfigFlow<WakeUpConfig>()
-                .map { (it ?: WakeUpConfig()).clientType }
+                .map { it?.clientType }
                 .distinctUntilChanged()
                 .drop(1)
                 .collect { newClientType ->
-                    if (resourceLoader.state.value is MaaResourceLoader.State.Ready) {
+                    if (newClientType != null && resourceLoader.state.value is MaaResourceLoader.State.Ready) {
                         Timber.i("Client type changed to $newClientType, reloading resources")
                         withContext(Dispatchers.IO) {
                             resourceLoader.load(newClientType)
