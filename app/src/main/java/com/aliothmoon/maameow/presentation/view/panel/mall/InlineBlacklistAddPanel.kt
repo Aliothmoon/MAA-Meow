@@ -21,7 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -40,7 +39,7 @@ fun InlineBlacklistAddPanel(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color(0xFFFFEBEE),
+        color = MaterialTheme.colorScheme.errorContainer,
         shape = RoundedCornerShape(8.dp)
     ) {
         Column(
