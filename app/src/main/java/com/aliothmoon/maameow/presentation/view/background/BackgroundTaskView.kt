@@ -3,10 +3,6 @@ package com.aliothmoon.maameow.presentation.view.background
 import android.app.Activity
 import android.content.res.Configuration
 import android.content.pm.ActivityInfo
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.graphics.graphicsLayer
 
 import android.graphics.PixelFormat
 import android.view.Surface
@@ -64,7 +60,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -77,7 +72,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -324,23 +318,6 @@ fun BackgroundTaskView(
         }
     }
 
-    val fullscreenProgress = remember { Animatable(0f) }
-    val currentOrientation = LocalConfiguration.current.orientation
-    val isLandscapeReady = currentOrientation == Configuration.ORIENTATION_LANDSCAPE
-    var fullscreenAnimTarget by remember { mutableFloatStateOf(0f) }
-
-    LaunchedEffect(state.isFullscreenMonitor, isLandscapeReady) {
-        fullscreenAnimTarget = if (state.isFullscreenMonitor && isLandscapeReady) 1f else 0f
-    }
-
-    LaunchedEffect(fullscreenAnimTarget) {
-        if (fullscreenAnimTarget == 0f) {
-            fullscreenProgress.snapTo(0f)
-        } else {
-            fullscreenProgress.snapTo(0f)
-            fullscreenProgress.animateTo(1f, tween(300, easing = FastOutSlowInEasing))
-        }
-    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -645,9 +622,6 @@ fun BackgroundTaskView(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer {
-                        alpha = fullscreenProgress.value
-                    }
                     .background(Color.Black)
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
