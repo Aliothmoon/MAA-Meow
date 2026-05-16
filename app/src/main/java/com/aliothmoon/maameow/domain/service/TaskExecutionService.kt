@@ -12,8 +12,8 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import androidx.core.graphics.drawable.IconCompat
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.IconCompat
 import com.aliothmoon.maameow.MainActivity
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -47,6 +47,14 @@ class TaskExecutionService : Service() {
         private const val PROGRESS_COLOR_ACTIVE = 0xFF2196F3.toInt()
         private const val PROGRESS_COLOR_PENDING = 0xFF9E9E9E.toInt()
         private const val PROGRESS_COLOR_ERROR = 0xFFD32F2F.toInt()
+                private val VISIBLE_TASK_TITLES = mapOf(
+            "Fight" to "理智作战",
+            "Recruit" to "自动公招",
+            "Infrast" to "基建换班",
+            "Mall" to "信用收支",
+            "Award" to "领取奖励",
+        )
+
 
         fun start(context: Context) {
             val intent = Intent(context, TaskExecutionService::class.java)
@@ -199,11 +207,13 @@ class TaskExecutionService : Service() {
         }
         val progressInfo = buildProgressInfo(snapshot)
         val contentText = buildContentText(statusText, progressInfo)
+        val title = buildNotificationTitle(snapshot)
 
-        return buildCompatProgressNotification(statusText, contentText, progressInfo)
+        return buildCompatProgressNotification(title, statusText, contentText, progressInfo)
     }
 
     private fun buildCompatProgressNotification(
+        title: String,
         statusText: String,
         contentText: String,
         progressInfo: TaskProgressInfo,
@@ -230,7 +240,7 @@ class TaskExecutionService : Service() {
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher_foreground)
-            .setContentTitle(getString(R.string.notification_task_running_title))
+            .setContentTitle(title)
             .setContentText(contentText)
             .setStyle(style)
             .setContentIntent(buildContentIntent())
@@ -314,6 +324,18 @@ class TaskExecutionService : Service() {
         return "$progressText · $statusText"
     }
 
+        private fun buildNotificationTitle(snapshot: TaskNotificationSnapshot): String {
+            val currentTaskTitle = snapshot.tasks
+                .firstOrNull { it.status == TaskRunStatus.IN_PROGRESS }
+                ?.taskChain
+                ?.trim()
+                ?.let { taskChain -> VISIBLE_TASK_TITLES[taskChain] ?: taskChain.takeIf { it in VISIBLE_TASK_TITLES.values } }
+
+            return currentTaskTitle ?: getString(R.string.notification_task_running_title)
+        }
+
+
+
     private fun colorForStatus(status: TaskRunStatus): Int = when (status) {
         TaskRunStatus.PENDING -> PROGRESS_COLOR_PENDING
         TaskRunStatus.IN_PROGRESS -> PROGRESS_COLOR_ACTIVE
@@ -342,8 +364,10 @@ class TaskExecutionService : Service() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         return PendingIntent.getActivity(
-            this, 0, intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
     }
 
@@ -366,3 +390,4 @@ class TaskExecutionService : Service() {
         super.onDestroy()
     }
 }
+
