@@ -145,17 +145,7 @@ class TaskExecutionService : Service() {
                 }
             }
 
-            combine(
-                compositionService.state,
-                sessionLogger.logs,
-                taskChainStatusTracker.tasks,
-            ) { state, logs, tasks ->
-                TaskNotificationSnapshot(
-                    state = state,
-                    statusText = logs.lastOrNull()?.content,
-                    tasks = tasks,
-                )
-            }.collect { snapshot ->
+            fun handleSnapshot(snapshot: TaskNotificationSnapshot, immediate: Boolean) {
                 when (snapshot.state) {
                     MaaExecutionState.IDLE,
                     MaaExecutionState.ERROR,
@@ -180,8 +170,40 @@ class TaskExecutionService : Service() {
                             statusText = snapshot.statusText
                                 ?: getString(R.string.notification_task_running)
                         )
-                        scheduleRunningUpdate(runningSnapshot)
+                        if (immediate) {
+                            cancelScheduledRunningUpdate()
+                            lastUpdateTime = SystemClock.elapsedRealtime()
+                            updateNotification(runningSnapshot)
+                        } else {
+                            scheduleRunningUpdate(runningSnapshot)
+                        }
                     }
+                }
+            }
+
+            launch {
+                combine(
+                    compositionService.state,
+                    taskChainStatusTracker.tasks,
+                ) { state, tasks ->
+                    TaskNotificationSnapshot(
+                        state = state,
+                        statusText = sessionLogger.logs.value.lastOrNull()?.content,
+                        tasks = tasks,
+                    )
+                }.collect { snapshot ->
+                    handleSnapshot(snapshot, immediate = true)
+                }
+            }
+
+            launch {
+                sessionLogger.logs.collect { logs ->
+                    val snapshot = TaskNotificationSnapshot(
+                        state = compositionService.state.value,
+                        statusText = logs.lastOrNull()?.content,
+                        tasks = taskChainStatusTracker.tasks.value,
+                    )
+                    handleSnapshot(snapshot, immediate = false)
                 }
             }
         }
