@@ -26,7 +26,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
@@ -35,8 +35,7 @@ import timber.log.Timber
 class TaskExecutionService : Service() {
 
     companion object {
-        private const val TASK_CHANNEL_ID = "task_execution_live"
-        private const val RESULT_CHANNEL_ID = "task_execution_result"
+        private const val CHANNEL_ID = "task_execution"
         private const val NOTIFICATION_ID = 9003
         private const val RESULT_NOTIFICATION_ID = 9004
         private const val MIN_UPDATE_INTERVAL_MS = 1000L
@@ -57,14 +56,6 @@ class TaskExecutionService : Service() {
         )
 
 
-        private val VISIBLE_TASK_TITLES = mapOf(
-            "Fight" to "理智作战",
-            "Recruit" to "自动公招",
-            "Infrast" to "基建换班",
-            "Mall" to "信用收支",
-            "Award" to "领取奖励",
-        )
-
         fun start(context: Context) {
             val intent = Intent(context, TaskExecutionService::class.java)
             context.startForegroundService(intent)
@@ -78,7 +69,6 @@ class TaskExecutionService : Service() {
     private val compositionService: MaaCompositionService by inject()
     private val sessionLogger: MaaSessionLogger by inject()
     private val taskChainStatusTracker: TaskChainStatusTracker by inject()
-
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var observeJob: Job? = null
 
@@ -99,54 +89,9 @@ class TaskExecutionService : Service() {
         observeProgress()
     }
 
-    override fun onDestroy() {
-        observeJob?.cancel()
-        serviceScope.cancel()
-        super.onDestroy()
-    }
-
     private fun observeProgress() {
         observeJob = serviceScope.launch {
             var lastUpdateTime = 0L
-            var pendingRunningSnapshot: TaskNotificationSnapshot? = null
-            var scheduledRunningUpdateJob: Job? = null
-
-            fun cancelScheduledRunningUpdate() {
-                scheduledRunningUpdateJob?.cancel()
-                scheduledRunningUpdateJob = null
-                pendingRunningSnapshot = null
-            }
-
-            fun scheduleRunningUpdate(snapshot: TaskNotificationSnapshot) {
-                pendingRunningSnapshot = snapshot
-
-                val now = System.currentTimeMillis()
-                val elapsed = now - lastUpdateTime
-                if (elapsed >= MIN_UPDATE_INTERVAL_MS) {
-                    lastUpdateTime = now
-                    val latestSnapshot = pendingRunningSnapshot ?: snapshot
-                    pendingRunningSnapshot = null
-                    scheduledRunningUpdateJob?.cancel()
-                    scheduledRunningUpdateJob = null
-                    updateNotification(latestSnapshot)
-                    return
-                }
-
-                if (scheduledRunningUpdateJob?.isActive == true) {
-                    return
-                }
-
-                scheduledRunningUpdateJob = serviceScope.launch {
-                    delay((MIN_UPDATE_INTERVAL_MS - elapsed).coerceAtLeast(0L))
-                    pendingRunningSnapshot?.let { latestSnapshot ->
-                        lastUpdateTime = System.currentTimeMillis()
-                        pendingRunningSnapshot = null
-                        updateNotification(latestSnapshot)
-                    }
-                    scheduledRunningUpdateJob = null
-                }
-            }
-
             combine(
                 compositionService.state,
                 sessionLogger.logs,
@@ -157,21 +102,27 @@ class TaskExecutionService : Service() {
                     statusText = logs.lastOrNull()?.content,
                     tasks = tasks,
                 )
-            }.collect { snapshot ->
-                when (snapshot.state) {
-                    MaaExecutionState.IDLE,
-                    MaaExecutionState.ERROR,
-                    -> handleTerminalState(snapshot, ::cancelScheduledRunningUpdate)
+            }.collectLatest { snapshot ->
+                val state = snapshot.state
+                val latestLog = snapshot.statusText
+                when (state) {
+                    MaaExecutionState.IDLE, MaaExecutionState.ERROR -> {
+                        Timber.i("TaskExecutionService: state=$state, stopping")
+                        val title = getString(
+                            if (state == MaaExecutionState.IDLE) R.string.notification_task_completed
+                            else R.string.notification_task_error
+                        )
+                        showResultNotification(title, latestLog ?: "")
+                        stopSelf()
+                    }
 
                     MaaExecutionState.STARTING -> {
-                        cancelScheduledRunningUpdate()
                         updateNotification(
                             snapshot.copy(statusText = getString(R.string.notification_task_starting))
                         )
                     }
 
                     MaaExecutionState.STOPPING -> {
-                        cancelScheduledRunningUpdate()
                         updateNotification(
                             snapshot.copy(statusText = getString(R.string.notification_task_stopping))
                         )
@@ -179,63 +130,34 @@ class TaskExecutionService : Service() {
 
                     MaaExecutionState.RUNNING -> {
                         val runningSnapshot = snapshot.copy(
-                            statusText = snapshot.statusText
-                                ?: getString(R.string.notification_task_running)
+                            statusText = latestLog ?: getString(R.string.notification_task_running)
                         )
-                        scheduleRunningUpdate(runningSnapshot)
+                        val now = System.currentTimeMillis()
+                        if (now - lastUpdateTime >= MIN_UPDATE_INTERVAL_MS) {
+                            lastUpdateTime = now
+                            updateNotification(runningSnapshot)
+                        } else {
+                            delay(MIN_UPDATE_INTERVAL_MS - (now - lastUpdateTime))
+                            lastUpdateTime = System.currentTimeMillis()
+                            updateNotification(runningSnapshot)
+                        }
                     }
                 }
             }
         }
     }
 
-    private fun handleTerminalState(
-        snapshot: TaskNotificationSnapshot,
-        cancelScheduledRunningUpdate: () -> Unit,
-    ) {
-        cancelScheduledRunningUpdate()
-
-        val isCompleted = snapshot.state == MaaExecutionState.IDLE
-        val title = getString(
-            if (isCompleted) {
-                R.string.notification_task_completed
-            } else {
-                R.string.notification_task_error
-            }
-        )
-
-        Timber.i("TaskExecutionService: state=%s, stopping", snapshot.state)
-        showResultNotification(title, snapshot.statusText.orEmpty())
-        stopSelf()
-    }
-
     private fun ensureNotificationChannel() {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channelName = getString(R.string.notification_channel_task_execution)
-        val channelDescription = getString(R.string.notification_channel_task_execution_desc)
-
-        // Live updates must use DEFAULT+ importance to remain eligible for promoted ongoing
-        // notifications / Live Updates on supported devices. Result notifications stay LOW
-        // to reduce noise after the foreground task has ended.
-        val taskChannel = NotificationChannel(
-            TASK_CHANNEL_ID,
-            channelName,
-            NotificationManager.IMPORTANCE_DEFAULT,
-        ).apply {
-            description = channelDescription
-            setShowBadge(false)
-        }
-
-        val resultChannel = NotificationChannel(
-            RESULT_CHANNEL_ID,
-            channelName,
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            getString(R.string.notification_channel_task_execution),
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = channelDescription
+            description = getString(R.string.notification_channel_task_execution_desc)
             setShowBadge(false)
         }
-
-        manager.createNotificationChannels(listOf(taskChannel, resultChannel))
+        manager.createNotificationChannel(channel)
     }
 
     private fun startAsForeground(notification: Notification) {
@@ -250,26 +172,44 @@ class TaskExecutionService : Service() {
         }
     }
 
+    private data class TaskNotificationSnapshot(
+        val state: MaaExecutionState,
+        val statusText: String?,
+        val tasks: List<TaskRunInfo>,
+    )
+
+    private data class TaskProgressInfo(
+        val max: Int,
+        val progress: Int,
+        val completedCount: Int,
+        val totalCount: Int,
+        val segments: List<ProgressSegmentInfo>,
+        val points: List<ProgressPointInfo>,
+    )
+
+    private data class ProgressSegmentInfo(
+        val length: Int,
+        val color: Int,
+    )
+
+    private data class ProgressPointInfo(
+        val position: Int,
+        val color: Int,
+    )
+
     private fun buildNotification(snapshot: TaskNotificationSnapshot): Notification {
-        val statusText = snapshot.statusText ?: defaultStatusText(snapshot.state)
+        val statusText = snapshot.statusText ?: when (snapshot.state) {
+            MaaExecutionState.STARTING -> getString(R.string.notification_task_starting)
+            MaaExecutionState.STOPPING -> getString(R.string.notification_task_stopping)
+            MaaExecutionState.RUNNING -> getString(R.string.notification_task_running)
+            MaaExecutionState.IDLE -> getString(R.string.notification_task_completed)
+            MaaExecutionState.ERROR -> getString(R.string.notification_task_error)
+        }
         val progressInfo = buildProgressInfo(snapshot)
         val contentText = buildContentText(statusText, progressInfo)
         val title = buildNotificationTitle(snapshot)
 
-        return buildCompatProgressNotification(
-            title = title,
-            statusText = statusText,
-            contentText = contentText,
-            progressInfo = progressInfo,
-        )
-    }
-
-    private fun defaultStatusText(state: MaaExecutionState): String = when (state) {
-        MaaExecutionState.STARTING -> getString(R.string.notification_task_starting)
-        MaaExecutionState.STOPPING -> getString(R.string.notification_task_stopping)
-        MaaExecutionState.RUNNING -> getString(R.string.notification_task_running)
-        MaaExecutionState.IDLE -> getString(R.string.notification_task_completed)
-        MaaExecutionState.ERROR -> getString(R.string.notification_task_error)
+        return buildCompatProgressNotification(title, statusText, contentText, progressInfo)
     }
 
     private fun buildCompatProgressNotification(
@@ -281,9 +221,7 @@ class TaskExecutionService : Service() {
         val style = NotificationCompat.ProgressStyle()
             .setStyledByProgress(true)
             .setProgressIndeterminate(progressInfo.totalCount == 0)
-            .setProgressTrackerIcon(
-                IconCompat.createWithResource(this, R.drawable.ic_progress_tracker)
-            )
+            .setProgressTrackerIcon(IconCompat.createWithResource(this, R.drawable.point_yu))
 
         if (progressInfo.totalCount > 0) {
             style.setProgress(progressInfo.progress)
@@ -291,18 +229,16 @@ class TaskExecutionService : Service() {
 
         progressInfo.segments.forEach { segment ->
             style.addProgressSegment(
-                NotificationCompat.ProgressStyle.Segment(segment.length)
-                    .setColor(segment.color)
+                NotificationCompat.ProgressStyle.Segment(segment.length).setColor(segment.color)
             )
         }
         progressInfo.points.forEach { point ->
             style.addProgressPoint(
-                NotificationCompat.ProgressStyle.Point(point.position)
-                    .setColor(point.color)
+                NotificationCompat.ProgressStyle.Point(point.position).setColor(point.color)
             )
         }
 
-        return NotificationCompat.Builder(this, TASK_CHANNEL_ID)
+        return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher_foreground)
             .setContentTitle(title)
             .setContentText(contentText)
@@ -314,6 +250,7 @@ class TaskExecutionService : Service() {
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .setSubText(statusText)
+            .setProgress(progressInfo.max, progressInfo.progress, progressInfo.totalCount == 0)
             .build()
     }
 
@@ -326,9 +263,7 @@ class TaskExecutionService : Service() {
                 progress = 0,
                 completedCount = 0,
                 totalCount = 0,
-                segments = listOf(
-                    ProgressSegmentInfo(PROGRESS_STYLE_MAX, PROGRESS_COLOR_PENDING)
-                ),
+                segments = listOf(ProgressSegmentInfo(PROGRESS_STYLE_MAX, PROGRESS_COLOR_PENDING)),
                 points = emptyList(),
             )
         }
@@ -339,46 +274,32 @@ class TaskExecutionService : Service() {
             val length = unit + if (index < remainder) 1 else 0
             ProgressSegmentInfo(length, colorForStatus(task.status))
         }
-
-        val completedCount = tasks.count { it.status == TaskRunStatus.COMPLETED }
+        val completed = tasks.count { it.status == TaskRunStatus.COMPLETED }
         val activeIndex = tasks.indexOfFirst { it.status == TaskRunStatus.IN_PROGRESS }
             .takeIf { it >= 0 }
-        val taskErrorIndex = tasks.indexOfFirst { it.status == TaskRunStatus.ERROR }
-            .takeIf { it >= 0 }
-        val completedProgress = segments
-            .take(completedCount.coerceIn(0, total))
-            .sumOf { it.length }
-
         val progress = when {
-            // Fill through the first failed task so the errored segment is always visible.
-            taskErrorIndex != null -> {
-                segments.take((taskErrorIndex + 1).coerceIn(0, total)).sumOf { it.length }
+            snapshot.state == MaaExecutionState.ERROR || tasks.any { it.status == TaskRunStatus.ERROR } -> {
+                val errorIndex = tasks.indexOfFirst { it.status == TaskRunStatus.ERROR }
+                    .takeIf { it >= 0 }
+                    ?: activeIndex
+                    ?: completed
+                segments.take(errorIndex.coerceIn(0, total)).sumOf { it.length }
             }
 
-            // If the service enters ERROR without a task-level error marker, preserve only
-            // completed progress instead of implying the whole chain failed at once.
-            snapshot.state == MaaExecutionState.ERROR -> completedProgress
             snapshot.state == MaaExecutionState.IDLE -> PROGRESS_STYLE_MAX
-            snapshot.state == MaaExecutionState.STOPPING -> {
-                segments.take(
-                    completedCount.coerceAtLeast(activeIndex ?: completedCount)
-                        .coerceIn(0, total)
-                ).sumOf { it.length }
-            }
+            snapshot.state == MaaExecutionState.STOPPING -> segments.take(
+                completed.coerceAtLeast(activeIndex ?: completed).coerceIn(0, total)
+            ).sumOf { it.length }
 
-            activeIndex != null -> {
-                segments.take(activeIndex).sumOf { it.length } +
-                    segments[activeIndex].length / 2
-            }
-
-            completedCount > 0 -> completedProgress
+            activeIndex != null -> segments.take(activeIndex).sumOf { it.length } + segments[activeIndex].length / 2
+            completed > 0 -> segments.take(completed).sumOf { it.length }
             else -> 0
         }.coerceIn(0, PROGRESS_STYLE_MAX)
 
         return TaskProgressInfo(
             max = PROGRESS_STYLE_MAX,
             progress = progress,
-            completedCount = completedCount,
+            completedCount = completed,
             totalCount = total,
             segments = segments,
             points = buildProgressPoints(segments),
@@ -387,7 +308,6 @@ class TaskExecutionService : Service() {
 
     private fun buildProgressPoints(segments: List<ProgressSegmentInfo>): List<ProgressPointInfo> {
         if (segments.size <= 1) return emptyList()
-
         var position = 0
         return segments.dropLast(1).map { segment ->
             position += segment.length
@@ -404,18 +324,17 @@ class TaskExecutionService : Service() {
         return "$progressText · $statusText"
     }
 
-    private fun buildNotificationTitle(snapshot: TaskNotificationSnapshot): String {
-        val currentTaskTitle = snapshot.tasks
-            .firstOrNull { it.status == TaskRunStatus.IN_PROGRESS }
-            ?.taskChain
-            ?.trim()
-            ?.let { taskChain ->
-                VISIBLE_TASK_TITLES[taskChain]
-                    ?: taskChain.takeIf { it in VISIBLE_TASK_TITLES.values }
-            }
+        private fun buildNotificationTitle(snapshot: TaskNotificationSnapshot): String {
+            val currentTaskTitle = snapshot.tasks
+                .firstOrNull { it.status == TaskRunStatus.IN_PROGRESS }
+                ?.taskChain
+                ?.trim()
+                ?.let { taskChain -> VISIBLE_TASK_TITLES[taskChain] ?: taskChain.takeIf { it in VISIBLE_TASK_TITLES.values } }
 
-        return currentTaskTitle ?: getString(R.string.notification_task_running_title)
-    }
+            return currentTaskTitle ?: getString(R.string.notification_task_running_title)
+        }
+
+
 
     private fun colorForStatus(status: TaskRunStatus): Int = when (status) {
         TaskRunStatus.PENDING -> PROGRESS_COLOR_PENDING
@@ -454,42 +373,21 @@ class TaskExecutionService : Service() {
 
     private fun showResultNotification(title: String, text: String) {
         stopForeground(STOP_FOREGROUND_REMOVE)
-
-        val notification = NotificationCompat.Builder(this, RESULT_CHANNEL_ID)
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher_foreground)
             .setContentTitle(title)
             .setContentText(text)
             .setContentIntent(buildContentIntent())
             .setAutoCancel(true)
             .build()
-
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(RESULT_NOTIFICATION_ID, notification)
     }
 
-    private data class TaskNotificationSnapshot(
-        val state: MaaExecutionState,
-        val statusText: String?,
-        val tasks: List<TaskRunInfo>,
-    )
-
-    private data class TaskProgressInfo(
-        val max: Int,
-        val progress: Int,
-        val completedCount: Int,
-        val totalCount: Int,
-        val segments: List<ProgressSegmentInfo>,
-        val points: List<ProgressPointInfo>,
-    )
-
-    private data class ProgressSegmentInfo(
-        val length: Int,
-        val color: Int,
-    )
-
-    private data class ProgressPointInfo(
-        val position: Int,
-        val color: Int,
-    )
+    override fun onDestroy() {
+        observeJob?.cancel()
+        serviceScope.cancel()
+        super.onDestroy()
+    }
 }
 
