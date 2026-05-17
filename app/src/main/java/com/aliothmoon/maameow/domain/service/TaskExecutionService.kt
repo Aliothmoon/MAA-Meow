@@ -11,6 +11,7 @@ import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.IconCompat
@@ -49,12 +50,12 @@ class TaskExecutionService : Service() {
         private const val PROGRESS_COLOR_PENDING = 0xFF9E9E9E.toInt()
         private const val PROGRESS_COLOR_ERROR = 0xFFD32F2F.toInt()
 
-        private val VISIBLE_TASK_TITLES = mapOf(
-            "Fight" to "理智作战",
-            "Recruit" to "自动公招",
-            "Infrast" to "基建换班",
-            "Mall" to "信用收支",
-            "Award" to "领取奖励",
+        private val VISIBLE_TASK_TITLE_RES = mapOf(
+            "Fight" to R.string.maa_fight,
+            "Recruit" to R.string.maa_recruit,
+            "Infrast" to R.string.maa_infrast,
+            "Mall" to R.string.maa_mall,
+            "Award" to R.string.maa_award,
         )
 
         fun start(context: Context) {
@@ -112,7 +113,7 @@ class TaskExecutionService : Service() {
             fun scheduleRunningUpdate(snapshot: TaskNotificationSnapshot) {
                 pendingRunningSnapshot = snapshot
 
-                val now = System.currentTimeMillis()
+                val now = SystemClock.elapsedRealtime()
                 val elapsed = now - lastUpdateTime
                 if (elapsed >= MIN_UPDATE_INTERVAL_MS) {
                     lastUpdateTime = now
@@ -131,7 +132,7 @@ class TaskExecutionService : Service() {
                 scheduledRunningUpdateJob = serviceScope.launch {
                     delay((MIN_UPDATE_INTERVAL_MS - elapsed).coerceAtLeast(0L))
                     pendingRunningSnapshot?.let { latestSnapshot ->
-                        lastUpdateTime = System.currentTimeMillis()
+                        lastUpdateTime = SystemClock.elapsedRealtime()
                         pendingRunningSnapshot = null
                         updateNotification(latestSnapshot)
                     }
@@ -203,7 +204,8 @@ class TaskExecutionService : Service() {
 
     private fun ensureNotificationChannel() {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channelName = getString(R.string.notification_channel_task_execution)
+        val taskChannelName = getString(R.string.notification_channel_task_execution_live)
+        val resultChannelName = getString(R.string.notification_channel_task_execution_result)
         val channelDescription = getString(R.string.notification_channel_task_execution_desc)
 
         // Live updates must use DEFAULT+ importance to remain eligible for promoted ongoing
@@ -211,7 +213,7 @@ class TaskExecutionService : Service() {
         // to reduce noise after the foreground task has ended.
         val taskChannel = NotificationChannel(
             TASK_CHANNEL_ID,
-            channelName,
+            taskChannelName,
             NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
             description = channelDescription
@@ -220,7 +222,7 @@ class TaskExecutionService : Service() {
 
         val resultChannel = NotificationChannel(
             RESULT_CHANNEL_ID,
-            channelName,
+            resultChannelName,
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
             description = channelDescription
@@ -402,8 +404,7 @@ class TaskExecutionService : Service() {
             ?.taskChain
             ?.trim()
             ?.let { taskChain ->
-                VISIBLE_TASK_TITLES[taskChain]
-                    ?: taskChain.takeIf { it in VISIBLE_TASK_TITLES.values }
+                VISIBLE_TASK_TITLE_RES[taskChain]?.let { getString(it) }
             }
 
         return currentTaskTitle ?: getString(R.string.notification_task_running_title)

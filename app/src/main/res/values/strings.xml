@@ -1271,6 +1271,8 @@
 
     <!-- i18n: notification channels & service -->
     <string name="notification_channel_task_execution">任务执行</string>
+    <string name="notification_channel_task_execution_live">任务执行进度</string>
+    <string name="notification_channel_task_execution_result">任务执行结果</string>
     <string name="notification_channel_task_execution_desc">后台任务执行进度通知</string>
     <string name="notification_task_running_title">任务执行中</string>
     <string name="notification_task_starting">正在启动…</string>
