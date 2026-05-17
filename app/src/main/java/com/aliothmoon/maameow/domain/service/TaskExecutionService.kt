@@ -261,6 +261,7 @@ class TaskExecutionService : Service() {
             statusText = statusText,
             contentText = contentText,
             progressInfo = progressInfo,
+            activeTaskName = activeTaskName(snapshot),
         )
     }
 
@@ -277,6 +278,7 @@ class TaskExecutionService : Service() {
         statusText: String,
         contentText: String,
         progressInfo: TaskProgressInfo,
+        activeTaskName: String?,
     ): Notification {
         val style = NotificationCompat.ProgressStyle()
             .setStyledByProgress(true)
@@ -296,7 +298,13 @@ class TaskExecutionService : Service() {
             )
         }
 
-        val shortCritical = progressInfo.progressLabel
+        val shortCritical = when {
+            progressInfo.progressLabel != null && activeTaskName != null ->
+                "${progressInfo.progressLabel} $activeTaskName"
+            progressInfo.progressLabel != null -> progressInfo.progressLabel
+            activeTaskName != null -> activeTaskName
+            else -> null
+        }
 
         return NotificationCompat.Builder(this, TASK_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher_foreground)
