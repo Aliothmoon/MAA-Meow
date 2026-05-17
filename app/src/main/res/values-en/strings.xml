@@ -1216,6 +1216,8 @@
 
     <!-- i18n: notification channels & service -->
     <string name="notification_channel_task_execution">Task Execution</string>
+    <string name="notification_channel_task_execution_live">Task Execution Progress</string>
+    <string name="notification_channel_task_execution_result">Task Execution Results</string>
     <string name="notification_channel_task_execution_desc">Background task execution progress notifications</string>
     <string name="notification_task_running_title">Task Running</string>
     <string name="notification_task_starting">Starting…</string>
