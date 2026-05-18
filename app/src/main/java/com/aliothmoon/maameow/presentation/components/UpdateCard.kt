@@ -78,7 +78,6 @@ import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.presentation.viewmodel.UpdateViewModel
 import com.aliothmoon.maameow.utils.Misc
 import dev.jeziellago.compose.markdowntext.MarkdownText
-import androidx.compose.runtime.collectAsState
 
 /**
  * 更新管理卡片
