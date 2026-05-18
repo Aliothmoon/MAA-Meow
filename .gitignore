@@ -27,6 +27,7 @@ android/.cxx
 # IntelliJ
 *.iml
 .idea/
+!.idea/icon.png
 
 # MaaResource
 /app/src/main/assets/MaaSync
