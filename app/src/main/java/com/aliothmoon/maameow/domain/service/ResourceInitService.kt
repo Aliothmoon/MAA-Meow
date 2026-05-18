@@ -42,9 +42,10 @@ class ResourceInitService(
             withContext(Dispatchers.IO) {
                 pathConfig.ensureDirectories()
                 val resourceDir = File(pathConfig.resourceDir)
-                if (!resourceDir.exists()) {
-                    resourceDir.mkdirs()
+                if (resourceDir.exists() && !resourceDir.deleteRecursively()) {
+                    Timber.w("清理旧资源目录失败: ${resourceDir.absolutePath}")
                 }
+                resourceDir.mkdirs()
             }
 
             // 执行提取
