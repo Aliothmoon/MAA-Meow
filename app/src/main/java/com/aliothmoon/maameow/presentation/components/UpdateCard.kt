@@ -296,29 +296,16 @@ fun UpdateCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = stringResource(R.string.update_card_app, viewModel.currentAppVersion),
+                        text = stringResource(R.string.update_card_app),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
-
-                    if (!appIsUpdating) {
-                        TextButton(
-                            onClick = { viewModel.checkAppUpdate() },
-                            enabled = !appIsChecking,
-                            modifier = Modifier.defaultMinSize(minHeight = 1.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                        ) {
-                            if (appIsChecking) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Text(stringResource(R.string.update_card_check_button), fontSize = 14.sp)
-                            }
-                        }
-                    }
+                    Text(
+                        text = viewModel.currentAppVersion,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 // 应用下载进度（动画展开/收起）
@@ -339,29 +326,20 @@ fun UpdateCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = stringResource(R.string.update_card_resource, currentResourceVersion),
+                        text = stringResource(R.string.update_card_resource),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onTertiaryContainer,
                         modifier = Modifier.weight(1f)
                     )
-
-                    if (!resIsUpdating) {
-                        TextButton(
-                            onClick = { viewModel.checkResourceUpdate() },
-                            enabled = !resIsChecking,
-                            modifier = Modifier.defaultMinSize(minHeight = 1.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                        ) {
-                            if (resIsChecking) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Text(stringResource(R.string.update_card_check_button), fontSize = 14.sp)
-                            }
-                        }
-                    }
+                    val notInstalled = stringResource(R.string.home_resource_not_installed)
+                    Text(
+                        text = currentResourceVersion.ifBlank { notInstalled },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (currentResourceVersion.isBlank())
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 // 资源下载/解压进度（动画展开/收起）
@@ -463,6 +441,53 @@ fun UpdateCard(
                         cdk = mirrorChyanCdk,
                         onCdkChange = { viewModel.setMirrorChyanCdk(it) }
                     )
+                }
+            }
+
+            // 检查更新按钮
+            Row(
+                modifier = Modifier
+                    .padding(start = 16.dp, end = 16.dp)
+                    .fillMaxWidth()
+                    .height(36.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(
+                    onClick = { viewModel.checkAppUpdate() },
+                    enabled = !appIsChecking,
+                    modifier = Modifier.defaultMinSize(minHeight = 1.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    if (appIsChecking) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            stringResource(R.string.update_card_check_app_button),
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+                TextButton(
+                    onClick = { viewModel.checkResourceUpdate() },
+                    enabled = !resIsChecking,
+                    modifier = Modifier.defaultMinSize(minHeight = 1.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    if (resIsChecking) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            stringResource(R.string.update_card_check_resources_button),
+                            fontSize = 14.sp
+                        )
+                    }
                 }
             }
         }

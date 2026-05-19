@@ -268,9 +268,10 @@
 
     <!-- update card -->
     <string name="update_card_title">Updates</string>
-    <string name="update_card_app">App - %s</string>
-    <string name="update_card_resource">MAA Resources - %s</string>
-    <string name="update_card_check_button">Check</string>
+    <string name="update_card_app">App</string>
+    <string name="update_card_resource">MAA Resources</string>
+    <string name="update_card_check_app_button">Update App</string>
+    <string name="update_card_check_resources_button">Update MAA Resources</string>
     <string name="update_card_source_label">Source</string>
     <string name="update_source_github">GitHub</string>
     <string name="update_source_mirror_chyan">MirrorChyan</string>
