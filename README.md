@@ -1,4 +1,5 @@
 <div align="center">
+<img alt="LOGO" src="/docs/Logo.png" width="256" height="256" />
 
 # MAA Meow 🐱
 
