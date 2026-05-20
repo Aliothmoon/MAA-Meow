@@ -35,3 +35,7 @@ android/.cxx
 
 # MAA Core download cache
 .maa-cache/
+
+# App Build
+/app/release
+/app/debug

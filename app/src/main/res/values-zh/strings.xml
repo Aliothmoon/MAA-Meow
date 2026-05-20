@@ -274,6 +274,7 @@
     <string name="home_screen_resolution">屏幕分辨率</string>
     <string name="home_resource_version_label">资源版本</string>
     <string name="home_resource_not_installed">未安装</string>
+    <string name="home_app_version_label">App版本</string>
     <string name="home_service_status">服务状态</string>
 
     <!-- home: run mode card -->

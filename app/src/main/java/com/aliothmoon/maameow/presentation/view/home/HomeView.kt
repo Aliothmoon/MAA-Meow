@@ -109,6 +109,7 @@ fun HomeView(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val permissionState by permissionManager.state.collectAsStateWithLifecycle()
     val resourceVersion by updateViewModel.currentResourceVersion.collectAsStateWithLifecycle()
+    val appVersion = updateViewModel.currentAppVersion
     val state by RemoteServiceManager.state.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
@@ -257,6 +258,7 @@ fun HomeView(
                         screenWidth = width,
                         screenHeight = height,
                         resourceVersion = resourceVersion,
+                        appVersion = appVersion,
                         serviceStatusColor = uiState.serviceStatusColor,
                         serviceStatusText = uiState.serviceStatusText,
                         serviceStatusLoading = uiState.serviceStatusLoading
@@ -451,6 +453,7 @@ private fun ScreenInfoCard(
     screenWidth: Int,
     screenHeight: Int,
     resourceVersion: String,
+    appVersion: String,
     serviceStatusColor: StatusColorType,
     serviceStatusText: UiText,
     serviceStatusLoading: Boolean
@@ -506,6 +509,23 @@ private fun ScreenInfoCard(
                         MaterialTheme.colorScheme.error
                     else
                         MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.home_app_version_label),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = appVersion,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Row(

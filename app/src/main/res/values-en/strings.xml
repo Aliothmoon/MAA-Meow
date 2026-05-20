@@ -73,6 +73,7 @@
     <string name="home_screen_resolution">Screen Resolution</string>
     <string name="home_resource_version_label">Resource Version</string>
     <string name="home_resource_not_installed">Not Installed</string>
+    <string name="home_app_version_label">App Version</string>
     <string name="home_service_status">Service Status</string>
 
     <!-- home: run mode card -->
