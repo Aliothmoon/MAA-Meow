@@ -96,7 +96,6 @@ fun UpdateCard(
     val appCheckResult by viewModel.appCheckResult.collectAsStateWithLifecycle()
     val updateSource by viewModel.updateSource.collectAsStateWithLifecycle()
     val mirrorChyanCdk by viewModel.mirrorChyanCdk.collectAsStateWithLifecycle()
-    val currentResourceVersion by viewModel.currentResourceVersion.collectAsStateWithLifecycle()
     val context = LocalContext.current
     
     val resourceUpToDateMessage = stringResource(R.string.update_toast_resource_up_to_date)
@@ -296,7 +295,7 @@ fun UpdateCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = stringResource(R.string.update_card_app, viewModel.currentAppVersion),
+                        text = stringResource(R.string.update_card_app),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
@@ -339,7 +338,7 @@ fun UpdateCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = stringResource(R.string.update_card_resource, currentResourceVersion),
+                        text = stringResource(R.string.update_card_resource),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onTertiaryContainer,
                         modifier = Modifier.weight(1f)
