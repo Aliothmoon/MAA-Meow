@@ -329,7 +329,7 @@ class TaskExecutionService : Service() {
         }
 
         return NotificationCompat.Builder(this, TASK_CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_maa_logo)
             .setColor(progressInfo.barColor)
             .setContentTitle(title)
             .setContentText(contentText)
@@ -457,7 +457,7 @@ private fun buildProgressInfo(snapshot: TaskNotificationSnapshot): TaskProgressI
         stopForeground(STOP_FOREGROUND_REMOVE)
 
         val notification = NotificationCompat.Builder(this, RESULT_CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_maa_logo)
             .setContentTitle(title)
             .setContentText(text)
             .setContentIntent(buildContentIntent())

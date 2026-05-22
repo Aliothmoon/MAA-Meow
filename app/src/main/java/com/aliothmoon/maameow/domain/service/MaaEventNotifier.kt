@@ -134,7 +134,7 @@ class MaaEventNotifier(
 
         val title = string(titleRes)
         val notification = NotificationCompat.Builder(appContext, channelId)
-            .setSmallIcon(R.mipmap.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_maa_logo)
             .setContentTitle(title)
             .setContentText(text)
             .setContentIntent(pendingIntent)
