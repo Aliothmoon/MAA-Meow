@@ -10,9 +10,11 @@ import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
 import com.aliothmoon.maameow.data.model.copilot.CopilotTaskData
 import com.aliothmoon.maameow.data.model.copilot.DifficultyFlags
 import com.aliothmoon.maameow.constant.Packages
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.repository.CopilotRepository
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.AppAliveChecker
 import com.aliothmoon.maameow.domain.service.CopilotManager
 import com.aliothmoon.maameow.domain.service.CopilotRequestException
@@ -111,6 +113,7 @@ class CopilotViewModel(
     private val runtimeStateStore: CopilotRuntimeStateStore,
     private val appAliveChecker: AppAliveChecker,
     private val chainState: TaskChainState,
+    private val appSettings: AppSettingsManager,
 ) : ViewModel() {
 
     companion object {
@@ -948,13 +951,26 @@ class CopilotViewModel(
             val snapshot = _state.value
             if (!validateStart(snapshot)) return@launch
 
-            if (!gameNotRunningAcknowledged) {
-                val pkg = Packages[chainState.getClientType()]
-                if (pkg != null && appAliveChecker.isAppAlive(pkg) == AppAliveStatus.DEAD) {
+            val pkg = Packages[chainState.getClientType()]
+            if (pkg != null) {
+                val aliveStatus = appAliveChecker.isAppAlive(pkg)
+                if (!gameNotRunningAcknowledged && aliveStatus == AppAliveStatus.DEAD) {
                     _dialog.value = appContext.createStartWarningDialog(
                         appContext.resolveGameNotRunningWarningMessage()
                     )
                     return@launch
+                }
+                if (aliveStatus == AppAliveStatus.ALIVE
+                    && appSettings.runMode.value == RunMode.BACKGROUND
+                ) {
+                    val onVd = appAliveChecker.isAppOnBackgroundDisplay(pkg)
+                    if (onVd == false) {
+                        gameNotRunningAcknowledged = false
+                        _dialog.value = appContext.createStartBlockedDialog(
+                            uiTextOf(R.string.task_start_error_game_not_on_background_display)
+                        )
+                        return@launch
+                    }
                 }
             }
             gameNotRunningAcknowledged = false
