@@ -101,6 +101,7 @@
     <string name="maa_product_incorrect">产物与配置不相符。</string>
     <string name="maa_product_unknown">无法识别的产物</string>
     <string name="maa_product_changed">产物已切换</string>
+    <string name="maa_product_change_fail">产物切换失败</string>
     <string name="maa_room_groups_match">匹配编组: </string>
     <string name="maa_room_groups_match_failed">匹配干员编组失败，编组列表: </string>
     <string name="maa_custom_infrast_plan_index_auto_switch">已自动切换至下一套自定义基建方案，下次运行生效</string>

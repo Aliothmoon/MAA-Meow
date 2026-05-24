@@ -422,6 +422,7 @@
     <string name="maa_product_incorrect">Product does NOT match the configuration.</string>
     <string name="maa_product_unknown">Unknown Product</string>
     <string name="maa_product_changed">Product has changed</string>
+    <string name="maa_product_change_fail">Failed to switch product</string>
     <string name="maa_room_groups_match">Match Group: </string>
     <string name="maa_room_groups_match_failed">Failed to match Operator groups, group list: </string>
     <string name="maa_custom_infrast_plan_index_auto_switch">Auto-switched to the next custom infrast plan, effective next run</string>

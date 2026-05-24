@@ -413,6 +413,7 @@ class SubTaskHandler(
             "ProductIncorrect" -> append(str("ProductIncorrect"), LogLevel.ERROR)
             "ProductUnknown" -> append(str("ProductUnknown"), LogLevel.ERROR)
             "ProductChanged" -> append(str("ProductChanged"), LogLevel.INFO)
+            "ProductChangeFail" -> append(str("ProductChangeFail"), LogLevel.ERROR)
             "CustomInfrastRoomGroupsMatch" -> {
                 val group = subDetails?.getString("group") ?: ""
                 append("${str("RoomGroupsMatch")}$group", LogLevel.TRACE)
