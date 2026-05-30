@@ -75,14 +75,16 @@ fun AnnouncementDialog(
         snapshotFlow { scrollState.value >= scrollState.maxValue }
             .distinctUntilChanged()
             .collect { atBottom ->
-                if (atBottom && scrollState.maxValue >= 0) {
+                if (atBottom) {
                     scrolledToBottom = true
                 }
             }
     }
 
-    // 停留计时器
-    LaunchedEffect(Unit) {
+    // 停留计时器：滚动到底部后才开始计时，使倒计时提示得以显示
+    LaunchedEffect(scrolledToBottom) {
+        if (!scrolledToBottom) return@LaunchedEffect
+        elapsedSeconds = 0
         repeat(STAY_SECONDS_REQUIRED) {
             delay(1000)
             elapsedSeconds++

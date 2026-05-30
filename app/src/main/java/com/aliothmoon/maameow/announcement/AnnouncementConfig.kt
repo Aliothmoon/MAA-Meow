@@ -7,7 +7,7 @@ import java.util.Locale
 
 object AnnouncementConfig {
 
-    const val CURRENT_VERSION = "v1"
+    const val CURRENT_VERSION = "v2"
 
     private const val ASSET_DIR = "announcement"
 

@@ -1308,11 +1308,6 @@
 
     <!-- i18n: announcement -->
     <string name="announcement_title">重要公告</string>
-    <string name="announcement_read_button">我已阅读</string>
-    <string name="announcement_confirm_title">确认已阅读</string>
-    <string name="announcement_confirm_message">确认后本公告不再弹出，请确保已完整阅读全部内容。</string>
-    <string name="announcement_confirm_ok">确认，不再提示</string>
-    <string name="announcement_confirm_back">返回继续阅读</string>
     <string name="announcement_dont_show_again">下次公告更新前不再显示</string>
     <string name="announcement_dont_show_again_hint">请阅读完公告并停留 %1$d 秒后可勾选</string>
     <string name="announcement_scroll_to_bottom_hint">请阅读完公告内容</string>
