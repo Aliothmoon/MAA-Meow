@@ -64,7 +64,7 @@ class MainActivity : AppCompatActivity() {
 
             MaaMeowTheme(themeMode = themeMode) {
                 AppNavigation(backgroundTaskViewModel = backgroundTaskViewModel)
-            }
+                }
             }
         }
     }
@@ -100,7 +100,7 @@ class MainActivity : AppCompatActivity() {
                         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                     }
                 }
-            }
+                }
             }
         }
     }
@@ -118,7 +118,7 @@ class MainActivity : AppCompatActivity() {
                         delegate.localNightMode = target
                     }
                 }
-            }
+                }
             }
         }
     }
