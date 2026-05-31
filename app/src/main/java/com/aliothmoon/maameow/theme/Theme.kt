@@ -17,8 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
-import com.aliothmoon.maameow.UiMode
-import com.aliothmoon.maameow.LocalUiMode
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -156,66 +154,37 @@ object MaaThemeAlphas {
 
 private val MaaKeyColor = Color(0xFF2B6BCA)
 
-private fun themeModeToMiuixColorMode(
-    themeMode: AppSettingsManager.ThemeMode
-): ColorSchemeMode = when (themeMode) {
-    AppSettingsManager.ThemeMode.SYSTEM -> ColorSchemeMode.MonetSystem
-    AppSettingsManager.ThemeMode.WHITE -> ColorSchemeMode.MonetLight
-    AppSettingsManager.ThemeMode.DARK -> ColorSchemeMode.MonetDark
-    AppSettingsManager.ThemeMode.PURE_DARK -> ColorSchemeMode.Dark
-}
-
-@Composable
-private fun themeModeToMaterialScheme(
-    themeMode: AppSettingsManager.ThemeMode
-): ColorScheme = when (themeMode) {
-    AppSettingsManager.ThemeMode.SYSTEM -> if (isSystemInDarkTheme()) BlueDark else BlueLight
-    AppSettingsManager.ThemeMode.WHITE -> BlueLight
-    AppSettingsManager.ThemeMode.DARK -> BlueDark
-    AppSettingsManager.ThemeMode.PURE_DARK -> BluePureDark
-}
-
-/**
- * Main theme composable. Supports dual UI mode:
- * - Material: classic Material3 theme (original UI)
- * - Miuix: MiuixTheme wrapping Material3 (MIUI-style dynamic colors)
- */
 @Composable
 fun MaaMeowTheme(
     themeMode: AppSettingsManager.ThemeMode = AppSettingsManager.ThemeMode.SYSTEM,
-    uiMode: UiMode = UiMode.Miuix,
     content: @Composable () -> Unit
 ) {
-    when (uiMode) {
-        UiMode.Material -> {
-            val colorScheme = themeModeToMaterialScheme(themeMode)
-            CompositionLocalProvider(LocalIndication provides NoIndication) {
-                MaterialTheme(
-                    colorScheme = colorScheme,
-                    typography = Typography,
-                    shapes = MaaShapes,
-                    content = content
-                )
-            }
-        }
-        UiMode.Miuix -> {
-            val miuixColorMode = themeModeToMiuixColorMode(themeMode)
-            val miuixController = ThemeController(
-                colorSchemeMode = miuixColorMode,
-                keyColor = MaaKeyColor
+    val colorScheme = when (themeMode) {
+        AppSettingsManager.ThemeMode.SYSTEM -> if (isSystemInDarkTheme()) BlueDark else BlueLight
+        AppSettingsManager.ThemeMode.WHITE -> BlueLight
+        AppSettingsManager.ThemeMode.DARK -> BlueDark
+        AppSettingsManager.ThemeMode.PURE_DARK -> BluePureDark
+    }
+
+    val miuixColorMode = when (themeMode) {
+        AppSettingsManager.ThemeMode.SYSTEM -> ColorSchemeMode.MonetSystem
+        AppSettingsManager.ThemeMode.WHITE -> ColorSchemeMode.MonetLight
+        AppSettingsManager.ThemeMode.DARK -> ColorSchemeMode.MonetDark
+        AppSettingsManager.ThemeMode.PURE_DARK -> ColorSchemeMode.Dark
+    }
+    val miuixController = ThemeController(
+        colorSchemeMode = miuixColorMode,
+        keyColor = MaaKeyColor
+    )
+
+    MiuixTheme(controller = miuixController) {
+        CompositionLocalProvider(LocalIndication provides NoIndication) {
+            MaterialTheme(
+                colorScheme = colorScheme,
+                typography = Typography,
+                shapes = MaaShapes,
+                content = content
             )
-            MiuixTheme(controller = miuixController) {
-                // Material3 is still needed as the base for Compose Navigation etc.
-                val colorScheme = themeModeToMaterialScheme(themeMode)
-                CompositionLocalProvider(LocalIndication provides NoIndication) {
-                    MaterialTheme(
-                        colorScheme = colorScheme,
-                        typography = Typography,
-                        shapes = MaaShapes,
-                        content = content
-                    )
-                }
-            }
         }
     }
 }
