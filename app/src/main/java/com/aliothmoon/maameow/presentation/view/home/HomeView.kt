@@ -940,9 +940,6 @@ private fun ForegroundModeSection(
 }
 
 
-/**
- * Router that delegates to Material or Miuix home screen based on UiMode.
- */
 @Composable
 fun HomeView(
     navController: NavController,
