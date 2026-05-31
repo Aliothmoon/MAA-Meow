@@ -938,5 +938,3 @@ private fun ForegroundModeSection(
         }
     }
 }
-
-
