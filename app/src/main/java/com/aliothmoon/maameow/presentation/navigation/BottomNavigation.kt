@@ -1,8 +1,5 @@
 package com.aliothmoon.maameow.presentation.navigation
 
-import com.aliothmoon.maameow.LocalUiMode
-import com.aliothmoon.maameow.UiMode
-
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -125,27 +122,6 @@ private fun AppBottomNavigationMaterial(
                 }
             }
         }
-    }
-}
-
-
-/**
- * Router that delegates to Material or Miuix bottom navigation based on UiMode.
- */
-@Composable
-private fun AppBottomNavigationMaterial(
-    currentRoute: String,
-    onTabSelected: (BottomNavTab) -> Unit
-) {
-    when (LocalUiMode.current) {
-        UiMode.Miuix -> MiuixAppBottomNavigation(
-            currentRoute = currentRoute,
-            onTabSelected = onTabSelected
-        )
-        UiMode.Material -> AppBottomNavigationMaterial(
-            currentRoute = currentRoute,
-            onTabSelected = onTabSelected
-        )
     }
 }
 
