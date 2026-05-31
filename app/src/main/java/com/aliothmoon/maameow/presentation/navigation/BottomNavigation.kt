@@ -32,8 +32,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Routes
-import com.aliothmoon.maameow.LocalUiMode
-import com.aliothmoon.maameow.UiMode
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 
 sealed class BottomNavTab(
@@ -71,7 +69,7 @@ sealed class BottomNavTab(
 }
 
 @Composable
-private fun AppBottomNavigationMaterial(
+fun AppBottomNavigation(
     currentRoute: String,
     onTabSelected: (BottomNavTab) -> Unit
 ) {
