@@ -23,6 +23,8 @@ import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.presentation.navigation.AppNavigation
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.model.ScheduledExecutionRequest
+import com.aliothmoon.maameow.LocalUiMode
+import com.aliothmoon.maameow.UiMode
 import com.aliothmoon.maameow.theme.MaaMeowTheme
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -63,6 +65,7 @@ class MainActivity : AppCompatActivity() {
             MaaMeowTheme(themeMode = themeMode) {
                 AppNavigation(backgroundTaskViewModel = backgroundTaskViewModel)
             }
+            }
         }
     }
 
@@ -98,6 +101,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
+            }
         }
     }
 
@@ -114,6 +118,7 @@ class MainActivity : AppCompatActivity() {
                         delegate.localNightMode = target
                     }
                 }
+            }
             }
         }
     }
