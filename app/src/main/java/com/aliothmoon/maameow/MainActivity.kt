@@ -55,13 +55,8 @@ class MainActivity : AppCompatActivity() {
         })
         setContent {
             val themeMode by appSettingsManager.themeMode.collectAsStateWithLifecycle()
-            CompositionLocalProvider(LocalUiMode provides UiMode.Material) {
-                MaaMeowTheme(
-                    themeMode = themeMode,
-                    uiMode = LocalUiMode.current
-                ) {
+            MaaMeowTheme(themeMode = themeMode) {
                     AppNavigation(backgroundTaskViewModel = backgroundTaskViewModel)
-                }
             }
         }
     }
@@ -94,7 +89,6 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                     }
-                }
             }
         }
     }
@@ -109,7 +103,6 @@ class MainActivity : AppCompatActivity() {
                     if (delegate.localNightMode != target) {
                         delegate.localNightMode = target
                     }
-                }
             }
         }
     }
