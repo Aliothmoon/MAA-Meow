@@ -98,7 +98,7 @@ import timber.log.Timber
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun HomeView(
+private fun HomeViewMaterial(
     navController: NavController,
     viewModel: HomeViewModel = koinViewModel(),
     updateViewModel: UpdateViewModel = koinViewModel(),
@@ -936,5 +936,33 @@ private fun ForegroundModeSection(
                 )
             }
         }
+    }
+}
+
+
+/**
+ * Router that delegates to Material or Miuix home screen based on UiMode.
+ */
+@Composable
+fun HomeView(
+    navController: NavController,
+    viewModel: HomeViewModel = koinViewModel(),
+    updateViewModel: UpdateViewModel = koinViewModel(),
+    permissionManager: PermissionManager = koinInject(),
+    appSettingsManager: AppSettingsManager = koinInject()
+) {
+    when (LocalUiMode.current) {
+        UiMode.Miuix -> MiuixHomeView(
+            homeViewModel = viewModel,
+            navController = navController,
+            backgroundTaskViewModel = viewModel()
+        )
+        UiMode.Material -> HomeViewMaterial(
+            navController = navController,
+            viewModel = viewModel,
+            updateViewModel = updateViewModel,
+            permissionManager = permissionManager,
+            appSettingsManager = appSettingsManager
+        )
     }
 }

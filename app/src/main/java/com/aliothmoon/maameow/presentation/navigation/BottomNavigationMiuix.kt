@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.presentation.navigation
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -18,11 +17,6 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -31,56 +25,25 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
-import com.aliothmoon.maameow.constant.Routes
-import com.aliothmoon.maameow.LocalUiMode
-import com.aliothmoon.maameow.UiMode
-import com.aliothmoon.maameow.theme.MaaDesignTokens
-
-sealed class BottomNavTab(
-    val route: String,
-    @param:StringRes val labelRes: Int,
-    val icon: ImageVector
-) {
-    data object HOME : BottomNavTab(
-        route = Routes.HOME,
-        labelRes = R.string.bottom_nav_home,
-        icon = Icons.Default.Home
-    )
-
-    data object BACKGROUND : BottomNavTab(
-        route = Routes.BACKGROUND_TASK,
-        labelRes = R.string.bottom_nav_background_task,
-        icon = Icons.Default.PlayArrow
-    )
-
-    data object SCHEDULE : BottomNavTab(
-        route = Routes.SCHEDULE,
-        labelRes = R.string.bottom_nav_schedule,
-        icon = Icons.Default.DateRange
-    )
-
-    data object NOTIFICATION : BottomNavTab(
-        route = Routes.NOTIFICATION,
-        labelRes = R.string.bottom_nav_notification,
-        icon = Icons.Default.Notifications
-    )
-
-    companion object {
-        val all = listOf(HOME, BACKGROUND, SCHEDULE, NOTIFICATION)
-    }
-}
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.Surface
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
-private fun AppBottomNavigationMaterial(
+fun MiuixAppBottomNavigation(
     currentRoute: String,
     onTabSelected: (BottomNavTab) -> Unit
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 0.dp
+        color = MiuixTheme.colorScheme.surface,
     ) {
         Column {
-            HorizontalDivider(thickness = MaaDesignTokens.Separator.thickness, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            HorizontalDivider(
+                thickness = com.aliothmoon.maameow.theme.MaaDesignTokens.Separator.thickness,
+                color = MiuixTheme.colorScheme.dividerLine.copy(alpha = 0.3f)
+            )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -93,10 +56,9 @@ private fun AppBottomNavigationMaterial(
                     val label = stringResource(tab.labelRes)
                     val selected = currentRoute == tab.route
                     val contentColor = if (selected)
-                        MaterialTheme.colorScheme.primary
+                        MiuixTheme.colorScheme.primary
                     else
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-
+                        MiuixTheme.colorScheme.onSurfaceSecondary.copy(alpha = 0.7f)
                     Column(
                         modifier = Modifier
                             .clickable(
@@ -115,33 +77,12 @@ private fun AppBottomNavigationMaterial(
                         )
                         Text(
                             text = label,
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MiuixTheme.textStyles.footnote1,
                             color = contentColor
                         )
                     }
                 }
             }
         }
-    }
-}
-
-
-/**
- * Router that delegates to Material or Miuix bottom navigation based on UiMode.
- */
-@Composable
-fun AppBottomNavigation(
-    currentRoute: String,
-    onTabSelected: (BottomNavTab) -> Unit
-) {
-    when (LocalUiMode.current) {
-        UiMode.Miuix -> MiuixAppBottomNavigation(
-            currentRoute = currentRoute,
-            onTabSelected = onTabSelected
-        )
-        UiMode.Material -> AppBottomNavigationMaterial(
-            currentRoute = currentRoute,
-            onTabSelected = onTabSelected
-        )
     }
 }
