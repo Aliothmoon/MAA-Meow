@@ -122,24 +122,3 @@ fun AppBottomNavigation(
         }
     }
 }
-
-
-/**
- * Router that delegates to Material or Miuix bottom navigation based on UiMode.
- */
-@Composable
-fun AppBottomNavigation(
-    currentRoute: String,
-    onTabSelected: (BottomNavTab) -> Unit
-) {
-    when (LocalUiMode.current) {
-        UiMode.Miuix -> MiuixAppBottomNavigation(
-            currentRoute = currentRoute,
-            onTabSelected = onTabSelected
-        )
-        UiMode.Material -> AppBottomNavigationMaterial(
-            currentRoute = currentRoute,
-            onTabSelected = onTabSelected
-        )
-    }
-}
