@@ -39,13 +39,13 @@ val gitVersionName: String by lazy {
 
 android {
     namespace = "com.aliothmoon.maameow"
-    compileSdk = 36
+    compileSdk = 37
 
 
     defaultConfig {
         applicationId = "com.aliothmoon.maameow"
         minSdk = 28
-        targetSdk = 36
+        targetSdk = 37
         versionCode = gitVersionCode
         versionName = gitVersionName
         println("Build version: versionCode=$versionCode, versionName=$versionName")
@@ -169,6 +169,8 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    // Miuix Theme
+    implementation("top.yukonga.miuix.kmp:miuix-ui:0.9.1")
     implementation(libs.androidx.material.icons.core)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)

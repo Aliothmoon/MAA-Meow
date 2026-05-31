@@ -1,5 +1,4 @@
 package com.aliothmoon.maameow.theme
-
 import androidx.compose.foundation.IndicationNodeFactory
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.LocalIndication
@@ -18,6 +17,9 @@ import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import top.yukonga.miuix.kmp.theme.ColorSchemeMode
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.theme.ThemeController
 
 private val LightBackground = Color(0xFFF5F2ED)
 private val LightSurface = Color(0xFFF9F7F3)
@@ -25,18 +27,15 @@ private val LightSurfaceVariant = Color(0xFFE8E4DE)
 private val LightOnSurface = Color(0xFF1C1B18)
 private val LightOnSurfaceVariant = Color(0xFF8A8580)
 private val LightOutline = Color(0xFFC9C4BE)
-
 private val DarkBackground = Color(0xFF121212)
 private val DarkSurface = Color(0xFF1C1C1E)
 private val DarkSurfaceVariant = Color(0xFF2C2C2E)
 private val DarkOnSurface = Color(0xFFFFFFFF)
 private val DarkOnSurfaceVariant = Color(0xFF98989D)
 private val DarkOutline = Color(0xFF3A3A3C)
-
 private val PureDarkBackground = Color(0xFF000000)
 private val PureDarkSurface = Color(0xFF000000)
 private val PureDarkSurfaceVariant = Color(0xFF121212)
-
 
 private fun createLightColorScheme(
     primary: Color,
@@ -70,7 +69,6 @@ private fun createLightColorScheme(
         onErrorContainer = Color(0xFF690005)
     )
 }
-
 private fun createDarkColorScheme(
     primary: Color,
     primaryContainer: Color,
@@ -80,7 +78,6 @@ private fun createDarkColorScheme(
     val bg = if (isPureDark) PureDarkBackground else DarkBackground
     val surface = if (isPureDark) PureDarkSurface else DarkSurface
     val surfaceVariant = if (isPureDark) PureDarkSurfaceVariant else DarkSurfaceVariant
-
     return darkColorScheme(
         primary = primary,
         onPrimary = Color(0xFFFFFFFF),
@@ -108,7 +105,6 @@ private fun createDarkColorScheme(
         onErrorContainer = Color(0xFFFFDAD6)
     )
 }
-
 private val BlueLight = createLightColorScheme(
     primary = Color(0xFF2B6BCA),
     primaryContainer = Color(0xFFE5F1FF),
@@ -125,7 +121,6 @@ private val BluePureDark = createDarkColorScheme(
     onPrimaryContainer = Color(0xFFD6E8FF),
     isPureDark = true
 )
-
 val MaaShapes = Shapes(
     extraSmall = RoundedCornerShape(MaaDesignTokens.CornerRadius.inner),
     small = RoundedCornerShape(MaaDesignTokens.CornerRadius.button),
@@ -133,30 +128,24 @@ val MaaShapes = Shapes(
     large = RoundedCornerShape(MaaDesignTokens.CornerRadius.card),
     extraLarge = RoundedCornerShape(MaaDesignTokens.CornerRadius.pill)
 )
-
-
 private object NoIndication : IndicationNodeFactory {
     private class NoIndicationNode : Modifier.Node(), DrawModifierNode {
         override fun ContentDrawScope.draw() {
             drawContent()
         }
     }
-
     override fun create(interactionSource: InteractionSource): DelegatableNode {
         return NoIndicationNode()
     }
-
     override fun hashCode(): Int = -1
-
     override fun equals(other: Any?): Boolean = other === this
 }
-
 object MaaThemeAlphas {
     const val Disabled = 0.38f
     const val Secondary = 0.60f
     const val Medium = 0.74f
 }
-
+private val MaaKeyColor = Color(0xFF2B6BCA)
 @Composable
 fun MaaMeowTheme(
     themeMode: AppSettingsManager.ThemeMode = AppSettingsManager.ThemeMode.SYSTEM,
@@ -168,15 +157,26 @@ fun MaaMeowTheme(
         AppSettingsManager.ThemeMode.DARK -> BlueDark
         AppSettingsManager.ThemeMode.PURE_DARK -> BluePureDark
     }
-
-    CompositionLocalProvider(
-        LocalIndication provides NoIndication
-    ) {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = Typography,
-            shapes = MaaShapes,
-            content = content
-        )
+    val miuixColorMode = when (themeMode) {
+        AppSettingsManager.ThemeMode.SYSTEM -> ColorSchemeMode.MonetSystem
+        AppSettingsManager.ThemeMode.WHITE -> ColorSchemeMode.MonetLight
+        AppSettingsManager.ThemeMode.DARK -> ColorSchemeMode.MonetDark
+        AppSettingsManager.ThemeMode.PURE_DARK -> ColorSchemeMode.Dark
+    }
+    val miuixController = ThemeController(
+        colorSchemeMode = miuixColorMode,
+        keyColor = MaaKeyColor
+    )
+    MiuixTheme(controller = miuixController) {
+        CompositionLocalProvider(
+            LocalIndication provides NoIndication
+        ) {
+            MaterialTheme(
+                colorScheme = colorScheme,
+                typography = Typography,
+                shapes = MaaShapes,
+                content = content
+            )
+        }
     }
 }
