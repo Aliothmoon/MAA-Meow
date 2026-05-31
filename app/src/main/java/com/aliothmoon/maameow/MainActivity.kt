@@ -55,7 +55,7 @@ class MainActivity : AppCompatActivity() {
         })
         setContent {
             val themeMode by appSettingsManager.themeMode.collectAsStateWithLifecycle()
-            CompositionLocalProvider(LocalUiMode provides UiMode.Miuix) {
+            CompositionLocalProvider(LocalUiMode provides UiMode.Material) {
                 MaaMeowTheme(
                     themeMode = themeMode,
                     uiMode = LocalUiMode.current
