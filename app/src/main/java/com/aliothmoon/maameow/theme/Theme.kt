@@ -165,6 +165,7 @@ private fun themeModeToMiuixColorMode(
     AppSettingsManager.ThemeMode.PURE_DARK -> ColorSchemeMode.Dark
 }
 
+@Composable
 private fun themeModeToMaterialScheme(
     themeMode: AppSettingsManager.ThemeMode
 ): ColorScheme = when (themeMode) {

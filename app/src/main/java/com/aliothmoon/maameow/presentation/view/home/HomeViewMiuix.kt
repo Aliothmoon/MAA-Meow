@@ -1,7 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.home
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -25,11 +24,12 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Routes
-import com.aliothmoon.maameow.presentation.components.InfoCard
 import com.aliothmoon.maameow.presentation.state.HomeUiState
+import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.HomeViewModel
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -41,7 +41,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun MiuixHomeView(
     homeViewModel: HomeViewModel,
     navController: NavController,
-    backgroundTaskViewModel: com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
+    backgroundTaskViewModel: BackgroundTaskViewModel
 ) {
     val uiState by homeViewModel.uiState.collectAsState()
 
@@ -71,23 +71,8 @@ fun MiuixHomeView(
                 ),
                 verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm)
             ) {
-                // Status card
                 item {
                     MiuixStatusCard(uiState = uiState)
-                }
-
-                // Task list placeholder
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = stringResource(R.string.home_welcome_message),
-                            style = MiuixTheme.textStyles.body1,
-                            color = MiuixTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(MaaDesignTokens.Spacing.md)
-                        )
-                    }
                 }
             }
         }
@@ -105,7 +90,7 @@ private fun MiuixStatusCard(
             modifier = Modifier.padding(MaaDesignTokens.Spacing.lg)
         ) {
             Text(
-                text = stringResource(R.string.home_status_title),
+                text = stringResource(R.string.home_service_status),
                 style = MiuixTheme.textStyles.headline2,
                 color = MiuixTheme.colorScheme.onSurface
             )
@@ -113,24 +98,14 @@ private fun MiuixStatusCard(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .padding(1.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
+                if (uiState.serviceStatusLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp)
                     )
+                    Spacer(modifier = Modifier.width(MaaDesignTokens.Spacing.xs))
                 }
-                Spacer(modifier = Modifier.width(MaaDesignTokens.Spacing.xs))
                 Text(
-                    text = when (uiState) {
-                        is HomeUiState.Ready -> stringResource(R.string.home_status_idle)
-                        is HomeUiState.Loading -> stringResource(R.string.home_status_loading)
-                        is HomeUiState.Error -> stringResource(R.string.home_status_error)
-                    },
+                    text = stringResource(R.string.home_status_ready),
                     style = MiuixTheme.textStyles.body2,
                     color = MiuixTheme.colorScheme.onSurfaceSecondary
                 )

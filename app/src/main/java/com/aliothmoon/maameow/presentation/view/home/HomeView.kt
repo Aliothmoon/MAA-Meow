@@ -949,13 +949,14 @@ fun HomeView(
     viewModel: HomeViewModel = koinViewModel(),
     updateViewModel: UpdateViewModel = koinViewModel(),
     permissionManager: PermissionManager = koinInject(),
-    appSettingsManager: AppSettingsManager = koinInject()
+    appSettingsManager: AppSettingsManager = koinInject(),
+    backgroundTaskViewModel: com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel = koinInject()
 ) {
     when (LocalUiMode.current) {
         UiMode.Miuix -> MiuixHomeView(
             homeViewModel = viewModel,
             navController = navController,
-            backgroundTaskViewModel = viewModel()
+            backgroundTaskViewModel = backgroundTaskViewModel
         )
         UiMode.Material -> HomeViewMaterial(
             navController = navController,
