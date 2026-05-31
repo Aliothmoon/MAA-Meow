@@ -25,6 +25,8 @@ import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.model.ScheduledExecutionRequest
 import com.aliothmoon.maameow.LocalUiMode
 import com.aliothmoon.maameow.UiMode
+import com.aliothmoon.maameow.LocalUiMode
+import com.aliothmoon.maameow.UiMode
 import com.aliothmoon.maameow.theme.MaaMeowTheme
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -62,10 +64,12 @@ class MainActivity : AppCompatActivity() {
         setContent {
             val themeMode by appSettingsManager.themeMode.collectAsStateWithLifecycle()
 
-            MaaMeowTheme(themeMode = themeMode) {
-                AppNavigation(backgroundTaskViewModel = backgroundTaskViewModel)
+            CompositionLocalProvider(LocalUiMode provides UiMode.Material) {
+                MaaMeowTheme(themeMode = themeMode) {
+                    AppNavigation(backgroundTaskViewModel = backgroundTaskViewModel)
                 }
             }
+        }
         }
     }
 
