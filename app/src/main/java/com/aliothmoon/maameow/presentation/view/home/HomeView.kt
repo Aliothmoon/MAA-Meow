@@ -1,8 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.home
 
 import android.widget.Toast
-import com.aliothmoon.maameow.LocalUiMode
-import com.aliothmoon.maameow.UiMode
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -100,7 +98,7 @@ import timber.log.Timber
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun HomeViewMaterial(
+fun HomeView(
     navController: NavController,
     viewModel: HomeViewModel = koinViewModel(),
     updateViewModel: UpdateViewModel = koinViewModel(),
@@ -942,27 +940,3 @@ private fun ForegroundModeSection(
 }
 
 
-@Composable
-fun HomeView(
-    navController: NavController,
-    viewModel: HomeViewModel = koinViewModel(),
-    updateViewModel: UpdateViewModel = koinViewModel(),
-    permissionManager: PermissionManager = koinInject(),
-    appSettingsManager: AppSettingsManager = koinInject(),
-    backgroundTaskViewModel: com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel = koinInject()
-) {
-    when (LocalUiMode.current) {
-        UiMode.Miuix -> MiuixHomeView(
-            homeViewModel = viewModel,
-            navController = navController,
-            backgroundTaskViewModel = backgroundTaskViewModel
-        )
-        UiMode.Material -> HomeViewMaterial(
-            navController = navController,
-            viewModel = viewModel,
-            updateViewModel = updateViewModel,
-            permissionManager = permissionManager,
-            appSettingsManager = appSettingsManager
-        )
-    }
-}
