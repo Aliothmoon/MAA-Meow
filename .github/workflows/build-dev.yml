@@ -17,7 +17,7 @@ on:
       maa_tag:
         description: 'MAA Core release tag'
         required: false
-        default: 'v6.10.0-beta.1'
+        default: 'latest'
 
 jobs:
   build:
@@ -56,14 +56,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          TAG_ARG=""
           MAA_TAG="${{ github.event.inputs.maa_tag }}"
-          MAA_TAG="${MAA_TAG:-v6.10.0-beta.1}"
+          if [ -n "$MAA_TAG" ] && [ "$MAA_TAG" != "latest" ]; then
+            TAG_ARG="--tag $MAA_TAG"
+          fi
           MAA_REPO="${{ github.event.inputs.maa_repo }}"
           REPO_ARG=""
           if [ -n "$MAA_REPO" ]; then
             REPO_ARG="--repo $MAA_REPO"
           fi
-          python scripts/setup_maa_core.py --clean --tag "$MAA_TAG" $REPO_ARG
+          python scripts/setup_maa_core.py --clean $TAG_ARG $REPO_ARG
 
       - name: Print MAA Resource version
         run: cat app/src/main/assets/MaaSync/MaaResource/version.json

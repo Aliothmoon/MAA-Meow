@@ -10,7 +10,7 @@ on:
       maa_tag:
         description: 'MAA Core release tag'
         required: false
-        default: ''
+        default: 'latest'
 
 jobs:
   build:
@@ -59,8 +59,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG_ARG=""
-          if [ -n "${{ github.event.inputs.maa_tag }}" ]; then
-            TAG_ARG="--tag ${{ github.event.inputs.maa_tag }}"
+          MAA_TAG="${{ github.event.inputs.maa_tag }}"
+          if [ -n "$MAA_TAG" ] && [ "$MAA_TAG" != "latest" ]; then
+            TAG_ARG="--tag $MAA_TAG"
           fi
           REPO_ARG=""
           if [ -n "${{ github.event.inputs.maa_repo }}" ]; then
