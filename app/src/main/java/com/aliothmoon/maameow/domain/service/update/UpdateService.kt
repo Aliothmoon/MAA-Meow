@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import timber.log.Timber
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * 更新服务 — 直接编排版本检查、下载链接解析、下载安装全流程
@@ -65,6 +66,7 @@ class UpdateService(
 
     // ==================== App 更新 ====================
 
+    private val appDownloading = AtomicBoolean(false)
     private val _appProcessState = MutableStateFlow<UpdateProcessState>(UpdateProcessState.Idle)
     val appProcessState: StateFlow<UpdateProcessState> = _appProcessState.asStateFlow()
 
@@ -77,18 +79,25 @@ class UpdateService(
         version: String,
         channel: UpdateChannel = UpdateChannel.STABLE
     ): Result<Unit> {
-        Timber.i("downloadApp start: source=%s, version=%s, channel=%s", source, version, channel)
-        _appProcessState.value = UpdateProcessState.Downloading(0, "准备下载...", 0L, 0L)
-
-        val resolver = appDownloadResolvers[source]
-            ?: return failApp(UpdateError.UnknownError("不支持的下载源: $source"))
-
-        val url = resolver.resolve(version, channel).getOrElse { e ->
-            _appProcessState.value = UpdateProcessState.Failed(mapToUpdateError(e))
-            return Result.failure(e)
+        if (!appDownloading.compareAndSet(false, true)) {
+            return Result.success(Unit)   // 已在进行中，幂等跳过
         }
-        Timber.i("downloadApp resolved URL: host=%s", safeHost(url))
-        return downloadAndInstallApp(url, version)
+        try {
+            Timber.i("downloadApp start: source=%s, version=%s, channel=%s", source, version, channel)
+            _appProcessState.value = UpdateProcessState.Downloading(0, "准备下载...", 0L, 0L)
+
+            val resolver = appDownloadResolvers[source]
+                ?: return failApp(UpdateError.UnknownError("不支持的下载源: $source"))
+
+            val url = resolver.resolve(version, channel).getOrElse { e ->
+                _appProcessState.value = UpdateProcessState.Failed(mapToUpdateError(e))
+                return Result.failure(e)
+            }
+            Timber.i("downloadApp resolved URL: host=%s", safeHost(url))
+            return downloadAndInstallApp(url, version)
+        } finally {
+            appDownloading.set(false)
+        }
     }
 
     fun resetAppProcess() {
@@ -157,6 +166,7 @@ class UpdateService(
 
     // ==================== 资源更新 ====================
 
+    private val resourceDownloading = AtomicBoolean(false)
     private val _resourceProcessState =
         MutableStateFlow<UpdateProcessState>(UpdateProcessState.Idle)
     val resourceProcessState: StateFlow<UpdateProcessState> = _resourceProcessState.asStateFlow()
@@ -170,18 +180,25 @@ class UpdateService(
         currentVersion: String,
         target: File
     ): Result<Unit> {
-        Timber.i("downloadResource start: source=%s", source)
-        _resourceProcessState.value = UpdateProcessState.Downloading(0, "准备下载...", 0L, 0L)
-
-        val resolver = resourceDownloadResolvers[source]
-            ?: return failResource(UpdateError.UnknownError("不支持的下载源: $source"))
-
-        val url = resolver.resolve(currentVersion).getOrElse { e ->
-            _resourceProcessState.value = UpdateProcessState.Failed(mapToUpdateError(e))
-            return Result.failure(e)
+        if (!resourceDownloading.compareAndSet(false, true)) {
+            return Result.success(Unit)   // 已在进行中，幂等跳过
         }
-        Timber.i("downloadResource resolved URL: host=%s", safeHost(url))
-        return downloadAndExtractResource(target, url)
+        try {
+            Timber.i("downloadResource start: source=%s", source)
+            _resourceProcessState.value = UpdateProcessState.Downloading(0, "准备下载...", 0L, 0L)
+
+            val resolver = resourceDownloadResolvers[source]
+                ?: return failResource(UpdateError.UnknownError("不支持的下载源: $source"))
+
+            val url = resolver.resolve(currentVersion).getOrElse { e ->
+                _resourceProcessState.value = UpdateProcessState.Failed(mapToUpdateError(e))
+                return Result.failure(e)
+            }
+            Timber.i("downloadResource resolved URL: host=%s", safeHost(url))
+            return downloadAndExtractResource(target, url)
+        } finally {
+            resourceDownloading.set(false)
+        }
     }
 
     fun resetResourceProcess() {
