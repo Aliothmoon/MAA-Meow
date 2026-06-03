@@ -54,6 +54,7 @@ One-click automation for all daily tasks, powered by image recognition
 | [Build Guide](docs/BUILDING.md) | Build APK from source |
 | [External Automation](docs/AUTOMATION.md) | Launch profiles via Intent / am with MacroDroid or Tasker |
 | [Roadmap](docs/ROADMAP.md) | Feature plans & progress |
+| [PR Guidelines](docs/PULL_REQUEST_GUIDELINES.md) | Pull request title, description, verification, and review conventions |
 | [Third-Party Notices](docs/THIRD_PARTY_NOTICES.md) | Open-source components & licenses |
 
 ## Contributing
@@ -68,6 +69,7 @@ Pull requests are welcome! Whether it's a bug fix, UX improvement, or a new feat
 
 > Please follow the [Conventional Commits](https://www.conventionalcommits.org/) specification (`feat:`, `fix:`, `docs:`, etc.).
 > See the [Build Guide](docs/BUILDING.md) for first-time setup.
+> Read the [PR Guidelines](docs/PULL_REQUEST_GUIDELINES.md) before opening a pull request.
 
 If you find this project useful, consider giving it a Star ⭐ to help others discover it!
 

@@ -54,6 +54,7 @@
 | [构建指南](docs/BUILDING.md) | 从源码构建 APK |
 | [外部自动化集成](docs/AUTOMATION.md) | 通过 Intent / am 命令与 MacroDroid、Tasker 联动 |
 | [Roadmap](docs/ROADMAP.md) | 功能规划与进度 |
+| [PR 规范](docs/PULL_REQUEST_GUIDELINES.md) | 提交 PR 前的标题、描述、验证与评审约定 |
 | [第三方代码声明](docs/THIRD_PARTY_NOTICES.md) | 引用的开源组件及许可证 |
 
 ## 参与贡献
@@ -68,6 +69,7 @@
 
 > 提交信息请遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范（`feat:`、`fix:`、`docs:` 等）。
 > 首次构建请参阅 [构建指南](docs/BUILDING.md)。
+> 提交 PR 前请阅读 [PR 规范](docs/PULL_REQUEST_GUIDELINES.md)。
 
 如果觉得项目有用，欢迎点一个 Star ⭐ 让更多人看到！
 
