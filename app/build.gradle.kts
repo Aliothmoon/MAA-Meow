@@ -39,7 +39,7 @@ val gitVersionName: String by lazy {
 
 android {
     namespace = "com.aliothmoon.maameow"
-    compileSdk = 36
+    compileSdk = 37
 
 
     defaultConfig {
