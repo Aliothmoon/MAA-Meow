@@ -198,6 +198,9 @@ dependencies {
     implementation(libs.reorderable)
     implementation(libs.compose.markdown)
 
+    // Miuix UI (MIUI-style components)
+    implementation(libs.miuix.ui)
+
     // Kotlin Serialization
     implementation(libs.kotlinx.serialization.json)
 
