@@ -3,6 +3,7 @@
 agp = "9.2.0"
 kotlin = "2.3.10"
 ksp = "2.3.9"
+miuix = "0.9.1"
 
 # AndroidX Core
 coreKtx = "1.17.0"
@@ -100,7 +101,11 @@ angus-activation = { group = "org.eclipse.angus", name = "angus-activation", ver
 jakarta-activation-api = { group = "jakarta.activation", name = "jakarta.activation-api", version.ref = "jakartaActivationApi" }
 compose-markdown = { group = "com.github.jeziellago", name = "compose-markdown", version.ref = "composeMarkdown" }
 reorderable = { group = "sh.calvin.reorderable", name = "reorderable", version.ref = "reorderable" }
-kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+kotlinx-serialization-json
+# Miuix UI
+miuix-ui = { group = "top.yukonga.miuix.kmp", name = "miuix-ui-android", version.ref = "miuix" } = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json
+# Miuix UI
+miuix-ui = { group = "top.yukonga.miuix.kmp", name = "miuix-ui-android", version.ref = "miuix" }", version.ref = "kotlinxSerializationJson" }
 
 
 
