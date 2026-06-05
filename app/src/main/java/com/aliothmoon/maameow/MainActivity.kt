@@ -27,7 +27,7 @@ import com.aliothmoon.maameow.LocalUiMode
 import com.aliothmoon.maameow.UiMode
 import com.aliothmoon.maameow.LocalUiMode
 import com.aliothmoon.maameow.UiMode
-import com.aliothmoon.maameow.theme.MaaMeowTheme
+import com.aliothmoon.maameow.theme.MaaMeowMiuixTheme
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
@@ -65,7 +65,7 @@ class MainActivity : AppCompatActivity() {
             val themeMode by appSettingsManager.themeMode.collectAsStateWithLifecycle()
 
             CompositionLocalProvider(LocalUiMode provides UiMode.Material) {
-                MaaMeowTheme(themeMode = themeMode) {
+                MaaMeowMiuixTheme(themeMode = themeMode) {
                     AppNavigation(backgroundTaskViewModel = backgroundTaskViewModel)
                 }
             }
