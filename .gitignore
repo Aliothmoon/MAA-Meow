@@ -39,3 +39,4 @@ android/.cxx
 # App Build
 /app/release
 /app/debug
+/gradle/gradle-daemon-jvm.properties

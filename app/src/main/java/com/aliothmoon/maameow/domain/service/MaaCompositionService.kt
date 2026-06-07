@@ -187,10 +187,12 @@ class MaaCompositionService(
     suspend fun start(
         tasks: List<MaaTaskParams>,
         clientType: String,
+        isScheduled: Boolean = false,
         onSessionStarted: (suspend () -> Unit)? = null
     ): StartResult = executeStart(
         tasks = tasks,
         clientType = clientType,
+        isScheduled = isScheduled,
         startMessage = "开始执行任务，共 ${tasks.size} 项",
         successMessage = "任务开始运行",
         onSessionStarted = onSessionStarted,
@@ -225,7 +227,7 @@ class MaaCompositionService(
         return result
     }
 
-    private suspend fun checkPreconditions(mode: RunMode): StartResult? {
+    private suspend fun checkPreconditions(mode: RunMode, isScheduled: Boolean = false): StartResult? {
         // 服务连接中时直接拒绝，避免与后台自动 load() 并发触发 LoadResource
         val serviceState = RemoteServiceManager.state.value
         if (serviceState is RemoteServiceManager.ServiceState.Connecting) {
@@ -244,7 +246,7 @@ class MaaCompositionService(
                 StartResult.ResourceError(loaded.exceptionOrNull())
             )
         }
-        if (mode == RunMode.FOREGROUND) {
+        if (mode == RunMode.FOREGROUND && !isScheduled) {
             val (width, height) = Misc.getScreenSize(context)
             if (height > width) {
                 return failStart(
@@ -359,6 +361,7 @@ class MaaCompositionService(
         clientType: String,
         startMessage: String,
         successMessage: String,
+        isScheduled: Boolean = false,
         onSessionStarted: (suspend () -> Unit)? = null,
     ): StartResult {
         setRunState(MaaExecutionState.STARTING)
@@ -369,7 +372,7 @@ class MaaCompositionService(
 
         val mode = appSettings.runMode.value
         return withContext(Dispatchers.IO) {
-            checkPreconditions(mode)?.let { return@withContext it }
+            checkPreconditions(mode, isScheduled)?.let { return@withContext it }
 
             useRemoteService { service ->
                 val maa = service.maaCoreService

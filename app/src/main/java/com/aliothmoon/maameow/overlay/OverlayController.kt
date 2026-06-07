@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
@@ -19,6 +20,7 @@ import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.overlay.border.BorderOverlayManager
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
+import com.aliothmoon.maameow.schedule.model.CountdownState
 import com.aliothmoon.maameow.presentation.view.panel.ExpandedControlPanel
 import com.aliothmoon.maameow.service.AccessibilityHelperService
 import com.aliothmoon.maameow.theme.MaaMeowTheme
@@ -68,6 +70,15 @@ class OverlayController(
 
     private var currentMode: OverlayControlMode = OverlayControlMode.ACCESSIBILITY
     private var maaStateJob: Job? = null
+
+    private val _countdownState = MutableStateFlow<CountdownState>(CountdownState.Idle)
+    val countdownState: StateFlow<CountdownState> = _countdownState.asStateFlow()
+
+    var onCountdownClick: (() -> Unit)? = null
+
+    fun updateCountdownState(state: CountdownState) {
+        _countdownState.value = state
+    }
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
@@ -293,10 +304,12 @@ class OverlayController(
                             setViewTreeSavedStateRegistryOwner(it)
                         }
                         setContent {
-                            val runningState by compositionService.state.collectAsStateWithLifecycle()
+                            val runningState by compositionService.state.collectAsState()
+                            val countdown by _countdownState.collectAsState()
                             FloatBall(
                                 onClick = ::onFloatBallClick,
-                                runningState = runningState
+                                runningState = runningState,
+                                countdownSeconds = (countdown as? CountdownState.Counting)?.remainingSeconds,
                             )
                         }
                     }
@@ -316,6 +329,10 @@ class OverlayController(
     }
 
     fun onFloatBallClick() {
+        if (_countdownState.value is CountdownState.Counting) {
+            onCountdownClick?.invoke()
+            return
+        }
         hideFloatBall()
         if (compositionService.state.value == MaaExecutionState.RUNNING) {
             scope.launch {

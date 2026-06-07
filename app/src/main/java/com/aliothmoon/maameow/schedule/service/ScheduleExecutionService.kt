@@ -15,6 +15,9 @@ import androidx.core.app.NotificationCompat
 import com.aliothmoon.maameow.MainActivity
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.manager.RemoteServiceManager
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.models.OverlayControlMode
+import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
@@ -25,6 +28,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.android.ext.android.inject
 import timber.log.Timber
@@ -37,13 +41,16 @@ class ScheduleExecutionService : Service() {
         private const val NOTIFICATION_ID = 9001
         private const val RESULT_NOTIFICATION_ID = 9002
         private const val CHANNEL_ID = "schedule_execution"
-        private const val DATA_READY_TIMEOUT_MS = 5_000L
+        private val dataReadyTimeout = 5.seconds
     }
 
     private val repository: ScheduleStrategyRepository by inject()
     private val alarmManager: ScheduleAlarmManager by inject()
     private val triggerLogger: ScheduleTriggerLogger by inject()
+    private val appSettingsManager: AppSettingsManager by inject()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val silentStarter: ForegroundScheduleStarter by inject()
+
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -123,18 +130,30 @@ class ScheduleExecutionService : Service() {
         }
         triggerLogger.append("设备未锁屏，连接服务...")
 
-        val ctx = this
-        val launched = withTimeoutOrNull(10_000L) {
-            runCatching {
-                RemoteServiceManager.useRemoteService(timeoutMs = 8_000L) {
-                    it.startActivity(request.toLaunchIntent(ctx))
+        // 前台 + 悬浮球 + 允许前台定时：不拉起 Activity 通过 Starter 提交
+        val isForegroundFloatBall = appSettingsManager.runMode.value == RunMode.FOREGROUND
+                && appSettingsManager.overlayControlMode.value == OverlayControlMode.FLOAT_BALL
+                && appSettingsManager.allowForegroundScheduledTask.value
+
+        var launched = true
+
+        if (isForegroundFloatBall) {
+            triggerLogger.append("前台悬浮球模式，直接提交定时请求")
+            silentStarter.executeSilentStart(request)
+        } else {
+            val ctx = this
+            launched = withTimeoutOrNull(10.seconds) {
+                runCatching {
+                    RemoteServiceManager.useRemoteService(timeoutMs = 8_000L) {
+                        it.startActivity(request.toLaunchIntent(ctx))
+                    }
+                }.getOrElse { error ->
+                    Timber.w(error, "$TAG: 拉起界面前连接服务失败")
+                    triggerLogger.append("连接服务失败: ${error.message}")
+                    false
                 }
-            }.getOrElse { error ->
-                Timber.w(error, "$TAG: 拉起界面前连接服务失败")
-                triggerLogger.append("连接服务失败: ${error.message}")
-                false
-            }
-        } ?: false
+            } ?: false
+        }
 
         if (!launched) {
             triggerLogger.append("未能拉起界面")
@@ -150,7 +169,7 @@ class ScheduleExecutionService : Service() {
     }
 
     private suspend fun awaitStrategy(strategyId: String): ScheduleStrategy? {
-        return withTimeoutOrNull(DATA_READY_TIMEOUT_MS) {
+        return withTimeoutOrNull(dataReadyTimeout) {
             repository.isLoaded.first { it }
             repository.getById(strategyId)
         }

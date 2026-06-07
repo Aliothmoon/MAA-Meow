@@ -89,6 +89,7 @@ fun SettingsView(
     val deploymentWithPause by viewModel.deploymentWithPause.collectAsStateWithLifecycle()
     val forceFullscreenOnVirtualDisplay by viewModel.forceFullscreenOnVirtualDisplay.collectAsStateWithLifecycle()
     val excludeFromRecentsOnBackground by viewModel.excludeFromRecentsOnBackground.collectAsStateWithLifecycle()
+    val allowForegroundScheduledTask by viewModel.allowForegroundScheduledTask.collectAsStateWithLifecycle()
     val tasksOverrideEnabled by viewModel.tasksOverrideEnabled.collectAsStateWithLifecycle()
     val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
@@ -353,6 +354,14 @@ fun SettingsView(
                         contentColor = contentColor,
                         checked = excludeFromRecentsOnBackground,
                         onCheckedChange = { viewModel.setExcludeFromRecentsOnBackground(it) }
+                    )
+                    SettingsDivider(contentColor)
+                    SettingSwitchItem(
+                        title = stringResource(R.string.settings_allow_foreground_scheduled_task),
+                        description = stringResource(R.string.settings_allow_foreground_scheduled_task_desc),
+                        contentColor = contentColor,
+                        checked = allowForegroundScheduledTask,
+                        onCheckedChange = { viewModel.setAllowForegroundScheduledTask(it) }
                     )
                     SettingsDivider(contentColor)
                     SettingSwitchItem(

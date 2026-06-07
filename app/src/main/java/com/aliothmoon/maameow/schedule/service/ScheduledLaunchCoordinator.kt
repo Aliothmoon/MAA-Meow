@@ -125,8 +125,11 @@ class ScheduledLaunchCoordinator(
             }
         }
 
-        if (appSettingsManager.runMode.value != RunMode.BACKGROUND) {
-            reject(request, ExecutionResult.FAILED_VALIDATION, "当前运行模式不是后台模式")
+        val isBackgroundMode = appSettingsManager.runMode.value == RunMode.BACKGROUND
+        val allowForeground = appSettingsManager.allowForegroundScheduledTask.value
+
+        if (!isBackgroundMode && !allowForeground) {
+            reject(request, ExecutionResult.FAILED_VALIDATION, "当前运行模式不是后台模式，且未开启“允许前台定时任务”开关")
             return
         }
 

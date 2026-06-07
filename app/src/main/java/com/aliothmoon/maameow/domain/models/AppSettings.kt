@@ -68,4 +68,6 @@ data class AppSettings(
      * 注意：受游戏自身 FLAG_ACTIVITY_MULTIPLE_TASK 影响，实际效果有限，默认 false。
      */
     @PrefKey(default = "false") val excludeFromRecentsOnBackground: String = "false",
+
+    @PrefKey(default = "false") val allowForegroundScheduledTask: String = "false",
 )

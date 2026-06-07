@@ -62,6 +62,8 @@
     <string name="settings_deployment_with_pause_tip">Hold ESC to pause the game while deploying operators for higher precision. Disable if ESC injection misbehaves or some operators are not placed correctly; deployment will fall back to plain swipe</string>
     <string name="settings_force_fullscreen_on_virtual_display">Force FULLSCREEN mode</string>
     <string name="settings_exclude_from_recents_on_background">Hide game from Recents when running</string>
+    <string name="settings_allow_foreground_scheduled_task">Allow scheduled tasks in foreground</string>
+    <string name="settings_allow_foreground_scheduled_task_desc">Allow scheduled tasks even when not in background mode, requires float ball control mode. Countdown will be shown on the float ball — tap it to start immediately. May interfere with current operations. Suitable for cloud phones or dedicated farming devices</string>
     <string name="settings_tasks_override_title">MAA Task Override</string>
     <string name="settings_tasks_override_desc">Do not modify unless you know what you are doing — incorrect values will break MAA</string>
     <string name="settings_tasks_override_edit_title">Edit Config JSON</string>

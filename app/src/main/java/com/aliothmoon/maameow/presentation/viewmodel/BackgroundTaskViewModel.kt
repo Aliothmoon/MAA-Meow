@@ -437,6 +437,7 @@ class BackgroundTaskViewModel(
         val result = compositionService.start(
             tasks = plan.params,
             clientType = plan.clientType,
+            isScheduled = context.mode == TaskStartMode.SCHEDULED,
         ) {
             if (request != null) {
                 sessionLogger.appendAndWait(

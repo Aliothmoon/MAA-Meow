@@ -259,6 +259,8 @@
     <string name="settings_deployment_with_pause_tip">部署干员前模拟按住 ESC 暂停游戏，提高部署精确度。如遇 ESC 注入异常或部分干员部署不到位，可关闭改用普通滑动</string>
     <string name="settings_force_fullscreen_on_virtual_display">强制 FULLSCREEN 模式</string>
     <string name="settings_exclude_from_recents_on_background">游戏不在后台中展示</string>
+    <string name="settings_allow_foreground_scheduled_task">允许在前台模式执行定时任务</string>
+    <string name="settings_allow_foreground_scheduled_task_desc">在前台运行模式下也可触发定时任务，需使用悬浮球控制模式。启用后，倒计时将以数字形式显示在悬浮球上，点击悬浮球可立即执行。可能干扰当前操作，适用于云手机或备用挂机设备</string>
     <string name="settings_tasks_override_title">MAA 任务覆盖</string>
     <string name="settings_tasks_override_desc">如果你不知道这是什么请不要修改，会导致 MAA 无法正常工作</string>
     <string name="settings_tasks_override_edit_title">编辑配置 JSON</string>
