@@ -75,6 +75,20 @@ class OverlayController(
     val countdownState: StateFlow<CountdownState> = _countdownState.asStateFlow()
 
     var onCountdownClick: (() -> Unit)? = null
+    private var tempCountdownListener: (() -> Unit)? = null
+
+    fun setTemporaryCountdownListener(listener: (() -> Unit)?) {
+        this.tempCountdownListener = listener
+    }
+
+    fun handleCountdownClick() {
+        val temp = tempCountdownListener
+        if (temp != null) {
+            temp.invoke()
+        } else {
+            onCountdownClick?.invoke()
+        }
+    }
 
     fun updateCountdownState(state: CountdownState) {
         _countdownState.value = state
@@ -304,10 +318,17 @@ class OverlayController(
                             setViewTreeSavedStateRegistryOwner(it)
                         }
                         setContent {
+                            // 悬浮窗需要在后台强行保持监听，不使用 collectAsStateWithLifecycle
                             val runningState by compositionService.state.collectAsState()
-                            val countdown by _countdownState.collectAsState()
+                            val countdown by countdownState.collectAsState()
                             FloatBall(
-                                onClick = ::onFloatBallClick,
+                                onClick = {
+                                    if (countdown is CountdownState.Counting) {
+                                        handleCountdownClick()
+                                    } else {
+                                        onFloatBallClick()
+                                    }
+                                },
                                 runningState = runningState,
                                 countdownSeconds = (countdown as? CountdownState.Counting)?.remainingSeconds,
                             )
@@ -330,7 +351,7 @@ class OverlayController(
 
     fun onFloatBallClick() {
         if (_countdownState.value is CountdownState.Counting) {
-            onCountdownClick?.invoke()
+            handleCountdownClick()
             return
         }
         hideFloatBall()

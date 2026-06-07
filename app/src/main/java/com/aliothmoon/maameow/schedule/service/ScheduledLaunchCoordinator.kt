@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.schedule.service
 
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -127,10 +128,17 @@ class ScheduledLaunchCoordinator(
 
         val isBackgroundMode = appSettingsManager.runMode.value == RunMode.BACKGROUND
         val allowForeground = appSettingsManager.allowForegroundScheduledTask.value
+        val isFloatBall = appSettingsManager.overlayControlMode.value == OverlayControlMode.FLOAT_BALL
 
-        if (!isBackgroundMode && !allowForeground) {
-            reject(request, ExecutionResult.FAILED_VALIDATION, "当前运行模式不是后台模式，且未开启“允许前台定时任务”开关")
-            return
+        if (!isBackgroundMode) {
+            if (!allowForeground) {
+                reject(request, ExecutionResult.FAILED_VALIDATION, "当前运行模式不是后台模式，且未开启“允许前台定时任务”开关")
+                return
+            }
+            if (!isFloatBall) {
+                reject(request, ExecutionResult.FAILED_VALIDATION, "当前运行模式不是后台模式，且控制模式不是悬浮球模式")
+                return
+            }
         }
 
         triggerLogger.append("等待任务配置加载...")

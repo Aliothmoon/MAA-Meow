@@ -172,7 +172,6 @@ class SettingsViewModel(
     }
 
     val allowForegroundScheduledTask: StateFlow<Boolean> = appSettingsManager.allowForegroundScheduledTask
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     fun setAllowForegroundScheduledTask(enabled: Boolean) {
         viewModelScope.launch {

@@ -26,6 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,7 +41,10 @@ fun FloatBall(
     runningState: MaaExecutionState = MaaExecutionState.IDLE,
     countdownSeconds: Int? = null,
 ) {
-    val isCountdown = countdownSeconds != null
+    val safeCountdownSeconds = countdownSeconds?.takeIf { it > 0 }
+    val isCountdown = safeCountdownSeconds != null
+    val countdownText = safeCountdownSeconds?.toString().orEmpty()
+
     val targetColor = when {
         isCountdown -> Color(0xFFFFA726)
         runningState == MaaExecutionState.RUNNING -> Color(0xFF4CAF50) // 绿色 - 运行中
@@ -75,7 +80,14 @@ fun FloatBall(
         modifier = modifier
             .size(32.dp)
             .border(1.dp, textColor.copy(alpha = 0.15f), CircleShape)
-            .then(alphaModifier),
+            .then(alphaModifier)
+            .semantics {
+                if (isCountdown) {
+                    contentDescription = "正在倒计时，剩余 $countdownText 秒"
+                } else {
+                    contentDescription = runningState.name
+                }
+            },
         shape = CircleShape,
         color = baseColor,
         shadowElevation = 8.dp,
@@ -88,7 +100,7 @@ fun FloatBall(
         ) {
             if (isCountdown) {
                 Text(
-                    text = "$countdownSeconds",
+                    text = countdownText,
                     color = textColor,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
