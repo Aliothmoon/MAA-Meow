@@ -31,6 +31,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 
 
@@ -76,17 +78,28 @@ fun FloatBall(
         Modifier
     }
 
+    val stateDescription = stringResource(
+        when (runningState) {
+            MaaExecutionState.IDLE -> R.string.overlay_floatball_state_idle
+            MaaExecutionState.STARTING -> R.string.overlay_floatball_state_starting
+            MaaExecutionState.RUNNING -> R.string.overlay_floatball_state_running
+            MaaExecutionState.STOPPING -> R.string.overlay_floatball_state_stopping
+            MaaExecutionState.ERROR -> R.string.overlay_floatball_state_error
+        }
+    )
+    val semanticsDescription = if (isCountdown) {
+        stringResource(R.string.overlay_floatball_countdown_desc, countdownText)
+    } else {
+        stateDescription
+    }
+
     Surface(
         modifier = modifier
             .size(32.dp)
             .border(1.dp, textColor.copy(alpha = 0.15f), CircleShape)
             .then(alphaModifier)
             .semantics {
-                if (isCountdown) {
-                    contentDescription = "正在倒计时，剩余 $countdownText 秒"
-                } else {
-                    contentDescription = runningState.name
-                }
+                contentDescription = semanticsDescription
             },
         shape = CircleShape,
         color = baseColor,
@@ -112,7 +125,7 @@ fun FloatBall(
                         MaaExecutionState.ERROR -> Icons.Filled.Warning
                         else -> Icons.Filled.Check
                     },
-                    contentDescription = runningState.name,
+                    contentDescription = stateDescription,
                     tint = textColor,
                     modifier = Modifier.size(16.dp)
                 )

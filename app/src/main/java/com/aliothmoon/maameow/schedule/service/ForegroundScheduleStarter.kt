@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.schedule.service
 
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -28,7 +29,8 @@ class ForegroundScheduleStarter(
     private val chainState: TaskChainState,
     private val compositionService: MaaCompositionService,
     private val triggerLogger: ScheduleTriggerLogger,
-    private val scheduleRepository: ScheduleStrategyRepository
+    private val scheduleRepository: ScheduleStrategyRepository,
+    private val appSettingsManager: AppSettingsManager,
 ) {
     private val mutex = Mutex()
 
@@ -55,30 +57,36 @@ class ForegroundScheduleStarter(
                 chainState.switchProfile(request.profileId)
             }
 
-            // 倒计时并同步到悬浮球
+            // 无论哪种模式，都执行倒计时等待到整点
             var isStartingNow = false
+            val isFloatBall = appSettingsManager.overlayControlMode.value == OverlayControlMode.FLOAT_BALL
 
-            triggerLogger.append("开始倒计时 (${ScheduledExecutionRequest.COUNTDOWN_SECONDS}s)")
+            if (isFloatBall) {
+                triggerLogger.append("开始倒计时 (${ScheduledExecutionRequest.COUNTDOWN_SECONDS}s)")
+                try {
+                    overlayController.setTemporaryCountdownListener {
+                        isStartingNow = true
+                        triggerLogger.append("用户点击立即执行")
+                    }
 
-            try {
-                overlayController.setTemporaryCountdownListener {
-                    isStartingNow = true
-                    triggerLogger.append("用户点击立即执行")
+                    for (remaining in ScheduledExecutionRequest.COUNTDOWN_SECONDS downTo 1) {
+                        if (isStartingNow) break
+                        overlayController.updateCountdownState(
+                            CountdownState.Counting(request.strategyName, remaining)
+                        )
+                        delay(1000)
+                    }
+                } finally {
+                    overlayController.updateCountdownState(CountdownState.Idle)
+                    overlayController.setTemporaryCountdownListener(null)
                 }
-
-                for (remaining in ScheduledExecutionRequest.COUNTDOWN_SECONDS downTo 1) {
-                    if (isStartingNow) break
-                    overlayController.updateCountdownState(
-                        CountdownState.Counting(request.strategyName, remaining)
-                    )
-                    delay(1000)
-                }
-            } finally {
-                overlayController.updateCountdownState(CountdownState.Idle)
-                overlayController.setTemporaryCountdownListener(null)
+            } else {
+                // 非悬浮球模式：静默等待，不更新 UI（但仍保证任务在整点开始）
+                triggerLogger.append("非悬浮球模式，静默倒计时")
+                delay(ScheduledExecutionRequest.COUNTDOWN_SECONDS * 1000L)
             }
-
             triggerLogger.append("倒计时结束，开始准备执行")
+
             val chain = chainState.chain.value.filter { it.enabled }
             if (chain.isEmpty()) {
                 val emptyMsg = "关联的任务配置中没有启用任务"

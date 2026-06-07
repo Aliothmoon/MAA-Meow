@@ -16,7 +16,7 @@ import com.aliothmoon.maameow.MainActivity
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
-import com.aliothmoon.maameow.domain.models.OverlayControlMode
+
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
@@ -130,15 +130,14 @@ class ScheduleExecutionService : Service() {
         }
         triggerLogger.append("设备未锁屏，连接服务...")
 
-        // 前台 + 悬浮球 + 允许前台定时：不拉起 Activity 通过 Starter 提交
-        val isForegroundFloatBall = appSettingsManager.runMode.value == RunMode.FOREGROUND
-                && appSettingsManager.overlayControlMode.value == OverlayControlMode.FLOAT_BALL
+        // 前台 + 允许前台定时：不拉起 Activity，通过 Starter 静默提交
+        val isForegroundSilent = appSettingsManager.runMode.value == RunMode.FOREGROUND
                 && appSettingsManager.allowForegroundScheduledTask.value
 
         var launched = true
 
-        if (isForegroundFloatBall) {
-            triggerLogger.append("前台悬浮球模式，直接提交定时请求")
+        if (isForegroundSilent) {
+            triggerLogger.append("前台模式（已允许静默），直接提交定时请求")
             silentStarter.executeSilentStart(request)
         } else {
             val ctx = this

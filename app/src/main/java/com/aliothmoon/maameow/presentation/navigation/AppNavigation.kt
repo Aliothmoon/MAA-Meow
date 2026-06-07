@@ -31,7 +31,6 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.announcement.AnnouncementConfig
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
-import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.ExternalNotificationService
 import com.aliothmoon.maameow.overlay.OverlayController
@@ -332,11 +331,10 @@ fun AppNavigation(
 
         ResourceLoadingOverlay()
 
-        // 全局定时任务倒计时弹窗（前台+FLOAT_BALL模式通过悬浮球显示倒计时，不弹出对话框）
+        // 全局定时任务倒计时弹窗（前台所有控制模式均不弹出对话框，静默处理）
         val countdown = scheduledCountdownState
-        val useFloatBallCountdown = runMode == RunMode.FOREGROUND
-                && overlayControlMode == OverlayControlMode.FLOAT_BALL
-        if (countdown is CountdownState.Counting && !useFloatBallCountdown) {
+        val hideCountdownDialog = runMode == RunMode.FOREGROUND
+        if (countdown is CountdownState.Counting && !hideCountdownDialog) {
             CountdownDialog(
                 state = countdown,
                 onCancel = { backgroundTaskViewModel.onScheduledCountdownCancel() },

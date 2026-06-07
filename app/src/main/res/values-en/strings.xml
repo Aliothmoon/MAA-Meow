@@ -63,7 +63,7 @@
     <string name="settings_force_fullscreen_on_virtual_display">Force FULLSCREEN mode</string>
     <string name="settings_exclude_from_recents_on_background">Hide game from Recents when running</string>
     <string name="settings_allow_foreground_scheduled_task">Allow scheduled tasks in foreground</string>
-    <string name="settings_allow_foreground_scheduled_task_desc">Allow scheduled tasks even when not in background mode, requires float ball control mode. Countdown will be shown on the float ball — tap it to start immediately. May interfere with current operations. Suitable for cloud phones or dedicated farming devices</string>
+    <string name="settings_allow_foreground_scheduled_task_desc">Allows scheduled tasks tto trigger in foreground mode (ap the float ball to start immediately, other modes execute silently)</string>
     <string name="settings_tasks_override_title">MAA Task Override</string>
     <string name="settings_tasks_override_desc">Do not modify unless you know what you are doing — incorrect values will break MAA</string>
     <string name="settings_tasks_override_edit_title">Edit Config JSON</string>
@@ -1276,4 +1276,12 @@
     <string name="announcement_dont_show_again_hint">Please read the full announcement and stay for %1$d seconds to enable</string>
     <string name="announcement_scroll_to_bottom_hint">Please read the full announcement first</string>
     <string name="announcement_confirm">Confirm</string>
+
+    <!-- i18n: overlay floatball -->
+    <string name="overlay_floatball_countdown_desc">Countdown, %1$s seconds remaining</string>
+    <string name="overlay_floatball_state_idle">Idle</string>
+    <string name="overlay_floatball_state_starting">Starting</string>
+    <string name="overlay_floatball_state_running">Running</string>
+    <string name="overlay_floatball_state_stopping">Stopping</string>
+    <string name="overlay_floatball_state_error">Error</string>
 </resources>
