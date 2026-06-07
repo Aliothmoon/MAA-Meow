@@ -16,9 +16,8 @@ import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.schedule.model.ScheduledExecutionRequest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * 专供前台悬浮球模式使用的静默启动器。
@@ -32,10 +31,15 @@ class ForegroundScheduleStarter(
     private val scheduleRepository: ScheduleStrategyRepository,
     private val appSettingsManager: AppSettingsManager,
 ) {
-    private val mutex = Mutex()
+    private val executing = AtomicBoolean(false)
 
     suspend fun executeSilentStart(request: ScheduledExecutionRequest) {
-        mutex.withLock {
+        if (!executing.compareAndSet(false, true)) {
+            triggerLogger.append("已有定时任务正在准备执行，跳过本次请求")
+            recordResult(request, ExecutionResult.SKIPPED_BUSY, "另一个定时任务正在执行")
+            return
+        }
+        try {
             Timber.i("SilentStarter: 接管前台悬浮球定时请求 ${request.requestId}")
 
             if (compositionService.state.value == MaaExecutionState.RUNNING ||
@@ -134,6 +138,8 @@ class ForegroundScheduleStarter(
                 triggerLogger.append(errMsg)
                 recordResult(request, ExecutionResult.FAILED_START, errMsg)
             }
+        } finally {
+            executing.set(false)
         }
     }
 
