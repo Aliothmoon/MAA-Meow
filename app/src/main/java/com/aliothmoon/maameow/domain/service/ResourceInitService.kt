@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.domain.service
 
 import android.content.Context
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.MaaFiles.ASSET_DIR_NAME
 import com.aliothmoon.maameow.constant.MaaFiles.OVERRIDES_ASSET_TASKS
 import com.aliothmoon.maameow.data.config.MaaPathConfig
@@ -38,7 +39,7 @@ class ResourceInitService(
     }
 
     suspend fun doExtractFromAssets() {
-        _state.value = ResourceInitState.Extracting(0, 0, "准备中...")
+        _state.value = ResourceInitState.Extracting(0, 0, context.getString(R.string.resource_init_preparing))
 
         try {
             withContext(Dispatchers.IO) {
@@ -70,12 +71,12 @@ class ResourceInitService(
                     _state.value = ResourceInitState.Ready
                 },
                 onFailure = { e ->
-                    _state.value = ResourceInitState.Failed(e.message ?: "复制失败")
+                    _state.value = ResourceInitState.Failed(e.message ?: context.getString(R.string.resource_init_error_copy_failed))
                 }
             )
         } catch (e: Exception) {
             Timber.e(e, "资源初始化失败")
-            _state.value = ResourceInitState.Failed(e.message ?: "未知错误")
+            _state.value = ResourceInitState.Failed(e.message ?: context.getString(R.string.resource_init_error_unknown))
         }
     }
 

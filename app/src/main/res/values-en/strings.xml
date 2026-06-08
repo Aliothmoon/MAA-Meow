@@ -1022,6 +1022,9 @@
     <string name="resource_init_reinitialize_title">Reinitialize resources</string>
     <string name="resource_init_reinitialize_message">Reinitialize resources now?\n\nThis deletes existing resources and extracts them again from the bundled package. If you previously updated resources, those updates will be overwritten.</string>
     <string name="resource_init_reinitialize_confirm">Reinitialize</string>
+    <string name="resource_init_preparing">Preparing…</string>
+    <string name="resource_init_error_copy_failed">Copy failed</string>
+    <string name="resource_init_error_unknown">Unknown error</string>
 
     <!-- i18n: notifications -->
     <string name="notification_settings_title">Notifications</string>

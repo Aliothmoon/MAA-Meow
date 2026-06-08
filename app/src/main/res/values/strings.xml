@@ -1074,6 +1074,9 @@
     <string name="resource_init_reinitialize_title">重新初始化资源</string>
     <string name="resource_init_reinitialize_message">确定要重新初始化资源吗？\n\n这将删除现有资源并重新从内置资源包解压。如果您已更新过资源，更新的内容将被覆盖。</string>
     <string name="resource_init_reinitialize_confirm">确认重新初始化</string>
+    <string name="resource_init_preparing">准备中…</string>
+    <string name="resource_init_error_copy_failed">复制失败</string>
+    <string name="resource_init_error_unknown">未知错误</string>
 
     <!-- i18n: notifications -->
     <string name="notification_settings_title">通知设置</string>
