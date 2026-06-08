@@ -358,7 +358,6 @@ fun SettingsView(
                     SettingsDivider(contentColor)
                     SettingSwitchItem(
                         title = stringResource(R.string.settings_allow_foreground_scheduled_task),
-                        description = stringResource(R.string.settings_allow_foreground_scheduled_task_desc),
                         contentColor = contentColor,
                         checked = allowForegroundScheduledTask,
                         onCheckedChange = { viewModel.setAllowForegroundScheduledTask(it) }
