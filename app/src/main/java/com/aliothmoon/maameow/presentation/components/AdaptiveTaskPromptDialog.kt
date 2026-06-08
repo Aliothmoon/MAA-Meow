@@ -15,11 +15,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -44,8 +48,9 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.max
 import com.aliothmoon.maameow.R
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -75,7 +80,6 @@ fun AdaptiveTaskPromptDialog(
     confirmColor: Color? = null,
     iconTint: Color? = null,
     buttonLayout: TaskPromptButtonLayout = TaskPromptButtonLayout.HORIZONTAL,
-    maxWidth: Dp = 320.dp,
     dismissOnOutsideClick: Boolean = true,
     landscapeAdaptive: Boolean = false,
     content: @Composable (() -> Unit)? = null
@@ -101,7 +105,6 @@ fun AdaptiveTaskPromptDialog(
             iconTint = resolvedIconTint,
             confirmColor = resolvedConfirmColor,
             buttonLayout = buttonLayout,
-            maxWidth = maxWidth,
             dismissOnOutsideClick = dismissOnOutsideClick,
             landscapeAdaptive = landscapeAdaptive,
             content = content
@@ -120,7 +123,6 @@ fun AdaptiveTaskPromptDialog(
             iconTint = resolvedIconTint,
             confirmColor = resolvedConfirmColor,
             buttonLayout = buttonLayout,
-            maxWidth = maxWidth,
             dismissOnOutsideClick = dismissOnOutsideClick,
             landscapeAdaptive = landscapeAdaptive,
             content = content
@@ -142,7 +144,6 @@ private fun FloatingTaskPromptDialog(
     iconTint: Color,
     confirmColor: Color,
     buttonLayout: TaskPromptButtonLayout,
-    maxWidth: Dp,
     dismissOnOutsideClick: Boolean,
     landscapeAdaptive: Boolean,
     content: @Composable (() -> Unit)?
@@ -188,7 +189,6 @@ private fun FloatingTaskPromptDialog(
                     iconTint = iconTint,
                     confirmColor = confirmColor,
                     buttonLayout = buttonLayout,
-                    maxWidth = maxWidth,
                     landscapeAdaptive = landscapeAdaptive,
                     modifier = Modifier
                         .padding(horizontal = 24.dp)
@@ -218,7 +218,6 @@ private fun MaterialTaskPromptDialog(
     iconTint: Color,
     confirmColor: Color,
     buttonLayout: TaskPromptButtonLayout,
-    maxWidth: Dp,
     dismissOnOutsideClick: Boolean,
     landscapeAdaptive: Boolean,
     content: @Composable (() -> Unit)?
@@ -229,26 +228,41 @@ private fun MaterialTaskPromptDialog(
             dismissOnBackPress = dismissOnOutsideClick,
             dismissOnClickOutside = dismissOnOutsideClick,
             usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
         ),
     ) {
-        TaskPromptCard(
-            title = title,
-            message = message,
-            onDismissRequest = onDismissRequest,
-            onConfirm = onConfirm,
-            confirmText = confirmText,
-            dismissText = dismissText,
-            neutralText = neutralText,
-            onNeutralClick = onNeutralClick,
-            icon = icon,
-            iconTint = iconTint,
-            confirmColor = confirmColor,
-            buttonLayout = buttonLayout,
-            maxWidth = maxWidth,
-            landscapeAdaptive = landscapeAdaptive,
-            modifier = Modifier.padding(horizontal = 24.dp),
-            content = content
+        val safeInsets = WindowInsets.safeDrawing.asPaddingValues()
+        val layoutDirection = LocalLayoutDirection.current
+        val maxHorizontalInset = max(
+            safeInsets.calculateLeftPadding(layoutDirection),
+            safeInsets.calculateRightPadding(layoutDirection)
         )
+
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            TaskPromptCard(
+                title = title,
+                message = message,
+                onDismissRequest = onDismissRequest,
+                onConfirm = onConfirm,
+                confirmText = confirmText,
+                dismissText = dismissText,
+                neutralText = neutralText,
+                onNeutralClick = onNeutralClick,
+                icon = icon,
+                iconTint = iconTint,
+                confirmColor = confirmColor,
+                buttonLayout = buttonLayout,
+                landscapeAdaptive = landscapeAdaptive,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 600.dp)
+                    .padding(horizontal = maxHorizontalInset + 16.dp),
+                content = content
+            )
+        }
     }
 }
 
@@ -266,19 +280,15 @@ private fun TaskPromptCard(
     iconTint: Color,
     confirmColor: Color,
     buttonLayout: TaskPromptButtonLayout,
-    maxWidth: Dp,
     landscapeAdaptive: Boolean,
     modifier: Modifier = Modifier,
     content: @Composable (() -> Unit)?
 ) {
     val inLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
 
     Surface(
-        modifier = if (inLandscape && landscapeAdaptive) {
-            modifier.fillMaxWidth().wrapContentHeight()
-        } else {
-            modifier.widthIn(max = maxWidth).wrapContentHeight()
-        },
+        modifier = modifier.fillMaxWidth().wrapContentHeight().heightIn(max = screenHeight * 0.85f),
         shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
