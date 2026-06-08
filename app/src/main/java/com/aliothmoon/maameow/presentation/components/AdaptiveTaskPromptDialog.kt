@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -41,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
@@ -74,6 +77,7 @@ fun AdaptiveTaskPromptDialog(
     buttonLayout: TaskPromptButtonLayout = TaskPromptButtonLayout.HORIZONTAL,
     maxWidth: Dp = 320.dp,
     dismissOnOutsideClick: Boolean = true,
+    landscapeActions: Boolean = false,
     content: @Composable (() -> Unit)? = null
 ) {
     if (!visible) return
@@ -99,6 +103,7 @@ fun AdaptiveTaskPromptDialog(
             buttonLayout = buttonLayout,
             maxWidth = maxWidth,
             dismissOnOutsideClick = dismissOnOutsideClick,
+            landscapeActions = landscapeActions,
             content = content
         )
     } else {
@@ -117,6 +122,7 @@ fun AdaptiveTaskPromptDialog(
             buttonLayout = buttonLayout,
             maxWidth = maxWidth,
             dismissOnOutsideClick = dismissOnOutsideClick,
+            landscapeActions = landscapeActions,
             content = content
         )
     }
@@ -138,6 +144,7 @@ private fun FloatingTaskPromptDialog(
     buttonLayout: TaskPromptButtonLayout,
     maxWidth: Dp,
     dismissOnOutsideClick: Boolean,
+    landscapeActions: Boolean,
     content: @Composable (() -> Unit)?
 ) {
     val overlayInteractionSource = remember { MutableInteractionSource() }
@@ -182,6 +189,7 @@ private fun FloatingTaskPromptDialog(
                     confirmColor = confirmColor,
                     buttonLayout = buttonLayout,
                     maxWidth = maxWidth,
+                    landscapeActions = landscapeActions,
                     modifier = Modifier
                         .padding(horizontal = 24.dp)
                         .clickable(
@@ -212,6 +220,7 @@ private fun MaterialTaskPromptDialog(
     buttonLayout: TaskPromptButtonLayout,
     maxWidth: Dp,
     dismissOnOutsideClick: Boolean,
+    landscapeActions: Boolean,
     content: @Composable (() -> Unit)?
 ) {
     Dialog(
@@ -236,6 +245,7 @@ private fun MaterialTaskPromptDialog(
             confirmColor = confirmColor,
             buttonLayout = buttonLayout,
             maxWidth = maxWidth,
+            landscapeActions = landscapeActions,
             modifier = Modifier.padding(horizontal = 24.dp),
             content = content
         )
@@ -257,14 +267,19 @@ private fun TaskPromptCard(
     confirmColor: Color,
     buttonLayout: TaskPromptButtonLayout,
     maxWidth: Dp,
+    landscapeActions: Boolean,
     modifier: Modifier = Modifier,
     content: @Composable (() -> Unit)?
 ) {
+    val inLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     Surface(
-        modifier = modifier
-            .widthIn(max = maxWidth)
-            .wrapContentHeight(),
-        shape = RoundedCornerShape(8.dp), // 保持 8dp 圆角风格
+        modifier = if (inLandscape && landscapeActions) {
+            modifier.fillMaxWidth().wrapContentHeight()
+        } else {
+            modifier.widthIn(max = maxWidth).wrapContentHeight()
+        },
+        shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
         tonalElevation = 6.dp,
@@ -305,6 +320,33 @@ private fun TaskPromptCard(
                     textAlign = TextAlign.Start,
                     modifier = Modifier.weight(1f)
                 )
+
+                if (inLandscape && landscapeActions) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        neutralText?.let {
+                            TextButton(
+                                onClick = onNeutralClick,
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(it, maxLines = 1, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                        TextButton(
+                            onClick = onConfirm,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(confirmText, maxLines = 1, style = MaterialTheme.typography.bodySmall)
+                        }
+                        dismissText?.let {
+                            TextButton(
+                                onClick = onDismissRequest,
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(it, maxLines = 1, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
             }
 
             if (message != null || content != null) {
@@ -335,18 +377,19 @@ private fun TaskPromptCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            TaskPromptButtons(
-                onDismissRequest = onDismissRequest,
-                onConfirm = onConfirm,
-                confirmText = confirmText,
-                dismissText = dismissText,
-                neutralText = neutralText,
-                onNeutralClick = onNeutralClick,
-                confirmColor = confirmColor,
-                buttonLayout = buttonLayout,
-            )
+            if (!inLandscape || !landscapeActions) {
+                Spacer(modifier = Modifier.height(24.dp))
+                TaskPromptButtons(
+                    onDismissRequest = onDismissRequest,
+                    onConfirm = onConfirm,
+                    confirmText = confirmText,
+                    dismissText = dismissText,
+                    neutralText = neutralText,
+                    onNeutralClick = onNeutralClick,
+                    confirmColor = confirmColor,
+                    buttonLayout = buttonLayout,
+                )
+            }
         }
     }
 }
