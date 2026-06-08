@@ -869,7 +869,7 @@ private fun ForegroundModeSection(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.home_overlay_mode_title),
                         style = MaterialTheme.typography.bodyLarge,
