@@ -416,6 +416,7 @@ fun UpdateCard(
                         confirmText = stringResource(R.string.update_card_visit_site),
                         dismissText = stringResource(R.string.common_close),
                         icon = Icons.Rounded.Info,
+                        landscapeAdaptive = true,
                         content = {
                             Column(
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
