@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.presentation.components
 
-import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -57,7 +56,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -716,7 +714,6 @@ private fun AppUpdateConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val inLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     AdaptiveTaskPromptDialog(
         visible = true,
         title = stringResource(R.string.dialog_update_found_title),
@@ -726,7 +723,7 @@ private fun AppUpdateConfirmDialog(
         confirmColor = Color(0xFF4CAF50),
         dismissText = stringResource(R.string.dialog_update_later),
         icon = Icons.Rounded.Info,
-        landscapeActions = inLandscape,
+        landscapeAdaptive = true,
         content = {
             Column {
                 Text(

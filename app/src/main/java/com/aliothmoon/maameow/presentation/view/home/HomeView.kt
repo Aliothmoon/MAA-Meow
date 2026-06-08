@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.presentation.view.home
 
-import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -58,7 +57,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -157,7 +155,6 @@ fun HomeView(
 
     // 发现更新弹窗
     startupDialog?.let { result ->
-        val inLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
         val appVersionLine = result.appUpdate?.let {
             stringResource(R.string.dialog_update_app_version_line, it.version)
         }.orEmpty()
@@ -173,7 +170,7 @@ fun HomeView(
             confirmText = stringResource(R.string.dialog_update_confirm),
             confirmColor = Color(0xFF4CAF50),
             dismissText = stringResource(R.string.dialog_update_dismiss),
-            landscapeActions = inLandscape,
+            landscapeAdaptive = true,
             onConfirm = {
                 if (result.appUpdate != null) {
                     updateViewModel.confirmAppDownload(result.appUpdate.version)

@@ -1,11 +1,9 @@
 package com.aliothmoon.maameow.presentation.components
 
-import android.content.res.Configuration
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import com.aliothmoon.maameow.R
@@ -21,7 +19,6 @@ fun UpdateConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val inLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val displayVersion = ResourceDownloader.formatVersionForDisplay(updateInfo.version)
     
     AdaptiveTaskPromptDialog(
@@ -34,6 +31,6 @@ fun UpdateConfirmDialog(
         confirmColor = Color(0xFF4CAF50),
         dismissText = stringResource(R.string.dialog_update_later),
         icon = Icons.Rounded.Info,
-        landscapeActions = inLandscape
+        landscapeAdaptive = true
     )
 }

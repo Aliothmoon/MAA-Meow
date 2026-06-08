@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.presentation.components
 
-import android.content.res.Configuration
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,7 +12,6 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
@@ -24,7 +22,6 @@ fun ChangelogDialog(
     content: String,
     onDismiss: () -> Unit
 ) {
-    val inLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     AdaptiveTaskPromptDialog(
         visible = true,
         title = stringResource(R.string.dialog_changelog_title),
@@ -33,7 +30,7 @@ fun ChangelogDialog(
         confirmText = stringResource(R.string.common_i_got_it),
         dismissText = null,
         icon = Icons.Rounded.Info,
-        landscapeActions = inLandscape,
+        landscapeAdaptive = true,
         content = {
             Column {
                 Spacer(modifier = Modifier.height(12.dp))

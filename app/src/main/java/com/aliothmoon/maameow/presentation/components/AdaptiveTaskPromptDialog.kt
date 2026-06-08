@@ -77,7 +77,7 @@ fun AdaptiveTaskPromptDialog(
     buttonLayout: TaskPromptButtonLayout = TaskPromptButtonLayout.HORIZONTAL,
     maxWidth: Dp = 320.dp,
     dismissOnOutsideClick: Boolean = true,
-    landscapeActions: Boolean = false,
+    landscapeAdaptive: Boolean = false,
     content: @Composable (() -> Unit)? = null
 ) {
     if (!visible) return
@@ -103,7 +103,7 @@ fun AdaptiveTaskPromptDialog(
             buttonLayout = buttonLayout,
             maxWidth = maxWidth,
             dismissOnOutsideClick = dismissOnOutsideClick,
-            landscapeActions = landscapeActions,
+            landscapeAdaptive = landscapeAdaptive,
             content = content
         )
     } else {
@@ -122,7 +122,7 @@ fun AdaptiveTaskPromptDialog(
             buttonLayout = buttonLayout,
             maxWidth = maxWidth,
             dismissOnOutsideClick = dismissOnOutsideClick,
-            landscapeActions = landscapeActions,
+            landscapeAdaptive = landscapeAdaptive,
             content = content
         )
     }
@@ -144,7 +144,7 @@ private fun FloatingTaskPromptDialog(
     buttonLayout: TaskPromptButtonLayout,
     maxWidth: Dp,
     dismissOnOutsideClick: Boolean,
-    landscapeActions: Boolean,
+    landscapeAdaptive: Boolean,
     content: @Composable (() -> Unit)?
 ) {
     val overlayInteractionSource = remember { MutableInteractionSource() }
@@ -189,7 +189,7 @@ private fun FloatingTaskPromptDialog(
                     confirmColor = confirmColor,
                     buttonLayout = buttonLayout,
                     maxWidth = maxWidth,
-                    landscapeActions = landscapeActions,
+                    landscapeAdaptive = landscapeAdaptive,
                     modifier = Modifier
                         .padding(horizontal = 24.dp)
                         .clickable(
@@ -220,7 +220,7 @@ private fun MaterialTaskPromptDialog(
     buttonLayout: TaskPromptButtonLayout,
     maxWidth: Dp,
     dismissOnOutsideClick: Boolean,
-    landscapeActions: Boolean,
+    landscapeAdaptive: Boolean,
     content: @Composable (() -> Unit)?
 ) {
     Dialog(
@@ -245,7 +245,7 @@ private fun MaterialTaskPromptDialog(
             confirmColor = confirmColor,
             buttonLayout = buttonLayout,
             maxWidth = maxWidth,
-            landscapeActions = landscapeActions,
+            landscapeAdaptive = landscapeAdaptive,
             modifier = Modifier.padding(horizontal = 24.dp),
             content = content
         )
@@ -267,14 +267,14 @@ private fun TaskPromptCard(
     confirmColor: Color,
     buttonLayout: TaskPromptButtonLayout,
     maxWidth: Dp,
-    landscapeActions: Boolean,
+    landscapeAdaptive: Boolean,
     modifier: Modifier = Modifier,
     content: @Composable (() -> Unit)?
 ) {
     val inLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     Surface(
-        modifier = if (inLandscape && landscapeActions) {
+        modifier = if (inLandscape && landscapeAdaptive) {
             modifier.fillMaxWidth().wrapContentHeight()
         } else {
             modifier.widthIn(max = maxWidth).wrapContentHeight()
@@ -321,7 +321,7 @@ private fun TaskPromptCard(
                     modifier = Modifier.weight(1f)
                 )
 
-                if (inLandscape && landscapeActions) {
+                if (inLandscape && landscapeAdaptive) {
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         neutralText?.let {
                             TextButton(
@@ -377,7 +377,7 @@ private fun TaskPromptCard(
                 }
             }
 
-            if (!inLandscape || !landscapeActions) {
+            if (!inLandscape || !landscapeAdaptive) {
                 Spacer(modifier = Modifier.height(24.dp))
                 TaskPromptButtons(
                     onDismissRequest = onDismissRequest,
