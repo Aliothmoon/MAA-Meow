@@ -488,4 +488,19 @@ class AppSettingsManager(private val context: Context) {
         }
     }
 
+    // 强制横屏
+    val forceLandscape: StateFlow<Boolean> = settings
+        .map { it.forceLandscape.toBooleanStrictOrNull() ?: false }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            initialSettings.forceLandscape.toBooleanStrictOrNull() ?: false
+        )
+
+    suspend fun setForceLandscape(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[forceLandscape] = enabled.toString() }
+        }
+    }
+
 }

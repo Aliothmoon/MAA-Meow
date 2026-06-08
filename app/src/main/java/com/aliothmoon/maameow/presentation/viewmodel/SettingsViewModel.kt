@@ -234,6 +234,16 @@ class SettingsViewModel(
         }
     }
 
+    // 强制横屏
+    val forceLandscape: StateFlow<Boolean> = appSettingsManager.forceLandscape
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun setForceLandscape(enabled: Boolean) {
+        viewModelScope.launch {
+            appSettingsManager.setForceLandscape(enabled)
+        }
+    }
+
     // Android 特化任务覆盖
     val tasksOverrideEnabled: StateFlow<Boolean> = appSettingsManager.tasksOverrideEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)

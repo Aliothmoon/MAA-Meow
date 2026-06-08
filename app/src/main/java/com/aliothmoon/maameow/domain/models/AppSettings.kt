@@ -70,4 +70,6 @@ data class AppSettings(
     @PrefKey(default = "false") val excludeFromRecentsOnBackground: String = "false",
 
     @PrefKey(default = "false") val allowForegroundScheduledTask: String = "false",
+
+    @PrefKey(default = "false") val forceLandscape: String = "false",
 )
