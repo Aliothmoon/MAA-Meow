@@ -32,7 +32,6 @@ import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.android.ext.android.inject
 import timber.log.Timber
-import com.aliothmoon.maameow.schedule.service.ScheduleTriggerLogger
 
 class ScheduleExecutionService : Service() {
 
@@ -41,7 +40,7 @@ class ScheduleExecutionService : Service() {
         private const val NOTIFICATION_ID = 9001
         private const val RESULT_NOTIFICATION_ID = 9002
         private const val CHANNEL_ID = "schedule_execution"
-        private val dataReadyTimeout = 5.seconds
+        private const val DATA_READY_TIMEOUT_MS = 5_000L
     }
 
     private val repository: ScheduleStrategyRepository by inject()
@@ -109,7 +108,7 @@ class ScheduleExecutionService : Service() {
         )
 
         triggerLogger.append("检查锁屏状态...")
-        val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
         if (keyguardManager.isKeyguardLocked) {
             Timber.i("$TAG: 设备锁屏中，跳过本次定时执行: %s", strategy.name)
             triggerLogger.append("设备锁屏，跳过本次执行")
@@ -168,7 +167,7 @@ class ScheduleExecutionService : Service() {
     }
 
     private suspend fun awaitStrategy(strategyId: String): ScheduleStrategy? {
-        return withTimeoutOrNull(dataReadyTimeout) {
+        return withTimeoutOrNull(DATA_READY_TIMEOUT_MS) {
             repository.isLoaded.first { it }
             repository.getById(strategyId)
         }
@@ -193,7 +192,7 @@ class ScheduleExecutionService : Service() {
     }
 
     private fun ensureNotificationChannel() {
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         val channel = NotificationChannel(
             CHANNEL_ID,
             getString(R.string.notification_channel_schedule),
@@ -248,7 +247,7 @@ class ScheduleExecutionService : Service() {
             .setContentIntent(buildContentIntent())
             .setAutoCancel(true)
             .build()
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(RESULT_NOTIFICATION_ID, notification)
     }
 

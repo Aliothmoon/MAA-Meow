@@ -125,13 +125,15 @@ class ScheduledLaunchCoordinator(
             }
         }
 
-        val isBackgroundMode = appSettingsManager.runMode.value == RunMode.BACKGROUND
+        val isForegroundMode = appSettingsManager.runMode.value == RunMode.FOREGROUND
         val allowForeground = appSettingsManager.allowForegroundScheduledTask.value
-        if (!isBackgroundMode) {
-            if (!allowForeground) {
-                reject(request, ExecutionResult.FAILED_VALIDATION, "当前运行模式不是后台模式，且未开启“允许前台定时任务”开关")
-                return
-            }
+        if (isForegroundMode && !allowForeground) {
+            reject(
+                request,
+                ExecutionResult.FAILED_VALIDATION,
+                "当前运行模式不是后台模式，且未开启“允许前台定时任务”开关"
+            )
+            return
         }
 
         triggerLogger.append("等待任务配置加载...")

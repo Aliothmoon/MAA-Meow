@@ -19,9 +19,7 @@ import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * 专供前台悬浮球模式使用的静默启动器。
- */
+
 class ForegroundScheduleStarter(
     private val overlayController: OverlayController,
     private val prepareTaskStartUseCase: PrepareTaskStartUseCase,
@@ -40,7 +38,7 @@ class ForegroundScheduleStarter(
             return
         }
         try {
-            Timber.i("SilentStarter: 接管前台悬浮球定时请求 ${request.requestId}")
+            Timber.i("接管前台定时请求 ${request.requestId}")
 
             if (compositionService.state.value == MaaExecutionState.RUNNING ||
                 compositionService.state.value == MaaExecutionState.STARTING) {
@@ -101,9 +99,7 @@ class ForegroundScheduleStarter(
 
             try {
                 val startContext = TaskStartContext(mode = TaskStartMode.SCHEDULED)
-                val decision = prepareTaskStartUseCase.invoke(chain, startContext)
-
-                when (decision) {
+                when (val decision = prepareTaskStartUseCase.invoke(chain, startContext)) {
                     is TaskStartDecision.Ready -> {
                         triggerLogger.append("前置条件通过，启用任务 ${chain.size} 项，正在启动 MAA 核心服务...")
 
