@@ -420,9 +420,7 @@ class MaaCompositionService(
                 put("height", height)
             })
             put("display_id", displayId)
-            if (displayId != 0) {
-                put("force_stop", true)
-            }
+            put("force_stop", true)
         }.toString()
     }
 
