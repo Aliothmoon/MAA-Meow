@@ -260,7 +260,6 @@
     <string name="settings_force_fullscreen_on_virtual_display">强制 FULLSCREEN 模式</string>
     <string name="settings_exclude_from_recents_on_background">游戏不在后台中展示</string>
     <string name="settings_allow_foreground_scheduled_task">允许在前台模式执行定时任务</string>
-    <string name="settings_force_landscape_title">强制横屏</string>
     <string name="settings_tasks_override_title">MAA 任务覆盖</string>
     <string name="settings_tasks_override_desc">如果你不知道这是什么请不要修改，会导致 MAA 无法正常工作</string>
     <string name="settings_tasks_override_edit_title">编辑配置 JSON</string>

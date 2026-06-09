@@ -1,7 +1,6 @@
 package com.aliothmoon.maameow
 
 import android.content.Intent
-import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.view.ViewTreeObserver
 import android.view.WindowManager
@@ -50,7 +49,6 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         doObserveKeepScreenOn()
         doObserveThemeMode()
-        applyForceLandscape()
         window.decorView.viewTreeObserver.addOnPreDrawListener(object :
             ViewTreeObserver.OnPreDrawListener {
             override fun onPreDraw(): Boolean {
@@ -117,22 +115,6 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-        }
-    }
-
-    private fun applyForceLandscape() {
-        lifecycleScope.launch {
-            appSettingsManager.forceLandscape
-                .collect { enabled ->
-                    val target = if (enabled) {
-                        ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-                    } else {
-                        ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-                    }
-                    if (requestedOrientation != target) {
-                        requestedOrientation = target
-                    }
-                }
         }
     }
 

@@ -63,7 +63,6 @@
     <string name="settings_force_fullscreen_on_virtual_display">Force FULLSCREEN mode</string>
     <string name="settings_exclude_from_recents_on_background">Hide game from Recents when running</string>
     <string name="settings_allow_foreground_scheduled_task">Allow scheduled tasks in foreground</string>
-    <string name="settings_force_landscape_title">Force Landscape</string>
     <string name="settings_tasks_override_title">MAA Task Override</string>
     <string name="settings_tasks_override_desc">Do not modify unless you know what you are doing — incorrect values will break MAA</string>
     <string name="settings_tasks_override_edit_title">Edit Config JSON</string>
