@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -141,8 +140,7 @@ fun AnnouncementDialog(
         ) {
             Surface(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 600.dp)
+                    .dialogWidth(max = 600.dp, fraction = 0.95f)
                     .heightIn(max = screenHeight * 0.85f)
                     .padding(horizontal = maxHorizontalInset + 16.dp),
                 shape = RoundedCornerShape(12.dp),

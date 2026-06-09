@@ -27,8 +27,10 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -49,12 +51,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import com.aliothmoon.maameow.R
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
+
+/** 普通提示弹窗的最大宽度上限（手机按比例、平板/宽屏封顶） */
+private val DialogMaxWidth = 400.dp
+
+/**
+ * 对话框宽度：手机按 [fraction] 比例留白，平板/宽屏由 [max] 封顶。
+ *
+ * widthIn 必须在 fillMaxWidth 之前——fillMaxWidth 会把约束钉死成 min == max，
+ * 导致其后的 widthIn 被 coerce 压回而失效；fraction 也是相对收窄后的上限计算。
+ */
+internal fun Modifier.dialogWidth(max: Dp, fraction: Float = 0.9f): Modifier =
+    widthIn(max = max).fillMaxWidth(fraction)
 
 enum class TaskPromptButtonLayout {
     HORIZONTAL,
@@ -191,6 +206,7 @@ private fun FloatingTaskPromptDialog(
                     buttonLayout = buttonLayout,
                     landscapeAdaptive = landscapeAdaptive,
                     modifier = Modifier
+                        .dialogWidth(max = DialogMaxWidth)
                         .padding(horizontal = 24.dp)
                         .clickable(
                             indication = null,
@@ -257,8 +273,7 @@ private fun MaterialTaskPromptDialog(
                 buttonLayout = buttonLayout,
                 landscapeAdaptive = landscapeAdaptive,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 600.dp)
+                    .dialogWidth(max = DialogMaxWidth)
                     .padding(horizontal = maxHorizontalInset + 16.dp),
                 content = content
             )
@@ -286,6 +301,7 @@ private fun TaskPromptCard(
 ) {
     val inLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val scrollState = rememberScrollState()
 
     Surface(
         modifier = modifier.fillMaxWidth().wrapContentHeight().heightIn(max = screenHeight * 0.85f),
@@ -361,28 +377,34 @@ private fun TaskPromptCard(
 
             if (message != null || content != null) {
                 Spacer(modifier = Modifier.height(16.dp))
-            }
+                // 内容区：在剩余空间内可滚动；内容不足时不撑开（fill = false）
+                Column(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(scrollState),
+                ) {
+                    if (content != null) {
+                        content()
+                    } else if (message != null) {
+                        when (message) {
+                            is AnnotatedString -> {
+                                Text(
+                                    text = message,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Start,
+                                )
+                            }
 
-            if (content != null) {
-                content()
-            } else if (message != null) {
-                when (message) {
-                    is AnnotatedString -> {
-                        Text(
-                            text = message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Start,
-                        )
-                    }
-
-                    else -> {
-                        Text(
-                            text = message.toString(),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Start,
-                        )
+                            else -> {
+                                Text(
+                                    text = message.toString(),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Start,
+                                )
+                            }
+                        }
                     }
                 }
             }
