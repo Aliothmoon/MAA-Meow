@@ -100,8 +100,16 @@ data class RoguelikeConfig(
             //  投资相关 
             put("investment_enabled", investmentEnabled)
             if (investmentEnabled) {
-                put("investments_count", investCount)
-                put("stop_when_investment_full", stopWhenInvestmentFull)
+                // WPF AsstRoguelikeTask:1078 非投资模式发 int.MaxValue
+                put(
+                    "investments_count",
+                    if (mode == RoguelikeMode.Investment) investCount else Int.MAX_VALUE
+                )
+                // WPF AsstRoguelikeTask:1079 仅投资模式生效
+                put(
+                    "stop_when_investment_full",
+                    stopWhenInvestmentFull && mode == RoguelikeMode.Investment
+                )
                 put(
                     "investment_with_more_score",
                     investmentWithMoreScore && mode == RoguelikeMode.Investment
@@ -122,27 +130,27 @@ data class RoguelikeConfig(
                 RoguelikeMode.Collectible -> {
                     put("collectible_mode_squad", collectibleModeSquad)
                     put("collectible_mode_shopping", collectibleModeShopping)
+                    // WPF AsstRoguelikeTask:1089 / Serialize:245
                     put(
                         "start_with_elite_two",
-                        startWithEliteTwo && squadIsProfessional && theme in listOf(
-                            "Mizuki",
-                            "Sami"
-                        )
+                        startWithEliteTwo && squadIsProfessional && theme in listOf("Mizuki", "Sami")
                     )
+                    // WPF AsstRoguelikeTask:1090 / Serialize:246 (仅依赖 only 开关与主题)
                     put(
                         "only_start_with_elite_two",
-                        onlyStartWithEliteTwo && startWithEliteTwo && squadIsProfessional && theme in listOf("Mizuki", "Sami")
+                        onlyStartWithEliteTwo && theme in listOf("Mizuki", "Sami")
                     )
-                    // WPF: collectible_mode_start_list (line 247, 1113-1136)
-                    // 条件: Mode==Collectible AND !onlyStartWithEliteTwo(computed)
-                    val computedOnlyEliteTwo = onlyStartWithEliteTwo && startWithEliteTwo && squadIsProfessional && theme in listOf("Mizuki", "Sami")
-                    if (!computedOnlyEliteTwo && collectibleStartAwards.isNotEmpty()) {
-                        put("collectible_mode_start_list", buildJsonObject {
-                            collectibleStartAwards.forEach { key ->
-                                put(key, true)
+                    // WPF Serialize:247 在 Collectible 模式始终输出该字段;
+                    // WPF:1113-1115 的 roguelikeOnlyStartWithEliteTwo(无主题约束)为真时输出空对象
+                    val onlyEliteTwoForRewards =
+                        onlyStartWithEliteTwo && startWithEliteTwo && squadIsProfessional
+                    put("collectible_mode_start_list", buildJsonObject {
+                        if (!onlyEliteTwoForRewards) {
+                            ALL_COLLECTIBLE_AWARD_KEYS.forEach { key ->
+                                put(key, key in collectibleStartAwards)
                             }
-                        })
-                    }
+                        }
+                    })
                 }
 
                 RoguelikeMode.Squad -> {
@@ -194,5 +202,12 @@ data class RoguelikeConfig(
             }
         }
         return MaaTaskParams(MaaTaskType.ROGUELIKE, paramsJson.toString())
+    }
+
+    companion object {
+        // WPF RoguelikeSettingsUserControlModel:1117-1128 的 reward key 全集(与主题无关)
+        private val ALL_COLLECTIBLE_AWARD_KEYS = listOf(
+            "hot_water", "shield", "ingot", "hope", "random", "key", "dice", "ideas", "ticket"
+        )
     }
 }
