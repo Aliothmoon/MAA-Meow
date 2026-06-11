@@ -14,7 +14,7 @@ class GitHubAppDownloadUrlResolver(
 
     private val json = JsonUtils.common
 
-    override suspend fun resolve(version: String, channel: UpdateChannel): Result<String> {
+    override suspend fun resolve(version: String, channel: UpdateChannel, abi:String): Result<String> {
         return runCatching {
             val tag = if (version.startsWith("v", ignoreCase = true)) version else "v$version"
             val response = httpClient.get(MaaApi.appGitHubReleaseByTag(tag))
@@ -25,7 +25,7 @@ class GitHubAppDownloadUrlResolver(
 
             val release = json.decodeFromString<GitHubRelease>(response.body.string())
 
-            val apkAsset = release.assets.firstOrNull { it.name.endsWith("universal.apk") }
+            val apkAsset = release.assets.firstOrNull { it.name.endsWith("$abi.apk") }
                 ?: throw Exception("Release 中未找到 APK 文件")
 
             apkAsset.browserDownloadUrl

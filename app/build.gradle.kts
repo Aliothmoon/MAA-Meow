@@ -67,6 +67,9 @@ android {
                 arguments("-DANDROID_STL=c++_shared")
             }
         }
+
+
+        buildConfigField("String", "PACKAGED_ABI_LABEL", ("\"${project.findProperty("PACKAGED_ABI_LABEL") ?: "universal"}\""))
     }
 
     signingConfigs {

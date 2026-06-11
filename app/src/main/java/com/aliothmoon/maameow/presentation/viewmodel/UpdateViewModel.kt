@@ -216,7 +216,8 @@ class UpdateViewModel(
                     val result = updateService.downloadApp(
                         source = updateSource.value,
                         version = appAvailable.version,
-                        channel = updateChannel.value
+                        channel = updateChannel.value,
+                        abi = appUpdateAbi
                     )
                     if (result.isFailure) {
                         _toastMessage.tryEmit(appContext.getString(R.string.update_toast_auto_download_app_failed))
@@ -256,6 +257,8 @@ class UpdateViewModel(
 
     val currentAppVersion: String = BuildConfig.VERSION_NAME
 
+    val appUpdateAbi: String = if(updateSource.value == UpdateSource.GITHUB) BuildConfig.PACKAGED_ABI_LABEL else "universal"
+
     fun checkAppUpdate() {
         val currentState = appUpdateState.value
         if (_appChecking.value || currentState is UpdateProcessState.Downloading || currentState is UpdateProcessState.Installing) {
@@ -281,8 +284,8 @@ class UpdateViewModel(
             updateService.downloadApp(
                 source = updateSource.value,
                 version = version,
-                channel = updateChannel.value
-            )
+                channel = updateChannel.value,
+                abi = appUpdateAbi)
         }
     }
 

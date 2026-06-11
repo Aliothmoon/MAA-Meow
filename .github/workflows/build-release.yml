@@ -99,7 +99,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           chmod +x ./gradlew
-          ./gradlew clean assembleRelease
+          ./gradlew clean assembleRelease -P PACKAGED_ABI_LABEL=${{ matrix.label }}
 
       - name: Rename APK
         run: |

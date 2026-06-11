@@ -13,7 +13,7 @@ class MirrorChyanAppDownloadUrlResolver(
     private val appSettingsManager: AppSettingsManager
 ) : AppDownloadUrlResolver {
 
-    override suspend fun resolve(version: String, channel: UpdateChannel): Result<String> {
+    override suspend fun resolve(version: String, channel: UpdateChannel, abi: String): Result<String> {
         val cdk = appSettingsManager.mirrorChyanCdk.value
         if (cdk.isBlank()) {
             return Result.failure(CdkRequiredException())

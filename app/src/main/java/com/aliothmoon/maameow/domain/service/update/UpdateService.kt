@@ -77,19 +77,20 @@ class UpdateService(
     suspend fun downloadApp(
         source: UpdateSource,
         version: String,
-        channel: UpdateChannel = UpdateChannel.STABLE
+        channel: UpdateChannel = UpdateChannel.STABLE,
+        abi: String
     ): Result<Unit> {
         if (!appDownloading.compareAndSet(false, true)) {
             return Result.success(Unit)   // 已在进行中，幂等跳过
         }
         try {
-            Timber.i("downloadApp start: source=%s, version=%s, channel=%s", source, version, channel)
+            Timber.i("downloadApp start: source=%s, version=%s, channel=%s, abi=%s", source, version, channel, abi)
             _appProcessState.value = UpdateProcessState.Downloading(0, "准备下载...", 0L, 0L)
 
             val resolver = appDownloadResolvers[source]
                 ?: return failApp(UpdateError.UnknownError("不支持的下载源: $source"))
 
-            val url = resolver.resolve(version, channel).getOrElse { e ->
+            val url = resolver.resolve(version, channel, abi).getOrElse { e ->
                 _appProcessState.value = UpdateProcessState.Failed(mapToUpdateError(e))
                 return Result.failure(e)
             }
