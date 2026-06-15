@@ -1,0 +1,6 @@
+# Build-time deps for OCR onnx -> ncnn conversion (scripts/convert_ocr_ncnn.py).
+# Versions pinned to the toolchain that produced the validated cos=1.0 / argmax=100%
+# conversions; relax only if a platform wheel is unavailable, then re-verify accuracy.
+onnx
+onnxsim==0.6.3
+pnnx==20260526

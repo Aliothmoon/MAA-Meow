@@ -52,6 +52,9 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
+      - name: Install OCR conversion deps
+        run: python -m pip install -r scripts/requirements.txt
+
       - name: Download and deploy MAA Core
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

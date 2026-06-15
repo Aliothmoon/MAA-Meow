@@ -26,6 +26,8 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
+import convert_ocr_ncnn
+
 # Fix Windows console encoding
 if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
@@ -234,6 +236,12 @@ def main():
     parser.add_argument("--skip-download", "-s", action="store_true", help="Skip download, use cache")
     parser.add_argument("--abi", choices=["arm64-v8a", "x86_64", "all"], default="all",
                         help="Process only specified ABI (default: all)")
+    parser.add_argument("--skip-ncnn", action="store_true",
+                        help="Skip OCR onnx->ncnn conversion (Android OCR needs ncnn; debug only)")
+    parser.add_argument("--keep-onnx", action="store_true",
+                        help="Keep OCR inference.onnx after conversion (default: delete, ~72MB unused on Android)")
+    parser.add_argument("--rec-fp16", action="store_true",
+                        help="Store rec ncnn weights as fp16 (smaller APK; det always stays fp32)")
     args = parser.parse_args()
 
     global API_BASE
@@ -302,6 +310,23 @@ def main():
         write_version_file(deployed_version, project_root)
     else:
         print(f"[WARN] Could not parse version from tarball name, {VERSION_FILE} not updated")
+
+    # Convert OCR onnx -> ncnn in place. Android (OcrPackNcnn) needs ncnn; doing it here,
+    # from the just-deployed onnx, keeps ncnn always in lockstep with the onnx/keys it
+    # ships with, so the Android-only ncnn never has to live in MAA's shared resource.
+    if not args.skip_ncnn:
+        print("\n[NCNN] Converting OCR onnx -> ncnn (Android-only)...")
+        ncnn_cache = cache_dir / "ncnn"
+        stats = convert_ocr_ncnn.convert_tree(
+            resource_dir=assets_dir,
+            cache_dir=ncnn_cache,
+            keep_onnx=args.keep_onnx,
+            rec_fp16=args.rec_fp16,
+        )
+        print(f"[NCNN] converted={stats['converted']} cached={stats['cached']} "
+              f"onnx_removed={stats['onnx_removed']} skipped={stats['skipped']}")
+    else:
+        print("\n[SKIP] Skipping OCR ncnn conversion (--skip-ncnn)")
 
     # Summary
     print("\n" + "=" * 55)
