@@ -11,11 +11,12 @@ Why this exists:
     very same onnx in the very same step, it can never drift out of version with the
     onnx / keys.txt that ships alongside it.
 
-Recipe (kept faithful to MAA's src/OCRBenchmark/convert.py, validated cos=1.0):
-    - rec: onnxsim fix shape to [1,3,48,320] (avoids SVTR dynamic-shape pitfalls)
-           -> pnnx inputshape=[1,3,48,320] fp16=0
-    - det: pnnx inputshape=[1,3,640,640] fp16=0 (no onnxsim; keep DBNet fully-conv
-           dynamic sizing). det MUST be fp32 -- fp16 destroys DBNet probability maps.
+Recipe (validated vs onnxruntime: cos=1.0 / argmax=100% on CN, PaddleCharOCR and all global rec):
+    - rec: pnnx inputshape=[1,3,48,320] fp16=0
+    - det: pnnx inputshape=[1,3,640,640] fp16=0 (keep DBNet fully-conv dynamic sizing).
+           det MUST be fp32 -- fp16 destroys DBNet probability maps.
+    Pinning pnnx's inputshape already fixes the SVTR dynamic-shape conversion, so no onnxsim
+    pre-pass is needed (onnxsim also SIGSEGV'd under onnxsim+onnxruntime on Python 3.14 CI).
     onnx2ncnn is deprecated upstream (2025-09); only pnnx is used.
 
 Driven by glob: every `*/det/inference.onnx` -> det.ncnn.*, every `*/rec/inference.onnx`
@@ -38,10 +39,9 @@ import tempfile
 from pathlib import Path
 
 # Bump when the conversion recipe changes so cached artifacts are invalidated.
-RECIPE_VERSION = "1"
+RECIPE_VERSION = "2"
 
 REC_INPUTSHAPE = "[1,3,48,320]"
-REC_SIM_SHAPE = "1,3,48,320"
 DET_INPUTSHAPE = "[1,3,640,640]"
 
 
@@ -96,19 +96,16 @@ def _pnnx_outputs(workdir: Path) -> tuple[Path, Path]:
 
 def _convert_into_cache(onnx_path: Path, kind: str, rec_fp16: bool, cache_param: Path, cache_bin: Path) -> None:
     pnnx = _find_pnnx()
+    if kind == "rec":
+        inputshape = REC_INPUTSHAPE
+        fp16 = 1 if rec_fp16 else 0
+    else:  # det
+        inputshape = DET_INPUTSHAPE
+        fp16 = 0  # det must stay fp32
     with tempfile.TemporaryDirectory(prefix=f"ncnn_{kind}_") as tmp:
         work = Path(tmp)
-        if kind == "rec":
-            work_onnx = work / "rec_sim.onnx"
-            _run([sys.executable, "-m", "onnxsim", str(onnx_path), str(work_onnx),
-                  "--overwrite-input-shape", REC_SIM_SHAPE])
-            inputshape = REC_INPUTSHAPE
-            fp16 = 1 if rec_fp16 else 0
-        else:  # det
-            work_onnx = work / "det.onnx"
-            shutil.copy(onnx_path, work_onnx)
-            inputshape = DET_INPUTSHAPE
-            fp16 = 0  # det must stay fp32
+        work_onnx = work / f"{kind}.onnx"
+        shutil.copy(onnx_path, work_onnx)
         _run([pnnx, work_onnx.name, f"inputshape={inputshape}", f"fp16={fp16}"], cwd=work)
         param, binp = _pnnx_outputs(work)
         cache_param.parent.mkdir(parents=True, exist_ok=True)
