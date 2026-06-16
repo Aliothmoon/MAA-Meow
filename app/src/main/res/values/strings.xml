@@ -279,7 +279,7 @@
     <!-- achievements -->
     <string name="achievement_title">成就</string>
     <string name="achievement_unlocked_message">达成成就：%1$s</string>
-    <string name="achievement_search_hint">搜索成就 ID 或名称</string>
+    <string name="achievement_search_hint">搜索成就名称</string>
     <string name="achievement_unlocked_count">已解锁 %1$d / %2$d</string>
     <string name="achievement_locked_title">\?\?\?</string>
     <string name="achievement_locked_desc">隐藏的成就仍未揭晓</string>

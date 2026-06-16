@@ -78,7 +78,7 @@
     <string name="settings_import_config_desc">Restore settings and task configurations from a file</string>
     <string name="achievement_title">Achievements</string>
     <string name="achievement_unlocked_message">Achievement unlocked: %1$s</string>
-    <string name="achievement_search_hint">Search achievement ID or name</string>
+    <string name="achievement_search_hint">Search achievement name</string>
     <string name="achievement_unlocked_count">Unlocked %1$d / %2$d</string>
     <string name="achievement_locked_title">\?\?\?</string>
     <string name="achievement_locked_desc">This hidden achievement has not been revealed yet</string>

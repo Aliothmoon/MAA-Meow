@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +15,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class AchievementViewModel(private val repository: AchievementRepository) : ViewModel() {
+class AchievementViewModel(
+    private val repository: AchievementRepository,
+    appSettingsManager: AppSettingsManager,
+) : ViewModel() {
     private val query = MutableStateFlow("")
 
     val searchText: StateFlow<String> = query
@@ -26,14 +31,13 @@ class AchievementViewModel(private val repository: AchievementRepository) : View
         .map { achievements -> achievements.count { it.unlocked } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
-    val achievements = combine(repository.achievements, query) { achievements, text ->
+    val achievements = combine(repository.achievements, query, appSettingsManager.language) { achievements, text, language ->
         val normalized = text.trim()
+        val languageTag = resolveSelectedLanguage(language).tag
         achievements.filter { state ->
             state.unlocked && (
                 normalized.isEmpty()
-                    || state.definition.id.contains(normalized, ignoreCase = true)
-                    || state.definition.title.zh.contains(normalized, ignoreCase = true)
-                    || state.definition.title.en.contains(normalized, ignoreCase = true)
+                    || state.definition.title.resolve(languageTag).contains(normalized, ignoreCase = true)
                 )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
