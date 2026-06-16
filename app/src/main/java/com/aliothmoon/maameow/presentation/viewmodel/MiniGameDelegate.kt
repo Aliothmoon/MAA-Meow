@@ -2,6 +2,8 @@ package com.aliothmoon.maameow.presentation.viewmodel
 
 import android.content.Context
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.achievement.AchievementEvents
+import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.activity.MiniGame
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
@@ -36,6 +38,7 @@ class MiniGameDelegate(
     activityManager: ActivityManager,
     private val compositionService: MaaCompositionService,
     private val scope: CoroutineScope,
+    private val achievementRepository: AchievementRepository,
 ) {
 
     private val _state = MutableStateFlow(MiniGameUiState())
@@ -91,6 +94,12 @@ class MiniGameDelegate(
             val task = buildTaskParams()
             _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_starting)) }
             val result = compositionService.startCopilot(listOf(task))
+            if (result is MaaCompositionService.StartResult.Success) {
+                achievementRepository.recordEvent(
+                    AchievementEvents.MiniGameStarted,
+                    mapOf("task" to _state.value.selectedTaskName),
+                )
+            }
             _state.update {
                 it.copy(
                     statusMessage = appContext.formatStartResult(

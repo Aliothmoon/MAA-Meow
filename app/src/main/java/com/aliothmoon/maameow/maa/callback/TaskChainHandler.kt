@@ -2,6 +2,8 @@ package com.aliothmoon.maameow.maa.callback
 
 import android.content.Context
 import com.alibaba.fastjson2.JSONObject
+import com.aliothmoon.maameow.data.achievement.AchievementEvents
+import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
@@ -26,6 +28,7 @@ class TaskChainHandler(
     private val notificationCenter: MaaNotificationCenter,
     private val subTaskHandler: SubTaskHandler,
     private val taskChainState: TaskChainState,
+    private val achievementRepository: AchievementRepository,
 ) {
     // 回调路径用于 suspend 的 TaskChainState 更新；独立于任一生命周期
     private val callbackScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -78,6 +81,12 @@ class TaskChainHandler(
         val taskName = str(taskchain)
         sessionLogger.append("${str("TaskError")}$taskName", LogLevel.ERROR)
         notificationCenter.notifyTaskError(taskName)
+        callbackScope.launch {
+            achievementRepository.recordEvent(
+                AchievementEvents.TaskChainError,
+                mapOf("taskchain" to taskchain),
+            )
+        }
     }
 
     /**
@@ -148,6 +157,7 @@ class TaskChainHandler(
      */
     private fun handleTaskChainStopped(details: JSONObject) {
         sessionLogger.append(str("TaskStopped"), LogLevel.INFO)
+        callbackScope.launch { achievementRepository.recordEvent(AchievementEvents.TaskStopped) }
     }
 
     /**
@@ -161,6 +171,12 @@ class TaskChainHandler(
         val startMillis = sessionLogger.sessionStartTimeMillis
         if (startMillis > 0) {
             val elapsed = System.currentTimeMillis() - startMillis
+            callbackScope.launch {
+                achievementRepository.recordEvent(
+                    AchievementEvents.AllTasksCompleted,
+                    mapOf("elapsedMillis" to elapsed.toString()),
+                )
+            }
             val h = elapsed / 3_600_000
             val m = (elapsed % 3_600_000) / 60_000
             val s = (elapsed % 60_000) / 1_000

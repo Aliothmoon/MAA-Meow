@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.aliothmoon.maameow.constant.Packages
+import com.aliothmoon.maameow.data.achievement.AchievementEvents
+import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.InfrastConfig
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskProfile
@@ -35,6 +37,7 @@ import java.util.UUID
 class TaskChainState(
     private val context: Context,
     private val appSettings: AppSettingsManager,
+    private val achievementRepository: AchievementRepository,
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -119,6 +122,7 @@ class TaskChainState(
             }
             Timber.d("Added node: %s (%s)", node.name, typeInfo.name)
         }
+        achievementRepository.recordEvent(AchievementEvents.TaskNodeAdded)
         return newNodeId
     }
 
@@ -127,6 +131,7 @@ class TaskChainState(
             current.removeAll { it.id == nodeId }
             Timber.d("Removed node: %s", nodeId)
         }
+        achievementRepository.recordEvent(AchievementEvents.TaskNodeRemoved)
     }
 
     /**

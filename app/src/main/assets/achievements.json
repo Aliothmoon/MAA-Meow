@@ -1,0 +1,2299 @@
+[
+    {
+        "id":  "SanitySpender1",
+        "title":  {
+                      "zh":  "战术实战",
+                      "en":  "Tactical Practice"
+                  },
+        "description":  {
+                            "zh":  "你已经上手了。",
+                            "en":  "You\u0027ve got the hang of it"
+                        },
+        "condition":  {
+                          "zh":  "完成 10 次代理通关",
+                          "en":  "Complete 10 auto-battle operations"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "SanitySpender",
+        "target":  10,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  1,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "process_task_started",
+                        "mode":  "INCREMENT",
+                        "where":  {
+                                      "task":  "StageDrops-Stars-3"
+                                  }
+                    }
+    },
+    {
+        "id":  "SanitySpender2",
+        "title":  {
+                      "zh":  "代理先锋",
+                      "en":  "Auto-Battle Pioneer"
+                  },
+        "description":  {
+                            "zh":  "比我还熟练。",
+                            "en":  "Even more skilled than me"
+                        },
+        "condition":  {
+                          "zh":  "完成 100 次代理通关",
+                          "en":  "Complete 100 auto-battle operations"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "SanitySpender",
+        "target":  100,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "process_task_started",
+                        "mode":  "INCREMENT",
+                        "where":  {
+                                      "task":  "StageDrops-Stars-3"
+                                  }
+                    }
+    },
+    {
+        "id":  "SanitySpender3",
+        "title":  {
+                      "zh":  "ZOOT",
+                      "en":  "ZOOT"
+                  },
+        "description":  {
+                            "zh":  "可露希尔代理程序正常运转中。",
+                            "en":  "Closure\u0027s proxy program is running normally."
+                        },
+        "condition":  {
+                          "zh":  "完成 1000 次代理通关",
+                          "en":  "Complete 1000 auto-battle operations"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "SanitySpender",
+        "target":  1000,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  3,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "process_task_started",
+                        "mode":  "INCREMENT",
+                        "where":  {
+                                      "task":  "StageDrops-Stars-3"
+                                  }
+                    }
+    },
+    {
+        "id":  "SanitySaver1",
+        "title":  {
+                      "zh":  "精打细算",
+                      "en":  "Penny Pincher"
+                  },
+        "description":  {
+                            "zh":  "每点理智都用得恰到好处。",
+                            "en":  "Every point of sanity used perfectly."
+                        },
+        "condition":  {
+                          "zh":  "使用 ｢{key=UseSanityPotion}｣ 功能回复理智 1 次",
+                          "en":  "Use ｢{key=UseSanityPotion}｣ function to recover sanity 1 time"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "SanitySaver",
+        "target":  1,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  1,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "medicine_used",
+                        "mode":  "INCREMENT"
+                    }
+    },
+    {
+        "id":  "SanitySaver2",
+        "title":  {
+                      "zh":  "补给大师",
+                      "en":  "Supply Master"
+                  },
+        "description":  {
+                            "zh":  "你对药剂的使用炉火纯青。",
+                            "en":  "You\u0027ve mastered the use of potions."
+                        },
+        "condition":  {
+                          "zh":  "使用 ｢{key=UseSanityPotion}｣ 功能回复理智 10 次",
+                          "en":  "Use ｢{key=UseSanityPotion}｣ function to recover sanity 10 times"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "SanitySaver",
+        "target":  10,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "medicine_used",
+                        "mode":  "INCREMENT"
+                    }
+    },
+    {
+        "id":  "SanitySaver3",
+        "title":  {
+                      "zh":  "永动机",
+                      "en":  "Perpetual Motion Machine"
+                  },
+        "description":  {
+                            "zh":  "你的理智似乎永远用不完。",
+                            "en":  "Your sanity seems to never run out."
+                        },
+        "condition":  {
+                          "zh":  "使用 ｢{key=UseSanityPotion}｣ 功能回复理智 50 次",
+                          "en":  "Use ｢{key=UseSanityPotion}｣ function to recover sanity 50 times"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "SanitySaver",
+        "target":  50,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  3,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "medicine_used",
+                        "mode":  "INCREMENT"
+                    }
+    },
+    {
+        "id":  "RoguelikeGamePass1",
+        "title":  {
+                      "zh":  "初抵终点",
+                      "en":  "First Arrival at the End"
+                  },
+        "description":  {
+                            "zh":  "只要能到达...那个地方...",
+                            "en":  "If only we could reach... that place..."
+                        },
+        "condition":  {
+                          "zh":  "使用 ｢{key=AutoRoguelike}｣ 通关肉鸽 1 次",
+                          "en":  "Clear Integrated Strategies using ｢{key=AutoRoguelike}｣ 1 time"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "RoguelikeGamePass",
+        "target":  1,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  1,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "process_task_started",
+                        "mode":  "INCREMENT",
+                        "where":  {
+                                      "task":  "GamePass"
+                                  }
+                    }
+    },
+    {
+        "id":  "RoguelikeGamePass2",
+        "title":  {
+                      "zh":  "再临终点",
+                      "en":  "Return to the End"
+                  },
+        "description":  {
+                            "zh":  "这条道路我已走过多次。",
+                            "en":  "I\u0027ve walked this path many times."
+                        },
+        "condition":  {
+                          "zh":  "使用 ｢{key=AutoRoguelike}｣ 通关肉鸽 5 次",
+                          "en":  "Clear Integrated Strategies using ｢{key=AutoRoguelike}｣ 5 times"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "RoguelikeGamePass",
+        "target":  5,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "process_task_started",
+                        "mode":  "INCREMENT",
+                        "where":  {
+                                      "task":  "GamePass"
+                                  }
+                    }
+    },
+    {
+        "id":  "RoguelikeGamePass3",
+        "title":  {
+                      "zh":  "终点常客",
+                      "en":  "Regular at the End"
+                  },
+        "description":  {
+                            "zh":  "闭着眼睛都能走到这。",
+                            "en":  "Could walk there with eyes closed."
+                        },
+        "condition":  {
+                          "zh":  "使用 ｢{key=AutoRoguelike}｣ 通关肉鸽 10 次",
+                          "en":  "Clear Integrated Strategies using ｢{key=AutoRoguelike}｣ 10 times"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "RoguelikeGamePass",
+        "target":  10,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  3,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "process_task_started",
+                        "mode":  "INCREMENT",
+                        "where":  {
+                                      "task":  "GamePass"
+                                  }
+                    }
+    },
+    {
+        "id":  "RoguelikeN04",
+        "title":  {
+                      "zh":  "简简单单",
+                      "en":  "Simple and Easy"
+                  },
+        "description":  {
+                            "zh":  "这种难度难不倒我。",
+                            "en":  "This difficulty can\u0027t stop me."
+                        },
+        "condition":  {
+                          "zh":  "使用 ｢{key=AutoRoguelike}｣ 通关任意肉鸽 N4 及以上难度",
+                          "en":  "Clear any I.S. at N4 difficulty or above using ｢{key=AutoRoguelike}｣"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "RoguelikeN",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  1,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "process_task_started",
+                        "mode":  "UNLOCK",
+                        "where":  {
+                                       "task":  "GamePass"
+                                   },
+                        "conditions":  [
+                                           {
+                                               "field":  "difficulty",
+                                               "op":  "GTE",
+                                               "value":  "4"
+                                           }
+                                       ]
+                    }
+    },
+    {
+        "id":  "RoguelikeN08",
+        "title":  {
+                      "zh":  "挑战困难",
+                      "en":  "Challenge the Difficult"
+                  },
+        "description":  {
+                            "zh":  "勇敢牛牛不怕困难。",
+                            "en":  "Brave MAA fears no difficulty."
+                        },
+        "condition":  {
+                          "zh":  "使用 ｢{key=AutoRoguelike}｣ 通关任意肉鸽 N8 及以上难度",
+                          "en":  "Clear any I.S. at N8 difficulty or above using ｢{key=AutoRoguelike}｣"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "RoguelikeN",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "process_task_started",
+                        "mode":  "UNLOCK",
+                        "where":  {
+                                       "task":  "GamePass"
+                                   },
+                        "conditions":  [
+                                           {
+                                               "field":  "difficulty",
+                                               "op":  "GTE",
+                                               "value":  "8"
+                                           }
+                                       ]
+                    }
+    },
+    {
+        "id":  "RoguelikeN12",
+        "title":  {
+                      "zh":  "超越人类",
+                      "en":  "Beyond Human"
+                  },
+        "description":  {
+                            "zh":  "比一般人玩的都好。",
+                            "en":  "Playing better than most people."
+                        },
+        "condition":  {
+                          "zh":  "使用 ｢{key=AutoRoguelike}｣ 通关任意肉鸽 N12 及以上难度",
+                          "en":  "Clear any I.S. at N12 difficulty or above using ｢{key=AutoRoguelike}｣"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "RoguelikeN",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  3,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "process_task_started",
+                        "mode":  "UNLOCK",
+                        "where":  {
+                                       "task":  "GamePass"
+                                   },
+                        "conditions":  [
+                                           {
+                                               "field":  "difficulty",
+                                               "op":  "GTE",
+                                               "value":  "12"
+                                           }
+                                       ]
+                    }
+    },
+    {
+        "id":  "RoguelikeN15",
+        "title":  {
+                      "zh":  "仙术杯选手",
+                      "en":  "Immortal Arts Cup Contestant"
+                  },
+        "description":  {
+                            "zh":  "仙术牛牛真仙术。",
+                            "en":  "Immortal MAA truly immortal."
+                        },
+        "condition":  {
+                          "zh":  "使用 ｢{key=AutoRoguelike}｣ 通关任意肉鸽 N15 及以上难度",
+                          "en":  "Clear any I.S. at N15 difficulty or above using ｢{key=AutoRoguelike}｣"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "RoguelikeN",
+        "target":  0,
+        "hidden":  false,
+        "rare":  true,
+        "groupIndex":  4,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "process_task_started",
+                        "mode":  "UNLOCK",
+                        "where":  {
+                                       "task":  "GamePass"
+                                   },
+                        "conditions":  [
+                                           {
+                                               "field":  "difficulty",
+                                               "op":  "GTE",
+                                               "value":  "15"
+                                           }
+                                       ]
+                    }
+    },
+    {
+        "id":  "RoguelikeRetreat",
+        "title":  {
+                      "zh":  "失败是成功之母",
+                      "en":  "Failure Is the Mother of Success"
+                  },
+        "description":  {
+                            "zh":  "终有一天，我们会到达成功的彼岸，失败是成功的阶梯。",
+                            "en":  "One day, we\u0027ll reach the shore of success. Failure is the ladder to success."
+                        },
+        "condition":  {
+                          "zh":  "｢{key=AutoRoguelike}｣ 放弃探索 100 次",
+                          "en":  "｢{key=AutoRoguelike}｣ abandon exploration 100 times"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "Roguelike",
+        "target":  100,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "process_task_started",
+                        "mode":  "INCREMENT",
+                        "where":  {
+                                      "task":  "ExitThenAbandon"
+                                  }
+                    }
+    },
+    {
+        "id":  "RoguelikeGoldMax",
+        "title":  {
+                      "zh":  "满了满了",
+                      "en":  "All Full"
+                  },
+        "description":  {
+                            "zh":  "坎诺特，把你店里最贵的端出来！",
+                            "en":  "Cannott, bring out your most expensive stuff!"
+                        },
+        "condition":  {
+                          "zh":  "肉鸽源石锭到达 999",
+                          "en":  "Integrated Strategies Originium Ingots reach 999"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "Roguelike",
+        "target":  999,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "process_task_started",
+                        "mode":  "SET_MAX",
+                        "where":  {
+                                      "task":  "StageTraderInvestSystemFull"
+                                  },
+                        "amount":  999
+                    }
+    },
+    {
+        "id":  "FirstLaunch",
+        "title":  {
+                      "zh":  "初来乍到",
+                      "en":  "First Timer"
+                  },
+        "description":  {
+                            "zh":  "欢迎使用 Maa-Meow.",
+                            "en":  "Welcome to Maa-Meow."
+                        },
+        "condition":  {
+                          "zh":  "第一次启动软件",
+                          "en":  "Launch the software for the first time"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "app_launch",
+                        "mode":  "UNLOCK"
+                    }
+    },
+    {
+        "id":  "SanityExpire",
+        "title":  {
+                      "zh":  "要过期了",
+                      "en":  "About to Expire"
+                  },
+        "description":  {
+                            "zh":  "赶紧冲哇！！！",
+                            "en":  "Hurry up and use them!!!"
+                        },
+        "condition":  {
+                          "zh":  "使用「{key=UseExpiringMedicine}」，单次任务使用 8 瓶及以上临期理智药",
+                          "en":  "Use ｢{key=UseExpiringMedicine}｣, use 8 or more expiring sanity potions in a single task"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "",
+        "target":  8,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "medicine_used",
+                        "mode":  "SET_MAX",
+                        "where":  {
+                                      "isExpiring":  "true"
+                                  },
+                        "conditions":  [
+                                           {
+                                               "field":  "expiringTotal",
+                                               "op":  "GTE",
+                                               "value":  "8"
+                                           }
+                                       ]
+                    }
+    },
+    {
+        "id":  "RecruitGambler",
+        "title":  {
+                      "zh":  "公招赌徒",
+                      "en":  "Recruitment Gambler"
+                  },
+        "description":  {
+                            "zh":  "搏一搏，单车变摩托。",
+                            "en":  "All in! Turn a bicycle into a motorcycle."
+                        },
+        "condition":  {
+                          "zh":  "在公开招募中刷新标签 50 次",
+                          "en":  "Refresh tags 50 times in public recruitment"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "",
+        "target":  50,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  2,
+        "trigger":  {
+                        "event":  "process_task_started",
+                        "mode":  "INCREMENT",
+                        "where":  {
+                                      "task":  "RecruitRefreshConfirm"
+                                  }
+                    }
+    },
+    {
+        "id":  "ClueCollector",
+        "title":  {
+                      "zh":  "线索搜集",
+                      "en":  "Clue Collector"
+                  },
+        "description":  {
+                            "zh":  "罗德岛交际花。",
+                            "en":  "Rhodes Island socialite."
+                        },
+        "condition":  {
+                          "zh":  "累计开启线索交流 20 次",
+                          "en":  "Open clue exchange 20 times in total"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "ClueUse",
+        "target":  20,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  1,
+        "releasePhase":  2,
+        "trigger":  {
+                        "event":  "process_task_completed",
+                        "mode":  "INCREMENT",
+                        "where":  {
+                                      "taskchain":  "Infrast",
+                                      "task":  "UnlockClues"
+                                  }
+                    }
+    },
+    {
+        "id":  "CluePhilosopher",
+        "title":  {
+                      "zh":  "线索哲学家",
+                      "en":  "Clue Philosopher"
+                  },
+        "description":  {
+                            "zh":  "聚会的意义是什么？",
+                            "en":  "What is the meaning of gathering?"
+                        },
+        "condition":  {
+                          "zh":  "累计开启线索交流 50 次",
+                          "en":  "Open clue exchange 50 times in total"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "ClueUse",
+        "target":  50,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2,
+        "releasePhase":  2,
+        "trigger":  {
+                        "event":  "process_task_completed",
+                        "mode":  "INCREMENT",
+                        "where":  {
+                                      "taskchain":  "Infrast",
+                                      "task":  "UnlockClues"
+                                  }
+                    }
+    },
+    {
+        "id":  "ClueObsession",
+        "title":  {
+                      "zh":  "线索强迫症",
+                      "en":  "Clue Obsession"
+                  },
+        "description":  {
+                            "zh":  "七色战队，集合！",
+                            "en":  "Seven-color team, assemble!"
+                        },
+        "condition":  {
+                          "zh":  "连续 7 天每天集齐并开启线索交流",
+                          "en":  "Collect and open clue exchange every day for 7 consecutive days"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "",
+        "target":  7,
+        "hidden":  false,
+        "rare":  true,
+        "groupIndex":  3,
+        "releasePhase":  2,
+        "trigger":  {
+                        "event":  "process_task_completed",
+                        "mode":  "DAILY_STREAK",
+                        "where":  {
+                                      "taskchain":  "Infrast",
+                                      "task":  "UnlockClues"
+                                  }
+                    }
+    },
+    {
+        "id":  "ClueSharer",
+        "title":  {
+                      "zh":  "线索分享",
+                      "en":  "Clue Sharer"
+                  },
+        "description":  {
+                            "zh":  "好东西要和朋友分享。",
+                            "en":  "Good things should be shared with friends."
+                        },
+        "condition":  {
+                          "zh":  "累计向好友发送 20 次线索",
+                          "en":  "Send clues to friends 20 times in total"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "ClueSend",
+        "target":  20,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  1,
+        "releasePhase":  2,
+        "trigger":  {
+                        "event":  "process_task_completed",
+                        "mode":  "INCREMENT",
+                        "where":  {
+                                      "taskchain":  "Infrast",
+                                      "task":  "SendClues"
+                                  }
+                    }
+    },
+    {
+        "id":  "CluePhilanthropist",
+        "title":  {
+                      "zh":  "线索慈善家",
+                      "en":  "Clue Philanthropist"
+                  },
+        "description":  {
+                            "zh":  "拿去花，不用谢。",
+                            "en":  "Take it, no need to thank me."
+                        },
+        "condition":  {
+                          "zh":  "累计向好友发送 50 次线索",
+                          "en":  "Send clues to friends 50 times in total"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "ClueSend",
+        "target":  50,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2,
+        "releasePhase":  2,
+        "trigger":  {
+                        "event":  "process_task_completed",
+                        "mode":  "INCREMENT",
+                        "where":  {
+                                      "taskchain":  "Infrast",
+                                      "task":  "SendClues"
+                                  }
+                    }
+    },
+    {
+        "id":  "TimeManagementMaster",
+        "title":  {
+                      "zh":  "时间管理大师",
+                      "en":  "Time Management Master"
+                  },
+        "description":  {
+                            "zh":  "一点时间也不放过。",
+                            "en":  "Not a single moment goes to waste."
+                        },
+        "condition":  {
+                          "zh":  "勾选 ｢{key=ScheduleSettings}｣ 所有定时器",
+                          "en":  "Use all timers in ｢{key=ScheduleSettings}｣"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "",
+        "target":  0,
+        "hidden":  true,
+        "rare":  true,
+        "groupIndex":  2147483647,
+        "releasePhase":  3,
+        "trigger":  {
+                        "event":  "schedule_saved",
+                        "mode":  "UNLOCK",
+                        "conditions":  [
+                                           {
+                                               "field":  "timerCount",
+                                               "op":  "GTE",
+                                               "value":  "7"
+                                           }
+                                       ]
+                    }
+    },
+    {
+        "id":  "DoubleSync",
+        "title":  {
+                      "zh":  "人货两清",
+                      "en":  "Both Accounted For"
+                  },
+        "description":  {
+                            "zh":  "人也盘明白了，货也点清楚了。",
+                            "en":  "The people are sorted out, and the inventory is checked too."
+                        },
+        "condition":  {
+                          "zh":  "单次 ｢{key=UserDataUpdate}｣ 同时同步干员与仓库",
+                          "en":  "Sync both Operators and Depot data in a single ｢{key=UserDataUpdate}｣ run"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  3,
+        "trigger":  {
+                        "event":  "toolbox_result",
+                        "mode":  "UNLOCK",
+                        "where":  {
+                                      "tool":  "DepotOperBox"
+                                  }
+                    }
+    },
+    {
+        "id":  "ResumeRecord",
+        "title":  {
+                      "zh":  "重新建档",
+                      "en":  "Resume Record"
+                  },
+        "description":  {
+                            "zh":  "隔了这么久，总算把档案续上了。",
+                            "en":  "After all this time, the record is finally continued."
+                        },
+        "condition":  {
+                          "zh":  "在至少 7 天未同步后，再次完成一次 ｢{key=UserDataUpdate}｣",
+                          "en":  "Complete ｢{key=UserDataUpdate}｣ again after at least 7 days without syncing"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  3,
+        "trigger":  {
+                        "event":  "toolbox_result",
+                        "mode":  "UNLOCK"
+                    }
+    },
+    {
+        "id":  "QueueExpansion",
+        "title":  {
+                      "zh":  "队伍扩编",
+                      "en":  "Queue Expansion"
+                  },
+        "description":  {
+                            "zh":  "先把流程搭起来。",
+                            "en":  "Build the workflow first."
+                        },
+        "condition":  {
+                          "zh":  "手动新增一个任务",
+                          "en":  "Manually add a task"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  3,
+        "trigger":  {
+                        "event":  "task_node_added",
+                        "mode":  "UNLOCK"
+                    }
+    },
+    {
+        "id":  "QueueSimplifier",
+        "title":  {
+                      "zh":  "精简流程",
+                      "en":  "Queue Simplifier"
+                  },
+        "description":  {
+                            "zh":  "删繁就简，也是一种优化。",
+                            "en":  "Cutting the clutter is optimization too."
+                        },
+        "condition":  {
+                          "zh":  "手动删除一个任务",
+                          "en":  "Manually delete a task"
+                      },
+        "category":  "BASIC_USAGE",
+        "group":  "",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  3,
+        "trigger":  {
+                        "event":  "task_node_removed",
+                        "mode":  "UNLOCK"
+                    }
+    },
+    {
+        "id":  "ScheduleMaster1",
+        "title":  {
+                      "zh":  "××管理大师",
+                      "en":  "XX Management Master"
+                  },
+        "description":  {
+                            "zh":  "更有效的规划。",
+                            "en":  "More efficient planning."
+                        },
+        "condition":  {
+                          "zh":  "{key=ScheduleSettings} 1 次",
+                          "en":  "Use {key=ScheduleSettings} 1 time"
+                      },
+        "category":  "FEATURE_EXPLORATION",
+        "group":  "ScheduleMaster",
+        "target":  1,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  1,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "schedule_saved",
+                        "mode":  "INCREMENT"
+                    }
+    },
+    {
+        "id":  "ScheduleMaster2",
+        "title":  {
+                      "zh":  "泛用型自动化解决方案0.3.2.9f2",
+                      "en":  "Universal Automation Solution 0.3.2.9f2"
+                  },
+        "description":  {
+                            "zh":  "您已熟知 PRTS 的自动化部署。",
+                            "en":  "You are familiar with PRTS\u0027s automated deployment."
+                        },
+        "condition":  {
+                          "zh":  "{key=ScheduleSettings} 100 次",
+                          "en":  "Use {key=ScheduleSettings} 100 times"
+                      },
+        "category":  "FEATURE_EXPLORATION",
+        "group":  "ScheduleMaster",
+        "target":  100,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "schedule_saved",
+                        "mode":  "INCREMENT"
+                    }
+    },
+    {
+        "id":  "MirrorChyanFirstUse",
+        "title":  {
+                      "zh":  "Mirror～～☆",
+                      "en":  "Mirror～～☆"
+                  },
+        "description":  {
+                            "zh":  "是 {key=MirrorChyan}！我们有救了！",
+                            "en":  "It\u0027s {key=MirrorChyan}! We\u0027re saved!"
+                        },
+        "condition":  {
+                          "zh":  "初次成功使用 {key=MirrorChyan}",
+                          "en":  "Successfully use {key=MirrorChyan} for the first time"
+                      },
+        "category":  "FEATURE_EXPLORATION",
+        "group":  "MirrorChyan",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "update_completed",
+                        "mode":  "UNLOCK",
+                        "where":  {
+                                      "source":  "MIRROR_CHYAN"
+                                  }
+                    }
+    },
+    {
+        "id":  "MirrorChyanCdkError",
+        "title":  {
+                      "zh":  "这……对吗？",
+                      "en":  "Is This... Right?"
+                  },
+        "description":  {
+                            "zh":  "谁偷吃了我的字母饼干？",
+                            "en":  "Who ate my alphabet cookies?"
+                        },
+        "condition":  {
+                          "zh":  "{key=MirrorChyan} CDK 填写错误",
+                          "en":  "Enter incorrect {key=MirrorChyan} CDK"
+                      },
+        "category":  "FEATURE_EXPLORATION",
+        "group":  "MirrorChyan",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "update_failed",
+                        "mode":  "UNLOCK",
+                        "where":  {
+                                      "source":  "MIRROR_CHYAN",
+                                      "errorType":  "CDK"
+                                  }
+                    }
+    },
+    {
+        "id":  "Pioneer1",
+        "title":  {
+                      "zh":  "测试先锋",
+                      "en":  "Test Pioneer"
+                  },
+        "description":  {
+                            "zh":  "您率先体验了处于测试中的版本。",
+                            "en":  "You experienced the beta version ahead of others."
+                        },
+        "condition":  {
+                          "zh":  "将 MAA 更新至{key=UpdateCheckBeta}",
+                          "en":  "Update MAA to {key=UpdateCheckBeta}"
+                      },
+        "category":  "FEATURE_EXPLORATION",
+        "group":  "Pioneer",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  1,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "update_completed",
+                        "mode":  "UNLOCK",
+                        "where":  {
+                                      "kind":  "app",
+                                      "channel":  "BETA"
+                                  }
+                    }
+    },
+    {
+        "id":  "Pioneer2",
+        "title":  {
+                      "zh":  "超级测试先锋",
+                      "en":  "Super Test Pioneer"
+                  },
+        "description":  {
+                            "zh":  "您使用了最新的测试版本（出现任何新的问题请前往{key=IssueReport}！）",
+                            "en":  "You used the latest test version (please report any new issues to {key=IssueReport}!)"
+                        },
+        "condition":  {
+                          "zh":  "将 MAA 更新至{key=UpdateCheckNightly}",
+                          "en":  "Update MAA to {key=UpdateCheckNightly}"
+                      },
+        "category":  "FEATURE_EXPLORATION",
+        "group":  "Pioneer",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "update_completed",
+                        "mode":  "UNLOCK",
+                        "where":  {
+                                      "kind":  "app",
+                                      "channel":  "BETA"
+                                  }
+                    }
+    },
+    {
+        "id":  "Pioneer3",
+        "title":  {
+                      "zh":  "DEBUG 急先锋",
+                      "en":  "DEBUG Vanguard"
+                  },
+        "description":  {
+                            "zh":  "能下到这个版本的都不是一般人。",
+                            "en":  "Anyone who can get this version is no ordinary person."
+                        },
+        "condition":  {
+                          "zh":  "使用未发布版本的 MAA",
+                          "en":  "Use unreleased version of MAA"
+                      },
+        "category":  "FEATURE_EXPLORATION",
+        "group":  "Pioneer",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  3,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "app_launch",
+                        "mode":  "UNLOCK",
+                        "conditions":  [
+                                           {
+                                               "field":  "version",
+                                               "op":  "CONTAINS",
+                                               "value":  "dev"
+                                           }
+                                       ]
+                    }
+    },
+    {
+        "id":  "MosquitoLeg",
+        "title":  {
+                      "zh":  "蚊子腿也是肉！",
+                      "en":  "Even Mosquito Legs Are Meat!"
+                  },
+        "description":  {
+                            "zh":  "您深刻理解了积少成多的道理。",
+                            "en":  "You deeply understand the principle of accumulating little by little."
+                        },
+        "condition":  {
+                          "zh":  "使用 ｢{key=CreditFight}｣ 功能超过 5 次",
+                          "en":  "Use ｢{key=CreditFight}｣ function more than 5 times"
+                      },
+        "category":  "FEATURE_EXPLORATION",
+        "group":  "",
+        "target":  5,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "process_task_completed",
+                        "mode":  "INCREMENT",
+                        "where":  {
+                                      "taskchain":  "Mall",
+                                      "task":  "StageDrops-Stars-3"
+                                  }
+                    }
+    },
+    {
+        "id":  "LogSupervisor",
+        "title":  {
+                      "zh":  "超级监工",
+                      "en":  "Supervisor"
+                  },
+        "description":  {
+                            "zh":  "据说，盯着MAA的日志能够有效提高代理成功率。",
+                            "en":  "They say watching MAA\u0027s logs can effectively improve auto-battle success rate."
+                        },
+        "condition":  {
+                          "zh":  "开着日志悬浮窗完成一次任务",
+                          "en":  "Complete a task with the log floating window open"
+                      },
+        "category":  "FEATURE_EXPLORATION",
+        "group":  "",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  2,
+        "trigger":  {
+                        "event":  "all_tasks_completed",
+                        "mode":  "UNLOCK"
+                    }
+    },
+    {
+        "id":  "TaskChainKing",
+        "title":  {
+                      "zh":  "任务链王",
+                      "en":  "Task Chain King"
+                  },
+        "description":  {
+                            "zh":  "一键启动，全部搞定。",
+                            "en":  "One click to start, everything done."
+                        },
+        "condition":  {
+                          "zh":  "单次运行中，勾选超过 7 个任务",
+                          "en":  "Select more than 7 tasks in a single run"
+                      },
+        "category":  "FEATURE_EXPLORATION",
+        "group":  "",
+        "target":  7,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  2,
+        "trigger":  {
+                        "event":  "mission_started",
+                        "mode":  "UNLOCK",
+                        "conditions":  [
+                                           {
+                                               "field":  "taskCount",
+                                               "op":  "GT",
+                                               "value":  "7"
+                                           }
+                                       ]
+                    }
+    },
+    {
+        "id":  "WarehouseMiser",
+        "title":  {
+                      "zh":  "仓库守财奴",
+                      "en":  "Warehouse Miser"
+                  },
+        "description":  {
+                            "zh":  "一个都不许用！",
+                            "en":  "Not a single one shall be used!"
+                        },
+        "condition":  {
+                          "zh":  "仓库识别功能识别到仓库内某种材料数量超过 10000 个",
+                          "en":  "Warehouse recognition detects more than 10000 of a material"
+                      },
+        "category":  "FEATURE_EXPLORATION",
+        "group":  "",
+        "target":  10000,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  2,
+        "trigger":  {
+                        "event":  "toolbox_result",
+                        "mode":  "SET_MAX",
+                        "where":  {
+                                      "tool":  "Depot"
+                                  },
+                        "conditions":  [
+                                           {
+                                               "field":  "maxCount",
+                                               "op":  "GTE",
+                                               "value":  "10000"
+                                           }
+                                       ]
+                    }
+    },
+    {
+        "id":  "HrSpecialist",
+        "title":  {
+                      "zh":  "人事部专员",
+                      "en":  "HR Specialist"
+                  },
+        "description":  {
+                            "zh":  "怎么全是预备行动组啊！",
+                            "en":  "Why are they all Reserve Action Teams!"
+                        },
+        "condition":  {
+                          "zh":  "单轮公招任务连续招募 10 次",
+                          "en":  "Recruit 10 times consecutively in a single recruitment task"
+                      },
+        "category":  "FEATURE_EXPLORATION",
+        "group":  "HrManager",
+        "target":  10,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  1,
+        "releasePhase":  2,
+        "trigger":  {
+                        "event":  "process_task_started",
+                        "mode":  "INCREMENT",
+                        "where":  {
+                                      "task":  "RecruitConfirm"
+                                  }
+                    }
+    },
+    {
+        "id":  "HrSeniorSpecialist",
+        "title":  {
+                      "zh":  "人事部高级专员",
+                      "en":  "HR Senior Specialist"
+                  },
+        "description":  {
+                            "zh":  "高资在哪里啊高资在哪里🎶",
+                            "en":  "Where is the Senior Operator tag? Where is it?🎶"
+                        },
+        "condition":  {
+                          "zh":  "单轮公招任务连续招募 20 次",
+                          "en":  "Recruit 20 times consecutively in a single recruitment task"
+                      },
+        "category":  "FEATURE_EXPLORATION",
+        "group":  "HrManager",
+        "target":  20,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2,
+        "releasePhase":  2,
+        "trigger":  {
+                        "event":  "process_task_started",
+                        "mode":  "INCREMENT",
+                        "where":  {
+                                      "task":  "RecruitConfirm"
+                                  }
+                    }
+    },
+    {
+        "id":  "Linguist",
+        "title":  {
+                      "zh":  "语言学家",
+                      "en":  "Linguist"
+                  },
+        "description":  {
+                            "zh":  "MAA，但国际化。",
+                            "en":  "MAA, but internationalized."
+                        },
+        "condition":  {
+                          "zh":  "尝试切换界面语言",
+                          "en":  "Try switching interface language"
+                      },
+        "category":  "FEATURE_EXPLORATION",
+        "group":  "",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  2,
+        "trigger":  {
+                        "event":  "language_changed",
+                        "mode":  "UNLOCK"
+                    }
+    },
+    {
+        "id":  "AchievementObserver",
+        "title":  {
+                      "zh":  "成就观测者",
+                      "en":  "Achievement Observer"
+                  },
+        "description":  {
+                            "zh":  "看看自己都做了什么。",
+                            "en":  "Take a look at what you\u0027ve been up to."
+                        },
+        "condition":  {
+                          "zh":  "打开一次 ｢{key=AchievementList}｣",
+                          "en":  "Open ｢{key=AchievementList}｣ once"
+                      },
+        "category":  "FEATURE_EXPLORATION",
+        "group":  "",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  3,
+        "trigger":  {
+                        "event":  "achievement_page_opened",
+                        "mode":  "UNLOCK"
+                    }
+    },
+    {
+        "id":  "PrivateDormManager",
+        "title":  {
+                      "zh":  "私人宿管",
+                      "en":  "Private Dorm Manager"
+                  },
+        "description":  {
+                            "zh":  "排班表当然要用自己的。",
+                            "en":  "Of course the shift schedule should use your own."
+                        },
+        "condition":  {
+                          "zh":  "成功载入一次 ｢{key=InfrastModeCustom}｣",
+                          "en":  "Successfully load ｢{key=InfrastModeCustom}｣ once"
+                      },
+        "category":  "FEATURE_EXPLORATION",
+        "group":  "",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  3,
+        "trigger":  {
+                        "event":  "process_task_completed",
+                        "mode":  "UNLOCK",
+                        "where":  {
+                                      "taskchain":  "Infrast"
+                                  }
+                    }
+    },
+    {
+        "id":  "UseCopilot1",
+        "title":  {
+                      "zh":  "抄作业",
+                      "en":  "Copying Homework"
+                  },
+        "description":  {
+                            "zh":  "真正的摆完挂机。",
+                            "en":  "True hands-off gaming."
+                        },
+        "condition":  {
+                          "zh":  "使用 ｢{key=Copilot}｣ 功能通关 1 次",
+                          "en":  "Use ｢{key=Copilot}｣ function to clear 1 time"
+                      },
+        "category":  "AUTO_BATTLE",
+        "group":  "UseCopilot",
+        "target":  1,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  1,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "copilot_success",
+                        "mode":  "INCREMENT"
+                    }
+    },
+    {
+        "id":  "UseCopilot2",
+        "title":  {
+                      "zh":  "一摆到底",
+                      "en":  "Hands-Off All the Way"
+                  },
+        "description":  {
+                            "zh":  "活动全交给牛牛打。",
+                            "en":  "Leave all events to MAA."
+                        },
+        "condition":  {
+                          "zh":  "使用 ｢{key=Copilot}｣ 功能通关 10 次",
+                          "en":  "Use ｢{key=Copilot}｣ function to clear 10 times"
+                      },
+        "category":  "AUTO_BATTLE",
+        "group":  "UseCopilot",
+        "target":  10,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "copilot_success",
+                        "mode":  "INCREMENT"
+                    }
+    },
+    {
+        "id":  "UseCopilot3",
+        "title":  {
+                      "zh":  "下次还填非常简单",
+                      "en":  "Will Still Mark \"Very Easy\" Next Time"
+                  },
+        "description":  {
+                            "zh":  "到最后也不知道关底 boss 什么机制。",
+                            "en":  "Still don\u0027t know the final boss mechanics in the end."
+                        },
+        "condition":  {
+                          "zh":  "使用 ｢{key=Copilot}｣ 功能通关 100 次",
+                          "en":  "Use ｢{key=Copilot}｣ function to clear 100 times"
+                      },
+        "category":  "AUTO_BATTLE",
+        "group":  "UseCopilot",
+        "target":  100,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  3,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "copilot_success",
+                        "mode":  "INCREMENT"
+                    }
+    },
+    {
+        "id":  "CopilotLikeGiven1",
+        "title":  {
+                      "zh":  "鼓励一下",
+                      "en":  "Encouragement"
+                  },
+        "description":  {
+                            "zh":  "点赞是对作者最大的鼓励！",
+                            "en":  "Likes are the greatest encouragement to authors!"
+                        },
+        "condition":  {
+                          "zh":  "给作业点赞 1 次",
+                          "en":  "Like a copilot 1 time"
+                      },
+        "category":  "AUTO_BATTLE",
+        "group":  "CopilotLikeGiven",
+        "target":  1,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  1,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "copilot_liked",
+                        "mode":  "INCREMENT"
+                    }
+    },
+    {
+        "id":  "CopilotLikeGiven2",
+        "title":  {
+                      "zh":  "积极互动",
+                      "en":  "Active Interaction"
+                  },
+        "description":  {
+                            "zh":  "点赞 10 次，积极参与社区互动。",
+                            "en":  "10 likes, actively participating in community interaction."
+                        },
+        "condition":  {
+                          "zh":  "给作业累计点赞 10 次",
+                          "en":  "Like copilots 10 times total"
+                      },
+        "category":  "AUTO_BATTLE",
+        "group":  "CopilotLikeGiven",
+        "target":  10,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "copilot_liked",
+                        "mode":  "INCREMENT"
+                    }
+    },
+    {
+        "id":  "CopilotLikeGiven3",
+        "title":  {
+                      "zh":  "点赞达人",
+                      "en":  "Like Master"
+                  },
+        "description":  {
+                            "zh":  "点赞 50 次，你已经成为点赞大师！",
+                            "en":  "50 likes, you\u0027ve become a like master!"
+                        },
+        "condition":  {
+                          "zh":  "给作业累计点赞 50 次",
+                          "en":  "Like copilots 50 times total"
+                      },
+        "category":  "AUTO_BATTLE",
+        "group":  "CopilotLikeGiven",
+        "target":  50,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  3,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "copilot_liked",
+                        "mode":  "INCREMENT"
+                    }
+    },
+    {
+        "id":  "CopilotError",
+        "title":  {
+                      "zh":  "哎呀",
+                      "en":  "Oops"
+                  },
+        "description":  {
+                            "zh":  "出事故了……",
+                            "en":  "An accident happened..."
+                        },
+        "condition":  {
+                          "zh":  "｢{key=Copilot}｣ 出现失误",
+                          "en":  "Error occurred in ｢{key=Copilot}｣"
+                      },
+        "category":  "AUTO_BATTLE",
+        "group":  "",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "subtask_error",
+                        "mode":  "UNLOCK",
+                        "where":  {
+                                      "subtask":  "CopilotTask"
+                                  }
+                    }
+    },
+    {
+        "id":  "MapOutdated",
+        "title":  {
+                      "zh":  "急急国王",
+                      "en":  "Impatient King"
+                  },
+        "description":  {
+                            "zh":  "我知道你很急，但你先别急。",
+                            "en":  "I know you\u0027re in a hurry, but don\u0027t rush."
+                        },
+        "condition":  {
+                          "zh":  "在未更新资源的情况下使用 ｢{key=Copilot}｣",
+                          "en":  "Use ｢{key=Copilot}｣ without updating resources"
+                      },
+        "category":  "AUTO_BATTLE",
+        "group":  "",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "subtask_extra_info",
+                        "mode":  "UNLOCK",
+                        "where":  {
+                                      "what":  "UnsupportedLevel"
+                                  }
+                    }
+    },
+    {
+        "id":  "Irreplaceable",
+        "title":  {
+                      "zh":  "无可替代",
+                      "en":  "Irreplaceable"
+                  },
+        "description":  {
+                            "zh":  "或许我应该换一份作业？",
+                            "en":  "Maybe I should get different homework?"
+                        },
+        "condition":  {
+                          "zh":  "使用 ｢{key=Copilot} - {key=AutoSquad}｣ 时，缺少至少两名{key=Operator}",
+                          "en":  "When using ｢{key=Copilot} - {key=AutoSquad}｣, missing at least two {key=Operator}s"
+                      },
+        "category":  "AUTO_BATTLE",
+        "group":  "",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "subtask_error",
+                        "mode":  "UNLOCK",
+                        "where":  {
+                                      "subtask":  "BattleFormationTask"
+                                  }
+                    }
+    },
+    {
+        "id":  "QuickCloser",
+        "title":  {
+                      "zh":  "YOLO!",
+                      "en":  "YOLO!"
+                  },
+        "description":  {
+                            "zh":  "“我知道我在做什么。”——某用户在点击之前。",
+                            "en":  "\"I know what I\u0027m doing!\" —A user, moments before clicking"
+                        },
+        "condition":  {
+                          "zh":  "1s 内关闭弹窗（你大概是没看吧）",
+                          "en":  "Close popup within 1 second (you probably didn\u0027t read it)"
+                      },
+        "category":  "HUMOR",
+        "group":  "",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1
+    },
+    {
+        "id":  "TacticalRetreat",
+        "title":  {
+                      "zh":  "临阵脱逃",
+                      "en":  "Tactical Retreat"
+                  },
+        "description":  {
+                            "zh":  "我不是放弃，是战术性撤退！",
+                            "en":  "I\u0027m not giving up, it\u0027s a tactical retreat!"
+                        },
+        "condition":  {
+                          "zh":  "手动中止一次正在运行的代理",
+                          "en":  "Manually stop a running auto-battle operation"
+                      },
+        "category":  "HUMOR",
+        "group":  "",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "task_stopped",
+                        "mode":  "UNLOCK"
+                    }
+    },
+    {
+        "id":  "Martian",
+        "title":  {
+                      "zh":  "火星人",
+                      "en":  "Martian"
+                  },
+        "description":  {
+                            "zh":  "远古版本好用吗？",
+                            "en":  "How\u0027s that ancient version working for you?"
+                        },
+        "condition":  {
+                          "zh":  "资源时间或版本时间距今超过 3 个月",
+                          "en":  "Resource or version date is more than 3 months old"
+                      },
+        "category":  "HUMOR",
+        "group":  "",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1
+    },
+    {
+        "id":  "RecruitNoSixStar",
+        "title":  {
+                      "zh":  "玄学无效",
+                      "en":  "Superstition Invalid"
+                  },
+        "description":  {
+                            "zh":  "事已至此，先睡觉吧。",
+                            "en":  "Things have come to this, let\u0027s sleep first."
+                        },
+        "condition":  {
+                          "zh":  "｢{key=Recruiting}｣ 中累计 500 次没出现六星 tag",
+                          "en":  "｢{key=Recruiting}｣ accumulated 500 times without 6★ tags appearing"
+                      },
+        "category":  "HUMOR",
+        "group":  "Recruit",
+        "target":  500,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  1,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "recruit_result",
+                        "mode":  "INCREMENT",
+                        "conditions":  [
+                                           {
+                                               "field":  "level",
+                                               "op":  "LT",
+                                               "value":  "6"
+                                           }
+                                       ]
+                    }
+    },
+    {
+        "id":  "RecruitNoSixStarStreak",
+        "title":  {
+                      "zh":  "一定是 MAA 干的！",
+                      "en":  "It Must Be MAA\u0027s Fault!"
+                  },
+        "description":  {
+                            "zh":  "乆乆乆乆乆乆乆乆乆乆！",
+                            "en":  "RAGE RAGE RAGE RAGE RAGE RAGE RAGE RAGE RAGE RAGE!"
+                        },
+        "condition":  {
+                          "zh":  "｢{key=Recruiting}｣ 中连续 500 次没出现六星 tag",
+                          "en":  "｢{key=Recruiting}｣ 500 consecutive times without 6★ tags appearing"
+                      },
+        "category":  "HUMOR",
+        "group":  "Recruit",
+        "target":  500,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2,
+        "releasePhase":  1,
+        "triggers":  [
+                         {
+                             "event":  "recruit_result",
+                             "mode":  "INCREMENT",
+                             "conditions":  [
+                                                {
+                                                    "field":  "level",
+                                                    "op":  "LT",
+                                                    "value":  "6"
+                                                }
+                                            ]
+                         },
+                         {
+                             "event":  "recruit_result",
+                             "mode":  "RESET",
+                             "conditions":  [
+                                                {
+                                                    "field":  "level",
+                                                    "op":  "GTE",
+                                                    "value":  "6"
+                                                }
+                                            ]
+                         }
+                     ]
+    },
+    {
+        "id":  "CongratulationError",
+        "title":  {
+                      "zh":  "喜报",
+                      "en":  "Good News"
+                  },
+        "description":  {
+                            "zh":  "我的 MMA 怎么用不了了？",
+                            "en":  "Why isn\u0027t my MAA working anymore?"
+                        },
+        "condition":  {
+                          "zh":  "触发过 MAA 的报错",
+                          "en":  "Triggered a MAA error"
+                      },
+        "category":  "BUG_RELATED",
+        "group":  "",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "triggers":  [
+                         {
+                             "event":  "task_chain_error",
+                             "mode":  "UNLOCK"
+                         },
+                         {
+                             "event":  "subtask_error",
+                             "mode":  "UNLOCK"
+                         }
+                     ]
+    },
+    {
+        "id":  "UnexpectedCrash",
+        "title":  {
+                      "zh":  "不速之客",
+                      "en":  "Uninvited Guest"
+                  },
+        "description":  {
+                            "zh":  "你触发了未知的领域。",
+                            "en":  "You\u0027ve triggered an unknown domain."
+                        },
+        "condition":  {
+                          "zh":  "出现未处理异常并被崩溃日志记录",
+                          "en":  "Unhandled exception occurred and was recorded in crash logs"
+                      },
+        "category":  "BUG_RELATED",
+        "group":  "",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "error_log_opened",
+                        "mode":  "UNLOCK"
+                    }
+    },
+    {
+        "id":  "ProblemFeedback",
+        "title":  {
+                      "zh":  "隐患勘察",
+                      "en":  "Risk Assessment"
+                  },
+        "description":  {
+                            "zh":  "一定要杜绝的是，来自内部的风险。",
+                            "en":  "What must be eliminated are the risks from within."
+                        },
+        "condition":  {
+                          "zh":  "进行一次{key=IssueReport}",
+                          "en":  "Submit {key=IssueReport} once"
+                      },
+        "category":  "BUG_RELATED",
+        "group":  "",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1
+    },
+    {
+        "id":  "CdnTorture",
+        "title":  {
+                      "zh":  "网络折磨人",
+                      "en":  "Network Torture"
+                  },
+        "description":  {
+                            "zh":  "比宇宙更远的地方，是 GitHub 的服务器。",
+                            "en":  "Farther than the universe are GitHub\u0027s servers."
+                        },
+        "condition":  {
+                          "zh":  "下载资源失败超过 3 次",
+                          "en":  "Resource download failed more than 3 times"
+                      },
+        "category":  "BUG_RELATED",
+        "group":  "",
+        "target":  3,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "update_failed",
+                        "mode":  "INCREMENT",
+                        "where":  {
+                                      "kind":  "resource"
+                                  }
+                    }
+    },
+    {
+        "id":  "BackstageExplorer",
+        "title":  {
+                      "zh":  "走进后台",
+                      "en":  "Backstage Explorer"
+                  },
+        "description":  {
+                            "zh":  "让我看看都记了点啥。",
+                            "en":  "Let me see what\u0027s written back there."
+                        },
+        "condition":  {
+                          "zh":  "使用一次 ｢{key=OpenDebugFolder}｣",
+                          "en":  "Use ｢{key=OpenDebugFolder}｣ once"
+                      },
+        "category":  "BUG_RELATED",
+        "group":  "",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  3
+    },
+    {
+        "id":  "MissionStartCount",
+        "title":  {
+                      "zh":  "不离不弃",
+                      "en":  "Never Give Up"
+                  },
+        "description":  {
+                            "zh":  "是信任，也是依赖。",
+                            "en":  "It\u0027s trust, and it\u0027s dependence."
+                        },
+        "condition":  {
+                          "zh":  "一天内开始任务超过 3 次",
+                          "en":  "Start tasks more than 3 times in one day"
+                      },
+        "category":  "BEHAVIOR",
+        "group":  "",
+        "target":  4,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "mission_started",
+                        "mode":  "SAME_DAY_COUNT"
+                    }
+    },
+    {
+        "id":  "LongTaskTimeout",
+        "title":  {
+                      "zh":  "漫长的任务",
+                      "en":  "Long Task"
+                  },
+        "description":  {
+                            "zh":  "要不，咱再等等？",
+                            "en":  "How about we wait a bit longer?"
+                        },
+        "condition":  {
+                          "zh":  "触发超时提醒",
+                          "en":  "Trigger timeout reminder"
+                      },
+        "category":  "BEHAVIOR",
+        "group":  "",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1
+    },
+    {
+        "id":  "ProxyOnline3Hours",
+        "title":  {
+                      "zh":  "全勤先锋",
+                      "en":  "Perfect Attendance Pioneer"
+                  },
+        "description":  {
+                            "zh":  "你，已经成为博士的替身了。",
+                            "en":  "You have become the Doctor\u0027s stand-in."
+                        },
+        "condition":  {
+                          "zh":  "开始任务后连续在线超过 3 小时",
+                          "en":  "Continuously online for more than 3 hours after starting tasks"
+                      },
+        "category":  "BEHAVIOR",
+        "group":  "",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "all_tasks_completed",
+                        "mode":  "UNLOCK",
+                        "conditions":  [
+                                           {
+                                               "field":  "elapsedMillis",
+                                               "op":  "GTE",
+                                               "value":  "10800000"
+                                           }
+                                       ]
+                    }
+    },
+    {
+        "id":  "TaskStartCancel",
+        "title":  {
+                      "zh":  "真是纠纠又结结啊",
+                      "en":  "So Indecisive"
+                  },
+        "description":  {
+                            "zh":  "啊对的对的，啊不对不对，啊对的对的，啊不对不对…",
+                            "en":  "Ah yes yes, ah no no, ah yes yes, ah no no..."
+                        },
+        "condition":  {
+                          "zh":  "在开始任务后马上又停止",
+                          "en":  "Stop immediately after starting a task"
+                      },
+        "category":  "BEHAVIOR",
+        "group":  "",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "task_stopped",
+                        "mode":  "UNLOCK"
+                    }
+    },
+    {
+        "id":  "UseDaily1",
+        "title":  {
+                      "zh":  "天天打卡",
+                      "en":  "Daily Check-in"
+                  },
+        "description":  {
+                            "zh":  "连续签到七天，可惜没有奖励。",
+                            "en":  "Seven consecutive days of check-in, too bad there\u0027s no reward."
+                        },
+        "condition":  {
+                          "zh":  "连续 7 天使用 MAA",
+                          "en":  "Use MAA for 7 consecutive days"
+                      },
+        "category":  "BEHAVIOR",
+        "group":  "UseDaily",
+        "target":  7,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  1,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "app_launch",
+                        "mode":  "DAILY_STREAK"
+                    }
+    },
+    {
+        "id":  "UseDaily2",
+        "title":  {
+                      "zh":  "全勤奖",
+                      "en":  "Perfect Attendance Award"
+                  },
+        "description":  {
+                            "zh":  "这个月的全勤奖发一下。",
+                            "en":  "Let\u0027s give out this month\u0027s perfect attendance award."
+                        },
+        "condition":  {
+                          "zh":  "连续 30 天使用 MAA",
+                          "en":  "Use MAA for 30 consecutive days"
+                      },
+        "category":  "BEHAVIOR",
+        "group":  "UseDaily",
+        "target":  30,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  2,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "app_launch",
+                        "mode":  "DAILY_STREAK"
+                    }
+    },
+    {
+        "id":  "UseDaily3",
+        "title":  {
+                      "zh":  "全年无休",
+                      "en":  "No Rest All Year"
+                  },
+        "description":  {
+                            "zh":  "就是你天天在压榨牛牛？",
+                            "en":  "So you\u0027re the one exploiting MAA every day?"
+                        },
+        "condition":  {
+                          "zh":  "连续 365 天使用 MAA",
+                          "en":  "Use MAA for 365 consecutive days"
+                      },
+        "category":  "BEHAVIOR",
+        "group":  "UseDaily",
+        "target":  365,
+        "hidden":  false,
+        "rare":  true,
+        "groupIndex":  3,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "app_launch",
+                        "mode":  "DAILY_STREAK"
+                    }
+    },
+    {
+        "id":  "UpdateObsession",
+        "title":  {
+                      "zh":  "更新强迫症",
+                      "en":  "Update Obsession"
+                  },
+        "description":  {
+                            "zh":  "有更新？更！",
+                            "en":  "Update available? Update!"
+                        },
+        "condition":  {
+                          "zh":  "在更新发布后 1 天内完成更新",
+                          "en":  "Complete update within 1 day after release"
+                      },
+        "category":  "BEHAVIOR",
+        "group":  "Update",
+        "target":  0,
+        "hidden":  false,
+        "rare":  false,
+        "groupIndex":  1,
+        "releasePhase":  2
+    },
+    {
+        "id":  "UpdateEarlyBird",
+        "title":  {
+                      "zh":  "更新尝鲜者",
+                      "en":  "Update Early Bird"
+                  },
+        "description":  {
+                            "zh":  "抢先体验！",
+                            "en":  "Be the first to experience!"
+                        },
+        "condition":  {
+                          "zh":  "在更新发布后 1 小时内完成更新",
+                          "en":  "Complete update within 1 hour after release"
+                      },
+        "category":  "BEHAVIOR",
+        "group":  "Update",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2,
+        "releasePhase":  2
+    },
+    {
+        "id":  "AprilFools",
+        "title":  {
+                      "zh":  "愚你同行",
+                      "en":  "Fooled Together"
+                  },
+        "description":  {
+                            "zh":  "不会真有人今天上线吧？",
+                            "en":  "Surely no one would go online today?"
+                        },
+        "condition":  {
+                          "zh":  "在 4 月 1 日 打开程序",
+                          "en":  "Open the program on April 1st"
+                      },
+        "category":  "EASTER_EGG",
+        "group":  "",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "app_launch",
+                        "mode":  "UNLOCK",
+                        "conditions":  [
+                                           {
+                                               "field":  "monthDay",
+                                               "op":  "MONTH_DAY",
+                                               "value":  "04-01"
+                                           }
+                                       ]
+                    }
+    },
+    {
+        "id":  "MidnightLaunch",
+        "title":  {
+                      "zh":  "午夜作战",
+                      "en":  "Midnight Operation"
+                  },
+        "description":  {
+                            "zh":  "你是深夜行动专家吗？",
+                            "en":  "Are you a night operation specialist?"
+                        },
+        "condition":  {
+                          "zh":  "在午夜 0 点后 启动",
+                          "en":  "Launch after midnight (12 AM)"
+                      },
+        "category":  "EASTER_EGG",
+        "group":  "",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "app_launch",
+                        "mode":  "UNLOCK",
+                        "conditions":  [
+                                           {
+                                               "field":  "hour",
+                                               "op":  "BETWEEN",
+                                               "value":  "0..3"
+                                           }
+                                       ]
+                    }
+    },
+    {
+        "id":  "LunarNewYear",
+        "title":  {
+                      "zh":  "新春快乐",
+                      "en":  "Happy Lunar New Year"
+                  },
+        "description":  {
+                            "zh":  "好运和六星一起到来！",
+                            "en":  "Good luck and 6★s come together!"
+                        },
+        "condition":  {
+                          "zh":  "在农历新年期间打开程序",
+                          "en":  "Open the program during Lunar New Year"
+                      },
+        "category":  "EASTER_EGG",
+        "group":  "",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "app_launch",
+                        "mode":  "UNLOCK",
+                        "conditions":  [
+                                           {
+                                               "field":  "monthDay",
+                                               "op":  "MONTH_DAY_BETWEEN",
+                                               "value":  "01-28..02-04"
+                                           }
+                                       ]
+                    }
+    },
+    {
+        "id":  "Lucky",
+        "title":  {
+                      "zh":  "Lucky",
+                      "en":  "Lucky"
+                  },
+        "description":  {
+                            "zh":  "据说能看到这条成就的人都三连金了。",
+                            "en":  "Legend says those who see this achievement got three 6★s in a row."
+                        },
+        "condition":  {
+                          "zh":  "启动 MAA 时有极！小！概率触发",
+                          "en":  "Extremely low probability trigger when starting MAA"
+                      },
+        "category":  "EASTER_EGG",
+        "group":  "",
+        "target":  0,
+        "hidden":  true,
+        "rare":  true,
+        "groupIndex":  2147483647,
+        "releasePhase":  1,
+        "trigger":  {
+                        "event":  "app_launch",
+                        "mode":  "UNLOCK",
+                        "conditions":  [
+                                           {
+                                               "field":  "random",
+                                               "op":  "LT",
+                                               "value":  "0.000799"
+                                           }
+                                       ]
+                    }
+    },
+    {
+        "id":  "SanityPlanner",
+        "title":  {
+                      "zh":  "理智规划师",
+                      "en":  "Sanity Planner"
+                  },
+        "description":  {
+                            "zh":  "精确，完美，分毫不差。",
+                            "en":  "Precise, perfect, not a single point off."
+                        },
+        "condition":  {
+                          "zh":  "完成{key=Combat}时刚好消耗完所有理智",
+                          "en":  "Complete {key=Combat} with exactly all sanity consumed"
+                      },
+        "category":  "EASTER_EGG",
+        "group":  "",
+        "target":  0,
+        "hidden":  false,
+        "rare":  true,
+        "groupIndex":  2147483647,
+        "releasePhase":  2
+    },
+    {
+        "id":  "WarehouseKeeper",
+        "title":  {
+                      "zh":  "我是仓管！",
+                      "en":  "I\u0027m the Warehouse Keeper!"
+                  },
+        "description":  {
+                            "zh":  "牛牛找到了牛牛！",
+                            "en":  "MAA found MAA!"
+                        },
+        "condition":  {
+                          "zh":  "干员识别中包含干员\"帕拉斯\"",
+                          "en":  "Operator recognition includes operator \"Pallas\""
+                      },
+        "category":  "EASTER_EGG",
+        "group":  "",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  2,
+        "trigger":  {
+                        "event":  "toolbox_result",
+                        "mode":  "UNLOCK",
+                        "where":  {
+                                      "tool":  "OperBox",
+                                      "hasPallas":  "true"
+                                  }
+                    }
+    },
+    {
+        "id":  "PallasStarter",
+        "title":  {
+                      "zh":  "牛牛厨",
+                      "en":  "Pallas Fan"
+                  },
+        "description":  {
+                            "zh":  "伟大的战士们啊，我会在你们身边，与你们一同奋勇搏杀。",
+                            "en":  "Great warriors, I will be by your side, fighting bravely with you."
+                        },
+        "condition":  {
+                          "zh":  "使用帕拉斯作为肉鸽 ｢{key=StartingCoreChar}｣",
+                          "en":  "Use Pallas as the ｢{key=StartingCoreChar}｣ in Integrated Strategies"
+                      },
+        "category":  "EASTER_EGG",
+        "group":  "",
+        "target":  0,
+        "hidden":  true,
+        "rare":  true,
+        "groupIndex":  2147483647,
+        "releasePhase":  3,
+        "trigger":  {
+                        "event":  "process_task_completed",
+                        "mode":  "UNLOCK",
+                        "where":  {
+                                      "taskchain":  "Roguelike",
+                                      "task":  "StartExplore",
+                                      "coreChar":  "帕拉斯"
+                                  }
+                    }
+    },
+    {
+        "id":  "SlackingOff",
+        "title":  {
+                      "zh":  "不务正业",
+                      "en":  "Slacking Off"
+                  },
+        "description":  {
+                            "zh":  "正事做累了，玩点别的。",
+                            "en":  "Done with serious business, time to play something else."
+                        },
+        "condition":  {
+                          "zh":  "启动一次小游戏",
+                          "en":  "Launch a mini-game once"
+                      },
+        "category":  "EASTER_EGG",
+        "group":  "",
+        "target":  0,
+        "hidden":  true,
+        "rare":  false,
+        "groupIndex":  2147483647,
+        "releasePhase":  3,
+        "trigger":  {
+                        "event":  "mini_game_started",
+                        "mode":  "UNLOCK"
+                    }
+    }
+]

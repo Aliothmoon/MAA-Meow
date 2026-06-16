@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.constant.Packages
+import com.aliothmoon.maameow.data.achievement.AchievementEvents
+import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.model.LogItem
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
@@ -57,6 +59,7 @@ class BackgroundTaskViewModel(
     private val appSettingsManager: AppSettingsManager,
     private val hardwareScreenOffManager: HardwareScreenOffManager,
     private val pathConfig: MaaPathConfig,
+    private val achievementRepository: AchievementRepository,
     scheduleRepository: ScheduleStrategyRepository,
     triggerLogger: ScheduleTriggerLogger,
     private val application: Context,
@@ -460,6 +463,12 @@ class BackgroundTaskViewModel(
             }
         }
         if (result is MaaCompositionService.StartResult.Success) {
+            viewModelScope.launch {
+                achievementRepository.recordEvent(
+                    AchievementEvents.MissionStarted,
+                    mapOf("taskCount" to plan.params.size.toString()),
+                )
+            }
             if (appSettingsManager.muteOnGameLaunch.value) {
                 onMuteGameSound(plan.clientType)
             }

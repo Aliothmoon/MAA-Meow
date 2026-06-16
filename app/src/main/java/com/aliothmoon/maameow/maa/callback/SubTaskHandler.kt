@@ -5,6 +5,7 @@ import com.alibaba.fastjson2.JSONObject
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.LogItem
 import com.aliothmoon.maameow.data.model.LogLevel
+import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
@@ -17,6 +18,12 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import com.alibaba.fastjson2.JSONArray
+import com.aliothmoon.maameow.data.achievement.AchievementEvents
+import com.aliothmoon.maameow.data.achievement.AchievementRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.Locale
 
@@ -33,7 +40,9 @@ class SubTaskHandler(
     private val notificationCenter: MaaNotificationCenter,
     private val chainState: TaskChainState,
     private val activityManager: ActivityManager,
+    private val achievementRepository: AchievementRepository,
 ) {
+    private val achievementScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val resources = applicationContext.resources
     private val packageName = applicationContext.packageName
 
@@ -50,6 +59,7 @@ class SubTaskHandler(
 
     // 本次会话累计用药数（跨战斗累计，session 开始时重置）
     private var medicineUsedTotal = 0
+    private var expiringMedicineUsedTotal = 0
 
     // 会话级理智快照（最近一次 SanityBeforeStage），供 AllTasksCompleted 消费
     data class SanitySnapshot(
@@ -66,6 +76,7 @@ class SubTaskHandler(
     fun resetSessionState() {
         pendingFight = PendingFightState()
         medicineUsedTotal = 0
+        expiringMedicineUsedTotal = 0
         lastSanitySnapshot = null
     }
 
@@ -132,9 +143,21 @@ class SubTaskHandler(
                     }
                     append(sb.trimEnd().toString(), LogLevel.ERROR)
                 }
+                achievementScope.launch {
+                    achievementRepository.recordEvent(
+                        AchievementEvents.SubTaskError,
+                        mapOf("subtask" to subtask),
+                    )
+                }
             }
 
             "CopilotTask" -> {
+                achievementScope.launch {
+                    achievementRepository.recordEvent(
+                        AchievementEvents.SubTaskError,
+                        mapOf("subtask" to subtask),
+                    )
+                }
                 val innerDetails = details.getJSONObject("details")
                 val what = innerDetails?.getString("what")
                 if (what == "UserAdditionalOperInvalid") {
@@ -144,6 +167,12 @@ class SubTaskHandler(
             }
 
             else -> {
+                achievementScope.launch {
+                    achievementRepository.recordEvent(
+                        AchievementEvents.SubTaskError,
+                        mapOf("subtask" to subtask),
+                    )
+                }
                 Timber.d("SubTaskError unhandled subtask=$subtask")
             }
         }
@@ -213,10 +242,22 @@ class SubTaskHandler(
 
             "RecruitRefreshConfirm" -> {
                 append(str("LabelsRefreshed"), LogLevel.INFO)
+                achievementScope.launch {
+                    achievementRepository.recordEvent(
+                        AchievementEvents.ProcessTaskStarted,
+                        mapOf("task" to task),
+                    )
+                }
             }
 
             "RecruitConfirm" -> {
                 append(str("RecruitConfirm"), LogLevel.INFO)
+                achievementScope.launch {
+                    achievementRepository.recordEvent(
+                        AchievementEvents.ProcessTaskStarted,
+                        mapOf("task" to task),
+                    )
+                }
             }
 
             "InfrastDormDoubleConfirmButton" -> {
@@ -225,6 +266,12 @@ class SubTaskHandler(
 
             "ExitThenAbandon" -> {
                 append(str("ExplorationAbandoned"), LogLevel.ROGUELIKE_ABANDON)
+                achievementScope.launch {
+                    achievementRepository.recordEvent(
+                        AchievementEvents.ProcessTaskStarted,
+                        mapOf("task" to task),
+                    )
+                }
             }
 
             "MissionCompletedFlag" -> {
@@ -261,6 +308,12 @@ class SubTaskHandler(
 
             "StageTraderInvestSystemFull" -> {
                 append(str("UpperLimit"), LogLevel.INFO)
+                achievementScope.launch {
+                    achievementRepository.recordEvent(
+                        AchievementEvents.ProcessTaskStarted,
+                        mapOf("task" to task),
+                    )
+                }
             }
 
             "OfflineConfirm" -> {
@@ -269,6 +322,15 @@ class SubTaskHandler(
 
             "GamePass" -> {
                 append(str("RoguelikeGamePass"), LogLevel.RARE)
+                achievementScope.launch {
+                    achievementRepository.recordEvent(
+                        AchievementEvents.ProcessTaskStarted,
+                        mapOf(
+                            "task" to task,
+                            "difficulty" to currentRoguelikeConfig()?.difficulty.toString(),
+                        ),
+                    )
+                }
             }
 
             "StageTraderSpecialShoppingAfterRefresh" -> {
@@ -293,6 +355,15 @@ class SubTaskHandler(
 
             "StageDrops-Stars-3", "StageDrops-Stars-Adverse" -> {
                 append(str("CompleteCombat"), LogLevel.INFO)
+                achievementScope.launch {
+                    achievementRepository.recordEvent(
+                        AchievementEvents.ProcessTaskStarted,
+                        mapOf(
+                            "task" to task,
+                            "sanityAfter" to (lastSanitySnapshot?.current ?: -1).toString(),
+                        ),
+                    )
+                }
                 copilotRuntimeStateStore.markTaskSuccess()
             }
 
@@ -315,21 +386,50 @@ class SubTaskHandler(
             when (taskchain) {
                 "Infrast" if task == "UnlockClues" -> {
                     append(str("ClueExchangeUnlocked"), LogLevel.TRACE)
+                    achievementScope.launch {
+                        achievementRepository.recordEvent(
+                            AchievementEvents.ProcessTaskCompleted,
+                            mapOf("taskchain" to taskchain, "task" to task),
+                        )
+                    }
                 }
 
                 "Infrast" if task == "SendClues" -> {
                     append(str("CluesSent"), LogLevel.TRACE)
+                    achievementScope.launch {
+                        achievementRepository.recordEvent(
+                            AchievementEvents.ProcessTaskCompleted,
+                            mapOf("taskchain" to taskchain, "task" to task),
+                        )
+                    }
                 }
 
                 "Roguelike" if task == "StartExplore" -> {
                     val times = innerDetails.getIntValue("exec_times", 0)
                     append("${str("BegunToExplore")} $times ${str("UnitTime")}", LogLevel.INFO)
+                    achievementScope.launch {
+                        val coreChar = normalizedRoguelikeCoreChar()
+                        achievementRepository.recordEvent(
+                            AchievementEvents.ProcessTaskCompleted,
+                            mapOf(
+                                "taskchain" to taskchain,
+                                "task" to task,
+                                "coreChar" to coreChar,
+                            ),
+                        )
+                    }
                 }
 
                 // 上游 dev-v2 22f3175b4: Core 移除 EndOfActionThenStop 任务,
                 // OF-1 信用战完成现在会触发 Copilot@StageDrops-Stars-3
                 "Mall" if task == "StageDrops-Stars-3" -> {
                     append("${str("CompleteTask")}${str("CreditFight")}", LogLevel.TRACE)
+                    achievementScope.launch {
+                        achievementRepository.recordEvent(
+                            AchievementEvents.ProcessTaskCompleted,
+                            mapOf("taskchain" to taskchain, "task" to task),
+                        )
+                    }
                 }
 
                 "Mall" if (task == "VisitLimited" || task == "VisitNextBlack") -> {
@@ -464,6 +564,12 @@ class SubTaskHandler(
                 if (level >= 5) {
                     notificationCenter.notifyRecruitHighRarity(level)
                 }
+                achievementScope.launch {
+                    achievementRepository.recordEvent(
+                        AchievementEvents.RecruitResult,
+                        mapOf("level" to level.toString()),
+                    )
+                }
             }
 
             "RecruitSupportOperator" -> {
@@ -563,6 +669,12 @@ class SubTaskHandler(
             "UnsupportedLevel" -> {
                 val level = subDetails?.getString("level") ?: ""
                 append("${str("UnsupportedLevel")}$level", LogLevel.ERROR)
+                achievementScope.launch {
+                    achievementRepository.recordEvent(
+                        AchievementEvents.SubTaskExtraInfo,
+                        mapOf("what" to what, "level" to level),
+                    )
+                }
             }
 
             else -> {
@@ -641,6 +753,7 @@ class SubTaskHandler(
         }
 
         val baseLog = if (isExpiring) {
+            if (count > 0) expiringMedicineUsedTotal += count
             // 上游 dev-v2 925ff331a: 回调不带 expire_days, 反查当前 active fight config 计算小时数
             val hours = computeExpireHoursFromActiveConfig()
             val prefix = if (hours > 0) {
@@ -667,6 +780,18 @@ class SubTaskHandler(
         }
 
         append(baseLog + suffix, LogLevel.INFO)
+        if (count > 0) {
+            achievementScope.launch {
+                achievementRepository.recordEvent(
+                    AchievementEvents.MedicineUsed,
+                    mapOf(
+                        "isExpiring" to isExpiring.toString(),
+                        "expiringTotal" to expiringMedicineUsedTotal.toString(),
+                    ),
+                    count,
+                )
+            }
+        }
     }
 
     /**
@@ -687,6 +812,15 @@ class SubTaskHandler(
             0
         }
         return maxOf(userDays, activityDays) * 24
+    }
+
+    private fun currentRoguelikeConfig(): RoguelikeConfig? = chainState.chain.value
+        .mapNotNull { it.config as? RoguelikeConfig }
+        .firstOrNull()
+
+    private fun normalizedRoguelikeCoreChar(): String {
+        val coreChar = currentRoguelikeConfig()?.coreChar.orEmpty()
+        return resourceDataManager.getCharacterByNameOrAlias(coreChar)?.name ?: coreChar
     }
 
     private fun handleReclamationReport(subDetails: JSONObject?) {

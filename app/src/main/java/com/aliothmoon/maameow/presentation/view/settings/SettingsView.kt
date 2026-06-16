@@ -120,6 +120,7 @@ fun SettingsView(
 
     var showReInitConfirm by remember { mutableStateOf(false) }
     var showDebugModeConfirm by remember { mutableStateOf(false) }
+    var versionTapCount by remember { mutableStateOf(0) }
 
     if (showRestartDialog) {
         AdaptiveTaskPromptDialog(
@@ -307,6 +308,14 @@ fun SettingsView(
                         onBackendSelected = { viewModel.setStartupBackend(it) }
                     )
                     SettingsDivider(contentColor)
+                    SettingClickItem(
+                        title = stringResource(R.string.settings_achievement_title),
+                        description = stringResource(R.string.settings_achievement_desc),
+                        contentColor = contentColor
+                    ) {
+                        navController.navigate(Routes.ACHIEVEMENT)
+                    }
+                    SettingsDivider(contentColor)
                     SettingThemeModeItem(
                         contentColor = contentColor,
                         selectedMode = themeMode,
@@ -425,7 +434,14 @@ fun SettingsView(
                     SettingInfoRow(
                         label = stringResource(R.string.settings_about_version),
                         value = BuildConfig.VERSION_NAME,
-                        contentColor = contentColor
+                        contentColor = contentColor,
+                        onClick = {
+                            versionTapCount += 1
+                            if (versionTapCount >= 20) {
+                                versionTapCount = 0
+                                navController.navigate(Routes.ACHIEVEMENT_DEBUG)
+                            }
+                        },
                     )
                     SettingsDivider(contentColor)
                     SettingInfoRow(
@@ -603,11 +619,13 @@ private fun SettingSwitchItem(
 private fun SettingInfoRow(
     label: String,
     value: String,
-    contentColor: Color
+    contentColor: Color,
+    onClick: (() -> Unit)? = null,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {

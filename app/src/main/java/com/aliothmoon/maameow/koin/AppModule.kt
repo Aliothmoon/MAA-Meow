@@ -5,6 +5,7 @@ import com.aliothmoon.maameow.data.api.ETagCacheManager
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.api.MaaApiService
 import com.aliothmoon.maameow.data.api.MirrorChyanApiClient
+import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.datasource.AppDownloader
 import com.aliothmoon.maameow.data.datasource.AssetExtractor
@@ -93,6 +94,7 @@ val appModule = module {
 
 
     singleOf(::AppSettingsManager)
+    singleOf(::AchievementRepository)
     singleOf(::ScheduleStrategyRepository)
     singleOf(::ScheduleTriggerLogger)
     singleOf(::ScheduleAlarmManager)

@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.koin
 
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
+import com.aliothmoon.maameow.presentation.viewmodel.AchievementViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.ErrorLogViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.ExpandedControlPanelViewModel
@@ -21,6 +22,7 @@ import org.koin.dsl.module
 
 val viewModelModule = module {
     viewModelOf(::HomeViewModel)
+    viewModelOf(::AchievementViewModel)
     viewModelOf(::SettingsViewModel)
     viewModelOf(::UpdateViewModel)
     viewModelOf(::LogHistoryViewModel)

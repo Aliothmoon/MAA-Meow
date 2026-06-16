@@ -53,6 +53,7 @@ One-click automation for all daily tasks, powered by image recognition
 |---|---|
 | [Build Guide](docs/BUILDING.md) | Build APK from source |
 | [External Automation](docs/AUTOMATION.md) | Launch profiles via Intent / am with MacroDroid or Tasker |
+| [Achievement System Guide](docs/ACHIEVEMENTS.md) | Achievement definitions, triggers, and maintenance notes |
 | [Roadmap](docs/ROADMAP.md) | Feature plans & progress |
 | [PR Guidelines](docs/PULL_REQUEST_GUIDELINES_EN.md) | Pull request title, description, verification, and review conventions |
 | [Third-Party Notices](docs/THIRD_PARTY_NOTICES.md) | Open-source components & licenses |

@@ -53,6 +53,7 @@
 |---|---|
 | [构建指南](docs/BUILDING.md) | 从源码构建 APK |
 | [外部自动化集成](docs/AUTOMATION.md) | 通过 Intent / am 命令与 MacroDroid、Tasker 联动 |
+| [成就系统维护指南](docs/ACHIEVEMENTS.md) | 成就定义、触发规则与维护说明 |
 | [Roadmap](docs/ROADMAP.md) | 功能规划与进度 |
 | [PR 规范](docs/PULL_REQUEST_GUIDELINES.md) | 提交 PR 前的标题、描述、验证与评审约定 |
 | [第三方代码声明](docs/THIRD_PARTY_NOTICES.md) | 引用的开源组件及许可证 |

@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
+import com.aliothmoon.maameow.data.achievement.AchievementEvents
+import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.domain.models.AppSettings
@@ -27,7 +29,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.runBlocking
 
 
-class AppSettingsManager(private val context: Context) {
+class AppSettingsManager(
+    private val context: Context,
+    private val achievementRepository: AchievementRepository,
+) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -385,6 +390,7 @@ class AppSettingsManager(private val context: Context) {
         with(AppSettingsSchema) {
             context.dataStore.edit { it[language] = lang.name }
         }
+        achievementRepository.recordEvent(AchievementEvents.LanguageChanged)
     }
 
     // 待展示的更新公告

@@ -6,6 +6,8 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.constant.MaaFiles
+import com.aliothmoon.maameow.data.achievement.AchievementEvents
+import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.api.CdkRequiredException
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.api.MirrorChyanApiClient
@@ -20,6 +22,7 @@ import com.aliothmoon.maameow.data.datasource.update.MirrorChyanResourceDownload
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.model.update.UpdateCheckResult
 import com.aliothmoon.maameow.data.model.update.UpdateError
+import com.aliothmoon.maameow.data.model.update.UpdateError.MirrorchyanBizError
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
@@ -47,6 +50,7 @@ class UpdateService(
     private val appDownloader: AppDownloader,
     private val resourceDownloader: ResourceDownloader,
     private val extractor: ZipExtractor,
+    private val achievementRepository: AchievementRepository,
 ) {
     private val appDownloadResolvers: Map<UpdateSource, AppDownloadUrlResolver> = mapOf(
         UpdateSource.MIRROR_CHYAN to MirrorChyanAppDownloadUrlResolver(
@@ -90,11 +94,30 @@ class UpdateService(
                 ?: return failApp(UpdateError.UnknownError("不支持的下载源: $source"))
 
             val url = resolver.resolve(version, channel).getOrElse { e ->
-                _appProcessState.value = UpdateProcessState.Failed(mapToUpdateError(e))
+                val error = mapToUpdateError(e)
+                _appProcessState.value = UpdateProcessState.Failed(error)
+                achievementRepository.recordEvent(
+                    AchievementEvents.UpdateFailed,
+                    updateAchievementPayload(
+                        kind = "app",
+                        source = source,
+                        error = error,
+                    ) + mapOf("channel" to channel.name),
+                )
                 return Result.failure(e)
             }
             Timber.i("downloadApp resolved URL: host=%s", safeHost(url))
-            return downloadAndInstallApp(url, version)
+            val result = downloadAndInstallApp(url, version)
+            achievementRepository.recordEvent(
+                if (result.isSuccess) AchievementEvents.UpdateCompleted else AchievementEvents.UpdateFailed,
+                mapOf(
+                    "kind" to "app",
+                    "source" to source.name,
+                    "channel" to channel.name,
+                    "version" to version,
+                ),
+            )
+            return result
         } finally {
             appDownloading.set(false)
         }
@@ -191,11 +214,25 @@ class UpdateService(
                 ?: return failResource(UpdateError.UnknownError("不支持的下载源: $source"))
 
             val url = resolver.resolve(currentVersion).getOrElse { e ->
-                _resourceProcessState.value = UpdateProcessState.Failed(mapToUpdateError(e))
+                val error = mapToUpdateError(e)
+                _resourceProcessState.value = UpdateProcessState.Failed(error)
+                achievementRepository.recordEvent(
+                    AchievementEvents.UpdateFailed,
+                    updateAchievementPayload(
+                        kind = "resource",
+                        source = source,
+                        error = error,
+                    ),
+                )
                 return Result.failure(e)
             }
             Timber.i("downloadResource resolved URL: host=%s", safeHost(url))
-            return downloadAndExtractResource(target, url)
+            val result = downloadAndExtractResource(target, url)
+            achievementRepository.recordEvent(
+                if (result.isSuccess) AchievementEvents.UpdateCompleted else AchievementEvents.UpdateFailed,
+                mapOf("kind" to "resource", "source" to source.name),
+            )
+            return result
         } finally {
             resourceDownloading.set(false)
         }
@@ -275,6 +312,28 @@ class UpdateService(
         is CdkRequiredException -> UpdateError.CdkRequired
         is MirrorChyanBizException -> e.toUpdateError()
         else -> UpdateError.NetworkError(e.message ?: "未知错误")
+    }
+
+    private fun updateAchievementPayload(
+        kind: String,
+        source: UpdateSource,
+        error: UpdateError? = null,
+    ): Map<String, String> {
+        val base = mutableMapOf("kind" to kind, "source" to source.name)
+        if (source == UpdateSource.MIRROR_CHYAN && error.isCdkError()) {
+            base["errorType"] = "CDK"
+        }
+        return base
+    }
+
+    private fun UpdateError?.isCdkError(): Boolean = when (this) {
+        UpdateError.CdkRequired,
+        MirrorchyanBizError.KeyExpired,
+        MirrorchyanBizError.KeyInvalid,
+        MirrorchyanBizError.ResourceQuotaExhausted,
+        MirrorchyanBizError.KeyMismatched,
+        MirrorchyanBizError.KeyBlocked -> true
+        else -> false
     }
 
     private fun safeHost(url: String): String {

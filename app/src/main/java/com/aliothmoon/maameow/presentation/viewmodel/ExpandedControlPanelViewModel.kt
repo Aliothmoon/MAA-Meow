@@ -4,6 +4,8 @@ import android.content.Context
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aliothmoon.maameow.data.achievement.AchievementEvents
+import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.LogItem
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import com.aliothmoon.maameow.data.preferences.TaskChainState
@@ -39,7 +41,8 @@ class ExpandedControlPanelViewModel(
     private val prepareTaskStart: PrepareTaskStartUseCase,
     private val compositionService: MaaCompositionService,
     private val overlayController: OverlayController,
-    private val sessionLogger: MaaSessionLogger
+    private val sessionLogger: MaaSessionLogger,
+    private val achievementRepository: AchievementRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(FloatingPanelState())
@@ -281,6 +284,12 @@ class ExpandedControlPanelViewModel(
             )
             val message = application.formatStartResult(result)
             if (result is MaaCompositionService.StartResult.Success) {
+                viewModelScope.launch {
+                    achievementRepository.recordEvent(
+                        AchievementEvents.MissionStarted,
+                        mapOf("taskCount" to plan.params.size.toString()),
+                    )
+                }
                 // 成功时用 Toast 简短提示
                 withContext(Dispatchers.Main) {
                     Toast.makeText(

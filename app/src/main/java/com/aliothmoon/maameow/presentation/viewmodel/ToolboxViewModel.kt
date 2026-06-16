@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Packages
+import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.ActivityManager
@@ -57,9 +58,10 @@ class ToolboxViewModel(
     private val appAliveChecker: AppAliveChecker,
     private val chainState: TaskChainState,
     private val appSettings: AppSettingsManager,
+    achievementRepository: AchievementRepository,
 ) : ViewModel() {
 
-    val miniGame = MiniGameDelegate(appContext, activityManager, compositionService, viewModelScope)
+    val miniGame = MiniGameDelegate(appContext, activityManager, compositionService, viewModelScope, achievementRepository)
 
     private val _currentTab = MutableStateFlow(ToolboxTab.MINI_GAME)
     val currentTab: StateFlow<ToolboxTab> = _currentTab.asStateFlow()

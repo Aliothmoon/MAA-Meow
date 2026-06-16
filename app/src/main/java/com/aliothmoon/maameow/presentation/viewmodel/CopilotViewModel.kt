@@ -5,6 +5,8 @@ import com.aliothmoon.maameow.R
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aliothmoon.maameow.data.achievement.AchievementEvents
+import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.CopilotConfig
 import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
 import com.aliothmoon.maameow.data.model.copilot.CopilotTaskData
@@ -114,6 +116,7 @@ class CopilotViewModel(
     private val appAliveChecker: AppAliveChecker,
     private val chainState: TaskChainState,
     private val appSettings: AppSettingsManager,
+    private val achievementRepository: AchievementRepository,
 ) : ViewModel() {
 
     companion object {
@@ -1186,6 +1189,8 @@ class CopilotViewModel(
     }
 
     private suspend fun onCopilotTaskSuccess() {
+        achievementRepository.recordEvent(AchievementEvents.CopilotSuccess)
+
         val current = _state.value
         if (!current.useCopilotList) return
 
@@ -1229,6 +1234,7 @@ class CopilotViewModel(
                 val success = copilotManager.rateCopilot(id, isLike)
                 if (success) {
                     recentlyRatedCopilotIds.add(id)
+                    achievementRepository.recordEvent(AchievementEvents.CopilotLiked)
                     if (updateStatusMessage) {
                         _state.update { it.copy(statusMessage = text(R.string.copilot_rate_success)) }
                     }

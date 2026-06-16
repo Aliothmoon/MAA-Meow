@@ -14,6 +14,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import kotlinx.coroutines.flow.drop
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
@@ -35,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private var isUiReady: Boolean = false
 
     private val appSettingsManager: AppSettingsManager by inject()
+    private val achievementRepository: AchievementRepository by inject()
     private val compositionService: MaaCompositionService by inject()
     private val screenSaverManager: ScreenSaverOverlayManager by inject()
     private val hardwareScreenOffManager: HardwareScreenOffManager by inject()
@@ -47,6 +49,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         dispatchScheduledLaunchIntent(intent)
         enableEdgeToEdge()
+        lifecycleScope.launch { achievementRepository.recordAppLaunch() }
         doObserveKeepScreenOn()
         doObserveThemeMode()
         window.decorView.viewTreeObserver.addOnPreDrawListener(object :
