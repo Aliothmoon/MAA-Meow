@@ -24,6 +24,7 @@ import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.data.repository.CopilotRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
+import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.CopilotManager
 import com.aliothmoon.maameow.domain.service.LogExportService
@@ -162,6 +163,7 @@ val appModule = module {
 
 
     singleOf(::ItemHelper)
+    singleOf(::ItemIconLoader)
     singleOf(::ActivityManager)
     singleOf(::ResourceDataManager)
     // Copilot (自动战斗)

@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -27,10 +29,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.toClipEntry
@@ -44,6 +49,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.toolbox.DepotItem
 import com.aliothmoon.maameow.data.resource.ItemHelper
+import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.domain.service.ToolboxExportFileType
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.utils.i18n.asString
@@ -54,7 +60,8 @@ import org.koin.compose.koinInject
 fun DepotRecognitionPanel(
     modifier: Modifier = Modifier,
     viewModel: ToolboxViewModel = koinInject(),
-    itemHelper: ItemHelper = koinInject()
+    itemHelper: ItemHelper = koinInject(),
+    iconLoader: ItemIconLoader = koinInject()
 ) {
     val items by viewModel.collector.depotItems.collectAsStateWithLifecycle()
     val itemMap by itemHelper.items.collectAsStateWithLifecycle()
@@ -128,7 +135,7 @@ fun DepotRecognitionPanel(
         // 物品网格
         items(items, key = { it.id }) { item ->
             val name = itemMap[item.id]?.name
-            DepotItemCell(item, name)
+            DepotItemCell(item, name, iconLoader)
         }
     }
 }
@@ -229,7 +236,15 @@ private fun HintRow(text: String) {
 }
 
 @Composable
-private fun DepotItemCell(item: DepotItem, name: String?) {
+private fun rememberItemIcon(itemId: String, loader: ItemIconLoader): State<ImageBitmap?> {
+    return produceState(initialValue = null, itemId) {
+        value = loader.load(itemId)
+    }
+}
+
+@Composable
+private fun DepotItemCell(item: DepotItem, name: String?, iconLoader: ItemIconLoader) {
+    val icon by rememberItemIcon(item.id, iconLoader)
     Surface(
         shape = RoundedCornerShape(6.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -240,6 +255,17 @@ private fun DepotItemCell(item: DepotItem, name: String?) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
+            val bitmap = icon
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = name,
+                    modifier = Modifier.size(44.dp)
+                )
+            } else {
+                // 加载中 / 无图：同尺寸占位，避免网格抖动
+                Box(modifier = Modifier.size(44.dp))
+            }
             Text(
                 text = name ?: item.id,
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
