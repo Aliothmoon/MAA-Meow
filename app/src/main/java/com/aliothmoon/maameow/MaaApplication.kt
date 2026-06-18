@@ -2,6 +2,7 @@ package com.aliothmoon.maameow
 
 import android.app.Application
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.koin.appModule
 import com.aliothmoon.maameow.koin.floatingWindowModule
@@ -35,6 +36,7 @@ class MaaApplication : Application() {
     private val treeHolder: LogTreeHolder by inject()
     private val scheduleRepository: ScheduleStrategyRepository by inject()
     private val scheduleAlarmManager: ScheduleAlarmManager by inject()
+    private val achievementReporter: AchievementReporter by inject()
 
     override fun onCreate() {
         super.onCreate()
@@ -51,7 +53,7 @@ class MaaApplication : Application() {
     }
 
     private fun postCreateApplication() {
-        RemoteServiceManager.initialize(this, appSettingsManager)
+        RemoteServiceManager.initialize(this, appSettingsManager, achievementReporter)
         treeHolder.setup()
         crashHandler.init(this)
         overlayController.setup()

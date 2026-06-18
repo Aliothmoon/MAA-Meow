@@ -10,6 +10,7 @@ import com.aliothmoon.maameow.data.permission.PermissionState
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.remote.PermissionGrantRequest
 import com.aliothmoon.maameow.remote.PermissionGrantRequest.Companion.PERM_ACCESSIBILITY
 import com.aliothmoon.maameow.service.AccessibilityHelperService
@@ -34,7 +35,8 @@ import kotlin.coroutines.resume
 
 class PermissionManager(
     private val context: Context,
-    private val appSettings: AppSettingsManager
+    private val appSettings: AppSettingsManager,
+    private val achievementReporter: AchievementReporter,
 ) : DefaultLifecycleObserver {
 
     private val _state = MutableStateFlow(PermissionState())
@@ -73,30 +75,37 @@ class PermissionManager(
 
     fun refresh() {
         val remoteState = RemoteAccessCoordinator.refresh()
-        _state.value = PermissionState(
-            shizukuAvailable = remoteState.shizukuAvailable,
-            shizuku = remoteState.shizukuGranted,
-            root = remoteState.rootGranted,
-            rootAvailable = remoteState.rootAvailable,
-            startupBackend = remoteState.configuredBackend,
-            overlay = checkOverlay(),
-            storage = checkStorage(),
-            accessibility = checkAccessibility(),
-            batteryWhitelist = checkBatteryWhitelist(),
-            notification = checkNotification()
+        updateState(
+            PermissionState(
+                shizukuAvailable = remoteState.shizukuAvailable,
+                shizuku = remoteState.shizukuGranted,
+                root = remoteState.rootGranted,
+                rootAvailable = remoteState.rootAvailable,
+                startupBackend = remoteState.configuredBackend,
+                overlay = checkOverlay(),
+                storage = checkStorage(),
+                accessibility = checkAccessibility(),
+                batteryWhitelist = checkBatteryWhitelist(),
+                notification = checkNotification(),
+            )
         )
     }
 
     private fun applyRemoteAccessState(remoteState: RemoteAccessState) {
-        _state.update { current ->
-            current.copy(
+        updateState(
+            _state.value.copy(
                 shizukuAvailable = remoteState.shizukuAvailable,
                 shizuku = remoteState.shizukuGranted,
                 root = remoteState.rootGranted,
                 rootAvailable = remoteState.rootAvailable,
                 startupBackend = remoteState.configuredBackend
             )
-        }
+        )
+    }
+
+    private fun updateState(state: PermissionState) {
+        _state.value = state
+        achievementReporter.reportPermissionState(state)
     }
 
     private fun checkOverlay(): Boolean {
@@ -278,6 +287,7 @@ class PermissionManager(
         }
 
         _state.update { it.copy(notification = granted) }
+        achievementReporter.reportNotificationPermissionResult(granted)
         return granted
     }
 

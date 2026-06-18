@@ -6,6 +6,7 @@ import android.os.Process
 import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
+import com.aliothmoon.maameow.domain.service.AchievementReporter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -49,6 +50,7 @@ object RemoteServiceManager {
     )
 
     private var boundBackend: RemoteBackend? = null
+    private var achievementReporter: AchievementReporter? = null
 
     val state: StateFlow<ServiceState> = _state.asStateFlow()
 
@@ -81,6 +83,7 @@ object RemoteServiceManager {
             }
             ServiceBootLogger.event("CB_ON_ERROR", "backend=$backend ${throwable.javaClass.simpleName}: ${throwable.message}")
             Timber.e(throwable, "RemoteService connection failed: %s", backend)
+            achievementReporter?.reportRemoteConnectFailed(backend)
             clearCurrentBinder()
             boundBackend = null
             _state.value = ServiceState.Error(throwable)
@@ -97,9 +100,14 @@ object RemoteServiceManager {
         }
     }
 
-    fun initialize(context: Context, appSettings: AppSettingsManager) {
+    fun initialize(
+        context: Context,
+        appSettings: AppSettingsManager,
+        achievementReporter: AchievementReporter,
+    ) {
         ServiceBootLogger.init(context)
         RemoteAccessCoordinator.initialize(appSettings)
+        this.achievementReporter = achievementReporter
         RootRemoteServiceConnector.initialize(context)
         LogcatServiceManager.initialize(context)
     }
@@ -112,6 +120,7 @@ object RemoteServiceManager {
         val service = RemoteService.Stub.asInterface(binder)
         _state.value = ServiceState.Connected(service)
         ServiceBootLogger.event("BINDER_CONNECTED", "backend=$backend linkToDeath ok, heartbeat sent")
+        achievementReporter?.reportRemoteConnected(backend)
         service.heartbeat(Process.myPid())
     }
 

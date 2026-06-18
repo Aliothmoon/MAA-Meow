@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.schedule.service
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
@@ -31,6 +32,7 @@ class ScheduledLaunchCoordinator(
     private val appSettingsManager: AppSettingsManager,
     private val chainState: TaskChainState,
     private val triggerLogger: ScheduleTriggerLogger,
+    private val achievementReporter: AchievementReporter,
 ) {
     private val _countdownState = MutableStateFlow<CountdownState>(CountdownState.Idle)
     val countdownState: StateFlow<CountdownState> = _countdownState.asStateFlow()
@@ -209,6 +211,7 @@ class ScheduledLaunchCoordinator(
         lastHandledRequestId = request.requestId
         triggerLogger.append("跳过: $message")
         triggerLogger.end(result, message)
+        achievementReporter.reportScheduleResult(result)
         scheduleRepository.recordExecutionResult(
             strategyId = request.strategyId,
             result = result,
@@ -224,6 +227,7 @@ class ScheduledLaunchCoordinator(
     ) {
         try {
             triggerLogger.end(result, message)
+            achievementReporter.reportScheduleResult(result)
             scheduleRepository.recordExecutionResult(
                 strategyId = request.strategyId,
                 result = result,

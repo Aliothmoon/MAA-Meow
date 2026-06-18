@@ -132,6 +132,7 @@ data class TaskChainPlan(
     val clientType: String,
     val gamePackageName: String?,
     val launchesGame: Boolean,
+    val gameAliveBeforeStart: Boolean? = null,
 )
 
 enum class AnalyzeTaskChainFailureReason {

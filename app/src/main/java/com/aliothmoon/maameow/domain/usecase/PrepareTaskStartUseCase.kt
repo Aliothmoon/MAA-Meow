@@ -4,6 +4,7 @@ import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.AppAliveChecker
+import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.remote.AppAliveStatus
 import timber.log.Timber
 
@@ -11,6 +12,7 @@ class PrepareTaskStartUseCase(
     private val analyzeTaskChainUseCase: AnalyzeTaskChainUseCase,
     private val appAliveChecker: AppAliveChecker,
     private val appSettings: AppSettingsManager,
+    private val achievementReporter: AchievementReporter,
     private val isPackageInstalled: (String) -> Boolean = { true },
 ) {
     suspend operator fun invoke(
@@ -45,12 +47,6 @@ class PrepareTaskStartUseCase(
         }
 
         val runMode = appSettings.runMode.value
-        if (plan.launchesGame ||
-            runMode == RunMode.FOREGROUND ||
-            context.acknowledgements.contains(TaskStartAcknowledgement.GAME_NOT_RUNNING_WITHOUT_WAKE_UP)
-        ) {
-            return TaskStartDecision.Ready(plan)
-        }
         if (packageName == null) {
             Timber.w(
                 "PrepareTaskStart: cannot resolve package name for clientType=%s",
@@ -59,8 +55,21 @@ class PrepareTaskStartUseCase(
             return TaskStartDecision.Ready(plan)
         }
 
-        return when (appAliveChecker.isAppAlive(packageName)) {
+        val aliveStatus = appAliveChecker.isAppAlive(packageName)
+        if (plan.launchesGame ||
+            runMode == RunMode.FOREGROUND ||
+            context.acknowledgements.contains(TaskStartAcknowledgement.GAME_NOT_RUNNING_WITHOUT_WAKE_UP)
+        ) {
+            return TaskStartDecision.Ready(
+                plan.copy(gameAliveBeforeStart = aliveStatus == AppAliveStatus.ALIVE)
+            )
+        }
+
+        return when (aliveStatus) {
             AppAliveStatus.DEAD -> {
+                achievementReporter.reportTaskStartBlocked(
+                    TaskStartDecisionReason.GAME_NOT_RUNNING_WITHOUT_WAKE_UP.name
+                )
                 when (context.mode) {
                     TaskStartMode.MANUAL -> {
                         TaskStartDecision.RequiresConfirmation(

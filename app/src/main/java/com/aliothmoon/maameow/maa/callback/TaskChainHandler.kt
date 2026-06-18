@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.data.achievement.AchievementRepository
 
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.maa.AsstMsg
@@ -30,6 +31,7 @@ class TaskChainHandler(
     private val subTaskHandler: SubTaskHandler,
     private val taskChainState: TaskChainState,
     private val achievementRepository: AchievementRepository,
+    private val achievementReporter: AchievementReporter,
 ) {
     // 回调路径用于 suspend 的 TaskChainState 更新；独立于任一生命周期
     private val callbackScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -157,6 +159,7 @@ class TaskChainHandler(
      */
     private fun handleTaskChainStopped(details: JSONObject) {
         sessionLogger.append(str("TaskStopped"), LogLevel.INFO)
+        achievementReporter.reportTaskStopped()
         callbackScope.launch {
             achievementRepository.report {
                 event = AchievementEvents.TASK_STOPPED
@@ -175,12 +178,7 @@ class TaskChainHandler(
         val startMillis = sessionLogger.sessionStartTimeMillis
         if (startMillis > 0) {
             val elapsed = System.currentTimeMillis() - startMillis
-            callbackScope.launch {
-                achievementRepository.report {
-                    event = AchievementEvents.ALL_TASKS_COMPLETED
-                    "elapsedMillis" to elapsed
-                }
-            }
+            achievementReporter.reportAllTasksCompleted(elapsed)
             val h = elapsed / 3_600_000
             val m = (elapsed % 3_600_000) / 60_000
             val s = (elapsed % 60_000) / 1_000
@@ -190,6 +188,8 @@ class TaskChainHandler(
                 append("${s}s")
             }
             sb.append(" ($timeStr)")
+        } else {
+            achievementReporter.reportAllTasksCompleted()
         }
 
         // 理智恢复时间

@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.EmojiEvents
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -138,25 +137,15 @@ private fun AchievementCard(achievement: AchievementState) {
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = if (achievement.unlocked) {
-                            context.achievementText(achievement.definition.id, "title")
-                        } else {
-                            stringResource(R.string.achievement_locked_title)
-                        },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    SuggestionChip(
-                        onClick = {},
-                        label = { Text("#${achievement.definition.releasePhase}") },
-                    )
-                }
+                Text(
+                    text = if (achievement.unlocked) {
+                        context.achievementText(achievement.definition.id, "title")
+                    } else {
+                        stringResource(R.string.achievement_locked_title)
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
 
                 Text(
                     text = if (achievement.unlocked) {

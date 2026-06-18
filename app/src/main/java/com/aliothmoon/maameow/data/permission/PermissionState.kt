@@ -29,4 +29,7 @@ data class PermissionState(
             RemoteBackend.SHIZUKU -> shizuku
             RemoteBackend.ROOT -> root
         }
+
+    val allRequiredGranted: Boolean
+        get() = remoteAccessGranted && overlay && storage && accessibility && batteryWhitelist && notification
 }

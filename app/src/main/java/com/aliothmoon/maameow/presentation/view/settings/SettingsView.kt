@@ -55,6 +55,7 @@ import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
+import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.LogExportService
 import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.state.ResourceInitState
@@ -78,7 +79,8 @@ fun SettingsView(
     onViewAnnouncement: () -> Unit = {},
     viewModel: SettingsViewModel = koinViewModel(),
     resourceInitService: ResourceInitService = koinInject(),
-    logExportService: LogExportService = koinInject()
+    logExportService: LogExportService = koinInject(),
+    achievementReporter: AchievementReporter = koinInject(),
 ) {
     val resourceInitState by resourceInitService.state.collectAsStateWithLifecycle()
     val debugMode by viewModel.debugMode.collectAsStateWithLifecycle()
@@ -457,6 +459,7 @@ fun SettingsView(
                         description = stringResource(R.string.settings_about_qq_group_desc),
                         contentColor = contentColor
                     ) {
+                        achievementReporter.reportFeedbackGroupOpened()
                         Misc.openUriSafely(context, "https://qm.qq.com/q/j4CFbeDQXu")
                     }
                     SettingsDivider(contentColor)

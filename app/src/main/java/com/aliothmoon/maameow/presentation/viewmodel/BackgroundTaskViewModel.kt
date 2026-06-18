@@ -7,8 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.constant.Packages
-import com.aliothmoon.maameow.data.achievement.AchievementEvents
-import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.model.LogItem
 import com.aliothmoon.maameow.data.model.TaskParamProvider
@@ -17,6 +15,7 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
+import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
 import com.aliothmoon.maameow.domain.usecase.TaskStartAcknowledgement
@@ -58,7 +57,7 @@ class BackgroundTaskViewModel(
     private val appSettingsManager: AppSettingsManager,
     private val hardwareScreenOffManager: HardwareScreenOffManager,
     private val pathConfig: MaaPathConfig,
-    private val achievementRepository: AchievementRepository,
+    private val achievementReporter: AchievementReporter,
     scheduleRepository: ScheduleStrategyRepository,
     triggerLogger: ScheduleTriggerLogger,
     private val application: Context,
@@ -71,6 +70,7 @@ class BackgroundTaskViewModel(
         appSettingsManager = appSettingsManager,
         chainState = chainState,
         triggerLogger = triggerLogger,
+        achievementReporter = achievementReporter,
     )
 
     private val _state = MutableStateFlow(BackgroundTaskState())
@@ -462,12 +462,11 @@ class BackgroundTaskViewModel(
             }
         }
         if (result is MaaCompositionService.StartResult.Success) {
-            viewModelScope.launch {
-                achievementRepository.report {
-                    event = AchievementEvents.MISSION_STARTED
-                    "taskCount" to plan.params.size
-                }
-            }
+            achievementReporter.reportTaskStarted(
+                taskCount = plan.params.size,
+                launchesGame = plan.launchesGame,
+                gameAliveBeforeStart = plan.gameAliveBeforeStart,
+            )
             if (appSettingsManager.muteOnGameLaunch.value) {
                 onMuteGameSound(plan.clientType)
             }
@@ -486,6 +485,7 @@ class BackgroundTaskViewModel(
     }
 
     fun onStopTasks() {
+        achievementReporter.reportTaskStopped()
         viewModelScope.launch {
             compositionService.stop()
         }

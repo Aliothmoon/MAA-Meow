@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.data.notification.NotificationSettings
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
+import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.ExternalNotificationService
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +15,23 @@ import kotlinx.coroutines.launch
 class NotificationSettingsViewModel(
     private val settingsManager: NotificationSettingsManager,
     private val notificationService: ExternalNotificationService,
+    private val achievementReporter: AchievementReporter,
 ) : ViewModel() {
+
+    companion object {
+        val ALL_PROVIDER_IDS = setOf(
+            "ServerChan",
+            "Telegram",
+            "Discord",
+            "DingTalk",
+            "Discord Webhook",
+            "SMTP",
+            "Bark",
+            "Qmsg",
+            "Gotify",
+            "CustomWebhook",
+        )
+    }
 
     val settings: StateFlow<NotificationSettings> = settingsManager.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), NotificationSettings())
@@ -44,6 +61,7 @@ class NotificationSettingsViewModel(
                 .toMutableSet()
             if (enabled) providers.add(id) else providers.remove(id)
             settingsManager.updateSettings(current.copy(enabledProviders = providers.joinToString(",")))
+            achievementReporter.reportNotificationProviders(providers, ALL_PROVIDER_IDS)
         }
     }
 

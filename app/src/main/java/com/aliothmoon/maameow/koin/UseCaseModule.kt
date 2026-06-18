@@ -16,6 +16,7 @@ val useCaseModule = module {
             analyzeTaskChainUseCase = get(),
             appAliveChecker = get(),
             appSettings = get(),
+            achievementReporter = get(),
             isPackageInstalled = { packageName ->
                 try {
                     RemoteServiceManager.getInstanceOrNull()

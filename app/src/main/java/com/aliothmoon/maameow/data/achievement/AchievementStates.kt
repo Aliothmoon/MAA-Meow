@@ -19,7 +19,6 @@ fun buildAchievementStates(
     .sortedWith(
         compareByDescending<AchievementState> { it.unlocked }
             .thenBy { it.definition.category.ordinal }
-            .thenBy { it.definition.releasePhase }
             .thenBy { it.definition.group }
             .thenBy { it.definition.groupIndex }
             .thenBy { it.definition.id }

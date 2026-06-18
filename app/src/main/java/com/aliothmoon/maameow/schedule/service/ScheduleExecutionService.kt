@@ -17,6 +17,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 
+import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
@@ -47,6 +48,7 @@ class ScheduleExecutionService : Service() {
     private val alarmManager: ScheduleAlarmManager by inject()
     private val triggerLogger: ScheduleTriggerLogger by inject()
     private val appSettingsManager: AppSettingsManager by inject()
+    private val achievementReporter: AchievementReporter by inject()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val silentStarter: ForegroundScheduleStarter by inject()
 
@@ -113,6 +115,7 @@ class ScheduleExecutionService : Service() {
             Timber.i("$TAG: 设备锁屏中，跳过本次定时执行: %s", strategy.name)
             triggerLogger.append("设备锁屏，跳过本次执行")
             triggerLogger.end(ExecutionResult.SKIPPED_LOCKED, "设备处于锁屏状态")
+            achievementReporter.reportScheduleResult(ExecutionResult.SKIPPED_LOCKED)
             val lockedMsg = getString(R.string.notification_schedule_device_locked)
             repository.recordExecutionResult(
                 strategyId = strategy.id,
@@ -156,6 +159,7 @@ class ScheduleExecutionService : Service() {
         if (!launched) {
             triggerLogger.append("未能拉起界面")
             triggerLogger.end(ExecutionResult.FAILED_UI_LAUNCH, "未能拉起界面")
+            achievementReporter.reportScheduleResult(ExecutionResult.FAILED_UI_LAUNCH)
             recordUiLaunchFailure(strategy, "未能拉起界面", scheduledTimeMs)
             return
         }

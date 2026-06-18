@@ -4,14 +4,13 @@ import android.content.Context
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.aliothmoon.maameow.data.achievement.AchievementEvents
-import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.LogItem
 import com.aliothmoon.maameow.data.model.TaskParamProvider
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
+import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
 import com.aliothmoon.maameow.domain.usecase.TaskStartAcknowledgement
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
@@ -40,7 +39,7 @@ class ExpandedControlPanelViewModel(
     private val compositionService: MaaCompositionService,
     private val overlayController: OverlayController,
     private val sessionLogger: MaaSessionLogger,
-    private val achievementRepository: AchievementRepository,
+    private val achievementReporter: AchievementReporter,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(FloatingPanelState())
@@ -282,12 +281,11 @@ class ExpandedControlPanelViewModel(
             )
             val message = application.formatStartResult(result)
             if (result is MaaCompositionService.StartResult.Success) {
-                viewModelScope.launch {
-                    achievementRepository.report {
-                        event = AchievementEvents.MISSION_STARTED
-                        "taskCount" to plan.params.size
-                    }
-                }
+                achievementReporter.reportTaskStarted(
+                    taskCount = plan.params.size,
+                    launchesGame = plan.launchesGame,
+                    gameAliveBeforeStart = plan.gameAliveBeforeStart,
+                )
                 // 成功时用 Toast 简短提示
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
