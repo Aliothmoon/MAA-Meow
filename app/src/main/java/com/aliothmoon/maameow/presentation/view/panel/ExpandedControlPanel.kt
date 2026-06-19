@@ -18,6 +18,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
@@ -183,7 +184,11 @@ fun ExpandedControlPanel(
                         }
 
                         2 -> { // PanelTab.TOOLS
-                            ToolboxPanel(modifier = Modifier.fillMaxSize())
+                            CompositionLocalProvider(
+                                LocalToolboxFileExporter provides rememberShareToolboxFileExporter()
+                            ) {
+                                ToolboxPanel(modifier = Modifier.fillMaxSize())
+                            }
                         }
 
                         3 -> { // PanelTab.LOG

@@ -121,6 +121,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.aliothmoon.maameow.presentation.view.panel.ToolboxPanel
+import com.aliothmoon.maameow.presentation.view.panel.LocalToolboxFileExporter
+import com.aliothmoon.maameow.presentation.view.panel.rememberSafToolboxFileExporter
 
 @Composable
 fun BackgroundTaskView(
@@ -468,7 +470,11 @@ fun BackgroundTaskView(
                                 }
 
                                 1 -> AutoBattlePanel(modifier = Modifier.fillMaxSize())
-                                2 -> ToolboxPanel(modifier = Modifier.fillMaxSize())
+                                2 -> CompositionLocalProvider(
+                                    LocalToolboxFileExporter provides rememberSafToolboxFileExporter()
+                                ) {
+                                    ToolboxPanel(modifier = Modifier.fillMaxSize())
+                                }
                                 3 -> {
                                     val runtimeLogs by viewModel.logs.collectAsStateWithLifecycle()
                                     LogPanel(

@@ -19,3 +19,5 @@
 
 - [x] MaaFramework Controller 迁移
   逐步迁移至 MaaFramework AndroidNativeController，优化底层实现，为后续功能扩展与维护打下基础
+
+- [ ] 为 MaaCore 支持 NCNN 提高移动端运行效率

@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.presentation.view.panel
 
 import android.content.ClipData
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +20,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +31,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -46,7 +50,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.res.stringResource
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.model.toolbox.OperBoxExportFormatter
+import com.aliothmoon.maameow.data.model.toolbox.OperBoxExportLabels
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
+import com.aliothmoon.maameow.domain.service.ToolboxExportFileType
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.utils.i18n.asString
 import kotlinx.coroutines.launch
@@ -63,10 +70,13 @@ fun OperBoxPanel(
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val fileExporter = LocalToolboxFileExporter.current
     val copyToastMessage = stringResource(R.string.panel_operbox_copy_toast)
+    val exportLabels = rememberOperBoxExportLabels()
 
     // 0 = 已拥有, 1 = 未拥有
     var selectedTab by remember { mutableIntStateOf(0) }
+    var exportExpanded by remember { mutableStateOf(false) }
 
     val data = result
     if (data == null) {
@@ -83,49 +93,86 @@ fun OperBoxPanel(
         contentPadding = PaddingValues(top = 6.dp, bottom = 4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // 顶部：Tab 切换 + 导出
+        // 顶部：Tab 切换 + 导出（复制 / 导出文件可展开选格式）
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    val tabs = listOf(
-                        stringResource(R.string.panel_operbox_tab_owned, data.owned.size),
-                        stringResource(R.string.panel_operbox_tab_not_owned, data.notOwned.size)
-                    )
-                    tabs.forEachIndexed { index, label ->
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (selectedTab == index)
-                                MaterialTheme.colorScheme.primary
-                            else
-                                MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                            modifier = Modifier
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) { selectedTab = index }
-                                .padding(vertical = 4.dp)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        val tabs = listOf(
+                            stringResource(R.string.panel_operbox_tab_owned, data.owned.size),
+                            stringResource(R.string.panel_operbox_tab_not_owned, data.notOwned.size)
                         )
+                        tabs.forEachIndexed { index, label ->
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (selectedTab == index)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) { selectedTab = index }
+                                    .padding(vertical = 4.dp)
+                            )
+                        }
+                    }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = {
+                            scope.launch {
+                                val text = viewModel.exportOperBox()
+                                val entry = ClipData.newPlainText("label", text).toClipEntry()
+                                clipboard.setClipEntry(entry)
+                            }
+                            Toast.makeText(context, copyToastMessage, Toast.LENGTH_SHORT).show()
+                        }) {
+                            Text(stringResource(R.string.panel_export_copy), style = MaterialTheme.typography.bodySmall)
+                        }
+                        if (fileExporter != null) {
+                            TextButton(onClick = { exportExpanded = !exportExpanded }) {
+                                Text(stringResource(R.string.panel_export_file), style = MaterialTheme.typography.bodySmall)
+                                Icon(
+                                    imageVector = if (exportExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
                     }
                 }
-                TextButton(onClick = {
-                    scope.launch {
-                        val text = viewModel.exportOperBox()
-                        val entry = ClipData.newPlainText("label", text).toClipEntry()
-                        clipboard.setClipEntry(entry)
+                if (fileExporter != null) {
+                    AnimatedVisibility(visible = exportExpanded) {
+                        val exportFormats = listOf(
+                            Triple("JSON", ToolboxExportFileType.JSON, { viewModel.exportOperBox() }),
+                            Triple("Markdown", ToolboxExportFileType.MARKDOWN, {
+                                OperBoxExportFormatter.toMarkdown(viewModel.exportOperBoxList(), exportLabels)
+                            }),
+                            Triple("CSV", ToolboxExportFileType.CSV, {
+                                OperBoxExportFormatter.toCsv(viewModel.exportOperBoxList(), exportLabels)
+                            }),
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End)
+                        ) {
+                            exportFormats.forEach { (label, fileType, buildContent) ->
+                                TextButton(onClick = {
+                                    fileExporter.export("operbox", buildContent(), fileType)
+                                    exportExpanded = false
+                                }) { Text(label, style = MaterialTheme.typography.bodySmall) }
+                            }
+                        }
                     }
-                    Toast.makeText(
-                        context,
-                        copyToastMessage,
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }) {
-                    Text(stringResource(R.string.common_export), style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -134,6 +181,22 @@ fun OperBoxPanel(
         items(operators, key = { it.id }) { oper ->
             OperatorRow(oper)
         }
+    }
+}
+
+@Composable
+private fun rememberOperBoxExportLabels(): OperBoxExportLabels {
+    val name = stringResource(R.string.operbox_export_header_name)
+    val id = stringResource(R.string.operbox_export_header_id)
+    val rarity = stringResource(R.string.operbox_export_header_rarity)
+    val elite = stringResource(R.string.operbox_export_header_elite)
+    val level = stringResource(R.string.operbox_export_header_level)
+    val own = stringResource(R.string.operbox_export_header_own)
+    val potential = stringResource(R.string.operbox_export_header_potential)
+    val yes = stringResource(R.string.operbox_export_yes)
+    val no = stringResource(R.string.operbox_export_no)
+    return remember(name, id, rarity, elite, level, own, potential, yes, no) {
+        OperBoxExportLabels(name, id, rarity, elite, level, own, potential, yes, no)
     }
 }
 

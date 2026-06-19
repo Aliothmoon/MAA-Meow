@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.domain.service
 
 import android.content.Context
 import com.alibaba.fastjson2.JSON
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.MaaCoreCallback
 import com.aliothmoon.maameow.MaaCoreService
 import com.aliothmoon.maameow.RemoteService
@@ -227,7 +228,10 @@ class MaaCompositionService(
         return result
     }
 
-    private suspend fun checkPreconditions(mode: RunMode, isScheduled: Boolean = false): StartResult? {
+    private suspend fun checkPreconditions(
+        mode: RunMode,
+        isScheduled: Boolean = false
+    ): StartResult? {
         // 服务连接中时直接拒绝，避免与后台自动 load() 并发触发 LoadResource
         val serviceState = RemoteServiceManager.state.value
         if (serviceState is RemoteServiceManager.ServiceState.Connecting) {
@@ -369,6 +373,7 @@ class MaaCompositionService(
         subTaskHandler.resetSessionState()
         onSessionStarted?.invoke()
         sessionLogger.appendAndWait(startMessage, LogLevel.INFO)
+        sessionLogger.appendAndWait(fetchDeviceMemoryInfo(), LogLevel.INFO)
 
         val mode = appSettings.runMode.value
         return withContext(Dispatchers.IO) {
@@ -422,6 +427,27 @@ class MaaCompositionService(
             put("display_id", displayId)
             put("force_stop", true)
         }.toString()
+    }
+
+
+    private fun fetchDeviceMemoryInfo(): String {
+        return try {
+            val am = context.getSystemService(android.app.ActivityManager::class.java)
+                ?: return context.getString(R.string.task_start_device_memory_unavailable)
+            val mi = android.app.ActivityManager.MemoryInfo()
+            am.getMemoryInfo(mi)
+            val mb = 1024L * 1024
+            val availMb = mi.availMem / mb
+            val totalMb = mi.totalMem / mb
+            val usedPercent = if (totalMb > 0) (totalMb - availMb) * 100 / totalMb else 0
+            val base = context.getString(
+                R.string.task_start_device_memory, availMb, totalMb, usedPercent
+            )
+            if (mi.lowMemory) base + context.getString(R.string.task_start_device_memory_low) else base
+        } catch (e: Exception) {
+            Timber.w(e, "读取设备内存信息失败")
+            context.getString(R.string.task_start_device_memory_unavailable)
+        }
     }
 
     suspend fun stop(): StopResult {

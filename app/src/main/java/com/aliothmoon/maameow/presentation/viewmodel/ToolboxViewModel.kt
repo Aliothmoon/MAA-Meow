@@ -14,6 +14,8 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.AppAliveChecker
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.remote.AppAliveStatus
+import com.aliothmoon.maameow.data.model.toolbox.OperBoxExportFormatter
+import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.maa.callback.ToolboxResultCollector
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
@@ -223,15 +225,14 @@ class ToolboxViewModel(
         return "{${items.joinToString(",") { "\"${it.id}\":${it.count}" }}}"
     }
 
-    fun exportOperBox(): String {
-        val result = collector.operBoxResult.value ?: return "[]"
-        val all = result.owned + result.notOwned
-        return "[${
-            all.joinToString(",") { op ->
-                """{"id":"${op.id}","name":"${op.name}","own":${op.own},"rarity":${op.rarity},"elite":${op.elite},"level":${op.level},"potential":${op.potential}}"""
-            }
-        }]"
+    /** 干员识别导出列表：owned + notOwned（全部可用干员）。 */
+    fun exportOperBoxList(): List<OperBoxOperator> {
+        val result = collector.operBoxResult.value ?: return emptyList()
+        return result.owned + result.notOwned
     }
+
+    /** 干员识别导出为 JSON（剪贴板与 .json 文件共用）。 */
+    fun exportOperBox(): String = OperBoxExportFormatter.toJson(exportOperBoxList())
 
     private fun handleStartResult(result: MaaCompositionService.StartResult) {
         _statusMessage.value =

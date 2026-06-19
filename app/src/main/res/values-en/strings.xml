@@ -598,6 +598,22 @@
     <string name="panel_operbox_hint_results">After recognition, you can review owned / not owned operators and export the result.</string>
     <string name="panel_operbox_owned_meta">E%1$d Lv%2$d Pot%3$d</string>
 
+    <!-- recognition result export (shared) -->
+    <string name="panel_export_copy">Copy</string>
+    <string name="panel_export_file">Export file</string>
+    <string name="toolbox_export_chooser_title">Export recognition result</string>
+    <string name="toolbox_export_file_success">File exported</string>
+    <string name="toolbox_export_file_failed">Export failed</string>
+    <string name="operbox_export_header_name">Name</string>
+    <string name="operbox_export_header_id">ID</string>
+    <string name="operbox_export_header_rarity">Rarity</string>
+    <string name="operbox_export_header_elite">Elite</string>
+    <string name="operbox_export_header_level">Level</string>
+    <string name="operbox_export_header_own">Owned</string>
+    <string name="operbox_export_header_potential">Potential</string>
+    <string name="operbox_export_yes">Yes</string>
+    <string name="operbox_export_no">No</string>
+
     <!-- panel: auto battle -->
     <string name="panel_autobattle_tab_mainline">Main Theme / Story Collection</string>
     <string name="panel_autobattle_tab_mainline_subtitle">Side Story</string>
@@ -818,9 +834,9 @@
     <!-- panel: depot -->
     <string name="panel_depot_item_count">%1$d item types</string>
     <string name="panel_depot_copy_penguin">Penguin Stats planner format copied</string>
-    <string name="panel_depot_export_penguin">Export to Penguin Stats planner</string>
     <string name="panel_depot_copy_toolbox">Arknights Toolbox format copied</string>
-    <string name="panel_depot_export_toolbox">Export to Arknights Toolbox</string>
+    <string name="panel_depot_format_penguin">Penguin Stats planner</string>
+    <string name="panel_depot_format_toolbox">Arknights Toolbox</string>
     <string name="panel_depot_hint_scan">Tap Start to scan the current depot items and quantities.</string>
     <string name="panel_depot_hint_results">After recognition, you can export to Penguin Stats planner / Arknights Toolbox format.</string>
 
@@ -1228,6 +1244,9 @@
     <string name="task_start_execution_finished_message">The task has ended. Check logs for details</string>
     <string name="task_start_execution_completed_title">Task completed</string>
     <string name="task_start_triggered_by_schedule">Triggered by scheduled task \"%1$s\"</string>
+    <string name="task_start_device_memory">Device memory: %1$dMB free / %2$dMB total (%3$d%% used)</string>
+    <string name="task_start_device_memory_low"> [system is low on memory]</string>
+    <string name="task_start_device_memory_unavailable">Device memory: unavailable</string>
 
     <!-- i18n: toolbox / mini game -->
     <string name="toolbox_status_starting">Starting…</string>

@@ -651,6 +651,22 @@
     <string name="panel_operbox_hint_results">识别完成后可查看已拥有 / 未拥有干员，支持导出。</string>
     <string name="panel_operbox_owned_meta">E%1$d Lv%2$d 潜%3$d</string>
 
+    <!-- 识别结果导出（通用） -->
+    <string name="panel_export_copy">复制</string>
+    <string name="panel_export_file">导出文件</string>
+    <string name="toolbox_export_chooser_title">导出识别结果</string>
+    <string name="toolbox_export_file_success">已导出文件</string>
+    <string name="toolbox_export_file_failed">导出失败</string>
+    <string name="operbox_export_header_name">名称</string>
+    <string name="operbox_export_header_id">ID</string>
+    <string name="operbox_export_header_rarity">稀有度</string>
+    <string name="operbox_export_header_elite">精英化</string>
+    <string name="operbox_export_header_level">等级</string>
+    <string name="operbox_export_header_own">拥有</string>
+    <string name="operbox_export_header_potential">潜能</string>
+    <string name="operbox_export_yes">是</string>
+    <string name="operbox_export_no">否</string>
+
     <!-- panel: auto battle -->
     <string name="panel_autobattle_tab_mainline">主线 / 故事集</string>
     <string name="panel_autobattle_tab_mainline_subtitle">SideStory</string>
@@ -871,9 +887,9 @@
     <!-- panel: depot -->
     <string name="panel_depot_item_count">共 %1$d 种物品</string>
     <string name="panel_depot_copy_penguin">已复制企鹅物流刷图规划格式</string>
-    <string name="panel_depot_export_penguin">导出至企鹅物流刷图规划</string>
     <string name="panel_depot_copy_toolbox">已复制明日方舟工具箱格式</string>
-    <string name="panel_depot_export_toolbox">导出至明日方舟工具箱</string>
+    <string name="panel_depot_format_penguin">企鹅物流刷图规划</string>
+    <string name="panel_depot_format_toolbox">明日方舟工具箱</string>
     <string name="panel_depot_hint_scan">点击下方「开始任务」扫描当前仓库物品及数量。</string>
     <string name="panel_depot_hint_results">识别完成后支持导出企鹅物流刷图规划 / 明日方舟工具箱格式。</string>
 
@@ -1282,6 +1298,9 @@
     <string name="task_start_execution_finished_message">任务已结束，详细信息请查看日志</string>
     <string name="task_start_execution_completed_title">任务完成</string>
     <string name="task_start_triggered_by_schedule">由定时任务「%1$s」触发</string>
+    <string name="task_start_device_memory">设备内存: 可用 %1$dMB / 共 %2$dMB (已用 %3$d%%)</string>
+    <string name="task_start_device_memory_low"> [系统已处于低内存]</string>
+    <string name="task_start_device_memory_unavailable">设备内存: 读取失败</string>
 
     <!-- i18n: toolbox / mini game -->
     <string name="toolbox_status_starting">正在启动…</string>

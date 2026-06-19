@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -27,10 +29,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.toClipEntry
@@ -44,6 +49,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.toolbox.DepotItem
 import com.aliothmoon.maameow.data.resource.ItemHelper
+import com.aliothmoon.maameow.data.resource.ItemIconLoader
+import com.aliothmoon.maameow.domain.service.ToolboxExportFileType
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.utils.i18n.asString
 import kotlinx.coroutines.launch
@@ -53,7 +60,8 @@ import org.koin.compose.koinInject
 fun DepotRecognitionPanel(
     modifier: Modifier = Modifier,
     viewModel: ToolboxViewModel = koinInject(),
-    itemHelper: ItemHelper = koinInject()
+    itemHelper: ItemHelper = koinInject(),
+    iconLoader: ItemIconLoader = koinInject()
 ) {
     val items by viewModel.collector.depotItems.collectAsStateWithLifecycle()
     val itemMap by itemHelper.items.collectAsStateWithLifecycle()
@@ -62,8 +70,16 @@ fun DepotRecognitionPanel(
     val clipboard = LocalClipboard.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val exporter = LocalToolboxFileExporter.current
     val copyPenguinToast = stringResource(R.string.panel_depot_copy_penguin)
     val copyToolboxToast = stringResource(R.string.panel_depot_copy_toolbox)
+    val doCopy: (String, String) -> Unit = { text, toast ->
+        scope.launch {
+            val entry = ClipData.newPlainText("label", text).toClipEntry()
+            clipboard.setClipEntry(entry)
+        }
+        Toast.makeText(context, toast, Toast.LENGTH_SHORT).show()
+    }
 
     if (items.isEmpty()) {
         DepotEmptyState(modifier, resolvedStatusMessage)
@@ -87,54 +103,82 @@ fun DepotRecognitionPanel(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    TextButton(
-                        onClick = {
-                            scope.launch {
-                                val text = viewModel.exportDepotArkPlanner()
-                                val entry = ClipData.newPlainText("label", text).toClipEntry()
-                                clipboard.setClipEntry(entry)
-                            }
-                            Toast.makeText(context, copyPenguinToast, Toast.LENGTH_SHORT).show()
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            stringResource(R.string.panel_depot_export_penguin),
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                ExportFormatRow(
+                    label = stringResource(R.string.panel_depot_format_penguin),
+                    onCopy = { doCopy(viewModel.exportDepotArkPlanner(), copyPenguinToast) },
+                    onExportFile = exporter?.let {
+                        {
+                            it.export(
+                                "depot_penguin",
+                                viewModel.exportDepotArkPlanner(),
+                                ToolboxExportFileType.JSON
+                            )
+                        }
                     }
-                    TextButton(
-                        onClick = {
-                            scope.launch {
-                                val text = viewModel.exportDepotLolicon()
-                                val entry = ClipData.newPlainText("label", text).toClipEntry()
-                                clipboard.setClipEntry(entry)
-                            }
-                            Toast.makeText(context, copyToolboxToast, Toast.LENGTH_SHORT).show()
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            stringResource(R.string.panel_depot_export_toolbox),
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                )
+                ExportFormatRow(
+                    label = stringResource(R.string.panel_depot_format_toolbox),
+                    onCopy = { doCopy(viewModel.exportDepotLolicon(), copyToolboxToast) },
+                    onExportFile = exporter?.let {
+                        {
+                            it.export(
+                                "depot_arktools",
+                                viewModel.exportDepotLolicon(),
+                                ToolboxExportFileType.JSON
+                            )
+                        }
                     }
-                }
+                )
             }
         }
 
         // 物品网格
         items(items, key = { it.id }) { item ->
             val name = itemMap[item.id]?.name
-            DepotItemCell(item, name)
+            DepotItemCell(item, name, iconLoader)
+        }
+    }
+}
+
+@Composable
+private fun ExportFormatRow(
+    label: String,
+    onCopy: () -> Unit,
+    onExportFile: (() -> Unit)?,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        TextButton(
+            onClick = onCopy,
+            modifier = Modifier.height(32.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+        ) {
+            Text(
+                stringResource(R.string.panel_export_copy),
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        if (onExportFile != null) {
+            TextButton(
+                onClick = onExportFile,
+                modifier = Modifier.height(32.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+            ) {
+                Text(
+                    stringResource(R.string.panel_export_file),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
     }
 }
@@ -192,7 +236,15 @@ private fun HintRow(text: String) {
 }
 
 @Composable
-private fun DepotItemCell(item: DepotItem, name: String?) {
+private fun rememberItemIcon(itemId: String, loader: ItemIconLoader): State<ImageBitmap?> {
+    return produceState(initialValue = null, itemId) {
+        value = loader.load(itemId)
+    }
+}
+
+@Composable
+private fun DepotItemCell(item: DepotItem, name: String?, iconLoader: ItemIconLoader) {
+    val icon by rememberItemIcon(item.id, iconLoader)
     Surface(
         shape = RoundedCornerShape(6.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -203,6 +255,17 @@ private fun DepotItemCell(item: DepotItem, name: String?) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
+            val bitmap = icon
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = name,
+                    modifier = Modifier.size(44.dp)
+                )
+            } else {
+                // 加载中 / 无图：同尺寸占位，避免网格抖动
+                Box(modifier = Modifier.size(44.dp))
+            }
             Text(
                 text = name ?: item.id,
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
