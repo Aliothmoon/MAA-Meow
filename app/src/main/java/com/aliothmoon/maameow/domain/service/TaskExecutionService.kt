@@ -99,7 +99,7 @@ class TaskExecutionService : Service() {
 
     override fun onDestroy() {
         // 外部 stopService 与 StateFlow 收集存在竞态；此处兜底确保 Live Update 通知被清除。
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        removeActiveNotification()
         observeJob?.cancel()
         serviceScope.cancel()
         super.onDestroy()
@@ -443,6 +443,12 @@ private fun buildProgressInfo(snapshot: TaskNotificationSnapshot): TaskProgressI
         manager.notify(NOTIFICATION_ID, buildNotification(snapshot))
     }
 
+    private fun removeActiveNotification() {
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.cancel(NOTIFICATION_ID)
+    }
+
     private fun buildContentIntent(): PendingIntent {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -456,7 +462,7 @@ private fun buildProgressInfo(snapshot: TaskNotificationSnapshot): TaskProgressI
     }
 
     private fun showResultNotification(title: String, text: String) {
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        removeActiveNotification()
 
         val notification = NotificationCompat.Builder(this, RESULT_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_maa_logo)
