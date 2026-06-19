@@ -239,4 +239,12 @@ class SettingsViewModel(
             resourceLoader.reset()
         }
     }
+
+    // ============ System Monet theme color ============
+    val useSystemMonetColor: StateFlow<Boolean> = appSettingsManager.useSystemMonetColor
+    fun setUseSystemMonetColor(enabled: Boolean) {
+        viewModelScope.launch {
+            appSettingsManager.setUseSystemMonetColor(enabled)
+        }
+    }
 }

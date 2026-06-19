@@ -483,4 +483,20 @@ class AppSettingsManager(
         }
     }
 
+
+    // 是否启用系统莫奈主题色（Android 12+ Material You）
+    private fun parseUseSystemMonetColor(raw: String): Boolean =
+        raw.toBooleanStrictOrNull() ?: true
+
+    val useSystemMonetColor: StateFlow<Boolean> = settings
+        .map { parseUseSystemMonetColor(it.useSystemMonetColor) }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, parseUseSystemMonetColor(initialSettings.useSystemMonetColor))
+
+    suspend fun setUseSystemMonetColor(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[useSystemMonetColor] = enabled.toString() }
+        }
+    }
+
 }

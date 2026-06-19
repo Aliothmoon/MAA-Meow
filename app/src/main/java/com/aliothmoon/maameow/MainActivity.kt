@@ -67,8 +67,9 @@ class MainActivity : AppCompatActivity() {
         })
         setContent {
             val themeMode by appSettingsManager.themeMode.collectAsStateWithLifecycle()
+            val useSystemMonetColor by appSettingsManager.useSystemMonetColor.collectAsStateWithLifecycle()
 
-            MaaMeowTheme(themeMode = themeMode) {
+            MaaMeowTheme(themeMode = themeMode, useSystemMonetColor = useSystemMonetColor) {
                 AppNavigation(backgroundTaskViewModel = backgroundTaskViewModel)
             }
         }
