@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.settings
 
+import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -13,14 +14,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -28,6 +32,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,8 +64,10 @@ import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.LogExportService
 import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.state.ResourceInitState
+import com.aliothmoon.maameow.manager.ShizukuInstallHelper
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.InfoCard
+import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.components.ReInitializeConfirmDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.TopAppBar
@@ -69,7 +76,10 @@ import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
 import com.aliothmoon.maameow.utils.i18n.resolve
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
@@ -88,6 +98,7 @@ fun SettingsView(
     val autoDownloadUpdate by viewModel.autoDownloadUpdate.collectAsStateWithLifecycle()
     val startupBackend by viewModel.startupBackend.collectAsStateWithLifecycle()
     val skipShizukuCheck by viewModel.skipShizukuCheck.collectAsStateWithLifecycle()
+    val shizukuLaunchPackage by viewModel.shizukuLaunchPackage.collectAsStateWithLifecycle()
     val deploymentWithPause by viewModel.deploymentWithPause.collectAsStateWithLifecycle()
     val forceFullscreenOnVirtualDisplay by viewModel.forceFullscreenOnVirtualDisplay.collectAsStateWithLifecycle()
     val allowForegroundScheduledTask by viewModel.allowForegroundScheduledTask.collectAsStateWithLifecycle()
@@ -113,6 +124,29 @@ fun SettingsView(
     ) { uri ->
         uri ?: return@rememberLauncherForActivityResult
         context.contentResolver.openInputStream(uri)?.let { viewModel.importConfig(it) }
+    }
+
+    var showShizukuAppPicker by remember { mutableStateOf(false) }
+    var shizukuAppPickerLoadKey by remember { mutableStateOf(0) }
+    var shizukuAppSearch by remember { mutableStateOf("") }
+    var shizukuAppOptions by remember { mutableStateOf<List<ShizukuLaunchAppOption>?>(null) }
+    var shizukuAppLoadFailed by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showShizukuAppPicker, shizukuAppPickerLoadKey) {
+        if (!showShizukuAppPicker) return@LaunchedEffect
+
+        shizukuAppLoadFailed = false
+        shizukuAppOptions = null
+        shizukuAppOptions = try {
+            withContext(Dispatchers.IO) {
+                loadShizukuLaunchApps(context.applicationContext)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            shizukuAppLoadFailed = true
+            emptyList()
+        }
     }
 
     backupMessage?.let { msg ->
@@ -168,6 +202,113 @@ fun SettingsView(
         ResourceInitDialog(
             state = resourceInitState,
             onRetry = {}
+        )
+    }
+
+    if (showShizukuAppPicker) {
+        val searchText = shizukuAppSearch.trim()
+        val filteredOptions = shizukuAppOptions
+            ?.filter { option ->
+                searchText.isBlank() ||
+                        option.label.contains(searchText, ignoreCase = true) ||
+                        option.packageName.contains(searchText, ignoreCase = true)
+            }
+            .orEmpty()
+
+        AdaptiveTaskPromptDialog(
+            visible = true,
+            title = stringResource(R.string.settings_shizuku_launch_app_picker_title),
+            icon = Icons.Rounded.Build,
+            confirmText = stringResource(R.string.common_close),
+            dismissText = "",
+            onConfirm = { showShizukuAppPicker = false },
+            onDismissRequest = { showShizukuAppPicker = false },
+            content = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    when {
+                        shizukuAppOptions == null -> {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                CircularProgressIndicator()
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = stringResource(R.string.settings_shizuku_launch_app_loading),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        shizukuAppLoadFailed -> {
+                            Text(
+                                text = stringResource(R.string.settings_shizuku_launch_app_picker_failed),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+
+                        else -> {
+                            ITextField(
+                                value = shizukuAppSearch,
+                                onValueChange = { shizukuAppSearch = it },
+                                placeholder = stringResource(R.string.settings_shizuku_launch_app_search_hint),
+                                singleLine = true
+                            )
+
+                            if (filteredOptions.isEmpty()) {
+                                Text(
+                                    text = stringResource(R.string.settings_shizuku_launch_app_empty),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.heightIn(max = 320.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    items(filteredOptions, key = { it.packageName }) { option ->
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                                        ) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clickable {
+                                                        viewModel.setShizukuLaunchPackage(option.packageName)
+                                                        showShizukuAppPicker = false
+                                                    }
+                                                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                                            ) {
+                                                Text(
+                                                    text = option.label,
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Text(
+                                                    text = option.packageName,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         )
     }
 
@@ -352,6 +493,29 @@ fun SettingsView(
                         enabled = startupBackend == RemoteBackend.SHIZUKU,
                         onCheckedChange = { viewModel.setSkipShizukuCheck(it) }
                     )
+                    SettingsDivider(contentColor)
+                    val shizukuLaunchAppName = ShizukuInstallHelper.getLaunchAppLabel(
+                        context,
+                        shizukuLaunchPackage
+                    )
+                    val shizukuLaunchAppDescription = if (shizukuLaunchPackage.isBlank()) {
+                        stringResource(R.string.settings_shizuku_launch_app_default_desc)
+                    } else {
+                        stringResource(
+                            R.string.settings_shizuku_launch_app_selected_desc,
+                            shizukuLaunchAppName ?: shizukuLaunchPackage
+                        )
+                    }
+                    SettingClickItem(
+                        title = stringResource(R.string.settings_shizuku_launch_app_title),
+                        description = shizukuLaunchAppDescription,
+                        contentColor = contentColor
+                    ) {
+                        // 先展示弹窗，再异步查询应用列表，避免点击后长时间无反馈。
+                        shizukuAppSearch = ""
+                        shizukuAppPickerLoadKey += 1
+                        showShizukuAppPicker = true
+                    }
                     SettingsDivider(contentColor)
                     SettingSwitchItem(
                         title = stringResource(R.string.settings_deployment_with_pause),
@@ -888,4 +1052,28 @@ private fun SettingRemoteBackendItem(
             }
         }
     }
+}
+
+private data class ShizukuLaunchAppOption(
+    val label: String,
+    val packageName: String
+)
+
+private fun loadShizukuLaunchApps(context: Context): List<ShizukuLaunchAppOption> {
+    val packageManager = context.packageManager
+    val launcherIntent = Intent(Intent.ACTION_MAIN).apply {
+        addCategory(Intent.CATEGORY_LAUNCHER)
+    }
+
+    // 应用列表查询较慢，调用方应在 IO 线程执行。
+    return packageManager.queryIntentActivities(launcherIntent, 0)
+        .mapNotNull { resolveInfo ->
+            val packageName = resolveInfo.activityInfo?.packageName ?: return@mapNotNull null
+            val label = resolveInfo.loadLabel(packageManager).toString()
+                .takeIf { it.isNotBlank() }
+                ?: packageName
+            ShizukuLaunchAppOption(label = label, packageName = packageName)
+        }
+        .distinctBy { it.packageName }
+        .sortedWith(compareBy<ShizukuLaunchAppOption, String>(String.CASE_INSENSITIVE_ORDER) { it.label })
 }

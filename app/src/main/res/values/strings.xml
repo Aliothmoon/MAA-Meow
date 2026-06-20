@@ -260,6 +260,14 @@
     <string name="settings_background_resolution_title">后台分辨率</string>
     <string name="settings_background_resolution_desc">仅后台模式生效</string>
     <string name="settings_skip_shizuku_check">跳过 Shizuku 检查</string>
+    <string name="settings_shizuku_launch_app_title">自选 Shizuku 应用</string>
+    <string name="settings_shizuku_launch_app_default_desc">当前使用官方 Shizuku</string>
+    <string name="settings_shizuku_launch_app_selected_desc">当前使用：%1$s</string>
+    <string name="settings_shizuku_launch_app_picker_title">选择 Shizuku 应用</string>
+    <string name="settings_shizuku_launch_app_picker_failed">加载应用列表失败</string>
+    <string name="settings_shizuku_launch_app_loading">正在加载应用列表…</string>
+    <string name="settings_shizuku_launch_app_search_hint">搜索应用名或包名</string>
+    <string name="settings_shizuku_launch_app_empty">未找到匹配应用</string>
     <string name="settings_deployment_with_pause">暂停时部署干员</string>
     <string name="settings_deployment_with_pause_tip">部署干员前模拟按住 ESC 暂停游戏，提高部署精确度。如遇 ESC 注入异常或部分干员部署不到位，可关闭改用普通滑动</string>
     <string name="settings_force_fullscreen_on_virtual_display">强制 FULLSCREEN 模式</string>
@@ -372,8 +380,9 @@
     <string name="home_overlay_close">关闭操作面板</string>
 
     <!-- home: action buttons -->
-    <string name="home_btn_reload_services">重新加载服务</string>
-    <string name="home_btn_stop_all_services">关闭所有服务</string>
+    <string name="home_btn_open_shizuku">打开 Shizuku</string>
+    <string name="home_btn_open_service">打开服务</string>
+    <string name="home_btn_close_service">关闭服务</string>
 
     <!-- home: service status strings -->
     <string name="home_status_service_error">服务异常</string>
@@ -399,8 +408,9 @@
     <string name="home_toast_missing_permissions_separator">、</string>
     <string name="home_toast_start_overlay_failed">启动悬浮窗失败: %1$s</string>
     <string name="home_toast_stop_overlay_failed">停止悬浮窗失败: %1$s</string>
-    <string name="home_toast_reload_services_failed">重新加载服务失败: %1$s</string>
-    <string name="home_toast_stop_services_failed">关闭服务失败: %1$s</string>
+    <string name="home_toast_open_shizuku_failed">打开 Shizuku 失败，请确认已安装 Shizuku</string>
+    <string name="home_toast_open_service_failed">打开服务失败: %1$s</string>
+    <string name="home_toast_close_service_failed">关闭服务失败: %1$s</string>
     <string name="home_toast_change_resolution_failed">修改分辨率失败: %1$s</string>
     <string name="home_toast_reset_resolution_failed">重置分辨率失败: %1$s</string>
     <string name="home_toast_not_16_9_resolution">当前分辨率不是 16:9，请使用后台任务或调整分辨率</string>

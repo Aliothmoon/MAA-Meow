@@ -20,7 +20,7 @@ object ShizukuInstallHelper {
         NOT_INSTALLED       // 均未检测到，需要安装
     }
 
-    fun checkStatus(context: Context): ShizukuStatus {
+    fun checkStatus(context: Context, customPackageName: String = ""): ShizukuStatus {
         val isSui = try { Sui.init(context.packageName) } catch (_: Exception) { false }
 
         if (isSui) {
@@ -31,12 +31,8 @@ object ShizukuInstallHelper {
             return ShizukuStatus.READY
         }
 
-        val appInstalled = try {
-            context.packageManager.getPackageInfo(SHIZUKU_PACKAGE, 0)
-            true
-        } catch (_: PackageManager.NameNotFoundException) {
-            false
-        }
+        val appInstalled = isPackageInstalled(context, SHIZUKU_PACKAGE) ||
+                isPackageInstalled(context, customPackageName)
 
         return if (appInstalled) ShizukuStatus.APP_NOT_RUNNING
         else ShizukuStatus.NOT_INSTALLED
@@ -59,6 +55,44 @@ object ShizukuInstallHelper {
             true
         } catch (e: Exception) {
             Timber.e(e, "Failed to install Shizuku")
+            false
+        }
+    }
+
+    fun openShizuku(context: Context, customPackageName: String = ""): Boolean {
+        return try {
+            // 自定义入口不可用时回退官方 Shizuku，保证默认流程仍可用。
+            val intent = launchIntentForPackage(context, customPackageName)
+                ?: launchIntentForPackage(context, SHIZUKU_PACKAGE)
+                ?: return false
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            true
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to open Shizuku")
+            false
+        }
+    }
+
+    fun getLaunchAppLabel(context: Context, packageName: String): String? {
+        if (packageName.isBlank()) return null
+        return runCatching {
+            val info = context.packageManager.getApplicationInfo(packageName, 0)
+            context.packageManager.getApplicationLabel(info).toString()
+        }.getOrNull()
+    }
+
+    private fun launchIntentForPackage(context: Context, packageName: String): Intent? {
+        if (packageName.isBlank()) return null
+        return context.packageManager.getLaunchIntentForPackage(packageName)
+    }
+
+    private fun isPackageInstalled(context: Context, packageName: String): Boolean {
+        if (packageName.isBlank()) return false
+        return try {
+            context.packageManager.getPackageInfo(packageName, 0)
+            true
+        } catch (_: PackageManager.NameNotFoundException) {
             false
         }
     }

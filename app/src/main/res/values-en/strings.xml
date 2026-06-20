@@ -62,6 +62,14 @@
     <string name="settings_background_resolution_title">Background Resolution</string>
     <string name="settings_background_resolution_desc">Background mode only</string>
     <string name="settings_skip_shizuku_check">Skip Shizuku Check</string>
+    <string name="settings_shizuku_launch_app_title">Custom Shizuku App</string>
+    <string name="settings_shizuku_launch_app_default_desc">Currently using official Shizuku</string>
+    <string name="settings_shizuku_launch_app_selected_desc">Currently using: %1$s</string>
+    <string name="settings_shizuku_launch_app_picker_title">Select Shizuku App</string>
+    <string name="settings_shizuku_launch_app_picker_failed">Failed to load app list</string>
+    <string name="settings_shizuku_launch_app_loading">Loading app list…</string>
+    <string name="settings_shizuku_launch_app_search_hint">Search app name or package</string>
+    <string name="settings_shizuku_launch_app_empty">No matching apps found</string>
     <string name="settings_deployment_with_pause">Deploy operators while paused</string>
     <string name="settings_deployment_with_pause_tip">Hold ESC to pause the game while deploying operators for higher precision. Disable if ESC injection misbehaves or some operators are not placed correctly; deployment will fall back to plain swipe</string>
     <string name="settings_force_fullscreen_on_virtual_display">Force FULLSCREEN mode</string>
@@ -170,8 +178,9 @@
     <string name="home_overlay_close">Close Control Panel</string>
 
     <!-- home: action buttons -->
-    <string name="home_btn_reload_services">Reload Services</string>
-    <string name="home_btn_stop_all_services">Stop All Services</string>
+    <string name="home_btn_open_shizuku">Open Shizuku</string>
+    <string name="home_btn_open_service">Open Service</string>
+    <string name="home_btn_close_service">Close Service</string>
 
     <!-- home: service status strings -->
     <string name="home_status_service_error">Service Error</string>
@@ -197,8 +206,9 @@
     <string name="home_toast_missing_permissions_separator">, </string>
     <string name="home_toast_start_overlay_failed">Failed to start overlay: %1$s</string>
     <string name="home_toast_stop_overlay_failed">Failed to stop overlay: %1$s</string>
-    <string name="home_toast_reload_services_failed">Failed to reload services: %1$s</string>
-    <string name="home_toast_stop_services_failed">Failed to stop services: %1$s</string>
+    <string name="home_toast_open_shizuku_failed">Failed to open Shizuku. Please make sure Shizuku is installed</string>
+    <string name="home_toast_open_service_failed">Failed to open service: %1$s</string>
+    <string name="home_toast_close_service_failed">Failed to close service: %1$s</string>
     <string name="home_toast_change_resolution_failed">Failed to change resolution: %1$s</string>
     <string name="home_toast_reset_resolution_failed">Failed to reset resolution: %1$s</string>
     <string name="home_toast_not_16_9_resolution">Current resolution is not 16:9. Please use background task or adjust the resolution</string>

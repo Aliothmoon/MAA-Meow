@@ -363,7 +363,7 @@ private fun TaskPromptCard(
                         ) {
                             Text(confirmText, maxLines = 1, style = MaterialTheme.typography.bodySmall)
                         }
-                        dismissText?.let {
+                        dismissText?.takeIf { it.isNotBlank() }?.let {
                             TextButton(
                                 onClick = onDismissRequest,
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
@@ -467,7 +467,7 @@ private fun TaskPromptButtons(
         }
 
         // 取消/辅助按钮：Text
-        dismissText?.let {
+        dismissText?.takeIf { it.isNotBlank() }?.let {
             TextButton(
                 onClick = onDismissRequest,
                 shape = MaterialTheme.shapes.large

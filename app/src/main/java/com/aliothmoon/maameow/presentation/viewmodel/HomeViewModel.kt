@@ -19,6 +19,7 @@ import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
+import com.aliothmoon.maameow.manager.ShizukuInstallHelper
 import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.presentation.state.HomeUiState
 import com.aliothmoon.maameow.presentation.state.StatusColorType
@@ -80,7 +81,9 @@ class HomeViewModel(
                 compositionService.state
             ) { serviceState, resourceState, executionState ->
                 Timber.i("ServiceState collect $serviceState $resourceState $executionState")
-                when {
+                val remoteServiceActive = serviceState is RemoteServiceManager.ServiceState.Connected ||
+                        serviceState is RemoteServiceManager.ServiceState.Connecting
+                val status = when {
                     serviceState is RemoteServiceManager.ServiceState.Died ||
                             serviceState is RemoteServiceManager.ServiceState.Error ->
                         Triple(uiTextOf(R.string.home_status_service_error), StatusColorType.ERROR, false)
@@ -113,12 +116,15 @@ class HomeViewModel(
                     else ->
                         Triple(uiTextOf(R.string.home_status_ready), StatusColorType.PRIMARY, false)
                 }
-            }.collect { (text, color, loading) ->
+                Pair(status, remoteServiceActive)
+            }.collect { (status, remoteServiceActive) ->
+                val (text, color, loading) = status
                 _uiState.update {
                     it.copy(
                         serviceStatusText = text,
                         serviceStatusColor = color,
-                        serviceStatusLoading = loading
+                        serviceStatusLoading = loading,
+                        remoteServiceActive = remoteServiceActive
                     )
                 }
             }
@@ -327,44 +333,92 @@ class HomeViewModel(
         }
     }
 
-    fun onReloadServices() {
+    fun onOpenShizuku() {
+        val opened = ShizukuInstallHelper.openShizuku(
+            application,
+            appSettingsManager.shizukuLaunchPackage.value
+        )
+        if (!opened) {
+            Toast.makeText(
+                application,
+                application.getString(R.string.home_toast_open_shizuku_failed),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    fun onToggleRemoteService() {
+        if (_uiState.value.remoteServiceActive) {
+            onCloseRemoteService()
+        } else {
+            onOpenRemoteService()
+        }
+    }
+
+    private fun onOpenRemoteService() {
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isLoading = true) }
 
-                RemoteServiceManager.unbind()
+                permissionManager.refresh()
+                val state = permissionManager.permissions
+                val backend = state.startupBackend
+                if (!state.isStartupBackendAvailable(backend)) {
+                    _uiState.update { it.copy(isLoading = false) }
+                    Toast.makeText(
+                        application,
+                        application.getString(R.string.home_toast_backend_unavailable, backend.display),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@launch
+                }
+
+                if (!state.remoteAccessGranted) {
+                    val granted = permissionManager.requestRemoteAccess()
+                    if (!granted) {
+                        _uiState.update { it.copy(isLoading = false) }
+                        Toast.makeText(
+                            application,
+                            application.getString(R.string.home_toast_backend_auth_failed, backend.display),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@launch
+                    }
+                }
+
                 RemoteServiceManager.bind()
 
-                Timber.i("onReloadServices: Services reloaded")
+                Timber.i("onOpenRemoteService: Service binding started")
                 _uiState.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
-                Timber.e(e, "Error reloading services")
+                Timber.e(e, "Error opening remote service")
                 _uiState.update { it.copy(isLoading = false) }
                 Toast.makeText(
                     application,
-                    application.getString(R.string.home_toast_reload_services_failed, e.message.orEmpty()),
+                    application.getString(R.string.home_toast_open_service_failed, e.message.orEmpty()),
                     Toast.LENGTH_SHORT
                 ).show()
             }
         }
     }
 
-    fun onStopAllServices() {
+    private fun onCloseRemoteService() {
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isLoading = true) }
 
+                // 先关闭依赖远程服务的入口，避免继续操作已断开的 Binder。
                 overlayController.hideAll()
                 RemoteServiceManager.unbind()
 
-                Timber.i("onStopAllServices: All services stopped")
+                Timber.i("onCloseRemoteService: Service unbound")
                 _uiState.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
-                Timber.e(e, "Error stopping all services")
+                Timber.e(e, "Error closing remote service")
                 _uiState.update { it.copy(isLoading = false) }
                 Toast.makeText(
                     application,
-                    application.getString(R.string.home_toast_stop_services_failed, e.message.orEmpty()),
+                    application.getString(R.string.home_toast_close_service_failed, e.message.orEmpty()),
                     Toast.LENGTH_SHORT
                 ).show()
             }

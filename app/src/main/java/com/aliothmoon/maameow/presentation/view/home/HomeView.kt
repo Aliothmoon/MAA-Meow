@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -72,7 +74,6 @@ import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.PermissionManager
-import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ChangelogDialog
@@ -107,7 +108,6 @@ fun HomeView(
     val permissionState by permissionManager.state.collectAsStateWithLifecycle()
     val resourceVersion by updateViewModel.currentResourceVersion.collectAsStateWithLifecycle()
     val appVersion = updateViewModel.currentAppVersion
-    val state by RemoteServiceManager.state.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val (width, height) = Misc.getScreenSize(context)
@@ -256,7 +256,11 @@ fun HomeView(
                         appVersion = appVersion,
                         serviceStatusColor = uiState.serviceStatusColor,
                         serviceStatusText = uiState.serviceStatusText,
-                        serviceStatusLoading = uiState.serviceStatusLoading
+                        serviceStatusLoading = uiState.serviceStatusLoading,
+                        remoteServiceActive = uiState.remoteServiceActive,
+                        isLoading = uiState.isLoading,
+                        onOpenShizuku = { viewModel.onOpenShizuku() },
+                        onToggleRemoteService = { viewModel.onToggleRemoteService() }
                     )
                 }
 
@@ -308,65 +312,17 @@ fun HomeView(
                     }
                 }
 
-                if (
-                    state !is RemoteServiceManager.ServiceState.Connected
-                    && state !is RemoteServiceManager.ServiceState.Connecting
-                    && permissionState.remoteAccessGranted
-                ) {
-                    item {
-                        OutlinedButton(
-                            onClick = { viewModel.onReloadServices() },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp),
-                            shape = MaterialTheme.shapes.large,
-                            enabled = !uiState.isLoading
-                        ) {
-                            Text(
-                                text = stringResource(R.string.home_btn_reload_services),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-
-                item {
-                    OutlinedButton(
-                        onClick = {
-                            Timber.d("关闭所有服务")
-                            viewModel.onStopAllServices()
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        ),
-                        border = BorderStroke(
-                            1.dp,
-                            MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
-                        ),
-                        shape = MaterialTheme.shapes.large,
-                        enabled = !uiState.isLoading
-                    ) {
-                        Text(
-                            text = stringResource(R.string.home_btn_stop_all_services),
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
             }
         }
 
         // Shizuku/Sui 检测
         val skipShizukuCheck by appSettingsManager.skipShizukuCheck.collectAsStateWithLifecycle()
-        var shizukuStatus by remember {
-            mutableStateOf(ShizukuInstallHelper.checkStatus(context))
+        val shizukuLaunchPackage by appSettingsManager.shizukuLaunchPackage.collectAsStateWithLifecycle()
+        var shizukuStatus by remember(shizukuLaunchPackage) {
+            mutableStateOf(ShizukuInstallHelper.checkStatus(context, shizukuLaunchPackage))
         }
-        LifecycleResumeEffect(Unit) {
-            shizukuStatus = ShizukuInstallHelper.checkStatus(context)
+        LifecycleResumeEffect(shizukuLaunchPackage) {
+            shizukuStatus = ShizukuInstallHelper.checkStatus(context, shizukuLaunchPackage)
             onPauseOrDispose {}
         }
         if (permissionState.startupBackend == RemoteBackend.SHIZUKU && !skipShizukuCheck) {
@@ -402,11 +358,7 @@ fun HomeView(
                         icon = Icons.Rounded.Build,
                         confirmText = stringResource(R.string.dialog_shizuku_open_app),
                         onConfirm = {
-                            runCatching {
-                                val intent =
-                                    context.packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
-                                if (intent != null) context.startActivity(intent)
-                            }
+                            ShizukuInstallHelper.openShizuku(context, shizukuLaunchPackage)
                         },
                         neutralText = if (permissionState.rootAvailable)
                             stringResource(R.string.dialog_shizuku_switch_to_root)
@@ -452,7 +404,11 @@ private fun ScreenInfoCard(
     appVersion: String,
     serviceStatusColor: StatusColorType,
     serviceStatusText: UiText,
-    serviceStatusLoading: Boolean
+    serviceStatusLoading: Boolean,
+    remoteServiceActive: Boolean,
+    isLoading: Boolean,
+    onOpenShizuku: () -> Unit,
+    onToggleRemoteService: () -> Unit
 ) {
     val serviceStatusLabel = serviceStatusText.asString()
     Card(
@@ -565,6 +521,89 @@ private fun ScreenInfoCard(
                             color = statusColor
                         )
                     }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(
+                    onClick = onOpenShizuku,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
+                    shape = MaterialTheme.shapes.large,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    enabled = !isLoading
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Build,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.size(6.dp))
+                    Text(
+                        text = stringResource(R.string.home_btn_open_shizuku),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 2,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                }
+                val serviceButtonModifier = Modifier
+                    .weight(1f)
+                    .height(52.dp)
+                val serviceButtonContentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                val serviceButtonContent: @Composable RowScope.() -> Unit = {
+                    Icon(
+                        imageVector = Icons.Rounded.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.size(6.dp))
+                    Text(
+                        text = stringResource(
+                            if (remoteServiceActive) R.string.home_btn_close_service
+                            else R.string.home_btn_open_service
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 2,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                }
+                if (remoteServiceActive) {
+                    OutlinedButton(
+                        onClick = onToggleRemoteService,
+                        modifier = serviceButtonModifier,
+                        shape = MaterialTheme.shapes.large,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error.copy(alpha = 0.82f)
+                        ),
+                        border = BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.error.copy(alpha = 0.45f)
+                        ),
+                        contentPadding = serviceButtonContentPadding,
+                        enabled = !isLoading,
+                        content = serviceButtonContent
+                    )
+                } else {
+                    Button(
+                        onClick = onToggleRemoteService,
+                        modifier = serviceButtonModifier,
+                        shape = MaterialTheme.shapes.large,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        contentPadding = serviceButtonContentPadding,
+                        enabled = !isLoading,
+                        content = serviceButtonContent
+                    )
                 }
             }
         }

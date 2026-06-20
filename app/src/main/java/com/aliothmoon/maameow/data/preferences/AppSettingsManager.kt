@@ -206,6 +206,18 @@ class AppSettingsManager(
         }
     }
 
+    // 自定义 Shizuku 管理器入口
+    val shizukuLaunchPackage: StateFlow<String> = settings
+        .map { it.shizukuLaunchPackage }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.shizukuLaunchPackage)
+
+    suspend fun setShizukuLaunchPackage(packageName: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[shizukuLaunchPackage] = packageName.trim() }
+        }
+    }
+
     // 游戏启动时静音
     val muteOnGameLaunch: StateFlow<Boolean> = settings
         .map { it.muteOnGameLaunch.toBooleanStrictOrNull() ?: false }

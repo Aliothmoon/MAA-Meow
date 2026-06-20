@@ -147,6 +147,15 @@ class SettingsViewModel(
         }
     }
 
+    val shizukuLaunchPackage: StateFlow<String> = appSettingsManager.shizukuLaunchPackage
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    fun setShizukuLaunchPackage(packageName: String) {
+        viewModelScope.launch {
+            appSettingsManager.setShizukuLaunchPackage(packageName)
+        }
+    }
+
     val deploymentWithPause: StateFlow<Boolean> = appSettingsManager.deploymentWithPause
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
