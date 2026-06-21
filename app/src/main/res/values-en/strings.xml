@@ -46,6 +46,10 @@
     <string name="settings_section_other">Other</string>
     <string name="settings_startup_backend_title">Startup Mode</string>
     <string name="settings_startup_backend_desc">Choose how the app obtains system permissions</string>
+    <!-- settings: monet theme color (system Material You toggle, Android 12+) -->
+    <string name="settings_monet_color_title">Monet Theme Color</string>
+    <string name="settings_monet_color_desc">Use Material You dynamic color on Android 12+. Off uses the built-in blue theme.</string>
+
     <string name="settings_achievement_title">Achievements</string>
     <string name="settings_achievement_desc">View MaaMeow milestones and hidden easter eggs</string>
     <string name="settings_achievement_debug_title">Achievement Debug</string>

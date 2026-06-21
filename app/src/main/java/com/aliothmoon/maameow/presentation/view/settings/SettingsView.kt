@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material3.CircularProgressIndicator
+import android.os.Build
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -105,6 +106,7 @@ fun SettingsView(
     val tasksOverrideEnabled by viewModel.tasksOverrideEnabled.collectAsStateWithLifecycle()
     val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val useSystemMonetColor by viewModel.useSystemMonetColor.collectAsStateWithLifecycle()
     val backgroundResolution by viewModel.backgroundResolution.collectAsStateWithLifecycle()
     val language by viewModel.language.collectAsStateWithLifecycle()
     val backupMessage by viewModel.backupMessage.collectAsStateWithLifecycle()
@@ -450,6 +452,16 @@ fun SettingsView(
                         onBackendSelected = { viewModel.setStartupBackend(it) }
                     )
                     SettingsDivider(contentColor)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        SettingSwitchItem(
+                            title = stringResource(R.string.settings_monet_color_title),
+                            description = stringResource(R.string.settings_monet_color_desc),
+                            contentColor = contentColor,
+                            checked = useSystemMonetColor,
+                            onCheckedChange = { viewModel.setUseSystemMonetColor(it) }
+                        )
+                        SettingsDivider(contentColor)
+                    }
                     SettingClickItem(
                         title = stringResource(R.string.settings_achievement_title),
                         description = stringResource(R.string.settings_achievement_desc),
