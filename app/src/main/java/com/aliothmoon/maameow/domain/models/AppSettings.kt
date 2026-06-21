@@ -69,5 +69,5 @@ data class AppSettings(
      * 启用后主题跟随系统壁纸动态取色，关闭则使用内置硬编码蓝色主题
      * Android 12 以下设备只能使用内置蓝色主题
      */
-    @PrefKey(default = "true") val useSystemMonetColor: String = "true",
+    @PrefKey(default = "false") val useSystemMonetColor: String = "false",
 )
