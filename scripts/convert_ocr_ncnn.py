@@ -55,18 +55,15 @@ def _find_pnnx() -> str:
 
 
 def _run(cmd: list[str], cwd: Path | None = None) -> None:
+    # Stream stdout/stderr live so CI logs show pnnx progress instead of going
+    # silent for tens of seconds per model.
     res = subprocess.run(
         [str(c) for c in cmd],
         cwd=str(cwd) if cwd else None,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
     )
     if res.returncode != 0:
-        sys.stderr.write(res.stdout or "")
-        sys.stderr.write(res.stderr or "")
-        raise SystemExit(f"command failed (exit={res.returncode}): {' '.join(map(str, cmd))}")
+        sys.stderr.write(f"command failed (exit={res.returncode}): {' '.join(map(str, cmd))}\n")
+        raise SystemExit(res.returncode)
 
 
 def _sha256(path: Path) -> str:
@@ -87,7 +84,7 @@ def _pnnx_outputs(workdir: Path) -> tuple[Path, Path]:
     if len(params) != 1:
         raise SystemExit(f"expected exactly one *.ncnn.param in {workdir}, found {len(params)}")
     param = params[0]
-    binp = param.with_suffix("").with_suffix(".bin")  # foo.ncnn.param -> foo.ncnn.bin
+    # foo.ncnn.param -> foo.ncnn.bin (can't use with_suffix here, .ncnn isn't a suffix)
     binp = param.parent / (param.name[: -len(".param")] + ".bin")
     if not binp.exists():
         raise SystemExit(f"pnnx .bin not found next to {param}")
