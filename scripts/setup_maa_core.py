@@ -43,8 +43,12 @@ ABI_MAP = {
     "android-x64": "x86_64",
 }
 
-# Excluded from jniLibs copy
-EXCLUDE_SO = {"libc++_shared.so"}
+# Excluded from jniLibs copy.
+# - libc++_shared.so: provided by the NDK toolchain, never ship MAA's copy.
+# - libfastdeploy_ppocr.so: desktop OCR backend; Android uses OcrPackNcnn driven
+#   by the ncnn weights generated in convert_ocr_ncnn.py, so this ~tens-of-MB
+#   so is dead weight in the APK.
+EXCLUDE_SO = {"libc++_shared.so", "libfastdeploy_ppocr.so"}
 
 # Ignored file extensions
 IGNORE_EXTENSIONS = {".h"}
