@@ -1,0 +1,6 @@
+# Build-time dep for OCR onnx -> ncnn conversion (scripts/convert_ocr_ncnn.py).
+# Only pnnx is needed: it reads onnx directly and, given a fixed inputshape, produces
+# ncnn faithful to onnxruntime (cos=1.0). No onnxsim/onnxruntime -- onnxsim SIGSEGV'd
+# on Python 3.14 CI and is unnecessary once pnnx's inputshape is pinned.
+# Pinned to the toolchain that produced the validated conversions; re-verify if bumped.
+pnnx==20260526
