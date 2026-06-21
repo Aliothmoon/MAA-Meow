@@ -264,8 +264,15 @@
     <string name="settings_background_resolution_title">后台分辨率</string>
     <string name="settings_background_resolution_desc">仅后台模式生效</string>
     <string name="settings_skip_shizuku_check">跳过 Shizuku 检查</string>
+    <string name="settings_shizuku_launch_mode_title">主页显示 Shizuku 快捷入口</string>
+    <string name="settings_shizuku_launch_mode_desc_off">当前已关闭</string>
+    <string name="settings_shizuku_launch_mode_desc_on">当前已开启：%1$s</string>
+    <string name="settings_shizuku_launch_mode_picker_title">选择主页快捷入口</string>
+    <string name="settings_shizuku_launch_mode_off">默认关闭</string>
+    <string name="settings_shizuku_launch_mode_official">打开官方 Shizuku</string>
+    <string name="settings_shizuku_launch_mode_custom">自定义 Shizuku</string>
     <string name="settings_shizuku_launch_app_title">自选 Shizuku 应用</string>
-    <string name="settings_shizuku_launch_app_default_desc">当前使用官方 Shizuku</string>
+    <string name="settings_shizuku_launch_app_default_desc">尚未选择自定义应用</string>
     <string name="settings_shizuku_launch_app_selected_desc">当前使用：%1$s</string>
     <string name="settings_shizuku_launch_app_picker_title">选择 Shizuku 应用</string>
     <string name="settings_shizuku_launch_app_picker_failed">加载应用列表失败</string>
@@ -515,6 +522,8 @@
     <!-- background task: permission & toast -->
     <string name="bg_shizuku_permission_title">需要%1$s权限</string>
     <string name="bg_shizuku_permission_message">后台任务页面依赖%1$s服务，授权成功前将持续显示该提示。</string>
+    <string name="bg_remote_access_unavailable_message">%1$s 不可用，请检查对应服务是否启动。\n\n在对应服务启动并完成授权前，此弹窗会持续显示。</string>
+    <string name="bg_toast_remote_access_unavailable">%1$s不可用，请检查对应服务是否启动。</string>
     <string name="bg_toast_permission_not_acquired">%1$s未获取，请重试</string>
     <string name="bg_toast_service_died">MaaService 异常关闭，请尝试重新启动</string>
     <string name="bg_toast_app_died">游戏进程未启动或被异常关闭</string>

@@ -81,10 +81,13 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
+import com.aliothmoon.maameow.domain.models.RemoteBackend
+import com.aliothmoon.maameow.domain.models.ShizukuLaunchMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.manager.PermissionManager
+import com.aliothmoon.maameow.manager.ShizukuInstallHelper
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ShizukuPermissionDialog
 import com.aliothmoon.maameow.presentation.view.panel.PanelHeader
@@ -135,6 +138,7 @@ fun BackgroundTaskView(
     permissionManager: PermissionManager = koinInject(),
     screenSaverManager: ScreenSaverOverlayManager = koinInject(),
     appWatchdog: AppWatchdog = koinInject(),
+    appSettingsManager: AppSettingsManager = koinInject(),
 ) {
 
     val coroutineScope = rememberCoroutineScope()
@@ -143,6 +147,8 @@ fun BackgroundTaskView(
     val markers by viewModel.markers.collectAsStateWithLifecycle()
     val displayResolution by compositionService.displayResolution.collectAsStateWithLifecycle()
     val permissions by permissionManager.state.collectAsStateWithLifecycle()
+    val shizukuLaunchMode by appSettingsManager.shizukuLaunchMode.collectAsStateWithLifecycle()
+    val shizukuLaunchPackage by appSettingsManager.shizukuLaunchPackage.collectAsStateWithLifecycle()
     val isChainLoaded by viewModel.chainState.isLoaded.collectAsStateWithLifecycle()
     var hasInitialized by rememberSaveable { mutableStateOf(false) }
     if (isChainLoaded) {
@@ -191,33 +197,85 @@ fun BackgroundTaskView(
         )
     )
 
-    if (!permissions.remoteAccessGranted) {
+    var showRemoteAccessDialog by remember { mutableStateOf(true) }
+
+    LaunchedEffect(permissions.remoteAccessGranted, permissions.startupBackend) {
+        showRemoteAccessDialog = !permissions.remoteAccessGranted
+    }
+
+    if (!permissions.remoteAccessGranted && showRemoteAccessDialog) {
         var isRequestingRemoteAccess by remember { mutableStateOf(false) }
+        val canOpenShizukuShortcut = permissions.startupBackend == RemoteBackend.SHIZUKU &&
+                shizukuLaunchMode != ShizukuLaunchMode.OFF
+        val shortcutPackageName = if (shizukuLaunchMode == ShizukuLaunchMode.CUSTOM) {
+            shizukuLaunchPackage
+        } else {
+            ""
+        }
         ShizukuPermissionDialog(
             title = stringResource(
                 R.string.bg_shizuku_permission_title,
                 permissions.startupBackend.display
             ),
-            message = stringResource(
-                R.string.bg_shizuku_permission_message,
-                permissions.startupBackend.display
-            ),
+            message = if (canOpenShizukuShortcut) {
+                stringResource(
+                    R.string.bg_shizuku_permission_message,
+                    permissions.startupBackend.display
+                )
+            } else {
+                stringResource(
+                    R.string.bg_remote_access_unavailable_message,
+                    permissions.startupBackend.display
+                )
+            },
             isRequesting = isRequestingRemoteAccess,
             onConfirm = {
                 if (isRequestingRemoteAccess) return@ShizukuPermissionDialog
+                if (canOpenShizukuShortcut) {
+                    val opened = ShizukuInstallHelper.openShizuku(context, shortcutPackageName)
+                    if (!opened) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.home_toast_open_shizuku_failed),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    return@ShizukuPermissionDialog
+                }
                 coroutineScope.launch {
                     isRequestingRemoteAccess = true
                     val granted = permissionManager.requestRemoteAccess()
                     isRequestingRemoteAccess = false
                     if (!granted) {
+                        val message = if (!permissions.isStartupBackendAvailable(permissions.startupBackend)) {
+                            context.getString(
+                                R.string.bg_toast_remote_access_unavailable,
+                                permissions.startupBackend.display
+                            )
+                        } else {
+                            permissionNotAcquiredFormat.format(currentPermissionLabel)
+                        }
                         Toast.makeText(
                             context,
-                            permissionNotAcquiredFormat.format(currentPermissionLabel),
+                            message,
                             Toast.LENGTH_SHORT
                         ).show()
                     }
                 }
-            })
+            },
+            onDismiss = { showRemoteAccessDialog = false },
+            confirmText = if (canOpenShizukuShortcut) {
+                stringResource(R.string.dialog_shizuku_open_app)
+            } else {
+                null
+            },
+            dismissText = if (canOpenShizukuShortcut) {
+                stringResource(R.string.common_cancel)
+            } else {
+                ""
+            },
+            dismissOnOutsideClick = canOpenShizukuShortcut
+        )
     }
 
 
@@ -496,6 +554,10 @@ fun BackgroundTaskView(
                                 Button(
                                     onClick = {
                                         focusManager.clearFocus()
+                                        if (!permissions.remoteAccessGranted) {
+                                            showRemoteAccessDialog = true
+                                            return@Button
+                                        }
                                         when (state.current) {
                                             PanelTab.TASKS -> viewModel.onStartTasks()
                                             PanelTab.AUTO_BATTLE -> copilotViewModel.onStart()

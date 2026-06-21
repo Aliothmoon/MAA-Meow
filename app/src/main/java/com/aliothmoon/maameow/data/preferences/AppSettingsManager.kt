@@ -17,6 +17,7 @@ import com.aliothmoon.maameow.domain.models.AppSettingsSchema
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.models.ShizukuLaunchMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -206,7 +207,26 @@ class AppSettingsManager(
         }
     }
 
-    // 自定义 Shizuku 管理器入口
+    // Shizuku 管理器快捷入口模式
+    val shizukuLaunchMode: StateFlow<ShizukuLaunchMode> = settings
+        .map {
+            runCatching { ShizukuLaunchMode.valueOf(it.shizukuLaunchMode) }
+                .getOrDefault(ShizukuLaunchMode.OFF)
+        }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            runCatching { ShizukuLaunchMode.valueOf(initialSettings.shizukuLaunchMode) }
+                .getOrDefault(ShizukuLaunchMode.OFF)
+        )
+
+    suspend fun setShizukuLaunchMode(mode: ShizukuLaunchMode) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[shizukuLaunchMode] = mode.name }
+        }
+    }
+
+    // 自定义 Shizuku 管理器入口包名
     val shizukuLaunchPackage: StateFlow<String> = settings
         .map { it.shizukuLaunchPackage }
         .distinctUntilChanged()

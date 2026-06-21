@@ -61,6 +61,7 @@ import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
+import com.aliothmoon.maameow.domain.models.ShizukuLaunchMode
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.LogExportService
 import com.aliothmoon.maameow.domain.service.ResourceInitService
@@ -99,6 +100,7 @@ fun SettingsView(
     val autoDownloadUpdate by viewModel.autoDownloadUpdate.collectAsStateWithLifecycle()
     val startupBackend by viewModel.startupBackend.collectAsStateWithLifecycle()
     val skipShizukuCheck by viewModel.skipShizukuCheck.collectAsStateWithLifecycle()
+    val shizukuLaunchMode by viewModel.shizukuLaunchMode.collectAsStateWithLifecycle()
     val shizukuLaunchPackage by viewModel.shizukuLaunchPackage.collectAsStateWithLifecycle()
     val deploymentWithPause by viewModel.deploymentWithPause.collectAsStateWithLifecycle()
     val forceFullscreenOnVirtualDisplay by viewModel.forceFullscreenOnVirtualDisplay.collectAsStateWithLifecycle()
@@ -129,6 +131,7 @@ fun SettingsView(
     }
 
     var showShizukuAppPicker by remember { mutableStateOf(false) }
+    var showShizukuLaunchModePicker by remember { mutableStateOf(false) }
     var shizukuAppPickerLoadKey by remember { mutableStateOf(0) }
     var shizukuAppSearch by remember { mutableStateOf("") }
     var shizukuAppOptions by remember { mutableStateOf<List<ShizukuLaunchAppOption>?>(null) }
@@ -204,6 +207,51 @@ fun SettingsView(
         ResourceInitDialog(
             state = resourceInitState,
             onRetry = {}
+        )
+    }
+
+    if (showShizukuLaunchModePicker) {
+        AdaptiveTaskPromptDialog(
+            visible = true,
+            title = stringResource(R.string.settings_shizuku_launch_mode_picker_title),
+            icon = Icons.Rounded.Build,
+            confirmText = stringResource(R.string.common_close),
+            dismissText = "",
+            onConfirm = { showShizukuLaunchModePicker = false },
+            onDismissRequest = { showShizukuLaunchModePicker = false },
+            content = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    ShizukuLaunchMode.entries.forEach { mode ->
+                        val selected = mode == shizukuLaunchMode
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .selectable(
+                                    selected = selected,
+                                    onClick = {
+                                        viewModel.setShizukuLaunchMode(mode)
+                                        showShizukuLaunchModePicker = false
+                                    },
+                                    role = Role.RadioButton
+                                )
+                                .padding(vertical = 6.dp)
+                        ) {
+                            RadioButton(selected = selected, onClick = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = shizukuLaunchModeLabel(mode),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
         )
     }
 
@@ -452,6 +500,55 @@ fun SettingsView(
                         onBackendSelected = { viewModel.setStartupBackend(it) }
                     )
                     SettingsDivider(contentColor)
+                    if (startupBackend == RemoteBackend.SHIZUKU) {
+                        val shizukuLaunchModeDescription = if (shizukuLaunchMode == ShizukuLaunchMode.OFF) {
+                            stringResource(R.string.settings_shizuku_launch_mode_desc_off)
+                        } else {
+                            stringResource(
+                                R.string.settings_shizuku_launch_mode_desc_on,
+                                shizukuLaunchModeLabel(shizukuLaunchMode)
+                            )
+                        }
+                        SettingClickItem(
+                            title = stringResource(R.string.settings_shizuku_launch_mode_title),
+                            description = shizukuLaunchModeDescription,
+                            contentColor = contentColor
+                        ) {
+                            showShizukuLaunchModePicker = true
+                        }
+                        SettingsDivider(contentColor)
+                        AnimatedVisibility(
+                            visible = shizukuLaunchMode == ShizukuLaunchMode.CUSTOM,
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
+                            Column {
+                                val shizukuLaunchAppName = ShizukuInstallHelper.getLaunchAppLabel(
+                                    context,
+                                    shizukuLaunchPackage
+                                )
+                                val shizukuLaunchAppDescription = if (shizukuLaunchPackage.isBlank()) {
+                                    stringResource(R.string.settings_shizuku_launch_app_default_desc)
+                                } else {
+                                    stringResource(
+                                        R.string.settings_shizuku_launch_app_selected_desc,
+                                        shizukuLaunchAppName ?: shizukuLaunchPackage
+                                    )
+                                }
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_shizuku_launch_app_title),
+                                    description = shizukuLaunchAppDescription,
+                                    contentColor = contentColor
+                                ) {
+                                    // 先展示弹窗，再异步查询应用列表，避免点击后长时间无反馈。
+                                    shizukuAppSearch = ""
+                                    shizukuAppPickerLoadKey += 1
+                                    showShizukuAppPicker = true
+                                }
+                                SettingsDivider(contentColor)
+                            }
+                        }
+                    }
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         SettingSwitchItem(
                             title = stringResource(R.string.settings_monet_color_title),
@@ -505,29 +602,6 @@ fun SettingsView(
                         enabled = startupBackend == RemoteBackend.SHIZUKU,
                         onCheckedChange = { viewModel.setSkipShizukuCheck(it) }
                     )
-                    SettingsDivider(contentColor)
-                    val shizukuLaunchAppName = ShizukuInstallHelper.getLaunchAppLabel(
-                        context,
-                        shizukuLaunchPackage
-                    )
-                    val shizukuLaunchAppDescription = if (shizukuLaunchPackage.isBlank()) {
-                        stringResource(R.string.settings_shizuku_launch_app_default_desc)
-                    } else {
-                        stringResource(
-                            R.string.settings_shizuku_launch_app_selected_desc,
-                            shizukuLaunchAppName ?: shizukuLaunchPackage
-                        )
-                    }
-                    SettingClickItem(
-                        title = stringResource(R.string.settings_shizuku_launch_app_title),
-                        description = shizukuLaunchAppDescription,
-                        contentColor = contentColor
-                    ) {
-                        // 先展示弹窗，再异步查询应用列表，避免点击后长时间无反馈。
-                        shizukuAppSearch = ""
-                        shizukuAppPickerLoadKey += 1
-                        showShizukuAppPicker = true
-                    }
                     SettingsDivider(contentColor)
                     SettingSwitchItem(
                         title = stringResource(R.string.settings_deployment_with_pause),
@@ -1063,6 +1137,15 @@ private fun SettingRemoteBackendItem(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun shizukuLaunchModeLabel(mode: ShizukuLaunchMode): String {
+    return when (mode) {
+        ShizukuLaunchMode.OFF -> stringResource(R.string.settings_shizuku_launch_mode_off)
+        ShizukuLaunchMode.OFFICIAL -> stringResource(R.string.settings_shizuku_launch_mode_official)
+        ShizukuLaunchMode.CUSTOM -> stringResource(R.string.settings_shizuku_launch_mode_custom)
     }
 }
 

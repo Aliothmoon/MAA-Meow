@@ -72,6 +72,7 @@ import com.aliothmoon.maameow.data.permission.PermissionState
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.models.ShizukuLaunchMode
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
@@ -111,6 +112,7 @@ fun HomeView(
 
     val context = LocalContext.current
     val (width, height) = Misc.getScreenSize(context)
+    val shizukuLaunchMode by appSettingsManager.shizukuLaunchMode.collectAsStateWithLifecycle()
 
     val startupDialog by updateViewModel.startupUpdateDialog.collectAsStateWithLifecycle()
 
@@ -259,6 +261,8 @@ fun HomeView(
                         serviceStatusLoading = uiState.serviceStatusLoading,
                         remoteServiceActive = uiState.remoteServiceActive,
                         isLoading = uiState.isLoading,
+                        showShizukuShortcut = permissionState.startupBackend == RemoteBackend.SHIZUKU &&
+                                shizukuLaunchMode != ShizukuLaunchMode.OFF,
                         onOpenShizuku = { viewModel.onOpenShizuku() },
                         onToggleRemoteService = { viewModel.onToggleRemoteService() }
                     )
@@ -318,11 +322,16 @@ fun HomeView(
         // Shizuku/Sui 检测
         val skipShizukuCheck by appSettingsManager.skipShizukuCheck.collectAsStateWithLifecycle()
         val shizukuLaunchPackage by appSettingsManager.shizukuLaunchPackage.collectAsStateWithLifecycle()
-        var shizukuStatus by remember(shizukuLaunchPackage) {
-            mutableStateOf(ShizukuInstallHelper.checkStatus(context, shizukuLaunchPackage))
+        val shizukuStatusPackage = if (shizukuLaunchMode == ShizukuLaunchMode.CUSTOM) {
+            shizukuLaunchPackage
+        } else {
+            ""
         }
-        LifecycleResumeEffect(shizukuLaunchPackage) {
-            shizukuStatus = ShizukuInstallHelper.checkStatus(context, shizukuLaunchPackage)
+        var shizukuStatus by remember(shizukuStatusPackage) {
+            mutableStateOf(ShizukuInstallHelper.checkStatus(context, shizukuStatusPackage))
+        }
+        LifecycleResumeEffect(shizukuStatusPackage) {
+            shizukuStatus = ShizukuInstallHelper.checkStatus(context, shizukuStatusPackage)
             onPauseOrDispose {}
         }
         if (permissionState.startupBackend == RemoteBackend.SHIZUKU && !skipShizukuCheck) {
@@ -358,7 +367,7 @@ fun HomeView(
                         icon = Icons.Rounded.Build,
                         confirmText = stringResource(R.string.dialog_shizuku_open_app),
                         onConfirm = {
-                            ShizukuInstallHelper.openShizuku(context, shizukuLaunchPackage)
+                            ShizukuInstallHelper.openShizuku(context, shizukuStatusPackage)
                         },
                         neutralText = if (permissionState.rootAvailable)
                             stringResource(R.string.dialog_shizuku_switch_to_root)
@@ -407,6 +416,7 @@ private fun ScreenInfoCard(
     serviceStatusLoading: Boolean,
     remoteServiceActive: Boolean,
     isLoading: Boolean,
+    showShizukuShortcut: Boolean,
     onOpenShizuku: () -> Unit,
     onToggleRemoteService: () -> Unit
 ) {
@@ -528,32 +538,37 @@ private fun ScreenInfoCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedButton(
-                    onClick = onOpenShizuku,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(52.dp),
-                    shape = MaterialTheme.shapes.large,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                    enabled = !isLoading
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Build,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.size(6.dp))
-                    Text(
-                        text = stringResource(R.string.home_btn_open_shizuku),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 2,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
+                if (showShizukuShortcut) {
+                    OutlinedButton(
+                        onClick = onOpenShizuku,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
+                        shape = MaterialTheme.shapes.large,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        enabled = !isLoading
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Build,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.size(6.dp))
+                        Text(
+                            text = stringResource(R.string.home_btn_open_shizuku),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 2,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                    }
                 }
                 val serviceButtonModifier = Modifier
-                    .weight(1f)
+                    .then(
+                        if (showShizukuShortcut) Modifier.weight(1f)
+                        else Modifier.fillMaxWidth()
+                    )
                     .height(52.dp)
                 val serviceButtonContentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                 val serviceButtonContent: @Composable RowScope.() -> Unit = {

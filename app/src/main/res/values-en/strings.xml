@@ -66,8 +66,15 @@
     <string name="settings_background_resolution_title">Background Resolution</string>
     <string name="settings_background_resolution_desc">Background mode only</string>
     <string name="settings_skip_shizuku_check">Skip Shizuku Check</string>
+    <string name="settings_shizuku_launch_mode_title">Show Shizuku Shortcut on Home</string>
+    <string name="settings_shizuku_launch_mode_desc_off">Currently off</string>
+    <string name="settings_shizuku_launch_mode_desc_on">Currently on: %1$s</string>
+    <string name="settings_shizuku_launch_mode_picker_title">Select Home Shortcut</string>
+    <string name="settings_shizuku_launch_mode_off">Default Off</string>
+    <string name="settings_shizuku_launch_mode_official">Open Official Shizuku</string>
+    <string name="settings_shizuku_launch_mode_custom">Custom Shizuku</string>
     <string name="settings_shizuku_launch_app_title">Custom Shizuku App</string>
-    <string name="settings_shizuku_launch_app_default_desc">Currently using official Shizuku</string>
+    <string name="settings_shizuku_launch_app_default_desc">No custom app selected</string>
     <string name="settings_shizuku_launch_app_selected_desc">Currently using: %1$s</string>
     <string name="settings_shizuku_launch_app_picker_title">Select Shizuku App</string>
     <string name="settings_shizuku_launch_app_picker_failed">Failed to load app list</string>
@@ -313,6 +320,8 @@
     <!-- background task: permission & toast -->
     <string name="bg_shizuku_permission_title">%1$s Permission Required</string>
     <string name="bg_shizuku_permission_message">The background task page depends on the %1$s service. This prompt will keep showing until access is granted.</string>
+    <string name="bg_remote_access_unavailable_message">%1$s is unavailable. Please check whether the corresponding service is running.\n\nThis dialog will keep showing until the corresponding service starts and access is granted.</string>
+    <string name="bg_toast_remote_access_unavailable">%1$s is unavailable. Please check whether the corresponding service is running.</string>
     <string name="bg_toast_permission_not_acquired">%1$s not acquired, please try again</string>
     <string name="bg_toast_service_died">MaaService terminated unexpectedly. Please try restarting</string>
     <string name="bg_toast_app_died">Game process is not running or was killed unexpectedly</string>

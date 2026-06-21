@@ -11,6 +11,7 @@ import com.aliothmoon.maameow.constant.DisplayMode
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.models.ShizukuLaunchMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.service.ResourceInitService
@@ -334,10 +335,14 @@ class HomeViewModel(
     }
 
     fun onOpenShizuku() {
-        val opened = ShizukuInstallHelper.openShizuku(
-            application,
-            appSettingsManager.shizukuLaunchPackage.value
-        )
+        val opened = when (appSettingsManager.shizukuLaunchMode.value) {
+            ShizukuLaunchMode.OFFICIAL -> ShizukuInstallHelper.openShizuku(application)
+            ShizukuLaunchMode.CUSTOM -> ShizukuInstallHelper.openShizuku(
+                application,
+                appSettingsManager.shizukuLaunchPackage.value
+            )
+            ShizukuLaunchMode.OFF -> false
+        }
         if (!opened) {
             Toast.makeText(
                 application,

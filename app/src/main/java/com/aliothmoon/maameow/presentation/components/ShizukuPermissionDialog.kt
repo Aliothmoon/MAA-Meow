@@ -13,20 +13,26 @@ fun ShizukuPermissionDialog(
     message: String,
     isRequesting: Boolean,
     onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    confirmText: String? = null,
+    dismissText: String? = null,
+    dismissOnOutsideClick: Boolean = true,
 ) {
+    val resolvedDismissText = dismissText ?: stringResource(R.string.common_cancel)
+
     AdaptiveTaskPromptDialog(
         visible = true,
         title = title,
         message = message,
         onConfirm = onConfirm,
-        onDismissRequest = {}, // 不允许通过关闭请求取消
-        dismissOnOutsideClick = false,
+        onDismissRequest = onDismiss,
+        dismissOnOutsideClick = dismissOnOutsideClick,
         confirmText = if (isRequesting) {
             stringResource(R.string.shizuku_auth_requesting)
         } else {
-            stringResource(R.string.shizuku_auth_grant_now)
+            confirmText ?: stringResource(R.string.shizuku_auth_grant_now)
         },
-        dismissText = null,
+        dismissText = resolvedDismissText,
         icon = Icons.Rounded.Build,
         confirmColor = MaterialTheme.colorScheme.primary
     )

@@ -26,8 +26,10 @@ data class AppSettings(
     @PrefKey(default = "false") val skipShizukuCheck: String = "false",
 
     /**
-     * 自定义 Shizuku 管理器入口包名，留空时使用官方 Shizuku。
+     * Shizuku 管理器快捷入口设置。
+     * 模式默认关闭；自定义包名仅在 CUSTOM 模式下作为打开入口使用。
      */
+    @PrefKey(default = "OFF") val shizukuLaunchMode: String = "OFF",
     @PrefKey(default = "") val shizukuLaunchPackage: String = "",
 
     @PrefKey(default = "false") val muteOnGameLaunch: String = "false",
