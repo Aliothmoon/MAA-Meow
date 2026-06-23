@@ -389,9 +389,9 @@
     <string name="home_overlay_close">关闭操作面板</string>
 
     <!-- home: action buttons -->
-    <string name="home_btn_open_shizuku">快捷入口</string>
-    <string name="home_btn_open_service">打开服务</string>
-    <string name="home_btn_close_service">关闭服务</string>
+    <string name="home_btn_open_shizuku">Shizuku快捷入口</string>
+    <string name="home_btn_open_service">重新加载服务</string>
+    <string name="home_btn_close_service">关闭所有服务</string>
 
     <!-- home: service status strings -->
     <string name="home_status_service_error">服务异常</string>

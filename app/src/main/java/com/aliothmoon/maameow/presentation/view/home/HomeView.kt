@@ -258,13 +258,7 @@ fun HomeView(
                         appVersion = appVersion,
                         serviceStatusColor = uiState.serviceStatusColor,
                         serviceStatusText = uiState.serviceStatusText,
-                        serviceStatusLoading = uiState.serviceStatusLoading,
-                        remoteServiceActive = uiState.remoteServiceActive,
-                        isLoading = uiState.isLoading,
-                        showShizukuShortcut = permissionState.startupBackend == RemoteBackend.SHIZUKU &&
-                                shizukuLaunchMode != ShizukuLaunchMode.OFF,
-                        onOpenShizuku = { viewModel.onOpenShizuku() },
-                        onToggleRemoteService = { viewModel.onToggleRemoteService() }
+                        serviceStatusLoading = uiState.serviceStatusLoading
                     )
                 }
 
@@ -291,6 +285,17 @@ fun HomeView(
                         onRequestBatteryWhitelist = { viewModel.onRequestBatteryWhitelist(context) },
                         onRequestAccessibility = { viewModel.onRequestAccessibility(context) },
                         onRequestNotification = { viewModel.onRequestNotification(context) }
+                    )
+                }
+
+                item {
+                    HomeServiceActionButtons(
+                        remoteServiceActive = uiState.remoteServiceActive,
+                        isLoading = uiState.isLoading,
+                        showShizukuShortcut = permissionState.startupBackend == RemoteBackend.SHIZUKU &&
+                                shizukuLaunchMode != ShizukuLaunchMode.OFF,
+                        onOpenShizuku = { viewModel.onOpenShizuku() },
+                        onToggleRemoteService = { viewModel.onToggleRemoteService() }
                     )
                 }
 
@@ -413,12 +418,7 @@ private fun ScreenInfoCard(
     appVersion: String,
     serviceStatusColor: StatusColorType,
     serviceStatusText: UiText,
-    serviceStatusLoading: Boolean,
-    remoteServiceActive: Boolean,
-    isLoading: Boolean,
-    showShizukuShortcut: Boolean,
-    onOpenShizuku: () -> Unit,
-    onToggleRemoteService: () -> Unit
+    serviceStatusLoading: Boolean
 ) {
     val serviceStatusLabel = serviceStatusText.asString()
     Card(
@@ -533,103 +533,107 @@ private fun ScreenInfoCard(
                     }
                 }
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+        }
+    }
+}
+
+@Composable
+private fun HomeServiceActionButtons(
+    remoteServiceActive: Boolean,
+    isLoading: Boolean,
+    showShizukuShortcut: Boolean,
+    onOpenShizuku: () -> Unit,
+    onToggleRemoteService: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        val serviceButtonContent: @Composable RowScope.() -> Unit = {
+            Icon(
+                imageVector = Icons.Rounded.Refresh,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.size(6.dp))
+            Text(
+                text = stringResource(
+                    if (remoteServiceActive) R.string.home_btn_close_service
+                    else R.string.home_btn_open_service
+                ),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                maxLines = 2,
+                textAlign = TextAlign.Center
+            )
+        }
+        if (remoteServiceActive) {
+            OutlinedButton(
+                onClick = onToggleRemoteService,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = MaterialTheme.shapes.large,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error.copy(alpha = 0.82f)
+                ),
+                border = BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.error.copy(alpha = 0.45f)
+                ),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                enabled = !isLoading,
+                content = serviceButtonContent
+            )
+        } else {
+            OutlinedButton(
+                onClick = onToggleRemoteService,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = MaterialTheme.shapes.large,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                ),
+                border = BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+                ),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                enabled = !isLoading,
+                content = serviceButtonContent
+            )
+        }
+        if (showShizukuShortcut) {
+            OutlinedButton(
+                onClick = onOpenShizuku,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = MaterialTheme.shapes.large,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.secondary
+                ),
+                border = BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.55f)
+                ),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                enabled = !isLoading
             ) {
-                if (showShizukuShortcut) {
-                    OutlinedButton(
-                        onClick = onOpenShizuku,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp),
-                        shape = MaterialTheme.shapes.large,
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary
-                        ),
-                        border = BorderStroke(
-                            1.dp,
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
-                        ),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                        enabled = !isLoading
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Build,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.size(6.dp))
-                        Text(
-                            text = stringResource(R.string.home_btn_open_shizuku),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 2,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-                    }
-                }
-                val serviceButtonModifier = Modifier
-                    .then(
-                        if (showShizukuShortcut) Modifier.weight(1f)
-                        else Modifier.fillMaxWidth()
-                    )
-                    .height(52.dp)
-                val serviceButtonContentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                val serviceButtonContent: @Composable RowScope.() -> Unit = {
-                    Icon(
-                        imageVector = Icons.Rounded.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.size(6.dp))
-                    Text(
-                        text = stringResource(
-                            if (remoteServiceActive) R.string.home_btn_close_service
-                            else R.string.home_btn_open_service
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 2,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                }
-                if (remoteServiceActive) {
-                    OutlinedButton(
-                        onClick = onToggleRemoteService,
-                        modifier = serviceButtonModifier,
-                        shape = MaterialTheme.shapes.large,
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error.copy(alpha = 0.82f)
-                        ),
-                        border = BorderStroke(
-                            1.dp,
-                            MaterialTheme.colorScheme.error.copy(alpha = 0.45f)
-                        ),
-                        contentPadding = serviceButtonContentPadding,
-                        enabled = !isLoading,
-                        content = serviceButtonContent
-                    )
-                } else {
-                    OutlinedButton(
-                        onClick = onToggleRemoteService,
-                        modifier = serviceButtonModifier,
-                        shape = MaterialTheme.shapes.large,
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary
-                        ),
-                        border = BorderStroke(
-                            1.dp,
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
-                        ),
-                        contentPadding = serviceButtonContentPadding,
-                        enabled = !isLoading,
-                        content = serviceButtonContent
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Rounded.Build,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.size(6.dp))
+                Text(
+                    text = stringResource(R.string.home_btn_open_shizuku),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 2,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }

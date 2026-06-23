@@ -187,9 +187,9 @@
     <string name="home_overlay_close">Close Control Panel</string>
 
     <!-- home: action buttons -->
-    <string name="home_btn_open_shizuku">Shortcut</string>
-    <string name="home_btn_open_service">Open Service</string>
-    <string name="home_btn_close_service">Close Service</string>
+    <string name="home_btn_open_shizuku">Shizuku Shortcut</string>
+    <string name="home_btn_open_service">Reload All Services</string>
+    <string name="home_btn_close_service">Close All Services</string>
 
     <!-- home: service status strings -->
     <string name="home_status_service_error">Service Error</string>
