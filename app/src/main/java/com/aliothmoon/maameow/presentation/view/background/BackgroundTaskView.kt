@@ -207,7 +207,7 @@ fun BackgroundTaskView(
         var isRequestingRemoteAccess by remember { mutableStateOf(false) }
         val canOpenShizukuShortcut = permissions.startupBackend == RemoteBackend.SHIZUKU &&
                 shizukuLaunchMode != ShizukuLaunchMode.OFF
-        val shortcutPackageName = if (shizukuLaunchMode == ShizukuLaunchMode.CUSTOM) {
+        val shortcutPackageName = if (shizukuLaunchMode != ShizukuLaunchMode.OFF) {
             shizukuLaunchPackage
         } else {
             ""

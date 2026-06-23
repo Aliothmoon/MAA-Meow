@@ -66,16 +66,14 @@
     <string name="settings_background_resolution_title">Background Resolution</string>
     <string name="settings_background_resolution_desc">Background mode only</string>
     <string name="settings_skip_shizuku_check">Skip Shizuku Check</string>
-    <string name="settings_shizuku_launch_mode_title">Show Shizuku Shortcut on Home</string>
-    <string name="settings_shizuku_launch_mode_desc_off">Currently off</string>
-    <string name="settings_shizuku_launch_mode_desc_on">Currently on: %1$s</string>
-    <string name="settings_shizuku_launch_mode_picker_title">Select Home Shortcut</string>
-    <string name="settings_shizuku_launch_mode_off">Default Off</string>
-    <string name="settings_shizuku_launch_mode_official">Open Official Shizuku</string>
-    <string name="settings_shizuku_launch_mode_custom">Custom Shizuku</string>
+    <string name="settings_shizuku_launch_mode_title">Enable Shortcut</string>
+    <string name="settings_shizuku_launch_mode_desc">Show a Shizuku shortcut on Home; official Shizuku is used when no app is selected.</string>
     <string name="settings_shizuku_launch_app_title">Custom Shizuku App</string>
-    <string name="settings_shizuku_launch_app_default_desc">No custom app selected</string>
+    <string name="settings_shizuku_launch_app_default_desc">Using official Shizuku</string>
     <string name="settings_shizuku_launch_app_selected_desc">Currently using: %1$s</string>
+    <string name="settings_shizuku_launch_app_reset_title">Restore Default Shortcut</string>
+    <string name="settings_shizuku_launch_app_reset_desc">Clear the custom app and use the default Shizuku shortcut</string>
+    <string name="settings_shizuku_launch_app_reset_default_desc">Already using the default Shizuku shortcut</string>
     <string name="settings_shizuku_launch_app_picker_title">Select Shizuku App</string>
     <string name="settings_shizuku_launch_app_picker_failed">Failed to load app list</string>
     <string name="settings_shizuku_launch_app_loading">Loading app list…</string>
@@ -189,7 +187,7 @@
     <string name="home_overlay_close">Close Control Panel</string>
 
     <!-- home: action buttons -->
-    <string name="home_btn_open_shizuku">Open Shizuku</string>
+    <string name="home_btn_open_shizuku">Shortcut</string>
     <string name="home_btn_open_service">Open Service</string>
     <string name="home_btn_close_service">Close Service</string>
 

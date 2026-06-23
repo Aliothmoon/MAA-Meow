@@ -335,13 +335,13 @@ class HomeViewModel(
     }
 
     fun onOpenShizuku() {
-        val opened = when (appSettingsManager.shizukuLaunchMode.value) {
-            ShizukuLaunchMode.OFFICIAL -> ShizukuInstallHelper.openShizuku(application)
-            ShizukuLaunchMode.CUSTOM -> ShizukuInstallHelper.openShizuku(
+        val opened = if (appSettingsManager.shizukuLaunchMode.value == ShizukuLaunchMode.OFF) {
+            false
+        } else {
+            ShizukuInstallHelper.openShizuku(
                 application,
                 appSettingsManager.shizukuLaunchPackage.value
             )
-            ShizukuLaunchMode.OFF -> false
         }
         if (!opened) {
             Toast.makeText(

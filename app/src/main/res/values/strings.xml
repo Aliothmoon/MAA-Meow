@@ -264,16 +264,14 @@
     <string name="settings_background_resolution_title">后台分辨率</string>
     <string name="settings_background_resolution_desc">仅后台模式生效</string>
     <string name="settings_skip_shizuku_check">跳过 Shizuku 检查</string>
-    <string name="settings_shizuku_launch_mode_title">主页显示 Shizuku 快捷入口</string>
-    <string name="settings_shizuku_launch_mode_desc_off">当前已关闭</string>
-    <string name="settings_shizuku_launch_mode_desc_on">当前已开启：%1$s</string>
-    <string name="settings_shizuku_launch_mode_picker_title">选择主页快捷入口</string>
-    <string name="settings_shizuku_launch_mode_off">默认关闭</string>
-    <string name="settings_shizuku_launch_mode_official">打开官方 Shizuku</string>
-    <string name="settings_shizuku_launch_mode_custom">自定义 Shizuku</string>
+    <string name="settings_shizuku_launch_mode_title">打开快捷入口</string>
+    <string name="settings_shizuku_launch_mode_desc">开启后首页显示 Shizuku 快捷入口；未选择应用时使用官方 Shizuku。</string>
     <string name="settings_shizuku_launch_app_title">自选 Shizuku 应用</string>
-    <string name="settings_shizuku_launch_app_default_desc">尚未选择自定义应用</string>
+    <string name="settings_shizuku_launch_app_default_desc">当前使用官方 Shizuku</string>
     <string name="settings_shizuku_launch_app_selected_desc">当前使用：%1$s</string>
+    <string name="settings_shizuku_launch_app_reset_title">恢复默认入口</string>
+    <string name="settings_shizuku_launch_app_reset_desc">清空自选应用，使用默认 Shizuku 入口</string>
+    <string name="settings_shizuku_launch_app_reset_default_desc">当前已使用默认 Shizuku 入口</string>
     <string name="settings_shizuku_launch_app_picker_title">选择 Shizuku 应用</string>
     <string name="settings_shizuku_launch_app_picker_failed">加载应用列表失败</string>
     <string name="settings_shizuku_launch_app_loading">正在加载应用列表…</string>
@@ -391,7 +389,7 @@
     <string name="home_overlay_close">关闭操作面板</string>
 
     <!-- home: action buttons -->
-    <string name="home_btn_open_shizuku">打开 Shizuku</string>
+    <string name="home_btn_open_shizuku">快捷入口</string>
     <string name="home_btn_open_service">打开服务</string>
     <string name="home_btn_close_service">关闭服务</string>
 

@@ -131,7 +131,6 @@ fun SettingsView(
     }
 
     var showShizukuAppPicker by remember { mutableStateOf(false) }
-    var showShizukuLaunchModePicker by remember { mutableStateOf(false) }
     var shizukuAppPickerLoadKey by remember { mutableStateOf(0) }
     var shizukuAppSearch by remember { mutableStateOf("") }
     var shizukuAppOptions by remember { mutableStateOf<List<ShizukuLaunchAppOption>?>(null) }
@@ -207,51 +206,6 @@ fun SettingsView(
         ResourceInitDialog(
             state = resourceInitState,
             onRetry = {}
-        )
-    }
-
-    if (showShizukuLaunchModePicker) {
-        AdaptiveTaskPromptDialog(
-            visible = true,
-            title = stringResource(R.string.settings_shizuku_launch_mode_picker_title),
-            icon = Icons.Rounded.Build,
-            confirmText = stringResource(R.string.common_close),
-            dismissText = "",
-            onConfirm = { showShizukuLaunchModePicker = false },
-            onDismissRequest = { showShizukuLaunchModePicker = false },
-            content = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    ShizukuLaunchMode.entries.forEach { mode ->
-                        val selected = mode == shizukuLaunchMode
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .selectable(
-                                    selected = selected,
-                                    onClick = {
-                                        viewModel.setShizukuLaunchMode(mode)
-                                        showShizukuLaunchModePicker = false
-                                    },
-                                    role = Role.RadioButton
-                                )
-                                .padding(vertical = 6.dp)
-                        ) {
-                            RadioButton(selected = selected, onClick = null)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = shizukuLaunchModeLabel(mode),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                }
-            }
         )
     }
 
@@ -501,24 +455,20 @@ fun SettingsView(
                     )
                     SettingsDivider(contentColor)
                     if (startupBackend == RemoteBackend.SHIZUKU) {
-                        val shizukuLaunchModeDescription = if (shizukuLaunchMode == ShizukuLaunchMode.OFF) {
-                            stringResource(R.string.settings_shizuku_launch_mode_desc_off)
-                        } else {
-                            stringResource(
-                                R.string.settings_shizuku_launch_mode_desc_on,
-                                shizukuLaunchModeLabel(shizukuLaunchMode)
-                            )
-                        }
-                        SettingClickItem(
+                        SettingSwitchItem(
                             title = stringResource(R.string.settings_shizuku_launch_mode_title),
-                            description = shizukuLaunchModeDescription,
-                            contentColor = contentColor
-                        ) {
-                            showShizukuLaunchModePicker = true
-                        }
+                            description = stringResource(R.string.settings_shizuku_launch_mode_desc),
+                            contentColor = contentColor,
+                            checked = shizukuLaunchMode != ShizukuLaunchMode.OFF,
+                            onCheckedChange = { checked ->
+                                viewModel.setShizukuLaunchMode(
+                                    if (checked) ShizukuLaunchMode.CUSTOM else ShizukuLaunchMode.OFF
+                                )
+                            }
+                        )
                         SettingsDivider(contentColor)
                         AnimatedVisibility(
-                            visible = shizukuLaunchMode == ShizukuLaunchMode.CUSTOM,
+                            visible = shizukuLaunchMode != ShizukuLaunchMode.OFF,
                             enter = expandVertically(),
                             exit = shrinkVertically()
                         ) {
@@ -544,6 +494,20 @@ fun SettingsView(
                                     shizukuAppSearch = ""
                                     shizukuAppPickerLoadKey += 1
                                     showShizukuAppPicker = true
+                                }
+                                SettingsDivider(contentColor)
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_shizuku_launch_app_reset_title),
+                                    description = stringResource(
+                                        if (shizukuLaunchPackage.isBlank()) {
+                                            R.string.settings_shizuku_launch_app_reset_default_desc
+                                        } else {
+                                            R.string.settings_shizuku_launch_app_reset_desc
+                                        }
+                                    ),
+                                    contentColor = contentColor
+                                ) {
+                                    viewModel.setShizukuLaunchPackage("")
                                 }
                                 SettingsDivider(contentColor)
                             }
@@ -1137,15 +1101,6 @@ private fun SettingRemoteBackendItem(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun shizukuLaunchModeLabel(mode: ShizukuLaunchMode): String {
-    return when (mode) {
-        ShizukuLaunchMode.OFF -> stringResource(R.string.settings_shizuku_launch_mode_off)
-        ShizukuLaunchMode.OFFICIAL -> stringResource(R.string.settings_shizuku_launch_mode_official)
-        ShizukuLaunchMode.CUSTOM -> stringResource(R.string.settings_shizuku_launch_mode_custom)
     }
 }
 

@@ -322,7 +322,7 @@ fun HomeView(
         // Shizuku/Sui 检测
         val skipShizukuCheck by appSettingsManager.skipShizukuCheck.collectAsStateWithLifecycle()
         val shizukuLaunchPackage by appSettingsManager.shizukuLaunchPackage.collectAsStateWithLifecycle()
-        val shizukuStatusPackage = if (shizukuLaunchMode == ShizukuLaunchMode.CUSTOM) {
+        val shizukuStatusPackage = if (shizukuLaunchMode != ShizukuLaunchMode.OFF) {
             shizukuLaunchPackage
         } else {
             ""
@@ -545,6 +545,13 @@ private fun ScreenInfoCard(
                             .weight(1f)
                             .height(52.dp),
                         shape = MaterialTheme.shapes.large,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.primary
+                        ),
+                        border = BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+                        ),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         enabled = !isLoading
                     ) {
@@ -607,13 +614,16 @@ private fun ScreenInfoCard(
                         content = serviceButtonContent
                     )
                 } else {
-                    Button(
+                    OutlinedButton(
                         onClick = onToggleRemoteService,
                         modifier = serviceButtonModifier,
                         shape = MaterialTheme.shapes.large,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.primary
+                        ),
+                        border = BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
                         ),
                         contentPadding = serviceButtonContentPadding,
                         enabled = !isLoading,
