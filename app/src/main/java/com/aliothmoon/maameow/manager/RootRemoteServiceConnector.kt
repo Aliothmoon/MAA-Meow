@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.manager
 
 import android.content.Context
+import android.os.Build
 import android.os.IBinder
 import android.os.Process
 import com.aliothmoon.maameow.BuildConfig
@@ -152,6 +153,9 @@ object RootRemoteServiceConnector : RemoteServiceConnectorBackend {
             append(shellQuote(RemoteServiceImpl::class.java.name))
             append(" --uid=")
             append(uid)
+            if (RootServiceUidPolicy.shouldKeepRoot(Build.VERSION.SDK_INT)) {
+                append(" --keep-root")
+            }
             append(" --log-file=")
             append(shellQuote(logFile.absolutePath))
             if (BuildConfig.DEBUG) {
