@@ -77,4 +77,7 @@ data class AppSettings(
      * Android 12 以下设备只能使用内置蓝色主题
      */
     @PrefKey(default = "false") val useSystemMonetColor: String = "false",
+
+    /** 页面缩放比例（80~110，默认 100 = 1.0x） */
+    @PrefKey(default = "100") val fontSizeScale: String = "100",
 )

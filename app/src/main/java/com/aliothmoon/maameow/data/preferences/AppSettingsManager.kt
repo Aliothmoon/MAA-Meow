@@ -40,6 +40,16 @@ class AppSettingsManager(
 
     companion object {
         val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
+
+        /** 页面缩放范围 */
+        const val FONT_SIZE_SCALE_MIN = 80
+        const val FONT_SIZE_SCALE_MAX = 110
+        const val FONT_SIZE_SCALE_DEFAULT = 100
+
+        /** 从存储原始值解析为合法的 font size scale */
+        fun parseFontSizeScale(raw: String): Int =
+            raw.toIntOrNull()?.coerceIn(FONT_SIZE_SCALE_MIN, FONT_SIZE_SCALE_MAX)
+                ?: FONT_SIZE_SCALE_DEFAULT
     }
 
     val settings: Flow<AppSettings> = with(AppSettingsSchema) { context.dataStore.flow }
@@ -530,5 +540,18 @@ class AppSettingsManager(
             context.dataStore.edit { it[useSystemMonetColor] = enabled.toString() }
         }
     }
+
+    // 页面缩放比例（80~110，默认 100）
+    val fontSizeScale: StateFlow<Int> = settings
+        .map { parseFontSizeScale(it.fontSizeScale) }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, parseFontSizeScale(initialSettings.fontSizeScale))
+
+    suspend fun setFontSizeScale(scale: Int) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[fontSizeScale] = scale.coerceIn(FONT_SIZE_SCALE_MIN, FONT_SIZE_SCALE_MAX).toString() }
+        }
+    }
+
 
 }
