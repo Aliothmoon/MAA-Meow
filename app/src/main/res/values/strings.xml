@@ -257,6 +257,8 @@
     <string name="settings_theme_white">白色</string>
     <string name="settings_theme_dark">暗色</string>
     <string name="settings_theme_pure_dark">纯黑</string>
+    <string name="settings_font_size_title">页面缩放</string>
+    <string name="settings_font_size_summary">调整页面内容大小 (80-110)</string>
     <string name="settings_language_title">语言</string>
     <string name="settings_language_system">跟随系统</string>
     <string name="settings_language_zh">中文</string>

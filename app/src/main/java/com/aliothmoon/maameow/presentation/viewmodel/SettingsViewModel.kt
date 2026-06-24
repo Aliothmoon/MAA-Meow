@@ -266,4 +266,12 @@ class SettingsViewModel(
             appSettingsManager.setUseSystemMonetColor(enabled)
         }
     }
+
+    // ============ Font Size Scale ============
+    val fontSizeScale: StateFlow<Int> = appSettingsManager.fontSizeScale
+    fun setFontSizeScale(scale: Int) {
+        viewModelScope.launch {
+            appSettingsManager.setFontSizeScale(scale)
+        }
+    }
 }

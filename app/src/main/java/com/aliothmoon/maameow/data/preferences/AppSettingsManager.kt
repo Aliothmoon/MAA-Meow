@@ -531,4 +531,16 @@ class AppSettingsManager(
         }
     }
 
+    // 页面缩放比例（80~110，默认 100）
+    val fontSizeScale: StateFlow<Int> = settings
+        .map { it.fontSizeScale.toIntOrNull()?.coerceIn(80, 110) ?: 100 }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.fontSizeScale.toIntOrNull()?.coerceIn(80, 110) ?: 100)
+
+    suspend fun setFontSizeScale(scale: Int) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[fontSizeScale] = scale.coerceIn(80, 110).toString() }
+        }
+    }
+
 }
