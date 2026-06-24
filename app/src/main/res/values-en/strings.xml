@@ -101,7 +101,7 @@
     <string name="settings_import_config_title">Import Configuration</string>
     <string name="settings_import_config_desc">Restore settings and task configurations from a file</string>
     <string name="settings_section_achievement">Achievements</string>
-    <string name="settings_achievement_snackbar_title">Popup Notifications</string>
+    <string name="settings_achievement_snackbar_title">Achievement Notifications</string>
     <string name="settings_achievement_snackbar_desc">Show Snackbar when achievements are unlocked</string>
 
 

@@ -302,7 +302,7 @@
     <string name="settings_import_config_desc">从文件恢复设置和任务配置</string>
 
         <string name="settings_section_achievement">成就</string>
-    <string name="settings_achievement_snackbar_title">弹窗提示</string>
+    <string name="settings_achievement_snackbar_title">成就提示</string>
     <string name="settings_achievement_snackbar_desc">成就解锁时弹出 Snackbar 提示</string>
 
 
