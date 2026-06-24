@@ -48,7 +48,6 @@
     <string name="settings_startup_backend_desc">Choose how the app obtains system permissions</string>
     <!-- settings: monet theme color (system Material You toggle, Android 12+) -->
     <string name="settings_monet_color_title">Monet Theme Color</string>
-    <string name="settings_monet_color_desc">Use Material You dynamic color on Android 12+. Off uses the built-in blue theme.</string>
 
     <string name="settings_achievement_title">Achievements</string>
     <string name="settings_achievement_desc">View MaaMeow milestones and hidden easter eggs</string>
@@ -59,6 +58,8 @@
     <string name="settings_theme_white">Light</string>
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_theme_pure_dark">Pure Black</string>
+    <string name="settings_font_size_title">Page Scale</string>
+    <string name="settings_font_size_summary">Adjust page content size (80-110)</string>
     <string name="settings_language_title">Language</string>
     <string name="settings_language_system">Follow System</string>
     <string name="settings_language_zh">中文</string>

@@ -246,7 +246,6 @@
     <string name="settings_startup_backend_desc">选择应用获取系统权限的方式</string>
     <!-- settings: monet theme color (system Material You toggle, Android 12+) -->
     <string name="settings_monet_color_title">莫奈主题色</string>
-    <string name="settings_monet_color_desc">Android 12+ 启用 Material You 动态取色；关闭则使用内置蓝色主题</string>
 
     <string name="settings_achievement_title">成就</string>
     <string name="settings_achievement_desc">查看 MaaMeow 使用记录与隐藏彩蛋</string>
@@ -257,6 +256,8 @@
     <string name="settings_theme_white">白色</string>
     <string name="settings_theme_dark">暗色</string>
     <string name="settings_theme_pure_dark">纯黑</string>
+    <string name="settings_font_size_title">页面缩放</string>
+    <string name="settings_font_size_summary">调整页面内容大小 (80-110)</string>
     <string name="settings_language_title">语言</string>
     <string name="settings_language_system">跟随系统</string>
     <string name="settings_language_zh">中文</string>
