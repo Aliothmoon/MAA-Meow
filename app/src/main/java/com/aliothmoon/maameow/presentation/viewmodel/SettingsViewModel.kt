@@ -274,4 +274,11 @@ class SettingsViewModel(
             appSettingsManager.setFontSizeScale(scale)
         }
     }
+    // 成就 Snackbar 提示开关
+    val showAchievementSnackbar: StateFlow<Boolean> = appSettingsManager.showAchievementSnackbar
+    fun setShowAchievementSnackbar(enabled: Boolean) {
+        viewModelScope.launch {
+            appSettingsManager.setShowAchievementSnackbar(enabled)
+        }
+    }
 }

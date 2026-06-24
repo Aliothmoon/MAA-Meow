@@ -1,6 +1,9 @@
 package com.aliothmoon.maameow.presentation.view.notification
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.navigation.NavController
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -61,6 +64,7 @@ private val PROVIDERS: List<Pair<String, Int>> = listOf(
 
 @Composable
 fun NotificationSettingsView(
+    navController: NavController,
     viewModel: NotificationSettingsViewModel = koinViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -77,7 +81,11 @@ fun NotificationSettingsView(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = stringResource(R.string.notification_settings_title))
+            TopAppBar(
+                title = stringResource(R.string.notification_settings_title),
+                navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                onNavigationClick = { navController.navigateUp() }
+            )
         }
     ) { paddingValues ->
     val contentColor = MaterialTheme.colorScheme.onSurface

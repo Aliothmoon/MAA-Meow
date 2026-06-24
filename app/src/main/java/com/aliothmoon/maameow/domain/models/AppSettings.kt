@@ -80,4 +80,7 @@ data class AppSettings(
 
     /** 页面缩放比例（80~110，默认 100 = 1.0x） */
     @PrefKey(default = "100") val fontSizeScale: String = "100",
+
+    /** 是否显示成就解锁时的 Snackbar 提示 */
+    @PrefKey(default = "true") val showAchievementSnackbar: String = "true",
 )

@@ -119,6 +119,7 @@ fun SettingsView(
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val useSystemMonetColor by viewModel.useSystemMonetColor.collectAsStateWithLifecycle()
     val fontSizeScale by viewModel.fontSizeScale.collectAsStateWithLifecycle()
+    val showAchievementSnackbar by viewModel.showAchievementSnackbar.collectAsStateWithLifecycle()
     val backgroundResolution by viewModel.backgroundResolution.collectAsStateWithLifecycle()
     val language by viewModel.language.collectAsStateWithLifecycle()
     val backupMessage by viewModel.backupMessage.collectAsStateWithLifecycle()
@@ -638,6 +639,57 @@ fun SettingsView(
                     ) {
                         importLauncher.launch(arrayOf("application/json"))
                     }
+                }
+            }
+
+            // 通知
+            item {
+                SectionHeader(stringResource(R.string.settings_section_notification))
+                InfoCard(
+                    title = "",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    contentColor = contentColor,
+                    contentPadding = PaddingValues(
+                        horizontal = MaaDesignTokens.Card.innerPadding,
+                        vertical = MaaDesignTokens.Spacing.listItemVertical
+                    )
+                ) {
+                    SettingClickItem(
+                        title = stringResource(R.string.settings_notification_title),
+                        description = stringResource(R.string.settings_notification_desc),
+                        contentColor = contentColor
+                    ) {
+                        navController.navigate(Routes.NOTIFICATION)
+                    }
+                }
+            }
+
+            // 成就
+            item {
+                SectionHeader(stringResource(R.string.settings_section_achievement))
+                InfoCard(
+                    title = "",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    contentColor = contentColor,
+                    contentPadding = PaddingValues(
+                        horizontal = MaaDesignTokens.Card.innerPadding,
+                        vertical = MaaDesignTokens.Spacing.listItemVertical
+                    )
+                ) {
+                    SettingClickItem(
+                        title = stringResource(R.string.settings_achievement_title),
+                        description = stringResource(R.string.settings_achievement_desc),
+                        contentColor = contentColor
+                    ) {
+                        navController.navigate(Routes.ACHIEVEMENT)
+                    }
+                    SettingsDivider(contentColor)
+                    SettingSwitchItem(
+                        title = stringResource(R.string.settings_achievement_snackbar_title),
+                        contentColor = contentColor,
+                        checked = showAchievementSnackbar,
+                        onCheckedChange = { viewModel.setShowAchievementSnackbar(it) }
+                    )
                 }
             }
 

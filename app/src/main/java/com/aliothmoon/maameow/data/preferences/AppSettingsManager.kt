@@ -553,6 +553,15 @@ class AppSettingsManager(
         }
     }
 
+    // 是否显示成就解锁时的 Snackbar 提示
+    val showAchievementSnackbar: StateFlow<Boolean> = settings
+        .map { it.showAchievementSnackbar.toBooleanStrictOrNull() ?: true }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.showAchievementSnackbar.toBooleanStrictOrNull() ?: true)
+
+    suspend fun setShowAchievementSnackbar(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[showAchievementSnackbar] = enabled.toString() }
         }
     }
 
