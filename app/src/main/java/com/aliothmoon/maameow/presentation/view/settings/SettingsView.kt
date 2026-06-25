@@ -441,6 +441,36 @@ fun SettingsView(
                 }
             }
 
+            // 显示设置
+            item {
+                SectionHeader(stringResource(R.string.settings_section_display))
+                InfoCard(
+                    title = "",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    contentColor = contentColor,
+                    contentPadding = PaddingValues(
+                        horizontal = MaaDesignTokens.Card.innerPadding,
+                        vertical = MaaDesignTokens.Spacing.listItemVertical
+                    )
+                ) {
+                    SettingLanguageItem(
+                        contentColor = contentColor,
+                        selectedLanguage = language,
+                        onLanguageSelected = { viewModel.setLanguage(it) }
+                    )
+                    SettingsDivider(contentColor)
+                    SettingThemeSection(
+                        contentColor = contentColor,
+                        selectedMode = themeMode,
+                        onModeSelected = { viewModel.setThemeMode(it) },
+                        useSystemMonetColor = useSystemMonetColor,
+                        onMonetColorChanged = { viewModel.setUseSystemMonetColor(it) },
+                        fontSizeScale = fontSizeScale,
+                        onFontSizeScaleChanged = { viewModel.setFontSizeScale(it) }
+                    )
+                }
+            }
+
             // 其他设置
             item {
                 SectionHeader(stringResource(R.string.settings_section_other))
@@ -518,22 +548,6 @@ fun SettingsView(
                             }
                         }
                     }
-                    SettingsDivider(contentColor)
-                    SettingThemeSection(
-                        contentColor = contentColor,
-                        selectedMode = themeMode,
-                        onModeSelected = { viewModel.setThemeMode(it) },
-                        useSystemMonetColor = useSystemMonetColor,
-                        onMonetColorChanged = { viewModel.setUseSystemMonetColor(it) },
-                        fontSizeScale = fontSizeScale,
-                        onFontSizeScaleChanged = { viewModel.setFontSizeScale(it) }
-                    )
-                    SettingsDivider(contentColor)
-                    SettingLanguageItem(
-                        contentColor = contentColor,
-                        selectedLanguage = language,
-                        onLanguageSelected = { viewModel.setLanguage(it) }
-                    )
                     SettingsDivider(contentColor)
                     SettingBackgroundResolutionItem(
                         contentColor = contentColor,
@@ -765,7 +779,7 @@ private fun SettingThemeSection(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // 标题
         Text(

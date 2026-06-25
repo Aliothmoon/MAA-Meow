@@ -43,6 +43,7 @@
     <string name="settings_log_export_chooser_title">Export Logs</string>
     <string name="settings_debug_mode_title">Debug Mode</string>
     <string name="settings_debug_mode_desc">Record detailed log information when enabled</string>
+    <string name="settings_section_display">Display</string>
     <string name="settings_section_other">Other</string>
     <string name="settings_startup_backend_title">Startup Mode</string>
     <string name="settings_startup_backend_desc">Choose how the app obtains system permissions</string>
