@@ -246,6 +246,7 @@
     <string name="settings_startup_backend_desc">选择应用获取系统权限的方式</string>
     <!-- settings: monet theme color (system Material You toggle, Android 12+) -->
     <string name="settings_monet_color_title">莫奈主题色</string>
+    <string name="settings_monet_color_desc">根据壁纸动态取色，关闭则使用内置蓝色主题</string>
 
     <string name="settings_achievement_title">成就</string>
     <string name="settings_achievement_desc">查看 MaaMeow 使用记录与隐藏彩蛋</string>
@@ -301,10 +302,10 @@
     <string name="settings_import_config_title">导入配置</string>
     <string name="settings_import_config_desc">从文件恢复设置和任务配置</string>
 
-        <string name="settings_section_achievement">成就</string>
+    <!-- settings: achievement section -->
+    <string name="settings_section_achievement">成就</string>
     <string name="settings_achievement_snackbar_title">成就提示</string>
     <string name="settings_achievement_snackbar_desc">成就解锁时弹出 Snackbar 提示</string>
-
 
     <!-- achievements -->
     <string name="achievement_title">成就</string>
@@ -359,7 +360,6 @@
 
     <!-- home: top bar & app title -->
     <string name="home_app_title">MAA</string>
-    <string name="home_cd_open_settings">设置</string>
 
     <!-- home: screen info card -->
     <string name="home_screen_resolution">屏幕分辨率</string>

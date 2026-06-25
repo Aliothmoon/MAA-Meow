@@ -48,6 +48,7 @@
     <string name="settings_startup_backend_desc">Choose how the app obtains system permissions</string>
     <!-- settings: monet theme color (system Material You toggle, Android 12+) -->
     <string name="settings_monet_color_title">Monet Theme Color</string>
+    <string name="settings_monet_color_desc">Generate colors from your wallpaper; off uses the built-in blue theme.</string>
 
     <string name="settings_achievement_title">Achievements</string>
     <string name="settings_achievement_desc">View MaaMeow milestones and hidden easter eggs</string>
@@ -104,7 +105,6 @@
     <string name="settings_achievement_snackbar_title">Achievement Notifications</string>
     <string name="settings_achievement_snackbar_desc">Show Snackbar when achievements are unlocked</string>
 
-
     <string name="achievement_title">Achievements</string>
     <string name="achievement_unlocked_message">Achievement unlocked: %1$s</string>
     <string name="achievement_search_hint">Search achievement name</string>
@@ -156,7 +156,6 @@
     <string name="achievement_debug_clear_done">All achievement records deleted</string>
     <!-- home: top bar & app title -->
     <string name="home_app_title">MAA</string>
-    <string name="home_cd_open_settings">Settings</string>
 
     <!-- home: screen info card -->
     <string name="home_screen_resolution">Screen Resolution</string>

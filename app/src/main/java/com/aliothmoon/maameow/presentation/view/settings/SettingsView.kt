@@ -670,6 +670,7 @@ fun SettingsView(
                     SettingsDivider(contentColor)
                     SettingSwitchItem(
                         title = stringResource(R.string.settings_achievement_snackbar_title),
+                        description = stringResource(R.string.settings_achievement_snackbar_desc),
                         contentColor = contentColor,
                         checked = showAchievementSnackbar,
                         onCheckedChange = { viewModel.setShowAchievementSnackbar(it) }
@@ -813,12 +814,18 @@ private fun SettingThemeSection(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(R.string.settings_monet_color_title),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = contentColor,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.settings_monet_color_title),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = contentColor
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_monet_color_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = contentColor.copy(alpha = 0.6f)
+                    )
+                }
                 Switch(checked = useSystemMonetColor, onCheckedChange = onMonetColorChanged)
             }
         }
@@ -927,11 +934,12 @@ private fun FontSizeSetting(
                 )
             }
         }
-        // 实时预览框：用 sliderValue 实时缩放，不等待松手
+        // 实时预览框：previewDensity 已被全局缩放（D0 * value/100），
+        // 故按 current/value 还原到 D0 * current/100，避免与全局缩放叠加造成重复缩放。
         val previewDensity = LocalDensity.current
         CompositionLocalProvider(
             LocalDensity provides Density(
-                density = previewDensity.density * current / 100f,
+                density = previewDensity.density * current / value.toFloat(),
                 fontScale = previewDensity.fontScale
             )
         ) {
