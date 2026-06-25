@@ -524,16 +524,6 @@ fun SettingsView(
                             }
                         }
                     }
-                    if (BuildConfig.DEBUG) {
-                        SettingsDivider(contentColor)
-                        SettingClickItem(
-                            title = stringResource(R.string.settings_achievement_debug_title),
-                            description = stringResource(R.string.settings_achievement_debug_desc),
-                            contentColor = contentColor
-                        ) {
-                            navController.navigate(Routes.ACHIEVEMENT_DEBUG)
-                        }
-                    }
                     SettingsDivider(contentColor)
                     SettingThemeSection(
                         contentColor = contentColor,
@@ -690,6 +680,16 @@ fun SettingsView(
                         checked = showAchievementSnackbar,
                         onCheckedChange = { viewModel.setShowAchievementSnackbar(it) }
                     )
+                    if (BuildConfig.DEBUG) {
+                        SettingsDivider(contentColor)
+                        SettingClickItem(
+                            title = stringResource(R.string.settings_achievement_debug_title),
+                            description = stringResource(R.string.settings_achievement_debug_desc),
+                            contentColor = contentColor
+                        ) {
+                            navController.navigate(Routes.ACHIEVEMENT_DEBUG)
+                        }
+                    }
                 }
             }
 
