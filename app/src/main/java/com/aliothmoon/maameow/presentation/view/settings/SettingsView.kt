@@ -965,7 +965,7 @@ private fun FontSizeSetting(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ) {
                 Text(
-                    text = "你是谁？请支持牛牛！('- ' )",
+                    text = stringResource(R.string.settings_font_size_preview_text),
                     modifier = Modifier.padding(16.dp),
                     color = contentColor
                 )

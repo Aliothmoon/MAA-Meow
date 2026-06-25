@@ -62,6 +62,7 @@
     <string name="settings_theme_pure_dark">Pure Black</string>
     <string name="settings_font_size_title">Page Scale</string>
     <string name="settings_font_size_summary">Adjust page content size (80-110)</string>
+    <string name="settings_font_size_preview_text">Who are you? Please support Pallas! (\'- \' )</string>
     <string name="settings_language_title">Language</string>
     <string name="settings_language_system">Follow System</string>
     <string name="settings_language_zh">中文</string>
