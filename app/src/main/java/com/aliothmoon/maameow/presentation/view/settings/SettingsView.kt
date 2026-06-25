@@ -22,14 +22,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material3.CircularProgressIndicator
 import android.os.Build
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -330,9 +326,7 @@ fun SettingsView(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = stringResource(R.string.settings_title),
-                navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
-                onNavigationClick = { navController.navigateUp() }
+                title = stringResource(R.string.settings_title)
             )
         }
     ) { paddingValues ->
@@ -766,92 +760,74 @@ private fun SettingThemeSection(
     fontSizeScale: Int,
     onFontSizeScaleChanged: (Int) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // 标题行：点击展开/收起
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = !expanded }
-                .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.settings_theme_title),
-                style = MaterialTheme.typography.bodyLarge,
-                color = contentColor,
-                modifier = Modifier.weight(1f)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // 标题
+        Text(
+            text = stringResource(R.string.settings_theme_title),
+            style = MaterialTheme.typography.bodyLarge,
+            color = contentColor
+        )
+        // 主题模式选择
+        Row(modifier = Modifier.fillMaxWidth()) {
+            val modes = listOf(
+                AppSettingsManager.ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
+                AppSettingsManager.ThemeMode.WHITE to stringResource(R.string.settings_theme_white),
+                AppSettingsManager.ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
+                AppSettingsManager.ThemeMode.PURE_DARK to stringResource(R.string.settings_theme_pure_dark)
             )
-            Icon(
-                imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = null,
-                tint = contentColor.copy(alpha = 0.6f)
-            )
-        }
-        // 展开内容：主题模式 + 莫奈色 + 页面缩放
-        AnimatedVisibility(visible = expanded) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // 主题模式选择
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    val modes = listOf(
-                        AppSettingsManager.ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
-                        AppSettingsManager.ThemeMode.WHITE to stringResource(R.string.settings_theme_white),
-                        AppSettingsManager.ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
-                        AppSettingsManager.ThemeMode.PURE_DARK to stringResource(R.string.settings_theme_pure_dark)
-                    )
-                    modes.forEach { (mode, label) ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(8.dp))
-                                .selectable(
-                                    selected = mode == selectedMode,
-                                    onClick = { onModeSelected(mode) },
-                                    role = Role.RadioButton
-                                )
-                        ) {
-                            RadioButton(
-                                selected = mode == selectedMode,
-                                onClick = null
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = contentColor,
-                                maxLines = 1
-                            )
-                        }
-                    }
-                }
-                // 莫奈主题色（SDK >= S）
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = stringResource(R.string.settings_monet_color_title),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = contentColor,
-                            modifier = Modifier.weight(1f)
+            modes.forEach { (mode, label) ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .selectable(
+                            selected = mode == selectedMode,
+                            onClick = { onModeSelected(mode) },
+                            role = Role.RadioButton
                         )
-                        Switch(checked = useSystemMonetColor, onCheckedChange = onMonetColorChanged)
-                    }
+                ) {
+                    RadioButton(
+                        selected = mode == selectedMode,
+                        onClick = null
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = contentColor,
+                        maxLines = 1
+                    )
                 }
-                // 页面缩放
-                FontSizeSetting(
-                    contentColor = contentColor,
-                    value = fontSizeScale,
-                    onValueChange = onFontSizeScaleChanged
-                )
             }
         }
+        // 莫奈主题色（SDK >= S）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_monet_color_title),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = contentColor,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(checked = useSystemMonetColor, onCheckedChange = onMonetColorChanged)
+            }
+        }
+        // 页面缩放
+        FontSizeSetting(
+            contentColor = contentColor,
+            value = fontSizeScale,
+            onValueChange = onFontSizeScaleChanged
+        )
     }
 }
 
