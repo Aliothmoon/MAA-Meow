@@ -125,6 +125,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import com.aliothmoon.maameow.presentation.view.panel.ToolboxPanel
 import com.aliothmoon.maameow.presentation.view.panel.LocalToolboxFileExporter
 import com.aliothmoon.maameow.presentation.view.panel.rememberSafToolboxFileExporter
+import com.aliothmoon.maameow.theme.MaaAnimations
+import androidx.compose.animation.core.tween
 
 @Composable
 fun BackgroundTaskView(
@@ -182,7 +184,13 @@ fun BackgroundTaskView(
 
     LaunchedEffect(state.current) {
         if (pagerState.currentPage != state.current.ordinal) {
-            pagerState.scrollToPage(state.current.ordinal)
+            pagerState.animateScrollToPage(
+                state.current.ordinal,
+                animationSpec = tween(
+                    easing = MaaAnimations.springEasing,
+                    durationMillis = 250
+                )
+            )
         }
     }
     val context = LocalContext.current
