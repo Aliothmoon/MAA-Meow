@@ -72,7 +72,6 @@ import com.aliothmoon.maameow.data.permission.PermissionState
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunMode
-import com.aliothmoon.maameow.domain.models.ShizukuLaunchMode
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
@@ -112,7 +111,7 @@ fun HomeView(
 
     val context = LocalContext.current
     val (width, height) = Misc.getScreenSize(context)
-    val shizukuLaunchMode by appSettingsManager.shizukuLaunchMode.collectAsStateWithLifecycle()
+    val shizukuShortcutEnabled by appSettingsManager.shizukuShortcutEnabled.collectAsStateWithLifecycle()
 
     val startupDialog by updateViewModel.startupUpdateDialog.collectAsStateWithLifecycle()
 
@@ -293,7 +292,7 @@ fun HomeView(
                         remoteServiceActive = uiState.remoteServiceActive,
                         isLoading = uiState.isLoading,
                         showShizukuShortcut = permissionState.startupBackend == RemoteBackend.SHIZUKU &&
-                                shizukuLaunchMode != ShizukuLaunchMode.OFF,
+                                shizukuShortcutEnabled,
                         onOpenShizuku = { viewModel.onOpenShizuku() },
                         onToggleRemoteService = { viewModel.onToggleRemoteService() }
                     )
@@ -327,16 +326,11 @@ fun HomeView(
         // Shizuku/Sui 检测
         val skipShizukuCheck by appSettingsManager.skipShizukuCheck.collectAsStateWithLifecycle()
         val shizukuLaunchPackage by appSettingsManager.shizukuLaunchPackage.collectAsStateWithLifecycle()
-        val shizukuStatusPackage = if (shizukuLaunchMode != ShizukuLaunchMode.OFF) {
-            shizukuLaunchPackage
-        } else {
-            ""
+        var shizukuStatus by remember(shizukuLaunchPackage) {
+            mutableStateOf(ShizukuInstallHelper.checkStatus(context, shizukuLaunchPackage))
         }
-        var shizukuStatus by remember(shizukuStatusPackage) {
-            mutableStateOf(ShizukuInstallHelper.checkStatus(context, shizukuStatusPackage))
-        }
-        LifecycleResumeEffect(shizukuStatusPackage) {
-            shizukuStatus = ShizukuInstallHelper.checkStatus(context, shizukuStatusPackage)
+        LifecycleResumeEffect(shizukuLaunchPackage) {
+            shizukuStatus = ShizukuInstallHelper.checkStatus(context, shizukuLaunchPackage)
             onPauseOrDispose {}
         }
         if (permissionState.startupBackend == RemoteBackend.SHIZUKU && !skipShizukuCheck) {
@@ -372,7 +366,7 @@ fun HomeView(
                         icon = Icons.Rounded.Build,
                         confirmText = stringResource(R.string.dialog_shizuku_open_app),
                         onConfirm = {
-                            ShizukuInstallHelper.openShizuku(context, shizukuStatusPackage)
+                            ShizukuInstallHelper.openShizuku(context, shizukuLaunchPackage)
                         },
                         neutralText = if (permissionState.rootAvailable)
                             stringResource(R.string.dialog_shizuku_switch_to_root)

@@ -57,11 +57,11 @@ import androidx.navigation.NavController
 import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
+import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
-import com.aliothmoon.maameow.domain.models.ShizukuLaunchMode
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.LogExportService
 import com.aliothmoon.maameow.domain.service.ResourceInitService
@@ -100,7 +100,7 @@ fun SettingsView(
     val autoDownloadUpdate by viewModel.autoDownloadUpdate.collectAsStateWithLifecycle()
     val startupBackend by viewModel.startupBackend.collectAsStateWithLifecycle()
     val skipShizukuCheck by viewModel.skipShizukuCheck.collectAsStateWithLifecycle()
-    val shizukuLaunchMode by viewModel.shizukuLaunchMode.collectAsStateWithLifecycle()
+    val shizukuShortcutEnabled by viewModel.shizukuShortcutEnabled.collectAsStateWithLifecycle()
     val shizukuLaunchPackage by viewModel.shizukuLaunchPackage.collectAsStateWithLifecycle()
     val deploymentWithPause by viewModel.deploymentWithPause.collectAsStateWithLifecycle()
     val forceFullscreenOnVirtualDisplay by viewModel.forceFullscreenOnVirtualDisplay.collectAsStateWithLifecycle()
@@ -459,16 +459,12 @@ fun SettingsView(
                             title = stringResource(R.string.settings_shizuku_launch_mode_title),
                             description = stringResource(R.string.settings_shizuku_launch_mode_desc),
                             contentColor = contentColor,
-                            checked = shizukuLaunchMode != ShizukuLaunchMode.OFF,
-                            onCheckedChange = { checked ->
-                                viewModel.setShizukuLaunchMode(
-                                    if (checked) ShizukuLaunchMode.CUSTOM else ShizukuLaunchMode.OFF
-                                )
-                            }
+                            checked = shizukuShortcutEnabled,
+                            onCheckedChange = { viewModel.setShizukuShortcutEnabled(it) }
                         )
                         SettingsDivider(contentColor)
                         AnimatedVisibility(
-                            visible = shizukuLaunchMode != ShizukuLaunchMode.OFF,
+                            visible = shizukuShortcutEnabled,
                             enter = expandVertically(),
                             exit = shrinkVertically()
                         ) {
@@ -477,7 +473,7 @@ fun SettingsView(
                                     context,
                                     shizukuLaunchPackage
                                 )
-                                val shizukuLaunchAppDescription = if (shizukuLaunchPackage.isBlank()) {
+                                val shizukuLaunchAppDescription = if (shizukuLaunchPackage == OFFICIAL_SHIZUKU_PACKAGE) {
                                     stringResource(R.string.settings_shizuku_launch_app_default_desc)
                                 } else {
                                     stringResource(
@@ -498,16 +494,10 @@ fun SettingsView(
                                 SettingsDivider(contentColor)
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_shizuku_launch_app_reset_title),
-                                    description = stringResource(
-                                        if (shizukuLaunchPackage.isBlank()) {
-                                            R.string.settings_shizuku_launch_app_reset_default_desc
-                                        } else {
-                                            R.string.settings_shizuku_launch_app_reset_desc
-                                        }
-                                    ),
+                                    description = stringResource(R.string.settings_shizuku_launch_app_reset_desc),
                                     contentColor = contentColor
                                 ) {
-                                    viewModel.setShizukuLaunchPackage("")
+                                    viewModel.setShizukuLaunchPackage(OFFICIAL_SHIZUKU_PACKAGE)
                                 }
                                 SettingsDivider(contentColor)
                             }

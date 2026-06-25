@@ -265,13 +265,12 @@
     <string name="settings_background_resolution_desc">仅后台模式生效</string>
     <string name="settings_skip_shizuku_check">跳过 Shizuku 检查</string>
     <string name="settings_shizuku_launch_mode_title">打开快捷入口</string>
-    <string name="settings_shizuku_launch_mode_desc">开启后首页显示 Shizuku 快捷入口；未选择应用时使用官方 Shizuku。</string>
+    <string name="settings_shizuku_launch_mode_desc">在首页显示 Shizuku 打开按钮，方便快速启动</string>
     <string name="settings_shizuku_launch_app_title">自选 Shizuku 应用</string>
     <string name="settings_shizuku_launch_app_default_desc">当前使用官方 Shizuku</string>
     <string name="settings_shizuku_launch_app_selected_desc">当前使用：%1$s</string>
     <string name="settings_shizuku_launch_app_reset_title">恢复默认入口</string>
-    <string name="settings_shizuku_launch_app_reset_desc">清空自选应用，使用默认 Shizuku 入口</string>
-    <string name="settings_shizuku_launch_app_reset_default_desc">当前已使用默认 Shizuku 入口</string>
+    <string name="settings_shizuku_launch_app_reset_desc">恢复为官方 Shizuku 入口</string>
     <string name="settings_shizuku_launch_app_picker_title">选择 Shizuku 应用</string>
     <string name="settings_shizuku_launch_app_picker_failed">加载应用列表失败</string>
     <string name="settings_shizuku_launch_app_loading">正在加载应用列表…</string>

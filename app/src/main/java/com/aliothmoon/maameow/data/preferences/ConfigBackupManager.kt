@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.data.preferences
 
+import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
 import com.aliothmoon.maameow.data.model.InfrastConfig
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskProfile
@@ -61,7 +62,7 @@ class ConfigBackupManager(
         require(backup.version <= CURRENT_VERSION) {
             "不支持的备份版本: ${backup.version}，当前最高支持: $CURRENT_VERSION"
         }
-        appSettingsManager.setSettings(backup.appSettings)
+        appSettingsManager.setSettings(backup.appSettings.normalizedForImport())
         notificationSettingsManager.updateSettings(backup.notificationSettings)
         taskChainState.importProfiles(backup.taskProfiles, backup.activeProfileId)
 
@@ -76,6 +77,13 @@ class ConfigBackupManager(
         const val CURRENT_VERSION = 1
 
         private fun AppSettings.sanitized() = copy(mirrorChyanCdk = "")
+
+        /**
+         * 导入时对已废弃或非法的旧值做归一化，避免后续读取时违反非空约束。
+          */
+        private fun AppSettings.normalizedForImport() = copy(
+            shizukuLaunchPackage = shizukuLaunchPackage.ifBlank { OFFICIAL_SHIZUKU_PACKAGE }
+        )
 
         /**
          * 导出时将使用自定义文件的基建配置回退为常规模式，

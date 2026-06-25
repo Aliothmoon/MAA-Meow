@@ -8,6 +8,7 @@ import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.AppAliveChecker
+import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.remote.AppAliveStatus
 import io.mockk.every
 import io.mockk.mockk
@@ -27,6 +28,7 @@ class PrepareTaskStartUseCaseTest {
     private val appSettings = mockk<AppSettingsManager> {
         every { runMode } returns MutableStateFlow(RunMode.BACKGROUND)
     }
+    private val achievementReporter = mockk<AchievementReporter>(relaxed = true)
 
     @Test
     fun manualStart_requiresConfirmation_whenGameIsDeadAndNoWakeUpLaunchConfigured() = runBlocking {
@@ -34,6 +36,7 @@ class PrepareTaskStartUseCaseTest {
             analyzeTaskChainUseCase = analyzeTaskChainUseCase,
             appAliveChecker = FakeAppAliveChecker(AppAliveStatus.DEAD),
             appSettings = appSettings,
+            achievementReporter = achievementReporter,
         )
 
         val result = useCase(
@@ -56,6 +59,7 @@ class PrepareTaskStartUseCaseTest {
             analyzeTaskChainUseCase = analyzeTaskChainUseCase,
             appAliveChecker = FakeAppAliveChecker(AppAliveStatus.DEAD),
             appSettings = appSettings,
+            achievementReporter = achievementReporter,
         )
 
         val result = useCase(
@@ -77,6 +81,7 @@ class PrepareTaskStartUseCaseTest {
             analyzeTaskChainUseCase = analyzeTaskChainUseCase,
             appAliveChecker = FakeAppAliveChecker(AppAliveStatus.DEAD),
             appSettings = appSettings,
+            achievementReporter = achievementReporter,
         )
 
         val result = useCase(
@@ -91,12 +96,13 @@ class PrepareTaskStartUseCaseTest {
     }
 
     @Test
-    fun launchesGame_skipsAliveCheck_andReturnsReady() = runBlocking {
+    fun launchesGame_recordsAliveStatus_andReturnsReady() = runBlocking {
         val checker = FakeAppAliveChecker(AppAliveStatus.DEAD)
         val useCase = PrepareTaskStartUseCase(
             analyzeTaskChainUseCase = analyzeTaskChainUseCase,
             appAliveChecker = checker,
             appSettings = appSettings,
+            achievementReporter = achievementReporter,
         )
 
         val result = useCase(
@@ -111,7 +117,9 @@ class PrepareTaskStartUseCaseTest {
         )
 
         assertTrue(result is TaskStartDecision.Ready)
-        assertEquals(0, checker.callCount)
+        val ready = result as TaskStartDecision.Ready
+        assertEquals(1, checker.callCount)
+        assertEquals(false, ready.plan.gameAliveBeforeStart)
     }
 
     @Test
@@ -120,6 +128,7 @@ class PrepareTaskStartUseCaseTest {
             analyzeTaskChainUseCase = analyzeTaskChainUseCase,
             appAliveChecker = FakeAppAliveChecker(AppAliveStatus.UNKNOWN),
             appSettings = appSettings,
+            achievementReporter = achievementReporter,
         )
 
         val result = useCase(
@@ -136,6 +145,7 @@ class PrepareTaskStartUseCaseTest {
             analyzeTaskChainUseCase = analyzeTaskChainUseCase,
             appAliveChecker = FakeAppAliveChecker(AppAliveStatus.ALIVE),
             appSettings = appSettings,
+            achievementReporter = achievementReporter,
         )
 
         val result = useCase(
@@ -157,6 +167,7 @@ class PrepareTaskStartUseCaseTest {
             analyzeTaskChainUseCase = analyzeTaskChainUseCase,
             appAliveChecker = FakeAppAliveChecker(AppAliveStatus.ALIVE),
             appSettings = appSettings,
+            achievementReporter = achievementReporter,
             isPackageInstalled = { false },
         )
 
@@ -180,6 +191,7 @@ class PrepareTaskStartUseCaseTest {
             analyzeTaskChainUseCase = analyzeTaskChainUseCase,
             appAliveChecker = FakeAppAliveChecker(AppAliveStatus.ALIVE),
             appSettings = appSettings,
+            achievementReporter = achievementReporter,
             isPackageInstalled = { false },
         )
 
@@ -202,6 +214,7 @@ class PrepareTaskStartUseCaseTest {
             analyzeTaskChainUseCase = analyzeTaskChainUseCase,
             appAliveChecker = FakeAppAliveChecker(AppAliveStatus.ALIVE),
             appSettings = appSettings,
+            achievementReporter = achievementReporter,
             isPackageInstalled = { false },
         )
 

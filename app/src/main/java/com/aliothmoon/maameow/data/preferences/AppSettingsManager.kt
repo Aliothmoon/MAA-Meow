@@ -17,7 +17,6 @@ import com.aliothmoon.maameow.domain.models.AppSettingsSchema
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunMode
-import com.aliothmoon.maameow.domain.models.ShizukuLaunchMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -207,34 +206,34 @@ class AppSettingsManager(
         }
     }
 
-    // Shizuku 管理器快捷入口模式
-    val shizukuLaunchMode: StateFlow<ShizukuLaunchMode> = settings
-        .map {
-            runCatching { ShizukuLaunchMode.valueOf(it.shizukuLaunchMode) }
-                .getOrDefault(ShizukuLaunchMode.OFF)
-        }
+    // Shizuku 管理器快捷入口是否启用
+    val shizukuShortcutEnabled: StateFlow<Boolean> = settings
+        .map { it.shizukuShortcutEnabled.toBooleanStrictOrNull() ?: false }
         .distinctUntilChanged()
         .stateIn(
             scope, SharingStarted.Eagerly,
-            runCatching { ShizukuLaunchMode.valueOf(initialSettings.shizukuLaunchMode) }
-                .getOrDefault(ShizukuLaunchMode.OFF)
+            initialSettings.shizukuShortcutEnabled.toBooleanStrictOrNull() ?: false
         )
 
-    suspend fun setShizukuLaunchMode(mode: ShizukuLaunchMode) {
+    suspend fun setShizukuShortcutEnabled(enabled: Boolean) {
         with(AppSettingsSchema) {
-            context.dataStore.edit { it[shizukuLaunchMode] = mode.name }
+            context.dataStore.edit { it[shizukuShortcutEnabled] = enabled.toString() }
         }
     }
 
-    // 自定义 Shizuku 管理器入口包名
+    // Shizuku 管理器入口包名，始终保持为非空包名。
     val shizukuLaunchPackage: StateFlow<String> = settings
         .map { it.shizukuLaunchPackage }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, initialSettings.shizukuLaunchPackage)
 
     suspend fun setShizukuLaunchPackage(packageName: String) {
+        val trimmedPackageName = packageName.trim()
+        require(trimmedPackageName.isNotEmpty()) { "shizukuLaunchPackage must not be blank" }
         with(AppSettingsSchema) {
-            context.dataStore.edit { it[shizukuLaunchPackage] = packageName.trim() }
+            context.dataStore.edit {
+                it[shizukuLaunchPackage] = trimmedPackageName
+            }
         }
     }
 

@@ -4,13 +4,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.core.content.FileProvider
+import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
 import rikka.sui.Sui
 import timber.log.Timber
 import java.io.File
 
 object ShizukuInstallHelper {
 
-    private const val SHIZUKU_PACKAGE = "moe.shizuku.privileged.api"
     private const val ASSET_NAME = "shizuku.apk"
 
     enum class ShizukuStatus {
@@ -20,22 +20,15 @@ object ShizukuInstallHelper {
         NOT_INSTALLED       // 均未检测到，需要安装
     }
 
-    fun checkStatus(context: Context, customPackageName: String = ""): ShizukuStatus {
-        val isSui = try { Sui.init(context.packageName) } catch (_: Exception) { false }
+    fun checkStatus(context: Context, launchPackageName: String = OFFICIAL_SHIZUKU_PACKAGE): ShizukuStatus {
+        val isSuiAvailable = try { Sui.init(context.packageName) } catch (_: Exception) { false }
+        if (isSuiAvailable) return ShizukuStatus.SUI_AVAILABLE
+        if (ShizukuManager.isShizukuAvailable()) return ShizukuStatus.READY
 
-        if (isSui) {
-            return ShizukuStatus.SUI_AVAILABLE
+        return when {
+            isPackageInstalled(context, launchPackageName) -> ShizukuStatus.APP_NOT_RUNNING
+            else -> ShizukuStatus.NOT_INSTALLED
         }
-
-        if (ShizukuManager.isShizukuAvailable()) {
-            return ShizukuStatus.READY
-        }
-
-        val appInstalled = isPackageInstalled(context, SHIZUKU_PACKAGE) ||
-                isPackageInstalled(context, customPackageName)
-
-        return if (appInstalled) ShizukuStatus.APP_NOT_RUNNING
-        else ShizukuStatus.NOT_INSTALLED
     }
 
     fun installShizuku(context: Context): Boolean {
@@ -59,12 +52,9 @@ object ShizukuInstallHelper {
         }
     }
 
-    fun openShizuku(context: Context, customPackageName: String = ""): Boolean {
+    fun openShizuku(context: Context, launchPackageName: String = OFFICIAL_SHIZUKU_PACKAGE): Boolean {
         return try {
-            // 自定义入口不可用时回退官方 Shizuku，保证默认流程仍可用。
-            val intent = launchIntentForPackage(context, customPackageName)
-                ?: launchIntentForPackage(context, SHIZUKU_PACKAGE)
-                ?: return false
+            val intent = launchIntentForPackage(context, launchPackageName) ?: return false
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
             true
@@ -74,17 +64,17 @@ object ShizukuInstallHelper {
         }
     }
 
+    private fun launchIntentForPackage(context: Context, packageName: String): Intent? {
+        if (packageName.isBlank()) return null
+        return context.packageManager.getLaunchIntentForPackage(packageName)
+    }
+
     fun getLaunchAppLabel(context: Context, packageName: String): String? {
         if (packageName.isBlank()) return null
         return runCatching {
             val info = context.packageManager.getApplicationInfo(packageName, 0)
             context.packageManager.getApplicationLabel(info).toString()
         }.getOrNull()
-    }
-
-    private fun launchIntentForPackage(context: Context, packageName: String): Intent? {
-        if (packageName.isBlank()) return null
-        return context.packageManager.getLaunchIntentForPackage(packageName)
     }
 
     private fun isPackageInstalled(context: Context, packageName: String): Boolean {

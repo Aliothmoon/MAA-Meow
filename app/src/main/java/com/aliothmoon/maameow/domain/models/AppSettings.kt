@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.domain.models
 
 import com.aliothmoon.preferences.PrefKey
 import com.aliothmoon.preferences.PrefSchema
+import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -26,11 +27,11 @@ data class AppSettings(
     @PrefKey(default = "false") val skipShizukuCheck: String = "false",
 
     /**
-     * Shizuku 管理器快捷入口设置。
-     * 模式默认关闭；自定义包名仅在 CUSTOM 模式下作为打开入口使用。
+     * Shizuku 管理器快捷入口是否启用。
+     * 入口包名默认官方 Shizuku，可由用户选择自定义应用。
      */
-    @PrefKey(default = "OFF") val shizukuLaunchMode: String = "OFF",
-    @PrefKey(default = "") val shizukuLaunchPackage: String = "",
+    @PrefKey(default = "false") val shizukuShortcutEnabled: String = "false",
+    @PrefKey(default = OFFICIAL_SHIZUKU_PACKAGE) val shizukuLaunchPackage: String = OFFICIAL_SHIZUKU_PACKAGE,
 
     @PrefKey(default = "false") val muteOnGameLaunch: String = "false",
 

@@ -7,13 +7,13 @@ import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
+import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
-import com.aliothmoon.maameow.domain.models.ShizukuLaunchMode
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.manager.PermissionManager
@@ -149,14 +149,14 @@ class SettingsViewModel(
     }
 
     val shizukuLaunchPackage: StateFlow<String> = appSettingsManager.shizukuLaunchPackage
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), OFFICIAL_SHIZUKU_PACKAGE)
 
-    val shizukuLaunchMode: StateFlow<ShizukuLaunchMode> = appSettingsManager.shizukuLaunchMode
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ShizukuLaunchMode.OFF)
+    val shizukuShortcutEnabled: StateFlow<Boolean> = appSettingsManager.shizukuShortcutEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    fun setShizukuLaunchMode(mode: ShizukuLaunchMode) {
+    fun setShizukuShortcutEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            appSettingsManager.setShizukuLaunchMode(mode)
+            appSettingsManager.setShizukuShortcutEnabled(enabled)
         }
     }
 

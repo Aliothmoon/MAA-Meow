@@ -11,7 +11,6 @@ import com.aliothmoon.maameow.constant.DisplayMode
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RunMode
-import com.aliothmoon.maameow.domain.models.ShizukuLaunchMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.service.ResourceInitService
@@ -335,7 +334,7 @@ class HomeViewModel(
     }
 
     fun onOpenShizuku() {
-        val opened = if (appSettingsManager.shizukuLaunchMode.value == ShizukuLaunchMode.OFF) {
+        val opened = if (!appSettingsManager.shizukuShortcutEnabled.value) {
             false
         } else {
             ShizukuInstallHelper.openShizuku(

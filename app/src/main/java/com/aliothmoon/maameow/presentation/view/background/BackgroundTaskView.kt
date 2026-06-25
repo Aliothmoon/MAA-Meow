@@ -82,7 +82,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.domain.models.RemoteBackend
-import com.aliothmoon.maameow.domain.models.ShizukuLaunchMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -147,7 +146,7 @@ fun BackgroundTaskView(
     val markers by viewModel.markers.collectAsStateWithLifecycle()
     val displayResolution by compositionService.displayResolution.collectAsStateWithLifecycle()
     val permissions by permissionManager.state.collectAsStateWithLifecycle()
-    val shizukuLaunchMode by appSettingsManager.shizukuLaunchMode.collectAsStateWithLifecycle()
+    val shizukuShortcutEnabled by appSettingsManager.shizukuShortcutEnabled.collectAsStateWithLifecycle()
     val shizukuLaunchPackage by appSettingsManager.shizukuLaunchPackage.collectAsStateWithLifecycle()
     val isChainLoaded by viewModel.chainState.isLoaded.collectAsStateWithLifecycle()
     var hasInitialized by rememberSaveable { mutableStateOf(false) }
@@ -206,12 +205,8 @@ fun BackgroundTaskView(
     if (!permissions.remoteAccessGranted && showRemoteAccessDialog) {
         var isRequestingRemoteAccess by remember { mutableStateOf(false) }
         val canOpenShizukuShortcut = permissions.startupBackend == RemoteBackend.SHIZUKU &&
-                shizukuLaunchMode != ShizukuLaunchMode.OFF
-        val shortcutPackageName = if (shizukuLaunchMode != ShizukuLaunchMode.OFF) {
-            shizukuLaunchPackage
-        } else {
-            ""
-        }
+                !permissions.isStartupBackendAvailable(permissions.startupBackend) &&
+                shizukuShortcutEnabled
         ShizukuPermissionDialog(
             title = stringResource(
                 R.string.bg_shizuku_permission_title,
@@ -232,7 +227,7 @@ fun BackgroundTaskView(
             onConfirm = {
                 if (isRequestingRemoteAccess) return@ShizukuPermissionDialog
                 if (canOpenShizukuShortcut) {
-                    val opened = ShizukuInstallHelper.openShizuku(context, shortcutPackageName)
+                    val opened = ShizukuInstallHelper.openShizuku(context, shizukuLaunchPackage)
                     if (!opened) {
                         Toast.makeText(
                             context,

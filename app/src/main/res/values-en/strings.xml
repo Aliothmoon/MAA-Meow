@@ -67,13 +67,12 @@
     <string name="settings_background_resolution_desc">Background mode only</string>
     <string name="settings_skip_shizuku_check">Skip Shizuku Check</string>
     <string name="settings_shizuku_launch_mode_title">Enable Shortcut</string>
-    <string name="settings_shizuku_launch_mode_desc">Show a Shizuku shortcut on Home; official Shizuku is used when no app is selected.</string>
+    <string name="settings_shizuku_launch_mode_desc">Show a Shizuku launch button on Home for quick access</string>
     <string name="settings_shizuku_launch_app_title">Custom Shizuku App</string>
     <string name="settings_shizuku_launch_app_default_desc">Using official Shizuku</string>
     <string name="settings_shizuku_launch_app_selected_desc">Currently using: %1$s</string>
     <string name="settings_shizuku_launch_app_reset_title">Restore Default Shortcut</string>
-    <string name="settings_shizuku_launch_app_reset_desc">Clear the custom app and use the default Shizuku shortcut</string>
-    <string name="settings_shizuku_launch_app_reset_default_desc">Already using the default Shizuku shortcut</string>
+    <string name="settings_shizuku_launch_app_reset_desc">Reset to official Shizuku</string>
     <string name="settings_shizuku_launch_app_picker_title">Select Shizuku App</string>
     <string name="settings_shizuku_launch_app_picker_failed">Failed to load app list</string>
     <string name="settings_shizuku_launch_app_loading">Loading app list…</string>
