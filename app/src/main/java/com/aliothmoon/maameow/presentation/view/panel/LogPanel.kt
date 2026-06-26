@@ -25,7 +25,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Icon
@@ -65,10 +64,9 @@ import com.aliothmoon.maameow.theme.themedColor
 /** 浮层形式的任务执行日志面板。 */
 @Composable
 fun LogPanel(
+    modifier: Modifier = Modifier,
     logs: List<LogItem>,
     onClearLogs: () -> Unit,
-    modifier: Modifier = Modifier,
-    onClose: () -> Unit
 ) {
     val listState = rememberLazyListState()
     var isAutoScroll by remember { mutableStateOf(true) }
@@ -113,13 +111,6 @@ fun LogPanel(
                     Icon(
                         imageVector = Icons.Rounded.Delete,
                         contentDescription = stringResource(R.string.common_clear),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                IconButton(onClick = onClose) {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = stringResource(R.string.common_close),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

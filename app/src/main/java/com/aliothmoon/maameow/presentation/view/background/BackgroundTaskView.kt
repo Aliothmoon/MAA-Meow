@@ -523,7 +523,7 @@ fun BackgroundTaskView(
                                     LogPanel(
                                         logs = runtimeLogs,
                                         onClearLogs = { viewModel.onClearLogs() },
-                                        onClose = { viewModel.onTabChange(PanelTab.TASKS) })
+                                    )
                                 }
                             }
                         }
