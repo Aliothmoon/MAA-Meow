@@ -35,14 +35,10 @@ import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 
 sealed class BottomNavTab(
-    val route: String,
-    @param:StringRes val labelRes: Int,
-    val icon: ImageVector
+    val route: String, @param:StringRes val labelRes: Int, val icon: ImageVector
 ) {
     data object HOME : BottomNavTab(
-        route = Routes.HOME,
-        labelRes = R.string.bottom_nav_home,
-        icon = Icons.Default.Home
+        route = Routes.HOME, labelRes = R.string.bottom_nav_home, icon = Icons.Default.Home
     )
 
     data object BACKGROUND : BottomNavTab(
@@ -71,14 +67,17 @@ sealed class BottomNavTab(
 @Composable
 fun AppBottomNavigation(
     currentRoute: String,
-    onTabSelected: (BottomNavTab) -> Unit
+    onTabSelected: (BottomNavTab) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 0.dp
+        modifier = modifier, color = MaterialTheme.colorScheme.surface, shadowElevation = 0.dp
     ) {
         Column {
-            HorizontalDivider(thickness = MaaDesignTokens.Separator.thickness, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            HorizontalDivider(
+                thickness = MaaDesignTokens.Separator.thickness,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+            )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -90,10 +89,8 @@ fun AppBottomNavigation(
                 BottomNavTab.all.forEach { tab ->
                     val label = stringResource(tab.labelRes)
                     val selected = currentRoute == tab.route
-                    val contentColor = if (selected)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    val contentColor = if (selected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
 
                     Column(
                         modifier = Modifier
@@ -103,8 +100,7 @@ fun AppBottomNavigation(
                             ) { onTabSelected(tab) }
                             .heightIn(min = 48.dp)
                             .padding(horizontal = 20.dp, vertical = 2.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
+                        horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             imageVector = tab.icon,
                             contentDescription = label,

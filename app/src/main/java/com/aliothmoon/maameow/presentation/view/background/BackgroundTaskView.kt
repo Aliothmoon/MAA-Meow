@@ -84,6 +84,7 @@ import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
+import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
@@ -126,11 +127,11 @@ import com.aliothmoon.maameow.presentation.view.panel.ToolboxPanel
 import com.aliothmoon.maameow.presentation.view.panel.LocalToolboxFileExporter
 import com.aliothmoon.maameow.presentation.view.panel.rememberSafToolboxFileExporter
 import com.aliothmoon.maameow.theme.MaaAnimations
+import com.aliothmoon.maameow.theme.MaaThemeAlphas
 import androidx.compose.animation.core.tween
 
 @Composable
 fun BackgroundTaskView(
-    onFullscreenChanged: (Boolean) -> Unit = {},
     viewModel: BackgroundTaskViewModel,
     copilotViewModel: CopilotViewModel = koinInject(),
     toolboxViewModel: ToolboxViewModel = koinInject(),
@@ -145,6 +146,7 @@ fun BackgroundTaskView(
     val coroutineScope = rememberCoroutineScope()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val maaState by compositionService.state.collectAsStateWithLifecycle()
+    val runMode by appSettingsManager.runMode.collectAsStateWithLifecycle()
     val markers by viewModel.markers.collectAsStateWithLifecycle()
     val displayResolution by compositionService.displayResolution.collectAsStateWithLifecycle()
     val permissions by permissionManager.state.collectAsStateWithLifecycle()
@@ -169,9 +171,7 @@ fun BackgroundTaskView(
     val canShowTaskActions = PanelTab.canShowTaskActions(state.current)
 
     val pagerState = rememberPagerState(
-        initialPage = state.current.ordinal,
-        pageCount = { PanelTab.entries.size }
-    )
+        initialPage = state.current.ordinal, pageCount = { PanelTab.entries.size })
 
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.settledPage }.collect { page ->
@@ -185,10 +185,8 @@ fun BackgroundTaskView(
     LaunchedEffect(state.current) {
         if (pagerState.currentPage != state.current.ordinal) {
             pagerState.animateScrollToPage(
-                state.current.ordinal,
-                animationSpec = tween(
-                    easing = MaaAnimations.springEasing,
-                    durationMillis = 250
+                state.current.ordinal, animationSpec = tween(
+                    easing = MaaAnimations.springEasing, durationMillis = 250
                 )
             )
         }
@@ -212,18 +210,17 @@ fun BackgroundTaskView(
 
     if (!permissions.remoteAccessGranted && showRemoteAccessDialog) {
         var isRequestingRemoteAccess by remember { mutableStateOf(false) }
-        val canOpenShizukuShortcut = permissions.startupBackend == RemoteBackend.SHIZUKU &&
-                !permissions.isStartupBackendAvailable(permissions.startupBackend) &&
-                shizukuShortcutEnabled
+        val canOpenShizukuShortcut =
+            permissions.startupBackend == RemoteBackend.SHIZUKU && !permissions.isStartupBackendAvailable(
+                permissions.startupBackend
+            ) && shizukuShortcutEnabled
         ShizukuPermissionDialog(
             title = stringResource(
-                R.string.bg_shizuku_permission_title,
-                permissions.startupBackend.display
-            ),
+            R.string.bg_shizuku_permission_title, permissions.startupBackend.display
+        ),
             message = if (canOpenShizukuShortcut) {
                 stringResource(
-                    R.string.bg_shizuku_permission_message,
-                    permissions.startupBackend.display
+                    R.string.bg_shizuku_permission_message, permissions.startupBackend.display
                 )
             } else {
                 stringResource(
@@ -250,18 +247,17 @@ fun BackgroundTaskView(
                     val granted = permissionManager.requestRemoteAccess()
                     isRequestingRemoteAccess = false
                     if (!granted) {
-                        val message = if (!permissions.isStartupBackendAvailable(permissions.startupBackend)) {
-                            context.getString(
-                                R.string.bg_toast_remote_access_unavailable,
-                                permissions.startupBackend.display
-                            )
-                        } else {
-                            permissionNotAcquiredFormat.format(currentPermissionLabel)
-                        }
+                        val message =
+                            if (!permissions.isStartupBackendAvailable(permissions.startupBackend)) {
+                                context.getString(
+                                    R.string.bg_toast_remote_access_unavailable,
+                                    permissions.startupBackend.display
+                                )
+                            } else {
+                                permissionNotAcquiredFormat.format(currentPermissionLabel)
+                            }
                         Toast.makeText(
-                            context,
-                            message,
-                            Toast.LENGTH_SHORT
+                            context, message, Toast.LENGTH_SHORT
                         ).show()
                     }
                 }
@@ -282,10 +278,6 @@ fun BackgroundTaskView(
     }
 
 
-    LaunchedEffect(state.isFullscreenMonitor) {
-        onFullscreenChanged(state.isFullscreenMonitor)
-    }
-
     val pendingExecution by viewModel.coordinator.pendingExecution.collectAsStateWithLifecycle()
 
     LaunchedEffect(pendingExecution?.requestId) {
@@ -297,9 +289,7 @@ fun BackgroundTaskView(
     LaunchedEffect(Unit) {
         dispatcher.serviceDiedEvent.collect {
             Toast.makeText(
-                context,
-                serviceDiedMessage,
-                Toast.LENGTH_SHORT
+                context, serviceDiedMessage, Toast.LENGTH_SHORT
             ).show()
         }
     }
@@ -307,9 +297,7 @@ fun BackgroundTaskView(
     LaunchedEffect(Unit) {
         appWatchdog.appDiedEvent.collect {
             Toast.makeText(
-                context,
-                appDiedMessage,
-                Toast.LENGTH_SHORT
+                context, appDiedMessage, Toast.LENGTH_SHORT
             ).show()
         }
     }
@@ -375,8 +363,7 @@ fun BackgroundTaskView(
                                     }
                                 })
                             }
-                        },
-                        modifier = Modifier.fillMaxSize()
+                        }, modifier = Modifier.fillMaxSize()
                     )
                     if (markers.isNotEmpty()) TouchPreviewOverlay(
                         markers = markers,
@@ -408,8 +395,7 @@ fun BackgroundTaskView(
                         modifier = Modifier.fillMaxSize(),
                         isRunning = maaState == MaaExecutionState.RUNNING,
                         isSurfaceAvailable = isSurfaceAvailable,
-                        onClick = { viewModel.onToggleFullscreenMonitor() }
-                    ) {
+                        onClick = { viewModel.onToggleFullscreenMonitor() }) {
                         previewContent()
                     }
                 } else {
@@ -482,12 +468,10 @@ fun BackgroundTaskView(
                                                     profiles = profiles,
                                                     activeProfileId = activeProfileId,
                                                     onConfigChange = { config ->
-                                                        val nodeId =
-                                                            selectedNode?.id
-                                                                ?: return@TaskConfigPanel
+                                                        val nodeId = selectedNode?.id
+                                                            ?: return@TaskConfigPanel
                                                         viewModel.onNodeConfigChange(
-                                                            nodeId,
-                                                            config
+                                                            nodeId, config
                                                         )
                                                     },
                                                     onAddNode = { viewModel.onAddNode(it) },
@@ -495,8 +479,7 @@ fun BackgroundTaskView(
                                                     onDuplicateNode = { viewModel.onDuplicateNode(it) },
                                                     onRenameNode = { id, name ->
                                                         viewModel.onRenameNode(
-                                                            id,
-                                                            name
+                                                            id, name
                                                         )
                                                     },
                                                     onSwitchProfile = {
@@ -506,8 +489,7 @@ fun BackgroundTaskView(
                                                     },
                                                     onRenameProfile = { id, name ->
                                                         viewModel.onRenameProfile(
-                                                            id,
-                                                            name
+                                                            id, name
                                                         )
                                                     },
                                                     onDuplicateProfile = {
@@ -523,8 +505,7 @@ fun BackgroundTaskView(
                                                     onCreateProfile = { viewModel.onCreateProfile() },
                                                     onReorderProfile = { from, to ->
                                                         viewModel.onReorderProfile(from, to)
-                                                    }
-                                                )
+                                                    })
                                             }
                                         }
                                     }
@@ -536,6 +517,7 @@ fun BackgroundTaskView(
                                 ) {
                                     ToolboxPanel(modifier = Modifier.fillMaxSize())
                                 }
+
                                 3 -> {
                                     val runtimeLogs by viewModel.logs.collectAsStateWithLifecycle()
                                     LogPanel(
@@ -549,6 +531,10 @@ fun BackgroundTaskView(
                         if (canShowTaskActions) {
                             Spacer(modifier = Modifier.height(6.dp))
                             val focusManager = LocalFocusManager.current
+                            // 前台模式不从后台任务页启动任务：按钮显示为禁用态但仍可点击，点击给出提示（防呆
+                            val foregroundBlocked = runMode == RunMode.FOREGROUND
+                            val switchBackgroundModeMessage =
+                                stringResource(R.string.navigation_toast_switch_background_mode)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -557,6 +543,14 @@ fun BackgroundTaskView(
                                 Button(
                                     onClick = {
                                         focusManager.clearFocus()
+                                        if (foregroundBlocked) {
+                                            Toast.makeText(
+                                                context,
+                                                switchBackgroundModeMessage,
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                            return@Button
+                                        }
                                         if (!permissions.remoteAccessGranted) {
                                             showRemoteAccessDialog = true
                                             return@Button
@@ -569,6 +563,18 @@ fun BackgroundTaskView(
                                         }
                                     },
                                     enabled = maaState != MaaExecutionState.RUNNING && maaState != MaaExecutionState.STARTING && maaState != MaaExecutionState.STOPPING,
+                                    colors = if (foregroundBlocked) {
+                                        ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.onSurface.copy(
+                                                alpha = 0.12f
+                                            ),
+                                            contentColor = MaterialTheme.colorScheme.onSurface.copy(
+                                                alpha = MaaThemeAlphas.Disabled
+                                            ),
+                                        )
+                                    } else {
+                                        ButtonDefaults.buttonColors()
+                                    },
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
@@ -631,8 +637,7 @@ fun BackgroundTaskView(
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(32.dp),
-                            strokeWidth = 2.dp
+                            modifier = Modifier.size(32.dp), strokeWidth = 2.dp
                         )
                     }
                 }
@@ -868,17 +873,13 @@ private fun BackgroundMoreActionsOverlay(
                 .fillMaxWidth()
                 .padding(start = 16.dp, end = 16.dp, bottom = 64.dp)
                 .clickable(
-                    interactionSource = cardInteractionSource,
-                    indication = null,
-                    onClick = {}
-                ),
+                    interactionSource = cardInteractionSource, indication = null, onClick = {}),
             shape = RoundedCornerShape(4.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
-        ) {
+            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)) {
             Column(modifier = Modifier.padding(10.dp)) {
                 // 标题与快速操作组
                 Text(
@@ -922,10 +923,8 @@ private fun BackgroundMoreActionsOverlay(
                 ) {
                     ActionTile(
                         icon = if (isGameMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                        label = if (isGameMuted)
-                            stringResource(R.string.bg_action_game_muted)
-                        else
-                            stringResource(R.string.bg_action_mute_game),
+                        label = if (isGameMuted) stringResource(R.string.bg_action_game_muted)
+                        else stringResource(R.string.bg_action_mute_game),
                         onClick = onToggleGameSound,
                         modifier = Modifier.weight(1f),
                         containerColor = if (isGameMuted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary,
@@ -953,8 +952,7 @@ private fun BackgroundMoreActionsOverlay(
 
                 Spacer(modifier = Modifier.height(12.dp))
                 HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    thickness = 0.5.dp
+                    color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -973,16 +971,14 @@ private fun BackgroundMoreActionsOverlay(
                     checked = muteOnGameLaunch,
                     onCheckedChange = {
                         coroutineScope.launch { appSettingsManager.setMuteOnGameLaunch(it) }
-                    }
-                )
+                    })
                 SettingSwitchRow(
                     icon = Icons.Filled.Cancel,
                     label = stringResource(R.string.bg_auto_close_on_end),
                     checked = closeAppOnTaskEnd,
                     onCheckedChange = {
                         coroutineScope.launch { appSettingsManager.setCloseAppOnTaskEnd(it) }
-                    }
-                )
+                    })
                 SettingSwitchRow(
                     icon = Icons.Filled.StayCurrentPortrait,
                     label = stringResource(R.string.bg_auto_hardware_screen_off),
@@ -997,16 +993,14 @@ private fun BackgroundMoreActionsOverlay(
                                 )
                             }
                         }
-                    }
-                )
+                    })
                 SettingSwitchRow(
                     icon = Icons.Filled.TouchApp,
                     label = stringResource(R.string.bg_auto_show_touch_preview),
                     checked = showTouchPreview,
                     onCheckedChange = {
                         coroutineScope.launch { appSettingsManager.setShowTouchPreview(it) }
-                    }
-                )
+                    })
             }
         }
     }
@@ -1071,10 +1065,7 @@ private fun ActionTile(
 
 @Composable
 private fun SettingSwitchRow(
-    icon: ImageVector,
-    label: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    icon: ImageVector, label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
         modifier = Modifier

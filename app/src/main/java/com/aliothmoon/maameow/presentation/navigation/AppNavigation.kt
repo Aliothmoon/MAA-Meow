@@ -3,11 +3,12 @@ package com.aliothmoon.maameow.presentation.navigation
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,8 +45,13 @@ import com.aliothmoon.maameow.schedule.ui.CountdownDialog
 import com.aliothmoon.maameow.schedule.ui.ScheduleEditView
 import com.aliothmoon.maameow.schedule.ui.ScheduleTriggerLogView
 import com.aliothmoon.maameow.theme.MaaAnimations
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+
+/** 主 Tab 路由集合（与 [BottomNavTab.all] 单一真源），用于判断是否处于主界面。 */
+private val MAIN_TAB_ROUTES: Set<String> = BottomNavTab.all.mapTo(HashSet()) { it.route }
 
 @Composable
 fun AppNavigation(
@@ -60,7 +66,11 @@ fun AppNavigation(
     val currentNavRoute = navBackStackEntry?.destination?.route
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
-    var isFullscreen by remember { mutableStateOf(false) }
+    val isFullscreen by remember(backgroundTaskViewModel) {
+        backgroundTaskViewModel.state
+            .map { it.isFullscreenMonitor }
+            .distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = false)
     var forceShowAnnouncement by remember { mutableStateOf(false) }
     var announcementDismissedOnce by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -71,10 +81,8 @@ fun AppNavigation(
     val language by appSettings.language.collectAsStateWithLifecycle()
     val scheduledCountdownState by backgroundTaskViewModel.coordinator.countdownState.collectAsStateWithLifecycle()
 
-    // 判断是否处于主 Tab 页面（由 MainScreen HorizontalPager 处理）
-    val isOnMainTab = currentNavRoute in listOf(
-        Routes.HOME, Routes.BACKGROUND_TASK, Routes.SCHEDULE, Routes.SETTINGS
-    ) || currentNavRoute == null
+    // 判断是否处于主 Tab 页面
+    val isOnMainTab = currentNavRoute == null || currentNavRoute in MAIN_TAB_ROUTES
 
     LaunchedEffect(backgroundTaskViewModel) {
         backgroundTaskViewModel.coordinator.feedbackMessages.collect { message ->
@@ -111,109 +119,52 @@ fun AppNavigation(
         }
     }
 
-    // Shared axis transitions for sub-pages
-    val forwardEnterTransition = MaaAnimations.sharedAxisForwardEnter()
-    val forwardExitTransition = MaaAnimations.sharedAxisForwardExit()
-    val popEnterTransition = MaaAnimations.sharedAxisPopEnter()
-    val popExitTransition = MaaAnimations.sharedAxisPopExit()
-
     Box(modifier = Modifier.fillMaxSize()) {
         // MainScreen with HorizontalPager for smooth tab switching
         MainScreen(
             navController = navController,
             backgroundTaskViewModel = backgroundTaskViewModel,
-            onFullscreenChanged = { isFullscreen = it },
             onViewAnnouncement = { forceShowAnnouncement = true },
             visible = isOnMainTab,
+            fullscreen = isFullscreen,
         )
 
-        // NavHost for sub-pages only (notifications, achievement, logs, etc.)
-        // Tab switching is handled entirely by MainScreen's HorizontalPager.
+        // NavHost 只承载子页面；主 Tab 切换完全由 MainScreen 的 HorizontalPager 处理。
         NavHost(
             navController = navController,
             startDestination = Routes.HOME,
+            enterTransition = { MaaAnimations.sharedAxisForwardEnter },
+            exitTransition = { MaaAnimations.sharedAxisForwardExit },
+            popEnterTransition = { MaaAnimations.sharedAxisPopEnter },
+            popExitTransition = { MaaAnimations.sharedAxisPopExit },
         ) {
-            // Main tab routes - MainScreen handles rendering via HorizontalPager
-            composable(route = Routes.HOME) {}
-            composable(route = Routes.BACKGROUND_TASK) {}
-            composable(route = Routes.SCHEDULE) {}
-            composable(route = Routes.SETTINGS) {}
+            // 主 Tab 路由仅作占位，真实内容由 MainScreen 的 HorizontalPager 渲染
+            BottomNavTab.all.forEach { tab -> composable(tab.route) {} }
 
-            // ── Sub-pages with forward navigation transitions ──
-            composable(
-                route = Routes.NOTIFICATION,
-                enterTransition = { forwardEnterTransition },
-                exitTransition = { forwardExitTransition },
-                popEnterTransition = { popEnterTransition },
-                popExitTransition = { popExitTransition }
-            ) {
+            composable(Routes.NOTIFICATION) {
                 NotificationSettingsView(navController = navController)
             }
-            composable(
-                route = Routes.ACHIEVEMENT,
-                enterTransition = { forwardEnterTransition },
-                exitTransition = { forwardExitTransition },
-                popEnterTransition = { popEnterTransition },
-                popExitTransition = { popExitTransition }
-            ) {
-                AchievementView(
-                    navController = navController,
-                )
+            composable(Routes.ACHIEVEMENT) {
+                AchievementView(navController = navController)
             }
-            composable(
-                route = Routes.ACHIEVEMENT_DEBUG,
-                enterTransition = { forwardEnterTransition },
-                exitTransition = { forwardExitTransition },
-                popEnterTransition = { popEnterTransition },
-                popExitTransition = { popExitTransition }
-            ) {
+            composable(Routes.ACHIEVEMENT_DEBUG) {
                 AchievementDebugView(navController = navController)
             }
-            composable(
-                route = Routes.LOG_HISTORY,
-                enterTransition = { forwardEnterTransition },
-                exitTransition = { forwardExitTransition },
-                popEnterTransition = { popEnterTransition },
-                popExitTransition = { popExitTransition }
-            ) {
+            composable(Routes.LOG_HISTORY) {
                 LogHistoryView(navController = navController)
             }
-            composable(
-                route = Routes.ERROR_LOG,
-                enterTransition = { forwardEnterTransition },
-                exitTransition = { forwardExitTransition },
-                popEnterTransition = { popEnterTransition },
-                popExitTransition = { popExitTransition }
-            ) {
+            composable(Routes.ERROR_LOG) {
                 ErrorLogView(navController = navController)
             }
-            composable(
-                route = Routes.SCHEDULE_EDIT,
-                enterTransition = { forwardEnterTransition },
-                exitTransition = { forwardExitTransition },
-                popEnterTransition = { popEnterTransition },
-                popExitTransition = { popExitTransition }
-            ) { backStackEntry ->
+            composable(Routes.SCHEDULE_EDIT) { backStackEntry ->
                 val strategyId = backStackEntry.arguments?.getString("strategyId")
                     .let { if (it == "new") null else it }
                 ScheduleEditView(navController = navController, strategyId = strategyId)
             }
-            composable(
-                route = Routes.SCHEDULE_TRIGGER_LOG,
-                enterTransition = { forwardEnterTransition },
-                exitTransition = { forwardExitTransition },
-                popEnterTransition = { popEnterTransition },
-                popExitTransition = { popExitTransition }
-            ) {
+            composable(Routes.SCHEDULE_TRIGGER_LOG) {
                 ScheduleTriggerLogView(navController = navController)
             }
-            composable(
-                route = Routes.TASK_OVERRIDE_EDITOR,
-                enterTransition = { forwardEnterTransition },
-                exitTransition = { forwardExitTransition },
-                popEnterTransition = { popEnterTransition },
-                popExitTransition = { popExitTransition }
-            ) {
+            composable(Routes.TASK_OVERRIDE_EDITOR) {
                 TaskOverrideEditorView(navController = navController)
             }
         }
@@ -221,7 +172,9 @@ fun AppNavigation(
         // SnackbarHost overlaid on top
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
         )
         // 全局定时任务倒计时弹窗（前台所有控制模式均不弹出对话框，静默处理）
         val countdown = scheduledCountdownState

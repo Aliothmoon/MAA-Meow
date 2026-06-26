@@ -10,50 +10,32 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 
-/**
- * Shared-axis style page transitions inspired by Material motion spec.
- * Uses spring-like cubic bezier for a subtle bounce feel.
- */
 object MaaAnimations {
 
     private const val PAGE_DURATION = 380
 
     /**
-     * Spring-like cubic bezier (0.32, 0.72, 0.0, 1.0) -- produces a subtle
-     * overshoot and settle-back feel for smooth transitions.
+     * Ease-out cubic bezier (0.32, 0.72, 0.0, 1.0): fast start, smooth settle.
+     * Control-point y stays within [0, 1], so it does not overshoot.
      */
     val springEasing = CubicBezierEasing(0.32f, 0.72f, 0.0f, 1.0f)
-    private val pageEasing = springEasing
 
-    fun sharedAxisForwardEnter(): EnterTransition =
+    private fun slideEnter(offsetX: (Int) -> Int): EnterTransition =
         slideInHorizontally(
-            initialOffsetX = { fullWidth -> fullWidth },
-            animationSpec = tween(PAGE_DURATION, easing = pageEasing)
-        ) + fadeIn(
-            animationSpec = tween(PAGE_DURATION, easing = LinearEasing)
-        )
+            initialOffsetX = offsetX,
+            animationSpec = tween(PAGE_DURATION, easing = springEasing)
+        ) +
+                fadeIn(animationSpec = tween(PAGE_DURATION, easing = LinearEasing))
 
-    fun sharedAxisForwardExit(): ExitTransition =
+    private fun slideExit(offsetX: (Int) -> Int): ExitTransition =
         slideOutHorizontally(
-            targetOffsetX = { fullWidth -> -fullWidth / 2 },
-            animationSpec = tween(PAGE_DURATION, easing = pageEasing)
-        ) + fadeOut(
-            animationSpec = tween(PAGE_DURATION, easing = LinearEasing)
-        )
+            targetOffsetX = offsetX,
+            animationSpec = tween(PAGE_DURATION, easing = springEasing)
+        ) +
+                fadeOut(animationSpec = tween(PAGE_DURATION, easing = LinearEasing))
 
-    fun sharedAxisPopEnter(): EnterTransition =
-        slideInHorizontally(
-            initialOffsetX = { fullWidth -> -fullWidth / 2 },
-            animationSpec = tween(PAGE_DURATION, easing = pageEasing)
-        ) + fadeIn(
-            animationSpec = tween(PAGE_DURATION, easing = LinearEasing)
-        )
-
-    fun sharedAxisPopExit(): ExitTransition =
-        slideOutHorizontally(
-            targetOffsetX = { fullWidth -> fullWidth },
-            animationSpec = tween(PAGE_DURATION, easing = pageEasing)
-        ) + fadeOut(
-            animationSpec = tween(PAGE_DURATION, easing = LinearEasing)
-        )
+    val sharedAxisForwardEnter: EnterTransition = slideEnter { fullWidth -> fullWidth }
+    val sharedAxisForwardExit: ExitTransition = slideExit { fullWidth -> -fullWidth / 2 }
+    val sharedAxisPopEnter: EnterTransition = slideEnter { fullWidth -> -fullWidth / 2 }
+    val sharedAxisPopExit: ExitTransition = slideExit { fullWidth -> fullWidth }
 }
