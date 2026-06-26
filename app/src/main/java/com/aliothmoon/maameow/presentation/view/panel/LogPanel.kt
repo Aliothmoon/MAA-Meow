@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -38,6 +39,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +55,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.LogColorRole
 import com.aliothmoon.maameow.data.model.LogItem
@@ -73,10 +76,11 @@ fun LogPanel(
     val listState = rememberLazyListState()
     var isAutoScroll by remember { mutableStateOf(true) }
     var selectedLog by remember { mutableStateOf<LogItem?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(logs.size) {
+    LaunchedEffect(logs.size, isAutoScroll) {
         if (isAutoScroll && logs.isNotEmpty()) {
-            listState.animateScrollToItem(logs.size - 1)
+            listState.scrollToItem(logs.size - 1)
         }
     }
 
@@ -144,9 +148,13 @@ fun LogPanel(
                 }
             }
 
-            if (!isAutoScroll && logs.isNotEmpty()) {
+            if (listState.canScrollForward && logs.isNotEmpty()) {
                 IconButton(
-                    onClick = { isAutoScroll = true },
+                    onClick = {
+                        coroutineScope.launch {
+                            listState.scrollToItem(logs.size - 1)
+                        }
+                    },
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(16.dp)
@@ -157,7 +165,7 @@ fun LogPanel(
                         )
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Info,
+                        imageVector = Icons.Filled.KeyboardArrowDown,
                         contentDescription = stringResource(R.string.panel_log_resume_auto_scroll),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(20.dp)
