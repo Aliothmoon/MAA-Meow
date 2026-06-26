@@ -49,6 +49,7 @@ import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.schedule.model.TriggerLogEntry
 import com.aliothmoon.maameow.schedule.service.ScheduleTriggerLogger.TriggerLogSummary
+import com.aliothmoon.maameow.theme.MaaDesignTokens
 import org.koin.androidx.compose.koinViewModel
 import java.time.Instant
 import java.time.ZoneId
@@ -133,8 +134,8 @@ fun ScheduleTriggerLogView(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    contentPadding = PaddingValues(horizontal = MaaDesignTokens.Spacing.listHorizontal, vertical = MaaDesignTokens.Spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm)
                 ) {
                     items(summaries, key = { it.fileName }) { summary ->
                         SummaryCard(
@@ -284,8 +285,8 @@ private fun DetailView(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            contentPadding = PaddingValues(horizontal = MaaDesignTokens.Spacing.listHorizontal, vertical = MaaDesignTokens.Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm)
         ) {
             itemsIndexed(entries, key = { index, _ -> index }) { _, entry ->
                 when (entry) {

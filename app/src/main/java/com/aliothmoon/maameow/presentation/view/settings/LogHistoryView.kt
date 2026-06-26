@@ -19,11 +19,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material3.AlertDialog
-import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -53,6 +50,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.log.LogEntry
 import com.aliothmoon.maameow.data.log.LogFileInfo
 import com.aliothmoon.maameow.domain.service.LogExportService
+import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.viewmodel.LogHistoryViewModel
 import com.aliothmoon.maameow.theme.LogTypography
@@ -185,7 +183,7 @@ private fun LogFileListView(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(

@@ -87,16 +87,17 @@ fun AchievementDebugView(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(
+                horizontal = MaaDesignTokens.Spacing.listHorizontal,
+                vertical = MaaDesignTokens.Spacing.sm,
+            ),
+            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.md),
         ) {
             item {
                 InfoCard(
-                    title = "",
                     contentColor = MaterialTheme.colorScheme.onSurface,
-                    contentPadding = PaddingValues(MaaDesignTokens.Card.innerPadding),
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.md)) {
                         Text(
                             text = stringResource(R.string.achievement_debug_desc),
                             style = MaterialTheme.typography.bodyMedium,

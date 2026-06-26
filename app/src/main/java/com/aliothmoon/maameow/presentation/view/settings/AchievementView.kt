@@ -27,10 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
@@ -72,8 +72,11 @@ fun AchievementView(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(
+                horizontal = MaaDesignTokens.Spacing.listHorizontal,
+                vertical = MaaDesignTokens.Spacing.sm,
+            ),
+            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.md),
         ) {
             item {
                 OutlinedTextField(
@@ -118,14 +121,10 @@ private fun AchievementCard(achievement: AchievementState) {
     val color = achievementColor(achievement)
     val context = LocalContext.current
     val dateFormat = remember { DateFormat.getDateTimeInstance() }
-    InfoCard(
-        title = "",
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        contentPadding = PaddingValues(MaaDesignTokens.Card.innerPadding),
-    ) {
+    InfoCard(contentColor = MaterialTheme.colorScheme.onSurface) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.md),
             verticalAlignment = Alignment.Top,
         ) {
             Icon(
@@ -135,7 +134,7 @@ private fun AchievementCard(achievement: AchievementState) {
             )
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap),
             ) {
                 Text(
                     text = if (achievement.unlocked) {

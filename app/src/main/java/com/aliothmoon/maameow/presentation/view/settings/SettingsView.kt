@@ -2,9 +2,13 @@ package com.aliothmoon.maameow.presentation.view.settings
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,39 +28,33 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material3.CircularProgressIndicator
-import android.os.Build
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Density
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import kotlin.math.roundToInt
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.BuildConfig
@@ -73,10 +71,13 @@ import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
-import com.aliothmoon.maameow.presentation.components.InfoCard
 import com.aliothmoon.maameow.presentation.components.ITextField
+import com.aliothmoon.maameow.presentation.components.ListItemDivider
 import com.aliothmoon.maameow.presentation.components.ReInitializeConfirmDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
+import com.aliothmoon.maameow.presentation.components.SectionHeader
+import com.aliothmoon.maameow.presentation.components.SettingRow
+import com.aliothmoon.maameow.presentation.components.SettingsGroupCard
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.viewmodel.SettingsViewModel
 import com.aliothmoon.maameow.theme.MaaDesignTokens
@@ -89,6 +90,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
+import kotlin.math.roundToInt
 
 @Composable
 fun SettingsView(
@@ -336,20 +338,16 @@ fun SettingsView(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = PaddingValues(vertical = 8.dp)
+            contentPadding = PaddingValues(
+                horizontal = MaaDesignTokens.Spacing.listHorizontal,
+                vertical = MaaDesignTokens.Spacing.sm
+            ),
+            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sectionGap)
         ) {
             // 更新管理
             item {
                 SectionHeader(stringResource(R.string.settings_section_update))
-                InfoCard(
-                    title = "",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    contentColor = contentColor,
-                    contentPadding = PaddingValues(
-                        horizontal = MaaDesignTokens.Card.innerPadding,
-                        vertical = MaaDesignTokens.Spacing.listItemVertical
-                    )
-                ) {
+                SettingsGroupCard {
                     SettingClickItem(
                         title = stringResource(R.string.settings_reinit_resource_title),
                         description = stringResource(R.string.settings_reinit_resource_desc),
@@ -357,7 +355,7 @@ fun SettingsView(
                     ) {
                         showReInitConfirm = true
                     }
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     SettingSwitchItem(
                         title = stringResource(R.string.settings_auto_check_update_title),
                         description = stringResource(R.string.settings_auto_check_update_desc),
@@ -365,7 +363,7 @@ fun SettingsView(
                         checked = autoCheckUpdate,
                         onCheckedChange = { viewModel.setAutoCheckUpdate(it) }
                     )
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     SettingSwitchItem(
                         title = stringResource(R.string.settings_auto_download_update_title),
                         description = stringResource(R.string.settings_auto_download_update_desc),
@@ -374,7 +372,7 @@ fun SettingsView(
                         enabled = autoCheckUpdate,
                         onCheckedChange = { viewModel.setAutoDownloadUpdate(it) }
                     )
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     SettingChannelItem(
                         contentColor = contentColor,
                         selectedChannel = updateChannel,
@@ -386,15 +384,7 @@ fun SettingsView(
             // 日志
             item {
                 SectionHeader(stringResource(R.string.settings_section_log))
-                InfoCard(
-                    title = "",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    contentColor = contentColor,
-                    contentPadding = PaddingValues(
-                        horizontal = MaaDesignTokens.Card.innerPadding,
-                        vertical = MaaDesignTokens.Spacing.listItemVertical
-                    )
-                ) {
+                SettingsGroupCard {
                     SettingClickItem(
                         title = stringResource(R.string.settings_log_history_title),
                         description = stringResource(R.string.settings_log_history_desc),
@@ -402,7 +392,7 @@ fun SettingsView(
                     ) {
                         navController.navigate("log_history")
                     }
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     SettingClickItem(
                         title = stringResource(R.string.settings_log_error_title),
                         description = stringResource(R.string.settings_log_error_desc),
@@ -410,7 +400,7 @@ fun SettingsView(
                     ) {
                         navController.navigate("error_log")
                     }
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     val logExportChooserTitle = stringResource(R.string.settings_log_export_chooser_title)
                     SettingClickItem(
                         title = stringResource(R.string.settings_log_export_title),
@@ -424,7 +414,7 @@ fun SettingsView(
                             }
                         }
                     }
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     SettingSwitchItem(
                         title = stringResource(R.string.settings_debug_mode_title),
                         description = stringResource(R.string.settings_debug_mode_desc),
@@ -444,21 +434,13 @@ fun SettingsView(
             // 显示设置
             item {
                 SectionHeader(stringResource(R.string.settings_section_display))
-                InfoCard(
-                    title = "",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    contentColor = contentColor,
-                    contentPadding = PaddingValues(
-                        horizontal = MaaDesignTokens.Card.innerPadding,
-                        vertical = MaaDesignTokens.Spacing.listItemVertical
-                    )
-                ) {
+                SettingsGroupCard {
                     SettingLanguageItem(
                         contentColor = contentColor,
                         selectedLanguage = language,
                         onLanguageSelected = { viewModel.setLanguage(it) }
                     )
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     SettingThemeSection(
                         contentColor = contentColor,
                         selectedMode = themeMode,
@@ -474,21 +456,13 @@ fun SettingsView(
             // 其他设置
             item {
                 SectionHeader(stringResource(R.string.settings_section_other))
-                InfoCard(
-                    title = "",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    contentColor = contentColor,
-                    contentPadding = PaddingValues(
-                        horizontal = MaaDesignTokens.Card.innerPadding,
-                        vertical = MaaDesignTokens.Spacing.listItemVertical
-                    )
-                ) {
+                SettingsGroupCard {
                     SettingRemoteBackendItem(
                         contentColor = contentColor,
                         selectedBackend = startupBackend,
                         onBackendSelected = { viewModel.setStartupBackend(it) }
                     )
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     if (startupBackend == RemoteBackend.SHIZUKU) {
                         SettingSwitchItem(
                             title = stringResource(R.string.settings_shizuku_launch_mode_title),
@@ -497,7 +471,7 @@ fun SettingsView(
                             checked = shizukuShortcutEnabled,
                             onCheckedChange = { viewModel.setShizukuShortcutEnabled(it) }
                         )
-                        SettingsDivider(contentColor)
+                        ListItemDivider()
                         AnimatedVisibility(
                             visible = shizukuShortcutEnabled,
                             enter = expandVertically(),
@@ -526,7 +500,7 @@ fun SettingsView(
                                     shizukuAppPickerLoadKey += 1
                                     showShizukuAppPicker = true
                                 }
-                                SettingsDivider(contentColor)
+                                ListItemDivider()
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_shizuku_launch_app_reset_title),
                                     description = stringResource(R.string.settings_shizuku_launch_app_reset_desc),
@@ -534,17 +508,17 @@ fun SettingsView(
                                 ) {
                                     viewModel.setShizukuLaunchPackage(OFFICIAL_SHIZUKU_PACKAGE)
                                 }
-                                SettingsDivider(contentColor)
+                                ListItemDivider()
                             }
                         }
                     }
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     SettingBackgroundResolutionItem(
                         contentColor = contentColor,
                         selectedPreference = backgroundResolution,
                         onPreferenceSelected = { viewModel.setBackgroundResolution(it) }
                     )
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     SettingSwitchItem(
                         title = stringResource(R.string.settings_skip_shizuku_check),
                         contentColor = contentColor,
@@ -552,7 +526,7 @@ fun SettingsView(
                         enabled = startupBackend == RemoteBackend.SHIZUKU,
                         onCheckedChange = { viewModel.setSkipShizukuCheck(it) }
                     )
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     SettingSwitchItem(
                         title = stringResource(R.string.settings_deployment_with_pause),
                         description = stringResource(R.string.settings_deployment_with_pause_tip),
@@ -560,21 +534,21 @@ fun SettingsView(
                         checked = deploymentWithPause,
                         onCheckedChange = { viewModel.setDeploymentWithPause(it) }
                     )
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     SettingSwitchItem(
                         title = stringResource(R.string.settings_force_fullscreen_on_virtual_display),
                         contentColor = contentColor,
                         checked = forceFullscreenOnVirtualDisplay,
                         onCheckedChange = { viewModel.setForceFullscreenOnVirtualDisplay(it) }
                     )
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     SettingSwitchItem(
                         title = stringResource(R.string.settings_allow_foreground_scheduled_task),
                         contentColor = contentColor,
                         checked = allowForegroundScheduledTask,
                         onCheckedChange = { viewModel.setAllowForegroundScheduledTask(it) }
                     )
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     SettingSwitchItem(
                         title = stringResource(R.string.settings_tasks_override_title),
                         description = stringResource(R.string.settings_tasks_override_desc),
@@ -588,7 +562,7 @@ fun SettingsView(
                         exit = shrinkVertically()
                     ) {
                         Column {
-                            SettingsDivider(contentColor)
+                            ListItemDivider()
                             SettingClickItem(
                                 title = stringResource(R.string.settings_tasks_override_edit_title),
                                 contentColor = contentColor
@@ -603,15 +577,7 @@ fun SettingsView(
             // 数据管理
             item {
                 SectionHeader(stringResource(R.string.settings_section_data))
-                InfoCard(
-                    title = "",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    contentColor = contentColor,
-                    contentPadding = PaddingValues(
-                        horizontal = MaaDesignTokens.Card.innerPadding,
-                        vertical = MaaDesignTokens.Spacing.listItemVertical
-                    )
-                ) {
+                SettingsGroupCard {
                     SettingClickItem(
                         title = stringResource(R.string.settings_export_config_title),
                         description = stringResource(R.string.settings_export_config_desc),
@@ -619,7 +585,7 @@ fun SettingsView(
                     ) {
                         exportLauncher.launch("maameow_config.json")
                     }
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     SettingClickItem(
                         title = stringResource(R.string.settings_import_config_title),
                         description = stringResource(R.string.settings_import_config_desc),
@@ -633,15 +599,7 @@ fun SettingsView(
             // 通知
             item {
                 SectionHeader(stringResource(R.string.settings_section_notification))
-                InfoCard(
-                    title = "",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    contentColor = contentColor,
-                    contentPadding = PaddingValues(
-                        horizontal = MaaDesignTokens.Card.innerPadding,
-                        vertical = MaaDesignTokens.Spacing.listItemVertical
-                    )
-                ) {
+                SettingsGroupCard {
                     SettingClickItem(
                         title = stringResource(R.string.settings_notification_title),
                         description = stringResource(R.string.settings_notification_desc),
@@ -655,15 +613,7 @@ fun SettingsView(
             // 成就
             item {
                 SectionHeader(stringResource(R.string.settings_section_achievement))
-                InfoCard(
-                    title = "",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    contentColor = contentColor,
-                    contentPadding = PaddingValues(
-                        horizontal = MaaDesignTokens.Card.innerPadding,
-                        vertical = MaaDesignTokens.Spacing.listItemVertical
-                    )
-                ) {
+                SettingsGroupCard {
                     SettingClickItem(
                         title = stringResource(R.string.settings_achievement_title),
                         description = stringResource(R.string.settings_achievement_desc),
@@ -671,7 +621,7 @@ fun SettingsView(
                     ) {
                         navController.navigate(Routes.ACHIEVEMENT)
                     }
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     SettingSwitchItem(
                         title = stringResource(R.string.settings_achievement_snackbar_title),
                         description = stringResource(R.string.settings_achievement_snackbar_desc),
@@ -680,7 +630,7 @@ fun SettingsView(
                         onCheckedChange = { viewModel.setShowAchievementSnackbar(it) }
                     )
                     if (BuildConfig.DEBUG) {
-                        SettingsDivider(contentColor)
+                        ListItemDivider()
                         SettingClickItem(
                             title = stringResource(R.string.settings_achievement_debug_title),
                             description = stringResource(R.string.settings_achievement_debug_desc),
@@ -695,27 +645,19 @@ fun SettingsView(
             // 关于
             item {
                 SectionHeader(stringResource(R.string.settings_section_about))
-                InfoCard(
-                    title = "",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    contentColor = contentColor,
-                    contentPadding = PaddingValues(
-                        horizontal = MaaDesignTokens.Card.innerPadding,
-                        vertical = MaaDesignTokens.Spacing.listItemVertical
-                    )
-                ) {
+                SettingsGroupCard {
                     SettingInfoRow(
                         label = stringResource(R.string.settings_about_version),
                         value = BuildConfig.VERSION_NAME,
                         contentColor = contentColor,
                     )
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     SettingInfoRow(
                         label = stringResource(R.string.settings_about_developer),
                         value = "Aliothmoon",
                         contentColor = contentColor
                     )
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     SettingClickItem(
                         title = stringResource(R.string.settings_about_qq_group_title),
                         description = stringResource(R.string.settings_about_qq_group_desc),
@@ -724,14 +666,14 @@ fun SettingsView(
                         achievementReporter.reportFeedbackGroupOpened()
                         Misc.openUriSafely(context, "https://qm.qq.com/q/j4CFbeDQXu")
                     }
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     SettingClickItem(
                         title = stringResource(R.string.settings_about_announcement),
                         contentColor = contentColor
                     ) {
                         onViewAnnouncement()
                     }
-                    SettingsDivider(contentColor)
+                    ListItemDivider()
                     Text(
                         text = stringResource(R.string.settings_about_star),
                         style = MaterialTheme.typography.bodyMedium,
@@ -849,28 +791,13 @@ private fun SettingClickItem(
     contentColor: Color,
     onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = contentColor
-            )
-            if (description.isNotEmpty()) {
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = contentColor.copy(alpha = 0.7f)
-                )
-            }
-        }
-    }
+    SettingRow(
+        title = title,
+        description = description.ifEmpty { null },
+        titleColor = contentColor,
+        descriptionColor = contentColor.copy(alpha = 0.7f),
+        onClick = onClick,
+    )
 }
 
 /**
@@ -889,9 +816,9 @@ private fun FontSizeSetting(
     }
     val current = sliderValue.roundToInt().coerceIn(AppSettingsManager.FONT_SIZE_SCALE_MIN, AppSettingsManager.FONT_SIZE_SCALE_MAX)
 
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = MaaDesignTokens.Spacing.listItemVertical)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -924,10 +851,10 @@ private fun FontSizeSetting(
             },
             valueRange = AppSettingsManager.FONT_SIZE_SCALE_MIN.toFloat()..AppSettingsManager.FONT_SIZE_SCALE_MAX.toFloat(),
             steps = 0,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            modifier = Modifier.fillMaxWidth()
         )
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             listOf(AppSettingsManager.FONT_SIZE_SCALE_MIN, 90, 100, AppSettingsManager.FONT_SIZE_SCALE_MAX).forEach { kp ->
@@ -950,7 +877,7 @@ private fun FontSizeSetting(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(vertical = MaaDesignTokens.Spacing.sm),
                 shape = RoundedCornerShape(12.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ) {
@@ -973,37 +900,20 @@ private fun SettingSwitchItem(
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = if (description != null) Arrangement.spacedBy(4.dp) else Arrangement.Top
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = contentColor.copy(alpha = if (enabled) 1f else 0.6f)
+    SettingRow(
+        title = title,
+        description = description,
+        titleColor = contentColor,
+        descriptionColor = contentColor.copy(alpha = 0.7f),
+        enabled = enabled,
+        trailing = {
+            Switch(
+                checked = checked,
+                enabled = enabled,
+                onCheckedChange = onCheckedChange
             )
-            if (description != null) {
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = contentColor.copy(alpha = if (enabled) 0.7f else 0.4f)
-                )
-            }
-
-        }
-        Switch(
-            checked = checked,
-            enabled = enabled,
-            onCheckedChange = onCheckedChange
-        )
-    }
+        },
+    )
 }
 
 @Composable
@@ -1013,46 +923,17 @@ private fun SettingInfoRow(
     contentColor: Color,
     onClick: (() -> Unit)? = null,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            color = contentColor
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            color = contentColor.copy(alpha = 0.7f)
-        )
-    }
-}
-
-@Composable
-private fun SettingsDivider(contentColor: Color) {
-    HorizontalDivider(
-        modifier = Modifier.padding(start = MaaDesignTokens.Separator.inset),
-        thickness = MaaDesignTokens.Separator.thickness,
-        color = contentColor.copy(alpha = 0.12f)
-    )
-}
-
-@Composable
-private fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(
-            start = 32.dp,
-            top = MaaDesignTokens.Spacing.lg,
-            bottom = MaaDesignTokens.Spacing.xs
-        )
+    SettingRow(
+        title = label,
+        titleColor = contentColor,
+        trailing = {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                color = contentColor.copy(alpha = 0.7f)
+            )
+        },
+        onClick = onClick,
     )
 }
 
@@ -1069,7 +950,7 @@ private fun SettingChannelItem(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap)) {
             Text(
                 text = stringResource(R.string.settings_update_channel_title),
                 style = MaterialTheme.typography.bodyLarge,
@@ -1126,7 +1007,7 @@ private fun SettingBackgroundResolutionItem(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap)) {
             Text(
                 text = stringResource(R.string.settings_background_resolution_title),
                 style = MaterialTheme.typography.bodyLarge,
@@ -1238,7 +1119,7 @@ private fun SettingRemoteBackendItem(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap)) {
             Text(
                 text = stringResource(R.string.settings_startup_backend_title),
                 style = MaterialTheme.typography.bodyLarge,

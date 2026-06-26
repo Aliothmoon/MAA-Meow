@@ -43,16 +43,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
-import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.constant.Routes
+import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
-import com.aliothmoon.maameow.schedule.service.AutoStartHelper
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
+import com.aliothmoon.maameow.schedule.service.AutoStartHelper
+import com.aliothmoon.maameow.theme.MaaDesignTokens
 import org.koin.androidx.compose.koinViewModel
-import androidx.core.content.edit
 
 @Composable
 fun ScheduleListView(
@@ -132,7 +133,7 @@ fun ScheduleListView(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(horizontal = MaaDesignTokens.Spacing.listHorizontal, vertical = MaaDesignTokens.Spacing.sm),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(state.strategies, key = { it.id }) { strategy ->

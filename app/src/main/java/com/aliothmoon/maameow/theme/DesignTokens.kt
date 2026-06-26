@@ -15,7 +15,9 @@ object MaaDesignTokens {
 
         val listHorizontal: Dp = 16.dp
 
-        val listItemVertical: Dp = 11.dp
+        val listItemVertical: Dp = 12.dp
+
+        val rowTitleGap: Dp = 6.dp
 
         val sectionGap: Dp = 20.dp
     }
