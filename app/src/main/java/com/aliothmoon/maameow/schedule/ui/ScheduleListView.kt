@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -99,7 +100,10 @@ fun ScheduleListView(
             ) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.schedule_create_strategy))
             }
-        }
+        },
+        // 外层 MainScreen 的 bottomBar 已消费导航栏 inset；此处不再重复预留，
+        // 否则底部会多出一条等高于导航栏的空白条
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { padding ->
         if (state.strategies.isEmpty()) {
             Box(
