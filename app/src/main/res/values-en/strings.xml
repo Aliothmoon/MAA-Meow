@@ -730,12 +730,14 @@
     <string name="panel_fight_stage_reset_ignore">Do not switch</string>
     <string name="panel_fight_stage_reset_title">When activity stage is closed, reset to</string>
     <string name="panel_fight_stage_selection_title">Stage</string>
-    <string name="panel_fight_stage_plan_tip">Executes the first open stage. If all stages are closed, skips the current task.\nCurrent execution: %1$s</string>
+    <string name="panel_fight_stage_plan_tip">Executes the first open stage. If all stages are closed, skips the current task.</string>
+    <string name="panel_fight_current_execution_label">Current execution</string>
     <string name="panel_fight_stage_selection_tip">Manual stage code entry supports common aliases.\nFor example: Lungmen Dollars → CE-6, EXP → LS-6.</string>
     <string name="panel_fight_primary_stage_label">Primary Stage</string>
     <string name="panel_fight_primary_stage_placeholder">For example: CE-6 or Lungmen Dollars</string>
     <string name="panel_fight_primary_stage_closed">%1$s is not open today</string>
     <string name="panel_fight_primary_stage_closed_with_alternate">%1$s is not open today. An alternative stage will be used.</string>
+    <string name="panel_fight_permanent_stage_blocks_alternate">Later alternative stages won\'t run (execution stage is permanent or current/last)</string>
     <string name="panel_fight_alternate_stage2_label">Alternative Stage 2</string>
     <string name="panel_fight_alternate_stage2_placeholder">For example: CE-5</string>
     <string name="panel_fight_alternate_stage3_label">Alternative Stage 3</string>

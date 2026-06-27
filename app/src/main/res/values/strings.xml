@@ -785,12 +785,14 @@
     <string name="panel_fight_stage_reset_ignore">不切换</string>
     <string name="panel_fight_stage_reset_title">未开放活动关卡重置为</string>
     <string name="panel_fight_stage_selection_title">关卡选择</string>
-    <string name="panel_fight_stage_plan_tip">将执行第一个开放的关卡, 如所有关卡均未开放则跳过当前任务\n当前执行: %1$s</string>
+    <string name="panel_fight_stage_plan_tip">将执行第一个开放的关卡, 如所有关卡均未开放则跳过当前任务</string>
+    <string name="panel_fight_current_execution_label">当前执行</string>
     <string name="panel_fight_stage_selection_tip">可手动输入关卡代码，支持简写\n例如：龙门币→CE-6，经验→LS-6</string>
     <string name="panel_fight_primary_stage_label">首选关卡</string>
     <string name="panel_fight_primary_stage_placeholder">例如: CE-6 或 龙门币</string>
     <string name="panel_fight_primary_stage_closed">「%1$s」今日不开放</string>
     <string name="panel_fight_primary_stage_closed_with_alternate">「%1$s」今日不开放，将使用备选关卡</string>
+    <string name="panel_fight_permanent_stage_blocks_alternate">其后备选关卡不会执行（执行关卡为常驻或「当前/上次」）</string>
     <string name="panel_fight_alternate_stage2_label">备选关卡2</string>
     <string name="panel_fight_alternate_stage2_placeholder">例如: CE-5</string>
     <string name="panel_fight_alternate_stage3_label">备选关卡3</string>

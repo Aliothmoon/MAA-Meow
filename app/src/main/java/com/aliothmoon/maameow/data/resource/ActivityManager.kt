@@ -16,7 +16,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,11 +25,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.time.DayOfWeek
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
-import kotlin.collections.plus
 
 /**
  * MAA 资源管理器
@@ -461,6 +458,20 @@ class ActivityManager(
 
         // Fallback: 当作常驻关卡
         return MergedStageInfo(code = stage, displayName = stage)
+    }
+
+    /**
+     * 判断指定关卡是否为常驻关卡（无周期限制且非限时活动，每天都开放）。
+     *
+     * 迁移自 WPF FightSettingsUserControlModel.IsPermanentStage：
+     * 资源本（如 LS-6）虽关联资源收集活动，但 isResourceCollection 为 true 且无周期限制，同样视为常驻。
+     * 注意：空串（当前/上次）经 [getStageInfo] fallback 后也会返回 true。
+     */
+    fun isPermanentStage(stage: String): Boolean {
+        val info = getStageInfo(stage)
+        val noPeriodicLimit = info.openDays.isEmpty()
+        val notLimitedActivity = info.activity == null || info.activity.isResourceCollection
+        return noPeriodicLimit && notLimitedActivity
     }
 
     /**

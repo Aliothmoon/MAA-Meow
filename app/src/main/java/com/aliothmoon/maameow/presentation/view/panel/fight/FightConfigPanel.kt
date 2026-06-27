@@ -37,11 +37,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.res.stringResource
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.StageResetMode
@@ -57,7 +57,6 @@ import com.aliothmoon.maameow.presentation.components.ITextFieldWithFocus
 import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
-import com.aliothmoon.maameow.theme.MaaThemeAlphas
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -199,7 +198,8 @@ fun FightConfigPanel(
                                 config = config,
                                 onConfigChange = onConfigChange,
                                 stageGroups = stageGroups,
-                                allStageItems = allStageItems
+                                allStageItems = allStageItems,
+                                activityManager = activityManager
                             )
                         }
                     }
@@ -488,8 +488,10 @@ private fun GroupedStageSelectionSection(
     config: FightConfig,
     onConfigChange: (FightConfig) -> Unit,
     stageGroups: List<StageGroup>,
-    allStageItems: List<StageItem>
+    allStageItems: List<StageItem>,
+    activityManager: ActivityManager
 ) {
+    // (i) 仅放选关机制/手动输入说明，默认折叠；实时状态（当前执行/告警）见下方状态卡片
     var tipExpanded by remember { mutableStateOf(false) }
 
     // 扁平的关卡代码列表（用于输入框模式）
@@ -523,12 +525,43 @@ private fun GroupedStageSelectionSection(
         candidates.firstOrNull { stageMap[it]?.isOpenToday == true } ?: candidates.firstOrNull() ?: ""
     }
     val defaultStageLabel = stringResource(R.string.panel_fight_stage_reset_current)
+
+    // 备选关卡是否会被常驻/当前关卡静默阻断（对齐 WPF PermanentStageBlocksStages）。
+    // getActiveStage 选关为「从上往下取第一个今日开放」，常驻关卡每天都开放、stage1 为空（当前/上次）
+    // 时更会直接 return ""，两种情况下其后配置的备选关卡都永远不会被执行，需提示用户。
+    val alternatesBlocked = remember(
+        config.stage1, config.stage2, config.stage3, config.stage4,
+        config.useAlternateStage, executingStage, stageMap
+    ) {
+        if (!config.useAlternateStage) return@remember false
+        val alternates = listOf(config.stage2, config.stage3, config.stage4)
+        // 当前/上次：getActiveStage 在 stage1 为空时直接返回 ""，备选整体失效
+        if (config.stage1.isEmpty()) return@remember alternates.any { it.isNotEmpty() }
+        // 执行关卡为常驻关卡时，其后配置的备选关卡永远不会被选中
+        if (!activityManager.isPermanentStage(executingStage)) return@remember false
+        val candidates = listOf(config.stage1, config.stage2, config.stage3, config.stage4)
+            .filter { it.isNotEmpty() }
+        candidates.indexOf(executingStage) in 0 until candidates.lastIndex
+    }
+
     val stagePlanTipText = buildString {
-        append(stringResource(R.string.panel_fight_stage_plan_tip, executingStage.ifEmpty { defaultStageLabel }))
+        append(stringResource(R.string.panel_fight_stage_plan_tip))
         if (config.customStageCode) {
             append("\n\n")
             append(stringResource(R.string.panel_fight_stage_selection_tip))
         }
+    }
+
+    // 选关告警，互斥优先级：备选被阻断 > 首选不开放(有备选) > 首选不开放。
+    // 优先级保证「将使用备选」与「备选不会执行」不会同时出现，消除文案矛盾。
+    val stageWarning = when {
+        alternatesBlocked ->
+            stringResource(R.string.panel_fight_permanent_stage_blocks_alternate)
+        !stage1Open && config.stage1.isNotBlank() && config.useAlternateStage ->
+            stringResource(R.string.panel_fight_primary_stage_closed_with_alternate, config.stage1)
+        !stage1Open && config.stage1.isNotBlank() ->
+            stringResource(R.string.panel_fight_primary_stage_closed, config.stage1)
+        else -> null
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -551,6 +584,48 @@ private fun GroupedStageSelectionSection(
                 visible = tipExpanded,
                 tipText = stagePlanTipText
             )
+        }
+
+        // 选关状态卡片：当前执行关卡 + 告警，整合展示
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            shape = RoundedCornerShape(6.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.panel_fight_current_execution_label),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = executingStage.ifEmpty { defaultStageLabel },
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                if (stageWarning != null) {
+                    Text(
+                        text = "· $stageWarning",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
         }
 
         // 首选关卡
@@ -576,29 +651,6 @@ private fun GroupedStageSelectionSection(
                         ?.first
                 } else null
             )
-        }
-
-        // 首选关卡不开放时显示警告
-        if (!stage1Open && config.stage1.isNotBlank()) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f),
-                shape = RoundedCornerShape(4.dp)
-            ) {
-                Text(
-                    text = if (config.useAlternateStage) {
-                        stringResource(
-                            R.string.panel_fight_primary_stage_closed_with_alternate,
-                            config.stage1
-                        )
-                    } else {
-                        stringResource(R.string.panel_fight_primary_stage_closed, config.stage1)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.padding(8.dp)
-                )
-            }
         }
 
         // 备选关卡（UseAlternateStage 启用时显示）
