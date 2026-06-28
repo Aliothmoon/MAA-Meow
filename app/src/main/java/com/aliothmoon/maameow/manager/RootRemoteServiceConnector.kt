@@ -153,15 +153,8 @@ object RootRemoteServiceConnector : RemoteServiceConnectorBackend {
             append(shellQuote(RemoteServiceImpl::class.java.name))
             append(" --uid=")
             append(uid)
-            /*
-             * Android 12L（API 32）及以下创建 VirtualDisplay 时需要以 shell（UID 2000）
-             * 身份运行，因此不传 --keep-root，由 native launcher 主动降权。
-             *
-             * Android 13（TIRAMISU，API 33）及以上则保持 Root（UID 0），否则部分设备
-             * 的 shell 身份没有 INJECT_EVENTS 权限，InputManager.injectInputEvent() 会拒绝
-             * MaaCore 的点击和滑动事件。
-             */
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // 扩充到 Android 14
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 append(" --keep-root")
             }
             append(" --log-file=")
