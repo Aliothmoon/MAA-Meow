@@ -33,6 +33,7 @@ fastjson2 = "2.0.62"
 shizuku = "13.1.5"
 libsu = "6.0.0"
 floatingX = "2.3.7"
+sonner = "0.3.9"
 timber = "5.0.1"
 okhttp = "5.3.2"
 angusMail = "2.0.5"
@@ -97,6 +98,7 @@ shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuk
 shizuku-provider = { group = "dev.rikka.shizuku", name = "provider", version.ref = "shizuku" }
 libsu = { group = "com.github.topjohnwu.libsu", name = "core", version.ref = "libsu" }
 floatingx = { group = "io.github.petterpx", name = "floatingx", version.ref = "floatingX" }
+sonner = { group = "io.github.dokar3", name = "sonner", version.ref = "sonner" }
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 angus-mail = { group = "org.eclipse.angus", name = "jakarta.mail", version.ref = "angusMail" }

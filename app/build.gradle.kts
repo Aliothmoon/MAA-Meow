@@ -196,6 +196,7 @@ dependencies {
     implementation(libs.device.compat)
     implementation(libs.xx.permissions)
     implementation(libs.floatingx)
+    implementation(libs.sonner)
     implementation(libs.timber)
     implementation(libs.okhttp)
     implementation(libs.angus.mail)

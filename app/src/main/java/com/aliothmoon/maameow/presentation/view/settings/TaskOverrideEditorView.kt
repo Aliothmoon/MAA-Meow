@@ -24,8 +24,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,9 +45,11 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.presentation.LocalToaster
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.viewmodel.TaskOverrideEditorViewModel
 import com.aliothmoon.maameow.utils.i18n.resolve
+import com.dokar.sonner.ToastType
 import io.github.rosemoe.sora.event.ContentChangeEvent
 import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme
 import io.github.rosemoe.sora.langs.textmate.TextMateLanguage
@@ -109,7 +109,7 @@ fun TaskOverrideEditorView(
     val saveState by viewModel.saveState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    val snackbarHostState = remember { SnackbarHostState() }
+    val toaster = LocalToaster.current
     val isDark = isSystemInDarkTheme()
 
     var editorRef by remember { mutableStateOf<CodeEditor?>(null) }
@@ -122,12 +122,12 @@ fun TaskOverrideEditorView(
     LaunchedEffect(saveState) {
         when (val s = saveState) {
             is TaskOverrideEditorViewModel.SaveState.Success -> {
-                snackbarHostState.showSnackbar(msg)
+                toaster.show(msg, type = ToastType.Success)
                 viewModel.clearSaveState()
             }
 
             is TaskOverrideEditorViewModel.SaveState.Error -> {
-                snackbarHostState.showSnackbar(s.text.resolve(context))
+                toaster.show(s.text.resolve(context), type = ToastType.Error)
                 viewModel.clearSaveState()
             }
 
@@ -157,7 +157,6 @@ fun TaskOverrideEditorView(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Column(
             modifier = Modifier

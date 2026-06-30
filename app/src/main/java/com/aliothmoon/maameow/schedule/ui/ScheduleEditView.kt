@@ -38,8 +38,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -65,6 +63,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.presentation.LocalToaster
 import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
@@ -72,6 +71,7 @@ import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.schedule.model.ScheduleType
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.i18n.asString
+import com.dokar.sonner.ToastType
 import org.koin.androidx.compose.koinViewModel
 import java.time.DayOfWeek
 import java.time.Instant
@@ -88,7 +88,7 @@ fun ScheduleEditView(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val errorMessage = state.errorMessage.asString()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val toaster = LocalToaster.current
     var showTimePicker by remember { mutableStateOf(false) }
     var editingTime by remember { mutableStateOf<LocalTime?>(null) }
     val context = LocalContext.current
@@ -111,7 +111,7 @@ fun ScheduleEditView(
 
     LaunchedEffect(errorMessage) {
         if (errorMessage.isNotBlank()) {
-            snackbarHostState.showSnackbar(errorMessage)
+            toaster.show(errorMessage, type = ToastType.Error)
             viewModel.onDismissError()
         }
     }
@@ -142,7 +142,6 @@ fun ScheduleEditView(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
