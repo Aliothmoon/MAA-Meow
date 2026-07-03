@@ -861,7 +861,7 @@
     <string name="panel_award_daily_weekly">Collect daily/weekly mission rewards</string>
     <string name="panel_award_mail">Collect all mail rewards</string>
     <string name="panel_award_free_gacha">Conducting daily free single pull from the limited banner</string>
-    <string name="panel_award_free_gacha_tip">If there is no free single pull, it will not be pooled</string>
+    <string name="panel_award_free_gacha_tip">If there is no free single pull, it will be skipped</string>
     <string name="panel_award_orundum">Collect daily Orundum reward from the Lucky Strips</string>
     <string name="panel_award_mining">Collect daily Orundum reward from the provisional mining permit</string>
     <string name="panel_award_special_access">Collect Special Access rewards</string>
