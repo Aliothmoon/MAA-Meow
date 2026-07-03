@@ -309,16 +309,16 @@
     <string name="copilot_file_read_error_with_detail">Failed to read file: %1$s</string>
     <string name="copilot_status_started">Copilot started</string>
     <string name="copilot_empty_load_first">Copilot is empty. Load a homework first</string>
-    <string name="copilot_type_mismatch">The selected Copilot does not match the current tab</string>
+    <string name="copilot_type_mismatch">The selected Copilot job does not match the current tab</string>
     <string name="copilot_empty_list">Using &quot;Battle list&quot;, but no tasks have been added</string>
     <string name="copilot_mixed_list">Using &quot;Battle list&quot;, mixing different Copilot types is not supported</string>
-    <string name="copilot_task_name_empty">Copilot tasks with empty names exist</string>
+    <string name="copilot_task_name_empty">Copilot jobs with empty names exist</string>
     <string name="copilot_single_list_warning">You\'re using &quot;Battle list&quot; to execute a single task, which is not recommended. For single tasks, run them directly instead.</string>
     <string name="copilot_unsupported_stage">Unsupported stage %1$s. Try updating resources</string>
     <string name="copilot_invalid_operator">Invalid operator: %1$s</string>
     <string name="copilot_status_completed">Completed: %1$s</string>
-    <string name="copilot_rate_failed">Something went wrong. Rating failed : &lt;</string>
-    <string name="copilot_rate_success">Thanks for the rating!\nComments are now open on the website. Feel free to leave one there.</string>
+    <string name="copilot_rate_failed">An error occurred, the like failed: &lt;</string>
+    <string name="copilot_rate_success">Thanks for the likes!\nThe comment section is already open on the web page, please feel free to leave your comment!</string>
 
     <!-- panel: fight config -->
     <string name="panel_fight_converted_prefix">Will convert to: %1$s</string>
@@ -606,12 +606,12 @@
     <string name="panel_config_editing_badge">Editing</string>
     <string name="panel_config_task_name_label">Task Name</string>
     <string name="panel_config_unknown_task_type">Unknown Task</string>
-    <string name="panel_task_type_wake_up">Startup</string>
+    <string name="panel_task_type_wake_up">Login</string>
     <string name="panel_task_type_recruiting">Auto Recruit</string>
-    <string name="panel_task_type_base">Base Shift</string>
+    <string name="panel_task_type_base">Base</string>
     <string name="panel_task_type_combat">Combat</string>
-    <string name="panel_task_type_mall">Credit Related</string>
-    <string name="panel_task_type_mission">Claim Rewards</string>
+    <string name="panel_task_type_mall">Credit Store</string>
+    <string name="panel_task_type_mission">Collect Rewards</string>
     <string name="panel_task_type_auto_roguelike">Auto I.S.</string>
     <string name="panel_task_type_reclamation">Reclamation Algorithm</string>
 
@@ -666,16 +666,16 @@
     <string name="panel_autobattle_use_formation">Use formation</string>
     <string name="panel_autobattle_ignore_requirements">Ignore operator requirements</string>
     <string name="panel_autobattle_ignore_requirements_tip">Some homework requires specific modules or other prerequisites.\nEnabling this option skips those checks, but may cause the homework to fail.</string>
-    <string name="panel_autobattle_support_unit">Support Unit</string>
-    <string name="panel_autobattle_support_unit_tip">Using one substitute is fine. Missing two or more usually means you should switch homework.</string>
-    <string name="panel_autobattle_support_fill_gaps">Fill Gaps</string>
+    <string name="panel_autobattle_support_unit">Use Support Unit</string>
+    <string name="panel_autobattle_support_unit_tip">Missing one operator is manageable, but if two or more are missing, consider switching to a different job.</string>
+    <string name="panel_autobattle_support_fill_gaps">When Needed</string>
     <string name="panel_autobattle_support_random">Random</string>
     <string name="panel_autobattle_add_trust">Add low-trust operators</string>
     <string name="panel_autobattle_battle_list">Battle list</string>
     <string name="panel_autobattle_battle_list_tip">Only supported in the following modes:\n  1. Main Theme: Navigate within the same chapter\n  2. Side Story: Navigate within the current page (Normal / EX / S cannot jump across pages)\n  3. Story Collection: Navigate within the current page\n  4. Paradox Simulation: Start from the operator list\nPlease start from the corresponding screen. Cross-chapter navigation is not supported.\n\nWhen \"Battle list\" is enabled, selecting a single homework automatically adds it to the list.</string>
     <string name="panel_autobattle_use_sanity_potion">Use Sanity Potion</string>
     <string name="panel_autobattle_loop">Loop Times</string>
-    <string name="panel_autobattle_sequence_tip">Tag order can be dragged</string>
+    <string name="panel_autobattle_sequence_tip">Jobs can be dragged</string>
     <string name="panel_autobattle_empty_entries">No entries yet</string>
     <string name="panel_autobattle_raid_suffix"> (Challenge)</string>
     <string name="panel_autobattle_tips_title">Tips</string>
@@ -718,21 +718,21 @@
     <string name="panel_fight_use_expiring_medicine">Unlimited use of expiring (&lt;N hours) sanity potion</string>
     <string name="panel_fight_use_expiring_medicine_tip">Prioritize sanity potions expiring within the configured time.</string>
     <string name="panel_fight_medicine_expire_days">Expire time</string>
-    <string name="panel_fight_use_expire_medicine_for_activity">Use sanity potions that expire this week within 48H before the activity ends</string>
+    <string name="panel_fight_use_expire_medicine_for_activity">Use sanity potions that expire this week within 48 hours before the activity ends</string>
     <string name="panel_fight_use_expire_medicine_for_activity_tip">When an activity is about to end within 2 days, automatically use sanity potions expiring this week.</string>
     <string name="panel_fight_activity_days_left_open">Days left open: </string>
     <string name="panel_fight_activity_less_than_one_day">Less than 1 day</string>
     <string name="panel_fight_no_activity">No activity</string>
     <string name="panel_fight_hide_unavailable_stage">Hide today not-open stages</string>
     <string name="panel_fight_hide_unavailable_stage_tip">Hide stages that are currently unavailable from the stage list.</string>
-    <string name="panel_fight_hide_series">Hide proxy rate</string>
-    <string name="panel_fight_auto_restart_on_drop">Reconnect automatically on disconnect</string>
+    <string name="panel_fight_hide_series">Hide series</string>
+    <string name="panel_fight_auto_restart_on_drop">Restart when game disconnects</string>
     <string name="panel_fight_auto_restart_on_drop_tip">When the game disconnects, MAA will try to reconnect automatically and continue the battle.</string>
-    <string name="panel_fight_series_title">Proxy Rate</string>
+    <string name="panel_fight_series_title">Series</string>
     <string name="panel_fight_series_tip">• AUTO:\nAutomatically detect the maximum proxy multiplier for the stage while keeping sanity potion usage from overflowing sanity.\n\n• Numeric (1~6):\nExecute with the configured multiplier.\nIf current sanity is insufficient to complete the configured multiplier (for example, only enough for 5 runs but set to 6), battle cannot start.\nLikewise, if remaining run count is insufficient for the configured multiplier, battle cannot start.\n\n• Do not switch:\nDo not change the in-game proxy multiplier setting.</string>
-    <string name="panel_fight_series_no_switch">Do not switch</string>
+    <string name="panel_fight_series_no_switch">Don&apos;t Switch</string>
     <string name="panel_fight_stage_reset_current">Cur/Last</string>
-    <string name="panel_fight_stage_reset_ignore">Do not switch</string>
+    <string name="panel_fight_stage_reset_ignore">Don&apos;t Switch</string>
     <string name="panel_fight_stage_reset_title">When activity stage is closed, reset to</string>
     <string name="panel_fight_stage_selection_title">Stage</string>
     <string name="panel_fight_stage_plan_tip">Executes the first open stage. If all stages are closed, skips the current task.</string>
@@ -775,24 +775,24 @@
     <!-- panel: infrast -->
     <string name="panel_infrast_mode_title">Base Mode</string>
     <string name="panel_infrast_mode_normal">Normal Mode</string>
-    <string name="panel_infrast_mode_custom">Custom Infrastructure Config</string>
-    <string name="panel_infrast_mode_rotation">Queue Rotation</string>
+    <string name="panel_infrast_mode_custom">Custom Base Mode</string>
+    <string name="panel_infrast_mode_rotation">One-click Rotation Mode</string>
     <string name="panel_infrast_mode_rotation_tip">The shift rotation logic is exactly the same as the in-game \"Queue Rotation\" button at the bottom right of the base.\nWhen any operator in the current shift reaches 0 mood, the entire shift switches to the next one.\nUse \"Custom Infrastructure Config\" if you need a custom rotation schedule.</string>
     <string name="panel_infrast_file_not_found">File not found</string>
     <string name="panel_infrast_parse_failed">Failed to parse: %1$s</string>
-    <string name="panel_infrast_scheduler_builder">Custom Infrastructure Scheduler Builder</string>
+    <string name="panel_infrast_scheduler_builder">Custom Base JSON Generator</string>
     <string name="panel_infrast_import_background_only">Please import custom configuration files in background mode.</string>
-    <string name="panel_infrast_presets_title">Built-in Presets</string>
+    <string name="panel_infrast_presets_title">Default Base infrastructure</string>
     <string name="panel_infrast_preset_user_defined">User defined</string>
-    <string name="panel_infrast_preset_153_3x">153, 3 shifts per day</string>
-    <string name="panel_infrast_preset_153_4x">153, 4 shifts per day</string>
-    <string name="panel_infrast_preset_243_3x">243, 3 shifts per day</string>
-    <string name="panel_infrast_preset_243_4x">243, 4 shifts per day</string>
-    <string name="panel_infrast_preset_333_3x">333, 3 shifts per day</string>
+    <string name="panel_infrast_preset_153_3x">153 3 times a day</string>
+    <string name="panel_infrast_preset_153_4x">153 4 times a day</string>
+    <string name="panel_infrast_preset_243_3x">243 3 times a day</string>
+    <string name="panel_infrast_preset_243_4x">243 4 times a day</string>
+    <string name="panel_infrast_preset_333_3x">333 3 times a day</string>
     <string name="panel_infrast_plan_title">Schedule Plan</string>
     <string name="panel_infrast_plan_tip">If \"Base Schedule\" has execution time configured, it will not switch automatically before the \"Base Shift\" task starts or during task execution. It stays in the state at Link Start! and only switches when idle or after the task is completed.</string>
     <string name="panel_infrast_plan_auto_switch">Auto switch by time (%1$s)</string>
-    <string name="panel_infrast_plan_missing_period_warning">Only some plans in this custom infrastructure config have time periods configured, which may cause unexpected behavior. If you want time-based shift switching, make sure every plan has a period configured; otherwise leave them all empty.</string>
+    <string name="panel_infrast_plan_missing_period_warning">Some rotations in the Custom Base Mode configuration have time periods set, which may lead to unexpected behavior. To set shift change time periods, ensure all rotations have time periods configured; otherwise, leave them all blank.</string>
     <string name="panel_infrast_drones_title">Drone Usage</string>
     <string name="panel_infrast_drones_not_use">Do not use Drones</string>
     <string name="panel_infrast_drones_money">LMD</string>
@@ -814,14 +814,14 @@
     <string name="panel_infrast_room_dorm">Dormitory</string>
     <string name="panel_infrast_room_processing">Workshop</string>
     <string name="panel_infrast_room_training">Training Room</string>
-    <string name="panel_infrast_dorm_trust">Use free dorm slots for trust</string>
+    <string name="panel_infrast_dorm_trust">Trust farming in Dormitory</string>
     <string name="panel_infrast_dorm_filter_not_stationed">Do not move stationed operators into dorms</string>
     <string name="panel_infrast_dorm_filter_not_stationed_tip">When enabled, operators such as Irene will not be removed from the Training Room, but Workshop operators also will not enter dorms.</string>
-    <string name="panel_infrast_originium_shard_auto_replenishment">Auto replenish Originium Shards</string>
+    <string name="panel_infrast_originium_shard_auto_replenishment">Originium Shard auto replenishment</string>
     <string name="panel_infrast_reception_message_board">Credit collection from message board in Reception Room</string>
-    <string name="panel_infrast_reception_clue_exchange">Exchange clues</string>
+    <string name="panel_infrast_reception_clue_exchange">Conduct Clue Exchange</string>
     <string name="panel_infrast_reception_send_clue">Send clues</string>
-    <string name="panel_infrast_continue_training">Continue skill training after completion</string>
+    <string name="panel_infrast_continue_training">After training is complete, try to continue mastering the current Skill</string>
 
     <!-- logs: detail/list -->
     <string name="log_list_meta">%1$d tasks | %2$s</string>
@@ -842,12 +842,12 @@
     <!-- shared panel / toolbox -->
     <string name="common_expand">Expand</string>
     <string name="panel_tab_tasks">Tasks</string>
-    <string name="panel_tab_auto_battle">Auto Battle</string>
+    <string name="panel_tab_auto_battle">Copilot</string>
     <string name="panel_tab_tools">Tools</string>
     <string name="panel_tab_log">Logs</string>
     <string name="panel_cd_go_home">Go to home screen</string>
     <string name="toolbox_tab_mini_game">Mini Games</string>
-    <string name="toolbox_tab_recruit_calc">Recruit Calc</string>
+    <string name="toolbox_tab_recruit_calc">Recruitment</string>
     <string name="toolbox_dialog_start_warning_title">Start Warning</string>
     <string name="toolbox_dialog_start_anyway">Start Anyway</string>
     <string name="toolbox_status_stopping">Stopping…</string>
@@ -858,12 +858,12 @@
     <string name="toolbox_status_started">Recognition task started</string>
 
     <!-- panel: award -->
-    <string name="panel_award_daily_weekly">Collect daily and weekly mission rewards</string>
+    <string name="panel_award_daily_weekly">Collect daily/weekly mission rewards</string>
     <string name="panel_award_mail">Collect all mail rewards</string>
-    <string name="panel_award_free_gacha">Conduct the daily free single pull from the limited banner</string>
-    <string name="panel_award_free_gacha_tip">If no free pull is available, it will be skipped</string>
-    <string name="panel_award_orundum">Collect the daily Orundum reward from the Lucky Strips</string>
-    <string name="panel_award_mining">Collect the daily Orundum reward from the mining permit</string>
+    <string name="panel_award_free_gacha">Conducting daily free single pull from the limited banner</string>
+    <string name="panel_award_free_gacha_tip">If there is no free single pull, it will not be pooled</string>
+    <string name="panel_award_orundum">Collect daily Orundum reward from the Lucky Strips</string>
+    <string name="panel_award_mining">Collect daily Orundum reward from the provisional mining permit</string>
     <string name="panel_award_special_access">Collect Special Access rewards</string>
 
     <!-- panel: depot -->
@@ -877,14 +877,14 @@
 
     <!-- panel: mini game -->
     <string name="panel_mini_game_title">Mini Games</string>
-    <string name="panel_mini_game_name">Mini Game</string>
+    <string name="panel_mini_game_name">Mini Game Name</string>
     <string name="panel_mini_game_ending">Ending</string>
-    <string name="panel_mini_game_preferred_events">Preferred Event Series</string>
+    <string name="panel_mini_game_preferred_events">Priority for Series of Events</string>
 
     <!-- mini game: data texts (names / tips, mirrors MaaWpfGui localization keys) -->
     <string name="mini_game_empty_tip">Select a mini-game from above to start running.</string>
     <string name="mini_game_low_version_tip">MaaCore version too old, update required\nCurrent MaaCore Version: %2$s\nMinimum Requirements: %1$s</string>
-    <string name="mini_game_sf_event_none">None</string>
+    <string name="mini_game_sf_event_none">Not selected</string>
     <string name="mini_game_sf_event_support_platform">Support Platform</string>
     <string name="mini_game_sf_event_knight_errant">Knight-errant</string>
     <string name="mini_game_sf_event_sly_shadows">Sly Shadows</string>
@@ -903,7 +903,7 @@
     <string name="mini_game_name_spa">Stronghold Protocol: Alliance</string>
     <string name="mini_game_tip_spa">Start the task from the main event screen (where ｢Solo Simulation｣ is located)\nIf there is a saved game, you need to manually abandon it first\nOnly tested up to ｢Perilous Simulation｣\nIf higher difficulties have been cleared and ｢Perilous Simulation｣ or ｢Standard Simulation｣ is not visible, manually select ｢Perilous Simulation｣ difficulty once\nCompleting ｢Standard Simulation｣ manually allows faster score farming\nOnly level rewards can be farmed; to get the Engraved Medal, all ｢Key Objectives｣ must be completed</string>
     <string name="mini_game_name_os">OS-Karlan Trade R&amp;D</string>
-    <string name="mini_game_tip_os">Start the task at the main minigame interface (where the \"START\" button is in the left bottom corner).</string>
+    <string name="mini_game_tip_os">Start the task at the main minigame interface (where the &quot;START&quot; button is in the left bottom corner).</string>
     <string name="mini_game_name_rm_tr_1">Rebuilding Mandate RM-TR-1</string>
     <string name="mini_game_tip_rm_tr_1">After completing the tutorial, enter the Frontier Outposts and swipe all the way to the far left of the screen.</string>
     <string name="mini_game_name_rm_1">Rebuilding Mandate RM-1</string>
@@ -937,7 +937,7 @@
 
     <!-- panel: wake up -->
     <string name="panel_wakeup_client_type">Client Type</string>
-    <string name="panel_wakeup_client_official">Official</string>
+    <string name="panel_wakeup_client_official">Official (CN)</string>
     <string name="panel_wakeup_client_bilibili">Bilibili</string>
     <string name="panel_wakeup_client_yostar_en">YoStarEN</string>
     <string name="panel_wakeup_client_yostar_jp">YoStarJP</string>
@@ -950,7 +950,7 @@
     <!-- panel: fight -->
     <string name="panel_fight_use_medicine">Use sanity potions</string>
     <string name="panel_fight_use_medicine_count">Use up to N sanity potions</string>
-    <string name="panel_fight_limit_times">Specify Times</string>
+    <string name="panel_fight_limit_times">Perform Battles</string>
     <string name="panel_fight_stop_after_times">Stop after N battles</string>
     <string name="panel_fight_series_warning">Battle count %1$d is not divisible by proxy multiplier %2$d, so sanity may not be fully consumed</string>
     <string name="panel_fight_specified_drops">Specified Drops</string>
@@ -963,12 +963,12 @@
 
     <!-- panel: mall -->
     <string name="panel_mall_advanced_options">Advanced Options</string>
-    <string name="panel_mall_force_shopping_if_full">Ignore blacklist when credits are about to overflow</string>
+    <string name="panel_mall_force_shopping_if_full">Ignore blacklist if credits overflow</string>
     <string name="panel_mall_force_shopping_if_full_tip">When credits are about to overflow, force-buy blacklisted items to avoid waste</string>
-    <string name="panel_mall_only_discount">Only buy discounted credit shop items</string>
+    <string name="panel_mall_only_discount">Only purchase discounted credit items</string>
     <string name="panel_mall_only_discount_tip">Note: This may still cause credit overflow. Non-discounted whitelisted items will still be bought.</string>
     <string name="panel_mall_reserve_credit">Stop buying when credits drop below 300</string>
-    <string name="panel_mall_reserve_credit_tip">Whitelisted items will still be bought even below 300 credits.</string>
+    <string name="panel_mall_reserve_credit_tip">Will still purchase whitelisted items even if credits are below 300!</string>
     <string name="panel_mall_drag_reorder">Drag to reorder</string>
     <string name="panel_mall_priority_empty">No priority items yet\nTap the button below to add one</string>
 
@@ -980,7 +980,7 @@
     <string name="panel_recruit_use_expedited_tip">Effective once only.\nRecruitment permits are consumed faster than acquired; normally the timer expires before the next recruit task runs. Use only in emergencies such as severe permit overflow</string>
     <string name="panel_recruit_max_times_title">Recruit Max Times</string>
     <string name="panel_recruit_max_times_desc">Maximum number of recruitments per task run</string>
-    <string name="panel_recruit_extra_tags_strategy">Strategy for Additional Tags</string>
+    <string name="panel_recruit_extra_tags_strategy">Strategies for Additional Tags</string>
     <string name="panel_recruit_extra_tags_none">Additional Tags are not selected by default</string>
     <string name="panel_recruit_extra_tags_select">If higher ★ tags appear, always select 3 tags</string>
     <string name="panel_recruit_extra_tags_rare_only">Pick as many high-star Tags as possible</string>
@@ -991,14 +991,14 @@
     <string name="panel_recruit_force_refresh">Continue trying to refresh Tags without recruitment permit</string>
     <string name="panel_recruit_preserve_tag_enabled">Preserve selected tags</string>
     <string name="panel_recruit_preserve_tag_enabled_tip">Skip the recruitment and keep the slot when any selected tag is identified. Leave it empty to preserve none.</string>
-    <string name="panel_recruit_choose_level3">Auto-confirm 3★</string>
-    <string name="panel_recruit_choose_level4">Auto-confirm 4★</string>
-    <string name="panel_recruit_choose_level5">Auto-confirm 5★</string>
+    <string name="panel_recruit_choose_level3">Auto confirm 3★</string>
+    <string name="panel_recruit_choose_level4">Auto confirm 4★</string>
+    <string name="panel_recruit_choose_level5">Auto confirm 5★</string>
 
     <!-- panel: reclamation -->
     <string name="panel_reclamation_theme">Theme</string>
     <string name="panel_reclamation_strategy">Strategy</string>
-    <string name="panel_reclamation_clear_store">Clear store after completion</string>
+    <string name="panel_reclamation_clear_store">Clear Store after completion</string>
     <string name="panel_reclamation_archive_tip">Farm prosperity points by crafting support props; an existing save is required</string>
     <string name="panel_reclamation_tool_name">Support prop name</string>
     <string name="panel_reclamation_tool_placeholder">Glow Stick</string>
@@ -1036,26 +1036,26 @@
     <string name="panel_roguelike_difficulty">Difficulty</string>
     <string name="panel_roguelike_strategy">Strategy</string>
     <string name="panel_roguelike_squad">Starting Squad</string>
-    <string name="panel_roguelike_roles">Starting Class Group</string>
+    <string name="panel_roguelike_roles">Starting Roles</string>
     <string name="panel_roguelike_investment_settings">Investment Settings</string>
-    <string name="panel_roguelike_investment_enabled">Invest Originium Ingots</string>
-    <string name="panel_roguelike_invest_count">Stop after investing N Originium Ingots</string>
-    <string name="panel_roguelike_stop_when_invest_full">Stop when the ingot storage reaches the cap</string>
-    <string name="panel_roguelike_investment_more_score">Investment mode enables shopping, recruitment, and entering floor 2</string>
+    <string name="panel_roguelike_investment_enabled">Invest ingots</string>
+    <string name="panel_roguelike_invest_count">Stops after investing N times</string>
+    <string name="panel_roguelike_stop_when_invest_full">Stops when invested ingots reach limit</string>
+    <string name="panel_roguelike_investment_more_score">Investment mode enables shopping, recruitment, and entering the second floor</string>
     <string name="panel_roguelike_support_settings">Support Unit Settings</string>
     <string name="panel_roguelike_use_support">Use a support unit for the starting operator</string>
     <string name="panel_roguelike_use_support_tip">Enter the starting operator first</string>
-    <string name="panel_roguelike_nonfriend_support">Allow non-friend support units</string>
-    <string name="panel_roguelike_starts_count">Stop after starting exploration N times</string>
+    <string name="panel_roguelike_nonfriend_support">Enable non-friend support</string>
+    <string name="panel_roguelike_starts_count">Stops after starting N times</string>
     <string name="panel_roguelike_exp_settings">Experience Mode Settings</string>
-    <string name="panel_roguelike_stop_before_boss">Stop before the floor 5 boss</string>
-    <string name="panel_roguelike_stop_at_max_level">Stop when max level is reached</string>
+    <string name="panel_roguelike_stop_before_boss">Stop before final boss</string>
+    <string name="panel_roguelike_stop_at_max_level">Stop when max level is achieved</string>
     <string name="panel_roguelike_collectible_settings">Collectible Mode Settings</string>
-    <string name="panel_roguelike_collectible_squad">Squad for collectible runs</string>
-    <string name="panel_roguelike_collectible_shopping">Enable shopping in collectible mode</string>
+    <string name="panel_roguelike_collectible_squad">Squad to get collectibles</string>
+    <string name="panel_roguelike_collectible_shopping">Enable shopping in the grinding mode</string>
     <string name="panel_roguelike_start_with_elite_two">Repeat for the starting operator to reach Elite 2</string>
     <string name="panel_roguelike_only_start_with_elite_two">Only repeat for the starting operator to reach Elite 2, without battle</string>
-    <string name="panel_roguelike_collectible_rewards">Expected rewards for collectible mode</string>
+    <string name="panel_roguelike_collectible_rewards">Grinding mode expected rewards</string>
     <string name="panel_roguelike_monthly_squad_settings">Monthly Squad Mode Settings</string>
     <string name="panel_roguelike_monthly_squad_auto_iterate">Monthly Squad Auto-Switch</string>
     <string name="panel_roguelike_monthly_squad_comms">Monthly Squad Communication</string>
@@ -1067,22 +1067,22 @@
     <string name="panel_roguelike_playtime_settings">Playtime Node Mode Settings</string>
     <string name="panel_roguelike_playtime_target">Target Playtime Node</string>
     <string name="panel_roguelike_mizuki_settings">Mizuki-Specific Settings</string>
-    <string name="panel_roguelike_refresh_trader_with_dice">Refresh shop with dice</string>
+    <string name="panel_roguelike_refresh_trader_with_dice">Refresh Rogue Trader with Dice</string>
     <string name="panel_roguelike_sami_settings">Sami-Specific Settings</string>
-    <string name="panel_roguelike_first_floor_foldartal">Repeat the first-floor foreseed foldartal without battle</string>
+    <string name="panel_roguelike_first_floor_foldartal">Repeat for foldartal foreseed first floor, No Battle</string>
     <string name="panel_roguelike_foldartal_placeholder">Foldartal name</string>
-    <string name="panel_roguelike_new_squad_foldartal">Start with Life Prioritizing Squad and acquire the cypherboard</string>
+    <string name="panel_roguelike_new_squad_foldartal">Start with ｢Life Prioritizing Squad｣ and acquire the cypherboard</string>
     <string name="panel_roguelike_new_squad_foldartal_placeholder">Write up to three items and separate them with English semicolons (;)</string>
-    <string name="panel_roguelike_start_with_seed">Start with a specified seed</string>
+    <string name="panel_roguelike_start_with_seed">Start with seed</string>
     <string name="panel_roguelike_seed_placeholder">Format: xxx,rogue_x,x</string>
-    <string name="common_not_switch">Don\'t Switch</string>
+    <string name="common_not_switch">Don&apos;t Switch</string>
     <string name="panel_roguelike_difficulty_max">MAX (%1$d)</string>
     <string name="panel_roguelike_difficulty_min">MIN (0)</string>
     <string name="panel_roguelike_theme_phantom">Phantom</string>
     <string name="panel_roguelike_theme_mizuki">Mizuki</string>
     <string name="panel_roguelike_theme_sami">Sami</string>
     <string name="panel_roguelike_theme_sarkaz">Sarkaz</string>
-    <string name="panel_roguelike_theme_jiegarden">JieGarden</string>
+    <string name="panel_roguelike_theme_jiegarden">Sui&apos;s Garden</string>
     <string name="panel_roguelike_mode_exp">Gain XP</string>
     <string name="panel_roguelike_mode_investment">Invest Ingots</string>
     <string name="panel_roguelike_mode_collectible">Collectible Start</string>
@@ -1091,18 +1091,18 @@
     <string name="panel_roguelike_mode_clp_pds">Collapse Paradigm</string>
     <string name="panel_roguelike_mode_find_playtime">Playtime Node</string>
     <string name="panel_roguelike_mode_desc_exp">Gain Experience Points, clear as many nodes as possible</string>
-    <string name="panel_roguelike_mode_desc_investment">Invest coins and exit automatically after the investment is complete</string>
+    <string name="panel_roguelike_mode_desc_investment">Invests ingots, exits automatically after investment completes</string>
     <string name="panel_roguelike_mode_desc_collectible">Grind to obtain Hot Water Kettle or an Elite 2 starting operator</string>
-    <string name="panel_roguelike_mode_desc_squad">Grind Monthly Squad and clear as far as possible</string>
-    <string name="panel_roguelike_mode_desc_exploration">Grind Deep Investigation and clear as far as possible</string>
-    <string name="panel_roguelike_mode_desc_clp_pds">Farm collapse paradigms and restart immediately after encountering a non-rare collapse paradigm</string>
-    <string name="panel_roguelike_mode_desc_find_playtime">Farm Playtime Nodes, enter the cave on floor 1, and restart if the target node does not appear</string>
-    <string name="panel_roguelike_role_first_move_advantage">First Move Advantage</string>
-    <string name="panel_roguelike_role_slow_and_steady">Slow and Steady Wins the Race</string>
-    <string name="panel_roguelike_role_overcoming_weaknesses">Overcoming Your Weaknesses</string>
-    <string name="panel_roguelike_role_as_your_heart_desires">As Your Heart Desires</string>
-    <string name="panel_roguelike_role_flexible_deployment">Flexible Deployment</string>
-    <string name="panel_roguelike_role_unbreakable">Unbreakable</string>
+    <string name="panel_roguelike_mode_desc_squad">Grind Monthly Squad, clear as far as possible</string>
+    <string name="panel_roguelike_mode_desc_exploration">Grind Deep Investigation, clear as far as possible</string>
+    <string name="panel_roguelike_mode_desc_clp_pds">Farm collapse paradigms, restart immediately after encountering a non-rare collapse paradigm</string>
+    <string name="panel_roguelike_mode_desc_find_playtime">Farm Playtime nodes, enter the cave on the first floor, restart if target node not found</string>
+    <string name="panel_roguelike_role_first_move_advantage">First Move Advantage (Vanguard, Sniper, Specialist)</string>
+    <string name="panel_roguelike_role_slow_and_steady">Slow and Steady Wins the Race (Defender, Caster, Sniper)</string>
+    <string name="panel_roguelike_role_overcoming_weaknesses">Overcoming Your Weaknesses (Guard, Supporter, Medic)</string>
+    <string name="panel_roguelike_role_as_your_heart_desires">As Your Heart Desires (Random)</string>
+    <string name="panel_roguelike_role_flexible_deployment">Flexible Deployment (Vanguard, Supporter, Specialist)</string>
+    <string name="panel_roguelike_role_unbreakable">Indestructible (Defender, Caster, Medic)</string>
     <string name="panel_roguelike_playtime_target_ling">Ling</string>
     <string name="panel_roguelike_playtime_target_shu">Shu</string>
     <string name="panel_roguelike_playtime_target_nian">Nian</string>
@@ -1114,7 +1114,7 @@
     <string name="panel_roguelike_reward_key">Key</string>
     <string name="panel_roguelike_reward_dice">Dice</string>
     <string name="panel_roguelike_reward_ideas">Thought</string>
-    <string name="panel_roguelike_reward_ticket">Ticket</string>
+    <string name="panel_roguelike_reward_ticket">Coupon</string>
     <string name="panel_roguelike_squad_leader">Leader Squad</string>
     <string name="panel_roguelike_squad_support">Support Squad</string>
     <string name="panel_roguelike_squad_tactical_assault">Tactical Assault Squad</string>
@@ -1140,18 +1140,18 @@
     <string name="panel_roguelike_squad_ingots">Ingots Squad</string>
     <string name="panel_roguelike_squad_collection">Collection Squad</string>
     <string name="panel_roguelike_squad_top_gun">Top Gun Squad</string>
-    <string name="panel_roguelike_squad_special_service">Special Service Squad</string>
-    <string name="panel_roguelike_squad_high_ground_breakthrough">High Ground Breakthrough Squad</string>
-    <string name="panel_roguelike_squad_ground_breakthrough">Ground Breakthrough Squad</string>
+    <string name="panel_roguelike_squad_special_service">Special Squad</string>
+    <string name="panel_roguelike_squad_high_ground_breakthrough">High Ground Breaching Squad</string>
+    <string name="panel_roguelike_squad_ground_breakthrough">Ground Breaching Squad</string>
     <string name="panel_roguelike_squad_tourist">Tourist Squad</string>
-    <string name="panel_roguelike_squad_sisuitai">Sisuitai Squad</string>
-    <string name="panel_roguelike_squad_tianshifu">Tianshifu Squad</string>
-    <string name="panel_roguelike_squad_splendid_blossoms">Splendid Blossoms Squad</string>
-    <string name="panel_roguelike_squad_risky_gambit">Risky Gambit Squad</string>
-    <string name="panel_roguelike_squad_echo_of_ages">Echo of Ages Squad</string>
+    <string name="panel_roguelike_squad_sisuitai">Sui Regulator Squad</string>
+    <string name="panel_roguelike_squad_tianshifu">Tianshi Bureau Squad</string>
+    <string name="panel_roguelike_squad_splendid_blossoms">Blooming Flowers Squad</string>
+    <string name="panel_roguelike_squad_risky_gambit">Perilous Game Squad</string>
+    <string name="panel_roguelike_squad_echo_of_ages">Sui's Shadow Squad</string>
     <string name="panel_roguelike_squad_agent">Agent Squad (Not Supported)</string>
-    <string name="panel_roguelike_squad_scholarly">Scholarly Squad</string>
-    <string name="panel_roguelike_squad_merchant">Merchant Squad</string>
+    <string name="panel_roguelike_squad_scholarly">Knowledge Squad (知学分队)</string>
+    <string name="panel_roguelike_squad_merchant">Merchant Squad (商贾分队)</string>
     <!-- i18n: shared helpers -->
     <string name="common_enumeration_separator">, </string>
 
@@ -1361,7 +1361,7 @@
     <string name="schedule_go_to_settings">Go to settings</string>
     <string name="schedule_later">Later</string>
     <string name="schedule_time_picker_title">Choose time</string>
-    <string name="schedule_time_picker_keyboard_input">Keyboard input</string>
+    <string name="schedule_time_picker_keyboard_input">Keyboard Input Method</string>
     <string name="schedule_time_picker_dial_selection">Dial selection</string>
     <string name="schedule_default_name">Schedule-%1$d</string>
     <string name="schedule_error_name_required">Enter a schedule name</string>
@@ -1486,18 +1486,18 @@
     <string name="log_level_rare">Rare</string>
 
     <!-- i18n: task type names (default task chain node names; intentionally shorter than panel_task_type_* labels) -->
-    <string name="task_type_wake_up">StartUp</string>
+    <string name="task_type_wake_up">Login</string>
     <string name="task_type_recruiting">Recruit</string>
     <string name="task_type_base">Base</string>
     <string name="task_type_combat">Combat</string>
     <string name="task_type_mall">Credit</string>
     <string name="task_type_mission">Rewards</string>
     <string name="task_type_auto_roguelike">Auto I.S.</string>
-    <string name="task_type_reclamation">Reclamation</string>
+    <string name="task_type_reclamation">Recl. Alg.</string>
 
     <!-- i18n: announcement -->
     <string name="announcement_title">Important Notice</string>
-    <string name="announcement_dont_show_again">Don\'t show again until next update</string>
+    <string name="announcement_dont_show_again">Do not show this announcement again</string>
     <string name="announcement_dont_show_again_hint">Please read the full announcement and stay for %1$d seconds to enable</string>
     <string name="announcement_scroll_to_bottom_hint">Please read the full announcement first</string>
     <string name="announcement_confirm">Confirm</string>
@@ -1512,19 +1512,19 @@
 
     <!-- 成就文案 -->
     <string name="achievement_SanitySpender1_title">Tactical Practice</string>
-    <string name="achievement_SanitySpender1_desc">You\'ve got the hang of it</string>
+    <string name="achievement_SanitySpender1_desc">You&apos;ve got the hang of it</string>
     <string name="achievement_SanitySpender1_condition">Complete 10 auto-battle operations</string>
     <string name="achievement_SanitySpender2_title">Auto-Battle Pioneer</string>
     <string name="achievement_SanitySpender2_desc">Even more skilled than me</string>
     <string name="achievement_SanitySpender2_condition">Complete 100 auto-battle operations</string>
     <string name="achievement_SanitySpender3_title">ZOOT</string>
-    <string name="achievement_SanitySpender3_desc">Closure\'s proxy program is running normally.</string>
+    <string name="achievement_SanitySpender3_desc">Closure&apos;s proxy program is running normally.</string>
     <string name="achievement_SanitySpender3_condition">Complete 1000 auto-battle operations</string>
     <string name="achievement_SanitySaver1_title">Penny Pincher</string>
     <string name="achievement_SanitySaver1_desc">Every point of sanity used perfectly.</string>
     <string name="achievement_SanitySaver1_condition">Use ｢Sanity Potion｣ function to recover sanity 1 time</string>
     <string name="achievement_SanitySaver2_title">Supply Master</string>
-    <string name="achievement_SanitySaver2_desc">You\'ve mastered the use of potions.</string>
+    <string name="achievement_SanitySaver2_desc">You&apos;ve mastered the use of potions.</string>
     <string name="achievement_SanitySaver2_condition">Use ｢Sanity Potion｣ function to recover sanity 10 times</string>
     <string name="achievement_SanitySaver3_title">Perpetual Motion Machine</string>
     <string name="achievement_SanitySaver3_desc">Your sanity seems to never run out.</string>
@@ -1533,13 +1533,13 @@
     <string name="achievement_RoguelikeGamePass1_desc">If only we could reach... that place...</string>
     <string name="achievement_RoguelikeGamePass1_condition">Clear Integrated Strategies using ｢Auto I.S.｣ 1 time</string>
     <string name="achievement_RoguelikeGamePass2_title">Return to the End</string>
-    <string name="achievement_RoguelikeGamePass2_desc">I\'ve walked this path many times.</string>
+    <string name="achievement_RoguelikeGamePass2_desc">I&apos;ve walked this path many times.</string>
     <string name="achievement_RoguelikeGamePass2_condition">Clear Integrated Strategies using ｢Auto I.S.｣ 5 times</string>
     <string name="achievement_RoguelikeGamePass3_title">Regular at the End</string>
     <string name="achievement_RoguelikeGamePass3_desc">Could walk there with eyes closed.</string>
     <string name="achievement_RoguelikeGamePass3_condition">Clear Integrated Strategies using ｢Auto I.S.｣ 10 times</string>
     <string name="achievement_RoguelikeN04_title">Simple and Easy</string>
-    <string name="achievement_RoguelikeN04_desc">This difficulty can\'t stop me.</string>
+    <string name="achievement_RoguelikeN04_desc">This difficulty can&apos;t stop me.</string>
     <string name="achievement_RoguelikeN04_condition">Clear any I.S. at N4 difficulty or above using ｢Auto I.S.｣</string>
     <string name="achievement_RoguelikeN08_title">Challenge the Difficult</string>
     <string name="achievement_RoguelikeN08_desc">Brave MAA fears no difficulty.</string>
@@ -1551,7 +1551,7 @@
     <string name="achievement_RoguelikeN15_desc">Immortal MAA truly immortal.</string>
     <string name="achievement_RoguelikeN15_condition">Clear any I.S. at N15 difficulty or above using ｢Auto I.S.｣</string>
     <string name="achievement_RoguelikeRetreat_title">Failure Is the Mother of Success</string>
-    <string name="achievement_RoguelikeRetreat_desc">One day, we\'ll reach the shore of success. Failure is the ladder to success.</string>
+    <string name="achievement_RoguelikeRetreat_desc">One day, we&apos;ll reach the shore of success. Failure is the ladder to success.</string>
     <string name="achievement_RoguelikeRetreat_condition">｢Auto I.S.｣ abandon exploration 100 times</string>
     <string name="achievement_RoguelikeGoldMax_title">All Full</string>
     <string name="achievement_RoguelikeGoldMax_desc">Cannott, bring out your most expensive stuff!</string>
@@ -1623,7 +1623,7 @@
     <string name="achievement_MosquitoLeg_desc">You deeply understand the principle of accumulating little by little.</string>
     <string name="achievement_MosquitoLeg_condition">Use ｢Credit Fight｣ function more than 5 times</string>
     <string name="achievement_LogSupervisor_title">Supervisor</string>
-    <string name="achievement_LogSupervisor_desc">They say watching MAA\'s logs can effectively improve auto-battle success rate.</string>
+    <string name="achievement_LogSupervisor_desc">They say watching MAA&apos;s logs can effectively improve auto-battle success rate.</string>
     <string name="achievement_LogSupervisor_condition">Complete a task with the log floating window open</string>
     <string name="achievement_TaskChainKing_title">Task Chain King</string>
     <string name="achievement_TaskChainKing_desc">One click to start, everything done.</string>
@@ -1641,7 +1641,7 @@
     <string name="achievement_Linguist_desc">MAA, but internationalized.</string>
     <string name="achievement_Linguist_condition">Try switching interface language</string>
     <string name="achievement_AchievementObserver_title">Achievement Observer</string>
-    <string name="achievement_AchievementObserver_desc">Take a look at what you\'ve been up to.</string>
+    <string name="achievement_AchievementObserver_desc">Take a look at what you&apos;ve been up to.</string>
     <string name="achievement_AchievementObserver_condition">Open ｢Achievements｣ once</string>
     <string name="achievement_PrivateDormManager_title">Private Dorm Manager</string>
     <string name="achievement_PrivateDormManager_desc">Of course the shift schedule should use your own.</string>
@@ -1652,8 +1652,8 @@
     <string name="achievement_UseCopilot2_title">Hands-Off All the Way</string>
     <string name="achievement_UseCopilot2_desc">Leave all events to MAA.</string>
     <string name="achievement_UseCopilot2_condition">Use ｢Copilot｣ function to clear 10 times</string>
-    <string name="achievement_UseCopilot3_title">Will Still Mark \"Very Easy\" Next Time</string>
-    <string name="achievement_UseCopilot3_desc">Still don\'t know the final boss mechanics in the end.</string>
+    <string name="achievement_UseCopilot3_title">Will Still Mark &quot;Very Easy&quot; Next Time</string>
+    <string name="achievement_UseCopilot3_desc">Still don&apos;t know the final boss mechanics in the end.</string>
     <string name="achievement_UseCopilot3_condition">Use ｢Copilot｣ function to clear 100 times</string>
     <string name="achievement_CopilotLikeGiven1_title">Encouragement</string>
     <string name="achievement_CopilotLikeGiven1_desc">Likes are the greatest encouragement to authors!</string>
@@ -1662,43 +1662,43 @@
     <string name="achievement_CopilotLikeGiven2_desc">10 likes, actively participating in community interaction.</string>
     <string name="achievement_CopilotLikeGiven2_condition">Like copilots 10 times total</string>
     <string name="achievement_CopilotLikeGiven3_title">Like Master</string>
-    <string name="achievement_CopilotLikeGiven3_desc">50 likes, you\'ve become a like master!</string>
+    <string name="achievement_CopilotLikeGiven3_desc">50 likes, you&apos;ve become a like master!</string>
     <string name="achievement_CopilotLikeGiven3_condition">Like copilots 50 times total</string>
     <string name="achievement_CopilotError_title">Oops</string>
     <string name="achievement_CopilotError_desc">An accident happened...</string>
     <string name="achievement_CopilotError_condition">Error occurred in ｢Copilot｣</string>
     <string name="achievement_MapOutdated_title">Impatient King</string>
-    <string name="achievement_MapOutdated_desc">I know you\'re in a hurry, but don\'t rush.</string>
+    <string name="achievement_MapOutdated_desc">I know you&apos;re in a hurry, but don&apos;t rush.</string>
     <string name="achievement_MapOutdated_condition">Use ｢Copilot｣ without updating resources</string>
     <string name="achievement_Irreplaceable_title">Irreplaceable</string>
     <string name="achievement_Irreplaceable_desc">Maybe I should get different homework?</string>
     <string name="achievement_Irreplaceable_condition">When using ｢Copilot - Auto Squad｣, missing at least two Operators</string>
     <string name="achievement_QuickCloser_title">YOLO!</string>
-    <string name="achievement_QuickCloser_desc">\"I know what I\'m doing!\" —A user, moments before clicking</string>
-    <string name="achievement_QuickCloser_condition">Close popup within 1 second (you probably didn\'t read it)</string>
+    <string name="achievement_QuickCloser_desc">&quot;I know what I&apos;m doing!&quot; —A user, moments before clicking</string>
+    <string name="achievement_QuickCloser_condition">Close popup within 1 second (you probably didn&apos;t read it)</string>
     <string name="achievement_Martian_title">Martian</string>
-    <string name="achievement_Martian_desc">How\'s that ancient version working for you?</string>
+    <string name="achievement_Martian_desc">How&apos;s that ancient version working for you?</string>
     <string name="achievement_Martian_condition">Resource or version date is more than 3 months old</string>
     <string name="achievement_RecruitNoSixStar_title">Superstition Invalid</string>
-    <string name="achievement_RecruitNoSixStar_desc">Things have come to this, let\'s sleep first.</string>
+    <string name="achievement_RecruitNoSixStar_desc">Things have come to this, let&apos;s sleep first.</string>
     <string name="achievement_RecruitNoSixStar_condition">｢Auto Recruit｣ accumulated 500 times without 6★ tags appearing</string>
-    <string name="achievement_RecruitNoSixStarStreak_title">It Must Be MAA\'s Fault!</string>
+    <string name="achievement_RecruitNoSixStarStreak_title">It Must Be MAA&apos;s Fault!</string>
     <string name="achievement_RecruitNoSixStarStreak_desc">RAGE RAGE RAGE RAGE RAGE RAGE RAGE RAGE RAGE RAGE!</string>
     <string name="achievement_RecruitNoSixStarStreak_condition">｢Auto Recruit｣ 500 consecutive times without 6★ tags appearing</string>
     <string name="achievement_CongratulationError_title">Good News</string>
-    <string name="achievement_CongratulationError_desc">Why isn\'t my MAA working anymore?</string>
+    <string name="achievement_CongratulationError_desc">Why isn&apos;t my MAA working anymore?</string>
     <string name="achievement_CongratulationError_condition">Triggered a MAA error</string>
     <string name="achievement_UnexpectedCrash_title">Uninvited Guest</string>
-    <string name="achievement_UnexpectedCrash_desc">You\'ve triggered an unknown domain.</string>
+    <string name="achievement_UnexpectedCrash_desc">You&apos;ve triggered an unknown domain.</string>
     <string name="achievement_UnexpectedCrash_condition">Unhandled exception occurred and was recorded in crash logs</string>
     <string name="achievement_ProblemFeedback_title">Risk Assessment</string>
     <string name="achievement_ProblemFeedback_desc">What must be eliminated are the risks from within.</string>
     <string name="achievement_ProblemFeedback_condition">Submit Issue Report once</string>
     <string name="achievement_CdnTorture_title">Network Torture</string>
-    <string name="achievement_CdnTorture_desc">Farther than the universe are GitHub\'s servers.</string>
+    <string name="achievement_CdnTorture_desc">Farther than the universe are GitHub&apos;s servers.</string>
     <string name="achievement_CdnTorture_condition">Resource download failed more than 3 times</string>
     <string name="achievement_BackstageExplorer_title">Backstage Explorer</string>
-    <string name="achievement_BackstageExplorer_desc">Let me see what\'s written back there.</string>
+    <string name="achievement_BackstageExplorer_desc">Let me see what&apos;s written back there.</string>
     <string name="achievement_BackstageExplorer_condition">Use ｢Open Debug Folder｣ once</string>
     <string name="achievement_LogDiagnostician_title">Log Diagnosis</string>
     <string name="achievement_LogDiagnostician_desc">With logs in hand, the diagnosis has clues.</string>
@@ -1713,7 +1713,7 @@
     <string name="achievement_DebugModeEnabled_desc">More details are now visible.</string>
     <string name="achievement_DebugModeEnabled_condition">Enable debug mode</string>
     <string name="achievement_MissionStartCount_title">Never Give Up</string>
-    <string name="achievement_MissionStartCount_desc">It\'s trust, and it\'s dependence.</string>
+    <string name="achievement_MissionStartCount_desc">It&apos;s trust, and it&apos;s dependence.</string>
     <string name="achievement_MissionStartCount_condition">Start tasks more than 3 times in one day</string>
     <string name="achievement_TaskStartWithoutWakeUp_title">No Need to Restart</string>
     <string name="achievement_TaskStartWithoutWakeUp_desc">The game is already ready, just continue.</string>
@@ -1734,19 +1734,19 @@
     <string name="achievement_LongTaskTimeout_desc">How about we wait a bit longer?</string>
     <string name="achievement_LongTaskTimeout_condition">Trigger timeout reminder</string>
     <string name="achievement_ProxyOnline3Hours_title">Perfect Attendance Pioneer</string>
-    <string name="achievement_ProxyOnline3Hours_desc">You have become the Doctor\'s stand-in.</string>
+    <string name="achievement_ProxyOnline3Hours_desc">You have become the Doctor&apos;s stand-in.</string>
     <string name="achievement_ProxyOnline3Hours_condition">Continuously online for more than 3 hours after starting tasks</string>
     <string name="achievement_TaskStartCancel_title">So Indecisive</string>
     <string name="achievement_TaskStartCancel_desc">Ah yes yes, ah no no, ah yes yes, ah no no...</string>
     <string name="achievement_TaskStartCancel_condition">Stop immediately after starting a task</string>
     <string name="achievement_UseDaily1_title">Daily Check-in</string>
-    <string name="achievement_UseDaily1_desc">Seven consecutive days of check-in, too bad there\'s no reward.</string>
+    <string name="achievement_UseDaily1_desc">Seven consecutive days of check-in, too bad there&apos;s no reward.</string>
     <string name="achievement_UseDaily1_condition">Use MAA for 7 consecutive days</string>
     <string name="achievement_UseDaily2_title">Perfect Attendance Award</string>
-    <string name="achievement_UseDaily2_desc">Let\'s give out this month\'s perfect attendance award.</string>
+    <string name="achievement_UseDaily2_desc">Let&apos;s give out this month&apos;s perfect attendance award.</string>
     <string name="achievement_UseDaily2_condition">Use MAA for 30 consecutive days</string>
     <string name="achievement_UseDaily3_title">No Rest All Year</string>
-    <string name="achievement_UseDaily3_desc">So you\'re the one exploiting MAA every day?</string>
+    <string name="achievement_UseDaily3_desc">So you&apos;re the one exploiting MAA every day?</string>
     <string name="achievement_UseDaily3_condition">Use MAA for 365 consecutive days</string>
     <string name="achievement_UpdateObsession_title">Update Obsession</string>
     <string name="achievement_UpdateObsession_desc">Update available? Update!</string>
@@ -1769,7 +1769,7 @@
     <string name="achievement_SanityPlanner_title">Sanity Planner</string>
     <string name="achievement_SanityPlanner_desc">Precise, perfect, not a single point off.</string>
     <string name="achievement_SanityPlanner_condition">Complete Combat with exactly all sanity consumed</string>
-    <string name="achievement_WarehouseKeeper_title">I\'m the Warehouse Keeper!</string>
+    <string name="achievement_WarehouseKeeper_title">I&apos;m the Warehouse Keeper!</string>
     <string name="achievement_WarehouseKeeper_desc">MAA found MAA!</string>
     <string name="achievement_WarehouseKeeper_condition">Operator recognition includes operator \"Pallas\"</string>
     <string name="achievement_PallasStarter_title">Pallas Fan</string>
