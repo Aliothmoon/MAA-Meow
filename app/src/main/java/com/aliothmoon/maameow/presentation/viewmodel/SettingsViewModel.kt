@@ -1,7 +1,9 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
 import android.app.Application
+import android.net.Uri
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.BuildConfig
@@ -12,6 +14,7 @@ import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.service.AchievementReporter
@@ -42,6 +45,7 @@ class SettingsViewModel(
     private val resourceDataManager: ResourceDataManager,
     private val resourceLoader: MaaResourceLoader,
     private val achievementReporter: AchievementReporter,
+    private val backgroundImageStore: BackgroundImageStore,
 ) : ViewModel() {
 
     // ========== 导入导出 ==========
@@ -288,5 +292,40 @@ class SettingsViewModel(
         viewModelScope.launch {
             appSettingsManager.setShowAchievementSnackbar(enabled)
         }
+    }
+
+    // ============ 自定义图片背景 ============
+    val customBackgroundEnabled: StateFlow<Boolean> = appSettingsManager.customBackgroundEnabled
+    val customBackgroundImageAlpha: StateFlow<Int> = appSettingsManager.customBackgroundImageAlpha
+    val customBackgroundScrim: StateFlow<Int> = appSettingsManager.customBackgroundScrim
+    val customBackgroundBlur: StateFlow<Int> = appSettingsManager.customBackgroundBlur
+    val backgroundImage: StateFlow<ImageBitmap?> = backgroundImageStore.imageBitmap
+
+    fun setCustomBackgroundEnabled(enabled: Boolean) {
+        viewModelScope.launch { appSettingsManager.setCustomBackgroundEnabled(enabled) }
+    }
+
+    fun onPickBackgroundImage(uri: Uri) {
+        viewModelScope.launch {
+            backgroundImageStore.importFromUri(uri).onFailure {
+                _backupMessage.value = uiTextOf(R.string.settings_background_import_failed)
+            }
+        }
+    }
+
+    fun removeBackgroundImage() {
+        viewModelScope.launch { backgroundImageStore.clear() }
+    }
+
+    fun setCustomBackgroundImageAlpha(value: Int) {
+        viewModelScope.launch { appSettingsManager.setCustomBackgroundImageAlpha(value) }
+    }
+
+    fun setCustomBackgroundScrim(value: Int) {
+        viewModelScope.launch { appSettingsManager.setCustomBackgroundScrim(value) }
+    }
+
+    fun setCustomBackgroundBlur(value: Int) {
+        viewModelScope.launch { appSettingsManager.setCustomBackgroundBlur(value) }
     }
 }

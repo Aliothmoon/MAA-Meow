@@ -7,10 +7,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -18,13 +22,18 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.constant.Routes
+import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.presentation.view.background.BackgroundTaskView
 import com.aliothmoon.maameow.presentation.view.home.HomeView
 import com.aliothmoon.maameow.presentation.view.settings.SettingsView
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.ui.ScheduleListView
 import com.aliothmoon.maameow.theme.MaaAnimations
+import com.aliothmoon.maameow.theme.MaaBackgroundHost
+import com.aliothmoon.maameow.theme.MaxBackgroundBlur
+import com.aliothmoon.maameow.theme.toGlass
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 import kotlin.math.abs
 
 
@@ -71,59 +80,92 @@ fun MainScreen(
         }
     }
 
-    Scaffold(
-        modifier = modifier,
-        bottomBar = {
-            if (visible && !fullscreen) {
-                AppBottomNavigation(
-                    currentRoute = BottomNavTab.all[pagerState.targetPage].route,
-                    onTabSelected = { tab -> goToPage(BottomNavTab.all.indexOf(tab)) },
-                )
-            }
-        },
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = paddingValues.calculateBottomPadding())
-                .graphicsLayer {
-                    // 隐藏时跳过绘制但保留组合树，避免 HorizontalPager 状态丢失
-                    alpha = if (visible) 1f else 0f
-                },
-        ) {
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize(),
-                key = { BottomNavTab.all[it].route },
-                userScrollEnabled = visible && !fullscreen,
-            ) { page ->
-                when (BottomNavTab.all[page]) {
-                    BottomNavTab.HOME -> HomeView(navController = navController)
-                    BottomNavTab.BACKGROUND -> BackgroundTaskView(
-                        viewModel = backgroundTaskViewModel,
-                    )
+    // 自定义图片背景（仅四个主 Tab 生效）：启用时切换玻璃配色并在 Scaffold 之下绘制背景图。
+    val backgroundStore: BackgroundImageStore = koinInject()
+    val bgImage by backgroundStore.imageBitmap.collectAsStateWithLifecycle()
+    val bgImageAlpha by backgroundStore.imageAlpha.collectAsStateWithLifecycle()
+    val bgScrimAlpha by backgroundStore.scrimAlpha.collectAsStateWithLifecycle()
+    val bgBlurFraction by backgroundStore.blurFraction.collectAsStateWithLifecycle()
 
-                    BottomNavTab.SCHEDULE -> ScheduleListView(navController = navController)
-                    BottomNavTab.SETTINGS -> SettingsView(
-                        navController = navController,
-                        onViewAnnouncement = onViewAnnouncement,
+    val mainContent: @Composable () -> Unit = {
+        Scaffold(
+            modifier = modifier,
+            bottomBar = {
+                if (visible && !fullscreen) {
+                    AppBottomNavigation(
+                        currentRoute = BottomNavTab.all[pagerState.targetPage].route,
+                        onTabSelected = { tab -> goToPage(BottomNavTab.all.indexOf(tab)) },
                     )
                 }
-            }
+            },
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = paddingValues.calculateBottomPadding())
+                    .graphicsLayer {
+                        // 隐藏时跳过绘制但保留组合树，避免 HorizontalPager 状态丢失
+                        alpha = if (visible) 1f else 0f
+                    },
+            ) {
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    key = { BottomNavTab.all[it].route },
+                    userScrollEnabled = visible && !fullscreen,
+                ) { page ->
+                    when (BottomNavTab.all[page]) {
+                        BottomNavTab.HOME -> HomeView(navController = navController)
+                        BottomNavTab.BACKGROUND -> BackgroundTaskView(
+                            viewModel = backgroundTaskViewModel,
+                        )
 
-            // 隐藏（子页面叠加其上）时吞掉所有指针，防止横滑切走主 Tab / 点击穿透到底层页。
-            if (!visible) {
-                Box(
-                    Modifier
-                        .matchParentSize()
-                        .pointerInput(Unit) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    awaitPointerEvent().changes.forEach { it.consume() }
+                        BottomNavTab.SCHEDULE -> ScheduleListView(navController = navController)
+                        BottomNavTab.SETTINGS -> SettingsView(
+                            navController = navController,
+                            onViewAnnouncement = onViewAnnouncement,
+                        )
+                    }
+                }
+
+                // 隐藏（子页面叠加其上）时吞掉所有指针，防止横滑切走主 Tab / 点击穿透到底层页。
+                if (!visible) {
+                    Box(
+                        Modifier
+                            .matchParentSize()
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        awaitPointerEvent().changes.forEach { it.consume() }
+                                    }
                                 }
-                            }
-                        })
+                            })
+                }
             }
         }
+    }
+
+    val image = bgImage
+    if (image != null) {
+        val baseScheme = MaterialTheme.colorScheme
+        val glassScheme = remember(baseScheme) { baseScheme.toGlass() }
+        MaterialTheme(
+            colorScheme = glassScheme,
+            typography = MaterialTheme.typography,
+            shapes = MaterialTheme.shapes,
+        ) {
+            CompositionLocalProvider(LocalContentColor provides glassScheme.onSurface) {
+                MaaBackgroundHost(
+                    image = image,
+                    imageAlpha = bgImageAlpha,
+                    scrimColor = baseScheme.background,
+                    scrimAlpha = bgScrimAlpha,
+                    blurRadius = MaxBackgroundBlur * bgBlurFraction,
+                    content = mainContent,
+                )
+            }
+        }
+    } else {
+        mainContent()
     }
 }

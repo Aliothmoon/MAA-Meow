@@ -2,11 +2,12 @@ package com.aliothmoon.maameow.theme
 
 import android.os.Build
 import androidx.compose.foundation.IndicationNodeFactory
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
@@ -16,11 +17,12 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.DrawModifierNode
-import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.platform.LocalContext
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 
@@ -159,6 +161,55 @@ object MaaThemeAlphas {
     const val Medium = 0.74f
 }
 
+/**
+ * 保存启用玻璃背景前的「原始不透明」ColorScheme，供 [OpaqueTheme] 在弹窗中恢复。
+ * 由 [MaaMeowTheme] 统一下发；未进入 App 主题时为 null。
+ */
+val LocalOpaqueColorScheme = staticCompositionLocalOf<ColorScheme?> { null }
+
+/** 主界面自定义背景启用时，卡片/表面的默认不透明度（玻璃拟态）。 */
+const val GLASS_SURFACE_ALPHA = 0.82f
+
+/**
+ * 生成玻璃版配色：背景置透明（露出背景图），各 surface 族加透明度让卡片透出背景，
+ * 前景 on* 色保持不透明以保证文字清晰。
+ */
+fun ColorScheme.toGlass(surfaceAlpha: Float = GLASS_SURFACE_ALPHA): ColorScheme = copy(
+    background = Color.Transparent,
+    surface = surface.copy(alpha = surfaceAlpha),
+    surfaceVariant = surfaceVariant.copy(alpha = surfaceAlpha),
+    surfaceBright = surfaceBright.copy(alpha = surfaceAlpha),
+    surfaceDim = surfaceDim.copy(alpha = surfaceAlpha),
+    surfaceContainer = surfaceContainer.copy(alpha = surfaceAlpha),
+    surfaceContainerLowest = surfaceContainerLowest.copy(alpha = surfaceAlpha),
+    surfaceContainerLow = surfaceContainerLow.copy(alpha = surfaceAlpha),
+    surfaceContainerHigh = surfaceContainerHigh.copy(alpha = surfaceAlpha),
+    surfaceContainerHighest = surfaceContainerHighest.copy(alpha = surfaceAlpha),
+)
+
+/**
+ * 在玻璃背景作用域内恢复不透明配色的包装器。
+ *
+ * 用于弹窗（[com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog] 等）——
+ * 它们在自身独立窗口内呈现，不应透出主界面背景图。若当前不处于玻璃作用域（[LocalOpaqueColorScheme] 为
+ * 空或与当前配色一致），则为无副作用的透传。
+ */
+@Composable
+fun OpaqueTheme(content: @Composable () -> Unit) {
+    val opaque = LocalOpaqueColorScheme.current
+    if (opaque == null || opaque === MaterialTheme.colorScheme) {
+        content()
+    } else {
+        MaterialTheme(
+            colorScheme = opaque,
+            typography = MaterialTheme.typography,
+            shapes = MaterialTheme.shapes,
+        ) {
+            CompositionLocalProvider(LocalContentColor provides opaque.onSurface, content = content)
+        }
+    }
+}
+
 @Composable
 fun MaaMeowTheme(
     themeMode: AppSettingsManager.ThemeMode = AppSettingsManager.ThemeMode.SYSTEM,
@@ -201,7 +252,8 @@ fun MaaMeowTheme(
     }
 
     CompositionLocalProvider(
-        LocalIndication provides NoIndication
+        LocalIndication provides NoIndication,
+        LocalOpaqueColorScheme provides colorScheme,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

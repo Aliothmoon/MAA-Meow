@@ -579,4 +579,68 @@ class AppSettingsManager(
         }
     }
 
+    // ============ 自定义图片背景（仅四个主 Tab 生效）============
+
+    /** 将 0~100 的原始字符串解析为合法百分比 */
+    private fun parsePercent(raw: String, default: Int): Int =
+        raw.toIntOrNull()?.coerceIn(0, 100) ?: default
+
+    val customBackgroundEnabled: StateFlow<Boolean> = settings
+        .map { it.customBackgroundEnabled.toBooleanStrictOrNull() ?: false }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            initialSettings.customBackgroundEnabled.toBooleanStrictOrNull() ?: false
+        )
+
+    suspend fun setCustomBackgroundEnabled(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[customBackgroundEnabled] = enabled.toString() }
+        }
+    }
+
+    val customBackgroundToken: StateFlow<String> = settings
+        .map { it.customBackgroundToken }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.customBackgroundToken)
+
+    suspend fun setCustomBackgroundToken(token: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[customBackgroundToken] = token }
+        }
+    }
+
+    val customBackgroundImageAlpha: StateFlow<Int> = settings
+        .map { parsePercent(it.customBackgroundImageAlpha, 80) }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, parsePercent(initialSettings.customBackgroundImageAlpha, 80))
+
+    suspend fun setCustomBackgroundImageAlpha(value: Int) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[customBackgroundImageAlpha] = value.coerceIn(0, 100).toString() }
+        }
+    }
+
+    val customBackgroundScrim: StateFlow<Int> = settings
+        .map { parsePercent(it.customBackgroundScrim, 25) }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, parsePercent(initialSettings.customBackgroundScrim, 25))
+
+    suspend fun setCustomBackgroundScrim(value: Int) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[customBackgroundScrim] = value.coerceIn(0, 100).toString() }
+        }
+    }
+
+    val customBackgroundBlur: StateFlow<Int> = settings
+        .map { parsePercent(it.customBackgroundBlur, 0) }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, parsePercent(initialSettings.customBackgroundBlur, 0))
+
+    suspend fun setCustomBackgroundBlur(value: Int) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[customBackgroundBlur] = value.coerceIn(0, 100).toString() }
+        }
+    }
+
 }
