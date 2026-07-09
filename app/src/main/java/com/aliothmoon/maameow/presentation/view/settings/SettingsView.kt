@@ -117,9 +117,10 @@ fun SettingsView(
     val tasksOverrideEnabled by viewModel.tasksOverrideEnabled.collectAsStateWithLifecycle()
     val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
-    val useSystemMonetColor by viewModel.useSystemMonetColor.collectAsStateWithLifecycle()
+    val useWallpaperColor by viewModel.useWallpaperColor.collectAsStateWithLifecycle()
     val fontSizeScale by viewModel.fontSizeScale.collectAsStateWithLifecycle()
     val showAchievementSnackbar by viewModel.showAchievementSnackbar.collectAsStateWithLifecycle()
+    val wallpaperUri by viewModel.wallpaperUri.collectAsStateWithLifecycle()
     val backgroundResolution by viewModel.backgroundResolution.collectAsStateWithLifecycle()
     val language by viewModel.language.collectAsStateWithLifecycle()
     val backupMessage by viewModel.backupMessage.collectAsStateWithLifecycle()
@@ -461,12 +462,25 @@ fun SettingsView(
                         onLanguageSelected = { viewModel.setLanguage(it) }
                     )
                     ListItemDivider()
+                    // Custom wallpaper
+                    SettingClickItem(
+                        title = stringResource(R.string.settings_wallpaper_title),
+                        description = if (wallpaperUri.isNotEmpty()) {
+                            stringResource(R.string.settings_wallpaper_set)
+                        } else {
+                            stringResource(R.string.settings_wallpaper_desc)
+                        },
+                        contentColor = contentColor
+                    ) {
+                        navController.navigate(Routes.WALLPAPER_SETTINGS)
+                    }
+                    ListItemDivider()
                     SettingThemeSection(
                         contentColor = contentColor,
                         selectedMode = themeMode,
                         onModeSelected = { viewModel.setThemeMode(it) },
-                        useSystemMonetColor = useSystemMonetColor,
-                        onMonetColorChanged = { viewModel.setUseSystemMonetColor(it) },
+useWallpaperColor = useWallpaperColor,
+                            onWallpaperColorChanged = { viewModel.setUseWallpaperColor(it) },
                         fontSizeScale = fontSizeScale,
                         onFontSizeScaleChanged = { viewModel.setFontSizeScale(it) }
                     )
@@ -735,8 +749,8 @@ private fun SettingThemeSection(
     contentColor: Color,
     selectedMode: AppSettingsManager.ThemeMode,
     onModeSelected: (AppSettingsManager.ThemeMode) -> Unit,
-    useSystemMonetColor: Boolean,
-    onMonetColorChanged: (Boolean) -> Unit,
+    useWallpaperColor: Boolean,
+    onWallpaperColorChanged: (Boolean) -> Unit,
     fontSizeScale: Int,
     onFontSizeScaleChanged: (Int) -> Unit
 ) {
@@ -805,7 +819,7 @@ private fun SettingThemeSection(
                         color = contentColor.copy(alpha = 0.6f)
                     )
                 }
-                Switch(checked = useSystemMonetColor, onCheckedChange = onMonetColorChanged)
+                Switch(checked = useWallpaperColor, onCheckedChange = onWallpaperColorChanged)
             }
         }
         // 页面缩放

@@ -267,11 +267,11 @@ class SettingsViewModel(
         }
     }
 
-    // ============ System Monet theme color ============
-    val useSystemMonetColor: StateFlow<Boolean> = appSettingsManager.useSystemMonetColor
-    fun setUseSystemMonetColor(enabled: Boolean) {
+    // 壁纸动态取色
+    val useWallpaperColor: StateFlow<Boolean> = appSettingsManager.useWallpaperColor
+    fun setUseWallpaperColor(enabled: Boolean) {
         viewModelScope.launch {
-            appSettingsManager.setUseSystemMonetColor(enabled)
+            appSettingsManager.setUseWallpaperColor(enabled)
         }
     }
 
@@ -289,4 +289,33 @@ class SettingsViewModel(
             appSettingsManager.setShowAchievementSnackbar(enabled)
         }
     }
-}
+
+    // 自定义壁纸
+    val wallpaperUri: StateFlow<String> = appSettingsManager.wallpaperUri
+    fun setWallpaperUri(uri: String) {
+        viewModelScope.launch {
+            appSettingsManager.setWallpaperUri(uri)
+        }
+    }
+
+    val wallpaperAlpha: StateFlow<Int> = appSettingsManager.wallpaperAlpha
+    fun setWallpaperAlpha(alpha: Int) {
+        viewModelScope.launch { appSettingsManager.setWallpaperAlpha(alpha) }
+    }
+
+    val wallpaperBlur: StateFlow<Int> = appSettingsManager.wallpaperBlur
+    fun setWallpaperBlur(blur: Int) {
+        viewModelScope.launch { appSettingsManager.setWallpaperBlur(blur) }
+    }
+
+    val wallpaperFrostedGlass: StateFlow<Boolean> = appSettingsManager.wallpaperFrostedGlass
+    fun setWallpaperFrostedGlass(enabled: Boolean) {
+        viewModelScope.launch { appSettingsManager.setWallpaperFrostedGlass(enabled) }
+    }
+
+    // 裁切状态恢复（跨导航保持）
+    val savedCropScale = MutableStateFlow(Float.NaN)
+    val savedCropPanX = MutableStateFlow(0f)
+    val savedCropPanY = MutableStateFlow(0f)
+    val savedCropRotation = MutableStateFlow(0f)
+    fun clearCropState() { savedCropScale.value = Float.NaN }}

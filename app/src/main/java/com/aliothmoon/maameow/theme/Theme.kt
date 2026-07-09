@@ -162,7 +162,7 @@ object MaaThemeAlphas {
 @Composable
 fun MaaMeowTheme(
     themeMode: AppSettingsManager.ThemeMode = AppSettingsManager.ThemeMode.SYSTEM,
-    useSystemMonetColor: Boolean = true,
+    useWallpaperColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -173,10 +173,10 @@ fun MaaMeowTheme(
         AppSettingsManager.ThemeMode.DARK, AppSettingsManager.ThemeMode.PURE_DARK -> true
     }
     val isPureDark = themeMode == AppSettingsManager.ThemeMode.PURE_DARK
-    val colorScheme: ColorScheme = remember(themeMode, useSystemMonetColor, isDarkTheme, context) {
+    val colorScheme: ColorScheme = remember(themeMode, useWallpaperColor, isDarkTheme, context) {
         when {
-            // Android 12+ with monet enabled ==> system dynamic color (Material You)
-            useSystemMonetColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            // Android 12+ with monet enabled => system dynamic color (Material You)
+            useWallpaperColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 val dynamic =
                     if (isDarkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(
                         context

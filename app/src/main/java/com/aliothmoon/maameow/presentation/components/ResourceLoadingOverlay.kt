@@ -62,9 +62,8 @@ fun ResourceLoadingOverlay(
         ) {
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(32.dp),

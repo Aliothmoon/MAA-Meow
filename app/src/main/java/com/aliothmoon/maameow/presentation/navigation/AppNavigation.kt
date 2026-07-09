@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.navigation
 
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -7,6 +8,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -16,6 +21,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -31,6 +38,7 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.ExternalNotificationService
 import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.presentation.LocalToaster
+import com.aliothmoon.maameow.theme.WallpaperColorScheme
 import com.aliothmoon.maameow.presentation.components.AnnouncementDialog
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
 import com.aliothmoon.maameow.presentation.state.UiEffect
@@ -40,6 +48,7 @@ import com.aliothmoon.maameow.presentation.view.settings.AchievementView
 import com.aliothmoon.maameow.presentation.view.settings.ErrorLogView
 import com.aliothmoon.maameow.presentation.view.settings.LogHistoryView
 import com.aliothmoon.maameow.presentation.view.settings.TaskOverrideEditorView
+import com.aliothmoon.maameow.presentation.view.settings.WallpaperSettingsView
 import com.aliothmoon.maameow.presentation.viewmodel.AppEventsViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.model.CountdownState
@@ -132,19 +141,121 @@ fun AppNavigation(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // MainScreen with HorizontalPager for smooth tab switching
-        MainScreen(
-            navController = navController,
-            backgroundTaskViewModel = backgroundTaskViewModel,
-            onViewAnnouncement = { forceShowAnnouncement = true },
-            visible = isOnMainTab,
-            fullscreen = isFullscreen,
-        )
+        // Full-screen wallpaper background — hide on wallpaper settings page & pure dark mode
+        val wallpaperUri by appSettings.wallpaperUri.collectAsStateWithLifecycle()
+        val wallpaperAlpha by appSettings.wallpaperAlpha.collectAsStateWithLifecycle()
+        val wallpaperBlur by appSettings.wallpaperBlur.collectAsStateWithLifecycle()
+        val wallpaperFrostedGlass by appSettings.wallpaperFrostedGlass.collectAsStateWithLifecycle()
+        val useWallpaperColor by appSettings.useWallpaperColor.collectAsStateWithLifecycle()
 
-        // NavHost 只承载子页面；主 Tab 切换完全由 MainScreen 的 HorizontalPager 处理。
-        // 在此统一下发 LocalToaster，使所有子页面都能弹出顶部提示。
-        CompositionLocalProvider(LocalToaster provides toaster) {
-            NavHost(
+        // Theme awareness for wallpaper behavior
+        val themeMode by appSettings.themeMode.collectAsStateWithLifecycle()
+        val isDarkTheme = when (themeMode) {
+            AppSettingsManager.ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            AppSettingsManager.ThemeMode.WHITE -> false
+            AppSettingsManager.ThemeMode.DARK, AppSettingsManager.ThemeMode.PURE_DARK -> true
+        }
+        val showWallpaper = wallpaperUri.isNotEmpty() &&
+            currentNavRoute != Routes.WALLPAPER_SETTINGS &&
+            themeMode != AppSettingsManager.ThemeMode.PURE_DARK
+
+        // Load full-quality bitmap for wallpaper display
+        val nativeBitmap = remember(wallpaperUri, showWallpaper) {
+            if (!showWallpaper || wallpaperUri.isEmpty()) null
+            else try {
+                val uri = Uri.parse(wallpaperUri)
+                // Downsample to max 2048px to avoid OOM on large images
+                val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                context.contentResolver.openInputStream(uri)?.use {
+                    android.graphics.BitmapFactory.decodeStream(it, null, bounds)
+                }
+                val maxDim = maxOf(bounds.outWidth, bounds.outHeight)
+                val sample = if (maxDim > 2048) (maxDim / 2048).coerceAtLeast(1) else 1
+                val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+                context.contentResolver.openInputStream(uri)?.use {
+                    android.graphics.BitmapFactory.decodeStream(it, null, opts)
+                }
+            } catch (_: Exception) { null }
+        }
+        // Recycle bitmap when wallpaper changes or is hidden
+        androidx.compose.runtime.DisposableEffect(nativeBitmap) {
+            onDispose { nativeBitmap?.recycle() }
+        }
+
+        if (showWallpaper) {
+            val bitmap = remember(nativeBitmap) { nativeBitmap?.asImageBitmap() }
+            if (bitmap != null) {
+                val contentScale = ContentScale.Crop
+                // Wallpaper image
+                androidx.compose.foundation.Image(
+                    bitmap = bitmap,
+                    contentDescription = null,
+                    contentScale = contentScale,
+                    alpha = wallpaperAlpha / 100f,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (wallpaperBlur > 0) Modifier.blur(wallpaperBlur.dp) else Modifier
+                        ),
+                )
+                // Dark mode: dim the wallpaper
+                if (isDarkTheme) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.3f)),
+                    )
+                }
+            }
+        }
+
+        // Dynamic color: when useWallpaperColor is ON:
+        // - has wallpaper → extract seed color from custom wallpaper
+        // - no wallpaper → use system dynamic color (from system wallpaper)
+        val dynamicColorScheme = remember(nativeBitmap, wallpaperUri, useWallpaperColor, isDarkTheme) {
+            if (useWallpaperColor) {
+                if (wallpaperUri.isNotEmpty() && nativeBitmap != null) {
+                    val seed = WallpaperColorScheme.extractSeedColor(nativeBitmap)
+                    WallpaperColorScheme.generateColorScheme(seed, isDarkTheme)
+                } else null // no custom wallpaper → fall through to system dynamic color in Theme.kt
+            } else null
+        }
+
+        // Adaptive color scheme: transparent Scaffold background when wallpaper is shown.
+        // Only background is transparent so wallpaper shows through the scaffold.
+        // When frosted glass is enabled, dialog/card surfaces become semi-transparent.
+        val baseScheme = dynamicColorScheme ?: MaterialTheme.colorScheme
+        val transparentColorScheme = if (showWallpaper) {
+            baseScheme.copy(
+                background = Color.Transparent,
+                surface = if (wallpaperFrostedGlass) baseScheme.surface.copy(alpha = 0.55f) else baseScheme.surface,
+                surfaceVariant = if (wallpaperFrostedGlass) baseScheme.surfaceVariant.copy(alpha = 0.55f) else baseScheme.surfaceVariant,
+                surfaceContainerLowest = if (wallpaperFrostedGlass) baseScheme.surfaceContainerLowest.copy(alpha = 0.35f) else baseScheme.surfaceContainerLowest,
+                surfaceContainerLow = if (wallpaperFrostedGlass) baseScheme.surfaceContainerLow.copy(alpha = 0.40f) else baseScheme.surfaceContainerLow,
+                surfaceContainer = if (wallpaperFrostedGlass) baseScheme.surfaceContainer.copy(alpha = 0.65f) else baseScheme.surfaceContainer,
+                surfaceContainerHigh = if (wallpaperFrostedGlass) baseScheme.surfaceContainerHigh.copy(alpha = 0.80f) else baseScheme.surfaceContainerHigh,
+                surfaceContainerHighest = if (wallpaperFrostedGlass) baseScheme.surfaceContainerHighest.copy(alpha = 0.90f) else baseScheme.surfaceContainerHighest,
+                outline = if (wallpaperFrostedGlass) baseScheme.outline.copy(alpha = 0.35f) else baseScheme.outline,
+                outlineVariant = if (wallpaperFrostedGlass) baseScheme.outlineVariant.copy(alpha = 0.30f) else baseScheme.outlineVariant,
+            )
+        } else if (dynamicColorScheme != null) {
+            dynamicColorScheme
+        } else baseScheme
+
+        // MainScreen with HorizontalPager for smooth tab switching
+        MaterialTheme(colorScheme = transparentColorScheme) {
+            MainScreen(
+                navController = navController,
+                backgroundTaskViewModel = backgroundTaskViewModel,
+                onViewAnnouncement = { forceShowAnnouncement = true },
+                visible = isOnMainTab,
+                fullscreen = isFullscreen,
+            )
+
+            // NavHost 只承载子页面；主 Tab 切换完全由 MainScreen 的 HorizontalPager 处理。
+            // 在此统一下发 LocalToaster，使所有子页面都能弹出顶部提示。
+            CompositionLocalProvider(LocalToaster provides toaster) {
+                NavHost(
                 navController = navController,
                 startDestination = Routes.HOME,
                 enterTransition = { MaaAnimations.sharedAxisForwardEnter },
@@ -181,16 +292,21 @@ fun AppNavigation(
                 composable(Routes.TASK_OVERRIDE_EDITOR) {
                     TaskOverrideEditorView(navController = navController)
                 }
+                composable(Routes.WALLPAPER_SETTINGS) {
+                    val settingsVm: com.aliothmoon.maameow.presentation.viewmodel.SettingsViewModel = koinViewModel()
+                    WallpaperSettingsView(navController = navController, viewModel = settingsVm)
+                }
+            }  // NavHost
             }
-        }
-        ResourceLoadingOverlay()
+                ResourceLoadingOverlay()
+}  // MaterialTheme
         // 顶部轻提示（sonner）：替代旧的 Material3 Snackbar，按类型上色（成功=绿、错误=红）
         Toaster(
             state = toaster,
             alignment = Alignment.TopCenter,
             richColors = true,
             showCloseButton = true,
-            darkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f,
+            darkTheme = isDarkTheme,
             containerPadding = PaddingValues(top = 8.dp),
             modifier = Modifier.statusBarsPadding(),
         )
@@ -215,6 +331,7 @@ fun AppNavigation(
             }
         }
         if (announcementMarkdown != null) {
+            androidx.compose.material3.MaterialTheme(colorScheme = baseScheme) {
             AnnouncementDialog(
                 imageAssetPath = remember(language) { AnnouncementConfig.imageAssetPath(language) },
                 markdown = announcementMarkdown,
@@ -229,6 +346,7 @@ fun AppNavigation(
                     }
                 },
             )
+            }
         }
     }
 }

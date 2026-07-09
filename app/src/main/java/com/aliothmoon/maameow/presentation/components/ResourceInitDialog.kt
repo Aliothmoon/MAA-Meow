@@ -1,7 +1,10 @@
 package com.aliothmoon.maameow.presentation.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -19,8 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.utils.i18n.asString
@@ -38,17 +39,17 @@ fun ResourceInitDialog(
 
     when (state) {
         is ResourceInitState.Extracting -> {
-            // 解压进度弹窗（不可关闭）
-            Dialog(
-                onDismissRequest = {},
-                properties = DialogProperties(
-                    dismissOnBackPress = false,
-                    dismissOnClickOutside = false
-                )
+            // 解压进度弹窗（不可关闭）— 使用 Box overlay 而非 Dialog，以保留壁纸可见性
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.45f)),
+                contentAlignment = Alignment.Center
             ) {
                 Surface(
+                    modifier = Modifier.fillMaxWidth(0.85f),
                     shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.surface,
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
                     tonalElevation = 6.dp
                 ) {
                     Column(

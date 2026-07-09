@@ -205,6 +205,8 @@ dependencies {
     implementation(libs.angus.activation)
     implementation(libs.jakarta.activation.api)
     implementation(libs.reorderable)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
     implementation(libs.compose.markdown)
 
     // sora-editor：JSON 语法高亮编辑器（TextMate + darcula 主题）

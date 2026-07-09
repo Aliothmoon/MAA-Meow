@@ -540,18 +540,18 @@ class AppSettingsManager(
     }
 
 
-    // 是否启用系统莫奈主题色（Android 12+ Material You）
-    private fun parseUseSystemMonetColor(raw: String): Boolean =
-        raw.toBooleanStrictOrNull() ?: true
+    // 是否启用壁纸动态取色（有自定义壁纸时从壁纸取色，无壁纸时跟随系统壁纸）
+    private fun parseUseWallpaperColor(raw: String): Boolean =
+        raw.toBooleanStrictOrNull() ?: false
 
-    val useSystemMonetColor: StateFlow<Boolean> = settings
-        .map { parseUseSystemMonetColor(it.useSystemMonetColor) }
+    val useWallpaperColor: StateFlow<Boolean> = settings
+        .map { parseUseWallpaperColor(it.useWallpaperColor) }
         .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, parseUseSystemMonetColor(initialSettings.useSystemMonetColor))
+        .stateIn(scope, SharingStarted.Eagerly, parseUseWallpaperColor(initialSettings.useWallpaperColor))
 
-    suspend fun setUseSystemMonetColor(enabled: Boolean) {
+    suspend fun setUseWallpaperColor(enabled: Boolean) {
         with(AppSettingsSchema) {
-            context.dataStore.edit { it[useSystemMonetColor] = enabled.toString() }
+            context.dataStore.edit { it[useWallpaperColor] = enabled.toString() }
         }
     }
 
@@ -578,5 +578,54 @@ class AppSettingsManager(
             context.dataStore.edit { it[showAchievementSnackbar] = enabled.toString() }
         }
     }
+
+    // 自定义壁纸
+    val wallpaperUri: StateFlow<String> = settings
+        .map { it.wallpaperUri }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wallpaperUri)
+
+    suspend fun setWallpaperUri(uri: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wallpaperUri] = uri }
+        }
+    }
+
+    // 壁纸透明度
+    val wallpaperAlpha: StateFlow<Int> = settings
+        .map { it.wallpaperAlpha.toIntOrNull() ?: 100 }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wallpaperAlpha.toIntOrNull() ?: 100)
+
+    suspend fun setWallpaperAlpha(alpha: Int) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wallpaperAlpha] = alpha.coerceIn(0, 100).toString() }
+        }
+    }
+
+    // 壁纸模糊
+    val wallpaperBlur: StateFlow<Int> = settings
+        .map { it.wallpaperBlur.toIntOrNull() ?: 0 }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wallpaperBlur.toIntOrNull() ?: 0)
+
+    suspend fun setWallpaperBlur(blur: Int) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wallpaperBlur] = blur.coerceIn(0, 25).toString() }
+        }
+    }
+
+    // 壁纸磨砂玻璃
+    val wallpaperFrostedGlass: StateFlow<Boolean> = settings
+        .map { it.wallpaperFrostedGlass.toBoolean() }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wallpaperFrostedGlass.toBoolean())
+
+    suspend fun setWallpaperFrostedGlass(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wallpaperFrostedGlass] = enabled.toString() }
+        }
+    }
+
 
 }

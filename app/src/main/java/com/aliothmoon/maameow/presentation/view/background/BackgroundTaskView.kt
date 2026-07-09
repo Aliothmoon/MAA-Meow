@@ -371,7 +371,7 @@ fun BackgroundTaskView(
                                                 .weight(1f)
                                                 .fillMaxHeight(),
                                             colors = CardDefaults.cardColors(
-                                                containerColor = MaterialTheme.colorScheme.surface
+                                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                                             )
                                         ) {
                                             Column(modifier = Modifier.padding(top = 10.dp)) {
@@ -804,10 +804,8 @@ private fun BackgroundMoreActionsOverlay(
                     interactionSource = cardInteractionSource, indication = null, onClick = {}),
             shape = RoundedCornerShape(4.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)) {
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.96f)
+            )) {
             Column(modifier = Modifier.padding(10.dp)) {
                 // 标题与快速操作组
                 Text(

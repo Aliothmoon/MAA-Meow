@@ -1799,4 +1799,21 @@
     <string name="runlog_task_stopped">Tasks stopped, status: %1$s</string>
     <string name="runlog_service_terminated">MAA service terminated unexpectedly</string>
     <string name="runlog_game_process_gone">Game process not started or closed unexpectedly (%1$s)</string>
+    <string name="settings_wallpaper_title">Custom Wallpaper</string>
+    <string name="settings_wallpaper_desc">Choose an image as app background</string>
+    <string name="settings_wallpaper_set">Wallpaper set</string>
+    <string name="settings_wallpaper_clear">Cancel Setting</string>
+    <string name="settings_wallpaper_alpha">Opacity: %d%%</string>
+    <string name="settings_wallpaper_blur">Blur: %d</string>
+    <string name="settings_wallpaper_scale_mode">Scale Mode</string>
+    <string name="settings_wallpaper_scale_crop">Crop</string>
+    <string name="settings_wallpaper_scale_fit">Fit</string>
+    <string name="settings_wallpaper_scale_fill_width">Fill Width</string>
+    <string name="settings_wallpaper_scale_fill_height">Fill Height</string>
+    <string name="settings_wallpaper_adjust">Adjust</string>
+    <string name="settings_wallpaper_confirm">Confirm</string>
+    <string name="settings_wallpaper_change">Change Wallpaper</string>
+    <string name="settings_wallpaper_frosted_glass">Frosted Glass</string>
+    <string name="settings_wallpaper_frosted_glass_desc">Semi-transparent components that show wallpaper through</string>
+    
 </resources>

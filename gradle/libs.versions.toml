@@ -45,6 +45,7 @@ composeMarkdown = "0.5.8"
 deviceCompat = "2.3"
 xxPermissions = "28.0"
 reorderable = "3.1.0"
+coil = "3.2.0"
 
 # Kotlin libraries
 kotlinxSerializationJson = "1.11.0"
@@ -105,6 +106,8 @@ angus-mail = { group = "org.eclipse.angus", name = "jakarta.mail", version.ref =
 angus-activation = { group = "org.eclipse.angus", name = "angus-activation", version.ref = "angusActivation" }
 jakarta-activation-api = { group = "jakarta.activation", name = "jakarta.activation-api", version.ref = "jakartaActivationApi" }
 compose-markdown = { group = "com.github.jeziellago", name = "compose-markdown", version.ref = "composeMarkdown" }
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 reorderable = { group = "sh.calvin.reorderable", name = "reorderable", version.ref = "reorderable" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 

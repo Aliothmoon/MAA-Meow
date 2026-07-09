@@ -306,10 +306,9 @@ private fun TaskPromptCard(
     Surface(
         modifier = modifier.fillMaxWidth().wrapContentHeight().heightIn(max = screenHeight * 0.85f),
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surface,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = 6.dp,
-        shadowElevation = 8.dp
+        tonalElevation = 6.dp
     ) {
         Column(
             modifier = Modifier.padding(20.dp),

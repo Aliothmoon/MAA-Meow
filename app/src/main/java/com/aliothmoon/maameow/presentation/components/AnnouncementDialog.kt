@@ -12,14 +12,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -50,14 +47,11 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.runtime.snapshotFlow
 import com.aliothmoon.maameow.R
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -118,44 +112,20 @@ fun AnnouncementDialog(
         }.getOrNull()?.asImageBitmap()
     }
 
-    Dialog(
-        onDismissRequest = {},
-        properties = DialogProperties(
-            dismissOnBackPress = false,
-            dismissOnClickOutside = false,
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        ),
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.45f)),
+        contentAlignment = Alignment.Center
     ) {
-        val safeInsets = WindowInsets.safeDrawing.asPaddingValues()
-        val layoutDirection = LocalLayoutDirection.current
-        val maxHorizontalInset = max(
-            safeInsets.calculateLeftPadding(layoutDirection),
-            safeInsets.calculateRightPadding(layoutDirection)
-        )
-        // 垂直安全区：避免居中弹窗底部按钮被状态栏/导航栏（手势条）遮挡
-        val maxVerticalInset = max(
-            safeInsets.calculateTopPadding(),
-            safeInsets.calculateBottomPadding()
-        )
-
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
             Surface(
                 modifier = Modifier
                     .dialogWidth(max = 600.dp, fraction = 0.95f)
-                    .heightIn(max = screenHeight * 0.85f)
-                    .padding(
-                        horizontal = maxHorizontalInset + 16.dp,
-                        vertical = maxVerticalInset,
-                    ),
+                    .heightIn(max = screenHeight * 0.85f),
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surface,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 tonalElevation = 6.dp,
-                shadowElevation = 8.dp,
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     val inLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -354,9 +324,8 @@ fun AnnouncementDialog(
                     ) {
                         Text(stringResource(R.string.announcement_confirm))
                     }
-                    }
-                }
             }
         }
     }
+}
 }
