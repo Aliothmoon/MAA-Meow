@@ -198,9 +198,11 @@ fun WallpaperSettingsView(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri ?: return@rememberLauncherForActivityResult
-        context.contentResolver.takePersistableUriPermission(
-            uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
-        )
+        try {
+            context.contentResolver.takePersistableUriPermission(
+                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        } catch (_: Exception) { }
         saveOriginalForReEdit(context, uri, originalFile)
         // New wallpaper chosen — clear saved crop
         viewModel.clearCropState()
