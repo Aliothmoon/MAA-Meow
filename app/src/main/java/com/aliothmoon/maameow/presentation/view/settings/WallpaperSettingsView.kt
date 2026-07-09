@@ -83,6 +83,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.presentation.components.SettingsGroupCard
@@ -291,7 +293,7 @@ fun WallpaperSettingsView(
                             scale = (scale * zoom).coerceIn(0.3f, 5f)
                             panX += pan.x
                             panY += pan.y
-                            rotationDegrees += rotation
+                            rotationDegrees += Math.toDegrees(rotation.toDouble()).toFloat()
                         }
                     }
                 }
@@ -507,9 +509,6 @@ private fun WallpaperPreview(
     onClick: () -> Unit,
 ) {
     val context = LocalContext.current
-    val bitmap = remember(wallpaperUri) {
-        BitmapUtils.loadDownsampledBitmap(context, wallpaperUri)
-    } ?: return
     Box(
         modifier = Modifier
             .padding(horizontal = 24.dp, vertical = 8.dp)
@@ -521,8 +520,11 @@ private fun WallpaperPreview(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Image(
-            bitmap = bitmap.asImageBitmap(),
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(wallpaperUri)
+                .crossfade(true)
+                .build(),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             alpha = alpha,
