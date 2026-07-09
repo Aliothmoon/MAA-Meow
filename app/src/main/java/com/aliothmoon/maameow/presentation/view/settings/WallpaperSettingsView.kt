@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.presentation.view.settings
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.net.Uri
@@ -91,6 +90,7 @@ import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.viewmodel.SettingsViewModel
 import com.aliothmoon.maameow.theme.MaaDesignTokens
+import com.aliothmoon.maameow.utils.BitmapUtils
 import java.io.File
 import kotlin.math.max
 import kotlin.math.min
@@ -210,7 +210,7 @@ fun WallpaperSettingsView(
         saveOriginalForReEdit(context, uri, originalFile)
         // New wallpaper chosen — clear saved crop
         viewModel.clearCropState()
-        val bitmap = loadDownsampledBitmap(context, uri)
+        val bitmap = BitmapUtils.loadDownsampledBitmap(context, uri, maxDimension = 2560)
         if (bitmap != null) {
             viewModel.setWallpaperUri(uri.toString())
             enterEditMode(bitmap)
@@ -417,7 +417,11 @@ fun WallpaperSettingsView(
                         screenRatio = screenRatio,
                         onClick = {
                             val src = if (originalFile.exists()) originalFile.absolutePath else wallpaperUri
-                            val bitmap = loadDownsampledBitmap(context, Uri.parse(if (src.startsWith("content://") || src.startsWith("file://")) src else "file://$src"))
+                            val bitmap = BitmapUtils.loadDownsampledBitmap(
+                                context,
+                                if (src.startsWith("content://") || src.startsWith("file://")) src else "file://$src",
+                                maxDimension = 2560,
+                            )
                             if (bitmap != null) enterEditMode(bitmap)
                         },
                     )
@@ -503,7 +507,9 @@ private fun WallpaperPreview(
     onClick: () -> Unit,
 ) {
     val context = LocalContext.current
-    val bitmap = remember(wallpaperUri) { loadBitmapFromUri(context, wallpaperUri) } ?: return
+    val bitmap = remember(wallpaperUri) {
+        BitmapUtils.loadDownsampledBitmap(context, wallpaperUri)
+    } ?: return
     Box(
         modifier = Modifier
             .padding(horizontal = 24.dp, vertical = 8.dp)
@@ -525,35 +531,6 @@ private fun WallpaperPreview(
         )
     }
 }
-
-private fun loadDownsampledBitmap(context: Context, uri: Uri): Bitmap? {
-    return try {
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        context.contentResolver.openInputStream(uri)?.use {
-            BitmapFactory.decodeStream(it, null, bounds)
-        }
-        val maxDim = max(bounds.outWidth, bounds.outHeight)
-        val sample = if (maxDim > 2560) (maxDim / 2560).coerceAtLeast(1) else 1
-        val opts = BitmapFactory.Options().apply { inSampleSize = sample }
-        context.contentResolver.openInputStream(uri)?.use {
-            BitmapFactory.decodeStream(it, null, opts)
-        }
-    } catch (_: Exception) { null }
-}
-
-private fun loadBitmapFromUri(context: Context, uriString: String): Bitmap? {
-    return try {
-        val uri = Uri.parse(uriString)
-        when (uri.scheme) {
-            "file" -> BitmapFactory.decodeFile(uri.path)
-            "content" -> context.contentResolver.openInputStream(uri)?.use {
-                BitmapFactory.decodeStream(it)
-            }
-            else -> BitmapFactory.decodeFile(uriString)
-        }
-    } catch (_: Exception) { null }
-}
-
 private fun saveOriginalForReEdit(context: Context, uri: Uri, destFile: File) {
     try {
         context.contentResolver.openInputStream(uri)?.use { input ->

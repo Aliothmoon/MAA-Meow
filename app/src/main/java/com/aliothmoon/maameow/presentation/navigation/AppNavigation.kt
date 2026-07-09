@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.presentation.navigation
 
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -39,6 +38,7 @@ import com.aliothmoon.maameow.domain.service.ExternalNotificationService
 import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.presentation.LocalToaster
 import com.aliothmoon.maameow.theme.WallpaperColorScheme
+import com.aliothmoon.maameow.utils.BitmapUtils
 import com.aliothmoon.maameow.presentation.components.AnnouncementDialog
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
 import com.aliothmoon.maameow.presentation.state.UiEffect
@@ -162,20 +162,7 @@ fun AppNavigation(
         // Load full-quality bitmap for wallpaper display
         val nativeBitmap = remember(wallpaperUri, showWallpaper) {
             if (!showWallpaper || wallpaperUri.isEmpty()) null
-            else try {
-                val uri = Uri.parse(wallpaperUri)
-                // Downsample to max 2048px to avoid OOM on large images
-                val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                context.contentResolver.openInputStream(uri)?.use {
-                    android.graphics.BitmapFactory.decodeStream(it, null, bounds)
-                }
-                val maxDim = maxOf(bounds.outWidth, bounds.outHeight)
-                val sample = if (maxDim > 2048) (maxDim / 2048).coerceAtLeast(1) else 1
-                val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
-                context.contentResolver.openInputStream(uri)?.use {
-                    android.graphics.BitmapFactory.decodeStream(it, null, opts)
-                }
-            } catch (_: Exception) { null }
+            else BitmapUtils.loadDownsampledBitmap(context, wallpaperUri)
         }
         // Recycle bitmap when wallpaper changes or is hidden
         androidx.compose.runtime.DisposableEffect(nativeBitmap) {
