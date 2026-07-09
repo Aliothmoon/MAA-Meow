@@ -380,12 +380,10 @@ fun WallpaperSettingsView(
                                 val path = saveBitmapToFile(context, cropped, "wallpaper.jpg")
                                 if (path != null) {
                                     pendingOriginalUri?.let { saveOriginalForReEdit(context, it, originalFile) }
-                                    viewModel.setCropState(
-                                        cropState.scale,
-                                        cropState.panX,
-                                        cropState.panY,
-                                        cropState.rotationDegrees,
-                                    )
+                                    viewModel.savedCropScale.value = cropState.scale
+                                    viewModel.savedCropPanX.value = cropState.panX
+                                    viewModel.savedCropPanY.value = cropState.panY
+                                    viewModel.savedCropRotation.value = cropState.rotationDegrees
                                     viewModel.setWallpaperUri(Uri.fromFile(File(path)).toString())
                                 }
                                 cropped.recycle()

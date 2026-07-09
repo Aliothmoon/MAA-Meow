@@ -100,10 +100,4 @@ data class AppSettings(
 
     /** 壁纸磨砂玻璃效果：组件背景半透明透出壁纸，默认 false */
     @PrefKey(default = "false") val wallpaperFrostedGlass: String = "false",
-
-    /** 壁纸裁切参数，空 scale 表示没有已保存裁切状态 */
-    @PrefKey(default = "") val wallpaperCropScale: String = "",
-    @PrefKey(default = "0") val wallpaperCropPanX: String = "0",
-    @PrefKey(default = "0") val wallpaperCropPanY: String = "0",
-    @PrefKey(default = "0") val wallpaperCropRotation: String = "0",
 )
