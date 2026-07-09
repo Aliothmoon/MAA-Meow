@@ -292,7 +292,7 @@ fun WallpaperSettingsView(
                             scale = (scale * zoom).coerceIn(0.3f, 5f)
                             panX += pan.x
                             panY += pan.y
-                            rotationDegrees += Math.toDegrees(rotation.toDouble()).toFloat()
+                            rotationDegrees += rotation
                         }
                     }
                 }
