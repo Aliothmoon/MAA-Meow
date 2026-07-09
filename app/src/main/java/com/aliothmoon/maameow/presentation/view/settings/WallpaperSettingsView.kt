@@ -202,7 +202,11 @@ fun WallpaperSettingsView(
             context.contentResolver.takePersistableUriPermission(
                 uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
-        } catch (_: Exception) { }
+        } catch (e: SecurityException) {
+            android.util.Log.w("WallpaperSettings", "takePersistableUriPermission security exception", e)
+        } catch (e: IllegalArgumentException) {
+            android.util.Log.w("WallpaperSettings", "takePersistableUriPermission bad argument", e)
+        }
         saveOriginalForReEdit(context, uri, originalFile)
         // New wallpaper chosen — clear saved crop
         viewModel.clearCropState()
