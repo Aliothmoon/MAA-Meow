@@ -134,30 +134,25 @@ class CropState {
         val bw = source.width.toFloat()
         val bh = source.height.toFloat()
         val baseScale = min(sw / bw, sh / bh)
+        val effectiveScale = baseScale * scale
+        if (effectiveScale <= 0f) return source
 
-        // Compute output size in source image pixel space for full resolution
-        val outW = (cropW / baseScale / scale).toInt().coerceAtLeast(1)
-        val outH = (cropH / baseScale / scale).toInt().coerceAtLeast(1)
-
-        val m = Matrix()
-        // Scale from source pixels to screen pixels
-        m.postScale(baseScale, baseScale)
-        m.postTranslate((sw - bw * baseScale) / 2f, (sh - bh * baseScale) / 2f)
-        // Apply user transforms (scale, rotate, pan)
-        m.postTranslate(-sw / 2f, -sh / 2f)
-        m.postScale(scale, scale)
-        m.postRotate(rotationDegrees)
-        m.postTranslate(sw / 2f, sh / 2f)
-        m.postTranslate(panX, panY)
-        // Move crop region to origin
-        m.postTranslate(-cropLeft, -cropTop)
-        // Scale output from screen pixels to output pixels
-        val scaleFactor = cropW / outW.toFloat()
-        m.postScale(1f / scaleFactor, 1f / scaleFactor)
-
+        val outW = (cropW / effectiveScale).toInt().coerceAtLeast(1)
+        val outH = (cropH / effectiveScale).toInt().coerceAtLeast(1)
         val result = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(result)
-        canvas.drawBitmap(source, m, null)
+        result.eraseColor(android.graphics.Color.BLACK)
+
+        val drawMatrix = Matrix().apply {
+            postScale(baseScale, baseScale)
+            postTranslate((sw - bw * baseScale) / 2f, (sh - bh * baseScale) / 2f)
+            postScale(scale, scale, sw / 2f, sh / 2f)
+            postRotate(rotationDegrees, sw / 2f, sh / 2f)
+            postTranslate(panX, panY)
+            postTranslate(-cropLeft, -cropTop)
+            postScale(outW / cropW, outH / cropH)
+        }
+
+        Canvas(result).drawBitmap(source, drawMatrix, null)
         return result
     }
 }
@@ -314,7 +309,7 @@ fun WallpaperSettingsView(
                             rotationZ = cropState.rotationDegrees
                         },
                 )
-                
+
                 ComposeCanvas(modifier = Modifier.fillMaxSize()) {
                     // Semi-transparent when touching so user can see uncropped parts
                     val maskAlpha = if (isTouching) 0.4f else 1f
