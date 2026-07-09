@@ -40,6 +40,8 @@ class AppSettingsManager(
     companion object {
         val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
 
+        private val NO_WALLPAPER_CROP_SCALE = Float.NaN
+
         /** 页面缩放范围 */
         const val FONT_SIZE_SCALE_MIN = 80
         const val FONT_SIZE_SCALE_MAX = 110
@@ -624,6 +626,52 @@ class AppSettingsManager(
     suspend fun setWallpaperFrostedGlass(enabled: Boolean) {
         with(AppSettingsSchema) {
             context.dataStore.edit { it[wallpaperFrostedGlass] = enabled.toString() }
+        }
+    }
+
+    val wallpaperCropScale: StateFlow<Float> = settings
+        .map { it.wallpaperCropScale.toFloatOrNull() ?: NO_WALLPAPER_CROP_SCALE }
+        .distinctUntilChanged()
+        .stateIn(
+            scope,
+            SharingStarted.Eagerly,
+            initialSettings.wallpaperCropScale.toFloatOrNull() ?: NO_WALLPAPER_CROP_SCALE,
+        )
+
+    val wallpaperCropPanX: StateFlow<Float> = settings
+        .map { it.wallpaperCropPanX.toFloatOrNull() ?: 0f }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wallpaperCropPanX.toFloatOrNull() ?: 0f)
+
+    val wallpaperCropPanY: StateFlow<Float> = settings
+        .map { it.wallpaperCropPanY.toFloatOrNull() ?: 0f }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wallpaperCropPanY.toFloatOrNull() ?: 0f)
+
+    val wallpaperCropRotation: StateFlow<Float> = settings
+        .map { it.wallpaperCropRotation.toFloatOrNull() ?: 0f }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wallpaperCropRotation.toFloatOrNull() ?: 0f)
+
+    suspend fun setWallpaperCropState(scale: Float, panX: Float, panY: Float, rotation: Float) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                it[wallpaperCropScale] = scale.toString()
+                it[wallpaperCropPanX] = panX.toString()
+                it[wallpaperCropPanY] = panY.toString()
+                it[wallpaperCropRotation] = rotation.toString()
+            }
+        }
+    }
+
+    suspend fun clearWallpaperCropState() {
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                it[wallpaperCropScale] = ""
+                it[wallpaperCropPanX] = "0"
+                it[wallpaperCropPanY] = "0"
+                it[wallpaperCropRotation] = "0"
+            }
         }
     }
 

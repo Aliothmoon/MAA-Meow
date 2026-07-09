@@ -313,9 +313,21 @@ class SettingsViewModel(
         viewModelScope.launch { appSettingsManager.setWallpaperFrostedGlass(enabled) }
     }
 
-    // 裁切状态恢复（跨导航保持）
-    val savedCropScale = MutableStateFlow(Float.NaN)
-    val savedCropPanX = MutableStateFlow(0f)
-    val savedCropPanY = MutableStateFlow(0f)
-    val savedCropRotation = MutableStateFlow(0f)
-    fun clearCropState() { savedCropScale.value = Float.NaN }}
+    // 裁切状态恢复（持久化）
+    val savedCropScale: StateFlow<Float> = appSettingsManager.wallpaperCropScale
+    val savedCropPanX: StateFlow<Float> = appSettingsManager.wallpaperCropPanX
+    val savedCropPanY: StateFlow<Float> = appSettingsManager.wallpaperCropPanY
+    val savedCropRotation: StateFlow<Float> = appSettingsManager.wallpaperCropRotation
+
+    fun setCropState(scale: Float, panX: Float, panY: Float, rotation: Float) {
+        viewModelScope.launch {
+            appSettingsManager.setWallpaperCropState(scale, panX, panY, rotation)
+        }
+    }
+
+    fun clearCropState() {
+        viewModelScope.launch {
+            appSettingsManager.clearWallpaperCropState()
+        }
+    }
+}

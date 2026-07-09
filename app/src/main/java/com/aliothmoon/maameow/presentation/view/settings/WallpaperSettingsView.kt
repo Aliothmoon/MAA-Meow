@@ -175,6 +175,7 @@ fun WallpaperSettingsView(
 
     var isEditing by remember { mutableStateOf(false) }
     var sourceBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var pendingOriginalUri by remember { mutableStateOf<Uri?>(null) }
     val cropState = remember { CropState() }
     val originalFile = remember { File(context.filesDir, "wallpaper_original.jpg") }
 
@@ -183,7 +184,7 @@ fun WallpaperSettingsView(
     val savedCropPanX by viewModel.savedCropPanX.collectAsStateWithLifecycle()
     val savedCropPanY by viewModel.savedCropPanY.collectAsStateWithLifecycle()
     val savedCropRotation by viewModel.savedCropRotation.collectAsStateWithLifecycle()
-    val hasSavedCrop = !savedCropScale.isNaN()
+    val hasSavedCrop = pendingOriginalUri == null && !savedCropScale.isNaN()
 
     fun enterEditMode(bitmap: Bitmap) {
         sourceBitmap = bitmap
@@ -193,6 +194,7 @@ fun WallpaperSettingsView(
     fun exitEditMode() {
         sourceBitmap?.recycle()
         sourceBitmap = null
+        pendingOriginalUri = null
         isEditing = false
     }
 
@@ -209,12 +211,9 @@ fun WallpaperSettingsView(
         } catch (e: IllegalArgumentException) {
             android.util.Log.w("WallpaperSettings", "takePersistableUriPermission bad argument", e)
         }
-        saveOriginalForReEdit(context, uri, originalFile)
-        // New wallpaper chosen — clear saved crop
-        viewModel.clearCropState()
         val bitmap = BitmapUtils.loadDownsampledBitmap(context, uri, maxDimension = 2560)
         if (bitmap != null) {
-            viewModel.setWallpaperUri(uri.toString())
+            pendingOriginalUri = uri
             enterEditMode(bitmap)
         }
     }
@@ -373,11 +372,6 @@ fun WallpaperSettingsView(
                     modifier = Modifier.size(56.dp).align(Alignment.CenterHorizontally)
                         .clip(CircleShape).background(MaterialTheme.colorScheme.primary)
                         .clickable {
-                            // Save crop state for re-edit
-                            viewModel.savedCropScale.value = cropState.scale
-                            viewModel.savedCropPanX.value = cropState.panX
-                            viewModel.savedCropPanY.value = cropState.panY
-                            viewModel.savedCropRotation.value = cropState.rotationDegrees
                             val cropped = cropState.getCroppedBitmap(sourceBitmap!!)
                             // Guard: if getCroppedBitmap returned the original (crop failed), skip
                             if (cropped === sourceBitmap) {
@@ -385,11 +379,18 @@ fun WallpaperSettingsView(
                             } else {
                                 val path = saveBitmapToFile(context, cropped, "wallpaper.jpg")
                                 if (path != null) {
+                                    pendingOriginalUri?.let { saveOriginalForReEdit(context, it, originalFile) }
+                                    viewModel.setCropState(
+                                        cropState.scale,
+                                        cropState.panX,
+                                        cropState.panY,
+                                        cropState.rotationDegrees,
+                                    )
                                     viewModel.setWallpaperUri(Uri.fromFile(File(path)).toString())
                                 }
                                 cropped.recycle()
+                                exitEditMode()
                             }
-                            exitEditMode()
                         },
                     contentAlignment = Alignment.Center,
                 ) {
