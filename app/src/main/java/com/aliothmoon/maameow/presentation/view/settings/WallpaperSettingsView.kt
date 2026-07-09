@@ -524,7 +524,6 @@ private fun WallpaperPreview(
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(wallpaperUri)
-                .crossfade(true)
                 .build(),
             contentDescription = null,
             contentScale = ContentScale.Crop,
