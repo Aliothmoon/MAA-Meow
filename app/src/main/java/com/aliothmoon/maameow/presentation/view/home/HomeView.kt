@@ -227,7 +227,8 @@ fun HomeView(
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
                     actionIconContentColor = MaterialTheme.colorScheme.primary
                 )
@@ -339,7 +340,7 @@ private fun ScreenInfoCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = com.aliothmoon.maameow.theme.LocalCardOpacity.current)
         )
     ) {
         Column(
@@ -564,7 +565,7 @@ private fun RunModeCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = com.aliothmoon.maameow.theme.LocalCardOpacity.current)
         )
     ) {
         Row(
@@ -661,7 +662,7 @@ private fun PermissionCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = com.aliothmoon.maameow.theme.LocalCardOpacity.current)
         )
     ) {
         Column(
@@ -774,7 +775,7 @@ private fun ForegroundModeSection(
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             shape = MaterialTheme.shapes.medium,
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = com.aliothmoon.maameow.theme.LocalCardOpacity.current)
             )
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
@@ -834,7 +835,7 @@ private fun ForegroundModeSection(
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             shape = MaterialTheme.shapes.medium,
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = com.aliothmoon.maameow.theme.LocalCardOpacity.current)
             )
         ) {
             Row(

@@ -69,9 +69,16 @@ class MainActivity : AppCompatActivity() {
         setContent {
             val themeMode by appSettingsManager.themeMode.collectAsStateWithLifecycle()
             val useSystemMonetColor by appSettingsManager.useSystemMonetColor.collectAsStateWithLifecycle()
+            val customWallpaperPath by appSettingsManager.customWallpaperPath.collectAsStateWithLifecycle()
+            val cardOpacity by appSettingsManager.cardOpacity.collectAsStateWithLifecycle()
             val fontSizeScale by appSettingsManager.fontSizeScale.collectAsStateWithLifecycle()
 
-            MaaMeowTheme(themeMode = themeMode, useSystemMonetColor = useSystemMonetColor) {
+            MaaMeowTheme(
+                themeMode = themeMode,
+                useSystemMonetColor = useSystemMonetColor,
+                customWallpaperPath = customWallpaperPath,
+                cardOpacity = cardOpacity / 100f,
+            ) {
                 val baseDensity = LocalDensity.current
                 CompositionLocalProvider(
                     LocalDensity provides Density(

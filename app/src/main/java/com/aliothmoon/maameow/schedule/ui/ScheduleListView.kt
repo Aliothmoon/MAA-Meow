@@ -81,6 +81,7 @@ fun ScheduleListView(
     }
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
                 title = stringResource(R.string.schedule_title),

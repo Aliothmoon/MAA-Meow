@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.runBlocking
 
 
@@ -36,6 +38,7 @@ class AppSettingsManager(
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val settingsMutex = Mutex()
 
     companion object {
         val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
@@ -45,10 +48,19 @@ class AppSettingsManager(
         const val FONT_SIZE_SCALE_MAX = 110
         const val FONT_SIZE_SCALE_DEFAULT = 100
 
+        const val CARD_OPACITY_MIN = 40
+        const val CARD_OPACITY_MAX = 100
+        const val CARD_OPACITY_DEFAULT = 100
+        const val CARD_OPACITY_WALLPAPER_DEFAULT = 60
+
         /** 从存储原始值解析为合法的 font size scale */
         fun parseFontSizeScale(raw: String): Int =
             raw.toIntOrNull()?.coerceIn(FONT_SIZE_SCALE_MIN, FONT_SIZE_SCALE_MAX)
                 ?: FONT_SIZE_SCALE_DEFAULT
+
+        fun parseCardOpacity(raw: String): Int =
+            raw.toIntOrNull()?.coerceIn(CARD_OPACITY_MIN, CARD_OPACITY_MAX)
+                ?: CARD_OPACITY_DEFAULT
     }
 
     val settings: Flow<AppSettings> = with(AppSettingsSchema) { context.dataStore.flow }
@@ -57,7 +69,18 @@ class AppSettingsManager(
     private val initialSettings: AppSettings = runBlocking { settings.first() }
 
     suspend fun setSettings(settings: AppSettings) {
-        with(AppSettingsSchema) { context.dataStore.update(settings) }
+        settingsMutex.withLock {
+            with(AppSettingsSchema) { context.dataStore.update(settings) }
+        }
+    }
+
+    suspend fun setSettingsPreservingWallpaper(settings: AppSettings) {
+        settingsMutex.withLock {
+            val currentWallpaperPath = this.settings.first().customWallpaperPath
+            with(AppSettingsSchema) {
+                context.dataStore.update(settings.copy(customWallpaperPath = currentWallpaperPath))
+            }
+        }
     }
 
     // 悬浮窗模式
@@ -552,6 +575,48 @@ class AppSettingsManager(
     suspend fun setUseSystemMonetColor(enabled: Boolean) {
         with(AppSettingsSchema) {
             context.dataStore.edit { it[useSystemMonetColor] = enabled.toString() }
+        }
+    }
+
+    val customWallpaperPath: StateFlow<String> = settings
+        .map { it.customWallpaperPath }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.customWallpaperPath)
+
+    suspend fun setCustomWallpaperPath(path: String) {
+        settingsMutex.withLock {
+            with(AppSettingsSchema) {
+                context.dataStore.edit { it[customWallpaperPath] = path }
+            }
+        }
+    }
+
+    suspend fun clearInvalidCustomWallpaper(): String = settingsMutex.withLock {
+        var oldPath = ""
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                oldPath = it[customWallpaperPath].orEmpty()
+                it[customWallpaperPath] = ""
+                if (parseCardOpacity(it[cardOpacity].orEmpty()) == CARD_OPACITY_WALLPAPER_DEFAULT) {
+                    it[cardOpacity] = CARD_OPACITY_DEFAULT.toString()
+                }
+            }
+        }
+        oldPath
+    }
+
+    val cardOpacity: StateFlow<Int> = settings
+        .map { parseCardOpacity(it.cardOpacity) }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, parseCardOpacity(initialSettings.cardOpacity))
+
+    suspend fun setCardOpacity(opacity: Int) {
+        settingsMutex.withLock {
+            with(AppSettingsSchema) {
+                context.dataStore.edit {
+                    it[cardOpacity] = opacity.coerceIn(CARD_OPACITY_MIN, CARD_OPACITY_MAX).toString()
+                }
+            }
         }
     }
 

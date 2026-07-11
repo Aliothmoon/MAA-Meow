@@ -49,6 +49,7 @@ import com.aliothmoon.maameow.data.model.toolbox.RecruitCalcResult
 import com.aliothmoon.maameow.presentation.components.INumericField
 import com.aliothmoon.maameow.presentation.components.RecruitTimeSelector
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
+import com.aliothmoon.maameow.theme.LocalControlOpacity
 import com.aliothmoon.maameow.utils.i18n.asString
 import org.koin.compose.koinInject
 
@@ -174,7 +175,7 @@ fun RecruitCalcPanel(
                         tags.forEach { tag ->
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = LocalControlOpacity.current),
                             ) {
                                 Text(
                                     text = tag,
@@ -244,7 +245,7 @@ private fun RecruitResultItem(result: RecruitCalcResult) {
 
     Surface(
         shape = RoundedCornerShape(8.dp),
-        color = bgColor,
+        color = bgColor.copy(alpha = bgColor.alpha * LocalControlOpacity.current),
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 2.dp)

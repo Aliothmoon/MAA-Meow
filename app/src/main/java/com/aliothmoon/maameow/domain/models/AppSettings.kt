@@ -83,6 +83,12 @@ data class AppSettings(
      */
     @PrefKey(default = "false") val useSystemMonetColor: String = "false",
 
+    /** 已保存的自定义壁纸文件绝对路径；为空时使用系统壁纸取色和默认背景 */
+    @PrefKey(default = "") val customWallpaperPath: String = "",
+
+    /** 卡片背景不透明度（40~100，默认 100） */
+    @PrefKey(default = "100") val cardOpacity: String = "100",
+
     /** 页面缩放比例（80~110，默认 100 = 1.0x） */
     @PrefKey(default = "100") val fontSizeScale: String = "100",
 

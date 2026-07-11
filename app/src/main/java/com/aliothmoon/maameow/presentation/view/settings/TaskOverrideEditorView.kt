@@ -136,6 +136,7 @@ fun TaskOverrideEditorView(
     }
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
                 title = stringResource(R.string.settings_tasks_override_edit_title),

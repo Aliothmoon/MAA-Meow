@@ -117,7 +117,7 @@ fun ExpandedControlPanel(
                 ),
             shape = RoundedCornerShape(4.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = com.aliothmoon.maameow.theme.LocalCardOpacity.current)
             )
         ) {
             Column(

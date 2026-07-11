@@ -269,7 +269,7 @@ private fun OperatorRow(oper: OperBoxOperator) {
 
     Surface(
         shape = RoundedCornerShape(6.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = com.aliothmoon.maameow.theme.LocalControlOpacity.current),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(

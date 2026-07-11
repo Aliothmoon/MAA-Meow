@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.theme
 
+import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.compose.foundation.IndicationNodeFactory
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -15,6 +16,9 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
@@ -23,6 +27,9 @@ import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.platform.LocalContext
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 
 private val LightBackground = Color(0xFFF5F2ED)
 private val LightSurface = Color(0xFFF9F7F3)
@@ -44,11 +51,14 @@ private val PureDarkSurfaceVariant = Color(0xFF121212)
 
 
 private fun createLightColorScheme(
-    primary: Color, primaryContainer: Color, onPrimaryContainer: Color
+    primary: Color,
+    primaryContainer: Color,
+    onPrimaryContainer: Color,
+    onPrimary: Color = Color.White,
 ): ColorScheme {
     return lightColorScheme(
         primary = primary,
-        onPrimary = Color(0xFFFFFFFF),
+        onPrimary = onPrimary,
         primaryContainer = primaryContainer,
         onPrimaryContainer = onPrimaryContainer,
         secondary = Color(0xFF8A8580),
@@ -75,7 +85,11 @@ private fun createLightColorScheme(
 }
 
 private fun createDarkColorScheme(
-    primary: Color, primaryContainer: Color, onPrimaryContainer: Color, isPureDark: Boolean = false
+    primary: Color,
+    primaryContainer: Color,
+    onPrimary: Color = primary.contrastingContentColor(),
+    onPrimaryContainer: Color,
+    isPureDark: Boolean = false,
 ): ColorScheme {
     val bg = if (isPureDark) PureDarkBackground else DarkBackground
     val surface = if (isPureDark) PureDarkSurface else DarkSurface
@@ -83,7 +97,7 @@ private fun createDarkColorScheme(
 
     return darkColorScheme(
         primary = primary,
-        onPrimary = Color(0xFFFFFFFF),
+        onPrimary = onPrimary,
         primaryContainer = primaryContainer,
         onPrimaryContainer = onPrimaryContainer,
         secondary = Color(0xFF98989D),
@@ -159,10 +173,15 @@ object MaaThemeAlphas {
     const val Medium = 0.74f
 }
 
+val LocalCardOpacity = staticCompositionLocalOf { 1f }
+val LocalControlOpacity = staticCompositionLocalOf { 1f }
+
 @Composable
 fun MaaMeowTheme(
     themeMode: AppSettingsManager.ThemeMode = AppSettingsManager.ThemeMode.SYSTEM,
     useSystemMonetColor: Boolean = true,
+    customWallpaperPath: String = "",
+    cardOpacity: Float = 1f,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -173,8 +192,17 @@ fun MaaMeowTheme(
         AppSettingsManager.ThemeMode.DARK, AppSettingsManager.ThemeMode.PURE_DARK -> true
     }
     val isPureDark = themeMode == AppSettingsManager.ThemeMode.PURE_DARK
-    val colorScheme: ColorScheme = remember(themeMode, useSystemMonetColor, isDarkTheme, context) {
+    val customSeed by produceState<Color?>(null, customWallpaperPath) {
+        value = withContext(Dispatchers.IO) { readWallpaperSeedColor(customWallpaperPath) }
+    }
+    val wallpaperSeed = customSeed
+    val colorScheme: ColorScheme = remember(themeMode, useSystemMonetColor, customSeed, isDarkTheme, context) {
         when {
+            useSystemMonetColor && wallpaperSeed != null -> createSeedColorScheme(
+                seed = wallpaperSeed,
+                isDark = isDarkTheme,
+                isPureDark = isPureDark,
+            )
             // Android 12+ with monet enabled ==> system dynamic color (Material You)
             useSystemMonetColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 val dynamic =
@@ -201,7 +229,9 @@ fun MaaMeowTheme(
     }
 
     CompositionLocalProvider(
-        LocalIndication provides NoIndication
+        LocalIndication provides NoIndication,
+        LocalCardOpacity provides cardOpacity.coerceIn(0.4f, 1f),
+        LocalControlOpacity provides (cardOpacity + 0.1f).coerceIn(0.5f, 1f),
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
@@ -211,4 +241,98 @@ fun MaaMeowTheme(
             ProvideLogPalette(isDark = isDarkTheme, content = content)
         }
     }
+}
+
+private fun createSeedColorScheme(seed: Color, isDark: Boolean, isPureDark: Boolean): ColorScheme {
+    val primary = seed.ensureReadablePrimary(isDark)
+    return if (isDark) {
+        createDarkColorScheme(
+            primary = primary,
+            primaryContainer = primary.darken(0.38f),
+            onPrimary = primary.contrastingContentColor(),
+            onPrimaryContainer = primary.darken(0.38f).contrastingContentColor(),
+            isPureDark = isPureDark,
+        )
+    } else {
+        createLightColorScheme(
+            primary = primary,
+            primaryContainer = primary.copy(alpha = 0.16f).compositeOver(Color.White),
+            onPrimaryContainer = primary.darken(0.45f),
+            onPrimary = primary.contrastingContentColor(),
+        )
+    }
+}
+
+private fun readWallpaperSeedColor(path: String): Color? {
+    if (path.isBlank()) return null
+    val file = File(path)
+    if (!file.isFile) return null
+    val options = BitmapFactory.Options().apply { inSampleSize = 16 }
+    val bitmap = BitmapFactory.decodeFile(file.absolutePath, options) ?: return null
+    return try {
+        var red = 0L
+        var green = 0L
+        var blue = 0L
+        var count = 0L
+        val stepX = (bitmap.width / 24).coerceAtLeast(1)
+        val stepY = (bitmap.height / 24).coerceAtLeast(1)
+        var y = 0
+        while (y < bitmap.height) {
+            var x = 0
+            while (x < bitmap.width) {
+                val pixel = bitmap.getPixel(x, y)
+                val r = (pixel shr 16) and 0xff
+                val g = (pixel shr 8) and 0xff
+                val b = pixel and 0xff
+                val saturation = maxOf(r, g, b) - minOf(r, g, b)
+                if (saturation > 16) {
+                    red += r
+                    green += g
+                    blue += b
+                    count++
+                }
+                x += stepX
+            }
+            y += stepY
+        }
+        if (count == 0L) null else Color(
+            red = (red / count).toInt(),
+            green = (green / count).toInt(),
+            blue = (blue / count).toInt(),
+        )
+    } finally {
+        bitmap.recycle()
+    }
+}
+
+private fun Color.ensureReadablePrimary(isDark: Boolean): Color = if (isDark) lighten(0.24f) else darken(0.18f)
+
+private fun Color.contrastingContentColor(): Color {
+    val luminance = 0.2126f * red + 0.7152f * green + 0.0722f * blue
+    return if (luminance > 0.46f) Color.Black else Color.White
+}
+
+private fun Color.lighten(amount: Float): Color = mix(Color.White, amount)
+
+private fun Color.darken(amount: Float): Color = mix(Color.Black, amount)
+
+private fun Color.mix(target: Color, amount: Float): Color {
+    val a = amount.coerceIn(0f, 1f)
+    return Color(
+        red = red + (target.red - red) * a,
+        green = green + (target.green - green) * a,
+        blue = blue + (target.blue - blue) * a,
+        alpha = alpha,
+    )
+}
+
+private fun Color.compositeOver(background: Color): Color {
+    val outAlpha = alpha + background.alpha * (1f - alpha)
+    if (outAlpha <= 0f) return Color.Transparent
+    return Color(
+        red = (red * alpha + background.red * background.alpha * (1f - alpha)) / outAlpha,
+        green = (green * alpha + background.green * background.alpha * (1f - alpha)) / outAlpha,
+        blue = (blue * alpha + background.blue * background.alpha * (1f - alpha)) / outAlpha,
+        alpha = outAlpha,
+    )
 }

@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Routes
+import com.aliothmoon.maameow.theme.LocalControlOpacity
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 
 sealed class BottomNavTab(
@@ -70,8 +71,13 @@ fun AppBottomNavigation(
     onTabSelected: (BottomNavTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val controlOpacity = LocalControlOpacity.current
     Surface(
-        modifier = modifier, color = MaterialTheme.colorScheme.surface, shadowElevation = 0.dp
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surface.copy(
+            alpha = MaterialTheme.colorScheme.surface.alpha * controlOpacity
+        ),
+        shadowElevation = 0.dp
     ) {
         Column {
             HorizontalDivider(

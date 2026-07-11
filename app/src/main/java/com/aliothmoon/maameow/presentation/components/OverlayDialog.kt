@@ -97,7 +97,7 @@ fun OverlayDialog(
                         ) { /* 消费点击事件，防止穿透到遮罩层 */ },
                     shape = RoundedCornerShape(8.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = com.aliothmoon.maameow.theme.LocalCardOpacity.current)
                     )
                 ) {
                     Column(

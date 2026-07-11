@@ -247,7 +247,7 @@ private fun DepotItemCell(item: DepotItem, name: String?, iconLoader: ItemIconLo
     val icon by rememberItemIcon(item.id, iconLoader)
     Surface(
         shape = RoundedCornerShape(6.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = com.aliothmoon.maameow.theme.LocalControlOpacity.current),
         modifier = Modifier.widthIn(min = 72.dp)
     ) {
         Column(

@@ -62,7 +62,7 @@ fun ResourceLoadingOverlay(
         ) {
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = com.aliothmoon.maameow.theme.LocalCardOpacity.current)
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {

@@ -1,6 +1,8 @@
 package com.aliothmoon.maameow.presentation.navigation
 
 import android.widget.Toast
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,15 +10,19 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,13 +53,21 @@ import com.aliothmoon.maameow.schedule.ui.CountdownDialog
 import com.aliothmoon.maameow.schedule.ui.ScheduleEditView
 import com.aliothmoon.maameow.schedule.ui.ScheduleTriggerLogView
 import com.aliothmoon.maameow.theme.MaaAnimations
+import com.aliothmoon.maameow.utils.decodeCustomWallpaper
+import com.aliothmoon.maameow.utils.deleteManagedCustomWallpaper
 import com.aliothmoon.maameow.utils.i18n.resolve
 import com.dokar.sonner.ToastType
 import com.dokar.sonner.Toaster
 import com.dokar.sonner.rememberToasterState
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
@@ -83,6 +97,7 @@ fun AppNavigation(
     val coroutineScope = rememberCoroutineScope()
 
     val runMode by appSettings.runMode.collectAsStateWithLifecycle()
+    val customWallpaperPath by appSettings.customWallpaperPath.collectAsStateWithLifecycle()
     val announcementReadVersion by appSettings.announcementReadVersion.collectAsStateWithLifecycle()
     val language by appSettings.language.collectAsStateWithLifecycle()
     val scheduledCountdownState by backgroundTaskViewModel.coordinator.countdownState.collectAsStateWithLifecycle()
@@ -131,7 +146,53 @@ fun AppNavigation(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    val wallpaperBitmap by produceState<android.graphics.Bitmap?>(null, customWallpaperPath) {
+        val producerJob = currentCoroutineContext()[Job]
+        val published = withContext(NonCancellable) {
+            val decoded = withContext(Dispatchers.IO) {
+                decodeCustomWallpaper(customWallpaperPath)
+            }
+            if (producerJob?.isActive == false) {
+                decoded?.recycle()
+                return@withContext false
+            }
+            value = decoded
+            true
+        }
+        if (!published) return@produceState
+        if (customWallpaperPath.isNotBlank() && value == null) {
+            try {
+                val invalidPath = appSettings.clearInvalidCustomWallpaper()
+                withContext(Dispatchers.IO) { deleteManagedCustomWallpaper(context, invalidPath) }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                // Keep the current setting and retry validation on the next launch.
+            }
+        }
+    }
+    DisposableEffect(wallpaperBitmap) {
+        val bitmap = wallpaperBitmap
+        onDispose { bitmap?.recycle() }
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        wallpaperBitmap?.let { bitmap ->
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.28f))
+            )
+        }
         // MainScreen with HorizontalPager for smooth tab switching
         MainScreen(
             navController = navController,
