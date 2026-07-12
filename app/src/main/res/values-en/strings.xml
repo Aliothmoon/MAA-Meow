@@ -1150,9 +1150,9 @@
     <string name="panel_roguelike_squad_splendid_blossoms">Blooming Flowers Squad</string>
     <string name="panel_roguelike_squad_risky_gambit">Perilous Game Squad</string>
     <string name="panel_roguelike_squad_echo_of_ages">Sui\'s Shadow Squad</string>
-    <string name="panel_roguelike_squad_agent">Agent Squad (Not Supported)</string>
-    <string name="panel_roguelike_squad_scholarly">Knowledge Squad (知学分队)</string>
-    <string name="panel_roguelike_squad_merchant">Merchant Squad (商贾分队)</string>
+    <string name="panel_roguelike_squad_agent">Proxy Squad (Not Supported)</string>
+    <string name="panel_roguelike_squad_scholarly">Knowledge Squad</string>
+    <string name="panel_roguelike_squad_merchant">Merchant Squad</string>
     <!-- i18n: shared helpers -->
     <string name="common_enumeration_separator">, </string>
 
