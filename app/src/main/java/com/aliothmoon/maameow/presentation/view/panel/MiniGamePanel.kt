@@ -35,7 +35,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.MiniGameTextRegistry
 import com.aliothmoon.maameow.presentation.viewmodel.MiniGameDelegate
-import com.aliothmoon.maameow.theme.LocalControlOpacity
 import com.aliothmoon.maameow.utils.i18n.asString
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -51,7 +50,6 @@ fun MiniGamePanel(
     val tip = currentGame?.tip.asString().ifBlank { MiniGameTextRegistry.EMPTY_TIP.asString() }
     val isUnsupported = currentGame?.isUnsupported == true
     val currentGameDisplay = currentGame?.display.asString()
-    val controlOpacity = LocalControlOpacity.current
 
     val tabTitleTextStyle = MaterialTheme.typography.bodySmall.copy(
         lineHeight = 16.sp
@@ -88,13 +86,13 @@ fun MiniGamePanel(
                             val selected = state.selectedTaskName == game.value
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = (if (game.isUnsupported) {
+                                color = if (game.isUnsupported) {
                                     MaterialTheme.colorScheme.errorContainer
                                 } else if (selected) {
                                     MaterialTheme.colorScheme.primaryContainer
                                 } else {
                                     MaterialTheme.colorScheme.surface
-                                }).copy(alpha = controlOpacity),
+                                },
                                 border = BorderStroke(
                                     width = 1.dp,
                                     color = if (game.isUnsupported && selected) {
@@ -149,11 +147,11 @@ fun MiniGamePanel(
             item {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = (if (isUnsupported) {
+                    color = if (isUnsupported) {
                         MaterialTheme.colorScheme.errorContainer
                     } else {
                         MaterialTheme.colorScheme.surfaceVariant
-                    }).copy(alpha = controlOpacity),
+                    },
                     border = if (isUnsupported) {
                         BorderStroke(1.dp, MaterialTheme.colorScheme.error)
                     } else {
@@ -244,11 +242,11 @@ fun MiniGamePanel(
                             val selected = state.selectedEvent == value
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = (if (selected) {
+                                color = if (selected) {
                                     MaterialTheme.colorScheme.primaryContainer
                                 } else {
                                     MaterialTheme.colorScheme.surface
-                                }).copy(alpha = controlOpacity),
+                                },
                                 border = BorderStroke(
                                     width = 1.dp,
                                     color = if (selected) {

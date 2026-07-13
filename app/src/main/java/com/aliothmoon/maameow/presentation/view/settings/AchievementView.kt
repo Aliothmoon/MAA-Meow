@@ -58,7 +58,6 @@ fun AchievementView(
     }
 
     Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         modifier = modifier,
         topBar = {
             TopAppBar(

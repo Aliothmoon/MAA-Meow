@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskChainNode
-import com.aliothmoon.maameow.theme.LocalControlOpacity
 import sh.calvin.reorderable.ReorderableColumn
 
 /**
@@ -67,7 +66,6 @@ fun TaskListPanel(
     onToggleProfileMode: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val controlOpacity = LocalControlOpacity.current
     Column(modifier = modifier.width(IntrinsicSize.Max)) {
         // 配置选择按钮 - 在编辑任务按钮上方
         Card(
@@ -76,8 +74,7 @@ fun TaskListPanel(
                 .clickable { onToggleProfileMode() },
             shape = RoundedCornerShape(4.dp),
             colors = CardDefaults.cardColors(
-                containerColor = (if (isProfileMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface)
-                    .copy(alpha = controlOpacity)
+                containerColor = if (isProfileMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = if (isProfileMode) 2.dp else 0.dp)
         ) {
@@ -114,8 +111,7 @@ fun TaskListPanel(
                 .clickable { onToggleEditMode() },
             shape = RoundedCornerShape(4.dp),
             colors = CardDefaults.cardColors(
-                containerColor = (if (isEditMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface)
-                    .copy(alpha = controlOpacity)
+                containerColor = if (isEditMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = if (isEditMode) 2.dp else 0.dp)
         ) {
@@ -155,8 +151,7 @@ fun TaskListPanel(
                         .clickable { onToggleAddingTask() },
                     shape = RoundedCornerShape(4.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = (if (isAddingTask) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
-                            .copy(alpha = controlOpacity)
+                        containerColor = if (isAddingTask) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
                     ),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                 ) {
@@ -219,14 +214,12 @@ private fun TaskNodeRow(
     onSelected: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val controlOpacity = LocalControlOpacity.current
     Card(
         modifier = modifier
             .fillMaxWidth(),
         shape = RoundedCornerShape(4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = (if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
-                .copy(alpha = controlOpacity)
+            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
         ),
         border = if (isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)) else null
     ) {

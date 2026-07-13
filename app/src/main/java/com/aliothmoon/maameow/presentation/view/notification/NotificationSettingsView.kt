@@ -71,7 +71,6 @@ fun NotificationSettingsView(
     val testMessage = stringResource(R.string.notification_test_message)
 
     Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
                 title = stringResource(R.string.notification_settings_title),

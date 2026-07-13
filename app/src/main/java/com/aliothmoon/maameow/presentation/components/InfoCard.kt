@@ -12,7 +12,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.aliothmoon.maameow.theme.LocalCardOpacity
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 
 @Composable
@@ -22,12 +21,11 @@ private fun BaseCard(
     containerColor: Color = MaterialTheme.colorScheme.surface,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val opacity = LocalCardOpacity.current
     Card(
         modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = MaaDesignTokens.Card.elevation),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = containerColor.copy(alpha = containerColor.alpha * opacity)),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
     ) {
         Column(
             modifier = Modifier

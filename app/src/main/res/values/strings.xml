@@ -248,21 +248,6 @@
     <!-- settings: monet theme color (system Material You toggle, Android 12+) -->
     <string name="settings_monet_color_title">莫奈主题色</string>
     <string name="settings_monet_color_desc">根据壁纸动态取色，关闭则使用内置蓝色主题</string>
-    <string name="settings_custom_wallpaper_title">自定义壁纸</string>
-    <string name="settings_custom_wallpaper_desc">选择图片后将按当前手机分辨率比例裁剪，并用于各主页面背景</string>
-    <string name="settings_custom_wallpaper_enabled_desc">已启用；莫奈主题色开启时将优先从自定义壁纸取色</string>
-    <string name="settings_custom_wallpaper_clear">清除自定义壁纸</string>
-    <string name="settings_custom_wallpaper_crop_title">裁剪壁纸</string>
-    <string name="settings_custom_wallpaper_crop_desc">将按当前手机分辨率 %1$d × %2$d 裁剪。拖动图片调整位置，双指缩放调整范围。</string>
-    <string name="settings_custom_wallpaper_load_failed">图片加载失败，请重新选择</string>
-    <string name="settings_custom_wallpaper_reset">复位</string>
-    <string name="settings_custom_wallpaper_rotate">旋转 90°</string>
-    <string name="settings_custom_wallpaper_save">保存壁纸</string>
-    <string name="settings_custom_wallpaper_zoom_out">缩小壁纸</string>
-    <string name="settings_custom_wallpaper_zoom_in">放大壁纸</string>
-    <string name="settings_card_opacity_title">卡片透明度</string>
-    <string name="settings_card_opacity_desc">调整页面卡片背景不透明度，降低后可透出自定义壁纸</string>
-    <string name="cancel">取消</string>
 
     <string name="settings_achievement_title">成就</string>
     <string name="settings_achievement_desc">查看 MaaMeow 使用记录与隐藏彩蛋</string>

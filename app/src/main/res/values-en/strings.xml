@@ -50,21 +50,6 @@
     <!-- settings: monet theme color (system Material You toggle, Android 12+) -->
     <string name="settings_monet_color_title">Monet Theme Color</string>
     <string name="settings_monet_color_desc">Generate colors from your wallpaper; off uses the built-in blue theme.</string>
-    <string name="settings_custom_wallpaper_title">Custom Wallpaper</string>
-    <string name="settings_custom_wallpaper_desc">Pick an image, crop it to your phone resolution ratio, and use it behind all main pages.</string>
-    <string name="settings_custom_wallpaper_enabled_desc">Enabled; when Monet color is on, colors are picked from the custom wallpaper first.</string>
-    <string name="settings_custom_wallpaper_clear">Clear Custom Wallpaper</string>
-    <string name="settings_custom_wallpaper_crop_title">Crop Wallpaper</string>
-    <string name="settings_custom_wallpaper_crop_desc">The image will be cropped for the current phone resolution %1$d × %2$d. Drag to position it and pinch to zoom.</string>
-    <string name="settings_custom_wallpaper_load_failed">Failed to load the image. Please pick another one.</string>
-    <string name="settings_custom_wallpaper_reset">Reset</string>
-    <string name="settings_custom_wallpaper_rotate">Rotate 90°</string>
-    <string name="settings_custom_wallpaper_save">Save Wallpaper</string>
-    <string name="settings_custom_wallpaper_zoom_out">Zoom wallpaper out</string>
-    <string name="settings_custom_wallpaper_zoom_in">Zoom wallpaper in</string>
-    <string name="settings_card_opacity_title">Card Opacity</string>
-    <string name="settings_card_opacity_desc">Adjust card background opacity so the custom wallpaper can show through.</string>
-    <string name="cancel">Cancel</string>
 
     <string name="settings_achievement_title">Achievements</string>
     <string name="settings_achievement_desc">View MaaMeow milestones and hidden easter eggs</string>

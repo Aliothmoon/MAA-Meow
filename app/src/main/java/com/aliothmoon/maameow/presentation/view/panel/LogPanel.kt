@@ -59,8 +59,6 @@ import com.aliothmoon.maameow.data.model.LogItem
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.model.RecruitCombination
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
-import com.aliothmoon.maameow.theme.LocalCardOpacity
-import com.aliothmoon.maameow.theme.LocalControlOpacity
 import com.aliothmoon.maameow.theme.LocalLogPalette
 import com.aliothmoon.maameow.theme.themedColor
 
@@ -74,8 +72,6 @@ fun LogPanel(
     val listState = rememberLazyListState()
     var isAutoScroll by remember { mutableStateOf(true) }
     var selectedLog by remember { mutableStateOf<LogItem?>(null) }
-    val cardOpacity = LocalCardOpacity.current
-    val controlOpacity = LocalControlOpacity.current
 
     LaunchedEffect(logs.size, isAutoScroll) {
         if (isAutoScroll && logs.isNotEmpty()) {
@@ -93,8 +89,6 @@ fun LogPanel(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = controlOpacity))
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -124,13 +118,7 @@ fun LogPanel(
             }
         }
 
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = cardOpacity))
-        ) {
+        Box(modifier = Modifier.weight(1f)) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
@@ -156,7 +144,7 @@ fun LogPanel(
                         .padding(16.dp)
                         .size(40.dp)
                         .background(
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = controlOpacity),
+                            MaterialTheme.colorScheme.primaryContainer,
                             CircleShape
                         )
                 ) {

@@ -19,20 +19,16 @@ import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.utils.Misc
-import com.aliothmoon.maameow.utils.deleteManagedCustomWallpaper
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.toLocaleList
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import java.io.InputStream
 import java.io.OutputStream
@@ -47,7 +43,6 @@ class SettingsViewModel(
     private val resourceLoader: MaaResourceLoader,
     private val achievementReporter: AchievementReporter,
 ) : ViewModel() {
-    private val wallpaperMutex = Mutex()
 
     // ========== 导入导出 ==========
 
@@ -277,61 +272,6 @@ class SettingsViewModel(
     fun setUseSystemMonetColor(enabled: Boolean) {
         viewModelScope.launch {
             appSettingsManager.setUseSystemMonetColor(enabled)
-        }
-    }
-
-    val customWallpaperPath: StateFlow<String> = appSettingsManager.customWallpaperPath
-    suspend fun setCustomWallpaperPath(path: String): Boolean = wallpaperMutex.withLock {
-        val oldPath = appSettingsManager.customWallpaperPath.value
-        var pathCommitted = false
-        try {
-            appSettingsManager.setCustomWallpaperPath(path)
-            pathCommitted = true
-            deleteManagedCustomWallpaper(app, oldPath, except = path)
-            if (oldPath.isBlank()) {
-                if (appSettingsManager.cardOpacity.value == AppSettingsManager.CARD_OPACITY_DEFAULT) {
-                    runCatching {
-                        appSettingsManager.setCardOpacity(AppSettingsManager.CARD_OPACITY_WALLPAPER_DEFAULT)
-                    }.onFailure { Timber.w(it, "Failed to set wallpaper card opacity") }
-                }
-                if (!appSettingsManager.useSystemMonetColor.value) {
-                    runCatching { appSettingsManager.setUseSystemMonetColor(true) }
-                        .onFailure { Timber.w(it, "Failed to enable wallpaper color extraction") }
-                }
-            }
-            true
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Exception) {
-            Timber.e(error, "Failed to persist custom wallpaper")
-            if (!pathCommitted) deleteManagedCustomWallpaper(app, path, except = oldPath)
-            false
-        }
-    }
-
-    fun clearCustomWallpaper() {
-        viewModelScope.launch {
-            wallpaperMutex.withLock {
-                val oldPath = appSettingsManager.customWallpaperPath.value
-                try {
-                    appSettingsManager.setCustomWallpaperPath("")
-                    deleteManagedCustomWallpaper(app, oldPath)
-                    if (appSettingsManager.cardOpacity.value == AppSettingsManager.CARD_OPACITY_WALLPAPER_DEFAULT) {
-                        appSettingsManager.setCardOpacity(AppSettingsManager.CARD_OPACITY_DEFAULT)
-                    }
-                } catch (error: CancellationException) {
-                    throw error
-                } catch (error: Exception) {
-                    Timber.e(error, "Failed to clear custom wallpaper")
-                }
-            }
-        }
-    }
-
-    val cardOpacity: StateFlow<Int> = appSettingsManager.cardOpacity
-    fun setCardOpacity(opacity: Int) {
-        viewModelScope.launch {
-            appSettingsManager.setCardOpacity(opacity)
         }
     }
 

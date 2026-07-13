@@ -73,7 +73,6 @@ fun MainScreen(
 
     Scaffold(
         modifier = modifier,
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         bottomBar = {
             if (visible && !fullscreen) {
                 AppBottomNavigation(

@@ -78,7 +78,6 @@ fun ScheduleTriggerLogView(
 
     // 列表模式
     Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
                 title = stringResource(R.string.schedule_trigger_log_title),
@@ -274,7 +273,6 @@ private fun DetailView(
     val header = entries.firstOrNull() as? TriggerLogEntry.Header
 
     Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
                 title = header?.strategyName ?: stringResource(R.string.schedule_log_detail_title),

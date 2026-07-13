@@ -44,7 +44,6 @@ import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -86,7 +85,6 @@ import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
 import com.aliothmoon.maameow.theme.DenseTabTypography
-import com.aliothmoon.maameow.theme.LocalControlOpacity
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.asString
 import kotlinx.coroutines.Dispatchers
@@ -118,7 +116,6 @@ fun AutoBattlePanel(
     val scope = rememberCoroutineScope()
     val isInFloatingWindow = LocalFloatingWindowContext.current
     val statusMessage = state.statusMessage.asString()
-    val controlOpacity = LocalControlOpacity.current
     val compactButtonShape = RoundedCornerShape(8.dp)
     val compactButtonPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
     val importFloatHint = stringResource(R.string.copilot_import_float_hint)
@@ -207,11 +204,11 @@ fun AutoBattlePanel(
                                 val selected = state.tabIndex == spec.index
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
-                                    color = (if (selected) {
+                                    color = if (selected) {
                                         MaterialTheme.colorScheme.primaryContainer
                                     } else {
                                         MaterialTheme.colorScheme.surface
-                                    }).copy(alpha = controlOpacity),
+                                    },
                                     border = BorderStroke(
                                         width = 1.dp,
                                         color = if (selected) {
@@ -302,7 +299,7 @@ fun AutoBattlePanel(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = controlOpacity)
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Row(
                         modifier = Modifier.padding(10.dp),
@@ -392,7 +389,7 @@ fun AutoBattlePanel(
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(6.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = controlOpacity)
+                            color = MaterialTheme.colorScheme.secondaryContainer
                         ) {
                             Column(
                                 modifier = Modifier
@@ -705,7 +702,7 @@ fun AutoBattlePanel(
                     Spacer(modifier = Modifier.height(4.dp))
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = controlOpacity),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = 300.dp)
@@ -742,7 +739,7 @@ fun AutoBattlePanel(
                                         Surface(
                                             tonalElevation = if (isDragging) 4.dp else 0.dp,
                                             shape = RoundedCornerShape(6.dp),
-                                            color = MaterialTheme.colorScheme.surface.copy(alpha = controlOpacity),
+                                            color = MaterialTheme.colorScheme.surface,
                                             modifier = Modifier
                                                 .longPressDraggableHandle()
                                                 .fillMaxWidth()
@@ -919,9 +916,6 @@ private fun RowScope.CopilotActionButton(
             shape = shape,
             contentPadding = padding,
             modifier = Modifier.weight(1f),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = LocalControlOpacity.current),
-            ),
             content = content,
         )
     } else {
@@ -982,7 +976,7 @@ private fun BuiltinCopilotPicker(
             }
             Surface(
                 shape = RoundedCornerShape(6.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = LocalControlOpacity.current),
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 6.dp)

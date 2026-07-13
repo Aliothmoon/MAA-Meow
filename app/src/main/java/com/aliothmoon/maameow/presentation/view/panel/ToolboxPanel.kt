@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxTab
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
-import com.aliothmoon.maameow.theme.LocalControlOpacity
 import org.koin.compose.koinInject
 
 @Composable
@@ -33,7 +32,6 @@ fun ToolboxPanel(
     viewModel: ToolboxViewModel = koinInject()
 ) {
     val currentTab by viewModel.currentTab.collectAsStateWithLifecycle()
-    val controlOpacity = LocalControlOpacity.current
 
     Column(modifier = modifier.fillMaxSize()) {
         // 子 Tab 按钮行
@@ -48,10 +46,10 @@ fun ToolboxPanel(
                 val selected = currentTab == tab
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = (if (selected)
+                    color = if (selected)
                         MaterialTheme.colorScheme.primaryContainer
                     else
-                        MaterialTheme.colorScheme.surface).copy(alpha = controlOpacity),
+                        MaterialTheme.colorScheme.surface,
                     border = BorderStroke(
                         width = 1.dp,
                         color = if (selected)
