@@ -88,4 +88,21 @@ data class AppSettings(
 
     /** 是否显示成就解锁时的 Snackbar 提示 */
     @PrefKey(default = "true") val showAchievementSnackbar: String = "true",
+
+    /** 是否启用主界面自定义图片背景（仅四个主 Tab 生效） */
+    @PrefKey(default = "false") val customBackgroundEnabled: String = "false",
+
+    /**
+     * 图片文件固定存放在 filesDir/backgrounds/bg.jpg，路径本身无需持久化。
+     */
+    @PrefKey(default = "") val customBackgroundToken: String = "",
+
+    /** 背景图不透明度 0~100（默认 80） */
+    @PrefKey(default = "80") val customBackgroundImageAlpha: String = "80",
+
+    /** 背景遮罩强度 0~100（默认 25，用于保证前景文字可读性） */
+    @PrefKey(default = "25") val customBackgroundScrim: String = "25",
+
+    /** 背景模糊强度 0~100（默认 0，仅 API 31+ 生效） */
+    @PrefKey(default = "0") val customBackgroundBlur: String = "0",
 )

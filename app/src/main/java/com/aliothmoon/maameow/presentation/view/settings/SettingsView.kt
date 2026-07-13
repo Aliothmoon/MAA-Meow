@@ -5,10 +5,12 @@ import android.content.Intent
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,8 +30,10 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -40,6 +44,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -48,6 +54,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -121,11 +129,21 @@ fun SettingsView(
     val fontSizeScale by viewModel.fontSizeScale.collectAsStateWithLifecycle()
     val showAchievementSnackbar by viewModel.showAchievementSnackbar.collectAsStateWithLifecycle()
     val backgroundResolution by viewModel.backgroundResolution.collectAsStateWithLifecycle()
+    val customBackgroundEnabled by viewModel.customBackgroundEnabled.collectAsStateWithLifecycle()
+    val customBackgroundImageAlpha by viewModel.customBackgroundImageAlpha.collectAsStateWithLifecycle()
+    val customBackgroundScrim by viewModel.customBackgroundScrim.collectAsStateWithLifecycle()
+    val customBackgroundBlur by viewModel.customBackgroundBlur.collectAsStateWithLifecycle()
+    val backgroundImage by viewModel.backgroundImage.collectAsStateWithLifecycle()
     val language by viewModel.language.collectAsStateWithLifecycle()
     val backupMessage by viewModel.backupMessage.collectAsStateWithLifecycle()
     val showRestartDialog by viewModel.showRestartDialog.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    val backgroundCrop = rememberBackgroundCropController(viewModel)
+    val pickBackgroundLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri -> uri?.let(backgroundCrop::pick) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -142,7 +160,7 @@ fun SettingsView(
     }
 
     var showShizukuAppPicker by remember { mutableStateOf(false) }
-    var shizukuAppPickerLoadKey by remember { mutableStateOf(0) }
+    var shizukuAppPickerLoadKey by remember { mutableIntStateOf(0) }
     var shizukuAppSearch by remember { mutableStateOf("") }
     var shizukuAppOptions by remember { mutableStateOf<List<ShizukuLaunchAppOption>?>(null) }
     var shizukuAppLoadFailed by remember { mutableStateOf(false) }
@@ -183,6 +201,17 @@ fun SettingsView(
             dismissText = stringResource(R.string.common_restart_later),
             onConfirm = { viewModel.confirmRestart() },
             onDismissRequest = { viewModel.dismissRestartDialog() }
+        )
+    }
+
+    // 全屏裁剪弹窗：选图后先裁剪，确认保存为背景，取消则清理源图片缓存。
+    val cropSourceBitmap = backgroundCrop.sourceBitmap
+    if (backgroundCrop.sourcePath != null && cropSourceBitmap != null) {
+        WallpaperCropFullScreen(
+            sourceBitmap = cropSourceBitmap,
+            cropState = backgroundCrop.cropState,
+            onCancel = backgroundCrop::cancel,
+            onConfirm = backgroundCrop::confirm,
         )
     }
 
@@ -421,7 +450,8 @@ fun SettingsView(
                         navController.navigate("error_log")
                     }
                     ListItemDivider()
-                    val logExportChooserTitle = stringResource(R.string.settings_log_export_chooser_title)
+                    val logExportChooserTitle =
+                        stringResource(R.string.settings_log_export_chooser_title)
                     SettingClickItem(
                         title = stringResource(R.string.settings_log_export_title),
                         description = stringResource(R.string.settings_log_export_desc),
@@ -430,7 +460,12 @@ fun SettingsView(
                         coroutineScope.launch {
                             val intent = logExportService.exportAllLogs()
                             if (intent != null) {
-                                context.startActivity(Intent.createChooser(intent, logExportChooserTitle))
+                                context.startActivity(
+                                    Intent.createChooser(
+                                        intent,
+                                        logExportChooserTitle
+                                    )
+                                )
                             }
                         }
                     }
@@ -470,6 +505,25 @@ fun SettingsView(
                         fontSizeScale = fontSizeScale,
                         onFontSizeScaleChanged = { viewModel.setFontSizeScale(it) }
                     )
+                    ListItemDivider()
+                    SettingCustomBackgroundSection(
+                        contentColor = contentColor,
+                        enabled = customBackgroundEnabled,
+                        previewImage = backgroundImage,
+                        imageAlpha = customBackgroundImageAlpha,
+                        scrim = customBackgroundScrim,
+                        blur = customBackgroundBlur,
+                        onEnabledChange = { viewModel.setCustomBackgroundEnabled(it) },
+                        onPickImage = {
+                            pickBackgroundLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                        onRemoveImage = { viewModel.removeBackgroundImage() },
+                        onImageAlphaChange = { viewModel.setCustomBackgroundImageAlpha(it) },
+                        onScrimChange = { viewModel.setCustomBackgroundScrim(it) },
+                        onBlurChange = { viewModel.setCustomBackgroundBlur(it) },
+                    )
                 }
             }
 
@@ -502,14 +556,15 @@ fun SettingsView(
                                     context,
                                     shizukuLaunchPackage
                                 )
-                                val shizukuLaunchAppDescription = if (shizukuLaunchPackage == OFFICIAL_SHIZUKU_PACKAGE) {
-                                    stringResource(R.string.settings_shizuku_launch_app_default_desc)
-                                } else {
-                                    stringResource(
-                                        R.string.settings_shizuku_launch_app_selected_desc,
-                                        shizukuLaunchAppName ?: shizukuLaunchPackage
-                                    )
-                                }
+                                val shizukuLaunchAppDescription =
+                                    if (shizukuLaunchPackage == OFFICIAL_SHIZUKU_PACKAGE) {
+                                        stringResource(R.string.settings_shizuku_launch_app_default_desc)
+                                    } else {
+                                        stringResource(
+                                            R.string.settings_shizuku_launch_app_selected_desc,
+                                            shizukuLaunchAppName ?: shizukuLaunchPackage
+                                        )
+                                    }
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_shizuku_launch_app_title),
                                     description = shizukuLaunchAppDescription,
@@ -715,7 +770,10 @@ fun SettingsView(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                Misc.openUriSafely(context, "https://github.com/Aliothmoon/MAA-Meow")
+                                Misc.openUriSafely(
+                                    context,
+                                    "https://github.com/Aliothmoon/MAA-Meow"
+                                )
                             }
                             .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
                         textAlign = TextAlign.Center
@@ -833,6 +891,140 @@ private fun SettingClickItem(
     )
 }
 
+@Composable
+private fun SettingCustomBackgroundSection(
+    contentColor: Color,
+    enabled: Boolean,
+    previewImage: ImageBitmap?,
+    imageAlpha: Int,
+    scrim: Int,
+    blur: Int,
+    onEnabledChange: (Boolean) -> Unit,
+    onPickImage: () -> Unit,
+    onRemoveImage: () -> Unit,
+    onImageAlphaChange: (Int) -> Unit,
+    onScrimChange: (Int) -> Unit,
+    onBlurChange: (Int) -> Unit,
+) {
+    val hasImage = previewImage != null
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SettingSwitchItem(
+            title = stringResource(R.string.settings_background_title),
+            description = stringResource(R.string.settings_background_desc),
+            contentColor = contentColor,
+            checked = enabled,
+            onCheckedChange = onEnabledChange,
+        )
+
+        AnimatedVisibility(
+            visible = enabled,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            Column(
+                modifier = Modifier.padding(bottom = MaaDesignTokens.Spacing.listItemVertical),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (previewImage != null) {
+                    Image(
+                        bitmap = previewImage,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .clip(MaterialTheme.shapes.medium)
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = onPickImage,
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(
+                            text = stringResource(
+                                if (hasImage) R.string.settings_background_replace
+                                else R.string.settings_background_pick
+                            )
+                        )
+                    }
+                    if (hasImage) {
+                        OutlinedButton(
+                            onClick = onRemoveImage,
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(text = stringResource(R.string.settings_background_remove))
+                        }
+                    }
+                }
+                if (hasImage) {
+                    BackgroundPercentSlider(
+                        label = stringResource(R.string.settings_background_image_alpha),
+                        value = imageAlpha,
+                        contentColor = contentColor,
+                        onValueChange = onImageAlphaChange
+                    )
+                    BackgroundPercentSlider(
+                        label = stringResource(R.string.settings_background_scrim),
+                        value = scrim,
+                        contentColor = contentColor,
+                        onValueChange = onScrimChange
+                    )
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        BackgroundPercentSlider(
+                            label = stringResource(R.string.settings_background_blur),
+                            value = blur,
+                            contentColor = contentColor,
+                            onValueChange = onBlurChange
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BackgroundPercentSlider(
+    label: String,
+    value: Int,
+    contentColor: Color,
+    onValueChange: (Int) -> Unit,
+) {
+    var sliderValue by remember { mutableFloatStateOf(value.toFloat()) }
+    LaunchedEffect(value) { sliderValue = value.toFloat() }
+    val current = sliderValue.roundToInt().coerceIn(0, 100)
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = contentColor,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = "$current%",
+                style = MaterialTheme.typography.bodyMedium,
+                color = contentColor
+            )
+        }
+        Slider(
+            value = sliderValue,
+            onValueChange = { sliderValue = it },
+            onValueChangeFinished = {
+                onValueChange(sliderValue.roundToInt().coerceIn(0, 100))
+            },
+            valueRange = 0f..100f,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
 /**
  * 字体大小（页面缩放）设置：整数 80~110，默认 100。
  * 松手后才提交全局缩放。滑块下方带实时预览框。
@@ -843,13 +1035,18 @@ private fun FontSizeSetting(
     value: Int,
     onValueChange: (Int) -> Unit
 ) {
-    var sliderValue by remember { mutableStateOf(value.toFloat()) }
+    var sliderValue by remember { mutableFloatStateOf(value.toFloat()) }
     LaunchedEffect(value) {
         sliderValue = value.toFloat()
     }
-    val current = sliderValue.roundToInt().coerceIn(AppSettingsManager.FONT_SIZE_SCALE_MIN, AppSettingsManager.FONT_SIZE_SCALE_MAX)
+    val current = sliderValue.roundToInt()
+        .coerceIn(AppSettingsManager.FONT_SIZE_SCALE_MIN, AppSettingsManager.FONT_SIZE_SCALE_MAX)
 
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = MaaDesignTokens.Spacing.listItemVertical)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical)
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -877,10 +1074,12 @@ private fun FontSizeSetting(
             value = sliderValue,
             onValueChange = { sliderValue = it },
             onValueChangeFinished = {
-                onValueChange(sliderValue.roundToInt().coerceIn(
-                    AppSettingsManager.FONT_SIZE_SCALE_MIN,
-                    AppSettingsManager.FONT_SIZE_SCALE_MAX
-                ))
+                onValueChange(
+                    sliderValue.roundToInt().coerceIn(
+                        AppSettingsManager.FONT_SIZE_SCALE_MIN,
+                        AppSettingsManager.FONT_SIZE_SCALE_MAX
+                    )
+                )
             },
             valueRange = AppSettingsManager.FONT_SIZE_SCALE_MIN.toFloat()..AppSettingsManager.FONT_SIZE_SCALE_MAX.toFloat(),
             steps = 0,
@@ -890,7 +1089,12 @@ private fun FontSizeSetting(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            listOf(AppSettingsManager.FONT_SIZE_SCALE_MIN, 90, 100, AppSettingsManager.FONT_SIZE_SCALE_MAX).forEach { kp ->
+            listOf(
+                AppSettingsManager.FONT_SIZE_SCALE_MIN,
+                90,
+                100,
+                AppSettingsManager.FONT_SIZE_SCALE_MAX
+            ).forEach { kp ->
                 Text(
                     text = kp.toString(),
                     style = MaterialTheme.typography.labelSmall,
@@ -983,7 +1187,10 @@ private fun SettingChannelItem(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap)) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap)
+        ) {
             Text(
                 text = stringResource(R.string.settings_update_channel_title),
                 style = MaterialTheme.typography.bodyLarge,
@@ -1040,7 +1247,10 @@ private fun SettingBackgroundResolutionItem(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap)) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap)
+        ) {
             Text(
                 text = stringResource(R.string.settings_background_resolution_title),
                 style = MaterialTheme.typography.bodyLarge,
@@ -1152,7 +1362,10 @@ private fun SettingRemoteBackendItem(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap)) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap)
+        ) {
             Text(
                 text = stringResource(R.string.settings_startup_backend_title),
                 style = MaterialTheme.typography.bodyLarge,
@@ -1212,5 +1425,5 @@ private fun loadShizukuLaunchApps(context: Context): List<ShizukuLaunchAppOption
             ShizukuLaunchAppOption(label = label, packageName = packageName)
         }
         .distinctBy { it.packageName }
-        .sortedWith(compareBy<ShizukuLaunchAppOption, String>(String.CASE_INSENSITIVE_ORDER) { it.label })
+        .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.label })
 }

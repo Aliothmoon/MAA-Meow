@@ -1,18 +1,19 @@
 package com.aliothmoon.maameow.presentation.components
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -21,7 +22,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -45,19 +45,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
-import com.aliothmoon.maameow.R
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
+import com.aliothmoon.maameow.theme.OpaqueTheme
 
 /** 普通提示弹窗的最大宽度上限（手机按比例、平板/宽屏封顶） */
 private val DialogMaxWidth = 400.dp
@@ -101,47 +102,50 @@ fun AdaptiveTaskPromptDialog(
 ) {
     if (!visible) return
 
-    val resolvedConfirmColor = confirmColor ?: MaterialTheme.colorScheme.primary
-    val resolvedIconTint = iconTint ?: resolvedConfirmColor
-    val resolvedConfirmText = confirmText ?: stringResource(R.string.common_confirm)
-    val resolvedDismissText = dismissText ?: stringResource(R.string.common_cancel)
+    // 弹窗在独立窗口内呈现，不应透出主界面自定义背景图：在玻璃作用域内恢复不透明配色。
+    OpaqueTheme {
+        val resolvedConfirmColor = confirmColor ?: MaterialTheme.colorScheme.primary
+        val resolvedIconTint = iconTint ?: resolvedConfirmColor
+        val resolvedConfirmText = confirmText ?: stringResource(R.string.common_confirm)
+        val resolvedDismissText = dismissText ?: stringResource(R.string.common_cancel)
 
-    if (LocalFloatingWindowContext.current) {
-        FloatingTaskPromptDialog(
-            title = title,
-            message = message,
-            onDismissRequest = onDismissRequest,
-            onConfirm = onConfirm,
-            confirmText = resolvedConfirmText,
-            dismissText = resolvedDismissText,
-            neutralText = neutralText,
-            onNeutralClick = onNeutralClick,
-            icon = icon,
-            iconTint = resolvedIconTint,
-            confirmColor = resolvedConfirmColor,
-            buttonLayout = buttonLayout,
-            dismissOnOutsideClick = dismissOnOutsideClick,
-            landscapeAdaptive = landscapeAdaptive,
-            content = content
-        )
-    } else {
-        MaterialTaskPromptDialog(
-            title = title,
-            message = message,
-            onDismissRequest = onDismissRequest,
-            onConfirm = onConfirm,
-            confirmText = resolvedConfirmText,
-            dismissText = resolvedDismissText,
-            neutralText = neutralText,
-            onNeutralClick = onNeutralClick,
-            icon = icon,
-            iconTint = resolvedIconTint,
-            confirmColor = resolvedConfirmColor,
-            buttonLayout = buttonLayout,
-            dismissOnOutsideClick = dismissOnOutsideClick,
-            landscapeAdaptive = landscapeAdaptive,
-            content = content
-        )
+        if (LocalFloatingWindowContext.current) {
+            FloatingTaskPromptDialog(
+                title = title,
+                message = message,
+                onDismissRequest = onDismissRequest,
+                onConfirm = onConfirm,
+                confirmText = resolvedConfirmText,
+                dismissText = resolvedDismissText,
+                neutralText = neutralText,
+                onNeutralClick = onNeutralClick,
+                icon = icon,
+                iconTint = resolvedIconTint,
+                confirmColor = resolvedConfirmColor,
+                buttonLayout = buttonLayout,
+                dismissOnOutsideClick = dismissOnOutsideClick,
+                landscapeAdaptive = landscapeAdaptive,
+                content = content
+            )
+        } else {
+            MaterialTaskPromptDialog(
+                title = title,
+                message = message,
+                onDismissRequest = onDismissRequest,
+                onConfirm = onConfirm,
+                confirmText = resolvedConfirmText,
+                dismissText = resolvedDismissText,
+                neutralText = neutralText,
+                onNeutralClick = onNeutralClick,
+                icon = icon,
+                iconTint = resolvedIconTint,
+                confirmColor = resolvedConfirmColor,
+                buttonLayout = buttonLayout,
+                dismissOnOutsideClick = dismissOnOutsideClick,
+                landscapeAdaptive = landscapeAdaptive,
+                content = content
+            )
+        }
     }
 }
 
@@ -304,7 +308,10 @@ private fun TaskPromptCard(
     val scrollState = rememberScrollState()
 
     Surface(
-        modifier = modifier.fillMaxWidth().wrapContentHeight().heightIn(max = screenHeight * 0.85f),
+        modifier = modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .heightIn(max = screenHeight * 0.85f),
         shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -361,7 +368,11 @@ private fun TaskPromptCard(
                             onClick = onConfirm,
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                         ) {
-                            Text(confirmText, maxLines = 1, style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                confirmText,
+                                maxLines = 1,
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
                         dismissText?.takeIf { it.isNotBlank() }?.let {
                             TextButton(
