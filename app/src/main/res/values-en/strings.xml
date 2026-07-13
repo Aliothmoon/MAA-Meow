@@ -48,8 +48,8 @@
     <string name="settings_startup_backend_title">Startup Mode</string>
     <string name="settings_startup_backend_desc">Choose how the app obtains system permissions</string>
     <!-- settings: monet theme color (system Material You toggle, Android 12+) -->
-    <string name="settings_monet_color_title">Monet Theme Color</string>
-    <string name="settings_monet_color_desc">Generate colors from your wallpaper; off uses the built-in blue theme.</string>
+    <string name="settings_monet_color_title">Wallpaper Dynamic Color</string>
+    <string name="settings_monet_color_desc">Generate theme colors from your custom wallpaper; without one, follow system dynamic color. Off uses the built-in blue theme.</string>
 
     <string name="settings_achievement_title">Achievements</string>
     <string name="settings_achievement_desc">View MaaMeow milestones and hidden easter eggs</string>
@@ -1800,4 +1800,25 @@
     <string name="runlog_task_stopped">Tasks stopped, status: %1$s</string>
     <string name="runlog_service_terminated">MAA service terminated unexpectedly</string>
     <string name="runlog_game_process_gone">Game process not started or closed unexpectedly (%1$s)</string>
+    <string name="settings_wallpaper_title">Custom Wallpaper</string>
+    <string name="settings_wallpaper_desc">Choose an image as app background</string>
+    <string name="settings_wallpaper_set">Wallpaper set</string>
+    <string name="settings_wallpaper_clear">Clear Wallpaper</string>
+    <string name="settings_wallpaper_alpha">Opacity: %d%%</string>
+    <string name="settings_wallpaper_blur">Blur: %d%%</string>
+    <string name="settings_wallpaper_opacity_label">Opacity</string>
+    <string name="settings_wallpaper_blur_label">Blur</string>
+    <string name="settings_wallpaper_confirm">Confirm</string>
+    <string name="settings_wallpaper_change">Change Wallpaper</string>
+<string name="settings_wallpaper_text_contrast">Dynamic Text</string>
+    <string name="settings_wallpaper_frosted_glass">Frosted Glass</string>
+    <string name="settings_wallpaper_load_failed">Failed to load image. Try another one.</string>
+    <string name="settings_wallpaper_save_failed">Failed to save wallpaper</string>
+    <string name="settings_wallpaper_missing">Wallpaper file is missing. Please choose again.</string>
+    <string name="settings_wallpaper_edit_hint">Tap the preview to recrop</string>
+    <string name="settings_wallpaper_rotate">Rotate</string>
+    <string name="settings_wallpaper_reset_crop">Reset</string>
+    <string name="settings_wallpaper_saving">Saving…</string>
+    <string name="settings_wallpaper_loading">Loading…</string>
+
 </resources>

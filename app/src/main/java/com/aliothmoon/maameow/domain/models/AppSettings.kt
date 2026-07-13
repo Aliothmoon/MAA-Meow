@@ -35,6 +35,7 @@ data class AppSettings(
 
     @PrefKey(default = "false") val muteOnGameLaunch: String = "false",
 
+    /** Write-ahead package name for in-progress game mute session; empty when not muted. */
     @PrefKey(default = "") val mutedGamePackage: String = "",
 
     @PrefKey(default = "false") val closeAppOnTaskEnd: String = "false",
@@ -78,16 +79,25 @@ data class AppSettings(
     /** 定时任务触发时跳过锁屏检查 */
     @PrefKey(default = "false") val runScheduleWhenLocked: String = "false",
 
-    /**
-     * 是否启用系统莫奈主题色（Android 12+ Material You）
-     * 启用后主题跟随系统壁纸动态取色，关闭则使用内置硬编码蓝色主题
-     * Android 12 以下设备只能使用内置蓝色主题
-     */
-    @PrefKey(default = "false") val useSystemMonetColor: String = "false",
+    /** 壁纸动态取色开关：开启后从自定义壁纸提取主色覆盖主题配色 */
+    @PrefKey(default = "false") val useWallpaperColor: String = "false",
 
     /** 页面缩放比例（80~110，默认 100 = 1.0x） */
     @PrefKey(default = "100") val fontSizeScale: String = "100",
 
     /** 是否显示成就解锁时的 Snackbar 提示 */
     @PrefKey(default = "true") val showAchievementSnackbar: String = "true",
+
+    /** 自定义壁纸 URI（content:// 或 file://），空串表示未设置 */
+    @PrefKey(default = "") val wallpaperUri: String = "",
+
+    /** 壁纸透明度 0~100，默认 100 */
+    @PrefKey(default = "100") val wallpaperAlpha: String = "100",
+
+    /** 壁纸模糊半径 0~12，默认 0 */
+    @PrefKey(default = "0") val wallpaperBlur: String = "0",
+
+    /** 壁纸磨砂玻璃效果：组件背景半透明透出壁纸，默认 false */
+    @PrefKey(default = "false") val wallpaperTextContrast: String = "false",
+    @PrefKey(default = "false") val wallpaperFrostedGlass: String = "false",
 )

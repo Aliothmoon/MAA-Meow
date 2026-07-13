@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
+import androidx.compose.ui.graphics.Color
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -117,7 +118,7 @@ fun ExpandedControlPanel(
                 ),
             shape = RoundedCornerShape(4.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
             )
         ) {
             Column(

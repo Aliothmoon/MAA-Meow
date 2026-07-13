@@ -3,6 +3,8 @@ package com.aliothmoon.maameow.data.preferences
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import com.aliothmoon.maameow.R
@@ -21,13 +23,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 
 class AppSettingsManager(
@@ -36,10 +42,14 @@ class AppSettingsManager(
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /** Serializes multi-field settings writes (import / wallpaper preserve / bulk update). */
+    private val settingsMutex = Mutex()
 
     companion object {
         val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
-
+        /** Marks wallpaperBlur as 0..100 percent (post-migration). */
+        private val wallpaperBlurIsPercentKey =
+            booleanPreferencesKey("wallpaper_blur_is_percent")
         /** 页面缩放范围 */
         const val FONT_SIZE_SCALE_MIN = 80
         const val FONT_SIZE_SCALE_MAX = 110
@@ -53,11 +63,61 @@ class AppSettingsManager(
 
     val settings: Flow<AppSettings> = with(AppSettingsSchema) { context.dataStore.flow }
 
-    // 阻塞读取 DataStore 首次值，确保后续 .value 不会是默认值
-    private val initialSettings: AppSettings = runBlocking { settings.first() }
+    // 阻塞读取 DataStore 首次值，确保后续 .value 不会是默认值。
+    // 同步完成 blur 百分制迁移，避免首帧仍按旧 0..12 dp 展示。
+    private val initialSettings: AppSettings = runBlocking {
+        migrateWallpaperBlurToPercentIfNeeded()
+        settings.first()
+    }
+
+    /**
+     * One-shot: old builds stored blur as absolute Compose dp (0..12).
+     * Rewrite to 0..100% so UI matches opacity-style percent scale.
+     */
+    private suspend fun migrateWallpaperBlurToPercentIfNeeded() {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { prefs ->
+                if (prefs[wallpaperBlurIsPercentKey] == true) return@edit
+                val raw = prefs[wallpaperBlur]?.toIntOrNull() ?: 0
+                val percent = if (raw in 0..WallpaperBlur.RADIUS_DP_MAX.toInt()) {
+                    WallpaperBlur.legacyDpToPercent(raw)
+                } else {
+                    WallpaperBlur.parsePercent(raw.toString())
+                }
+                prefs[wallpaperBlur] = percent.toString()
+                prefs[wallpaperBlurIsPercentKey] = true
+            }
+        }
+    }
+
 
     suspend fun setSettings(settings: AppSettings) {
-        with(AppSettingsSchema) { context.dataStore.update(settings) }
+        settingsMutex.withLock {
+            with(AppSettingsSchema) { context.dataStore.update(settings) }
+        }
+    }
+
+    /**
+     * Full settings import that keeps this device's wallpaper-related prefs.
+     * Wallpaper files are device-local and must not be overwritten by backups.
+     * Locked so read-current + write cannot interleave with other bulk updates.
+     */
+    suspend fun setSettingsPreservingWallpaper(settings: AppSettings) {
+        settingsMutex.withLock {
+            val current = this.settings.first()
+            with(AppSettingsSchema) {
+                context.dataStore.update(
+                    settings.copy(
+                        wallpaperUri = current.wallpaperUri,
+                        wallpaperAlpha = current.wallpaperAlpha,
+                        wallpaperBlur = current.wallpaperBlur,
+                        wallpaperTextContrast = current.wallpaperTextContrast,
+                        wallpaperFrostedGlass = current.wallpaperFrostedGlass,
+                        useWallpaperColor = current.useWallpaperColor,
+                    ),
+                )
+            }
+        }
     }
 
     // 悬浮窗模式
@@ -552,18 +612,29 @@ class AppSettingsManager(
     }
 
 
-    // 是否启用系统莫奈主题色（Android 12+ Material You）
-    private fun parseUseSystemMonetColor(raw: String): Boolean =
-        raw.toBooleanStrictOrNull() ?: true
+    // 是否启用壁纸动态取色（有自定义壁纸时从壁纸取色，无壁纸时跟随系统壁纸）
+    // 兼容旧键 useSystemMonetColor，避免升级后开关状态丢失
+    private val legacyUseSystemMonetColorKey = stringPreferencesKey("useSystemMonetColor")
 
-    val useSystemMonetColor: StateFlow<Boolean> = settings
-        .map { parseUseSystemMonetColor(it.useSystemMonetColor) }
+    private fun parseUseWallpaperColor(raw: String?): Boolean =
+        raw?.toBooleanStrictOrNull() ?: false
+
+    val useWallpaperColor: StateFlow<Boolean> = context.dataStore.data
+        .map { prefs ->
+            val current = prefs[AppSettingsSchema.useWallpaperColor]
+            if (current != null) {
+                parseUseWallpaperColor(current)
+            } else {
+                parseUseWallpaperColor(prefs[legacyUseSystemMonetColorKey])
+            }
+        }
         .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, parseUseSystemMonetColor(initialSettings.useSystemMonetColor))
+        .stateIn(scope, SharingStarted.Eagerly, parseUseWallpaperColor(initialSettings.useWallpaperColor))
 
-    suspend fun setUseSystemMonetColor(enabled: Boolean) {
-        with(AppSettingsSchema) {
-            context.dataStore.edit { it[useSystemMonetColor] = enabled.toString() }
+    suspend fun setUseWallpaperColor(enabled: Boolean) {
+        context.dataStore.edit {
+            it[AppSettingsSchema.useWallpaperColor] = enabled.toString()
+            it.remove(legacyUseSystemMonetColorKey)
         }
     }
 
@@ -588,6 +659,76 @@ class AppSettingsManager(
     suspend fun setShowAchievementSnackbar(enabled: Boolean) {
         with(AppSettingsSchema) {
             context.dataStore.edit { it[showAchievementSnackbar] = enabled.toString() }
+        }
+    }
+
+    // Bumped when wallpaper file content may change under the same URI path.
+    private val _wallpaperUpdateVersion = MutableStateFlow(0)
+    val wallpaperUpdateVersion: StateFlow<Int> = _wallpaperUpdateVersion.asStateFlow()
+
+    // 自定义壁纸
+    val wallpaperUri: StateFlow<String> = settings
+        .map { it.wallpaperUri }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wallpaperUri)
+
+    suspend fun setWallpaperUri(uri: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wallpaperUri] = uri }
+        }
+        // Always bump so same-path recrop and clear both refresh collectors.
+        _wallpaperUpdateVersion.value++
+    }
+
+    // 壁纸透明度
+    val wallpaperAlpha: StateFlow<Int> = settings
+        .map { it.wallpaperAlpha.toIntOrNull() ?: 100 }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wallpaperAlpha.toIntOrNull() ?: 100)
+
+    suspend fun setWallpaperAlpha(alpha: Int) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wallpaperAlpha] = alpha.coerceIn(0, 100).toString() }
+        }
+    }
+
+    // 壁纸模糊：0..100%（渲染映射到 0..12dp，见 WallpaperBlur）
+    val wallpaperBlur: StateFlow<Int> = settings
+        .map { WallpaperBlur.parsePercent(it.wallpaperBlur) }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, WallpaperBlur.parsePercent(initialSettings.wallpaperBlur))
+
+    suspend fun setWallpaperBlur(blur: Int) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                it[wallpaperBlur] = blur.coerceIn(0, WallpaperBlur.PERCENT_MAX).toString()
+                // User writes are always percent after this change.
+                it[wallpaperBlurIsPercentKey] = true
+            }
+        }
+    }
+
+    // 壁纸磨砂玻璃
+    // 壁纸文字对比度：独立控制是否基于壁纸亮度调整文字颜色（深动态色）
+    val wallpaperTextContrast: StateFlow<Boolean> = settings
+        .map { it.wallpaperTextContrast.toBoolean() }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wallpaperTextContrast.toBoolean())
+
+    suspend fun setWallpaperTextContrast(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wallpaperTextContrast] = enabled.toString() }
+        }
+    }
+
+    val wallpaperFrostedGlass: StateFlow<Boolean> = settings
+        .map { it.wallpaperFrostedGlass.toBoolean() }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wallpaperFrostedGlass.toBoolean())
+
+    suspend fun setWallpaperFrostedGlass(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wallpaperFrostedGlass] = enabled.toString() }
         }
     }
 

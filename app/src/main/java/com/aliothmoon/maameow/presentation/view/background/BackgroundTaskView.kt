@@ -126,6 +126,7 @@ import com.aliothmoon.maameow.presentation.view.panel.rememberSafToolboxFileExpo
 import com.aliothmoon.maameow.theme.MaaAnimations
 import com.aliothmoon.maameow.theme.MaaThemeAlphas
 import androidx.compose.animation.core.tween
+import com.aliothmoon.maameow.theme.overlayBoardColor
 
 @Composable
 fun BackgroundTaskView(
@@ -371,7 +372,7 @@ fun BackgroundTaskView(
                                                 .weight(1f)
                                                 .fillMaxHeight(),
                                             colors = CardDefaults.cardColors(
-                                                containerColor = MaterialTheme.colorScheme.surface
+                                                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
                                             )
                                         ) {
                                             Column(modifier = Modifier.padding(top = 10.dp)) {
@@ -676,7 +677,7 @@ fun BackgroundTaskView(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = stringResource(R.string.task_close_preview_cd),
-                        tint = Color.White.copy(alpha = 0.7f),
+                        tint = MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.7f),
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -804,10 +805,8 @@ private fun BackgroundMoreActionsOverlay(
                     interactionSource = cardInteractionSource, indication = null, onClick = {}),
             shape = RoundedCornerShape(4.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)) {
+                containerColor = overlayBoardColor()
+            )) {
             Column(modifier = Modifier.padding(10.dp)) {
                 // 标题与快速操作组
                 Text(

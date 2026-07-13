@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.theme.overlayBoardColor
 
 /**
  * 悬浮窗专用对话框组件
@@ -97,7 +98,7 @@ fun OverlayDialog(
                         ) { /* 消费点击事件，防止穿透到遮罩层 */ },
                     shape = RoundedCornerShape(8.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = overlayBoardColor()
                     )
                 ) {
                     Column(

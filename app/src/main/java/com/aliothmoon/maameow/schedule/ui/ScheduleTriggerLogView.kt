@@ -25,7 +25,8 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,6 +55,7 @@ import org.koin.androidx.compose.koinViewModel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.aliothmoon.maameow.theme.overlayBoardColor
 
 @Composable
 fun ScheduleTriggerLogView(
@@ -109,22 +111,34 @@ fun ScheduleTriggerLogView(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(padding),
+                        .padding(padding)
+                        .padding(horizontal = MaaDesignTokens.Spacing.listHorizontal),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.DateRange,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    // Compact board wrapping content with a little padding (same as schedule empty state).
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            stringResource(R.string.schedule_log_empty_state),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 28.dp, vertical = 24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = null,
+                                modifier = Modifier.size(56.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                stringResource(R.string.schedule_log_empty_state),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -151,6 +165,7 @@ fun ScheduleTriggerLogView(
         if (showClearConfirm) {
             AlertDialog(
                 onDismissRequest = { showClearConfirm = false },
+                containerColor = overlayBoardColor(),
                 title = { Text(stringResource(R.string.schedule_log_clear_title)) },
                 text = { Text(stringResource(R.string.schedule_log_clear_message)) },
                 confirmButton = {
@@ -168,6 +183,7 @@ fun ScheduleTriggerLogView(
         if (deleteConfirmFileName != null) {
             AlertDialog(
                 onDismissRequest = { deleteConfirmFileName = null },
+                containerColor = overlayBoardColor(),
                 title = { Text(stringResource(R.string.schedule_log_delete_title)) },
                 text = { Text(stringResource(R.string.schedule_log_delete_message)) },
                 confirmButton = {
@@ -197,11 +213,14 @@ private fun SummaryCard(
     val resultLabel = summary.footer?.result?.let { scheduleExecutionResultLabel(it) }
         ?: stringResource(R.string.schedule_result_in_progress)
 
-    ElevatedCard(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+        )
     ) {
         Row(
             modifier = Modifier.padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 4.dp),

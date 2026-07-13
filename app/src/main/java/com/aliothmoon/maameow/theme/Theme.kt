@@ -42,6 +42,24 @@ private val PureDarkBackground = Color(0xFF000000)
 private val PureDarkSurface = Color(0xFF000000)
 private val PureDarkSurfaceVariant = Color(0xFF121212)
 
+/** Pure black surface family for PURE_DARK (M3 surfaceContainer* must be forced too). */
+internal fun ColorScheme.withPureDarkSurfaces(): ColorScheme = copy(
+    background = PureDarkBackground,
+    surface = PureDarkSurface,
+    surfaceVariant = PureDarkSurfaceVariant,
+    surfaceBright = PureDarkSurfaceVariant,
+    surfaceDim = PureDarkBackground,
+    surfaceContainerLowest = PureDarkBackground,
+    surfaceContainerLow = PureDarkBackground,
+    surfaceContainer = PureDarkSurface,
+    surfaceContainerHigh = PureDarkSurfaceVariant,
+    surfaceContainerHighest = PureDarkSurfaceVariant,
+    surfaceTint = PureDarkSurface,
+    outlineVariant = PureDarkSurfaceVariant,
+    scrim = PureDarkBackground,
+)
+
+
 
 private fun createLightColorScheme(
     primary: Color, primaryContainer: Color, onPrimaryContainer: Color
@@ -159,10 +177,21 @@ object MaaThemeAlphas {
     const val Medium = 0.74f
 }
 
+
+/**
+ * Secondary overlay boards that float above primary page content
+ * (dialogs, announcement, quick-actions sheet, loading cards, etc.).
+ * Matches BackgroundTask "快捷操作": surfaceContainerHighest @ 0.96, no blur.
+ * Primary in-page cards keep surfaceContainerLowest.
+ */
+@Composable
+fun overlayBoardColor(): Color =
+    MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.96f)
+
 @Composable
 fun MaaMeowTheme(
     themeMode: AppSettingsManager.ThemeMode = AppSettingsManager.ThemeMode.SYSTEM,
-    useSystemMonetColor: Boolean = true,
+    useWallpaperColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -173,21 +202,17 @@ fun MaaMeowTheme(
         AppSettingsManager.ThemeMode.DARK, AppSettingsManager.ThemeMode.PURE_DARK -> true
     }
     val isPureDark = themeMode == AppSettingsManager.ThemeMode.PURE_DARK
-    val colorScheme: ColorScheme = remember(themeMode, useSystemMonetColor, isDarkTheme, context) {
+    val colorScheme: ColorScheme = remember(themeMode, useWallpaperColor, isDarkTheme, context) {
         when {
-            // Android 12+ with monet enabled ==> system dynamic color (Material You)
-            useSystemMonetColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            // Android 12+: when wallpaper color is enabled and no custom wallpaper scheme is applied, use system dynamic color
+            useWallpaperColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 val dynamic =
                     if (isDarkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(
                         context
                     )
                 // PURE_DARK keeps the monet-tinted primary but forces pure-black surfaces
                 if (isPureDark) {
-                    dynamic.copy(
-                        background = PureDarkBackground,
-                        surface = PureDarkSurface,
-                        surfaceVariant = PureDarkSurfaceVariant
-                    )
+                    dynamic.withPureDarkSurfaces()
                 } else dynamic
             }
             // Otherwise fall back to the built-in blue palette
@@ -195,7 +220,7 @@ fun MaaMeowTheme(
                 AppSettingsManager.ThemeMode.SYSTEM -> if (systemDarkTheme) BlueDark else BlueLight
                 AppSettingsManager.ThemeMode.WHITE -> BlueLight
                 AppSettingsManager.ThemeMode.DARK -> BlueDark
-                AppSettingsManager.ThemeMode.PURE_DARK -> BluePureDark
+                AppSettingsManager.ThemeMode.PURE_DARK -> BluePureDark.withPureDarkSurfaces()
             }
         }
     }

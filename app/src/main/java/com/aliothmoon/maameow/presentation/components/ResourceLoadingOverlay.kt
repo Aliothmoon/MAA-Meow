@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.utils.i18n.resourceLoaderMessage
 import org.koin.compose.koinInject
+import com.aliothmoon.maameow.theme.overlayBoardColor
 
 /**
  * 资源加载 Loading 遮罩
@@ -62,9 +63,8 @@ fun ResourceLoadingOverlay(
         ) {
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                    containerColor = overlayBoardColor()
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(32.dp),

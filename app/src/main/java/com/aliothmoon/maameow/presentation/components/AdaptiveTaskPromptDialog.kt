@@ -58,6 +58,7 @@ import com.aliothmoon.maameow.R
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
+import com.aliothmoon.maameow.theme.overlayBoardColor
 
 /** 普通提示弹窗的最大宽度上限（手机按比例、平板/宽屏封顶） */
 private val DialogMaxWidth = 400.dp
@@ -306,10 +307,9 @@ private fun TaskPromptCard(
     Surface(
         modifier = modifier.fillMaxWidth().wrapContentHeight().heightIn(max = screenHeight * 0.85f),
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surface,
+        color = overlayBoardColor(),
         contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = 6.dp,
-        shadowElevation = 8.dp
+        tonalElevation = 6.dp
     ) {
         Column(
             modifier = Modifier.padding(20.dp),

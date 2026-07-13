@@ -246,8 +246,8 @@
     <string name="settings_startup_backend_title">启动模式</string>
     <string name="settings_startup_backend_desc">选择应用获取系统权限的方式</string>
     <!-- settings: monet theme color (system Material You toggle, Android 12+) -->
-    <string name="settings_monet_color_title">莫奈主题色</string>
-    <string name="settings_monet_color_desc">根据壁纸动态取色，关闭则使用内置蓝色主题</string>
+    <string name="settings_monet_color_title">壁纸动态取色</string>
+    <string name="settings_monet_color_desc">开启后根据自定义壁纸生成主题色；无自定义壁纸时跟随系统动态色，关闭则使用内置蓝色主题</string>
 
     <string name="settings_achievement_title">成就</string>
     <string name="settings_achievement_desc">查看 MaaMeow 使用记录与隐藏彩蛋</string>
@@ -1856,4 +1856,25 @@
     <string name="runlog_task_stopped">任务停止，状态: %1$s</string>
     <string name="runlog_service_terminated">MAA服务异常终止</string>
     <string name="runlog_game_process_gone">游戏进程未启动或被异常关闭(%1$s)</string>
+    <string name="settings_wallpaper_title">自定义壁纸</string>
+    <string name="settings_wallpaper_desc">选择一张图片作为应用背景</string>
+    <string name="settings_wallpaper_set">已设置壁纸</string>
+    <string name="settings_wallpaper_clear">清除壁纸</string>
+    <string name="settings_wallpaper_alpha">不透明度: %d%%</string>
+    <string name="settings_wallpaper_blur">模糊度: %d%%</string>
+    <string name="settings_wallpaper_opacity_label">不透明度</string>
+    <string name="settings_wallpaper_blur_label">模糊度</string>
+    <string name="settings_wallpaper_confirm">确认</string>
+    <string name="settings_wallpaper_change">更换壁纸</string>
+<string name="settings_wallpaper_text_contrast">动态色文字</string>
+    <string name="settings_wallpaper_frosted_glass">磨砂玻璃</string>
+    <string name="settings_wallpaper_load_failed">无法加载图片，请重试或换一张</string>
+    <string name="settings_wallpaper_save_failed">保存壁纸失败</string>
+    <string name="settings_wallpaper_missing">壁纸文件已丢失，请重新选择</string>
+    <string name="settings_wallpaper_edit_hint">点击预览可重新裁切</string>
+    <string name="settings_wallpaper_rotate">旋转</string>
+    <string name="settings_wallpaper_reset_crop">重置</string>
+    <string name="settings_wallpaper_saving">正在保存…</string>
+    <string name="settings_wallpaper_loading">正在加载…</string>
+
 </resources>

@@ -8,6 +8,8 @@ ksp = "2.3.9"
 # AndroidX Core
 coreKtx = "1.19.0"
 coreSplashscreen = "1.2.0"
+exifinterface = "1.4.1"
+materialColorUtilities = "4.1.1"
 activityCompose = "1.13.0"
 appcompat = "1.7.1"
 kotlinpoet = "2.3.0"
@@ -59,6 +61,8 @@ espressoCore = "3.7.0"
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
+material-color-utilities = { group = "com.materialkolor", name = "material-color-utilities-jvm", version.ref = "materialColorUtilities" }
 bom = { module = "io.github.Rosemoe.sora-editor:bom", version.ref = "bom" }
 editor = { module = "io.github.Rosemoe.sora-editor:editor" }
 editor-language-textmate = { module = "io.github.Rosemoe.sora-editor:language-textmate" }

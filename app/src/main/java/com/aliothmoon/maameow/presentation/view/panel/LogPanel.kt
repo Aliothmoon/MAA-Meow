@@ -118,42 +118,49 @@ fun LogPanel(
             }
         }
 
-        Box(modifier = Modifier.weight(1f)) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                items(
-                    items = logs,
-                    key = { it.id }
-                ) { logItem ->
-                    LogLine(
-                        logItem = logItem,
-                        onClick = { selectedLog = logItem }
-                    )
-                }
-            }
-
-            if (listState.canScrollForward && logs.isNotEmpty()) {
-                IconButton(
-                    onClick = { isAutoScroll = true },
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(16.dp)
-                        .size(40.dp)
-                        .background(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            CircleShape
-                        )
+        Surface(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLowest,
+            tonalElevation = 1.dp,
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.KeyboardArrowDown,
-                        contentDescription = stringResource(R.string.panel_log_resume_auto_scroll),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    items(
+                        items = logs,
+                        key = { it.id }
+                    ) { logItem ->
+                        LogLine(
+                            logItem = logItem,
+                            onClick = { selectedLog = logItem }
+                        )
+                    }
+                }
+
+                if (listState.canScrollForward && logs.isNotEmpty()) {
+                    IconButton(
+                        onClick = { isAutoScroll = true },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp)
+                            .size(40.dp)
+                            .background(
+                                MaterialTheme.colorScheme.primaryContainer,
+                                CircleShape
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.KeyboardArrowDown,
+                            contentDescription = stringResource(R.string.panel_log_resume_auto_scroll),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }

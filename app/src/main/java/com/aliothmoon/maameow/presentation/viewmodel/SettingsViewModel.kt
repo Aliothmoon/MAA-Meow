@@ -267,11 +267,11 @@ class SettingsViewModel(
         }
     }
 
-    // ============ System Monet theme color ============
-    val useSystemMonetColor: StateFlow<Boolean> = appSettingsManager.useSystemMonetColor
-    fun setUseSystemMonetColor(enabled: Boolean) {
+    // 壁纸动态取色
+    val useWallpaperColor: StateFlow<Boolean> = appSettingsManager.useWallpaperColor
+    fun setUseWallpaperColor(enabled: Boolean) {
         viewModelScope.launch {
-            appSettingsManager.setUseSystemMonetColor(enabled)
+            appSettingsManager.setUseWallpaperColor(enabled)
         }
     }
 
@@ -288,5 +288,42 @@ class SettingsViewModel(
         viewModelScope.launch {
             appSettingsManager.setShowAchievementSnackbar(enabled)
         }
+    }
+
+    // 壁纸更新版本号（由 AppSettingsManager 在 URI 写入后统一递增）
+    val wallpaperUpdateVersion: StateFlow<Int> = appSettingsManager.wallpaperUpdateVersion
+
+    // 自定义壁纸
+    val wallpaperUri: StateFlow<String> = appSettingsManager.wallpaperUri
+    fun setWallpaperUri(uri: String) {
+        viewModelScope.launch {
+            appSettingsManager.setWallpaperUri(uri)
+        }
+    }
+
+    /** Awaitable write so UI can refresh only after version bump. */
+    suspend fun setWallpaperUriSync(uri: String) {
+        appSettingsManager.setWallpaperUri(uri)
+    }
+
+    val wallpaperAlpha: StateFlow<Int> = appSettingsManager.wallpaperAlpha
+    fun setWallpaperAlpha(alpha: Int) {
+        viewModelScope.launch { appSettingsManager.setWallpaperAlpha(alpha) }
+    }
+
+    val wallpaperBlur: StateFlow<Int> = appSettingsManager.wallpaperBlur
+    fun setWallpaperBlur(blur: Int) {
+        viewModelScope.launch { appSettingsManager.setWallpaperBlur(blur) }
+    }
+
+    val wallpaperTextContrast: StateFlow<Boolean> = appSettingsManager.wallpaperTextContrast
+
+    fun setWallpaperTextContrast(enabled: Boolean) {
+        viewModelScope.launch { appSettingsManager.setWallpaperTextContrast(enabled) }
+    }
+
+    val wallpaperFrostedGlass: StateFlow<Boolean> = appSettingsManager.wallpaperFrostedGlass
+    fun setWallpaperFrostedGlass(enabled: Boolean) {
+        viewModelScope.launch { appSettingsManager.setWallpaperFrostedGlass(enabled) }
     }
 }

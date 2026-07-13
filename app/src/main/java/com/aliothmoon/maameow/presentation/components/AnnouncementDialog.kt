@@ -63,6 +63,7 @@ import com.aliothmoon.maameow.R
 import kotlinx.coroutines.flow.distinctUntilChanged
 import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.delay
+import com.aliothmoon.maameow.theme.overlayBoardColor
 
 /** 勾选"不再显示"前需停留的秒数 */
 private const val STAY_SECONDS_REQUIRED = 5
@@ -152,7 +153,7 @@ fun AnnouncementDialog(
                         vertical = maxVerticalInset,
                     ),
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surface,
+                color = overlayBoardColor(),
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 tonalElevation = 6.dp,
                 shadowElevation = 8.dp,

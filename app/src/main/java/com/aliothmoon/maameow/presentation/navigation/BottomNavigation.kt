@@ -71,7 +71,7 @@ fun AppBottomNavigation(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier, color = MaterialTheme.colorScheme.surface, shadowElevation = 0.dp
+        modifier = modifier, color = MaterialTheme.colorScheme.surfaceContainerLowest, shadowElevation = 0.dp
     ) {
         Column {
             HorizontalDivider(

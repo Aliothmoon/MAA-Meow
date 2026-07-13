@@ -24,6 +24,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.utils.i18n.asString
+import com.aliothmoon.maameow.theme.overlayBoardColor
 
 /**
  * 资源初始化弹窗
@@ -48,7 +49,7 @@ fun ResourceInitDialog(
             ) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.surface,
+                    color = overlayBoardColor(),
                     tonalElevation = 6.dp
                 ) {
                     Column(

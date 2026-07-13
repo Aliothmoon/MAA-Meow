@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.schedule.model.CountdownState
+import com.aliothmoon.maameow.theme.overlayBoardColor
 
 @Composable
 fun CountdownDialog(
@@ -29,6 +30,7 @@ fun CountdownDialog(
 ) {
     AlertDialog(
         onDismissRequest = { /* 不可关闭 */ },
+        containerColor = overlayBoardColor(),
         title = { Text(stringResource(R.string.schedule_countdown_title)) },
         text = {
             Column(

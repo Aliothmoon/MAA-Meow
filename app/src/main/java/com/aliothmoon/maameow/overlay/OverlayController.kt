@@ -25,7 +25,7 @@ import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import com.aliothmoon.maameow.presentation.view.panel.ExpandedControlPanel
 import com.aliothmoon.maameow.schedule.model.CountdownState
 import com.aliothmoon.maameow.service.AccessibilityHelperService
-import com.aliothmoon.maameow.theme.MaaMeowTheme
+import com.aliothmoon.maameow.theme.WallpaperAwareMaterialTheme
 import com.aliothmoon.maameow.utils.Misc
 import com.petterp.floatingx.FloatingX
 import com.petterp.floatingx.assist.FxDisplayMode
@@ -214,7 +214,7 @@ class OverlayController(
             setContent {
                 val themeMode by appSettings.themeMode.collectAsStateWithLifecycle()
 
-                MaaMeowTheme(themeMode = themeMode) {
+                WallpaperAwareMaterialTheme(themeMode = themeMode, appSettings = appSettings) {
                     val baseDensity = LocalDensity.current
                     CompositionLocalProvider(
                         LocalFloatingWindowContext provides true,
@@ -328,19 +328,22 @@ class OverlayController(
                         }
                         setContent {
                             // 悬浮窗需要在后台强行保持监听，不使用 collectAsStateWithLifecycle
+                            val themeMode by appSettings.themeMode.collectAsStateWithLifecycle()
                             val runningState by compositionService.state.collectAsState()
                             val countdown by countdownState.collectAsState()
-                            FloatBall(
-                                onClick = {
-                                    if (countdown is CountdownState.Counting) {
-                                        handleCountdownClick()
-                                    } else {
-                                        onFloatBallClick()
-                                    }
-                                },
-                                runningState = runningState,
-                                countdownSeconds = (countdown as? CountdownState.Counting)?.remainingSeconds,
-                            )
+                            WallpaperAwareMaterialTheme(themeMode = themeMode, appSettings = appSettings) {
+                                FloatBall(
+                                    onClick = {
+                                        if (countdown is CountdownState.Counting) {
+                                            handleCountdownClick()
+                                        } else {
+                                            onFloatBallClick()
+                                        }
+                                    },
+                                    runningState = runningState,
+                                    countdownSeconds = (countdown as? CountdownState.Counting)?.remainingSeconds,
+                                )
+                            }
                         }
                     }
                 )

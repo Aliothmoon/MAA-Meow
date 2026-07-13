@@ -68,10 +68,21 @@ class MainActivity : AppCompatActivity() {
         })
         setContent {
             val themeMode by appSettingsManager.themeMode.collectAsStateWithLifecycle()
-            val useSystemMonetColor by appSettingsManager.useSystemMonetColor.collectAsStateWithLifecycle()
+            val useWallpaperColor by appSettingsManager.useWallpaperColor.collectAsStateWithLifecycle()
+            val wallpaperUri by appSettingsManager.wallpaperUri.collectAsStateWithLifecycle()
             val fontSizeScale by appSettingsManager.fontSizeScale.collectAsStateWithLifecycle()
 
-            MaaMeowTheme(themeMode = themeMode, useSystemMonetColor = useSystemMonetColor) {
+            // System Monet when the switch is on and either there is no custom wallpaper
+            // seed path, or PURE_DARK (custom wallpaper is not drawn / not used for MCU).
+            // Custom wallpaper MCU is applied inside AppNavigation for non-pure-dark.
+            val applySystemDynamicColor = useWallpaperColor && (
+                wallpaperUri.isEmpty() ||
+                    themeMode == AppSettingsManager.ThemeMode.PURE_DARK
+            )
+            MaaMeowTheme(
+                themeMode = themeMode,
+                useWallpaperColor = applySystemDynamicColor,
+            ) {
                 val baseDensity = LocalDensity.current
                 CompositionLocalProvider(
                     LocalDensity provides Density(
