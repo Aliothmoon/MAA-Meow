@@ -210,7 +210,9 @@ fun OpaqueTheme(content: @Composable () -> Unit) {
  */
 @Composable
 fun ProvideColorScheme(scheme: ColorScheme, content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = scheme) {
+    val typography = MaterialTheme.typography
+    val shapes = MaterialTheme.shapes
+    MaterialTheme(colorScheme = scheme, typography = typography, shapes = shapes) {
         CompositionLocalProvider(LocalContentColor provides scheme.onSurface, content = content)
     }
 }
