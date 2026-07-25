@@ -1,0 +1,71 @@
+# AI 自动分析 Issue（开 issue / @github-actions / 手动触发）
+# 依赖：MistEO/ai-issue-analysis + .agent/skills/maameow-issue-log-analysis
+# 文档：https://github.com/MistEO/ai-issue-analysis
+name: AI Issue Analysis
+
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Issue number to analyze"
+        required: true
+        type: number
+
+jobs:
+  ai-analysis:
+    # 新开 issue、手动指定编号、或评论 @github-actions 时运行
+    # 评论作者为 Bot 时跳过，避免自我触发死循环
+    if: |
+      (github.event_name == 'issues' && github.event.action == 'opened') ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.action == 'created' &&
+       contains(github.event.comment.body, '@github-actions') &&
+       github.event.comment.user.type != 'Bot')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      # 领域规则见 .agent/skills/maameow-issue-log-analysis/SKILL.md
+      - name: Analyze issue with AI
+        id: analysis
+        continue-on-error: true
+        uses: MistEO/ai-issue-analysis@main
+        with:
+          # 通过 Secrets 切换 agent / 模型，无需改 workflow
+          # BOT_AI_AGENT: claude | codex | copilot
+          agent: ${{ secrets.BOT_AI_AGENT }}
+          api-key: ${{ secrets.BOT_AI_API_KEY }}
+          api-base-url: ${{ secrets.BOT_AI_API_BASE_URL }}
+          model: ${{ secrets.BOT_AI_MODEL }}
+          # 先用 GITHUB_TOKEN：评论身份为 github-actions[bot]，无需单独 bot 账号
+          # 若以后要用 @MaaMeowBot 品牌号，换成 PAT secret 并改 bot-name / if 条件
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          bot-name: "@github-actions"
+          initial-comment-body: |
+            🤖 **MaaMeow Bot 正在分析此 Issue...**
+
+            感谢你的反馈。AI 将自动下载日志并对照代码排查，预计约 10 分钟。
+          prompt-template: |
+            严格遵循 .agent/skills/maameow-issue-log-analysis/SKILL.md 中的规则，分析 GitHub Issue {{issue_number}}，将最终结论写入 {{answer_file}}。
+          # 若日后接上 issue-checker，避免 AI 长文被规则误标
+          extra-comment-content: |
+            <!-- Skip all labels -->
+
+      - name: Show analysis outputs
+        if: always()
+        env:
+          ISSUE_NUMBER: ${{ steps.analysis.outputs.issue-number }}
+          COMMENT_ID: ${{ steps.analysis.outputs.comment-id }}
+          COMMENT_URL: ${{ steps.analysis.outputs.comment-url }}
+        run: |
+          echo "issue_number=$ISSUE_NUMBER"
+          echo "comment_id=$COMMENT_ID"
+          echo "comment_url=$COMMENT_URL"
+          echo "(Full agent-output and final-conclusion are in the uploaded artifacts)"
