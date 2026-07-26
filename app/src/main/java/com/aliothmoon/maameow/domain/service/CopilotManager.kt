@@ -81,7 +81,7 @@ class CopilotManager(
     private val repository: CopilotRepository,
 ) {
     companion object {
-        // TODO: 作业站迁移完成后删除 maa:// 旧格式支持
+        /** 旧格式前缀，长期保留解析兼容（见 parseCopilotCode） */
         private const val LEGACY_ID_PREFIX = "maa://"
 
         /** 新格式前缀，prts://12345 为作业 */
@@ -338,7 +338,7 @@ class CopilotManager(
             val id = trimmed.drop(NEW_ID_PREFIX.length).toIntOrNull() ?: return null
             return CopilotCode(CopilotCodeType.COPILOT, id)
         }
-        // TODO: 作业站迁移完成后删除 maa:// 旧格式分支
+        // 支持 maa:// 旧格式
         if (trimmed.startsWith(LEGACY_ID_PREFIX, ignoreCase = true)) {
             val rest = trimmed.drop(LEGACY_ID_PREFIX.length)
             val id = rest.substringBefore("?").substringBefore("/").toIntOrNull() ?: return null
