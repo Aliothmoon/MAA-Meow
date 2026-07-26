@@ -1,7 +1,9 @@
 package com.aliothmoon.maameow.domain.usecase
 
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.model.FightConfig
+import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.model.MallConfig
 import com.aliothmoon.maameow.data.model.ReclamationConfig
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
@@ -11,8 +13,11 @@ import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.data.resource.ServerTimezone
 import com.aliothmoon.maameow.domain.models.MallCreditFightAvailability
+import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.domain.models.resolveMallCreditFightAvailability
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
+import com.aliothmoon.maameow.utils.i18n.UiText
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import timber.log.Timber
 import java.time.DayOfWeek
 
@@ -54,6 +59,12 @@ class AnalyzeTaskChainUseCase(
             )
         }
 
+        val preflightLogs = mutableListOf<Pair<UiText, LogLevel>>()
+        // TODO: MaaCore 适配代理倍率 7~10 后删除
+        if (SeriesLock.isLocked(clientType) && enabledNodes.any { it.config is FightConfig }) {
+            preflightLogs += uiTextOf(R.string.runlog_series_locked) to LogLevel.WARNING
+        }
+
         return AnalyzeTaskChainResult.Ready(
             TaskChainPlan(
                 enabledNodes = enabledNodes,
@@ -63,6 +74,7 @@ class AnalyzeTaskChainUseCase(
                 launchesGame = enabledNodes
                     .mapNotNull { it.config as? WakeUpConfig }
                     .any { it.startGameEnabled },
+                preflightLogs = preflightLogs,
             )
         )
     }
@@ -107,6 +119,8 @@ class AnalyzeTaskChainUseCase(
                 resourceDataManager.getCharacterByNameOrAlias(coreChar)?.name ?: coreChar
             }
 
+            is FightConfig -> config.toTaskParams(clientType = clientType)
+
             else -> node.config.toTaskParams()
         }
         return base.copy(nodeId = node.id)
@@ -133,6 +147,11 @@ data class TaskChainPlan(
     val gamePackageName: String?,
     val launchesGame: Boolean,
     val gameAliveBeforeStart: Boolean? = null,
+    /**
+     * 任务链分析阶段产生的、需要在会话开始后回放给用户的日志。
+     * UseCase 保持无副作用，由 MaaCompositionService 在 startSession 之后统一 append。
+     */
+    val preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
 )
 
 enum class AnalyzeTaskChainFailureReason {

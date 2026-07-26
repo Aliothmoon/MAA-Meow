@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.model
 
 import com.aliothmoon.maameow.data.resource.ActivityManager
+import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import kotlinx.serialization.Serializable
@@ -316,7 +317,15 @@ data class FightConfig(
         return true
     }
 
-    override fun toTaskParams(): MaaTaskParams {
+    /**
+     * 理智作战必须知道客户端类型才能决定代理倍率是否锁定，无参重载无法给出正确结果。
+     * AnalyzeTaskChainUseCase 的 `is FightConfig ->` 分支已覆盖全部调用路径，
+     * 走到这里说明新增了绕过该分支的调用方 —— 必须显式传 clientType。
+     */
+    override fun toTaskParams(): MaaTaskParams =
+        error("FightConfig 必须使用 toTaskParams(clientType) 以正确处理代理倍率锁定")
+
+    fun toTaskParams(clientType: String): MaaTaskParams {
         var stage = getActiveStage()
 
         // 自定义剿灭替换 (WPF SerializeTask line 735-738)
@@ -330,6 +339,9 @@ data class FightConfig(
 
         // 次数: WPF 不限制时使用 Int.MAX_VALUE (line 724)
         val actualTimes = if (hasTimesLimited) maxTimes else Int.MAX_VALUE
+
+        // TODO: MaaCore 适配代理倍率 7~10 后删除，恢复为 put("series", series)
+        val effectiveSeries = if (SeriesLock.isLocked(clientType)) -1 else series
 
         val paramsJson = buildJsonObject {
             put("stage", stage)
@@ -349,7 +361,7 @@ data class FightConfig(
             }
             put("stone", actualStone)
             put("times", actualTimes)
-            put("series", series)
+            put("series", effectiveSeries)
             if (isDrGrandet) {
                 put("DrGrandet", true)
             }

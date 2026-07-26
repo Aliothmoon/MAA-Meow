@@ -808,6 +808,8 @@
     <string name="panel_fight_series_title">代理倍率</string>
     <string name="panel_fight_series_tip">• AUTO:\n自动识别关卡最大代理倍率, 保持最大代理倍率且使用理智药后理智不溢出\n\n• 数值 (1~6):\n按设定倍率执行代理\n若当前理智不足完成设定倍率 (如仅够 5 次 but 设为 6 倍), 则无法进入战斗\n或者\n战斗次数不足完成设定倍率 (如仅够 5 次 but 设为 6 倍), 也将无法进入战斗\n\n• 不切换:\n不调整游戏内代理倍率设定</string>
     <string name="panel_fight_series_no_switch">不切换</string>
+    <!-- TODO: MaaCore 适配代理倍率 7~10 后删除 -->
+    <string name="panel_fight_series_locked_tip">游戏更新后暂未适配，请手动在游戏内设置代理倍率</string>
     <string name="panel_fight_stage_reset_current">当前/上次</string>
     <string name="panel_fight_stage_reset_ignore">不切换</string>
     <string name="panel_fight_stage_reset_title">未开放活动关卡重置为</string>
@@ -1858,6 +1860,8 @@
     <!-- runtime session log (shown in log panel / history) -->
     <string name="runlog_task_start">开始执行任务，共 %1$d 项</string>
     <string name="runlog_task_started">任务开始运行</string>
+    <!-- TODO: MaaCore 适配代理倍率 7~10 后删除 -->
+    <string name="runlog_series_locked">游戏更新后暂未适配代理倍率，已使用「不切换」，请手动在游戏内设置</string>
     <string name="runlog_copilot_start">开始执行自动战斗</string>
     <string name="runlog_copilot_started">自动战斗开始运行</string>
     <string name="runlog_service_connecting">服务正在启动中，请稍后再试</string>

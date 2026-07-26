@@ -336,7 +336,7 @@ class CopilotViewModel(
         }
     }
 
-    /** 进入"开始解析"时对 UI 状态的统一重置。 */
+    /** 进入「开始解析」时对 UI 状态的统一重置。 */
     private fun CopilotUiState.startingParse(): CopilotUiState = copy(
         isLoading = true,
         statusMessage = text(R.string.copilot_status_parsing),

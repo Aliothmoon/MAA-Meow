@@ -277,6 +277,7 @@ class ExpandedControlPanelViewModel(
             val result = compositionService.start(
                 tasks = plan.params,
                 clientType = plan.clientType,
+                preflightLogs = plan.preflightLogs,
             )
             val message = application.formatStartResult(result)
             if (result is MaaCompositionService.StartResult.Success) {

@@ -466,6 +466,7 @@ class BackgroundTaskViewModel(
             tasks = plan.params,
             clientType = plan.clientType,
             isScheduled = context.mode == TaskStartMode.SCHEDULED,
+            preflightLogs = plan.preflightLogs,
         ) {
             if (request != null) {
                 sessionLogger.appendAndWait(

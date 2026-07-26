@@ -753,6 +753,8 @@
     <string name="panel_fight_series_title">Series</string>
     <string name="panel_fight_series_tip">• AUTO:\nAutomatically detect the maximum proxy multiplier for the stage while keeping sanity potion usage from overflowing sanity.\n\n• Numeric (1~6):\nExecute with the configured multiplier.\nIf current sanity is insufficient to complete the configured multiplier (for example, only enough for 5 runs but set to 6), battle cannot start.\nLikewise, if remaining run count is insufficient for the configured multiplier, battle cannot start.\n\n• Do not switch:\nDo not change the in-game proxy multiplier setting.</string>
     <string name="panel_fight_series_no_switch">Don\'t Switch</string>
+    <!-- TODO: remove after MaaCore adapts proxy multipliers 7~10 -->
+    <string name="panel_fight_series_locked_tip">Not yet adapted after game update. Please set the proxy multiplier manually in the game.</string>
     <string name="panel_fight_stage_reset_current">Cur/Last</string>
     <string name="panel_fight_stage_reset_ignore">Don\'t Switch</string>
     <string name="panel_fight_stage_reset_title">When activity stage is closed, reset to</string>
@@ -1802,6 +1804,8 @@
     <!-- runtime session log (shown in log panel / history) -->
     <string name="runlog_task_start">Starting tasks (%1$d total)</string>
     <string name="runlog_task_started">Tasks started</string>
+    <!-- TODO: remove after MaaCore adapts proxy multipliers 7~10 -->
+    <string name="runlog_series_locked">Proxy multiplier not yet adapted after game update; using \"Don\'t Switch\". Please set it manually in the game.</string>
     <string name="runlog_copilot_start">Starting auto-battle</string>
     <string name="runlog_copilot_started">Auto-battle started</string>
     <string name="runlog_service_connecting">Service is starting, please try again later</string>

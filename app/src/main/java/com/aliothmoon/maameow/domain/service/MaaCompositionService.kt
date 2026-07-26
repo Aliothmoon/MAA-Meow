@@ -28,6 +28,8 @@ import com.aliothmoon.maameow.manager.RemoteAccessCoordinator
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
 import com.aliothmoon.maameow.utils.Misc
+import com.aliothmoon.maameow.utils.i18n.UiText
+import com.aliothmoon.maameow.utils.i18n.resolve
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -197,6 +199,7 @@ class MaaCompositionService(
         tasks: List<MaaTaskParams>,
         clientType: String,
         isScheduled: Boolean = false,
+        preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
         onSessionStarted: (suspend () -> Unit)? = null
     ): StartResult = executeStart(
         tasks = tasks,
@@ -204,6 +207,7 @@ class MaaCompositionService(
         isScheduled = isScheduled,
         startMessage = context.getString(R.string.runlog_task_start, tasks.size),
         successMessage = context.getString(R.string.runlog_task_started),
+        preflightLogs = preflightLogs,
         onSessionStarted = onSessionStarted,
     )
 
@@ -390,6 +394,7 @@ class MaaCompositionService(
         startMessage: String,
         successMessage: String,
         isScheduled: Boolean = false,
+        preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
         onSessionStarted: (suspend () -> Unit)? = null,
     ): StartResult {
         setRunState(MaaExecutionState.STARTING)
@@ -397,6 +402,9 @@ class MaaCompositionService(
         subTaskHandler.resetSessionState()
         onSessionStarted?.invoke()
         sessionLogger.appendAndWait(startMessage, LogLevel.INFO)
+        preflightLogs.forEach { (text, level) ->
+            sessionLogger.appendAndWait(text.resolve(context), level)
+        }
         sessionLogger.appendAndWait(fetchDeviceMemoryInfo(), LogLevel.INFO)
 
         val mode = appSettings.runMode.value
