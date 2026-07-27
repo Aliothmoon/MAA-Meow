@@ -23,6 +23,7 @@ import com.aliothmoon.maameow.data.resource.ItemInfo
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.INumericField
+import com.aliothmoon.maameow.presentation.view.panel.common.ItemButtonGroup
 
 /**
  * 指定材料掉落区域
