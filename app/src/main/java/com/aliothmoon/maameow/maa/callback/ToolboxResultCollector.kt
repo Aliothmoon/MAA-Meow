@@ -8,6 +8,7 @@ import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxResult
 import com.aliothmoon.maameow.data.model.toolbox.RecruitCalcResult
 import com.aliothmoon.maameow.data.model.toolbox.RecruitOperator
+import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import kotlinx.coroutines.CoroutineScope
@@ -26,8 +27,9 @@ class ToolboxResultCollector(
     private val resourceDataManager: ResourceDataManager,
     private val achievementRepository: AchievementRepository,
     private val itemHelper: ItemHelper,
+    private val depotRepository: DepotRepository,
 ) {
-    private val achievementScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // ==================== 公招识别 ====================
 
@@ -95,7 +97,10 @@ class ToolboxResultCollector(
                 { it.id })
         )
         _depotItems.value = items
-        achievementScope.launch {
+        ioScope.launch {
+            depotRepository.replaceAll(items)
+        }
+        ioScope.launch {
             achievementRepository.report {
                 event = AchievementEvents.TOOLBOX_RESULT
                 "tool" to "Depot"
@@ -104,6 +109,7 @@ class ToolboxResultCollector(
         }
     }
 
+    /** 仅清 UI 展示态（识别开始前调用），不动持久化快照 —— 那是历史库存。 */
     fun clearDepot() {
         _depotItems.value = emptyList()
     }
@@ -159,7 +165,7 @@ class ToolboxResultCollector(
                 .thenByDescending { it.potential }),
             notOwned = notOwned.sortedByDescending { it.rarity },
         )
-        achievementScope.launch {
+        ioScope.launch {
             achievementRepository.report {
                 event = AchievementEvents.TOOLBOX_RESULT
                 "tool" to "OperBox"
