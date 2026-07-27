@@ -65,6 +65,26 @@ internal fun StageBadge(
 }
 
 /**
+ * 关卡代码 → 展示文案（选关徽章、计划摘要等唯一入口）：
+ * - 空串 → [emptyLabel]（默认「当前/上次」）
+ * - Annihilation 且提供了 [annihilationDisplayName] → 用该名
+ * - 否则在 [stageGroups] 里查 displayName，查不到回退代码本身
+ */
+@Composable
+fun stageDisplayName(
+    code: String,
+    stageGroups: List<StageGroup>,
+    emptyLabel: String = stringResource(R.string.panel_fight_stage_reset_current),
+    annihilationDisplayName: String? = null,
+): String = when {
+    code.isEmpty() -> emptyLabel
+    code == "Annihilation" && annihilationDisplayName != null -> annihilationDisplayName
+    else -> stageGroups.firstNotNullOfOrNull { group ->
+        group.stages.firstOrNull { it.code == code }?.displayName
+    } ?: code
+}
+
+/**
  * 分组关卡选择按钮组（可折叠）
  * 标题行：左侧区块名，右侧「已选关卡」徽章 + 展开/收起箭头；点击标题行切换折叠
  * 展开后显示分组标题 + 每个分组下的关卡自动换行平铺
@@ -81,19 +101,15 @@ internal fun GroupedStageButtonGroup(
     onRemove: (() -> Unit)? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val defaultLabel = stringResource(R.string.panel_fight_stage_reset_current)
-    // 已选关卡的展示名：空=当前/上次；自定义剿灭替换名；否则从分组里查显示名，查不到回退关卡代码
-    val selectedDisplay = when {
-        selectedValue.isEmpty() -> defaultLabel
-        selectedValue == "Annihilation" && annihilationDisplayName != null -> annihilationDisplayName
-        else -> stageGroups.firstNotNullOfOrNull { group ->
-            group.stages.firstOrNull { it.code == selectedValue }?.displayName
-        } ?: selectedValue
-    }
+    val selectedDisplay = stageDisplayName(
+        code = selectedValue,
+        stageGroups = stageGroups,
+        annihilationDisplayName = annihilationDisplayName,
+    )
 
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = modifier
+        modifier = modifier.bringIntoViewOnExpand(expanded),
     ) {
         // 折叠标题行
         Row(
@@ -118,8 +134,10 @@ internal fun GroupedStageButtonGroup(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
-            // 删除按钮 / 等宽占位内嵌在标题行内：随标题行 CenterVertically 居中，展开时不会漂移到内容中部
-            StageRowTrailing(onRemove)
+            // 有 onRemove 时内嵌删除按钮；无则不占位（库存保持等场景无行内删除）
+            if (onRemove != null) {
+                CollapsibleRowTrailing(onRemove)
+            }
         }
 
         // 分组内容（折叠时隐藏）
@@ -190,9 +208,8 @@ internal fun GroupedStageButtonGroup(
 }
 
 /**
- * 关卡行（自定义关卡代码文本输入模式用）：内容区 + 右侧删除按钮 / 等宽占位
- * onRemove 为空时（首选关卡）渲染等宽占位，保证与备选关卡左右宽度对齐
- * 分组按钮模式的删除按钮内嵌在 GroupedStageButtonGroup 折叠标题行内，不走此容器
+ * 关卡行（自定义关卡代码文本输入模式用）：内容区 + 可选右侧删除按钮。
+ * onRemove 为空时不占位；分组按钮模式的删除内嵌在 [GroupedStageButtonGroup] 标题行。
  */
 @Composable
 internal fun StageRow(
@@ -205,33 +222,27 @@ internal fun StageRow(
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         content()
-        StageRowTrailing(onRemove)
+        if (onRemove != null) {
+            CollapsibleRowTrailing(onRemove)
+        }
     }
 }
 
-/**
- * 关卡行尾部控件：删除按钮（onRemove 非空）或等宽占位（首选关卡，保证左右对齐）
- * 对齐 WPF StagePlan 列表项的删除交互（移动端改为常显删除图标，无 hover）
- */
+/** 关卡行尾部删除按钮；仅本文件内使用 */
 @Composable
-private fun StageRowTrailing(
-    onRemove: (() -> Unit)?
+private fun CollapsibleRowTrailing(
+    onRemove: () -> Unit,
 ) {
-    if (onRemove != null) {
-        IconButton(
-            onClick = onRemove,
-            modifier = Modifier.size(36.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = stringResource(R.string.panel_fight_remove_stage),
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    } else {
-        // 与删除按钮同宽的占位（IconButton size 36dp），保证首选关卡与备选关卡左右对齐
-        Spacer(modifier = Modifier.size(36.dp))
+    IconButton(
+        onClick = onRemove,
+        modifier = Modifier.size(36.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Close,
+            contentDescription = stringResource(R.string.panel_fight_remove_stage),
+            tint = MaterialTheme.colorScheme.error,
+            modifier = Modifier.size(20.dp)
+        )
     }
 }
 
@@ -282,7 +293,12 @@ internal fun StageInputField(
             placeholder = placeholder,
             singleLine = true,
             supportingText = if (showConvertedHint) {
-                { Text(stringResource(R.string.panel_fight_converted_prefix, convertedCode), color = MaterialTheme.colorScheme.primary) }
+                {
+                    Text(
+                        stringResource(R.string.panel_fight_converted_prefix, convertedCode),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             } else null
         )
     }

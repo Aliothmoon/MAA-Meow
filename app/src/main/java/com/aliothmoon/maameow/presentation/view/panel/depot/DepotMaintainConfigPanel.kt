@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.UnfoldLess
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -54,6 +55,7 @@ import com.aliothmoon.maameow.presentation.view.panel.common.GroupedStageButtonG
 import com.aliothmoon.maameow.presentation.view.panel.common.ItemButtonGroup
 import com.aliothmoon.maameow.presentation.view.panel.common.StageInputField
 import com.aliothmoon.maameow.presentation.view.panel.common.StageRow
+import com.aliothmoon.maameow.presentation.view.panel.common.stageDisplayName
 import org.koin.compose.koinInject
 
 /** 目标库存上限，对齐 WPF NumericUpDown 的 Maximum */
@@ -82,7 +84,8 @@ fun DepotMaintainConfigPanel(
         stageGroups.flatMap { group -> group.stages.map { it.code } }
     }
     val itemNameMap = remember(dropItems) { dropItems.associate { it.id to it.name } }
-    val itemIds = if (dropItems.isNotEmpty()) dropItems.map { it.id } else UiUsageConstants.dropItems
+    val itemIds =
+        if (dropItems.isNotEmpty()) dropItems.map { it.id } else UiUsageConstants.dropItems
 
     // 展开态是纯 UI 局部状态，不持久化；删除时重映射下标，避免落到相邻计划。
     val expandedIndices = remember { mutableStateListOf<Int>() }
@@ -133,7 +136,7 @@ fun DepotMaintainConfigPanel(
                     modifier = Modifier.padding(8.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    config.plans.forEachIndexed { index, plan ->
+                    config.plans.forEach { plan ->
                         // 未跑过仓库识别时用「--」表达「无数据」，而非误导性的 0
                         val current = if (snapshot.syncTimeMillis == 0L) {
                             "--"
@@ -141,9 +144,10 @@ fun DepotMaintainConfigPanel(
                             (snapshot.items[plan.dropId] ?: 0).toString()
                         }
                         Text(
-                            text = "${index + 1}: ${stageDisplayOf(stageGroups, plan.stage)}" +
-                                    " - ${itemNameMap[plan.dropId] ?: notSelectedLabel}" +
-                                    " $current/${plan.dropCount}",
+                            text = stageDisplayName(
+                                plan.stage,
+                                stageGroups
+                            ) + " - ${itemNameMap[plan.dropId] ?: notSelectedLabel}" + " $current/${plan.dropCount}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -152,12 +156,16 @@ fun DepotMaintainConfigPanel(
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Button(
                 onClick = {
                     onConfigChange(config.copy(plans = config.plans + DepotMaintainPlan()))
                 },
-                shape = RoundedCornerShape(8.dp)
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(8.dp),
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(6.dp))
@@ -165,15 +173,21 @@ fun DepotMaintainConfigPanel(
             }
             OutlinedButton(
                 onClick = { expandedIndices.clear() },
-                shape = RoundedCornerShape(8.dp)
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(8.dp),
             ) {
+                Icon(
+                    Icons.Default.UnfoldLess,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(stringResource(R.string.panel_depot_collapse_all))
             }
         }
 
         config.plans.forEachIndexed { index, plan ->
             PlanCard(
-                index = index,
                 plan = plan,
                 expanded = index in expandedIndices,
                 onToggleExpand = {
@@ -188,28 +202,22 @@ fun DepotMaintainConfigPanel(
                 onPlanChange = { updated ->
                     onConfigChange(
                         config.copy(
-                            plans = config.plans.toMutableList().also { it[index] = updated }
-                        )
-                    )
+                        plans = config.plans.toMutableList().also { it[index] = updated }))
                 },
                 onRemove = {
                     // 删除 index 后：>index 的展开下标整体 -1，==index 移除
-                    val remapped = expandedIndices
-                        .mapNotNull { i ->
+                    val remapped = expandedIndices.mapNotNull { i ->
                             when {
                                 i < index -> i
                                 i == index -> null
                                 else -> i - 1
                             }
-                        }
-                        .distinct()
+                        }.distinct()
                     expandedIndices.clear()
                     expandedIndices.addAll(remapped)
                     onConfigChange(
                         config.copy(
-                            plans = config.plans.toMutableList().also { it.removeAt(index) }
-                        )
-                    )
+                        plans = config.plans.toMutableList().also { it.removeAt(index) }))
                 },
             )
         }
@@ -218,7 +226,6 @@ fun DepotMaintainConfigPanel(
 
 @Composable
 private fun PlanCard(
-    index: Int,
     plan: DepotMaintainPlan,
     expanded: Boolean,
     onToggleExpand: () -> Unit,
@@ -238,7 +245,9 @@ private fun PlanCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         color = MaterialTheme.colorScheme.surface
     ) {
-        Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(
+            modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -246,9 +255,10 @@ private fun PlanCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${index + 1}: ${stageDisplayOf(stageGroups, plan.stage)}" +
-                            " - ${itemNameMap[plan.dropId] ?: notSelectedLabel}" +
-                            " x${plan.dropCount}",
+                    text = stageDisplayName(
+                        plan.stage,
+                        stageGroups
+                    ) + " - ${itemNameMap[plan.dropId] ?: notSelectedLabel}" + " x${plan.dropCount}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.weight(1f)
@@ -279,8 +289,7 @@ private fun PlanCard(
                             label = stringResource(R.string.panel_fight_primary_stage_label),
                             selectedValue = plan.stage,
                             stageGroups = stageGroups,
-                            onItemSelected = { onPlanChange(plan.copy(stage = it)) }
-                        )
+                            onItemSelected = { onPlanChange(plan.copy(stage = it)) })
                     }
 
                     ItemButtonGroup(
@@ -288,8 +297,7 @@ private fun PlanCard(
                         selectedValue = plan.dropId,
                         items = itemIds,
                         onItemSelected = { onPlanChange(plan.copy(dropId = it)) },
-                        displayMapper = { id -> itemNameMap[id] ?: id }
-                    )
+                        displayMapper = { id -> itemNameMap[id] ?: id })
 
                     INumericField(
                         value = plan.dropCount,
@@ -342,7 +350,9 @@ private fun PlanCard(
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.error
                         ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f)),
+                        border = BorderStroke(
+                            1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
+                        ),
                         shape = RoundedCornerShape(4.dp)
                     ) {
                         Icon(
@@ -357,13 +367,4 @@ private fun PlanCard(
             }
         }
     }
-}
-
-/** 关卡代码 → 显示名；查不到回退代码本身，空串回退「未选择」 */
-@Composable
-private fun stageDisplayOf(stageGroups: List<StageGroup>, code: String): String {
-    if (code.isEmpty()) return stringResource(R.string.panel_depot_not_selected)
-    return stageGroups.firstNotNullOfOrNull { group ->
-        group.stages.firstOrNull { it.code == code }?.displayName
-    } ?: code
 }
