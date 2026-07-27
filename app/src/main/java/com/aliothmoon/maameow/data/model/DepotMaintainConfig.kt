@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.model
 
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.domain.models.DropTarget
 import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
@@ -110,16 +111,31 @@ data class DepotMaintainConfig(
                 return@forEachIndexed
             }
 
+            val medicine = if (plan.useMedicine) plan.medicineCount else 0
+            val stone = if (plan.useStone) plan.stoneCount else 0
             // times 固定 Int.MAX_VALUE，靠 drops 达标终止，而非预先算次数
             val json = buildJsonObject {
                 put("stage", plan.stage)
                 put("times", Int.MAX_VALUE)
                 put("series", series)
-                put("medicine", if (plan.useMedicine) plan.medicineCount else 0)
-                put("stone", if (plan.useStone) plan.stoneCount else 0)
+                put("medicine", medicine)
+                put("stone", stone)
                 put("drops", buildJsonObject { put(plan.dropId, need) })
             }
-            params += MaaTaskParams(MaaTaskType.FIGHT, json.toString())
+            // dropTarget 快照整份计划字段，任务开始时按最新库存重算（前序掉落会反映进来）
+            params += MaaTaskParams(
+                type = MaaTaskType.FIGHT,
+                params = json.toString(),
+                dropTarget = DropTarget(
+                    dropId = plan.dropId,
+                    dropCount = plan.dropCount,
+                    stage = plan.stage,
+                    medicine = medicine,
+                    stone = stone,
+                    series = series,
+                    logLabel = no.toString(),
+                ),
+            )
         }
 
         return TaskParamResult(params, logs)

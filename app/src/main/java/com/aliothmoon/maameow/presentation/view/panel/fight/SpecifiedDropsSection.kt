@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -14,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
@@ -49,7 +49,8 @@ fun SpecifiedDropsSection(
                         isSpecifiedDrops = it,
                         // 取消时清空材料设置
                         dropsItemId = if (!it) "" else config.dropsItemId,
-                        dropsQuantity = if (!it) 5 else config.dropsQuantity
+                        dropsQuantity = if (!it) 5 else config.dropsQuantity,
+                        isInventoryTarget = if (!it) false else config.isInventoryTarget,
                     )
                 )
             },
@@ -88,14 +89,35 @@ fun SpecifiedDropsSection(
                 displayMapper = { id -> itemNameMap[id] ?: id }
             )
 
-            // 材料数量
+            // 模式切换：数量 / 目标库存
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = !config.isInventoryTarget,
+                    onClick = { onConfigChange(config.copy(isInventoryTarget = false)) },
+                    label = { Text(stringResource(R.string.panel_fight_drops_mode_quantity)) },
+                )
+                FilterChip(
+                    selected = config.isInventoryTarget,
+                    onClick = { onConfigChange(config.copy(isInventoryTarget = true)) },
+                    label = { Text(stringResource(R.string.panel_fight_drops_mode_target_inventory)) },
+                )
+            }
+
+            // 数值输入（标签随模式变化）
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = stringResource(R.string.panel_fight_target_count),
+                    text = if (config.isInventoryTarget) {
+                        stringResource(R.string.panel_fight_target_inventory)
+                    } else {
+                        stringResource(R.string.panel_fight_target_count)
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f)
                 )
@@ -105,6 +127,14 @@ fun SpecifiedDropsSection(
                     minimum = 1,
                     maximum = 1145141919,
                     modifier = Modifier.width(100.dp)
+                )
+            }
+
+            if (config.isInventoryTarget) {
+                Text(
+                    text = stringResource(R.string.panel_fight_target_inventory_tip),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

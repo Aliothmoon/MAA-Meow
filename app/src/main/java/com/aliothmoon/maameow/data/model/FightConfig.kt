@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.model
 
 import com.aliothmoon.maameow.data.resource.ActivityManager
+import com.aliothmoon.maameow.domain.models.DropTarget
 import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
@@ -97,13 +98,20 @@ data class FightConfig(
      * 掉落材料数量
      *
      * 默认值: 5（WPF 第644行）
+     * 语义取决于 [isInventoryTarget]：false 时是本次要刷的数量，true 时是目标库存。
      */
     val dropsQuantity: Int = 5,
 
-    // TODO: 目标库存模式（WPF PR#16487 feat: 理智作战支持设定目标材料最大库存）
-    //   逻辑: 实际刷取次数 = dropsInventoryTarget - 当前仓库数
-    //   前提: 需要建立本地仓库数据持久化方案（ToolboxResultCollector.depotItems 当前为运行时 StateFlow，不持久）
-    //   待依赖: 本地仓库 base 设计完成后在此处新增 isInventoryTarget: Boolean 和 dropsInventoryTarget: Int
+    /**
+     * 指定掉落使用「目标库存」模式。
+     *
+     * false（默认）：[dropsQuantity] 是本次要刷的数量
+     * true：[dropsQuantity] 是目标库存，实际刷取缺口 = dropsQuantity - 当前库存
+     *
+     * 迁移自 WPF FightTask.IsInventoryTarget。
+     * 运行时缺口由 FightDropsRefresher 在任务开始时按最新库存重算。
+     */
+    val isInventoryTarget: Boolean = false,
 
     // ============ 常规设置 - 代理倍率与关卡 ============
 
@@ -332,19 +340,23 @@ data class FightConfig(
         // TODO: MaaCore 适配代理倍率 7~10 后删除，恢复为 put("series", series)
         val effectiveSeries = if (SeriesLock.isLocked(ctx.clientType)) -1 else series
 
+        val expireDays = if (useExpiringMedicine) {
+            var days = medicineExpireDays.coerceIn(1, 7)
+            if (useExpireMedicineForActivity) {
+                val activityExpireDays = ctx.activityManager.getActivityAwareExpireDays()
+                if (activityExpireDays > 0) {
+                    days = maxOf(days, activityExpireDays)
+                }
+            }
+            days
+        } else {
+            null
+        }
+
         val paramsJson = buildJsonObject {
             put("stage", stage)
             put("medicine", actualMedicine)
-            if (useExpiringMedicine) {
-                var expireDays = medicineExpireDays.coerceIn(1, 7)
-                if (useExpireMedicineForActivity) {
-                    val activityExpireDays = ctx.activityManager.getActivityAwareExpireDays()
-                    if (activityExpireDays > 0) {
-                        expireDays = maxOf(expireDays, activityExpireDays)
-                    }
-                }
-                put("medicine_expire_days", expireDays)
-            }
+            expireDays?.let { put("medicine_expire_days", it) }
             put("stone", actualStone)
             put("times", actualTimes)
             put("series", effectiveSeries)
@@ -352,12 +364,33 @@ data class FightConfig(
                 put("DrGrandet", true)
             }
             if (isSpecifiedDrops && dropsItemId.isNotBlank()) {
+                // 目标库存模式：append 期初值按 dropsQuantity 下发（相当于假设库存为 0），
+                // 任务真正开始时 FightDropsRefresher 会用最新库存再算一次覆盖
                 put("drops", buildJsonObject {
                     put(dropsItemId, dropsQuantity)
                 })
             }
         }
 
-        return TaskParamResult(listOf(MaaTaskParams(MaaTaskType.FIGHT, paramsJson.toString())))
+        val dropTarget = if (isSpecifiedDrops && isInventoryTarget && dropsItemId.isNotBlank()) {
+            DropTarget(
+                dropId = dropsItemId,
+                dropCount = dropsQuantity,
+                stage = stage,
+                medicine = actualMedicine,
+                stone = actualStone,
+                series = effectiveSeries,
+                // 占位；AnalyzeTaskChainUseCase 会覆盖为节点名
+                logLabel = "Fight",
+                medicineExpireDays = expireDays,
+                drGrandet = isDrGrandet,
+            )
+        } else {
+            null
+        }
+
+        return TaskParamResult(
+            listOf(MaaTaskParams(MaaTaskType.FIGHT, paramsJson.toString(), dropTarget = dropTarget))
+        )
     }
 }

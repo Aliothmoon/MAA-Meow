@@ -981,6 +981,10 @@
     <string name="panel_fight_specified_drops_stage_tip">This feature does not automatically calculate the optimal stage. Please choose the stage manually.</string>
     <string name="panel_fight_material">Material</string>
     <string name="panel_fight_target_count">Target Amount</string>
+    <string name="panel_fight_drops_mode_quantity">Quantity</string>
+    <string name="panel_fight_drops_mode_target_inventory">Target inventory</string>
+    <string name="panel_fight_target_inventory">Target inventory</string>
+    <string name="panel_fight_target_inventory_tip">Refers to the inventory data saved by \"Tools - Depot Recognition\", farming only up to the target. Inventory is cached and may drift after manual runs, crafting or consumption; it is updated in real time from drops during a run, so materials farmed by earlier tasks reduce the deficit of subsequent tasks.</string>
     <string name="panel_fight_resource_collection_open_tip">· Resource collection event is active (all resource stages are open)</string>
     <string name="panel_fight_today_stage_hint_title">Today\'s stage tips (%1$s)</string>
 
@@ -1825,6 +1829,7 @@
     <string name="runlog_depot_plan_no_stage">Plan %1$d: stage not specified or is \"Current/Last\".</string>
     <string name="runlog_depot_plan_stage_not_open">Plan %1$d: stage \'%2$s\' is not open.</string>
     <string name="runlog_depot_plan_inventory_enough">Plan %1$s: %2$s inventory sufficient (current %3$d / target %4$d).</string>
+    <string name="runlog_depot_set_params_failed">Plan %1$s: failed to update task params; original params will be used.</string>
     <string name="runlog_depot_skipped_activity">An event is in progress; Depot Maintain skipped.</string>
     <string name="runlog_depot_skipped_resource">The resource collection event is active; Depot Maintain skipped.</string>
     <string name="runlog_copilot_start">Starting auto-battle</string>

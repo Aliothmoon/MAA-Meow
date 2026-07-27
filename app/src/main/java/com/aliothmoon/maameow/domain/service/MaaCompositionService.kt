@@ -62,6 +62,7 @@ class MaaCompositionService(
     private val subTaskHandler: SubTaskHandler,
     private val taskChainStatusTracker: TaskChainStatusTracker,
     private val notificationCenter: MaaNotificationCenter,
+    private val dropsRefresher: FightDropsRefresher,
 ) : MaaExecutionStateHolder {
 
     private val _state = MutableStateFlow(MaaExecutionState.IDLE)
@@ -359,6 +360,23 @@ class MaaCompositionService(
         return asyncConnect(maa, config)
     }
 
+    /**
+     * 运行中改写已排队任务的参数（MaaCore AsstSetTaskParams）。
+     * 仅供 [FightDropsRefresher] 在 TaskChainStart 回调内同步调用。
+     *
+     * 注意：调用方在 MaaCore 回调线程上同步执行，本方法内不得再切线程，
+     * 否则参数可能来不及在 core 进入关卡前生效。
+     */
+    fun setTaskParams(taskId: Int, params: String): Boolean {
+        val maa = RemoteServiceManager.getInstanceOrNull()?.maaCoreService ?: run {
+            Timber.w("SetTaskParams 时 MaaCore 服务不可用，taskId=%d", taskId)
+            return false
+        }
+        return runCatching { maa.SetTaskParams(taskId, params) }
+            .onFailure { Timber.e(it, "SetTaskParams 失败 taskId=%d", taskId) }
+            .getOrDefault(false)
+    }
+
     private suspend fun appendTasksAndStart(
         maa: MaaCoreService,
         tasks: List<MaaTaskParams>,
@@ -366,11 +384,13 @@ class MaaCompositionService(
         mode: RunMode,
     ): StartResult {
         taskChainStatusTracker.clear()
+        dropsRefresher.clear()
         tasks.forEach { t ->
             sessionLogger.appendToFileOnly("[TaskParams] ${t.type.value}: ${t.params}")
             val taskId = maa.AppendTask(t.type.value, t.params)
             if (taskId > 0) {
                 taskChainStatusTracker.register(taskId, t.type.value, t.nodeId)
+                t.dropTarget?.let { dropsRefresher.register(taskId, it) }
             }
         }
         if (!maa.Start()) {

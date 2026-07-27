@@ -42,6 +42,7 @@ import com.aliothmoon.maameow.domain.service.AppAliveChecker
 import com.aliothmoon.maameow.domain.service.AppWatchdog
 import com.aliothmoon.maameow.domain.service.CopilotManager
 import com.aliothmoon.maameow.domain.service.ExternalNotificationService
+import com.aliothmoon.maameow.domain.service.FightDropsRefresher
 import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
 import com.aliothmoon.maameow.domain.service.LogExportService
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
@@ -156,6 +157,7 @@ val appModule = module {
     singleOf(::CopilotRuntimeStateStore)
     singleOf(::ToolboxResultCollector)
     singleOf(::TaskChainStatusTracker)
+    singleOf(::FightDropsRefresher)
     singleOf(::TaskChainHandler)
     singleOf(::SubTaskHandler)
     single<AppAliveChecker> { RemoteAppAliveChecker() }

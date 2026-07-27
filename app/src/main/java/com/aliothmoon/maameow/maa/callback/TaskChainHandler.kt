@@ -7,7 +7,10 @@ import com.aliothmoon.maameow.data.achievement.AchievementRepository
 
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.service.AchievementReporter
+import com.aliothmoon.maameow.domain.service.FightDropsRefresher
+import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.maa.AsstMsg
@@ -15,6 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import org.koin.java.KoinJavaComponent.inject
 import timber.log.Timber
 import java.time.Instant
 import java.time.ZoneId
@@ -32,12 +36,17 @@ class TaskChainHandler(
     private val taskChainState: TaskChainState,
     private val achievementRepository: AchievementRepository,
     private val achievementReporter: AchievementReporter,
+    private val dropsRefresher: FightDropsRefresher,
 ) {
     // 回调路径用于 suspend 的 TaskChainState 更新；独立于任一生命周期
     private val callbackScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    // 懒解析，避免与 MaaCompositionService → CallbackDispatcher → 本类 的构造环
+    private val compositionService: MaaCompositionService by inject(MaaCompositionService::class.java)
+
     private val resources = applicationContext.resources
     private val packageName = applicationContext.packageName
+    private val appContext = applicationContext
 
     /**
      * 处理 TaskChain 回调消息
@@ -47,6 +56,8 @@ class TaskChainHandler(
         when (msg) {
             AsstMsg.TaskChainStart -> {
                 statusTracker.updateStatus(taskId, TaskRunStatus.IN_PROGRESS)
+                // 在 core 进入关卡前同步重算目标库存缺口；必须先于 handleTaskChainStart，且不得切线程
+                refreshDropsIfNeeded(taskId)
                 handleTaskChainStart(details)
             }
 
@@ -64,15 +75,49 @@ class TaskChainHandler(
 
             AsstMsg.TaskChainStopped -> {
                 statusTracker.clear()
+                dropsRefresher.clear()
                 handleTaskChainStopped(details)
             }
 
             AsstMsg.AllTasksCompleted -> {
                 statusTracker.clear()
+                dropsRefresher.clear()
                 handleAllTasksCompleted()
             }
 
             else -> Timber.w("TaskChainHandler received unexpected msg: $msg")
+        }
+    }
+
+    private fun refreshDropsIfNeeded(taskId: Int) {
+        when (val outcome = dropsRefresher.onTaskStarted(taskId, compositionService::setTaskParams)) {
+            is FightDropsRefresher.RefreshOutcome.Sufficient -> {
+                sessionLogger.append(
+                    appContext.getString(
+                        R.string.runlog_depot_plan_inventory_enough,
+                        outcome.logLabel,
+                        outcome.dropName,
+                        outcome.current,
+                        outcome.target,
+                    ),
+                    LogLevel.INFO,
+                )
+                if (!outcome.applied) {
+                    sessionLogger.append(
+                        appContext.getString(R.string.runlog_depot_set_params_failed, outcome.logLabel),
+                        LogLevel.WARNING,
+                    )
+                }
+            }
+            is FightDropsRefresher.RefreshOutcome.Updated -> {
+                if (!outcome.applied) {
+                    sessionLogger.append(
+                        appContext.getString(R.string.runlog_depot_set_params_failed, outcome.logLabel),
+                        LogLevel.WARNING,
+                    )
+                }
+            }
+            FightDropsRefresher.RefreshOutcome.Skipped -> Unit
         }
     }
 

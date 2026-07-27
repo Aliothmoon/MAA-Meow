@@ -75,7 +75,16 @@ class AnalyzeTaskChainUseCase(
             }
             val result = node.config.toTaskParams(ctx)
             preflightLogs += result.logs
-            result.params.map { it.copy(nodeId = node.id) }
+            result.params.map { params ->
+                val withNode = params.copy(nodeId = node.id)
+                // 理智作战的目标库存日志标签用节点名（用户可重命名），比固定 "Fight" 更可读
+                val target = withNode.dropTarget
+                if (node.config is FightConfig && target != null) {
+                    withNode.copy(dropTarget = target.copy(logLabel = node.name))
+                } else {
+                    withNode
+                }
+            }
         }
 
         if (params.isEmpty()) {
