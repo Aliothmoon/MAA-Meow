@@ -206,7 +206,7 @@ data class InfrastConfig(
      * 将心情阈值转换为MAA Core需要的浮点数格式(0.0-1.0)
      */
     fun getDormThresholdAsFloat(): Double = dormThreshold / 100.0
-    override fun toTaskParams(): MaaTaskParams {
+    override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
         val threshold = getDormThresholdAsFloat()
         val paramsJson = buildJsonObject {
             put("facility", buildJsonArray {
@@ -232,7 +232,7 @@ data class InfrastConfig(
             }
         }
 
-        return MaaTaskParams(MaaTaskType.INFRAST, paramsJson.toString())
+        return listOf(MaaTaskParams(MaaTaskType.INFRAST, paramsJson.toString()))
     }
 
     /**

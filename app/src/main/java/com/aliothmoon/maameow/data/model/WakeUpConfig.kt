@@ -77,7 +77,7 @@ data class WakeUpConfig(
      * 获取服务器类型
      */
     fun getServerType(): String = getServerType(clientType)
-    override fun toTaskParams(): MaaTaskParams {
+    override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
         val normalizedAccountName = accountName.trim()
         val canSwitchAccount =
             clientType == "Official" || clientType == "Bilibili" || clientType == "txwy"
@@ -88,6 +88,6 @@ data class WakeUpConfig(
                 put("account_name", normalizedAccountName)
             }
         }
-        return MaaTaskParams(MaaTaskType.START_UP, paramsJson.toString())
+        return listOf(MaaTaskParams(MaaTaskType.START_UP, paramsJson.toString()))
     }
 }

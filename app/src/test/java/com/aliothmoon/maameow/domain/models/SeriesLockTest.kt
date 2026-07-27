@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.domain.models
 
 import com.aliothmoon.maameow.data.model.FightConfig
+import com.aliothmoon.maameow.data.model.TaskParamContext
 import com.aliothmoon.maameow.data.resource.ServerTimezone
 import io.mockk.every
 import io.mockk.mockkObject
@@ -51,13 +52,8 @@ class SeriesLockTest {
     fun fightConfig_keepsSeries_whenClientTypeNotLocked() {
         val config = FightConfig(stage1 = "1-7", series = 6)
 
-        assertEquals(6, seriesOf(config.toTaskParams(clientType = "YoStarJP").params))
+        assertEquals(6, seriesOf(config, clientType = "YoStarJP"))
         assertEquals(6, config.series)
-    }
-
-    @Test(expected = IllegalStateException::class)
-    fun fightConfig_rejectsParameterlessToTaskParams() {
-        FightConfig(stage1 = "1-7").toTaskParams()
     }
 
     @Test
@@ -67,7 +63,7 @@ class SeriesLockTest {
             every { ServerTimezone.getYjDate("Official") } returns afterLock
             val config = FightConfig(stage1 = "1-7", series = 6)
 
-            assertEquals(-1, seriesOf(config.toTaskParams(clientType = "Official").params))
+            assertEquals(-1, seriesOf(config, clientType = "Official"))
             // 锁定只影响下发，用户原选值必须保留
             assertEquals(6, config.series)
         } finally {
@@ -76,5 +72,8 @@ class SeriesLockTest {
     }
 }
 
-private fun seriesOf(params: String): Int =
-    Json.parseToJsonElement(params).jsonObject["series"]!!.jsonPrimitive.content.toInt()
+private fun seriesOf(config: FightConfig, clientType: String): Int {
+    val ctx = TaskParamContext(clientType = clientType, normalizeCoreChar = { it })
+    val params = config.toTaskParams(ctx).single().params
+    return Json.parseToJsonElement(params).jsonObject["series"]!!.jsonPrimitive.content.toInt()
+}

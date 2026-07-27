@@ -5,9 +5,8 @@ import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.model.MallConfig
-import com.aliothmoon.maameow.data.model.ReclamationConfig
-import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.data.model.TaskChainNode
+import com.aliothmoon.maameow.data.model.TaskParamContext
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
@@ -46,11 +45,19 @@ class AnalyzeTaskChainUseCase(
 
         logCreditFightWarning(enabledNodes, creditFightAvailability)
 
-        val params = enabledNodes.mapNotNull { node ->
+        val ctx = TaskParamContext(
+            clientType = clientType,
+            chainAllowsCreditFight = creditFightAvailability.isAvailable,
+            normalizeCoreChar = { coreChar ->
+                resourceDataManager.getCharacterByNameOrAlias(coreChar)?.name ?: coreChar
+            },
+        )
+
+        val params = enabledNodes.flatMap { node ->
             if (isSkippedByWeeklySchedule(node, serverDayOfWeek)) {
-                return@mapNotNull null
+                return@flatMap emptyList()
             }
-            buildNodeParams(node, creditFightAvailability, clientType)
+            node.config.toTaskParams(ctx).map { it.copy(nodeId = node.id) }
         }
 
         if (params.isEmpty()) {
@@ -98,32 +105,6 @@ class AnalyzeTaskChainUseCase(
             }
         }
         return false
-    }
-
-    private fun buildNodeParams(
-        node: TaskChainNode,
-        creditFightAvailability: MallCreditFightAvailability,
-        clientType: String,
-    ): MaaTaskParams {
-        val base = when (val config = node.config) {
-            is MallConfig -> {
-                config.toTaskParams(
-                    creditFightEnabled = config.creditFight && creditFightAvailability.isAvailable,
-                    clientType = clientType,
-                )
-            }
-
-            is ReclamationConfig -> config.toTaskParams(clientType = clientType)
-
-            is RoguelikeConfig -> config.toTaskParams { coreChar ->
-                resourceDataManager.getCharacterByNameOrAlias(coreChar)?.name ?: coreChar
-            }
-
-            is FightConfig -> config.toTaskParams(clientType = clientType)
-
-            else -> node.config.toTaskParams()
-        }
-        return base.copy(nodeId = node.id)
     }
 
     private fun logCreditFightWarning(
