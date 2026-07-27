@@ -157,23 +157,10 @@ data class MallConfig(
             // 购物
             put("shopping", shopping)
             if (buyFirst.isNotEmpty()) {
-                put(
-                    "buy_first", JsonArray(
-                        buyFirst
-
-                            .map {
-                                JsonPrimitive(it)
-                            })
-                )
+                put("buy_first", JsonArray(buyFirst.map { JsonPrimitive(it) }))
             }
             if (mergedBlacklist.isNotEmpty()) {
-                put(
-                    "blacklist", JsonArray(
-                        mergedBlacklist
-                            .map {
-                                JsonPrimitive(it)
-                            })
-                )
+                put("blacklist", JsonArray(mergedBlacklist.map { JsonPrimitive(it) }))
             }
 
             // 高级选项

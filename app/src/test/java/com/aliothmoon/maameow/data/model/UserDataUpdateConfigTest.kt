@@ -10,7 +10,6 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -37,7 +36,6 @@ class UserDataUpdateConfigTest {
         val result = UserDataUpdateConfig(updateOperBox = false, updateDepot = false)
             .toTaskParams(ctx())
         assertTrue(result.params.isEmpty())
-        assertFalse(result.unlockDoubleSync)
     }
 
     @Test
@@ -47,7 +45,6 @@ class UserDataUpdateConfigTest {
             listOf(MaaTaskType.OPER_BOX, MaaTaskType.DEPOT),
             result.params.map { it.type },
         )
-        assertTrue(result.unlockDoubleSync)
     }
 
     @Test
@@ -55,7 +52,6 @@ class UserDataUpdateConfigTest {
         val result = UserDataUpdateConfig(updateOperBox = false, updateDepot = true)
             .toTaskParams(ctx())
         assertEquals(listOf(MaaTaskType.DEPOT), result.params.map { it.type })
-        assertFalse(result.unlockDoubleSync)
     }
 
     @Test

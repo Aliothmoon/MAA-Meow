@@ -17,7 +17,6 @@ import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
-import com.aliothmoon.maameow.maa.AsstMsg
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -79,22 +78,9 @@ class SubTaskHandler(
         lastSanitySnapshot = null
     }
 
-    /**
-     * 主分发方法
-     */
-    fun handle(msg: AsstMsg, details: JSONObject) {
-        when (msg) {
-            AsstMsg.SubTaskError -> handleError(details)
-            AsstMsg.SubTaskStart -> handleStart(details)
-            AsstMsg.SubTaskCompleted -> handleCompleted(details)
-            AsstMsg.SubTaskExtraInfo -> handleExtraInfo(details)
-            else -> Timber.w("SubTaskHandler received unexpected msg: $msg")
-        }
-    }
-
     // ==================== SubTaskError (20000) ====================
 
-    private fun handleError(details: JSONObject) {
+    fun onSubTaskError(details: JSONObject) {
         val subtask = details.getString("subtask") ?: return
 
         when (subtask) {
@@ -179,7 +165,7 @@ class SubTaskHandler(
 
     // ==================== SubTaskStart (20001) ====================
 
-    private fun handleStart(details: JSONObject) {
+    fun onSubTaskStart(details: JSONObject) {
         val subtask = details.getString("subtask") ?: return
 
         when (subtask) {
@@ -370,7 +356,7 @@ class SubTaskHandler(
 
     // ==================== SubTaskCompleted (20002) ====================
 
-    private fun handleCompleted(details: JSONObject) {
+    fun onSubTaskCompleted(details: JSONObject) {
         val subtask = details.getString("subtask") ?: return
 
         if (subtask == "ProcessTask") {
@@ -437,7 +423,7 @@ class SubTaskHandler(
 
     // ==================== SubTaskExtraInfo (20003) ====================
 
-    private fun handleExtraInfo(details: JSONObject) {
+    fun onSubTaskExtraInfo(details: JSONObject) {
         // Depot / OperBox 通过 taskchain 路由（与 WPF 一致）
         val taskchain = details.getString("taskchain")
         val subDetails = details.getJSONObject("details")

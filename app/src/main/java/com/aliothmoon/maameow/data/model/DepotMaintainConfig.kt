@@ -8,8 +8,6 @@ import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 
 /**
  * 库存保持计划：把 dropId 材料刷到 dropCount 数量。
@@ -66,8 +64,9 @@ data class DepotMaintainConfig(
 
         val params = mutableListOf<MaaTaskParams>()
 
-        // 刷新库存数据。注意：本轮的缺口在下面按当前快照算死，识别结果要到下次运行才生效，
-        // 运行时按最新库存重算是后续任务（对齐上游 RefreshFightTaskDrops）
+        // 刷新库存数据。下面按当前快照算的缺口只是 append 期初值：
+        // 每条 Fight 真正开始时 FightDropsRefresher 会用最新库存重算，本轮识别结果立即生效
+        // （对齐上游 DepotMaintainTaskUserControlModel「刷新库存后再执行计划」+ RefreshFightTaskDrops）
         if (updateDepot) {
             params += MaaTaskParams(MaaTaskType.DEPOT, "{}")
         }
@@ -103,7 +102,8 @@ data class DepotMaintainConfig(
             val need = plan.dropCount - current
             if (need <= 0) {
                 val dropName = ctx.itemHelper.getItemInfo(plan.dropId)?.name ?: plan.dropId
-                // 第 1 个占位符是 %1$s：PR5 运行时重算会复用同一条并传任务名
+                // 第 1 个占位符是 %1$s 而非 %1$d：FightDropsRefresher 复用同一条串，
+                // 传的是节点名（理智作战）或计划序号（本任务）
                 logs += uiTextOf(
                     R.string.runlog_depot_plan_inventory_enough,
                     no.toString(), dropName, current, plan.dropCount,
@@ -111,30 +111,22 @@ data class DepotMaintainConfig(
                 return@forEachIndexed
             }
 
-            val medicine = if (plan.useMedicine) plan.medicineCount else 0
-            val stone = if (plan.useStone) plan.stoneCount else 0
-            // times 固定 Int.MAX_VALUE，靠 drops 达标终止，而非预先算次数
-            val json = buildJsonObject {
-                put("stage", plan.stage)
-                put("times", Int.MAX_VALUE)
-                put("series", series)
-                put("medicine", medicine)
-                put("stone", stone)
-                put("drops", buildJsonObject { put(plan.dropId, need) })
-            }
-            // dropTarget 快照整份计划字段，任务开始时按最新库存重算（前序掉落会反映进来）
+            // dropTarget 快照整份计划字段，任务开始时按最新库存重算（前序掉落会反映进来）；
+            // append 期与刷新期共用 toFightParamsJson，字段不会在两处漂移
+            val target = DropTarget(
+                dropId = plan.dropId,
+                dropCount = plan.dropCount,
+                stage = plan.stage,
+                medicine = if (plan.useMedicine) plan.medicineCount else 0,
+                stone = if (plan.useStone) plan.stoneCount else 0,
+                series = series,
+                logLabel = no.toString(),
+            )
             params += MaaTaskParams(
                 type = MaaTaskType.FIGHT,
-                params = json.toString(),
-                dropTarget = DropTarget(
-                    dropId = plan.dropId,
-                    dropCount = plan.dropCount,
-                    stage = plan.stage,
-                    medicine = medicine,
-                    stone = stone,
-                    series = series,
-                    logLabel = no.toString(),
-                ),
+                // 此处 need > 0 已成立 → times = Int.MAX_VALUE，靠 drops 达标终止而非预先算次数
+                params = target.toFightParamsJson(need),
+                dropTarget = target,
             )
         }
 

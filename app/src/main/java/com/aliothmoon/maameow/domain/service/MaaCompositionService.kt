@@ -179,7 +179,7 @@ class MaaCompositionService(
 
     fun handleCallback(msg: Int, json: String?) {
         if (onAsyncConnectCallback(msg, json)) return
-        callbackDispatcher.dispatch(msg, json)
+        callbackDispatcher.onEvent(msg, json)
     }
 
     val callback = object : MaaCoreCallback.Stub() {
@@ -203,8 +203,6 @@ class MaaCompositionService(
         clientType: String,
         isScheduled: Boolean = false,
         preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
-        /** 更新数据双识别到期：启动成功后 arm，两侧识别成功再报 DoubleSync */
-        expectDoubleSync: Boolean = false,
         onSessionStarted: (suspend () -> Unit)? = null
     ): StartResult = executeStart(
         tasks = tasks,
@@ -213,7 +211,6 @@ class MaaCompositionService(
         startMessage = context.getString(R.string.runlog_task_start, tasks.size),
         successMessage = context.getString(R.string.runlog_task_started),
         preflightLogs = preflightLogs,
-        expectDoubleSync = expectDoubleSync,
         onSessionStarted = onSessionStarted,
     )
 
@@ -365,23 +362,6 @@ class MaaCompositionService(
         return asyncConnect(maa, config)
     }
 
-    /**
-     * 运行中改写已排队任务的参数（MaaCore AsstSetTaskParams）。
-     * 仅供 [FightDropsRefresher] 在 TaskChainStart 回调内同步调用。
-     *
-     * 注意：调用方在 MaaCore 回调线程上同步执行，本方法内不得再切线程，
-     * 否则参数可能来不及在 core 进入关卡前生效。
-     */
-    fun setTaskParams(taskId: Int, params: String): Boolean {
-        val maa = RemoteServiceManager.getInstanceOrNull()?.maaCoreService ?: run {
-            Timber.w("SetTaskParams 时 MaaCore 服务不可用，taskId=%d", taskId)
-            return false
-        }
-        return runCatching { maa.SetTaskParams(taskId, params) }
-            .onFailure { Timber.e(it, "SetTaskParams 失败 taskId=%d", taskId) }
-            .getOrDefault(false)
-    }
-
     private suspend fun appendTasksAndStart(
         maa: MaaCoreService,
         tasks: List<MaaTaskParams>,
@@ -420,12 +400,12 @@ class MaaCompositionService(
         successMessage: String,
         isScheduled: Boolean = false,
         preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
-        expectDoubleSync: Boolean = false,
         onSessionStarted: (suspend () -> Unit)? = null,
     ): StartResult {
         setRunState(MaaExecutionState.STARTING)
         sessionLogger.startSession(tasks.map { it.type.value })
         subTaskHandler.resetSessionState()
+        // 划定 DoubleSync 的会话边界：本次的两侧识别都成功才算「双同步」
         toolboxResultCollector.clearDoubleSyncSession()
         onSessionStarted?.invoke()
         sessionLogger.appendAndWait(startMessage, LogLevel.INFO)
@@ -452,9 +432,6 @@ class MaaCompositionService(
                     val result = appendTasksAndStart(maa, tasks, successMessage, mode)
                     if (result is StartResult.Success) {
                         taskChainState.saveLastUsedClientType(clientType)
-                        if (expectDoubleSync) {
-                            toolboxResultCollector.armDoubleSyncSession()
-                        }
                     }
                     result
                 }

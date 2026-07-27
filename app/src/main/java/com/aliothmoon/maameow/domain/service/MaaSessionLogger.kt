@@ -25,6 +25,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 
@@ -47,23 +48,50 @@ class MaaSessionLogger(private val pathConfig: MaaPathConfig) {
             }
         }
 
-        fun writeEntry(logItem: LogItem) {
+        fun writeEntry(logItem: LogItem) = writeEntries(listOf(logItem))
+
+        /**
+         * 批量落盘：整批只 flush 一次。
+         *
+         * 逐条 flush 会让 [BufferedWriter] 完全失去意义 —— 一批 N 条就是 N 次
+         * 写系统调用。单条的序列化失败不影响同批其余条目。
+         *
+         * 代价：硬崩溃时最多丢失一个 flush 周期（[LogConfig.LOG_FLUSH_INTERVAL_MS]）内
+         * 经 [append] 缓冲的条目。会话头尾与 [appendAndWait] 的关键写入仍逐条 flush。
+         */
+        fun writeEntries(items: List<LogItem>) {
+            if (items.isEmpty()) return
+            var wrote = false
+            for (logItem in items) {
+                try {
+                    val entry = LogEntry.Log(
+                        time = logItem.timestampMillis,
+                        level = logItem.level.name,
+                        content = logItem.content
+                    )
+                    writeRaw(json.encodeToString(entry))
+                    wrote = true
+                } catch (e: Exception) {
+                    Timber.e(e, "$TAG: Failed to write log entry")
+                }
+            }
+            if (!wrote) return
             try {
-                val entry = LogEntry.Log(
-                    time = logItem.timestampMillis,
-                    level = logItem.level.name,
-                    content = logItem.content
-                )
-                writeLine(json.encodeToString(entry))
+                writer.flush()
             } catch (e: Exception) {
-                Timber.e(e, "$TAG: Failed to write log entry")
+                Timber.e(e, "$TAG: Failed to flush log entries")
             }
         }
 
+        /** 一次性关键写入（会话头尾）：立即 flush 保证可见 */
         fun writeLine(line: String) {
+            writeRaw(line)
+            writer.flush()
+        }
+
+        private fun writeRaw(line: String) {
             writer.write(line)
             writer.newLine()
-            writer.flush()
         }
 
         fun close(status: String? = null) {
@@ -94,7 +122,16 @@ class MaaSessionLogger(private val pathConfig: MaaPathConfig) {
 
     private val _logs = MutableStateFlow<List<LogItem>>(emptyList())
     val logs: StateFlow<List<LogItem>> = _logs.asStateFlow()
-    private val pendingLogs = ArrayDeque<LogItem>()
+
+    /**
+     * 待落盘缓冲。用无锁队列而非 ArrayDeque + 协程投递：
+     * [append] 位于 MaaCore 回调热路径上，为了往队列里塞一个元素而启动一个协程
+     * （连带一次 Job 分配与一次调度）是纯浪费。
+     *
+     * MaaCore 回调经 oneway binder 串行送达，故入队顺序即回调顺序；
+     * 排空只在单线程 [dispatcher] 上发生。
+     */
+    private val pendingLogs = ConcurrentLinkedQueue<LogItem>()
 
     // ---- 文件持久化 ----
 
@@ -165,10 +202,9 @@ class MaaSessionLogger(private val pathConfig: MaaPathConfig) {
         append(LogItem(content = content, level = level, tooltip = tooltip))
     }
 
+    /** 非阻塞、零调度：直接入队，由 flushLoop 批量排空。可从任意线程调用。 */
     fun append(logItem: LogItem) {
-        scope.launch {
-            pendingLogs.addLast(logItem)
-        }
+        pendingLogs.add(logItem)
     }
 
     suspend fun appendAndWait(
@@ -279,23 +315,43 @@ class MaaSessionLogger(private val pathConfig: MaaPathConfig) {
 
     // ========== 内部实现 ==========
 
-    /** 排空 pending → 更新 UI 缓冲 + 委托 Session 落盘 */
+    /** 排空 pending → 更新 UI 缓冲 + 委托 Session 落盘。仅在 [dispatcher] 上调用。 */
     private fun flushPending(session: ActiveSession) {
-        if (pendingLogs.isEmpty()) return
-        val batch = pendingLogs.toList()
-        pendingLogs.clear()
+        val batch = drainPending()
+        if (batch.isEmpty()) return
         emitToUI(batch)
-        batch.forEach { session.writeEntry(it) }
+        session.writeEntries(batch)
     }
 
-    /** 批量合并到 _logs StateFlow */
+    /** 一次性取走队列全部内容；poll 而非 toList()+clear()，避免与并发入队竞争丢条目 */
+    private fun drainPending(): List<LogItem> {
+        var item = pendingLogs.poll() ?: return emptyList()
+        val batch = ArrayList<LogItem>()
+        while (true) {
+            batch.add(item)
+            item = pendingLogs.poll() ?: break
+        }
+        return batch
+    }
+
+    /**
+     * 批量合并到 _logs StateFlow。
+     * 超限时按最终长度一次性构建，避免「先拼接再截断」在稳态下每个 flush 周期
+     * 都要拷贝两遍上限条引用。
+     */
     private fun emitToUI(batch: List<LogItem>) {
+        if (batch.isEmpty()) return
+        val max = LogConfig.MAX_RUNTIME_LOG_COUNT
         val current = _logs.value
-        val merged = if (current.isEmpty()) batch else current + batch
-        _logs.value = if (merged.size > LogConfig.MAX_RUNTIME_LOG_COUNT) {
-            merged.takeLast(LogConfig.MAX_RUNTIME_LOG_COUNT)
-        } else {
-            merged
+        val total = current.size + batch.size
+        _logs.value = when {
+            total <= max -> if (current.isEmpty()) batch.toList() else current + batch
+            // 单批就超上限：只保留这批最新的，旧的全丢
+            batch.size >= max -> batch.subList(batch.size - max, batch.size).toList()
+            else -> ArrayList<LogItem>(max).apply {
+                addAll(current.subList(total - max, current.size))
+                addAll(batch)
+            }
         }
     }
 

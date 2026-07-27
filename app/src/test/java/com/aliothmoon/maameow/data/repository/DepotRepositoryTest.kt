@@ -167,6 +167,38 @@ class DepotRepositoryTest {
         assertEquals(5, storedSnapshot().items["30011"])
     }
 
+    /**
+     * 回归：`store.data` 的 emission 是异步消费的，一条携带旧值的 emission 可能排在
+     * 自己那次落盘之后才被处理。若那时用它覆盖内存分片，下一次累加就会从旧值起算，
+     * 悄悄少记一次掉落（无异常、无日志）。次数放大到 50 是为了让这个窄窗口必然被撞上。
+     */
+    @Test
+    fun applyDrops_neverLosesUpdates_whenDiskEmissionsLagBehind() = runBlocking {
+        repeat(50) { repository.applyDrops(listOf("30011" to 1)) }
+
+        assertEquals(50, storedSnapshot().items["30011"])
+        assertEquals(50, repository.countOf("30011"))
+    }
+
+    /**
+     * 内存是权威读取源：已加载过的分片不再受磁盘影响。
+     * 这里直接往存储里塞一个不同的值，断言它不会回冲内存。
+     */
+    @Test
+    fun diskWriteAfterHydrate_doesNotOverrideMemory() = runBlocking {
+        repository.applyDrops(listOf("30011" to 7))
+        awaitSnapshot { it.items["30011"] == 7 }
+
+        store.edit { prefs ->
+            prefs[stringPreferencesKey("depot_$PROFILE_A")] =
+                JsonUtils.common.encodeToString(DepotSnapshot(items = mapOf("30011" to 2)))
+        }
+        withTimeout(AWAIT_TIMEOUT_MS) { repeat(50) { yield() } }
+
+        assertEquals("已加载的分片不得被磁盘值覆盖", 7, repository.countOf("30011"))
+        assertEquals(7, repository.snapshot.value.items["30011"])
+    }
+
     @Test
     fun concurrentApplyDrops_doNotLoseUpdates() = runBlocking {
         // 事务内读-改-写的核心保证：并发累加不丢更新
@@ -257,15 +289,19 @@ class DepotRepositoryTest {
         assertEquals(100, awaitSnapshot { it.items.containsKey("30011") }.items["30011"])
     }
 
+    /**
+     * 损坏数据只可能在 hydrate（冷启动 / 切到未加载过的档）时被读到 ——
+     * 运行期内存是权威，不再回读磁盘。故用「切到一个盘上是脏数据的档」构造该场景。
+     */
     @Test
-    fun corruptedShard_fallsBackToEmptySnapshot() = runBlocking {
-        repository.replaceAll(listOf(DepotItem("30011", 100)))
-        awaitSnapshot { it.items.containsKey("30011") }
+    fun corruptedShard_fallsBackToEmptySnapshotOnHydrate() = runBlocking {
+        store.edit { it[stringPreferencesKey("depot_$PROFILE_B")] = "{ this is not json" }
 
-        store.edit { it[stringPreferencesKey("depot_$PROFILE_A")] = "{ this is not json" }
+        activeProfileId.value = PROFILE_B
 
-        // 由非空变为空，证明 decode 的失败回退分支确实被执行
+        // 回退为空快照而不是抛异常终结收集协程
         assertEquals(emptyMap<String, Int>(), awaitSnapshot { it.items.isEmpty() }.items)
+        assertEquals(0, repository.countOf("30011"))
     }
 
     @Test

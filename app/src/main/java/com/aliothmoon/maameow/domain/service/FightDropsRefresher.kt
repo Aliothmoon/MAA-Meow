@@ -3,8 +3,7 @@ package com.aliothmoon.maameow.domain.service
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.domain.models.DropTarget
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
+import com.aliothmoon.maameow.manager.RemoteServiceManager
 import timber.log.Timber
 import java.util.concurrent.ConcurrentHashMap
 
@@ -13,12 +12,16 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * 任务开始（TaskChainStart）时用最新库存重新计算缺口，
  * 通过 AsstSetTaskParams 改写正在排队的 Fight 任务参数。
+ * 库存之所以会在 append 之后变化：同一条链里前序 Fight 的掉落会累加，
+ * 且「任务开始前更新库存数据」的仓库识别也排在 append 之后。
  *
- * 迁移自 WPF FightSettingsUserControlModel.RefreshFightTaskDrops。
+ * 迁移自 WPF FightSettingsUserControlModel.RefreshFightTaskDrops
+ * （上游由 AsstProxy.OnTaskStatusChanged → InProgress 触发，进程内同步）。
  *
- * [setTaskParams] 作为函数参数传入，避免本类持有 [MaaCompositionService]
- * 造成构造循环；调用方 [com.aliothmoon.maameow.maa.callback.TaskChainHandler]
- * 在回调线程同步调用，必须在 core 进入关卡前把参数改完。
+ * **时序是 best-effort，不是保证**：MaaCoreCallback 是 oneway，回调发出后 MaaCore 侧
+ * 不会等待，本次改写还要经「核心进程 → App 进程」和「App 进程 → 核心进程」两跳 binder。
+ * 正常情况下远早于 core 打完第一场（掉落判定在进关卡之后），
+ * 万一没赶上，任务只是按 append 期的缺口执行 —— 会多刷，但不会刷错。
  */
 class FightDropsRefresher(
     private val depotRepository: DepotRepository,
@@ -34,14 +37,15 @@ class FightDropsRefresher(
     fun clear() = registry.clear()
 
     /**
-     * 在 MaaCore 回调线程上同步调用。
+     * 在 MaaCore 回调线程上调用。
      *
-     * @param setTaskParams 改写任务参数的 IPC 调用；返回 false 表示下发失败
+     * @param setTaskParams 改写任务参数的 IPC 调用；返回 false 表示下发失败。
+     *   默认走 [sendTaskParams]，单测传入假实现即可，无需 Koin。
      * @return 重算结果，由调用方负责写会话日志（本类无 Android Context，便于单测）
      */
     fun onTaskStarted(
         taskId: Int,
-        setTaskParams: (Int, String) -> Boolean,
+        setTaskParams: (Int, String) -> Boolean = ::sendTaskParams,
     ): RefreshOutcome {
         val t = registry[taskId] ?: return RefreshOutcome.Skipped
         if (t.dropId.isBlank() || t.dropCount <= 0) return RefreshOutcome.Skipped
@@ -50,22 +54,7 @@ class FightDropsRefresher(
         val need = t.dropCount - current
         val dropName = itemHelper.getItemInfo(t.dropId)?.name ?: t.dropId
 
-        // SetTaskParams 是整表重放：必须把 append 时的字段一并带上，否则会冲成 core 默认值
-        val json = buildJsonObject {
-            put("stage", t.stage)
-            put("times", if (need <= 0) 0 else Int.MAX_VALUE)
-            put("medicine", t.medicine)
-            put("stone", t.stone)
-            put("series", t.series)
-            t.medicineExpireDays?.let { put("medicine_expire_days", it) }
-            if (t.drGrandet) put("DrGrandet", true)
-            // 已充足时 drops 仍带 {id:1}：core 需要非空 drops 结构，times=0 才是真正的止损
-            put("drops", buildJsonObject {
-                put(t.dropId, if (need <= 0) 1 else need)
-            })
-        }
-
-        val ok = setTaskParams(taskId, json.toString())
+        val ok = setTaskParams(taskId, t.toFightParamsJson(need))
         if (!ok) {
             Timber.w("SetTaskParams 返回 false，taskId=%d，任务将按原参数执行", taskId)
         }
@@ -93,6 +82,24 @@ class FightDropsRefresher(
                 applied = ok,
             )
         }
+    }
+
+    /**
+     * 运行中改写已排队任务的参数（MaaCore AsstSetTaskParams）。
+     *
+     * 直接走 [RemoteServiceManager]，不经 MaaCompositionService —— 后者会与
+     * `MaaCompositionService → CallbackDispatcher → TaskChainHandler` 构成构造环，
+     * 只能靠服务定位懒解析绕开，而本类需要的其实只是这一次 IPC。
+     * 调用方在 MaaCore 回调线程上同步执行，本方法内不得再切线程。
+     */
+    private fun sendTaskParams(taskId: Int, params: String): Boolean {
+        val maa = RemoteServiceManager.getInstanceOrNull()?.maaCoreService ?: run {
+            Timber.w("SetTaskParams 时 MaaCore 服务不可用，taskId=%d", taskId)
+            return false
+        }
+        return runCatching { maa.SetTaskParams(taskId, params) }
+            .onFailure { Timber.e(it, "SetTaskParams 失败 taskId=%d", taskId) }
+            .getOrDefault(false)
     }
 
     sealed interface RefreshOutcome {

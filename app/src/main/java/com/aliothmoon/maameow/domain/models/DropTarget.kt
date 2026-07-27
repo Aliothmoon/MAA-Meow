@@ -1,5 +1,8 @@
 package com.aliothmoon.maameow.domain.models
 
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
 /**
  * 指定掉落「目标库存」模式的运行时重算目标。
  *
@@ -32,4 +35,25 @@ data class DropTarget(
     val logLabel: String,
     val medicineExpireDays: Int? = null,
     val drGrandet: Boolean = false,
-)
+) {
+    /**
+     * 按给定缺口生成 Fight 任务参数 JSON。
+     *
+     * append（库存保持展开）与运行时刷新（[com.aliothmoon.maameow.domain.service.FightDropsRefresher]）
+     * 共用本方法：`AsstSetTaskParams` 是整表重放，刷新时漏带任一字段都会把 append 时的值
+     * 冲成 core 默认值，两处各写一份 JSON 迟早会漏。
+     *
+     * @param need 还需获得的数量；<= 0 表示已充足 —— 用 `times=0` 止损，
+     *   但 drops 仍留 `{id:1}`（core 需要非空 drops 结构）
+     */
+    fun toFightParamsJson(need: Int): String = buildJsonObject {
+        put("stage", stage)
+        put("times", if (need <= 0) 0 else Int.MAX_VALUE)
+        put("series", series)
+        put("medicine", medicine)
+        put("stone", stone)
+        medicineExpireDays?.let { put("medicine_expire_days", it) }
+        if (drGrandet) put("DrGrandet", true)
+        put("drops", buildJsonObject { put(dropId, if (need <= 0) 1 else need) })
+    }.toString()
+}

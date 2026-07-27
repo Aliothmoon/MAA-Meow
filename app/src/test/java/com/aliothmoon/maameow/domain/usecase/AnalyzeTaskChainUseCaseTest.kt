@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.domain.usecase
 
 import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.model.AwardConfig
+import com.aliothmoon.maameow.data.model.DepotMaintainConfig
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.data.model.TaskChainNode
@@ -196,8 +197,7 @@ class AnalyzeTaskChainUseCaseTest {
     }
 
     @Test
-    fun userDataUpdate_bothDue_setsUnlockDoubleSyncWithoutSideEffect() {
-        // 从未同步 → 双 due；flag 仅进 plan，UseCase 本身不解锁成就
+    fun userDataUpdate_neverSynced_expandsToBothRecognitions() {
         val result = useCase(
             listOf(
                 TaskChainNode(
@@ -213,29 +213,59 @@ class AnalyzeTaskChainUseCaseTest {
             listOf(MaaTaskType.OPER_BOX, MaaTaskType.DEPOT),
             ready.plan.params.map { it.type },
         )
-        assertTrue(ready.plan.unlockDoubleSync)
     }
 
+    /**
+     * 「更新数据」与「库存保持（任务开始前更新库存）」相邻时只保留一次仓库识别；
+     * 中间隔着别的任务则不合并 —— 那段时间库存确实可能变化。
+     */
     @Test
-    fun userDataUpdate_onlyOneSideDue_doesNotSetUnlockDoubleSync() {
-        every { operBoxRepository.snapshot } returns MutableStateFlow(
-            OperBoxSnapshot(syncTimeMillis = System.currentTimeMillis()),
-        )
-        every { depotRepository.snapshot } returns MutableStateFlow(DepotSnapshot())
-
+    fun adjacentDepotRecognitions_areDeduplicated() {
         val result = useCase(
             listOf(
                 TaskChainNode(
                     name = "更新数据",
                     enabled = true,
-                    // 干员刚同步过但间隔为每次 → 两侧仍都 due；改用仅开仓库验证单侧
+                    order = 0,
                     config = UserDataUpdateConfig(updateOperBox = false, updateDepot = true),
-                )
+                ),
+                TaskChainNode(
+                    name = "库存保持",
+                    enabled = true,
+                    order = 1,
+                    config = DepotMaintainConfig(updateDepot = true, plans = emptyList()),
+                ),
             )
         )
 
         val ready = result as AnalyzeTaskChainResult.Ready
         assertEquals(listOf(MaaTaskType.DEPOT), ready.plan.params.map { it.type })
-        assertFalse(ready.plan.unlockDoubleSync)
+    }
+
+    @Test
+    fun nonAdjacentDepotRecognitions_areKept() {
+        val result = useCase(
+            listOf(
+                TaskChainNode(
+                    name = "更新数据",
+                    enabled = true,
+                    order = 0,
+                    config = UserDataUpdateConfig(updateOperBox = false, updateDepot = true),
+                ),
+                TaskChainNode(name = "领取奖励", enabled = true, order = 1, config = AwardConfig()),
+                TaskChainNode(
+                    name = "库存保持",
+                    enabled = true,
+                    order = 2,
+                    config = DepotMaintainConfig(updateDepot = true, plans = emptyList()),
+                ),
+            )
+        )
+
+        val ready = result as AnalyzeTaskChainResult.Ready
+        assertEquals(
+            listOf(MaaTaskType.DEPOT, MaaTaskType.AWARD, MaaTaskType.DEPOT),
+            ready.plan.params.map { it.type },
+        )
     }
 }

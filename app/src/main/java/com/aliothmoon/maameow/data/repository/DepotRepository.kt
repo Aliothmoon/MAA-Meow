@@ -17,8 +17,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -54,8 +52,20 @@ data class DepotSnapshot(
  * - [replaceAllSync] / [applyDropsSync]（及对应 suspend 封装）**先**原子更新内存，
  *   **再**串行异步落盘；[countOf] / [snapshot] 只读内存。
  * - 不在 MaaCore 回调线程 `runBlocking` 等 DataStore。
- * - 某档在 [dirty] 中时忽略来自磁盘的同档覆盖，避免慢落盘写回冲掉更新的内存。
- * - 切配置档时从磁盘（或已有内存分片）hydrate。
+ * - **不订阅 `store.data`**：磁盘只在某档尚未加载时读一次（见 [onActiveProfileChanged]）。
+ * - 切配置档时优先用已有内存分片，没有才读盘 hydrate。
+ *
+ * ## 调用方必须同步写入
+ *
+ * 「前序掉落反映进后续缺口」之所以成立，依赖两件事叠加：
+ * 1. `MaaCoreCallback` 是 oneway binder，而 binder 对**同一 node 的异步事务严格串行保序**
+ *    —— 所以 `StageDrops` 一定先于下一条 `TaskChainStart` 被处理；
+ * 2. 处理 `StageDrops` 的一方（`SubTaskHandler` / `ToolboxResultCollector`）调用的是
+ *    [applyDropsSync] / [replaceAllSync]，在回调线程上**同步**完成内存写入。
+ *
+ * 把调用点改回 `launch { applyDrops(...) }` 之类的异步形式会破坏第 2 点：
+ * 顺序保证还在，写入却跑到了下一条回调之后，缺口重算读到旧库存 —— 且不会报错，
+ * 只表现为偶尔多刷几关。改动这些调用点前请先确认这条不变量。
  */
 class DepotRepository(
     private val store: DataStore<Preferences>,
@@ -82,20 +92,7 @@ class DepotRepository(
 
     init {
         scope.launch {
-            combine(taskChainState.activeProfileId, store.data) { profileId, prefs ->
-                profileId to prefs
-            }
-                .catch { e ->
-                    if (e is IOException) {
-                        Timber.e(e, "读取仓库数据失败")
-                        emit("" to emptyPreferences())
-                    } else {
-                        throw e
-                    }
-                }
-                .collect { (profileId, prefs) ->
-                    onDiskOrProfileChanged(profileId, prefs)
-                }
+            taskChainState.activeProfileId.collect { profileId -> onActiveProfileChanged(profileId) }
         }
     }
 
@@ -167,23 +164,42 @@ class DepotRepository(
         }
     }
 
-    private fun onDiskOrProfileChanged(profileId: String, prefs: Preferences) {
+    /**
+     * 切换活跃配置档：内存里没有该档的分片时才读盘 hydrate。
+     *
+     * **不订阅 `store.data`**。曾经用 `combine(activeProfileId, store.data)` 驱动内存，
+     * 那是写穿改造前的遗留：`store.data` 的 emission 异步消费，一条携带旧值的 emission
+     * 完全可能排在自己那次落盘之后才被处理，此时它会把 [shards] 回滚到旧值，
+     * 下一次 [mutateActive] 便从旧值累加，**悄悄丢掉一次更新**（无异常、无日志，
+     * 只表现为掉落少记一次）。`dirty` 只说明「有没有待落盘的写」，判断不了 emission 是否陈旧；
+     * 重读磁盘也只是把窗口缩小，因为读盘本身是挂起点。
+     *
+     * 既然所有写入都先过内存再落盘，磁盘永远不可能比内存新，订阅它就没有意义 ——
+     * 只在「这个档还没加载过」时读一次即可。档被删除时 [dropProfile] 会显式移除分片，
+     * 于是下次切回该档能重新 hydrate。
+     */
+    private suspend fun onActiveProfileChanged(profileId: String) {
         if (profileId.isEmpty()) {
-            synchronized(memoryLock) {
-                _snapshot.value = DepotSnapshot()
-            }
+            synchronized(memoryLock) { _snapshot.value = DepotSnapshot() }
             return
         }
-        val diskSnap = decode(prefs[keyOf(profileId)])
         synchronized(memoryLock) {
-            if (profileId in dirty) {
-                // 本地更新尚未落盘确认：内存优先，只保证对外 snapshot 指向内存分片
-                _snapshot.value = shards[profileId] ?: DepotSnapshot()
+            shards[profileId]?.let {
+                _snapshot.value = it
                 return
             }
-            shards[profileId] = diskSnap
+        }
+        val diskSnap = try {
+            decode(store.data.first()[keyOf(profileId)])
+        } catch (e: IOException) {
+            Timber.e(e, "读取仓库数据失败")
+            DepotSnapshot()
+        }
+        synchronized(memoryLock) {
+            // 读盘期间可能已经有写入落到内存，此时内存优先
+            val effective = shards.getOrPut(profileId) { diskSnap }
             if (taskChainState.activeProfileId.value == profileId) {
-                _snapshot.value = diskSnap
+                _snapshot.value = effective
             }
         }
     }

@@ -20,6 +20,7 @@ import com.aliothmoon.maameow.domain.models.MallCreditFightAvailability
 import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.domain.models.resolveMallCreditFightAvailability
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
+import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import timber.log.Timber
@@ -72,14 +73,12 @@ class AnalyzeTaskChainUseCase(
             preflightLogs += uiTextOf(R.string.runlog_series_locked) to LogLevel.WARNING
         }
 
-        var unlockDoubleSync = false
-        val params = enabledNodes.flatMap { node ->
+        val expanded = enabledNodes.flatMap { node ->
             if (isSkippedByWeeklySchedule(node, serverDayOfWeek)) {
                 return@flatMap emptyList()
             }
             val result = node.config.toTaskParams(ctx)
             preflightLogs += result.logs
-            if (result.unlockDoubleSync) unlockDoubleSync = true
             result.params.map { taskParams ->
                 val withNode = taskParams.copy(nodeId = node.id)
                 // 理智作战的目标库存日志标签用节点名（用户可重命名），比固定 "Fight" 更可读
@@ -91,6 +90,7 @@ class AnalyzeTaskChainUseCase(
                 }
             }
         }
+        val params = dropAdjacentDuplicateDepot(expanded)
 
         if (params.isEmpty()) {
             return AnalyzeTaskChainResult.Blocked(
@@ -110,11 +110,21 @@ class AnalyzeTaskChainUseCase(
                     .mapNotNull { it.config as? WakeUpConfig }
                     .any { it.startGameEnabled },
                 preflightLogs = preflightLogs,
-                // 双 due 标记：启动成功后 arm，两侧识别成功再解锁（见 ToolboxResultCollector）
-                unlockDoubleSync = unlockDoubleSync,
             )
         )
     }
+
+    /**
+     * 「更新数据」与「库存保持（任务开始前更新库存）」相邻时会各下发一个仓库识别，
+     * 后一个纯属重复扫描（约半分钟）。只合并**相邻**的：
+     * 中间隔着别的任务时，那段时间里库存确实可能变化，重扫是合理的。
+     */
+    private fun dropAdjacentDuplicateDepot(params: List<MaaTaskParams>): List<MaaTaskParams> =
+        params.filterIndexed { index, task ->
+            index == 0 ||
+                task.type != MaaTaskType.DEPOT ||
+                params[index - 1].type != MaaTaskType.DEPOT
+        }
 
     private fun validateClientTypeConsistency(nodes: List<TaskChainNode>): List<String>? {
         val clientTypes = nodes
@@ -163,12 +173,6 @@ data class TaskChainPlan(
      * UseCase 保持无副作用，由 MaaCompositionService 在 startSession 之后统一 append。
      */
     val preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
-    /**
-     * 更新数据节点同时到期干员+仓库时为 true。
-     * 启动成功后 arm [com.aliothmoon.maameow.maa.callback.ToolboxResultCollector]，
-     * 两侧识别成功后再报 TOOLBOX_RESULT(DepotOperBox)。
-     */
-    val unlockDoubleSync: Boolean = false,
 )
 
 enum class AnalyzeTaskChainFailureReason {

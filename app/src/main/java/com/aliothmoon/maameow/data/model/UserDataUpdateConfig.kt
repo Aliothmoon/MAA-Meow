@@ -43,15 +43,14 @@ data class UserDataUpdateConfig(
             return TaskParamResult(emptyList())
         }
 
-        val params = buildList {
-            // 对齐上游：先干员后仓库
-            if (operDue) add(MaaTaskParams(MaaTaskType.OPER_BOX, "{}"))
-            if (depotDue) add(MaaTaskParams(MaaTaskType.DEPOT, "{}"))
-        }
+        // 对齐上游：先干员后仓库。
+        // 双识别到期不在这里预告 DoubleSync —— 该成就由 ToolboxResultCollector
+        // 按「同一会话内两侧识别都真的成功」判定，排上队不等于同步成功。
         return TaskParamResult(
-            params = params,
-            // 双 due 时由 UseCase 解锁 DoubleSync（对齐上游 Serialize 时机）
-            unlockDoubleSync = operDue && depotDue,
+            buildList {
+                if (operDue) add(MaaTaskParams(MaaTaskType.OPER_BOX, "{}"))
+                if (depotDue) add(MaaTaskParams(MaaTaskType.DEPOT, "{}"))
+            }
         )
     }
 }

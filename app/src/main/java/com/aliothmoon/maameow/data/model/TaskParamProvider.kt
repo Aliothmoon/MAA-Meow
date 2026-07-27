@@ -24,9 +24,4 @@ sealed interface TaskParamProvider {
 data class TaskParamResult(
     val params: List<MaaTaskParams>,
     val logs: List<Pair<UiText, LogLevel>> = emptyList(),
-    /**
-     * 本节点展开时同时到期干员箱+仓库（更新数据任务）。
-     * 仅作规划标记：启动成功后 arm Collector，两侧识别成功再报 DepotOperBox。
-     */
-    val unlockDoubleSync: Boolean = false,
 )

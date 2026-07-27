@@ -33,47 +33,39 @@ class ToolboxResultCollector(
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
-     * 本轮任务链是否期待 DoubleSync（更新数据双 due 且已启动成功）。
-     * 小工具单独识别不会 arm，避免误触。
+     * DoubleSync 成就：同一会话内干员识别与仓库识别**都真的成功**才解锁。
+     *
+     * 由识别结果本身判定，不需要启动前的「预期」标志 ——
+     * 会话边界由 [clearDoubleSyncSession] 划定（启动时 + 任务链结束/停止时各清一次），
+     * 小工具单跑两次识别属于两个会话，不会误触。
      */
-    @Volatile
-    private var doubleSyncArmed = false
-
     @Volatile
     private var doubleSyncOperDone = false
 
     @Volatile
     private var doubleSyncDepotDone = false
 
-    /** 任务链启动成功且规划双识别到期时调用。 */
-    fun armDoubleSyncSession() {
-        doubleSyncArmed = true
-        doubleSyncOperDone = false
-        doubleSyncDepotDone = false
-    }
-
-    /** 任务链结束/停止时清除，避免跨会话误报。 */
+    /** 会话开始与结束/停止时清除，避免跨会话误报。 */
     fun clearDoubleSyncSession() {
-        doubleSyncArmed = false
         doubleSyncOperDone = false
         doubleSyncDepotDone = false
     }
 
     private fun noteDoubleSyncOperSuccess() {
-        if (!doubleSyncArmed) return
         doubleSyncOperDone = true
         tryReportDoubleSync()
     }
 
     private fun noteDoubleSyncDepotSuccess() {
-        if (!doubleSyncArmed) return
         doubleSyncDepotDone = true
         tryReportDoubleSync()
     }
 
     private fun tryReportDoubleSync() {
-        if (!doubleSyncArmed || !doubleSyncOperDone || !doubleSyncDepotDone) return
-        doubleSyncArmed = false
+        if (!doubleSyncOperDone || !doubleSyncDepotDone) return
+        // 置回，避免同一会话内重复识别时反复上报
+        doubleSyncOperDone = false
+        doubleSyncDepotDone = false
         ioScope.launch {
             achievementRepository.report {
                 event = AchievementEvents.TOOLBOX_RESULT

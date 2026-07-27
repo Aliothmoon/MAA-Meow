@@ -1040,6 +1040,9 @@
     <string name="panel_fight_drops_mode_quantity">数量</string>
     <string name="panel_fight_drops_mode_target_inventory">目标库存</string>
     <string name="panel_fight_target_inventory">目标库存</string>
+    <string name="panel_fight_current_inventory">当前库存：%1$s</string>
+    <string name="panel_fight_inventory_need">预计缺口：%1$d</string>
+    <string name="panel_fight_inventory_enough">当前库存已达目标</string>
     <string name="panel_fight_target_inventory_tip">会参考「小工具-仓库识别」保存的库存数据，只补到设定库存为止。库存数据是缓存值，手动刷关、合成或消耗材料后可能与实际不一致；运行时会根据掉落实时更新库存，前序任务刷出的材料会影响后续任务的缺口计算。</string>
     <string name="panel_fight_resource_collection_open_tip">· 资源收集活动进行中（资源本全开放）</string>
     <string name="panel_fight_today_stage_hint_title">今日关卡小提示（%1$s）</string>
@@ -1056,7 +1059,7 @@
 
     <!-- panel: depot maintain -->
     <string name="panel_depot_update_before_start">任务开始前更新库存数据</string>
-    <string name="panel_depot_update_before_start_tip">任务开始时先执行一次仓库识别刷新库存数据；本次的缺口仍按识别前的库存计算</string>
+    <string name="panel_depot_update_before_start_tip">任务开始时先执行一次仓库识别刷新库存数据；每条计划开始时都会按最新库存重算缺口，本次识别结果立即生效</string>
     <string name="panel_depot_skip_during_activity">活动期间跳过</string>
     <string name="panel_depot_skip_during_resource">资源收集限时全天开放期间跳过</string>
     <string name="panel_depot_add_plan">添加</string>

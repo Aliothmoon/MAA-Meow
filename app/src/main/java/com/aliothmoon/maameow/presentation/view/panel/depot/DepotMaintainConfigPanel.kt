@@ -295,7 +295,8 @@ private fun PlanCard(
                         value = plan.dropCount,
                         onValueChange = { onPlanChange(plan.copy(dropCount = it)) },
                         label = stringResource(R.string.panel_depot_target_inventory),
-                        minimum = 0,
+                        // 展开时 dropCount <= 0 会被按 ERROR 拒绝，UI 不该放行 0
+                        minimum = 1,
                         maximum = MAX_TARGET_INVENTORY,
                         modifier = Modifier.fillMaxWidth()
                     )

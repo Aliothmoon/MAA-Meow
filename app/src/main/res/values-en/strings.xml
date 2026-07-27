@@ -985,6 +985,9 @@
     <string name="panel_fight_drops_mode_quantity">Quantity</string>
     <string name="panel_fight_drops_mode_target_inventory">Target inventory</string>
     <string name="panel_fight_target_inventory">Target inventory</string>
+    <string name="panel_fight_current_inventory">Current inventory: %1$s</string>
+    <string name="panel_fight_inventory_need">Estimated deficit: %1$d</string>
+    <string name="panel_fight_inventory_enough">Current inventory already meets the target</string>
     <string name="panel_fight_target_inventory_tip">Refers to the inventory data saved by \"Tools - Depot Recognition\", farming only up to the target. Inventory is cached and may drift after manual runs, crafting or consumption; it is updated in real time from drops during a run, so materials farmed by earlier tasks reduce the deficit of subsequent tasks.</string>
     <string name="panel_fight_resource_collection_open_tip">· Resource collection event is active (all resource stages are open)</string>
     <string name="panel_fight_today_stage_hint_title">Today\'s stage tips (%1$s)</string>
@@ -1000,7 +1003,7 @@
     <string name="panel_userdata_interval_weekly">Weekly</string>
 
     <string name="panel_depot_update_before_start">Update inventory before starting</string>
-    <string name="panel_depot_update_before_start_tip">Runs depot recognition first to refresh inventory data; this run\'s deficits are still based on the inventory from before that recognition</string>
+    <string name="panel_depot_update_before_start_tip">Runs depot recognition first to refresh inventory data; each plan recomputes its deficit from the latest inventory when it starts, so this recognition takes effect immediately</string>
     <string name="panel_depot_skip_during_activity">Skip during event</string>
     <string name="panel_depot_skip_during_resource">Skip while the resource collection event is active</string>
     <string name="panel_depot_add_plan">Add</string>

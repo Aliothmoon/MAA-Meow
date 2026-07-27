@@ -48,7 +48,6 @@ fun isUserDataUpdateDue(
         .toLocalDate()
 
     return when (interval) {
-        UserDataUpdateTriggerInterval.EVERY_TIME -> true
         UserDataUpdateTriggerInterval.DAILY -> yjToday.isAfter(lastYjDate)
         UserDataUpdateTriggerInterval.WEEKLY -> {
             val lastYear = lastYjDate.get(IsoFields.WEEK_BASED_YEAR)

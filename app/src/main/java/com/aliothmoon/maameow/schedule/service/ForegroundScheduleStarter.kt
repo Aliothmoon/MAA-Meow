@@ -108,7 +108,6 @@ class ForegroundScheduleStarter(
                             clientType = decision.plan.clientType,
                             isScheduled = true,
                             preflightLogs = decision.plan.preflightLogs,
-                            expectDoubleSync = decision.plan.unlockDoubleSync,
                         )
 
                         if (result is MaaCompositionService.StartResult.Success) {
