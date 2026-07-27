@@ -80,7 +80,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -101,6 +100,7 @@ import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
+import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
 import com.aliothmoon.maameow.presentation.view.panel.AutoBattlePanel
@@ -444,7 +444,7 @@ fun BackgroundTaskView(
 
                         if (canShowTaskActions) {
                             Spacer(modifier = Modifier.height(6.dp))
-                            val focusManager = LocalFocusManager.current
+                            val inputFocusManager = LocalInputFocusManager.current
                             // 启动按钮的两种「禁用态」：① 前台模式不从后台任务页启动；
                             // ② 远程后端（Shizuku/Root）不可用。两者均显示为禁用态但仍可点击，
                             // 点击给出对应提示（防呆），与领域层 checkPreconditions 守卫一致。
@@ -465,7 +465,7 @@ fun BackgroundTaskView(
                             ) {
                                 Button(
                                     onClick = {
-                                        focusManager.clearFocus()
+                                        inputFocusManager.clear()
                                         if (foregroundBlocked) {
                                             Toast.makeText(
                                                 context,

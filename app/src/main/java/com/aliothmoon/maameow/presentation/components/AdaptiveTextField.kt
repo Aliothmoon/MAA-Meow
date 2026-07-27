@@ -2,9 +2,9 @@ package com.aliothmoon.maameow.presentation.components
 
 import android.text.InputType
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -20,14 +20,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
-
+import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 
 /**
- * 内部使用本地状态缓冲，防止上游异步状态更新（如 DataStore / StateFlow）
- * 导致 TextField 光标跳转。
- *
- * 原理：TextField 始终绑定同步的 localValue，用户输入立即生效；
- * dirty 标记防止异步回写的中间值覆盖用户正在输入的内容。
+ * 本地状态缓冲, 避免上游异步回写导致 TextField 光标跳转
  *
  * @see <a href="https://medium.com/androiddevelopers/effective-state-management-for-textfield-in-compose-d6e5b070fbe5">
  *   Effective state management for TextField in Compose</a>
@@ -58,6 +54,12 @@ private fun rememberBufferedTextState(
     return localValue to onValueChange
 }
 
+private fun KeyboardOptions.withDoneIfSingleLine(singleLine: Boolean): KeyboardOptions =
+    if (singleLine && imeAction == ImeAction.Default) {
+        copy(imeAction = ImeAction.Done)
+    } else {
+        this
+    }
 
 @Composable
 fun ITextField(
@@ -75,9 +77,13 @@ fun ITextField(
 ) {
     val isInFloatingWindow = LocalFloatingWindowContext.current
     val (bufferedValue, bufferedOnChange) = rememberBufferedTextState(value, onValueChange)
+    val inputFocusManager = LocalInputFocusManager.current
+    val handleImeDone: () -> Unit = {
+        onImeAction?.invoke()
+        inputFocusManager.clear()
+    }
 
     if (isInFloatingWindow) {
-        // 悬浮窗环境：使用 FloatWindowEditText
         FloatWindowEditText(
             value = bufferedValue,
             onValueChange = bufferedOnChange,
@@ -88,12 +94,11 @@ fun ITextField(
             enabled = enabled,
             shape = shape,
             outlineColor = outlineColor ?: MaterialTheme.colorScheme.outline,
-            onImeAction = onImeAction,
+            onImeAction = handleImeDone,
             inputType = if (singleLine) InputType.TYPE_CLASS_TEXT else
                 InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
         )
     } else {
-        // 普通环境：使用 OutlinedTextField
         OutlinedTextField(
             value = bufferedValue,
             onValueChange = bufferedOnChange,
@@ -111,20 +116,15 @@ fun ITextField(
             } else {
                 OutlinedTextFieldDefaults.colors()
             },
-            keyboardOptions = if (onImeAction != null) {
-                KeyboardOptions(imeAction = ImeAction.Done)
-            } else {
-                KeyboardOptions.Default
-            },
-            keyboardActions = if (onImeAction != null) {
-                KeyboardActions(onDone = { onImeAction() })
+            keyboardOptions = KeyboardOptions.Default.withDoneIfSingleLine(singleLine),
+            keyboardActions = if (singleLine) {
+                KeyboardActions(onDone = { handleImeDone() })
             } else {
                 KeyboardActions.Default
             }
         )
     }
 }
-
 
 @Composable
 fun ITextFieldWithFocus(
@@ -142,15 +142,17 @@ fun ITextFieldWithFocus(
     inputType: Int? = null,
 ) {
     val isInFloatingWindow = LocalFloatingWindowContext.current
+    val inputFocusManager = LocalInputFocusManager.current
     val filteredOnChange: (String) -> Unit = if (inputFilter != null) {
         { text -> if (inputFilter(text)) onValueChange(text) }
     } else {
         onValueChange
     }
     val (bufferedValue, bufferedOnChange) = rememberBufferedTextState(value, filteredOnChange)
+    val resolvedOptions = keyboardOptions.withDoneIfSingleLine(singleLine)
+    val handleImeDone: () -> Unit = { inputFocusManager.clear() }
 
     if (isInFloatingWindow) {
-        // 悬浮窗环境：使用 FloatWindowEditText
         FloatWindowEditText(
             value = bufferedValue,
             onValueChange = bufferedOnChange,
@@ -162,6 +164,7 @@ fun ITextFieldWithFocus(
             inputType = inputType
                 ?: if (singleLine) InputType.TYPE_CLASS_TEXT
                 else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE,
+            onImeAction = handleImeDone,
             onFocusChange = { hasFocus ->
                 if (!hasFocus) {
                     onFocusLost()
@@ -169,7 +172,6 @@ fun ITextFieldWithFocus(
             }
         )
     } else {
-        // 普通环境：使用 OutlinedTextField + onFocusChanged
         OutlinedTextField(
             value = bufferedValue,
             onValueChange = bufferedOnChange,
@@ -185,7 +187,12 @@ fun ITextFieldWithFocus(
             singleLine = singleLine,
             enabled = enabled,
             supportingText = supportingText,
-            keyboardOptions = keyboardOptions,
+            keyboardOptions = resolvedOptions,
+            keyboardActions = if (singleLine) {
+                KeyboardActions(onDone = { handleImeDone() })
+            } else {
+                KeyboardActions.Default
+            },
         )
     }
 }

@@ -27,7 +27,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
@@ -39,8 +38,10 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
+import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
+import com.aliothmoon.maameow.presentation.components.clearFocusOnBlankTap
 import com.aliothmoon.maameow.presentation.state.UiEffect
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType.ERROR
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType.SUCCESS
@@ -74,7 +75,7 @@ fun ExpandedControlPanel(
     val activeProfileId by viewModel.chainState.activeProfileId.collectAsStateWithLifecycle()
     val selectedNode = nodes.find { it.id == uiState.selectedNodeId }
     val clientType = remember(nodes) { viewModel.chainState.getClientType() }
-    val focusManager = LocalFocusManager.current
+    val inputFocusManager = LocalInputFocusManager.current
     val context = LocalContext.current
 
     val pagerState = rememberPagerState(
@@ -109,7 +110,7 @@ fun ExpandedControlPanel(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize().clearFocusOnBlankTap()) {
         Card(
             modifier = Modifier
                 .fillMaxSize()
@@ -229,7 +230,7 @@ fun ExpandedControlPanel(
                     BottomButtons(
                         onClose = { onClose() },
                         onStart = {
-                            focusManager.clearFocus()
+                            inputFocusManager.clear()
                             when (uiState.currentTab) {
                                 PanelTab.AUTO_BATTLE -> copilotViewModel.onStart()
                                 PanelTab.TOOLS -> toolboxViewModel.onStart()

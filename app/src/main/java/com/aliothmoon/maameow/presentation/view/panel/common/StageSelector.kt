@@ -134,7 +134,6 @@ internal fun GroupedStageButtonGroup(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
-            // 有 onRemove 时内嵌删除按钮；无则不占位（库存保持等场景无行内删除）
             if (onRemove != null) {
                 CollapsibleRowTrailing(onRemove)
             }
@@ -207,10 +206,6 @@ internal fun GroupedStageButtonGroup(
     }
 }
 
-/**
- * 关卡行（自定义关卡代码文本输入模式用）：内容区 + 可选右侧删除按钮。
- * onRemove 为空时不占位；分组按钮模式的删除内嵌在 [GroupedStageButtonGroup] 标题行。
- */
 @Composable
 internal fun StageRow(
     onRemove: (() -> Unit)?,
@@ -228,7 +223,6 @@ internal fun StageRow(
     }
 }
 
-/** 关卡行尾部删除按钮；仅本文件内使用 */
 @Composable
 private fun CollapsibleRowTrailing(
     onRemove: () -> Unit,

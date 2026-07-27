@@ -6,7 +6,6 @@ import com.dokar.sonner.ToasterState
 
 val LocalFloatingWindowContext = compositionLocalOf { false }
 
-
 val LocalToaster = staticCompositionLocalOf<ToasterState> {
     error("LocalToaster not provided.")
 }

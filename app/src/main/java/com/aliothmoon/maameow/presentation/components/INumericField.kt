@@ -8,12 +8,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 
 /**
- * 数字输入框（失焦时验证）
- *
- * 基于 [ITextFieldWithFocus] 封装，自动适配悬浮窗/普通环境。
+ * 数字输入框（失焦时验证）, 基于 [ITextFieldWithFocus]
  *
  * @param value 当前值
  * @param onValueChange 值变化回调（仅在失焦且验证通过后调用）
@@ -70,7 +69,10 @@ fun INumericField(
         placeholder = hint,
         enabled = enabled,
         inputFilter = { it.isEmpty() || it == "-" || it.toIntOrNull() != null },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Done,
+        ),
         inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED,
     )
 }

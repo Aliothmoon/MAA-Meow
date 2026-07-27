@@ -31,12 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
 
-/**
- * 材料选择按钮组（可折叠）
- *
- * 与 [GroupedStageButtonGroup] 一致：标题行左侧区块名，右侧已选徽章 + 展开箭头；
- * 默认折叠，展开后平铺材料芯片
- */
+/** 材料选择（可折叠，交互对齐 [GroupedStageButtonGroup]） */
 @Composable
 fun ItemButtonGroup(
     modifier: Modifier = Modifier,
@@ -87,7 +82,6 @@ fun ItemButtonGroup(
             enter = expandVertically(),
             exit = shrinkVertically()
         ) {
-            // label 已在折叠标题行展示，芯片组不再重复标题
             SelectableChipGroup(
                 label = "",
                 selectedValue = selectedValue,

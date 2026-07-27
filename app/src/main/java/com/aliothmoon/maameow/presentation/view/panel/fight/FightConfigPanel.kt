@@ -619,7 +619,6 @@ private fun GroupedStageSelectionSection(
             }
         }
 
-        // 首选关卡：无行内删除（备选关卡才有）
         if (config.customStageCode) {
             // 文本输入模式
             StageRow(onRemove = null) {
