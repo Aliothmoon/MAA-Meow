@@ -37,6 +37,7 @@ class TaskChainHandler(
     private val achievementRepository: AchievementRepository,
     private val achievementReporter: AchievementReporter,
     private val dropsRefresher: FightDropsRefresher,
+    private val toolboxResultCollector: ToolboxResultCollector,
 ) {
     // 回调路径用于 suspend 的 TaskChainState 更新；独立于任一生命周期
     private val callbackScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -76,12 +77,14 @@ class TaskChainHandler(
             AsstMsg.TaskChainStopped -> {
                 statusTracker.clear()
                 dropsRefresher.clear()
+                toolboxResultCollector.clearDoubleSyncSession()
                 handleTaskChainStopped(details)
             }
 
             AsstMsg.AllTasksCompleted -> {
                 statusTracker.clear()
                 dropsRefresher.clear()
+                toolboxResultCollector.clearDoubleSyncSession()
                 handleAllTasksCompleted()
             }
 

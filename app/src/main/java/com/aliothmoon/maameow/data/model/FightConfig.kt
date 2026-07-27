@@ -353,21 +353,38 @@ data class FightConfig(
             null
         }
 
+        // 目标库存：append 即按内存库存算缺口（SetTaskParams 失败时也不劣于满目标）；
+        // TaskChainStart 时 FightDropsRefresher 再用最新库存收窄。
+        val inventoryNeed = if (isSpecifiedDrops && isInventoryTarget && dropsItemId.isNotBlank()) {
+            (dropsQuantity - ctx.depotRepository.countOf(dropsItemId)).coerceAtLeast(0)
+        } else {
+            null
+        }
+
         val paramsJson = buildJsonObject {
             put("stage", stage)
             put("medicine", actualMedicine)
             expireDays?.let { put("medicine_expire_days", it) }
             put("stone", actualStone)
-            put("times", actualTimes)
+            put(
+                "times",
+                when {
+                    inventoryNeed != null && inventoryNeed <= 0 -> 0
+                    else -> actualTimes
+                },
+            )
             put("series", effectiveSeries)
             if (isDrGrandet) {
                 put("DrGrandet", true)
             }
             if (isSpecifiedDrops && dropsItemId.isNotBlank()) {
-                // 目标库存模式：append 期初值按 dropsQuantity 下发（相当于假设库存为 0），
-                // 任务真正开始时 FightDropsRefresher 会用最新库存再算一次覆盖
+                val dropQty = when {
+                    inventoryNeed == null -> dropsQuantity
+                    inventoryNeed <= 0 -> 1 // core 需要非空 drops；times=0 才是止损
+                    else -> inventoryNeed
+                }
                 put("drops", buildJsonObject {
-                    put(dropsItemId, dropsQuantity)
+                    put(dropsItemId, dropQty)
                 })
             }
         }

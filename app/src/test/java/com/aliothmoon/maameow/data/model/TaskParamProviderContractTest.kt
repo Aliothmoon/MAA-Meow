@@ -106,6 +106,42 @@ class TaskParamProviderContractTest {
         assertEquals("Bilibili", params["client_type"]?.jsonPrimitive?.content)
     }
 
+    @Test
+    fun fightConfig_inventoryTarget_appendsNeedNotFullTarget() {
+        val depot = mockk<com.aliothmoon.maameow.data.repository.DepotRepository> {
+            every { countOf("30011") } returns 90
+        }
+        val config = FightConfig(
+            stage1 = "1-7",
+            isSpecifiedDrops = true,
+            isInventoryTarget = true,
+            dropsItemId = "30011",
+            dropsQuantity = 100,
+        )
+        val params = jsonOf(config, ctx.copy(depotRepository = depot))
+
+        assertEquals("10", params["drops"]!!.jsonObject["30011"]!!.jsonPrimitive.content)
+        assertTrue(config.toTaskParams(ctx.copy(depotRepository = depot)).params.single().dropTarget != null)
+    }
+
+    @Test
+    fun fightConfig_inventoryTarget_alreadyEnough_setsTimesZero() {
+        val depot = mockk<com.aliothmoon.maameow.data.repository.DepotRepository> {
+            every { countOf("30011") } returns 100
+        }
+        val config = FightConfig(
+            stage1 = "1-7",
+            isSpecifiedDrops = true,
+            isInventoryTarget = true,
+            dropsItemId = "30011",
+            dropsQuantity = 100,
+        )
+        val params = jsonOf(config, ctx.copy(depotRepository = depot))
+
+        assertEquals("0", params["times"]!!.jsonPrimitive.content)
+        assertEquals("1", params["drops"]!!.jsonObject["30011"]!!.jsonPrimitive.content)
+    }
+
     private fun toolsToCraftOf(context: TaskParamContext): List<String> =
         jsonOf(ReclamationConfig(), context)["tools_to_craft"]!!
             .jsonArray.map { it.jsonPrimitive.content }

@@ -723,7 +723,8 @@ class SubTaskHandler(
         sessionLogger.append(sb.toString(), LogLevel.TRACE)
 
         if (drops.isNotEmpty()) {
-            ioScope.launch { depotRepository.applyDrops(drops) }
+            // 同步写穿内存，下一关 TaskChainStart 立刻能 countOf 到本场掉落
+            depotRepository.applyDropsSync(drops)
         }
     }
 

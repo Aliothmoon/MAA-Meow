@@ -84,9 +84,7 @@ fun DepotMaintainConfigPanel(
     val itemNameMap = remember(dropItems) { dropItems.associate { it.id to it.name } }
     val itemIds = if (dropItems.isNotEmpty()) dropItems.map { it.id } else UiUsageConstants.dropItems
 
-    // 展开态是纯 UI 局部状态，不持久化。
-    // 注意：以下标为 key，删除中间某条计划后展开态会落到相邻计划上。
-    // v1 接受此偏差（用户删除后通常会重新展开），若反馈明显再给 plan 加稳定 UI key。
+    // 展开态是纯 UI 局部状态，不持久化；删除时重映射下标，避免落到相邻计划。
     val expandedIndices = remember { mutableStateListOf<Int>() }
 
     val notSelectedLabel = stringResource(R.string.panel_depot_not_selected)
@@ -195,7 +193,18 @@ fun DepotMaintainConfigPanel(
                     )
                 },
                 onRemove = {
-                    expandedIndices.remove(index)
+                    // 删除 index 后：>index 的展开下标整体 -1，==index 移除
+                    val remapped = expandedIndices
+                        .mapNotNull { i ->
+                            when {
+                                i < index -> i
+                                i == index -> null
+                                else -> i - 1
+                            }
+                        }
+                        .distinct()
+                    expandedIndices.clear()
+                    expandedIndices.addAll(remapped)
                     onConfigChange(
                         config.copy(
                             plans = config.plans.toMutableList().also { it.removeAt(index) }

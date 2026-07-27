@@ -467,6 +467,7 @@ class BackgroundTaskViewModel(
             clientType = plan.clientType,
             isScheduled = context.mode == TaskStartMode.SCHEDULED,
             preflightLogs = plan.preflightLogs,
+            expectDoubleSync = plan.unlockDoubleSync,
         ) {
             if (request != null) {
                 sessionLogger.appendAndWait(
@@ -482,7 +483,6 @@ class BackgroundTaskViewModel(
                 taskCount = plan.params.size,
                 launchesGame = plan.launchesGame,
                 gameAliveBeforeStart = plan.gameAliveBeforeStart,
-                unlockDoubleSync = plan.unlockDoubleSync,
             )
             chainState.grantGameBatteryExemption(plan.clientType)
         }

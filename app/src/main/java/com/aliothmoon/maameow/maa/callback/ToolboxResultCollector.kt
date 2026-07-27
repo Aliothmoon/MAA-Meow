@@ -32,6 +32,56 @@ class ToolboxResultCollector(
 ) {
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    /**
+     * 本轮任务链是否期待 DoubleSync（更新数据双 due 且已启动成功）。
+     * 小工具单独识别不会 arm，避免误触。
+     */
+    @Volatile
+    private var doubleSyncArmed = false
+
+    @Volatile
+    private var doubleSyncOperDone = false
+
+    @Volatile
+    private var doubleSyncDepotDone = false
+
+    /** 任务链启动成功且规划双识别到期时调用。 */
+    fun armDoubleSyncSession() {
+        doubleSyncArmed = true
+        doubleSyncOperDone = false
+        doubleSyncDepotDone = false
+    }
+
+    /** 任务链结束/停止时清除，避免跨会话误报。 */
+    fun clearDoubleSyncSession() {
+        doubleSyncArmed = false
+        doubleSyncOperDone = false
+        doubleSyncDepotDone = false
+    }
+
+    private fun noteDoubleSyncOperSuccess() {
+        if (!doubleSyncArmed) return
+        doubleSyncOperDone = true
+        tryReportDoubleSync()
+    }
+
+    private fun noteDoubleSyncDepotSuccess() {
+        if (!doubleSyncArmed) return
+        doubleSyncDepotDone = true
+        tryReportDoubleSync()
+    }
+
+    private fun tryReportDoubleSync() {
+        if (!doubleSyncArmed || !doubleSyncOperDone || !doubleSyncDepotDone) return
+        doubleSyncArmed = false
+        ioScope.launch {
+            achievementRepository.report {
+                event = AchievementEvents.TOOLBOX_RESULT
+                "tool" to "DepotOperBox"
+            }
+        }
+    }
+
     // ==================== 公招识别 ====================
 
     private val _recruitTags = MutableStateFlow<List<String>>(emptyList())
@@ -88,8 +138,10 @@ class ToolboxResultCollector(
             val count = (value as? Number)?.toInt() ?: return@mapNotNull null
             if (count > 0) DepotItem(id, count) else null
         }
+        // 同步写穿内存，保证随后 TaskChainStart 重算能读到最新库存
+        depotRepository.replaceAllSync(items)
+        noteDoubleSyncDepotSuccess()
         ioScope.launch {
-            depotRepository.replaceAll(items)
             achievementRepository.report {
                 event = AchievementEvents.TOOLBOX_RESULT
                 "tool" to "Depot"
@@ -146,6 +198,8 @@ class ToolboxResultCollector(
         )
         val notOwnedSorted = notOwned.sortedByDescending { it.rarity }
 
+        // 识别成功即记 DoubleSync 半边（不等落盘）；写盘仍异步
+        noteDoubleSyncOperSuccess()
         ioScope.launch {
             operBoxRepository.replaceAll(ownedSorted, notOwnedSorted)
             achievementRepository.report {

@@ -110,7 +110,7 @@ class AnalyzeTaskChainUseCase(
                     .mapNotNull { it.config as? WakeUpConfig }
                     .any { it.startGameEnabled },
                 preflightLogs = preflightLogs,
-                // 启动成功后再解锁 DoubleSync（见 ViewModel / 定时启动路径）
+                // 双 due 标记：启动成功后 arm，两侧识别成功再解锁（见 ToolboxResultCollector）
                 unlockDoubleSync = unlockDoubleSync,
             )
         )
@@ -164,7 +164,9 @@ data class TaskChainPlan(
      */
     val preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
     /**
-     * 更新数据节点同时到期干员+仓库时为 true；须在 MAA **启动成功** 后再解锁 DoubleSync。
+     * 更新数据节点同时到期干员+仓库时为 true。
+     * 启动成功后 arm [com.aliothmoon.maameow.maa.callback.ToolboxResultCollector]，
+     * 两侧识别成功后再报 TOOLBOX_RESULT(DepotOperBox)。
      */
     val unlockDoubleSync: Boolean = false,
 )

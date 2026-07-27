@@ -191,6 +191,24 @@ class DepotRepositoryTest {
     }
 
     @Test
+    fun countOf_visibleImmediatelyAfterReplaceAllSync_withoutAwaitingStore() {
+        // 模拟 MaaCore 回调线程：只 Sync 写内存，不等落盘
+        repository.replaceAllSync(listOf(DepotItem("30011", 90)))
+        assertEquals(
+            "TaskChainStart 重算必须立刻读到识别结果，不能等 DataStore",
+            90,
+            repository.countOf("30011"),
+        )
+    }
+
+    @Test
+    fun applyDropsSync_visibleToCountOfBeforePersist() {
+        repository.replaceAllSync(listOf(DepotItem("30011", 100)))
+        repository.applyDropsSync(listOf("30011" to 7))
+        assertEquals(107, repository.countOf("30011"))
+    }
+
+    @Test
     fun dropProfile_removesShard() = runBlocking {
         repository.replaceAll(listOf(DepotItem("30011", 100)))
 
