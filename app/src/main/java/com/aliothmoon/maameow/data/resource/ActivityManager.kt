@@ -322,6 +322,20 @@ class ActivityManager(
         return _resourceCollection.value?.isOpen == true
     }
 
+    /**
+     * 判断当前是否有 SideStory 活动进行中。
+     * 迁移自 WPF StageManager.IsActivityOpen。
+     *
+     * 只看 SideStory 类活动，排除资源收集（后者由 [isResourceCollectionOpen] 单独判定），
+     * 否则资源收集期间本方法也会为 true，库存保持的两个跳过开关就分不开了。
+     */
+    fun isActivityOpen(): Boolean {
+        return _activityStages.value.any { stage ->
+            val activity = stage.activity
+            activity != null && !activity.isResourceCollection && activity.isOpen
+        }
+    }
+
 
     /**
      * 构建合并关卡字典

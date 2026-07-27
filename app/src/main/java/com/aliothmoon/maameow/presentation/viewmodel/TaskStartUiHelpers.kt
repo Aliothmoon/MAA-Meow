@@ -13,6 +13,7 @@ import com.aliothmoon.maameow.presentation.view.panel.PanelDialogUiState
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextDynamic
 import com.aliothmoon.maameow.utils.i18n.uiTextJoin
+import com.aliothmoon.maameow.utils.i18n.uiTextLines
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 
 // 需用户确认的警告文案（手动模式），按确认项区分。各启动入口共享。
@@ -62,7 +63,10 @@ internal fun Context.resolveTaskStartDecisionMessage(decision: TaskStartDecision
             resolveTaskStartConfirmationMessage(decision.acknowledgement)
 
         is TaskStartDecision.Blocked ->
-            resolveTaskStartBlockedMessage(decision.reason, decision.clientTypes)
+            uiTextLines(
+                resolveTaskStartBlockedMessage(decision.reason, decision.clientTypes),
+                *decision.details.toTypedArray(),
+            )
     }
 
 internal fun Context.resolveTaskStartFailureMessage(result: MaaCompositionService.StartResult): UiText? {

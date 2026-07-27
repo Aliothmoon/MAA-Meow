@@ -691,6 +691,7 @@
     <string name="panel_task_type_mission">领取奖励</string>
     <string name="panel_task_type_auto_roguelike">自动肉鸽</string>
     <string name="panel_task_type_reclamation">生息演算</string>
+    <string name="panel_task_type_depot_maintain">库存保持</string>
 
     <!-- panel: profile -->
     <string name="panel_profile_title">配置管理</string>
@@ -1037,6 +1038,18 @@
     <string name="panel_fight_target_count">目标数量</string>
     <string name="panel_fight_resource_collection_open_tip">· 资源收集活动进行中（资源本全开放）</string>
     <string name="panel_fight_today_stage_hint_title">今日关卡小提示（%1$s）</string>
+
+    <!-- panel: depot maintain -->
+    <string name="panel_depot_update_before_start">任务开始前更新库存数据</string>
+    <string name="panel_depot_update_before_start_tip">任务开始时先执行一次仓库识别刷新库存数据；本次的缺口仍按识别前的库存计算</string>
+    <string name="panel_depot_skip_during_activity">活动期间跳过</string>
+    <string name="panel_depot_skip_during_resource">资源收集限时全天开放期间跳过</string>
+    <string name="panel_depot_add_plan">添加</string>
+    <string name="panel_depot_collapse_all">折叠</string>
+    <string name="panel_depot_target_inventory">目标库存</string>
+    <string name="panel_depot_stone_count">最多使用 N 个源石</string>
+    <string name="panel_depot_not_selected">未选择</string>
+    <string name="panel_depot_remove_plan">删除此计划</string>
 
     <!-- panel: mall -->
     <string name="panel_mall_advanced_options">高级选项</string>
@@ -1572,6 +1585,7 @@
     <string name="task_type_mission">领取奖励</string>
     <string name="task_type_auto_roguelike">自动肉鸽</string>
     <string name="task_type_reclamation">生息演算</string>
+    <string name="task_type_depot_maintain">库存保持</string>
 
     <!-- i18n: announcement -->
     <string name="announcement_title">重要公告</string>
@@ -1862,6 +1876,13 @@
     <string name="runlog_task_started">任务开始运行</string>
     <!-- TODO: MaaCore 适配代理倍率 7~10 后删除 -->
     <string name="runlog_series_locked">游戏更新后暂未适配代理倍率，已使用「不切换」，请手动在游戏内设置</string>
+    <string name="runlog_depot_plan_invalid_drop">计划 %1$d：未指定掉落物。</string>
+    <string name="runlog_depot_plan_zero_count">计划 %1$d：目标库存为 0。</string>
+    <string name="runlog_depot_plan_no_stage">计划 %1$d：关卡未指定或为「当前/上次」。</string>
+    <string name="runlog_depot_plan_stage_not_open">计划 %1$d：关卡「%2$s」未开放。</string>
+    <string name="runlog_depot_plan_inventory_enough">计划 %1$s：%2$s 库存已充足（当前 %3$d / 目标 %4$d）。</string>
+    <string name="runlog_depot_skipped_activity">当前有活动进行中，已跳过库存保持。</string>
+    <string name="runlog_depot_skipped_resource">当前处于资源收集限时全天开放期间，已跳过库存保持。</string>
     <string name="runlog_copilot_start">开始执行自动战斗</string>
     <string name="runlog_copilot_started">自动战斗开始运行</string>
     <string name="runlog_service_connecting">服务正在启动中，请稍后再试</string>

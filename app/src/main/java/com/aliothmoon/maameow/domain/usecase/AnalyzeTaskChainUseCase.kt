@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.domain.usecase
 
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Packages
+import com.aliothmoon.maameow.data.model.DepotMaintainConfig
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.model.MallConfig
@@ -23,6 +24,7 @@ import java.time.DayOfWeek
 class AnalyzeTaskChainUseCase(
     private val taskChainState: TaskChainState,
     private val resourceDataManager: ResourceDataManager,
+    private val depotMaintainExpander: DepotMaintainExpander,
 ) {
     operator fun invoke(chain: List<TaskChainNode>): AnalyzeTaskChainResult {
         val enabledNodes = chain.filter { it.enabled }.sortedBy { it.order }
@@ -53,23 +55,34 @@ class AnalyzeTaskChainUseCase(
             },
         )
 
+        val preflightLogs = mutableListOf<Pair<UiText, LogLevel>>()
+        // TODO: MaaCore 适配代理倍率 7~10 后删除
+        val seriesLocked = SeriesLock.isLocked(clientType)
+        if (seriesLocked && enabledNodes.any { it.config is FightConfig || it.config is DepotMaintainConfig }) {
+            preflightLogs += uiTextOf(R.string.runlog_series_locked) to LogLevel.WARNING
+        }
+
         val params = enabledNodes.flatMap { node ->
             if (isSkippedByWeeklySchedule(node, serverDayOfWeek)) {
                 return@flatMap emptyList()
             }
-            node.config.toTaskParams(ctx).map { it.copy(nodeId = node.id) }
+            val config = node.config
+            val nodeParams = if (config is DepotMaintainConfig) {
+                val result = depotMaintainExpander.expand(config, seriesLocked)
+                preflightLogs += result.logs
+                result.params
+            } else {
+                config.toTaskParams(ctx)
+            }
+            nodeParams.map { it.copy(nodeId = node.id) }
         }
 
         if (params.isEmpty()) {
             return AnalyzeTaskChainResult.Blocked(
                 reason = AnalyzeTaskChainFailureReason.NO_EXECUTABLE_TASKS,
+                // 逐条计划的失败原因都在这里，丢掉用户就只剩一句「没有可执行的任务」
+                preflightLogs = preflightLogs,
             )
-        }
-
-        val preflightLogs = mutableListOf<Pair<UiText, LogLevel>>()
-        // TODO: MaaCore 适配代理倍率 7~10 后删除
-        if (SeriesLock.isLocked(clientType) && enabledNodes.any { it.config is FightConfig }) {
-            preflightLogs += uiTextOf(R.string.runlog_series_locked) to LogLevel.WARNING
         }
 
         return AnalyzeTaskChainResult.Ready(
@@ -147,5 +160,7 @@ sealed interface AnalyzeTaskChainResult {
     data class Blocked(
         val reason: AnalyzeTaskChainFailureReason,
         val clientTypes: List<String> = emptyList(),
+        /** 拦截前已产生的诊断日志（如库存保持逐条计划的失败原因），由调用方展示 */
+        val preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
     ) : AnalyzeTaskChainResult
 }

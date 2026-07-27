@@ -26,7 +26,15 @@ class AnalyzeTaskChainUseCaseTest {
         every { getClientType() } returns "Official"
     }
     private val resourceDataManager = mockk<ResourceDataManager>(relaxed = true)
-    private val useCase = AnalyzeTaskChainUseCase(taskChainState, resourceDataManager)
+    private val useCase = AnalyzeTaskChainUseCase(
+        taskChainState = taskChainState,
+        resourceDataManager = resourceDataManager,
+        depotMaintainExpander = DepotMaintainExpander(
+            depotRepository = mockk(relaxed = true),
+            activityManager = mockk(relaxed = true),
+            itemHelper = mockk(relaxed = true),
+        ),
+    )
 
     @Test
     fun returnsBlocked_whenNoTaskIsEnabled() {

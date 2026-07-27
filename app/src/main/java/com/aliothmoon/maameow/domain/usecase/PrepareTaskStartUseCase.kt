@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.domain.usecase
 
 import com.aliothmoon.maameow.data.model.TaskChainNode
+import com.aliothmoon.maameow.utils.i18n.UiText
 
 /**
  * 主任务链的启动决策：链分析([AnalyzeTaskChainUseCase]) + 游戏就绪性闸门([CheckGameReadinessUseCase])。
@@ -19,6 +20,7 @@ class PrepareTaskStartUseCase(
                 return TaskStartDecision.Blocked(
                     reason = analyzeResult.reason.toDecisionReason(),
                     clientTypes = analyzeResult.clientTypes,
+                    details = analyzeResult.preflightLogs.map { it.first },
                 )
             }
         }
@@ -74,6 +76,8 @@ sealed interface TaskStartDecision {
     data class Blocked(
         val reason: TaskStartDecisionReason,
         val clientTypes: List<String> = emptyList(),
+        /** 拦截的具体原因明细，附在拦截文案之后（如库存保持逐条计划为何被跳过） */
+        val details: List<UiText> = emptyList(),
     ) : TaskStartDecision
 }
 

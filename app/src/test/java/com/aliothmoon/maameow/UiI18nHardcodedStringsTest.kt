@@ -60,6 +60,7 @@ class UiI18nHardcodedStringsTest {
             TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/LogPanel.kt"),
             TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/RecruitCalcPanel.kt"),
             TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/WakeUpConfigPanel.kt"),
+            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/depot/DepotMaintainConfigPanel.kt"),
             TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/fight/MedicineAndStoneSection.kt"),
             TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/fight/SpecifiedDropsSection.kt"),
             TargetFile(
