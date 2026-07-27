@@ -22,6 +22,11 @@ enum class TaskTypeInfo(
     MISSION(R.string.task_type_mission, { AwardConfig() }),
     AUTO_ROGUELIKE(R.string.task_type_auto_roguelike, { RoguelikeConfig() }),
     RECLAMATION(R.string.task_type_reclamation, { ReclamationConfig() }),
+    USER_DATA_UPDATE(
+        R.string.task_type_user_data_update,
+        { UserDataUpdateConfig() },
+        inDefaultChain = true,
+    ),
     DEPOT_MAINTAIN(
         R.string.task_type_depot_maintain,
         { DepotMaintainConfig() },

@@ -5,13 +5,19 @@ import com.aliothmoon.maameow.data.model.AwardConfig
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.data.model.TaskChainNode
+import com.aliothmoon.maameow.data.model.UserDataUpdateConfig
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.repository.DepotRepository
+import com.aliothmoon.maameow.data.repository.DepotSnapshot
+import com.aliothmoon.maameow.data.repository.OperBoxRepository
+import com.aliothmoon.maameow.data.repository.OperBoxSnapshot
 import com.aliothmoon.maameow.data.resource.CharacterInfo
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -26,11 +32,18 @@ class AnalyzeTaskChainUseCaseTest {
         every { getClientType() } returns "Official"
     }
     private val resourceDataManager = mockk<ResourceDataManager>(relaxed = true)
+    private val operBoxRepository = mockk<OperBoxRepository>(relaxed = true) {
+        every { snapshot } returns MutableStateFlow(OperBoxSnapshot())
+    }
+    private val depotRepository = mockk<DepotRepository>(relaxed = true) {
+        every { snapshot } returns MutableStateFlow(DepotSnapshot())
+    }
     private val useCase = AnalyzeTaskChainUseCase(
         taskChainState = taskChainState,
         resourceDataManager = resourceDataManager,
         activityManager = mockk(relaxed = true),
-        depotRepository = mockk(relaxed = true),
+        depotRepository = depotRepository,
+        operBoxRepository = operBoxRepository,
         itemHelper = mockk(relaxed = true),
     )
 
@@ -180,5 +193,49 @@ class AnalyzeTaskChainUseCaseTest {
             .jsonObject["core_char"]?.jsonPrimitive?.content
 
         assertEquals("维什戴尔", coreChar)
+    }
+
+    @Test
+    fun userDataUpdate_bothDue_setsUnlockDoubleSyncWithoutSideEffect() {
+        // 从未同步 → 双 due；flag 仅进 plan，UseCase 本身不解锁成就
+        val result = useCase(
+            listOf(
+                TaskChainNode(
+                    name = "更新数据",
+                    enabled = true,
+                    config = UserDataUpdateConfig(),
+                )
+            )
+        )
+
+        val ready = result as AnalyzeTaskChainResult.Ready
+        assertEquals(
+            listOf(MaaTaskType.OPER_BOX, MaaTaskType.DEPOT),
+            ready.plan.params.map { it.type },
+        )
+        assertTrue(ready.plan.unlockDoubleSync)
+    }
+
+    @Test
+    fun userDataUpdate_onlyOneSideDue_doesNotSetUnlockDoubleSync() {
+        every { operBoxRepository.snapshot } returns MutableStateFlow(
+            OperBoxSnapshot(syncTimeMillis = System.currentTimeMillis()),
+        )
+        every { depotRepository.snapshot } returns MutableStateFlow(DepotSnapshot())
+
+        val result = useCase(
+            listOf(
+                TaskChainNode(
+                    name = "更新数据",
+                    enabled = true,
+                    // 干员刚同步过但间隔为每次 → 两侧仍都 due；改用仅开仓库验证单侧
+                    config = UserDataUpdateConfig(updateOperBox = false, updateDepot = true),
+                )
+            )
+        )
+
+        val ready = result as AnalyzeTaskChainResult.Ready
+        assertEquals(listOf(MaaTaskType.DEPOT), ready.plan.params.map { it.type })
+        assertFalse(ready.plan.unlockDoubleSync)
     }
 }

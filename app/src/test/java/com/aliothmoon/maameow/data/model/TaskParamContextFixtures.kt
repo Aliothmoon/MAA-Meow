@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.model
 
 import com.aliothmoon.maameow.data.repository.DepotRepository
+import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
@@ -10,7 +11,7 @@ import io.mockk.mockk
 /**
  * 测试用 [TaskParamContext] 工厂。
  *
- * 四个依赖默认用 relaxed mock；需要特定行为时用 [copy] 或具名参数覆盖。
+ * 依赖默认用 relaxed mock；需要特定行为时用 [copy] 或具名参数覆盖。
  * 不给 [TaskParamContext] 本身加默认值 —— 那会在生产路径里滋生「说谎的默认」。
  */
 fun testTaskParamContext(
@@ -18,6 +19,7 @@ fun testTaskParamContext(
     chainAllowsCreditFight: Boolean = false,
     activityManager: ActivityManager = mockk(relaxed = true),
     depotRepository: DepotRepository = mockk(relaxed = true),
+    operBoxRepository: OperBoxRepository = mockk(relaxed = true),
     itemHelper: ItemHelper = mockk(relaxed = true),
     resourceDataManager: ResourceDataManager = mockk(relaxed = true),
 ): TaskParamContext = TaskParamContext(
@@ -25,6 +27,7 @@ fun testTaskParamContext(
     chainAllowsCreditFight = chainAllowsCreditFight,
     activityManager = activityManager,
     depotRepository = depotRepository,
+    operBoxRepository = operBoxRepository,
     itemHelper = itemHelper,
     resourceDataManager = resourceDataManager,
 )

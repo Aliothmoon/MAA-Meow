@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.model
 
 import com.aliothmoon.maameow.data.repository.DepotRepository
+import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
@@ -41,7 +42,8 @@ import com.aliothmoon.maameow.data.resource.ResourceDataManager
  * @param chainAllowsCreditFight 整条任务链是否允许信用作战借助战打 OF-1。
  *   仅表示「链级前提成立」，是否真的下发还要与各 MallConfig 自身的开关取与。
  * @param activityManager 关卡开放判定、活动开放状态、活动临期理智药天数。
- * @param depotRepository 仓库材料存量，供库存保持计算缺口。
+ * @param depotRepository 仓库材料存量，供库存保持计算缺口、更新数据触发间隔。
+ * @param operBoxRepository 干员箱快照，供更新数据触发间隔。
  * @param itemHelper 材料 ID → 名称，仅用于日志展示。
  * @param resourceDataManager 干员名归一化：MaaCore 的 core_char 仅认简中名
  *   （BattleDataConfig::find_oper 只匹配 name 字段，繁中/英文名会使 get_role 返回 Unknown，
@@ -53,6 +55,7 @@ data class TaskParamContext(
     val chainAllowsCreditFight: Boolean,
     val activityManager: ActivityManager,
     val depotRepository: DepotRepository,
+    val operBoxRepository: OperBoxRepository,
     val itemHelper: ItemHelper,
     val resourceDataManager: ResourceDataManager,
 )

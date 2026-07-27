@@ -57,12 +57,14 @@ import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskParamProvider
 import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
+import com.aliothmoon.maameow.data.model.UserDataUpdateConfig
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.view.panel.depot.DepotMaintainConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.fight.FightConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.mall.MallConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.roguelike.RoguelikeConfigPanel
+import com.aliothmoon.maameow.presentation.view.panel.userdata.UserDataUpdateConfigPanel
 
 @Composable
 fun TaskConfigPanel(
@@ -162,6 +164,10 @@ fun TaskConfigPanel(
                         )
 
                         is ReclamationConfig -> ReclamationConfigPanel(
+                            config = cfg, onConfigChange = onConfigChange
+                        )
+
+                        is UserDataUpdateConfig -> UserDataUpdateConfigPanel(
                             config = cfg, onConfigChange = onConfigChange
                         )
 
@@ -405,6 +411,7 @@ private fun taskTypeLabel(typeInfo: TaskTypeInfo): String {
         TaskTypeInfo.MISSION -> stringResource(R.string.panel_task_type_mission)
         TaskTypeInfo.AUTO_ROGUELIKE -> stringResource(R.string.panel_task_type_auto_roguelike)
         TaskTypeInfo.RECLAMATION -> stringResource(R.string.panel_task_type_reclamation)
+        TaskTypeInfo.USER_DATA_UPDATE -> stringResource(R.string.panel_task_type_user_data_update)
         TaskTypeInfo.DEPOT_MAINTAIN -> stringResource(R.string.panel_task_type_depot_maintain)
     }
 }

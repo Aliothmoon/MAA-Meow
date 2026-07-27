@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.schedule.service
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
@@ -28,6 +29,7 @@ class ForegroundScheduleStarter(
     private val triggerLogger: ScheduleTriggerLogger,
     private val scheduleRepository: ScheduleStrategyRepository,
     private val appSettingsManager: AppSettingsManager,
+    private val achievementReporter: AchievementReporter,
 ) {
     private val executing = AtomicBoolean(false)
 
@@ -112,6 +114,9 @@ class ForegroundScheduleStarter(
 
                         if (result is MaaCompositionService.StartResult.Success) {
                             triggerLogger.append("任务启动成功，MAA版本: ${result.version}")
+                            if (decision.plan.unlockDoubleSync) {
+                                achievementReporter.unlockDoubleSync()
+                            }
                             recordResult(request, ExecutionResult.STARTED)
                         } else {
                             val failMsg = "MaaCore 启动失败: $result"

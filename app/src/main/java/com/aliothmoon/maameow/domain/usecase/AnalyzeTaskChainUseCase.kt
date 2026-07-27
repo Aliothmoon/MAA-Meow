@@ -11,6 +11,7 @@ import com.aliothmoon.maameow.data.model.TaskParamContext
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.repository.DepotRepository
+import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
@@ -29,6 +30,7 @@ class AnalyzeTaskChainUseCase(
     private val resourceDataManager: ResourceDataManager,
     private val activityManager: ActivityManager,
     private val depotRepository: DepotRepository,
+    private val operBoxRepository: OperBoxRepository,
     private val itemHelper: ItemHelper,
 ) {
     operator fun invoke(chain: List<TaskChainNode>): AnalyzeTaskChainResult {
@@ -57,6 +59,7 @@ class AnalyzeTaskChainUseCase(
             chainAllowsCreditFight = creditFightAvailability.isAvailable,
             activityManager = activityManager,
             depotRepository = depotRepository,
+            operBoxRepository = operBoxRepository,
             itemHelper = itemHelper,
             resourceDataManager = resourceDataManager,
         )
@@ -69,14 +72,16 @@ class AnalyzeTaskChainUseCase(
             preflightLogs += uiTextOf(R.string.runlog_series_locked) to LogLevel.WARNING
         }
 
+        var unlockDoubleSync = false
         val params = enabledNodes.flatMap { node ->
             if (isSkippedByWeeklySchedule(node, serverDayOfWeek)) {
                 return@flatMap emptyList()
             }
             val result = node.config.toTaskParams(ctx)
             preflightLogs += result.logs
-            result.params.map { params ->
-                val withNode = params.copy(nodeId = node.id)
+            if (result.unlockDoubleSync) unlockDoubleSync = true
+            result.params.map { taskParams ->
+                val withNode = taskParams.copy(nodeId = node.id)
                 // 理智作战的目标库存日志标签用节点名（用户可重命名），比固定 "Fight" 更可读
                 val target = withNode.dropTarget
                 if (node.config is FightConfig && target != null) {
@@ -105,6 +110,8 @@ class AnalyzeTaskChainUseCase(
                     .mapNotNull { it.config as? WakeUpConfig }
                     .any { it.startGameEnabled },
                 preflightLogs = preflightLogs,
+                // 启动成功后再解锁 DoubleSync（见 ViewModel / 定时启动路径）
+                unlockDoubleSync = unlockDoubleSync,
             )
         )
     }
@@ -156,6 +163,10 @@ data class TaskChainPlan(
      * UseCase 保持无副作用，由 MaaCompositionService 在 startSession 之后统一 append。
      */
     val preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
+    /**
+     * 更新数据节点同时到期干员+仓库时为 true；须在 MAA **启动成功** 后再解锁 DoubleSync。
+     */
+    val unlockDoubleSync: Boolean = false,
 )
 
 enum class AnalyzeTaskChainFailureReason {

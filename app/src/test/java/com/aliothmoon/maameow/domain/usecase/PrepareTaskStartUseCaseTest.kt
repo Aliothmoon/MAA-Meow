@@ -32,6 +32,7 @@ class PrepareTaskStartUseCaseTest {
         resourceDataManager = resourceDataManager,
         activityManager = mockk(relaxed = true),
         depotRepository = mockk(relaxed = true),
+        operBoxRepository = mockk(relaxed = true),
         itemHelper = mockk(relaxed = true),
     )
 

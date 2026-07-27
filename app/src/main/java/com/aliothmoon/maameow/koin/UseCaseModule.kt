@@ -17,6 +17,7 @@ val useCaseModule = module {
             resourceDataManager = get(),
             activityManager = get(),
             depotRepository = get(),
+            operBoxRepository = get(),
             itemHelper = get(),
         )
     }

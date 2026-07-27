@@ -55,6 +55,8 @@ class UiI18nHardcodedStringsTest {
             ),
             TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/AwardConfigPanel.kt"),
             TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/DepotRecognitionPanel.kt"),
+            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/OperBoxPanel.kt"),
+            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/userdata/UserDataUpdateConfigPanel.kt"),
             TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/MiniGamePanel.kt"),
             TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/TaskListPanel.kt"),
             TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/LogPanel.kt"),

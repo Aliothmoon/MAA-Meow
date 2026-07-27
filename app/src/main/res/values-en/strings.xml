@@ -636,6 +636,7 @@
     <string name="panel_task_type_mission">Collect Rewards</string>
     <string name="panel_task_type_auto_roguelike">Auto I.S.</string>
     <string name="panel_task_type_reclamation">Reclamation Algorithm</string>
+    <string name="panel_task_type_user_data_update">Update doctor data</string>
     <string name="panel_task_type_depot_maintain">Depot Maintain</string>
 
     <!-- panel: profile -->
@@ -989,6 +990,15 @@
     <string name="panel_fight_today_stage_hint_title">Today\'s stage tips (%1$s)</string>
 
     <!-- panel: depot maintain -->
+    <string name="panel_toolbox_last_sync">Last sync: %1$s</string>
+    <string name="panel_toolbox_never_synced">Not synced yet</string>
+    <string name="panel_userdata_update_oper_box">Operator recognition</string>
+    <string name="panel_userdata_update_depot">Depot recognition</string>
+    <string name="panel_userdata_trigger_interval">Trigger interval</string>
+    <string name="panel_userdata_interval_every_time">Every time</string>
+    <string name="panel_userdata_interval_daily">Daily</string>
+    <string name="panel_userdata_interval_weekly">Weekly</string>
+
     <string name="panel_depot_update_before_start">Update inventory before starting</string>
     <string name="panel_depot_update_before_start_tip">Runs depot recognition first to refresh inventory data; this run\'s deficits are still based on the inventory from before that recognition</string>
     <string name="panel_depot_skip_during_activity">Skip during event</string>
@@ -1533,6 +1543,7 @@
     <string name="task_type_mission">Rewards</string>
     <string name="task_type_auto_roguelike">Auto I.S.</string>
     <string name="task_type_reclamation">Recl. Alg.</string>
+    <string name="task_type_user_data_update">Update doctor data</string>
     <string name="task_type_depot_maintain">Depot Maintain</string>
 
     <!-- i18n: announcement -->

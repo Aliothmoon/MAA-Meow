@@ -4,6 +4,7 @@ import android.app.Application
 import com.aliothmoon.maameow.data.datasource.AppDownloader
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.repository.DepotRepository
+import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.koin.appModule
@@ -43,6 +44,7 @@ class MaaApplication : Application() {
     private val scheduleRepository: ScheduleStrategyRepository by inject()
     private val scheduleAlarmManager: ScheduleAlarmManager by inject()
     private val depotRepository: DepotRepository by inject()
+    private val operBoxRepository: OperBoxRepository by inject()
     override fun onCreate() {
         super.onCreate()
         val app = this
@@ -65,6 +67,7 @@ class MaaApplication : Application() {
         unifiedStateDispatcher.start()
         gameMuteCoordinator.startAutoRestore()
         depotRepository.start()
+        operBoxRepository.start()
         cleanCachedUpdateApks()
         doSyncScheduleAlarms()
     }

@@ -24,4 +24,8 @@ sealed interface TaskParamProvider {
 data class TaskParamResult(
     val params: List<MaaTaskParams>,
     val logs: List<Pair<UiText, LogLevel>> = emptyList(),
+    /**
+     * 本节点展开时同时到期干员箱+仓库（更新数据任务），启动成功后解锁 DoubleSync 成就。
+     */
+    val unlockDoubleSync: Boolean = false,
 )

@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.domain.service
 
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
+import com.aliothmoon.maameow.data.achievement.AchievementIds
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import kotlinx.coroutines.CoroutineScope
@@ -20,6 +21,8 @@ class AchievementReporter(
         taskCount: Int,
         launchesGame: Boolean,
         gameAliveBeforeStart: Boolean? = null,
+        /** 更新数据任务双识别同时到期；仅应在启动成功后传入 true */
+        unlockDoubleSync: Boolean = false,
     ) {
         val startedAfterStop = taskStoppedBeforeNextStart.getAndSet(false)
         report {
@@ -32,6 +35,14 @@ class AchievementReporter(
                 "gameAliveBeforeStart" to gameAliveBeforeStart
             }
         }
+        if (unlockDoubleSync) {
+            unlockDoubleSync()
+        }
+    }
+
+    /** 定时启动等未走 [reportTaskStarted] 的路径，在启动成功后单独解锁 DoubleSync。 */
+    fun unlockDoubleSync() {
+        scope.launch { repository.unlock(AchievementIds.DOUBLE_SYNC) }
     }
 
     fun reportTaskStopped() {

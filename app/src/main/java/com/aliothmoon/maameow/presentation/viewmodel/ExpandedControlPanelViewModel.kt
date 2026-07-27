@@ -285,6 +285,7 @@ class ExpandedControlPanelViewModel(
                     taskCount = plan.params.size,
                     launchesGame = plan.launchesGame,
                     gameAliveBeforeStart = plan.gameAliveBeforeStart,
+                    unlockDoubleSync = plan.unlockDoubleSync,
                 )
                 // 成功时用 Toast 简短提示
                 _effects.send(UiEffect.toast(message))
