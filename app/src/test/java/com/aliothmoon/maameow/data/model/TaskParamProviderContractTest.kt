@@ -1,6 +1,10 @@
 package com.aliothmoon.maameow.data.model
 
+import com.aliothmoon.maameow.data.resource.CharacterInfo
+import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.maa.task.MaaTaskType
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -16,7 +20,9 @@ import org.junit.Test
  */
 class TaskParamProviderContractTest {
 
-    private val ctx = TaskParamContext(clientType = "Official", normalizeCoreChar = { it })
+    private val ctx = testTaskParamContext(
+        activityManager = alwaysOpenActivityManager(),
+    )
 
     @Test
     fun everyNonContainerConfig_expandsToExactlyOneTaskOfItsOwnType() {
@@ -32,9 +38,10 @@ class TaskParamProviderContractTest {
         )
 
         configs.forEach { (config, expectedType) ->
-            val tasks = config.toTaskParams(ctx)
-            assertEquals("${config::class.simpleName} 应恰好产出 1 个任务", 1, tasks.size)
-            assertEquals(expectedType, tasks.single().type)
+            val result = config.toTaskParams(ctx)
+            assertEquals("${config::class.simpleName} 应恰好产出 1 个任务", 1, result.params.size)
+            assertEquals(expectedType, result.params.single().type)
+            assertTrue(result.logs.isEmpty())
         }
     }
 
@@ -64,13 +71,12 @@ class TaskParamProviderContractTest {
     }
 
     @Test
-    fun roguelikeConfig_normalizesCoreCharThroughContext() {
+    fun roguelikeConfig_normalizesCoreCharThroughResourceDataManager() {
+        val resourceDataManager = mockk<ResourceDataManager> {
+            every { getCharacterByNameOrAlias("維什戴爾") } returns CharacterInfo(name = "维什戴尔")
+        }
         val config = RoguelikeConfig(coreChar = "維什戴爾")
-
-        val params = jsonOf(
-            config,
-            ctx.copy(normalizeCoreChar = { if (it == "維什戴爾") "维什戴尔" else it }),
-        )
+        val params = jsonOf(config, ctx.copy(resourceDataManager = resourceDataManager))
 
         assertEquals("维什戴尔", params["core_char"]?.jsonPrimitive?.content)
     }
@@ -108,5 +114,5 @@ class TaskParamProviderContractTest {
         jsonOf(config, context)["credit_fight"]!!.jsonPrimitive.content.toBoolean()
 
     private fun jsonOf(config: TaskParamProvider, context: TaskParamContext) =
-        Json.parseToJsonElement(config.toTaskParams(context).single().params).jsonObject
+        Json.parseToJsonElement(config.toTaskParams(context).params.single().params).jsonObject
 }

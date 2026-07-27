@@ -5,7 +5,6 @@ import com.aliothmoon.maameow.domain.enums.InfrastMode
 import com.aliothmoon.maameow.domain.enums.InfrastRoomType
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
-import com.aliothmoon.maameow.data.model.TaskParamProvider
 import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -202,12 +201,8 @@ data class InfrastConfig(
     val customPlanNames: List<String> = emptyList()
 ) : TaskParamProvider {
 
-    /**
-     * 将心情阈值转换为MAA Core需要的浮点数格式(0.0-1.0)
-     */
-    fun getDormThresholdAsFloat(): Double = dormThreshold / 100.0
-    override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
-        val threshold = getDormThresholdAsFloat()
+    override fun toTaskParams(ctx: TaskParamContext): TaskParamResult {
+        val threshold = dormThreshold / 100.0
         val paramsJson = buildJsonObject {
             put("facility", buildJsonArray {
                 facilities.filter { it.second }
@@ -232,7 +227,7 @@ data class InfrastConfig(
             }
         }
 
-        return listOf(MaaTaskParams(MaaTaskType.INFRAST, paramsJson.toString()))
+        return TaskParamResult(listOf(MaaTaskParams(MaaTaskType.INFRAST, paramsJson.toString())))
     }
 
     /**

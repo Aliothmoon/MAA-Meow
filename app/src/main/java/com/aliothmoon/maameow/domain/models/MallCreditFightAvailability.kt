@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.domain.models
 
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.TaskChainNode
+import com.aliothmoon.maameow.data.resource.ActivityManager
 
 data class MallCreditFightAvailability(
     val isAvailable: Boolean,
@@ -18,14 +19,18 @@ data class MallCreditFightAvailability(
         }
 }
 
-fun resolveMallCreditFightAvailability(nodes: List<TaskChainNode>): MallCreditFightAvailability {
+fun resolveMallCreditFightAvailability(
+    nodes: List<TaskChainNode>,
+    activityManager: ActivityManager,
+): MallCreditFightAvailability {
     val blockingAvailability = nodes
         .asSequence()
         .filter { it.enabled }
         .sortedBy { it.order }
         .firstNotNullOfOrNull { node ->
             val fightConfig = node.config as? FightConfig ?: return@firstNotNullOfOrNull null
-            val blockingStageIndex = findBlockingStageIndex(fightConfig) ?: return@firstNotNullOfOrNull null
+            val blockingStageIndex = findBlockingStageIndex(fightConfig, activityManager)
+                ?: return@firstNotNullOfOrNull null
             MallCreditFightAvailability(
                 isAvailable = false,
                 blockingTaskName = node.name,
@@ -37,8 +42,11 @@ fun resolveMallCreditFightAvailability(nodes: List<TaskChainNode>): MallCreditFi
     return blockingAvailability ?: MallCreditFightAvailability(isAvailable = true)
 }
 
-private fun findBlockingStageIndex(config: FightConfig): Int? {
-    if (config.getActiveStage().isNotBlank()) {
+private fun findBlockingStageIndex(
+    config: FightConfig,
+    activityManager: ActivityManager,
+): Int? {
+    if (config.getActiveStage(activityManager).isNotBlank()) {
         return null
     }
 

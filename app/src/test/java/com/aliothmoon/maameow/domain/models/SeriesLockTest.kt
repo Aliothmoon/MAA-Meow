@@ -1,7 +1,8 @@
 package com.aliothmoon.maameow.domain.models
 
 import com.aliothmoon.maameow.data.model.FightConfig
-import com.aliothmoon.maameow.data.model.TaskParamContext
+import com.aliothmoon.maameow.data.model.alwaysOpenActivityManager
+import com.aliothmoon.maameow.data.model.testTaskParamContext
 import com.aliothmoon.maameow.data.resource.ServerTimezone
 import io.mockk.every
 import io.mockk.mockkObject
@@ -73,7 +74,10 @@ class SeriesLockTest {
 }
 
 private fun seriesOf(config: FightConfig, clientType: String): Int {
-    val ctx = TaskParamContext(clientType = clientType, normalizeCoreChar = { it })
-    val params = config.toTaskParams(ctx).single().params
+    val ctx = testTaskParamContext(
+        clientType = clientType,
+        activityManager = alwaysOpenActivityManager(),
+    )
+    val params = config.toTaskParams(ctx).params.single().params
     return Json.parseToJsonElement(params).jsonObject["series"]!!.jsonPrimitive.content.toInt()
 }

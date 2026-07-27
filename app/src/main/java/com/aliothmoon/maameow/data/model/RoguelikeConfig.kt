@@ -72,7 +72,7 @@ data class RoguelikeConfig(
     // 通用高级设置
     val delayAbortUntilCombatComplete: Boolean = false  // 战斗结束前延迟停止
 ) : TaskParamProvider {
-    override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
+    override fun toTaskParams(ctx: TaskParamContext): TaskParamResult {
         // WPF 条件变量
         val squadIsProfessional = mode == RoguelikeMode.Collectible && theme != "Phantom" &&
                 squad in listOf("突击战术分队", "堡垒战术分队", "远程战术分队", "破坏战术分队")
@@ -86,7 +86,13 @@ data class RoguelikeConfig(
             put("mode", mode.value)  // MaaCore 期望整数值
             if (squad.isNotBlank()) put("squad", squad)
             if (roles.isNotBlank()) put("roles", roles)
-            if (coreChar.isNotBlank()) put("core_char", ctx.normalizeCoreChar(coreChar))
+            if (coreChar.isNotBlank()) {
+                // MaaCore 的 core_char 仅认简中名（BattleDataConfig::find_oper 只匹配 name 字段，
+                // 繁中/英文名会使 get_role 返回 Unknown 导致开局干员选择失败）
+                val normalized = ctx.resourceDataManager
+                    .getCharacterByNameOrAlias(coreChar)?.name ?: coreChar
+                put("core_char", normalized)
+            }
             put("starts_count", startsCount)
 
             //  投资相关 
@@ -193,7 +199,7 @@ data class RoguelikeConfig(
                 put("start_with_seed", seed)
             }
         }
-        return listOf(MaaTaskParams(MaaTaskType.ROGUELIKE, paramsJson.toString()))
+        return TaskParamResult(listOf(MaaTaskParams(MaaTaskType.ROGUELIKE, paramsJson.toString())))
     }
 
     companion object {

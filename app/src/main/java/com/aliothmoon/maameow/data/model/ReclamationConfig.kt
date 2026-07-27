@@ -74,7 +74,7 @@ data class ReclamationConfig(
         }
     }
 
-    override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
+    override fun toTaskParams(ctx: TaskParamContext): TaskParamResult {
         // 对齐 WPF: 全角分号→半角;空字符串→ReclamationToolToCraftPlaceholder;按 ; 切分;仅 trim,不过滤空 entry
         val source = toolToCraft.ifEmpty { defaultToolToCraft(ctx.clientType) }
         val tools = source.replace('；', ';').split(';').map { it.trim() }
@@ -89,6 +89,6 @@ data class ReclamationConfig(
             }
             put("clear_store", clearStore)
         }
-        return listOf(MaaTaskParams(MaaTaskType.RECLAMATION, paramsJson.toString()))
+        return TaskParamResult(listOf(MaaTaskParams(MaaTaskType.RECLAMATION, paramsJson.toString())))
     }
 }

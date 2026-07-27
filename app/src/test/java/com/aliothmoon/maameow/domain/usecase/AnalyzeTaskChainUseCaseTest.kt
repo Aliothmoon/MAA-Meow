@@ -29,11 +29,9 @@ class AnalyzeTaskChainUseCaseTest {
     private val useCase = AnalyzeTaskChainUseCase(
         taskChainState = taskChainState,
         resourceDataManager = resourceDataManager,
-        depotMaintainExpander = DepotMaintainExpander(
-            depotRepository = mockk(relaxed = true),
-            activityManager = mockk(relaxed = true),
-            itemHelper = mockk(relaxed = true),
-        ),
+        activityManager = mockk(relaxed = true),
+        depotRepository = mockk(relaxed = true),
+        itemHelper = mockk(relaxed = true),
     )
 
     @Test

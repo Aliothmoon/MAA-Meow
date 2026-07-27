@@ -10,6 +10,9 @@ import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskParamContext
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.repository.DepotRepository
+import com.aliothmoon.maameow.data.resource.ActivityManager
+import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.data.resource.ServerTimezone
 import com.aliothmoon.maameow.domain.models.MallCreditFightAvailability
@@ -24,7 +27,9 @@ import java.time.DayOfWeek
 class AnalyzeTaskChainUseCase(
     private val taskChainState: TaskChainState,
     private val resourceDataManager: ResourceDataManager,
-    private val depotMaintainExpander: DepotMaintainExpander,
+    private val activityManager: ActivityManager,
+    private val depotRepository: DepotRepository,
+    private val itemHelper: ItemHelper,
 ) {
     operator fun invoke(chain: List<TaskChainNode>): AnalyzeTaskChainResult {
         val enabledNodes = chain.filter { it.enabled }.sortedBy { it.order }
@@ -42,7 +47,7 @@ class AnalyzeTaskChainUseCase(
         }
 
         val clientType = taskChainState.getClientType()
-        val creditFightAvailability = resolveMallCreditFightAvailability(enabledNodes)
+        val creditFightAvailability = resolveMallCreditFightAvailability(enabledNodes, activityManager)
         val serverDayOfWeek = ServerTimezone.getYjDayOfWeek(clientType)
 
         logCreditFightWarning(enabledNodes, creditFightAvailability)
@@ -50,15 +55,17 @@ class AnalyzeTaskChainUseCase(
         val ctx = TaskParamContext(
             clientType = clientType,
             chainAllowsCreditFight = creditFightAvailability.isAvailable,
-            normalizeCoreChar = { coreChar ->
-                resourceDataManager.getCharacterByNameOrAlias(coreChar)?.name ?: coreChar
-            },
+            activityManager = activityManager,
+            depotRepository = depotRepository,
+            itemHelper = itemHelper,
+            resourceDataManager = resourceDataManager,
         )
 
         val preflightLogs = mutableListOf<Pair<UiText, LogLevel>>()
         // TODO: MaaCore 适配代理倍率 7~10 后删除
-        val seriesLocked = SeriesLock.isLocked(clientType)
-        if (seriesLocked && enabledNodes.any { it.config is FightConfig || it.config is DepotMaintainConfig }) {
+        if (SeriesLock.isLocked(clientType) &&
+            enabledNodes.any { it.config is FightConfig || it.config is DepotMaintainConfig }
+        ) {
             preflightLogs += uiTextOf(R.string.runlog_series_locked) to LogLevel.WARNING
         }
 
@@ -66,15 +73,9 @@ class AnalyzeTaskChainUseCase(
             if (isSkippedByWeeklySchedule(node, serverDayOfWeek)) {
                 return@flatMap emptyList()
             }
-            val config = node.config
-            val nodeParams = if (config is DepotMaintainConfig) {
-                val result = depotMaintainExpander.expand(config, seriesLocked)
-                preflightLogs += result.logs
-                result.params
-            } else {
-                config.toTaskParams(ctx)
-            }
-            nodeParams.map { it.copy(nodeId = node.id) }
+            val result = node.config.toTaskParams(ctx)
+            preflightLogs += result.logs
+            result.params.map { it.copy(nodeId = node.id) }
         }
 
         if (params.isEmpty()) {

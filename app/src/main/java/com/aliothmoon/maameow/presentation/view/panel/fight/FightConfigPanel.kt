@@ -527,13 +527,13 @@ private fun GroupedStageSelectionSection(
     val stage1Open = config.stage1.isBlank() || activityManager.isStageOpen(config.stage1)
     val annihilationOptions = localizedAnnihilationOptions()
 
-    // 当前执行关卡：直接复用 config.getActiveStage()，与实际下发 core 的选关完全一致
+    // 当前执行关卡：直接复用 config.getActiveStage(activityManager)，与实际下发 core 的选关完全一致
     // （对齐 WPF：tip 与 SerializeTask 共用 GetFightStage，避免「显示」与「执行」分叉）
     val executingStage = remember(
         config.stage1, config.alternateStages, config.useAlternateStage,
-        config.customStageCode, config.stageResetMode, stageGroups
+        config.customStageCode, config.stageResetMode, stageGroups, activityManager
     ) {
-        config.getActiveStage()
+        config.getActiveStage(activityManager)
     }
     val defaultStageLabel = stringResource(R.string.panel_fight_stage_reset_current)
 

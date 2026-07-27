@@ -16,6 +16,7 @@ import java.time.LocalDate
  *
  * TODO: MaaCore 适配 7~10 倍率后，删除本文件及其全部调用点：
  *   - FightConfig.toTaskParams 里的 clientType 钳制分支
+ *   - DepotMaintainConfig.toTaskParams 里的 series 下发
  *   - AnalyzeTaskChainUseCase 里的锁定 Warning 日志
  *   - FightConfigPanel.SeriesSection 的 locked 分支与提示文案
  *   - 字符串 panel_fight_series_locked_tip / runlog_series_locked

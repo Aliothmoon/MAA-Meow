@@ -229,7 +229,7 @@ data class RecruitConfig(
         )
     }
 
-    override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
+    override fun toTaskParams(ctx: TaskParamContext): TaskParamResult {
         // 构建 select 和 confirm 列表
         val selectList = buildList {
             if (chooseLevel3) add(3)
@@ -276,6 +276,6 @@ data class RecruitConfig(
             })
         }
 
-        return listOf(MaaTaskParams(MaaTaskType.RECRUIT, paramsJson.toString()))
+        return TaskParamResult(listOf(MaaTaskParams(MaaTaskType.RECRUIT, paramsJson.toString())))
     }
 }

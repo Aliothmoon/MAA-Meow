@@ -4,15 +4,21 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.DepotMaintainConfig
 import com.aliothmoon.maameow.data.model.DepotMaintainPlan
 import com.aliothmoon.maameow.data.model.LogLevel
+import com.aliothmoon.maameow.data.model.TaskParamContext
+import com.aliothmoon.maameow.data.model.TaskParamResult
+import com.aliothmoon.maameow.data.model.testTaskParamContext
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemInfo
+import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.utils.i18n.UiText
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -32,12 +38,13 @@ class DepotMaintainExpansionTest {
     private val activityManager: ActivityManager = mockk()
     private val itemHelper: ItemHelper = mockk()
 
-    private fun expander(
+    private fun ctx(
         inventory: Map<String, Int> = emptyMap(),
         activityOpen: Boolean = false,
         resourceCollectionOpen: Boolean = false,
         openStages: Set<String> = setOf(STAGE),
-    ): DepotMaintainExpander {
+        clientType: String = "Official",
+    ): TaskParamContext {
         every { depotRepository.countOf(any()) } answers { inventory[firstArg()] ?: 0 }
         every { activityManager.isActivityOpen() } returns activityOpen
         every { activityManager.isResourceCollectionOpen() } returns resourceCollectionOpen
@@ -45,10 +52,16 @@ class DepotMaintainExpansionTest {
         every { itemHelper.getItemInfo(any()) } answers {
             if (firstArg<String>() == ITEM) ItemInfo(id = ITEM, name = "源岩") else null
         }
-        return DepotMaintainExpander(depotRepository, activityManager, itemHelper)
+        return testTaskParamContext(
+            clientType = clientType,
+            activityManager = activityManager,
+            depotRepository = depotRepository,
+            itemHelper = itemHelper,
+        )
     }
 
-    private fun DepotMaintainExpander.expand(cfg: DepotMaintainConfig) = expand(cfg, seriesLocked = false)
+    private fun DepotMaintainConfig.expand(context: TaskParamContext = ctx()): TaskParamResult =
+        toTaskParams(context)
 
     private fun plan(
         stage: String = STAGE,
@@ -91,18 +104,16 @@ class DepotMaintainExpansionTest {
 
     @Test
     fun skipDuringActivity_whenActivityOpen_producesNothing() {
-        val result = expander(activityOpen = true).expand(
-            config(plan(), skipDuringActivity = true, updateDepot = true)
-        )
+        val result = config(plan(), skipDuringActivity = true, updateDepot = true)
+            .expand(ctx(activityOpen = true))
         assertTrue(result.params.isEmpty())
         assertEquals(listOf(R.string.runlog_depot_skipped_activity), result.logs.resIds())
     }
 
     @Test
     fun skipDuringActivity_whenNoActivity_expandsNormally() {
-        val result = expander(activityOpen = false).expand(
-            config(plan(), skipDuringActivity = true)
-        )
+        val result = config(plan(), skipDuringActivity = true)
+            .expand(ctx(activityOpen = false))
         assertEquals(1, result.params.size)
         assertEquals(MaaTaskType.FIGHT, result.params[0].type)
         assertTrue(result.logs.isEmpty())
@@ -111,9 +122,8 @@ class DepotMaintainExpansionTest {
     /** 开关关闭时，活动开放也不得跳过（锁住条件的另一端） */
     @Test
     fun skipSwitchesOff_ignoreOpenActivityAndResourceCollection() {
-        val result = expander(activityOpen = true, resourceCollectionOpen = true).expand(
-            config(plan(), skipDuringActivity = false, skipDuringResourceCollection = false)
-        )
+        val result = config(plan(), skipDuringActivity = false, skipDuringResourceCollection = false)
+            .expand(ctx(activityOpen = true, resourceCollectionOpen = true))
         assertEquals(1, result.params.size)
         assertTrue(result.logs.isEmpty())
     }
@@ -121,18 +131,16 @@ class DepotMaintainExpansionTest {
     /** 两个条件同时成立时，活动跳过优先（对齐上游的判断顺序） */
     @Test
     fun bothSkipConditionsMet_reportsActivityFirst() {
-        val result = expander(activityOpen = true, resourceCollectionOpen = true).expand(
-            config(plan(), skipDuringActivity = true, skipDuringResourceCollection = true)
-        )
+        val result = config(plan(), skipDuringActivity = true, skipDuringResourceCollection = true)
+            .expand(ctx(activityOpen = true, resourceCollectionOpen = true))
         assertTrue(result.params.isEmpty())
         assertEquals(listOf(R.string.runlog_depot_skipped_activity), result.logs.resIds())
     }
 
     @Test
     fun skipDuringResourceCollection_whenOpen_producesNothing() {
-        val result = expander(resourceCollectionOpen = true).expand(
-            config(plan(), skipDuringResourceCollection = true)
-        )
+        val result = config(plan(), skipDuringResourceCollection = true)
+            .expand(ctx(resourceCollectionOpen = true))
         assertTrue(result.params.isEmpty())
         assertEquals(listOf(R.string.runlog_depot_skipped_resource), result.logs.resIds())
     }
@@ -140,9 +148,8 @@ class DepotMaintainExpansionTest {
     /** 活动跳过只看 SideStory，资源收集开放不应触发它，否则两个开关就分不开了 */
     @Test
     fun skipDuringActivity_isNotTriggeredByResourceCollection() {
-        val result = expander(activityOpen = false, resourceCollectionOpen = true).expand(
-            config(plan(), skipDuringActivity = true)
-        )
+        val result = config(plan(), skipDuringActivity = true)
+            .expand(ctx(activityOpen = false, resourceCollectionOpen = true))
         assertEquals(1, result.params.size)
         assertTrue(result.logs.isEmpty())
     }
@@ -151,7 +158,7 @@ class DepotMaintainExpansionTest {
 
     @Test
     fun updateDepot_prependsDepotTask() {
-        val result = expander().expand(config(plan(), updateDepot = true))
+        val result = config(plan(), updateDepot = true).expand()
         assertEquals(2, result.params.size)
         assertEquals(MaaTaskType.DEPOT, result.params[0].type)
         assertEquals(MaaTaskType.FIGHT, result.params[1].type)
@@ -159,7 +166,7 @@ class DepotMaintainExpansionTest {
 
     @Test
     fun updateDepotDisabled_producesOnlyFight() {
-        val result = expander().expand(config(plan(), updateDepot = false))
+        val result = config(plan(), updateDepot = false).expand()
         assertEquals(1, result.params.size)
         assertEquals(MaaTaskType.FIGHT, result.params[0].type)
     }
@@ -170,9 +177,7 @@ class DepotMaintainExpansionTest {
      */
     @Test
     fun allPlansInvalid_stillKeepsDepotTask() {
-        val result = expander().expand(
-            config(plan(dropId = ""), plan(dropCount = 0), updateDepot = true)
-        )
+        val result = config(plan(dropId = ""), plan(dropCount = 0), updateDepot = true).expand()
         assertEquals(1, result.params.size)
         assertEquals(MaaTaskType.DEPOT, result.params[0].type)
         assertEquals(
@@ -185,7 +190,7 @@ class DepotMaintainExpansionTest {
 
     @Test
     fun blankDropId_isRejected() {
-        val result = expander().expand(config(plan(dropId = "")))
+        val result = config(plan(dropId = "")).expand()
         assertTrue(result.params.isEmpty())
         assertEquals(listOf(R.string.runlog_depot_plan_invalid_drop), result.logs.resIds())
         assertEquals(listOf<Any?>(1), logArgsOf(result.logs, R.string.runlog_depot_plan_invalid_drop))
@@ -194,14 +199,14 @@ class DepotMaintainExpansionTest {
 
     @Test
     fun nonPositiveDropCount_isRejected() {
-        val result = expander().expand(config(plan(dropCount = 0)))
+        val result = config(plan(dropCount = 0)).expand()
         assertTrue(result.params.isEmpty())
         assertEquals(listOf(R.string.runlog_depot_plan_zero_count), result.logs.resIds())
     }
 
     @Test
     fun blankStage_isRejected() {
-        val result = expander().expand(config(plan(stage = "")))
+        val result = config(plan(stage = "")).expand()
         assertTrue(result.params.isEmpty())
         assertEquals(listOf(R.string.runlog_depot_plan_no_stage), result.logs.resIds())
     }
@@ -209,7 +214,7 @@ class DepotMaintainExpansionTest {
     /** 关卡未开放：对齐上游，不算 ERROR（上游 AddLog 未传色，默认 Trace），且日志带关卡代码 */
     @Test
     fun closedStage_isRejectedWithoutErrorLevel() {
-        val result = expander(openStages = emptySet()).expand(config(plan(stage = "CE-6")))
+        val result = config(plan(stage = "CE-6")).expand(ctx(openStages = emptySet()))
         assertTrue(result.params.isEmpty())
         assertEquals(listOf(R.string.runlog_depot_plan_stage_not_open), result.logs.resIds())
         assertEquals(LogLevel.TRACE, result.logs[0].second)
@@ -225,9 +230,8 @@ class DepotMaintainExpansionTest {
      */
     @Test
     fun closedStage_isStillRejectedWhenCustomStageCode() {
-        val result = expander(openStages = emptySet()).expand(
-            config(plan(stage = "XX-9"), customStageCode = true)
-        )
+        val result = config(plan(stage = "XX-9"), customStageCode = true)
+            .expand(ctx(openStages = emptySet()))
         assertTrue(result.params.isEmpty())
         assertEquals(listOf(R.string.runlog_depot_plan_stage_not_open), result.logs.resIds())
     }
@@ -235,7 +239,7 @@ class DepotMaintainExpansionTest {
     /** 空串检查先于开放检查：手动模式留空仍报「未指定关卡」而非原样透传 */
     @Test
     fun blankStage_isRejectedEvenWhenCustomStageCode() {
-        val result = expander().expand(config(plan(stage = ""), customStageCode = true))
+        val result = config(plan(stage = ""), customStageCode = true).expand()
         assertTrue(result.params.isEmpty())
         assertEquals(listOf(R.string.runlog_depot_plan_no_stage), result.logs.resIds())
     }
@@ -244,7 +248,7 @@ class DepotMaintainExpansionTest {
 
     @Test
     fun sufficientInventory_skipsPlan() {
-        val result = expander(inventory = mapOf(ITEM to 100)).expand(config(plan(dropCount = 100)))
+        val result = config(plan(dropCount = 100)).expand(ctx(inventory = mapOf(ITEM to 100)))
         assertTrue(result.params.isEmpty())
         assertEquals(listOf(R.string.runlog_depot_plan_inventory_enough), result.logs.resIds())
         // 第 1 个占位符是 %1$s，必须传字符串（PR5 会传任务名复用同一条）
@@ -256,7 +260,7 @@ class DepotMaintainExpansionTest {
 
     @Test
     fun partialInventory_dropsHoldRemainingDeficit() {
-        val result = expander(inventory = mapOf(ITEM to 30)).expand(config(plan(dropCount = 100)))
+        val result = config(plan(dropCount = 100)).expand(ctx(inventory = mapOf(ITEM to 30)))
         val drops = result.params[0].json()["drops"]!!.jsonObject
         assertEquals(70, drops[ITEM]!!.jsonPrimitive.content.toInt())
     }
@@ -264,9 +268,8 @@ class DepotMaintainExpansionTest {
     /** 物品名查不到时日志回退成材料 ID，不能显示 null */
     @Test
     fun sufficientInventory_fallsBackToItemIdWhenNameUnknown() {
-        val result = expander(inventory = mapOf("99999" to 5)).expand(
-            config(plan(dropId = "99999", dropCount = 1))
-        )
+        val result = config(plan(dropId = "99999", dropCount = 1))
+            .expand(ctx(inventory = mapOf("99999" to 5)))
         assertEquals(
             listOf<Any?>("1", "99999", 5, 1),
             logArgsOf(result.logs, R.string.runlog_depot_plan_inventory_enough),
@@ -275,9 +278,9 @@ class DepotMaintainExpansionTest {
 
     @Test
     fun fightJson_carriesMaxTimesAndConsumables() {
-        val result = expander().expand(
-            config(plan(useMedicine = true, medicineCount = 5, useStone = true, stoneCount = 2))
-        )
+        val result = config(
+            plan(useMedicine = true, medicineCount = 5, useStone = true, stoneCount = 2)
+        ).expand()
         val json = result.params[0].json()
         assertEquals(STAGE, json["stage"]!!.jsonPrimitive.content)
         assertEquals(Int.MAX_VALUE, json["times"]!!.jsonPrimitive.content.toInt())
@@ -292,38 +295,47 @@ class DepotMaintainExpansionTest {
      */
     @Test
     fun fightJson_disablesSeriesWhenLocked() {
-        val locked = expander().expand(config(plan()), seriesLocked = true)
-        assertEquals(-1, locked.params[0].json()["series"]!!.jsonPrimitive.content.toInt())
+        mockkObject(SeriesLock)
+        try {
+            every { SeriesLock.isLocked(any(), any()) } returns true
+            every { SeriesLock.isLocked(any()) } returns true
+            val locked = config(plan()).expand()
+            assertEquals(-1, locked.params[0].json()["series"]!!.jsonPrimitive.content.toInt())
 
-        val unlocked = expander().expand(config(plan()), seriesLocked = false)
-        assertEquals(1, unlocked.params[0].json()["series"]!!.jsonPrimitive.content.toInt())
+            every { SeriesLock.isLocked(any(), any()) } returns false
+            every { SeriesLock.isLocked(any()) } returns false
+            val unlocked = config(plan()).expand()
+            assertEquals(1, unlocked.params[0].json()["series"]!!.jsonPrimitive.content.toInt())
+        } finally {
+            unmockkObject(SeriesLock)
+        }
+    }
+
+    /** 开关关闭时数量必须归零，而不是沿用已保存的值 */
+    @Test
+    fun fightJson_zeroesConsumablesWhenSwitchesOff() {
+        val result = config(
+            plan(useMedicine = false, medicineCount = 5, useStone = false, stoneCount = 2)
+        ).expand()
+        val json = result.params[0].json()
+        assertEquals(0, json["medicine"]!!.jsonPrimitive.content.toInt())
+        assertEquals(0, json["stone"]!!.jsonPrimitive.content.toInt())
     }
 
     // --- 空计划 ---
 
     @Test
     fun noPlans_withUpdateDepot_producesOnlyDepot() {
-        val result = expander().expand(config(updateDepot = true))
+        val result = config(updateDepot = true).expand()
         assertEquals(listOf(MaaTaskType.DEPOT), result.params.map { it.type })
         assertTrue(result.logs.isEmpty())
     }
 
     @Test
     fun noPlans_withoutUpdateDepot_producesNothing() {
-        val result = expander().expand(config(updateDepot = false))
+        val result = config(updateDepot = false).expand()
         assertTrue(result.params.isEmpty())
         assertTrue(result.logs.isEmpty())
-    }
-
-    /** 开关关闭时数量必须归零，而不是沿用已保存的值 */
-    @Test
-    fun fightJson_zeroesConsumablesWhenSwitchesOff() {
-        val result = expander().expand(
-            config(plan(useMedicine = false, medicineCount = 5, useStone = false, stoneCount = 2))
-        )
-        val json = result.params[0].json()
-        assertEquals(0, json["medicine"]!!.jsonPrimitive.content.toInt())
-        assertEquals(0, json["stone"]!!.jsonPrimitive.content.toInt())
     }
 
     // --- 顺序 ---
@@ -331,9 +343,7 @@ class DepotMaintainExpansionTest {
     /** 计划顺序即优先级，产出的 Fight 必须与 plans 同序 */
     @Test
     fun multiplePlans_keepConfiguredOrder() {
-        val result = expander().expand(
-            config(plan(dropCount = 10), plan(dropCount = 20), plan(dropCount = 30))
-        )
+        val result = config(plan(dropCount = 10), plan(dropCount = 20), plan(dropCount = 30)).expand()
         assertEquals(
             listOf(10, 20, 30),
             result.params.map { it.json()["drops"]!!.jsonObject[ITEM]!!.jsonPrimitive.content.toInt() },
@@ -343,9 +353,9 @@ class DepotMaintainExpansionTest {
     /** 被跳过的计划只是不产出任务，不影响其余计划的内容与相对顺序 */
     @Test
     fun skippedPlans_doNotAffectRemainingPlans() {
-        val result = expander().expand(
-            config(plan(dropId = ""), plan(dropCount = 20), plan(stage = ""), plan(dropCount = 40))
-        )
+        val result = config(
+            plan(dropId = ""), plan(dropCount = 20), plan(stage = ""), plan(dropCount = 40)
+        ).expand()
         assertEquals(
             listOf(20, 40),
             result.params.map { it.json()["drops"]!!.jsonObject[ITEM]!!.jsonPrimitive.content.toInt() },
@@ -355,9 +365,7 @@ class DepotMaintainExpansionTest {
     /** 日志序号取原始位置，不能因前面有计划被跳过而错位 */
     @Test
     fun logNumbering_usesOneBasedOriginalPosition() {
-        val result = expander().expand(
-            config(plan(), plan(), plan(dropId = ""))
-        )
+        val result = config(plan(), plan(), plan(dropId = "")).expand()
         assertEquals(listOf<Any?>(3), logArgsOf(result.logs, R.string.runlog_depot_plan_invalid_drop))
     }
 

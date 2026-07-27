@@ -7,7 +7,6 @@ import com.aliothmoon.maameow.maa.task.MaaTaskType
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import org.koin.core.context.GlobalContext
 
 /**
  * 未开放关卡重置策略
@@ -269,9 +268,12 @@ data class FightConfig(
     /**
      * 获取实际使用的关卡
      *
-     * 根据备选关卡和关卡开放状态自动选择
+     * 根据备选关卡和关卡开放状态自动选择。
+     * 需要 [ActivityManager] 判定关卡开放，故由调用方显式传入 ——
+     * 早前这里用 GlobalContext 反向抓依赖，拿不到时会静默跳过全部开放判定、
+     * 返回一个可能未开放的关卡，且单测因 Koin 未启动而只覆盖了那条降级分支。
      */
-    fun getActiveStage(): String {
+    fun getActiveStage(activityManager: ActivityManager): String {
         if (stage1.isEmpty()) return ""
 
         // 如果不使用备选关卡，直接返回首选关卡
@@ -279,26 +281,21 @@ data class FightConfig(
 
         var candidates = (listOf(stage1) + alternateStages).filter { it.isNotEmpty() }
 
-        val activityManager = GlobalContext.getOrNull()?.getOrNull<ActivityManager>()
-        if (activityManager != null) {
-            // customStageCode 手动输入时跳过此检查仅 CURRENT 重置策略需要按候选列表成员过滤，
-            // 故 stageList 延迟到此分支内构建，避免备选/IGNORE 场景每次白白重建整份合并关卡列表
-            if (!customStageCode && stageResetMode == StageResetMode.CURRENT) {
-                val stageList = activityManager.getMergedStageList(filterByToday = false)
-                candidates = candidates.filter { code ->
-                    stageList.any { it.code == code }
-                }
+        // customStageCode 手动输入时跳过此检查仅 CURRENT 重置策略需要按候选列表成员过滤，
+        // 故 stageList 延迟到此分支内构建，避免备选/IGNORE 场景每次白白重建整份合并关卡列表
+        if (!customStageCode && stageResetMode == StageResetMode.CURRENT) {
+            val stageList = activityManager.getMergedStageList(filterByToday = false)
+            candidates = candidates.filter { code ->
+                stageList.any { it.code == code }
             }
-
-            // 参考 WPF GetFightStage: 从上往下取第一个今日开放的关卡
-            // 用 isStageOpen（经 getStageInfo 兜底，对齐 WPF StageManager.IsStageOpen）判定，
-            // 而非「候选列表成员 + isOpenToday」；否则主线关卡（如 16-14，不在候选列表）会被误判未开放而跳过
-            val day = activityManager.getYjDayOfWeek()
-            val openStage = candidates.firstOrNull { code ->
-                activityManager.isStageOpen(code, day)
-            }
-            if (openStage != null) return openStage
         }
+
+        // 参考 WPF GetFightStage: 从上往下取第一个今日开放的关卡
+        // 用 isStageOpen（经 getStageInfo 兜底，对齐 WPF StageManager.IsStageOpen）判定，
+        // 而非「候选列表成员 + isOpenToday」；否则主线关卡（如 16-14，不在候选列表）会被误判未开放而跳过
+        val day = activityManager.getYjDayOfWeek()
+        candidates.firstOrNull { code -> activityManager.isStageOpen(code, day) }
+            ?.let { return it }
 
         // 全不开放则回退第一条候选，无候选则返回 ""
         return candidates.firstOrNull() ?: ""
@@ -317,8 +314,8 @@ data class FightConfig(
         return true
     }
 
-    override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
-        var stage = getActiveStage()
+    override fun toTaskParams(ctx: TaskParamContext): TaskParamResult {
+        var stage = getActiveStage(ctx.activityManager)
 
         // 自定义剿灭替换 (WPF SerializeTask line 735-738)
         if (stage == "Annihilation" && useCustomAnnihilation) {
@@ -341,12 +338,9 @@ data class FightConfig(
             if (useExpiringMedicine) {
                 var expireDays = medicineExpireDays.coerceIn(1, 7)
                 if (useExpireMedicineForActivity) {
-                    val am = GlobalContext.getOrNull()?.getOrNull<ActivityManager>()
-                    if (am != null) {
-                        val activityExpireDays = am.getActivityAwareExpireDays()
-                        if (activityExpireDays > 0) {
-                            expireDays = maxOf(expireDays, activityExpireDays)
-                        }
+                    val activityExpireDays = ctx.activityManager.getActivityAwareExpireDays()
+                    if (activityExpireDays > 0) {
+                        expireDays = maxOf(expireDays, activityExpireDays)
                     }
                 }
                 put("medicine_expire_days", expireDays)
@@ -364,6 +358,6 @@ data class FightConfig(
             }
         }
 
-        return listOf(MaaTaskParams(MaaTaskType.FIGHT, paramsJson.toString()))
+        return TaskParamResult(listOf(MaaTaskParams(MaaTaskType.FIGHT, paramsJson.toString())))
     }
 }

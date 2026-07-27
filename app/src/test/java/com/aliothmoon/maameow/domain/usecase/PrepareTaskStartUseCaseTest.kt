@@ -30,11 +30,9 @@ class PrepareTaskStartUseCaseTest {
     private val analyzeTaskChainUseCase = AnalyzeTaskChainUseCase(
         taskChainState = taskChainState,
         resourceDataManager = resourceDataManager,
-        depotMaintainExpander = DepotMaintainExpander(
-            depotRepository = mockk(relaxed = true),
-            activityManager = mockk(relaxed = true),
-            itemHelper = mockk(relaxed = true),
-        ),
+        activityManager = mockk(relaxed = true),
+        depotRepository = mockk(relaxed = true),
+        itemHelper = mockk(relaxed = true),
     )
 
     private fun useCase(aliveStatus: Int) = PrepareTaskStartUseCase(

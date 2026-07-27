@@ -1,7 +1,7 @@
 package com.aliothmoon.maameow.data.model
+
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
-import com.aliothmoon.maameow.data.model.TaskParamProvider
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -18,7 +18,7 @@ data class AwardConfig(
     val mining: Boolean = false,  // 领取挖矿合成玉
     val specialAccess: Boolean = false  // 领取周年特殊月卡
 ) : TaskParamProvider {
-    override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
+    override fun toTaskParams(ctx: TaskParamContext): TaskParamResult {
         val paramsJson = buildJsonObject {
             put("award", award)
             put("mail", mail)
@@ -27,6 +27,6 @@ data class AwardConfig(
             put("mining", mining)
             put("specialaccess", specialAccess)
         }
-        return listOf(MaaTaskParams(MaaTaskType.AWARD, paramsJson.toString()))
+        return TaskParamResult(listOf(MaaTaskParams(MaaTaskType.AWARD, paramsJson.toString())))
     }
 }
