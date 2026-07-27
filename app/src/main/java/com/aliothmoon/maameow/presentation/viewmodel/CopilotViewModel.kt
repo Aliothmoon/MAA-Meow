@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
+import android.content.ClipboardManager
 import android.content.Context
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
@@ -209,6 +210,15 @@ class CopilotViewModel(
 
     fun onInputChanged(text: String) {
         _state.update { it.copy(inputText = text) }
+    }
+
+    fun onPasteAndParse() {
+        val clipboard = appContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+        if (text.isNotBlank()) {
+            onInputChanged(text)
+            onParseSingleInput()
+        }
     }
 
     fun onParseSingleInput() {

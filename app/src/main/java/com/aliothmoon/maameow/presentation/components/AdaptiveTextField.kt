@@ -70,6 +70,7 @@ fun ITextField(
     enabled: Boolean = true,
     shape: RoundedCornerShape = RoundedCornerShape(8.dp),
     supportingText: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
     outlineColor: Color? = null,
     onImeAction: (() -> Unit)? = null
 ) {
@@ -104,6 +105,7 @@ fun ITextField(
             enabled = enabled,
             shape = shape,
             supportingText = supportingText,
+            trailingIcon = trailingIcon,
             colors = if (outlineColor != null) {
                 OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = outlineColor

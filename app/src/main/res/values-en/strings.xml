@@ -340,6 +340,8 @@
     <string name="copilot_status_completed">Completed: %1$s</string>
     <string name="copilot_rate_failed">An error occurred, the like failed: &lt;</string>
     <string name="copilot_rate_success">Thanks for the likes!\nThe comment section is already open on the web page, please feel free to leave your comment!</string>
+    <string name="common_paste">Paste and load</string>
+
 
     <!-- panel: fight config -->
     <string name="panel_fight_converted_prefix">Will convert to: %1$s</string>
