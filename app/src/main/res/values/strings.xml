@@ -544,7 +544,7 @@
     <string name="copilot_status_completed">已完成: %1$s</string>
     <string name="copilot_rate_failed">出现错误，评价失败 : &lt;</string>
     <string name="copilot_rate_success">感谢评价！\n网页已经开放评论区，欢迎前往留下你的评论！</string>
-    <string name="common_paste">粘贴并读取</string>
+    <string name="copilot_paste_parse">粘贴并读取</string>
 
 
     <!-- panel: fight config -->

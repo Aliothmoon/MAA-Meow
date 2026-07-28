@@ -287,7 +287,7 @@ fun AutoBattlePanel(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ContentPaste,
-                                contentDescription = stringResource(R.string.common_paste),
+                                contentDescription = stringResource(R.string.copilot_paste_parse),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
