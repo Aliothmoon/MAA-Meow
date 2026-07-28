@@ -214,9 +214,14 @@ class CopilotViewModel(
 
     fun onPasteAndParse() {
         val clipboard = appContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+        val text = clipboard.primaryClip
+            ?.takeIf { it.itemCount > 0 }
+            ?.getItemAt(0)
+            ?.text
+            ?.toString()
+            .orEmpty()
         if (text.isNotBlank()) {
-            onInputChanged(text)
+            onInputChanged(text.trim())
             onParseSingleInput()
         }
     }
