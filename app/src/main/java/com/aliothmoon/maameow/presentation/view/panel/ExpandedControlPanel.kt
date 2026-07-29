@@ -3,8 +3,6 @@ package com.aliothmoon.maameow.presentation.view.panel
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -31,8 +29,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.aliothmoon.maameow.R
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
@@ -64,7 +62,7 @@ fun ExpandedControlPanel(
     copilotViewModel: CopilotViewModel = viewModel(),
     toolboxViewModel: ToolboxViewModel = koinInject(),
     service: MaaCompositionService = koinInject(),
-    appSettings: AppSettingsManager = koinInject()
+    appSettings: AppSettingsManager = koinInject(),
 ) {
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val maaState by service.state.collectAsStateWithLifecycle()
@@ -110,7 +108,11 @@ fun ExpandedControlPanel(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize().clearFocusOnBlankTap()) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .clearFocusOnBlankTap()
+    ) {
         Card(
             modifier = Modifier
                 .fillMaxSize()
@@ -148,55 +150,39 @@ fun ExpandedControlPanel(
                 ) { page ->
                     when (page) {
                         0 -> { // PanelTab.ONE_KEY_TASKS
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                            ) {
-                                // 左侧任务列表
-                                TaskListPanel(
-                                    nodes = nodes,
-                                    selectedNodeId = uiState.selectedNodeId,
-                                    isEditMode = uiState.isEditMode,
-                                    isAddingTask = uiState.isAddingTask,
-                                    isProfileMode = uiState.isProfileMode,
-                                    onNodeEnabledChange = viewModel::onNodeEnabledChange,
-                                    onNodeSelected = viewModel::onNodeSelected,
-                                    onNodeMove = viewModel::onNodeMove,
-                                    onToggleEditMode = viewModel::onToggleEditMode,
-                                    onToggleAddingTask = viewModel::onToggleAddingTask,
-                                    onToggleProfileMode = viewModel::onToggleProfileMode,
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                )
-
-                                // 右侧配置区域
-                                TaskConfigPanel(
-                                    selectedNode = selectedNode,
-                                    isEditMode = uiState.isEditMode,
-                                    isAddingTask = uiState.isAddingTask,
-                                    isProfileMode = uiState.isProfileMode,
-                                    profiles = profiles,
-                                    activeProfileId = profileId,
-                                    clientType = clientType,
-                                    onConfigChange = { config ->
-                                        val nodeId = selectedNode?.id ?: return@TaskConfigPanel
-                                        viewModel.onNodeConfigChange(nodeId, config)
-                                    },
-                                    onAddNode = viewModel::onAddNode,
-                                    onRemoveNode = viewModel::onRemoveNode,
-                                    onDuplicateNode = viewModel::onDuplicateNode,
-                                    onRenameNode = viewModel::onRenameNode,
-                                    onSwitchProfile = viewModel::onSwitchProfile,
-                                    onRenameProfile = viewModel::onRenameProfile,
-                                    onDuplicateProfile = viewModel::onDuplicateProfile,
-                                    onDeleteProfile = viewModel::onDeleteProfile,
-                                    onCreateProfile = viewModel::onCreateProfile,
-                                    onReorderProfile = viewModel::onReorderProfile,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                )
-                            }
+                            TaskListDetailLayout(
+                                nodes = nodes,
+                                selectedNode = selectedNode,
+                                selectedNodeId = uiState.selectedNodeId,
+                                isEditMode = uiState.isEditMode,
+                                isAddingTask = uiState.isAddingTask,
+                                isProfileMode = uiState.isProfileMode,
+                                profiles = profiles,
+                                activeProfileId = profileId,
+                                clientType = clientType,
+                                onNodeEnabledChange = viewModel::onNodeEnabledChange,
+                                onNodeSelected = viewModel::onNodeSelected,
+                                onNodeMove = viewModel::onNodeMove,
+                                onToggleEditMode = viewModel::onToggleEditMode,
+                                onToggleAddingTask = viewModel::onToggleAddingTask,
+                                onToggleProfileMode = viewModel::onToggleProfileMode,
+                                onConfigChange = { config ->
+                                    selectedNode?.id?.let {
+                                        viewModel.onNodeConfigChange(it, config)
+                                    }
+                                },
+                                onAddNode = viewModel::onAddNode,
+                                onRemoveNode = viewModel::onRemoveNode,
+                                onDuplicateNode = viewModel::onDuplicateNode,
+                                onRenameNode = viewModel::onRenameNode,
+                                onSwitchProfile = viewModel::onSwitchProfile,
+                                onRenameProfile = viewModel::onRenameProfile,
+                                onDuplicateProfile = viewModel::onDuplicateProfile,
+                                onDeleteProfile = viewModel::onDeleteProfile,
+                                onCreateProfile = viewModel::onCreateProfile,
+                                onReorderProfile = viewModel::onReorderProfile,
+                                modifier = Modifier.fillMaxSize(),
+                            )
                         }
 
                         1 -> { // PanelTab.AUTO_BATTLE

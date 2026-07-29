@@ -69,7 +69,6 @@ class OverlayController(
     private var calculatedPanelLayout: Pair<Int, Int>? = null
     private var orientation = context.resources.configuration.orientation
 
-
     private val _signal = MutableSharedFlow<MaaExecutionState>(extraBufferCapacity = 1)
     val signal: SharedFlow<MaaExecutionState> = _signal.asSharedFlow()
 
@@ -160,8 +159,13 @@ class OverlayController(
         if (!_isActive.value) return
 
         val wasActive =
-            previous == MaaExecutionState.RUNNING || previous == MaaExecutionState.STARTING || previous == MaaExecutionState.STOPPING
-        val isActive = current == MaaExecutionState.RUNNING || current == MaaExecutionState.STARTING || current == MaaExecutionState.STOPPING
+            previous == MaaExecutionState.RUNNING
+                    || previous == MaaExecutionState.STARTING
+                    || previous == MaaExecutionState.STOPPING
+        val isActive =
+            current == MaaExecutionState.RUNNING
+                    || current == MaaExecutionState.STARTING
+                    || current == MaaExecutionState.STOPPING
 
         when {
             // 进入运行态：隐藏主面板，显示悬浮控件
@@ -320,6 +324,7 @@ class OverlayController(
                 setEnableKeyBoardAdapt(true)
                 setKeyBackListener(object : IKeyBackListener {
                     override fun onBackPressed(): Boolean {
+                        // 消费返回，避免落到底层 Activity；关闭走面板「隐藏」按钮
                         return true
                     }
                 })

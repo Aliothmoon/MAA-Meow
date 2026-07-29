@@ -9,7 +9,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,7 +24,6 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -38,7 +36,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,7 +63,8 @@ fun TaskListPanel(
     onToggleProfileMode: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.width(IntrinsicSize.Max)) {
+    // 宽度由调用方决定：双栏用 IntrinsicSize.Max 收窄列表；单栏用 fillMaxSize 铺满
+    Column(modifier = modifier) {
         // 配置选择按钮 - 在编辑任务按钮上方
         Card(
             modifier = Modifier
@@ -92,7 +90,9 @@ fun TaskListPanel(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = if (isProfileMode) stringResource(R.string.common_done) else stringResource(R.string.panel_task_list_edit_config),
+                    text = if (isProfileMode) stringResource(R.string.common_done) else stringResource(
+                        R.string.panel_task_list_edit_config
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (isProfileMode) FontWeight.Bold else FontWeight.Normal,
                     color = if (isProfileMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
@@ -129,7 +129,9 @@ fun TaskListPanel(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = if (isEditMode) stringResource(R.string.common_done) else stringResource(R.string.panel_task_list_edit_tasks),
+                    text = if (isEditMode) stringResource(R.string.common_done) else stringResource(
+                        R.string.panel_task_list_edit_tasks
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (isEditMode) FontWeight.Bold else FontWeight.Normal,
                     color = if (isEditMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
@@ -184,7 +186,7 @@ fun TaskListPanel(
             list = nodes,
             onSettle = { fromIndex, toIndex -> onNodeMove(fromIndex, toIndex) },
             modifier = Modifier
-                .width(IntrinsicSize.Max)
+                .fillMaxWidth()
                 .weight(1f)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -221,7 +223,10 @@ private fun TaskNodeRow(
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
         ),
-        border = if (isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)) else null
+        border = if (isSelected) BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+        ) else null
     ) {
         Row(
             modifier = Modifier
@@ -231,7 +236,7 @@ private fun TaskNodeRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // 在编辑模式下也可以保留勾选框，或者隐藏以展示纯粹的排序视图
-            // 这里根据用户反馈“保持清爽”，我们依然显示勾选框以便快速切换状态，但调整间距
+            // 依然显示勾选框以便快速切换状态，但调整间距
             CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
                 Checkbox(
                     checked = node.enabled,

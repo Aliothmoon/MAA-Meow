@@ -109,8 +109,7 @@ import com.aliothmoon.maameow.presentation.view.panel.LogPanel
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType
 import com.aliothmoon.maameow.presentation.view.panel.PanelHeader
 import com.aliothmoon.maameow.presentation.view.panel.PanelTab
-import com.aliothmoon.maameow.presentation.view.panel.TaskConfigPanel
-import com.aliothmoon.maameow.presentation.view.panel.TaskListPanel
+import com.aliothmoon.maameow.presentation.view.panel.TaskListDetailLayout
 import com.aliothmoon.maameow.presentation.view.panel.ToolboxPanel
 import com.aliothmoon.maameow.presentation.view.panel.rememberSafToolboxFileExporter
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
@@ -346,83 +345,40 @@ fun BackgroundTaskView(
                         ) { page ->
                             when (page) {
                                 0 -> {
-                                    Row(modifier = Modifier.fillMaxSize()) {
-                                        TaskListPanel(
-                                            nodes = nodes,
-                                            selectedNodeId = state.selectedNodeId,
-                                            isEditMode = state.isEditMode,
-                                            isAddingTask = state.isAddingTask,
-                                            isProfileMode = state.isProfileMode,
-                                            onNodeEnabledChange = viewModel::onNodeEnabledChange,
-                                            onNodeSelected = viewModel::onNodeSelected,
-                                            onNodeMove = viewModel::onNodeMove,
-                                            onToggleEditMode = viewModel::onToggleEditMode,
-                                            onToggleAddingTask = viewModel::onToggleAddingTask,
-                                            onToggleProfileMode = viewModel::onToggleProfileMode,
-                                            modifier = Modifier.fillMaxHeight(),
-                                        )
-
-                                        Spacer(modifier = Modifier.width(8.dp))
-
-                                        Card(
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .fillMaxHeight(),
-                                            colors = CardDefaults.cardColors(
-                                                containerColor = MaterialTheme.colorScheme.surface
-                                            )
-                                        ) {
-                                            Column(modifier = Modifier.padding(top = 10.dp)) {
-                                                TaskConfigPanel(
-                                                    selectedNode = selectedNode,
-                                                    isEditMode = state.isEditMode,
-                                                    isAddingTask = state.isAddingTask,
-                                                    isProfileMode = state.isProfileMode,
-                                                    profiles = profiles,
-                                                    activeProfileId = profileId,
-                                                    clientType = clientType,
-                                                    onConfigChange = { config ->
-                                                        val nodeId = selectedNode?.id
-                                                            ?: return@TaskConfigPanel
-                                                        viewModel.onNodeConfigChange(
-                                                            nodeId, config
-                                                        )
-                                                    },
-                                                    onAddNode = { viewModel.onAddNode(it) },
-                                                    onRemoveNode = { viewModel.onRemoveNode(it) },
-                                                    onDuplicateNode = { viewModel.onDuplicateNode(it) },
-                                                    onRenameNode = { id, name ->
-                                                        viewModel.onRenameNode(
-                                                            id, name
-                                                        )
-                                                    },
-                                                    onSwitchProfile = {
-                                                        viewModel.onSwitchProfile(
-                                                            it
-                                                        )
-                                                    },
-                                                    onRenameProfile = { id, name ->
-                                                        viewModel.onRenameProfile(
-                                                            id, name
-                                                        )
-                                                    },
-                                                    onDuplicateProfile = {
-                                                        viewModel.onDuplicateProfile(
-                                                            it
-                                                        )
-                                                    },
-                                                    onDeleteProfile = {
-                                                        viewModel.onDeleteProfile(
-                                                            it
-                                                        )
-                                                    },
-                                                    onCreateProfile = { viewModel.onCreateProfile() },
-                                                    onReorderProfile = { from, to ->
-                                                        viewModel.onReorderProfile(from, to)
-                                                    })
-                                            }
-                                        }
-                                    }
+                                    TaskListDetailLayout(
+                                        nodes = nodes,
+                                        selectedNode = selectedNode,
+                                        selectedNodeId = state.selectedNodeId,
+                                        isEditMode = state.isEditMode,
+                                        isAddingTask = state.isAddingTask,
+                                        isProfileMode = state.isProfileMode,
+                                        profiles = profiles,
+                                        activeProfileId = profileId,
+                                        clientType = clientType,
+                                        onNodeEnabledChange = viewModel::onNodeEnabledChange,
+                                        onNodeSelected = viewModel::onNodeSelected,
+                                        onNodeMove = viewModel::onNodeMove,
+                                        onToggleEditMode = viewModel::onToggleEditMode,
+                                        onToggleAddingTask = viewModel::onToggleAddingTask,
+                                        onToggleProfileMode = viewModel::onToggleProfileMode,
+                                        onConfigChange = { config ->
+                                            val nodeId = selectedNode?.id
+                                                ?: return@TaskListDetailLayout
+                                            viewModel.onNodeConfigChange(nodeId, config)
+                                        },
+                                        onAddNode = viewModel::onAddNode,
+                                        onRemoveNode = viewModel::onRemoveNode,
+                                        onDuplicateNode = viewModel::onDuplicateNode,
+                                        onRenameNode = viewModel::onRenameNode,
+                                        onSwitchProfile = viewModel::onSwitchProfile,
+                                        onRenameProfile = viewModel::onRenameProfile,
+                                        onDuplicateProfile = viewModel::onDuplicateProfile,
+                                        onDeleteProfile = viewModel::onDeleteProfile,
+                                        onCreateProfile = viewModel::onCreateProfile,
+                                        onReorderProfile = viewModel::onReorderProfile,
+                                        modifier = Modifier.fillMaxSize(),
+                                        wrapDetailInCard = true,
+                                    )
                                 }
 
                                 1 -> AutoBattlePanel(modifier = Modifier.fillMaxSize())
@@ -806,7 +762,8 @@ private fun BackgroundMoreActionsOverlay(
                 containerColor = MaterialTheme.colorScheme.surface
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)) {
+            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+        ) {
             Column(modifier = Modifier.padding(10.dp)) {
                 // 标题与快速操作组
                 Text(
