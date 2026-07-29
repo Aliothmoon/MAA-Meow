@@ -94,17 +94,6 @@ fun OperBoxPanel(
         // 顶部：Tab 切换 + 导出（复制 / 导出文件可展开选格式）
         item {
             Column(modifier = Modifier.fillMaxWidth()) {
-                if (snapshot.syncTimeMillis > 0L) {
-                    Text(
-                        text = stringResource(
-                            R.string.panel_toolbox_last_sync,
-                            formatToolboxSyncTime(snapshot.syncTimeMillis),
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 4.dp),
-                    )
-                }
                 if (resolvedStatusMessage.isNotEmpty()) {
                     Text(
                         text = resolvedStatusMessage,
@@ -113,55 +102,93 @@ fun OperBoxPanel(
                         modifier = Modifier.padding(bottom = 4.dp),
                     )
                 }
+                // 左：Tab + 同步时间（左对齐同一列）；右：导出按钮顶对齐
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.Top,
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        val tabs = listOf(
-                            stringResource(R.string.panel_operbox_tab_owned, snapshot.owned.size),
-                            stringResource(R.string.panel_operbox_tab_not_owned, snapshot.notOwned.size)
-                        )
-                        tabs.forEachIndexed { index, label ->
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            val tabs = listOf(
+                                stringResource(R.string.panel_operbox_tab_owned, snapshot.owned.size),
+                                stringResource(R.string.panel_operbox_tab_not_owned, snapshot.notOwned.size)
+                            )
+                            tabs.forEachIndexed { index, label ->
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (selectedTab == index)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
+                                    modifier = Modifier
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null
+                                        ) { selectedTab = index }
+                                        .padding(vertical = 4.dp)
+                                )
+                            }
+                        }
+                        if (snapshot.syncTimeMillis > 0L) {
                             Text(
-                                text = label,
+                                text = stringResource(
+                                    R.string.panel_toolbox_last_sync,
+                                    formatToolboxSyncTime(snapshot.syncTimeMillis),
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (selectedTab == index)
-                                    MaterialTheme.colorScheme.primary
-                                else
-                                    MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                                modifier = Modifier
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null
-                                    ) { selectedTab = index }
-                                    .padding(vertical = 4.dp)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                     }
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.spacedBy(0.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        TextButton(onClick = {
-                            scope.launch {
-                                val text = viewModel.exportOperBox()
-                                val entry = ClipData.newPlainText("label", text).toClipEntry()
-                                clipboard.setClipEntry(entry)
-                            }
-                            Toast.makeText(context, copyToastMessage, Toast.LENGTH_SHORT).show()
-                        }) {
-                            Text(stringResource(R.string.panel_export_copy), style = MaterialTheme.typography.bodySmall)
+                        TextButton(
+                            onClick = {
+                                scope.launch {
+                                    val text = viewModel.exportOperBox()
+                                    val entry = ClipData.newPlainText("label", text).toClipEntry()
+                                    clipboard.setClipEntry(entry)
+                                }
+                                Toast.makeText(context, copyToastMessage, Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.height(32.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                        ) {
+                            Text(
+                                stringResource(R.string.panel_export_copy),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
                         }
                         if (fileExporter != null) {
-                            TextButton(onClick = { exportExpanded = !exportExpanded }) {
-                                Text(stringResource(R.string.panel_export_file), style = MaterialTheme.typography.bodySmall)
+                            TextButton(
+                                onClick = { exportExpanded = !exportExpanded },
+                                modifier = Modifier.height(32.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                            ) {
+                                Text(
+                                    stringResource(R.string.panel_export_file),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
                                 Icon(
-                                    imageVector = if (exportExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                    imageVector = if (exportExpanded) {
+                                        Icons.Default.ArrowDropUp
+                                    } else {
+                                        Icons.Default.ArrowDropDown
+                                    },
                                     contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(18.dp),
                                 )
                             }
                         }

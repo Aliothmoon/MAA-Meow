@@ -102,16 +102,6 @@ fun DepotRecognitionPanel(
         // 统计信息 + 导出按钮
         item(span = { GridItemSpan(maxLineSpan) }) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                if (snapshot.syncTimeMillis > 0L) {
-                    Text(
-                        text = stringResource(
-                            R.string.panel_toolbox_last_sync,
-                            formatToolboxSyncTime(snapshot.syncTimeMillis),
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
                 if (resolvedStatusMessage.isNotEmpty()) {
                     Text(
                         text = resolvedStatusMessage,
@@ -119,11 +109,31 @@ fun DepotRecognitionPanel(
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
-                Text(
-                    text = stringResource(R.string.panel_depot_item_count, items.size),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.panel_depot_item_count, items.size),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (snapshot.syncTimeMillis > 0L) {
+                        Text(
+                            text = stringResource(
+                                R.string.panel_toolbox_last_sync,
+                                formatToolboxSyncTime(snapshot.syncTimeMillis),
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.End,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                }
                 ExportFormatRow(
                     label = stringResource(R.string.panel_depot_format_penguin),
                     onCopy = { doCopy(viewModel.exportDepotArkPlanner(), copyPenguinToast) },
