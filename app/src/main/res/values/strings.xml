@@ -932,7 +932,7 @@
     <string name="panel_tab_tools">小工具</string>
     <string name="panel_tab_log">日志</string>
     <string name="panel_cd_go_home">回到主界面</string>
-    <string name="toolbox_tab_mini_game">小游戏</string>
+    <string name="toolbox_tab_mini_game">牛杂</string>
     <string name="toolbox_tab_recruit_calc">公招识别</string>
     <string name="toolbox_dialog_start_warning_title">启动警告</string>
     <string name="toolbox_dialog_start_anyway">仍然启动</string>
@@ -962,7 +962,7 @@
     <string name="panel_depot_hint_results">识别完成后支持导出企鹅物流刷图规划 / 明日方舟工具箱格式。</string>
 
     <!-- panel: mini game -->
-    <string name="panel_mini_game_title">小游戏</string>
+    <string name="panel_mini_game_title">牛杂</string>
     <string name="panel_mini_game_name">小游戏名称</string>
     <string name="panel_mini_game_ending">结局</string>
     <string name="panel_mini_game_preferred_events">优先系列事件</string>

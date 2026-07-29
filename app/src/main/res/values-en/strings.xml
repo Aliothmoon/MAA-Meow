@@ -877,7 +877,7 @@
     <string name="panel_tab_tools">Tools</string>
     <string name="panel_tab_log">Logs</string>
     <string name="panel_cd_go_home">Go to home screen</string>
-    <string name="toolbox_tab_mini_game">Mini Games</string>
+    <string name="toolbox_tab_mini_game">Useful Tasks</string>
     <string name="toolbox_tab_recruit_calc">Recruitment</string>
     <string name="toolbox_dialog_start_warning_title">Start Warning</string>
     <string name="toolbox_dialog_start_anyway">Start Anyway</string>
@@ -907,7 +907,7 @@
     <string name="panel_depot_hint_results">After recognition, you can export to Penguin Stats planner / Arknights Toolbox format.</string>
 
     <!-- panel: mini game -->
-    <string name="panel_mini_game_title">Mini Games</string>
+    <string name="panel_mini_game_title">Useful Tasks</string>
     <string name="panel_mini_game_name">Mini Game Name</string>
     <string name="panel_mini_game_ending">Ending</string>
     <string name="panel_mini_game_preferred_events">Priority for Series of Events</string>
