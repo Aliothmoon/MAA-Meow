@@ -4,7 +4,30 @@ header = """
 """
 body = """
 {%- macro remote_url() -%}
-  https://github.com/Aliothmoon/Maa-Meow
+  https://github.com/Aliothmoon/MAA-Meow
+{%- endmacro -%}
+{#- 主作者 GitHub 用户名；无 remote 时退回 git author 名 -#}
+{%- macro primary_author(commit) -%}
+  {%- if commit.remote.username -%}
+    {{ commit.remote.username }}
+  {%- elif commit.author.name -%}
+    {{ commit.author.name }}
+  {%- endif -%}
+{%- endmacro -%}
+{#- 从 Co-authored-by footer 取显示名（`Name <email>` → Name） -#}
+{%- macro coauthor_name(footer) -%}
+  {{ footer.value | split(pat="<") | first | trim }}
+{%- endmacro -%}
+{#- 每条 commit 后附 @author [@coauthor...]，不含单独贡献者名单 -#}
+{%- macro authors_suffix(commit) -%}
+  {%- set primary = self::primary_author(commit=commit) -%}
+  {%- if primary %} @{{ primary }}{% endif -%}
+  {%- for footer in commit.footers -%}
+    {%- if footer.token == "Co-authored-by" -%}
+      {%- set co = self::coauthor_name(footer=footer) -%}
+      {%- if co and co != primary %} @{{ co }}{% endif -%}
+    {%- endif -%}
+  {%- endfor -%}
 {%- endmacro -%}
 
 {% if version -%}
@@ -17,9 +40,9 @@ body = """
 ### {{ group | striptags | trim | upper_first }}
 {% for commit in commits %}
 {%- if commit.scope -%}
-- **{{ commit.scope }}**: {{ commit.message }}
+- **{{ commit.scope }}**: {{ commit.message }}{{ self::authors_suffix(commit=commit) }}
 {%- else -%}
-- {{ commit.message }}
+- {{ commit.message }}{{ self::authors_suffix(commit=commit) }}
 {%- endif %}
 {% endfor %}
 {% endfor -%}
@@ -51,3 +74,9 @@ filter_commits = false
 tag_pattern = "v[0-9].*"
 skip_tags = ".*alpha.*"
 sort_commits = "newest"
+
+# 启用 GitHub remote 解析 commit → GitHub username（供 @ 引用）
+# CI 需提供 GITHUB_TOKEN；本地可用 `gh auth token` / 环境变量
+[remote.github]
+owner = "Aliothmoon"
+repo = "MAA-Meow"

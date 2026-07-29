@@ -140,9 +140,12 @@ jobs:
         uses: kenji-miyake/setup-git-cliff@v2
 
       - name: Generate changelog
+        env:
+          # git-cliff 用 GitHub API 解析 commit → @username（见 cliff.toml [remote.github]）
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # 生成当前版本的 changelog（用于 Release body）
-          git-cliff --current --strip header -o RELEASE_NOTES.md
+          git-cliff --current --strip header --github-repo Aliothmoon/MAA-Meow -o RELEASE_NOTES.md
           # 追加 Mirror酱 下载链接
           cat >> RELEASE_NOTES.md << 'EOF'
 
