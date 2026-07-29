@@ -1,16 +1,24 @@
 package com.aliothmoon.maameow.data.model
 
+import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.repository.DepotRepository
+import com.aliothmoon.maameow.data.repository.DepotSnapshot
 import com.aliothmoon.maameow.data.resource.CharacterInfo
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.domain.service.FightDropsRefresher
 import com.aliothmoon.maameow.maa.task.MaaTaskType
+import com.aliothmoon.maameow.utils.i18n.UiText
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -20,8 +28,23 @@ import org.junit.Test
  */
 class TaskParamProviderContractTest {
 
-    private val ctx = testTaskParamContext(
-        activityManager = alwaysOpenActivityManager(),
+    private val baseActivity = alwaysOpenActivityManager()
+
+    private fun ctx(
+        clientType: String = "Official",
+        chainAllowsCreditFight: Boolean = false,
+        depotRepository: DepotRepository = mockk(relaxed = true),
+        resourceDataManager: ResourceDataManager = mockk(relaxed = true),
+        dropsRefresher: FightDropsRefresher = mockk(relaxed = true),
+        logSink: CollectingPreflightLogSink = CollectingPreflightLogSink(),
+    ) = testTaskParamContext(
+        clientType = clientType,
+        chainAllowsCreditFight = chainAllowsCreditFight,
+        activityManager = baseActivity,
+        depotRepository = depotRepository,
+        resourceDataManager = resourceDataManager,
+        dropsRefresher = dropsRefresher,
+        logSink = logSink,
     )
 
     @Test
@@ -36,34 +59,33 @@ class TaskParamProviderContractTest {
             RoguelikeConfig() to MaaTaskType.ROGUELIKE,
             ReclamationConfig() to MaaTaskType.RECLAMATION,
         )
+        val logSink = CollectingPreflightLogSink()
+        val context = ctx(logSink = logSink)
 
         configs.forEach { (config, expectedType) ->
-            val result = config.toTaskParams(ctx)
-            assertEquals("${config::class.simpleName} 应恰好产出 1 个任务", 1, result.params.size)
-            assertEquals(expectedType, result.params.single().type)
-            assertTrue(result.logs.isEmpty())
+            val params = config.toTaskParams(context)
+            assertEquals("${config::class.simpleName} 应恰好产出 1 个任务", 1, params.size)
+            assertEquals(expectedType, params.single().type)
         }
+        assertTrue(logSink.entries.isEmpty())
     }
 
     @Test
     fun mallConfig_requiresBothOwnSwitchAndChainPermission() {
-        // 链级前提成立但本任务没开 → 不下发
         assertFalse(
-            creditFightOf(MallConfig(creditFight = false), ctx.copy(chainAllowsCreditFight = true))
+            creditFightOf(MallConfig(creditFight = false), ctx(chainAllowsCreditFight = true))
         )
-        // 本任务开了但链级前提不成立（有作战任务关卡为「当前/上次」）→ 不下发
         assertFalse(
-            creditFightOf(MallConfig(creditFight = true), ctx.copy(chainAllowsCreditFight = false))
+            creditFightOf(MallConfig(creditFight = true), ctx(chainAllowsCreditFight = false))
         )
-        // 两者皆成立才下发
         assertTrue(
-            creditFightOf(MallConfig(creditFight = true), ctx.copy(chainAllowsCreditFight = true))
+            creditFightOf(MallConfig(creditFight = true), ctx(chainAllowsCreditFight = true))
         )
     }
 
     @Test
     fun mallConfig_mergesFixedBlacklistByClientType() {
-        val blacklist = jsonOf(MallConfig(), ctx.copy(clientType = "YoStarEN"))["blacklist"]!!
+        val blacklist = jsonOf(MallConfig(), ctx(clientType = "YoStarEN"))["blacklist"]!!
             .jsonArray.map { it.jsonPrimitive.content }
 
         assertTrue("英文服应合入英文固定黑名单", blacklist.containsAll(listOf("Courier", "Gavial")))
@@ -76,41 +98,32 @@ class TaskParamProviderContractTest {
             every { getCharacterByNameOrAlias("維什戴爾") } returns CharacterInfo(name = "维什戴尔")
         }
         val config = RoguelikeConfig(coreChar = "維什戴爾")
-        val params = jsonOf(config, ctx.copy(resourceDataManager = resourceDataManager))
+        val params = jsonOf(config, ctx(resourceDataManager = resourceDataManager))
 
         assertEquals("维什戴尔", params["core_char"]?.jsonPrimitive?.content)
     }
 
     @Test
     fun reclamationConfig_usesClientSpecificDefaultTool_whenToolToCraftEmpty() {
-        // 旧代码的无参重载硬编码 "Official"，非官服会拿到错误的默认造物
-        assertEquals(
-            listOf("荧光棒"),
-            toolsToCraftOf(ctx.copy(clientType = "Official")),
-        )
-        assertEquals(
-            listOf("ケミカルライト"),
-            toolsToCraftOf(ctx.copy(clientType = "YoStarJP")),
-        )
-        assertEquals(
-            listOf("Glow Stick"),
-            toolsToCraftOf(ctx.copy(clientType = "YoStarEN")),
-        )
+        assertEquals(listOf("荧光棒"), toolsToCraftOf(ctx(clientType = "Official")))
+        assertEquals(listOf("ケミカルライト"), toolsToCraftOf(ctx(clientType = "YoStarJP")))
+        assertEquals(listOf("Glow Stick"), toolsToCraftOf(ctx(clientType = "YoStarEN")))
     }
 
     @Test
     fun wakeUpConfig_emitsOwnClientType_notContextClientType() {
-        // WakeUpConfig 自身携带 clientType，ctx 里的同名字段与它无关，勿混用
-        val params = jsonOf(WakeUpConfig(clientType = "Bilibili"), ctx)
+        val params = jsonOf(WakeUpConfig(clientType = "Bilibili"), ctx())
 
         assertEquals("Bilibili", params["client_type"]?.jsonPrimitive?.content)
     }
 
     @Test
     fun fightConfig_inventoryTarget_appendsNeedNotFullTarget() {
-        val depot = mockk<com.aliothmoon.maameow.data.repository.DepotRepository> {
+        val depot = mockk<DepotRepository> {
+            every { snapshot } returns MutableStateFlow(DepotSnapshot(syncTimeMillis = 1L))
             every { countOf("30011") } returns 90
         }
+        val refresher = mockk<FightDropsRefresher>(relaxed = true)
         val config = FightConfig(
             stage1 = "1-7",
             isSpecifiedDrops = true,
@@ -118,17 +131,30 @@ class TaskParamProviderContractTest {
             dropsItemId = "30011",
             dropsQuantity = 100,
         )
-        val params = jsonOf(config, ctx.copy(depotRepository = depot))
+        val context = ctx(depotRepository = depot, dropsRefresher = refresher)
+        val params = config.toTaskParams(context)
+        val json = Json.parseToJsonElement(params.single().params).jsonObject
 
-        assertEquals("10", params["drops"]!!.jsonObject["30011"]!!.jsonPrimitive.content)
-        assertTrue(config.toTaskParams(ctx.copy(depotRepository = depot)).params.single().dropTarget != null)
+        assertEquals("10", json["drops"]!!.jsonObject["30011"]!!.jsonPrimitive.content)
+        assertNull(params.single().slot) // slot 由 Analyze 盖戳，toTaskParams 不写
+        verify(exactly = 1) {
+            refresher.stage(
+                slot = match { it.nodeId == context.node.id && it.index == 0 },
+                target = match {
+                    it.dropId == "30011" && it.dropCount == 100 && it.logLabel == context.node.name
+                },
+            )
+        }
     }
 
     @Test
-    fun fightConfig_inventoryTarget_alreadyEnough_setsTimesZero() {
-        val depot = mockk<com.aliothmoon.maameow.data.repository.DepotRepository> {
+    fun fightConfig_inventoryTarget_alreadyEnough_skipsAppend() {
+        val depot = mockk<DepotRepository> {
+            every { snapshot } returns MutableStateFlow(DepotSnapshot(syncTimeMillis = 1L))
             every { countOf("30011") } returns 100
         }
+        val refresher = mockk<FightDropsRefresher>(relaxed = true)
+        val logSink = CollectingPreflightLogSink()
         val config = FightConfig(
             stage1 = "1-7",
             isSpecifiedDrops = true,
@@ -136,10 +162,42 @@ class TaskParamProviderContractTest {
             dropsItemId = "30011",
             dropsQuantity = 100,
         )
-        val params = jsonOf(config, ctx.copy(depotRepository = depot))
+        val params = config.toTaskParams(
+            ctx(depotRepository = depot, dropsRefresher = refresher, logSink = logSink),
+        )
 
-        assertEquals("0", params["times"]!!.jsonPrimitive.content)
-        assertEquals("1", params["drops"]!!.jsonObject["30011"]!!.jsonPrimitive.content)
+        assertTrue(params.isEmpty())
+        assertEquals(1, logSink.entries.size)
+        assertEquals(LogLevel.TRACE, logSink.entries.single().second)
+        verify(exactly = 0) { refresher.stage(any(), any()) }
+    }
+
+    @Test
+    fun fightConfig_inventoryTarget_noDepotData_skipsWithWarning() {
+        val depot = mockk<DepotRepository> {
+            every { snapshot } returns MutableStateFlow(DepotSnapshot())
+        }
+        val refresher = mockk<FightDropsRefresher>(relaxed = true)
+        val logSink = CollectingPreflightLogSink()
+        val config = FightConfig(
+            stage1 = "1-7",
+            isSpecifiedDrops = true,
+            isInventoryTarget = true,
+            dropsItemId = "30011",
+            dropsQuantity = 100,
+        )
+        val params = config.toTaskParams(
+            ctx(depotRepository = depot, dropsRefresher = refresher, logSink = logSink),
+        )
+
+        assertTrue(params.isEmpty())
+        assertEquals(1, logSink.entries.size)
+        assertEquals(LogLevel.WARNING, logSink.entries.single().second)
+        assertEquals(
+            R.string.runlog_fight_inventory_unavailable,
+            (logSink.entries.single().first as UiText.Resource).resId,
+        )
+        verify(exactly = 0) { refresher.stage(any(), any()) }
     }
 
     private fun toolsToCraftOf(context: TaskParamContext): List<String> =
@@ -150,5 +208,5 @@ class TaskParamProviderContractTest {
         jsonOf(config, context)["credit_fight"]!!.jsonPrimitive.content.toBoolean()
 
     private fun jsonOf(config: TaskParamProvider, context: TaskParamContext) =
-        Json.parseToJsonElement(config.toTaskParams(context).params.single().params).jsonObject
+        Json.parseToJsonElement(config.toTaskParams(context).single().params).jsonObject
 }

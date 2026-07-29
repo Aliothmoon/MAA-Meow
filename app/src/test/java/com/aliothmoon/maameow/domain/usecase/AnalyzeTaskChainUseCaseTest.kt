@@ -19,6 +19,7 @@ import com.aliothmoon.maameow.maa.task.MaaTaskType
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -30,14 +31,18 @@ import org.junit.Test
 class AnalyzeTaskChainUseCaseTest {
 
     private val taskChainState = mockk<TaskChainState> {
-        every { getClientType() } returns "Official"
+        every { clientType } returns "Official"
     }
     private val resourceDataManager = mockk<ResourceDataManager>(relaxed = true)
     private val operBoxRepository = mockk<OperBoxRepository>(relaxed = true) {
         every { snapshot } returns MutableStateFlow(OperBoxSnapshot())
+        every { isLoaded } returns MutableStateFlow(true)
     }
     private val depotRepository = mockk<DepotRepository>(relaxed = true) {
         every { snapshot } returns MutableStateFlow(DepotSnapshot())
+        // isLoaded 必须显式给 —— relaxed mock 的 StateFlow 不会 emit，
+        // 分析阶段开头的 `isLoaded.first { it }` 会挂死
+        every { isLoaded } returns MutableStateFlow(true)
     }
     private val useCase = AnalyzeTaskChainUseCase(
         taskChainState = taskChainState,
@@ -46,10 +51,11 @@ class AnalyzeTaskChainUseCaseTest {
         depotRepository = depotRepository,
         operBoxRepository = operBoxRepository,
         itemHelper = mockk(relaxed = true),
+        dropsRefresher = mockk(relaxed = true),
     )
 
     @Test
-    fun returnsBlocked_whenNoTaskIsEnabled() {
+    fun returnsBlocked_whenNoTaskIsEnabled() = runBlocking {
         val result = useCase(
             listOf(TaskChainNode(name = "领取奖励", enabled = false, config = AwardConfig()))
         )
@@ -63,7 +69,7 @@ class AnalyzeTaskChainUseCaseTest {
     }
 
     @Test
-    fun returnsBlocked_whenWakeUpClientTypesConflict() {
+    fun returnsBlocked_whenWakeUpClientTypesConflict() = runBlocking {
         val result = useCase(
             listOf(
                 TaskChainNode(
@@ -91,7 +97,7 @@ class AnalyzeTaskChainUseCaseTest {
     }
 
     @Test
-    fun returnsBlocked_whenWeeklyScheduleFiltersOutAllTasks() {
+    fun returnsBlocked_whenWeeklyScheduleFiltersOutAllTasks() = runBlocking {
         val disabledEveryDay = mapOf(
             "MONDAY" to false,
             "TUESDAY" to false,
@@ -124,7 +130,7 @@ class AnalyzeTaskChainUseCaseTest {
     }
 
     @Test
-    fun returnsReadyPlan_withClientTypePackageAndLaunchFlag() {
+    fun returnsReadyPlan_withClientTypePackageAndLaunchFlag() = runBlocking {
         val result = useCase(
             listOf(
                 TaskChainNode(
@@ -149,12 +155,12 @@ class AnalyzeTaskChainUseCaseTest {
         assertEquals("Official", ready.plan.clientType)
         assertEquals(Packages["Official"], ready.plan.gamePackageName)
         assertTrue(ready.plan.launchesGame)
-        assertEquals(2, ready.plan.enabledNodes.size)
+        assertEquals(2, ready.plan.nodes.size)
         assertEquals(2, ready.plan.params.size)
     }
 
     @Test
-    fun returnsReadyPlan_withDefaultClientType_whenNoWakeUpTaskExists() {
+    fun returnsReadyPlan_withDefaultClientType_whenNoWakeUpTaskExists() = runBlocking {
         val result = useCase(
             listOf(
                 TaskChainNode(
@@ -173,7 +179,7 @@ class AnalyzeTaskChainUseCaseTest {
     }
 
     @Test
-    fun roguelikeCoreChar_normalizedToSimplifiedChinese_beforeDispatch() {
+    fun roguelikeCoreChar_normalizedToSimplifiedChinese_beforeDispatch() = runBlocking {
         // 繁中服选了繁中名,下发前须反查归一化为简中名(MaaCore core_char 仅认简中名)
         every { resourceDataManager.getCharacterByNameOrAlias("維什戴爾") } returns
             CharacterInfo(name = "维什戴尔")
@@ -197,7 +203,7 @@ class AnalyzeTaskChainUseCaseTest {
     }
 
     @Test
-    fun userDataUpdate_neverSynced_expandsToBothRecognitions() {
+    fun userDataUpdate_neverSynced_expandsToBothRecognitions() = runBlocking {
         val result = useCase(
             listOf(
                 TaskChainNode(
@@ -220,7 +226,7 @@ class AnalyzeTaskChainUseCaseTest {
      * 中间隔着别的任务则不合并 —— 那段时间库存确实可能变化。
      */
     @Test
-    fun adjacentDepotRecognitions_areDeduplicated() {
+    fun adjacentDepotRecognitions_areDeduplicated() = runBlocking {
         val result = useCase(
             listOf(
                 TaskChainNode(
@@ -243,7 +249,7 @@ class AnalyzeTaskChainUseCaseTest {
     }
 
     @Test
-    fun nonAdjacentDepotRecognitions_areKept() {
+    fun nonAdjacentDepotRecognitions_areKept() = runBlocking {
         val result = useCase(
             listOf(
                 TaskChainNode(

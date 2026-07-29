@@ -1,10 +1,13 @@
 package com.aliothmoon.maameow.data.model
 
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.models.DropTarget
 import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
+import com.aliothmoon.maameow.maa.task.TaskSlot
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -94,23 +97,10 @@ data class FightConfig(
      */
     val dropsItemId: String = "",
 
-    /**
-     * 掉落材料数量
-     *
-     * 默认值: 5（WPF 第644行）
-     * 语义取决于 [isInventoryTarget]：false 时是本次要刷的数量，true 时是目标库存。
-     */
+    /** 掉落数量；[isInventoryTarget]=true 时为库存目标。 */
     val dropsQuantity: Int = 5,
 
-    /**
-     * 指定掉落使用「目标库存」模式。
-     *
-     * false（默认）：[dropsQuantity] 是本次要刷的数量
-     * true：[dropsQuantity] 是目标库存，实际刷取缺口 = dropsQuantity - 当前库存
-     *
-     * 迁移自 WPF FightTask.IsInventoryTarget。
-     * 运行时缺口由 FightDropsRefresher 在任务开始时按最新库存重算。
-     */
+    /** true：按库存缺口刷，Start 时由 FightDropsRefresher 重算。 */
     val isInventoryTarget: Boolean = false,
 
     // ============ 常规设置 - 代理倍率与关卡 ============
@@ -276,10 +266,10 @@ data class FightConfig(
     /**
      * 获取实际使用的关卡
      *
-     * 根据备选关卡和关卡开放状态自动选择。
+     * 根据备选关卡和关卡开放状态自动选择
      * 需要 [ActivityManager] 判定关卡开放，故由调用方显式传入 ——
      * 早前这里用 GlobalContext 反向抓依赖，拿不到时会静默跳过全部开放判定、
-     * 返回一个可能未开放的关卡，且单测因 Koin 未启动而只覆盖了那条降级分支。
+     * 返回一个可能未开放的关卡，且单测因 Koin 未启动而只覆盖了那条降级分支
      */
     fun getActiveStage(activityManager: ActivityManager): String {
         if (stage1.isEmpty()) return ""
@@ -322,10 +312,10 @@ data class FightConfig(
         return true
     }
 
-    override fun toTaskParams(ctx: TaskParamContext): TaskParamResult {
+    override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
         var stage = getActiveStage(ctx.activityManager)
 
-        // 自定义剿灭替换 (WPF SerializeTask line 735-738)
+        // 自定义剿灭替换
         if (stage == "Annihilation" && useCustomAnnihilation) {
             stage = annihilationStage
         }
@@ -353,12 +343,34 @@ data class FightConfig(
             null
         }
 
-        // 目标库存：append 即按内存库存算缺口（SetTaskParams 失败时也不劣于满目标）；
-        // TaskChainStart 时 FightDropsRefresher 再用最新库存收窄。
-        val inventoryNeed = if (isSpecifiedDrops && isInventoryTarget && dropsItemId.isNotBlank()) {
-            (dropsQuantity - ctx.depotRepository.countOf(dropsItemId)).coerceAtLeast(0)
+        // 目标库存：未识别 skip；need≤0 不 append（times=0 仍会空导航）。
+        // times 双轨（预期）：append 用 actualTimes 兜底；Start 刷新改 MAX + drops 收束。
+        val need = if (isSpecifiedDrops && isInventoryTarget && dropsItemId.isNotBlank()) {
+            if (ctx.depotRepository.snapshot.value.syncTimeMillis <= 0L) {
+                ctx.appendLog(
+                    uiTextOf(R.string.runlog_fight_inventory_unavailable, ctx.node.name),
+                    LogLevel.WARNING,
+                )
+                return emptyList()
+            }
+            dropsQuantity - ctx.depotRepository.countOf(dropsItemId)
         } else {
             null
+        }
+        if (need != null && need <= 0) {
+            val dropName = ctx.itemHelper.getItemInfo(dropsItemId)?.name ?: dropsItemId
+            val current = dropsQuantity - need
+            ctx.appendLog(
+                uiTextOf(
+                    R.string.runlog_depot_plan_inventory_enough,
+                    ctx.node.name,
+                    dropName,
+                    current,
+                    dropsQuantity,
+                ),
+                LogLevel.TRACE,
+            )
+            return emptyList()
         }
 
         val paramsJson = buildJsonObject {
@@ -366,48 +378,41 @@ data class FightConfig(
             put("medicine", actualMedicine)
             expireDays?.let { put("medicine_expire_days", it) }
             put("stone", actualStone)
-            put(
-                "times",
-                when {
-                    inventoryNeed != null && inventoryNeed <= 0 -> 0
-                    else -> actualTimes
-                },
-            )
+            put("times", actualTimes)
             put("series", effectiveSeries)
             if (isDrGrandet) {
                 put("DrGrandet", true)
             }
             if (isSpecifiedDrops && dropsItemId.isNotBlank()) {
-                val dropQty = when {
-                    inventoryNeed == null -> dropsQuantity
-                    inventoryNeed <= 0 -> 1 // core 需要非空 drops；times=0 才是止损
-                    else -> inventoryNeed
-                }
+                val dropQty = need ?: dropsQuantity
                 put("drops", buildJsonObject {
                     put(dropsItemId, dropQty)
                 })
             }
         }
 
-        val dropTarget = if (isSpecifiedDrops && isInventoryTarget && dropsItemId.isNotBlank()) {
-            DropTarget(
-                dropId = dropsItemId,
-                dropCount = dropsQuantity,
-                stage = stage,
-                medicine = actualMedicine,
-                stone = actualStone,
-                series = effectiveSeries,
-                // 占位；AnalyzeTaskChainUseCase 会覆盖为节点名
-                logLabel = "Fight",
-                medicineExpireDays = expireDays,
-                drGrandet = isDrGrandet,
+        if (isSpecifiedDrops && isInventoryTarget && dropsItemId.isNotBlank()) {
+            ctx.dropsRefresher.stage(
+                slot = TaskSlot(ctx.node.id, 0),
+                target = DropTarget(
+                    dropId = dropsItemId,
+                    dropCount = dropsQuantity,
+                    stage = stage,
+                    medicine = actualMedicine,
+                    stone = actualStone,
+                    series = effectiveSeries,
+                    logLabel = ctx.node.name,
+                    medicineExpireDays = expireDays,
+                    drGrandet = isDrGrandet,
+                ),
             )
-        } else {
-            null
         }
 
-        return TaskParamResult(
-            listOf(MaaTaskParams(MaaTaskType.FIGHT, paramsJson.toString(), dropTarget = dropTarget))
+        return listOf(
+            MaaTaskParams(
+                type = MaaTaskType.FIGHT,
+                params = paramsJson.toString(),
+            ),
         )
     }
 }

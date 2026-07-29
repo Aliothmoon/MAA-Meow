@@ -34,7 +34,6 @@ class TaskChainHandler(
     private val achievementRepository: AchievementRepository,
     private val achievementReporter: AchievementReporter,
     private val dropsRefresher: FightDropsRefresher,
-    private val toolboxResultCollector: ToolboxResultCollector,
 ) {
     // 回调路径用于 suspend 的 TaskChainState 更新；独立于任一生命周期
     private val callbackScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -49,22 +48,16 @@ class TaskChainHandler(
     fun onTaskChainStart(details: JSONObject) {
         val taskId = details.getIntValue("taskid", 0)
         statusTracker.updateStatus(taskId, TaskRunStatus.IN_PROGRESS)
-        // 尽早重算目标库存缺口（best-effort，见 FightDropsRefresher 类注释）：
-        // 不切线程，且排在写日志之前，尽量抢在 core 打完第一场前下发
+
         refreshDropsIfNeeded(taskId)
 
         val taskName = str(details.getString("taskchain") ?: "Unknown")
         sessionLogger.append("${str("StartTask")}$taskName", LogLevel.TRACE)
     }
 
-    /**
-     * 会话终止（TaskChainStopped 10004 / AllTasksCompleted 3）共用的收尾：
-     * 清空按 taskId 索引的运行时登记，避免下一轮会话读到上一轮的残留。
-     */
     private fun clearSessionScopedState() {
         statusTracker.clear()
         dropsRefresher.clear()
-        toolboxResultCollector.clearDoubleSyncSession()
     }
 
     private fun refreshDropsIfNeeded(taskId: Int) {
@@ -84,7 +77,7 @@ class TaskChainHandler(
                 )
                 outcome.logLabel to outcome.applied
             }
-            // 缺口收窄无需告知用户，只有下发失败才值得提示
+
             is FightDropsRefresher.RefreshOutcome.Updated -> outcome.logLabel to outcome.applied
         }
         if (!applied) {
@@ -247,7 +240,7 @@ class TaskChainHandler(
         notificationCenter.notifyAllTasksCompleted(message)
 
         callbackScope.launch {
-            taskChainState.resetRecruitConfigUseExpedited()
+            taskChainState.clearRecruitUseExpeditedFlags()
         }
     }
 

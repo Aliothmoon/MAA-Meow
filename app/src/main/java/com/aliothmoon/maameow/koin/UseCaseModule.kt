@@ -19,6 +19,7 @@ val useCaseModule = module {
             depotRepository = get(),
             operBoxRepository = get(),
             itemHelper = get(),
+            dropsRefresher = get(),
         )
     }
     factory {
