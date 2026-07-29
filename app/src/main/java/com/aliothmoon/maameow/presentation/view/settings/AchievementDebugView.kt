@@ -68,6 +68,9 @@ fun AchievementDebugView(
                 AchievementEffect.Unlocked -> R.string.achievement_debug_unlock_done
                 AchievementEffect.UnlockedAll -> R.string.achievement_debug_unlock_all_done
                 AchievementEffect.Cleared -> R.string.achievement_debug_clear_done
+                AchievementEffect.PallasEnteredDebug,
+                AchievementEffect.PallasExitedDebug,
+                -> return@collect
             }
             Toast.makeText(context, resId, Toast.LENGTH_SHORT).show()
         }

@@ -207,6 +207,8 @@ object AchievementIds {
     const val SANITY_PLANNER = "SanityPlanner"
     const val WAREHOUSE_KEEPER = "WarehouseKeeper"
     const val PALLAS_STARTER = "PallasStarter"
+    /** 点击成就设置区帕拉斯头像（牛牛喝酒） */
+    const val PALLAS_CHEERS = "PallasCheers"
     const val SLACKING_OFF = "SlackingOff"
 }
 

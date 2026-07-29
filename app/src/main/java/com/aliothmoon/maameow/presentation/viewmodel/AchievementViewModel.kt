@@ -7,8 +7,11 @@ import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.data.achievement.AchievementDefinitions
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementField
+import com.aliothmoon.maameow.data.achievement.AchievementIds
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.achievement.AchievementState
+import com.aliothmoon.maameow.data.achievement.PallasClickResult
+import com.aliothmoon.maameow.data.achievement.PallasDebugEasterEgg
 import com.aliothmoon.maameow.data.achievement.achievementText
 import com.aliothmoon.maameow.data.achievement.buildAchievementStates
 
@@ -30,6 +33,8 @@ data class AchievementUiState(
     val achievements: List<AchievementState> = emptyList(),
     /** 全部可见成就(含未解锁),供调试页下拉选择等需要完整列表的场景使用。 */
     val allAchievements: List<AchievementState> = emptyList(),
+    /** 帕拉斯头像彩蛋：会话内 Debug 态（金色 + Unlock All）。 */
+    val pallasDebugActive: Boolean = false,
 )
 
 class AchievementViewModel(
@@ -37,11 +42,14 @@ class AchievementViewModel(
     private val application: Context,
 ) : ViewModel() {
     private val _query = MutableStateFlow("")
+    private val pallasEgg = PallasDebugEasterEgg()
+    private val _pallasDebugActive = MutableStateFlow(false)
 
     val uiState: StateFlow<AchievementUiState> = combine(
         repository.records,
         _query,
-    ) { records, query ->
+        _pallasDebugActive,
+    ) { records, query, pallasDebug ->
         val all = buildAchievementStates(records, AchievementDefinitions.all)
         val normalized = query.trim()
         val visible = if (normalized.isEmpty()) {
@@ -59,6 +67,7 @@ class AchievementViewModel(
             unlockedCount = all.count { it.unlocked },
             achievements = visible,
             allAchievements = all,
+            pallasDebugActive = pallasDebug,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AchievementUiState())
 
@@ -90,6 +99,24 @@ class AchievementViewModel(
                     event = AchievementEvents.ACHIEVEMENT_PAGE_OPENED
                 }
             }
+
+            AchievementEvent.PallasAvatarClicked -> viewModelScope.launch {
+                when (pallasEgg.onClick()) {
+                    PallasClickResult.Ignored -> return@launch
+                    PallasClickResult.EnteredDebug -> {
+                        _pallasDebugActive.value = true
+                        _effects.send(AchievementEffect.PallasEnteredDebug)
+                    }
+
+                    PallasClickResult.ExitedDebug -> {
+                        _pallasDebugActive.value = false
+                        _effects.send(AchievementEffect.PallasExitedDebug)
+                    }
+
+                    is PallasClickResult.Counting, PallasClickResult.MissedRoll -> Unit
+                }
+                repository.unlock(AchievementIds.PALLAS_CHEERS)
+            }
         }
     }
 }
@@ -101,6 +128,9 @@ sealed interface AchievementEvent {
     data object UnlockAll : AchievementEvent
     data object ClearAllRecords : AchievementEvent
     data object ScreenOpened : AchievementEvent
+
+    /** 设置成就区帕拉斯头像点击。 */
+    data object PallasAvatarClicked : AchievementEvent
 }
 
 /** 一次性 UI 副作用,由 ViewModel 发出、View 消费。 */
@@ -108,4 +138,6 @@ sealed interface AchievementEffect {
     data object Unlocked : AchievementEffect
     data object UnlockedAll : AchievementEffect
     data object Cleared : AchievementEffect
+    data object PallasEnteredDebug : AchievementEffect
+    data object PallasExitedDebug : AchievementEffect
 }

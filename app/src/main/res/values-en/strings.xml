@@ -1838,6 +1838,13 @@
     <string name="achievement_PallasStarter_title">Pallas Fan</string>
     <string name="achievement_PallasStarter_desc">Great warriors, I will be by your side, fighting bravely with you.</string>
     <string name="achievement_PallasStarter_condition">Use Pallas as the ｢Starting Core Operator｣ in Integrated Strategies</string>
+    <string name="achievement_PallasCheers_title">Cheers, Pallas</string>
+    <string name="achievement_PallasCheers_desc">I won\'t drink so much next time…</string>
+    <string name="achievement_PallasCheers_condition">Tap the Pallas avatar in Settings → Achievements</string>
+    <string name="settings_pallas_burping">Ugh… cough</string>
+    <string name="settings_pallas_drunk_hint">Oh, Doctor. Why are you walking so unsteadily today?</string>
+    <!-- Aligns with WPF Hangover: shown when tapping the avatar again to leave debug -->
+    <string name="settings_pallas_hangover">I won\'t drink so much next time…</string>
     <string name="achievement_SlackingOff_title">Slacking Off</string>
     <string name="achievement_SlackingOff_desc">Done with serious business, time to play something else.</string>
     <string name="achievement_SlackingOff_condition">Launch a mini-game once</string>

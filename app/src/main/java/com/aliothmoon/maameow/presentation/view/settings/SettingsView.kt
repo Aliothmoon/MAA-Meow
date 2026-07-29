@@ -12,6 +12,8 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,6 +26,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
@@ -65,6 +69,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.BuildConfig
@@ -91,6 +96,9 @@ import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.SettingsGroupCard
 import com.aliothmoon.maameow.presentation.components.TopAppBar
+import com.aliothmoon.maameow.presentation.viewmodel.AchievementEffect
+import com.aliothmoon.maameow.presentation.viewmodel.AchievementEvent
+import com.aliothmoon.maameow.presentation.viewmodel.AchievementViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.SettingsViewModel
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.Misc
@@ -108,6 +116,7 @@ fun SettingsView(
     navController: NavController,
     onViewAnnouncement: () -> Unit = {},
     viewModel: SettingsViewModel = koinViewModel(),
+    achievementViewModel: AchievementViewModel = koinViewModel(),
     resourceInitService: ResourceInitService = koinInject(),
     achievementReporter: AchievementReporter = koinInject(),
 ) {
@@ -138,8 +147,55 @@ fun SettingsView(
     val language by viewModel.language.collectAsStateWithLifecycle()
     val backupMessage by viewModel.backupMessage.collectAsStateWithLifecycle()
     val showRestartDialog by viewModel.showRestartDialog.collectAsStateWithLifecycle()
+    val achievementUiState by achievementViewModel.uiState.collectAsStateWithLifecycle()
+    // 对齐 WPF：进入 Debug 弹 DrunkAndStaggering，再点退出弹 Hangover
+    var pallasFlavorDialog by remember { mutableStateOf<PallasFlavorDialog?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    LaunchedEffect(achievementViewModel) {
+        achievementViewModel.effects.collect { effect ->
+            when (effect) {
+                AchievementEffect.PallasEnteredDebug ->
+                    pallasFlavorDialog = PallasFlavorDialog.Drunk
+                AchievementEffect.PallasExitedDebug ->
+                    pallasFlavorDialog = PallasFlavorDialog.Hangover
+                AchievementEffect.UnlockedAll -> Toast.makeText(
+                    context,
+                    R.string.achievement_debug_unlock_all_done,
+                    Toast.LENGTH_SHORT,
+                ).show()
+                AchievementEffect.Cleared -> Toast.makeText(
+                    context,
+                    R.string.achievement_debug_clear_done,
+                    Toast.LENGTH_SHORT,
+                ).show()
+                AchievementEffect.Unlocked -> Unit
+            }
+        }
+    }
+
+    pallasFlavorDialog?.let { flavor ->
+        // 禁止点外部/返回立刻关掉：连点与弹窗同帧时容易穿透 dismiss
+        val bodyRes = when (flavor) {
+            PallasFlavorDialog.Drunk -> R.string.settings_pallas_drunk_hint
+            PallasFlavorDialog.Hangover -> R.string.settings_pallas_hangover
+        }
+        AlertDialog(
+            onDismissRequest = { /* 仅允许确认按钮关闭，避免点击穿透 */ },
+            title = { Text(stringResource(R.string.settings_pallas_burping)) },
+            text = { Text(stringResource(bodyRes)) },
+            confirmButton = {
+                TextButton(onClick = { pallasFlavorDialog = null }) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
+            properties = DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false,
+            ),
+        )
+    }
 
     val backgroundCrop = rememberBackgroundCropController(viewModel)
     val pickBackgroundLauncher = rememberLauncherForActivityResult(
@@ -693,10 +749,53 @@ fun SettingsView(
                 }
             }
 
-            // 成就
+            // 成就（帕拉斯头像在分栏卡片内第一项）
             item {
                 SectionHeader(stringResource(R.string.settings_section_achievement))
                 SettingsGroupCard {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = MaaDesignTokens.Spacing.md),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
+                    ) {
+                        PallasMedal(
+                            debugActive = achievementUiState.pallasDebugActive,
+                            onClick = {
+                                achievementViewModel.onEvent(AchievementEvent.PallasAvatarClicked)
+                            },
+                        )
+                        AnimatedVisibility(
+                            visible = achievementUiState.pallasDebugActive,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    MaaDesignTokens.Spacing.sm,
+                                    Alignment.CenterHorizontally,
+                                ),
+                            ) {
+                                Button(
+                                    onClick = {
+                                        achievementViewModel.onEvent(AchievementEvent.UnlockAll)
+                                    },
+                                ) {
+                                    Text(stringResource(R.string.achievement_debug_unlock_all))
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        achievementViewModel.onEvent(AchievementEvent.ClearAllRecords)
+                                    },
+                                ) {
+                                    Text(stringResource(R.string.achievement_debug_clear_all))
+                                }
+                            }
+                        }
+                    }
+                    ListItemDivider()
                     SettingClickItem(
                         title = stringResource(R.string.settings_achievement_title),
                         description = stringResource(R.string.settings_achievement_desc),
@@ -1440,6 +1539,12 @@ private fun SettingRemoteBackendItem(
     }
 }
 
+
+/** 帕拉斯彩蛋弹窗：进入 Debug = Drunk，再点退出 = Hangover（对齐 WPF）。 */
+private enum class PallasFlavorDialog {
+    Drunk,
+    Hangover,
+}
 
 private data class ShizukuLaunchAppOption(
     val label: String,

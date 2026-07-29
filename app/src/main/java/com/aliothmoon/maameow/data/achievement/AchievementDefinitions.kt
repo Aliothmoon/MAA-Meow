@@ -763,6 +763,12 @@ object AchievementDefinitions {
             }
         }
         achievement(
+            id = AchievementIds.PALLAS_CHEERS,
+            category = AchievementCategory.EASTER_EGG,
+            hidden = true,
+            rare = true,
+        )
+        achievement(
             id = AchievementIds.SLACKING_OFF,
             category = AchievementCategory.EASTER_EGG,
             hidden = true,

@@ -1895,6 +1895,13 @@
     <string name="achievement_PallasStarter_title">牛牛厨</string>
     <string name="achievement_PallasStarter_desc">伟大的战士们啊，我会在你们身边，与你们一同奋勇搏杀。</string>
     <string name="achievement_PallasStarter_condition">使用帕拉斯作为肉鸽 ｢开局核心干员｣</string>
+    <string name="achievement_PallasCheers_title">给牛牛喝酒</string>
+    <string name="achievement_PallasCheers_desc">下次不能喝，喝这么多了……</string>
+    <string name="achievement_PallasCheers_condition">点击设置「成就」区域的帕拉斯头像</string>
+    <string name="settings_pallas_burping">呃……咳嗯</string>
+    <string name="settings_pallas_drunk_hint">呀，博士。你今天走起路来，怎么看着摇摇晃晃的？</string>
+    <!-- 对齐 WPF Hangover：再点头像退出 Debug 时弹出 -->
+    <string name="settings_pallas_hangover">下次不能喝、喝这么多了……</string>
     <string name="achievement_SlackingOff_title">不务正业</string>
     <string name="achievement_SlackingOff_desc">正事做累了，玩点别的。</string>
     <string name="achievement_SlackingOff_condition">启动一次小游戏</string>
