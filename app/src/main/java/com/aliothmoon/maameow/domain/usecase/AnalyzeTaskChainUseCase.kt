@@ -1,24 +1,37 @@
 package com.aliothmoon.maameow.domain.usecase
 
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Packages
+import com.aliothmoon.maameow.data.model.DepotMaintainConfig
 import com.aliothmoon.maameow.data.model.FightConfig
+import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.model.MallConfig
-import com.aliothmoon.maameow.data.model.ReclamationConfig
-import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.data.model.TaskChainNode
+import com.aliothmoon.maameow.data.model.TaskParamContext
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.repository.DepotRepository
+import com.aliothmoon.maameow.data.repository.OperBoxRepository
+import com.aliothmoon.maameow.data.resource.ActivityManager
+import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.data.resource.ServerTimezone
 import com.aliothmoon.maameow.domain.models.MallCreditFightAvailability
+import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.domain.models.resolveMallCreditFightAvailability
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
+import com.aliothmoon.maameow.utils.i18n.UiText
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import timber.log.Timber
 import java.time.DayOfWeek
 
 class AnalyzeTaskChainUseCase(
     private val taskChainState: TaskChainState,
     private val resourceDataManager: ResourceDataManager,
+    private val activityManager: ActivityManager,
+    private val depotRepository: DepotRepository,
+    private val operBoxRepository: OperBoxRepository,
+    private val itemHelper: ItemHelper,
 ) {
     operator fun invoke(chain: List<TaskChainNode>): AnalyzeTaskChainResult {
         val enabledNodes = chain.filter { it.enabled }.sortedBy { it.order }
@@ -36,21 +49,54 @@ class AnalyzeTaskChainUseCase(
         }
 
         val clientType = taskChainState.getClientType()
-        val creditFightAvailability = resolveMallCreditFightAvailability(enabledNodes)
+        val creditFightAvailability = resolveMallCreditFightAvailability(enabledNodes, activityManager)
         val serverDayOfWeek = ServerTimezone.getYjDayOfWeek(clientType)
 
         logCreditFightWarning(enabledNodes, creditFightAvailability)
 
-        val params = enabledNodes.mapNotNull { node ->
+        val ctx = TaskParamContext(
+            clientType = clientType,
+            chainAllowsCreditFight = creditFightAvailability.isAvailable,
+            activityManager = activityManager,
+            depotRepository = depotRepository,
+            operBoxRepository = operBoxRepository,
+            itemHelper = itemHelper,
+            resourceDataManager = resourceDataManager,
+        )
+
+        val preflightLogs = mutableListOf<Pair<UiText, LogLevel>>()
+        // TODO: MaaCore 适配代理倍率 7~10 后删除
+        if (SeriesLock.isLocked(clientType) &&
+            enabledNodes.any { it.config is FightConfig || it.config is DepotMaintainConfig }
+        ) {
+            preflightLogs += uiTextOf(R.string.runlog_series_locked) to LogLevel.WARNING
+        }
+
+        var unlockDoubleSync = false
+        val params = enabledNodes.flatMap { node ->
             if (isSkippedByWeeklySchedule(node, serverDayOfWeek)) {
-                return@mapNotNull null
+                return@flatMap emptyList()
             }
-            buildNodeParams(node, creditFightAvailability, clientType)
+            val result = node.config.toTaskParams(ctx)
+            preflightLogs += result.logs
+            if (result.unlockDoubleSync) unlockDoubleSync = true
+            result.params.map { taskParams ->
+                val withNode = taskParams.copy(nodeId = node.id)
+                // 理智作战的目标库存日志标签用节点名（用户可重命名），比固定 "Fight" 更可读
+                val target = withNode.dropTarget
+                if (node.config is FightConfig && target != null) {
+                    withNode.copy(dropTarget = target.copy(logLabel = node.name))
+                } else {
+                    withNode
+                }
+            }
         }
 
         if (params.isEmpty()) {
             return AnalyzeTaskChainResult.Blocked(
                 reason = AnalyzeTaskChainFailureReason.NO_EXECUTABLE_TASKS,
+                // 逐条计划的失败原因都在这里，丢掉用户就只剩一句「没有可执行的任务」
+                preflightLogs = preflightLogs,
             )
         }
 
@@ -63,6 +109,9 @@ class AnalyzeTaskChainUseCase(
                 launchesGame = enabledNodes
                     .mapNotNull { it.config as? WakeUpConfig }
                     .any { it.startGameEnabled },
+                preflightLogs = preflightLogs,
+                // 双 due 标记：启动成功后 arm，两侧识别成功再解锁（见 ToolboxResultCollector）
+                unlockDoubleSync = unlockDoubleSync,
             )
         )
     }
@@ -88,30 +137,6 @@ class AnalyzeTaskChainUseCase(
         return false
     }
 
-    private fun buildNodeParams(
-        node: TaskChainNode,
-        creditFightAvailability: MallCreditFightAvailability,
-        clientType: String,
-    ): MaaTaskParams {
-        val base = when (val config = node.config) {
-            is MallConfig -> {
-                config.toTaskParams(
-                    creditFightEnabled = config.creditFight && creditFightAvailability.isAvailable,
-                    clientType = clientType,
-                )
-            }
-
-            is ReclamationConfig -> config.toTaskParams(clientType = clientType)
-
-            is RoguelikeConfig -> config.toTaskParams { coreChar ->
-                resourceDataManager.getCharacterByNameOrAlias(coreChar)?.name ?: coreChar
-            }
-
-            else -> node.config.toTaskParams()
-        }
-        return base.copy(nodeId = node.id)
-    }
-
     private fun logCreditFightWarning(
         nodes: List<TaskChainNode>,
         availability: MallCreditFightAvailability,
@@ -133,6 +158,17 @@ data class TaskChainPlan(
     val gamePackageName: String?,
     val launchesGame: Boolean,
     val gameAliveBeforeStart: Boolean? = null,
+    /**
+     * 任务链分析阶段产生的、需要在会话开始后回放给用户的日志。
+     * UseCase 保持无副作用，由 MaaCompositionService 在 startSession 之后统一 append。
+     */
+    val preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
+    /**
+     * 更新数据节点同时到期干员+仓库时为 true。
+     * 启动成功后 arm [com.aliothmoon.maameow.maa.callback.ToolboxResultCollector]，
+     * 两侧识别成功后再报 TOOLBOX_RESULT(DepotOperBox)。
+     */
+    val unlockDoubleSync: Boolean = false,
 )
 
 enum class AnalyzeTaskChainFailureReason {
@@ -147,5 +183,7 @@ sealed interface AnalyzeTaskChainResult {
     data class Blocked(
         val reason: AnalyzeTaskChainFailureReason,
         val clientTypes: List<String> = emptyList(),
+        /** 拦截前已产生的诊断日志（如库存保持逐条计划的失败原因），由调用方展示 */
+        val preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
     ) : AnalyzeTaskChainResult
 }

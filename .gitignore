@@ -24,6 +24,9 @@ android/.cxx
 # Log Files
 *.log
 
+# Python
+__pycache__/
+
 # IntelliJ
 *.iml
 .idea/

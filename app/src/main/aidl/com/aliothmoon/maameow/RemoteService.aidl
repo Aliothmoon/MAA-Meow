@@ -45,7 +45,7 @@ interface RemoteService {
 
     oneway void setDisplayPower(boolean on) = 20;
 
-    oneway void setPlayAudioOpAllowed(String packageName, boolean isAllowed) = 21;
+    boolean setPlayAudioOpAllowed(String packageName, boolean isAllowed) = 21;
 
     int pid() = 22;
 

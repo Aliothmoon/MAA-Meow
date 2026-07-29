@@ -19,9 +19,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
@@ -29,20 +26,16 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -53,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.AwardConfig
+import com.aliothmoon.maameow.data.model.DepotMaintainConfig
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.InfrastConfig
 import com.aliothmoon.maameow.data.model.MallConfig
@@ -63,11 +57,14 @@ import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskParamProvider
 import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
+import com.aliothmoon.maameow.data.model.UserDataUpdateConfig
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.presentation.components.ITextField
+import com.aliothmoon.maameow.presentation.view.panel.depot.DepotMaintainConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.fight.FightConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.mall.MallConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.roguelike.RoguelikeConfigPanel
+import com.aliothmoon.maameow.presentation.view.panel.userdata.UserDataUpdateConfigPanel
 
 @Composable
 fun TaskConfigPanel(
@@ -77,6 +74,7 @@ fun TaskConfigPanel(
     isProfileMode: Boolean,
     profiles: List<TaskProfile>,
     activeProfileId: String,
+    clientType: String,
     onConfigChange: (TaskParamProvider) -> Unit,
     onAddNode: (TaskTypeInfo) -> Unit,
     onRemoveNode: (String) -> Unit,
@@ -116,8 +114,7 @@ fun TaskConfigPanel(
                     node = selectedNode,
                     onRename = { onRenameNode(selectedNode.id, it) },
                     onDuplicate = { onDuplicateNode(selectedNode.id) },
-                    onRemove = { onRemoveNode(selectedNode.id) }
-                )
+                    onRemove = { onRemoveNode(selectedNode.id) })
             }
 
             // 编辑模式：未选中
@@ -132,48 +129,50 @@ fun TaskConfigPanel(
             }
 
             // 普通模式：已选中任务
-            !isEditMode && selectedNode != null -> {
+            // key(node.id)：切任务时销毁并重建配置面板，避免复用同一 composition/输入框节点，
+            // 导致焦点残留跳转，以及各任务的 remember 状态（展开态/Tab/滚动/输入缓冲）互相串台
+            !isEditMode && selectedNode != null -> key(selectedNode.id) {
                 val cfg = selectedNode.config
                 Box(modifier = Modifier.fillMaxSize()) {
                     when (cfg) {
                         is WakeUpConfig -> WakeUpConfigPanel(
-                            config = cfg,
-                            onConfigChange = onConfigChange
+                            config = cfg, onConfigChange = onConfigChange
                         )
 
                         is RecruitConfig -> RecruitConfigPanel(
-                            config = cfg,
-                            onConfigChange = onConfigChange
+                            config = cfg, onConfigChange = onConfigChange
                         )
 
                         is InfrastConfig -> InfrastConfigPanel(
-                            config = cfg,
-                            onConfigChange = onConfigChange
+                            config = cfg, onConfigChange = onConfigChange
                         )
 
                         is FightConfig -> FightConfigPanel(
-                            config = cfg,
-                            onConfigChange = onConfigChange
+                            config = cfg, clientType = clientType, onConfigChange = onConfigChange
                         )
 
                         is MallConfig -> MallConfigPanel(
-                            config = cfg,
-                            onConfigChange = onConfigChange
+                            config = cfg, onConfigChange = onConfigChange
                         )
 
                         is AwardConfig -> AwardConfigPanel(
-                            config = cfg,
-                            onConfigChange = onConfigChange
+                            config = cfg, onConfigChange = onConfigChange
                         )
 
                         is RoguelikeConfig -> RoguelikeConfigPanel(
-                            config = cfg,
-                            onConfigChange = onConfigChange
+                            config = cfg, onConfigChange = onConfigChange
                         )
 
                         is ReclamationConfig -> ReclamationConfigPanel(
-                            config = cfg,
-                            onConfigChange = onConfigChange
+                            config = cfg, onConfigChange = onConfigChange
+                        )
+
+                        is UserDataUpdateConfig -> UserDataUpdateConfigPanel(
+                            config = cfg, onConfigChange = onConfigChange
+                        )
+
+                        is DepotMaintainConfig -> DepotMaintainConfigPanel(
+                            config = cfg, onConfigChange = onConfigChange
                         )
                     }
                 }
@@ -192,9 +191,7 @@ fun TaskConfigPanel(
 
 @Composable
 private fun EmptyStateHint(
-    title: String,
-    descriptions: List<String>,
-    showReorderHint: Boolean = true
+    title: String, descriptions: List<String>, showReorderHint: Boolean = true
 ) {
     Column(
         modifier = Modifier
@@ -226,8 +223,7 @@ private fun EmptyStateHint(
 @Composable
 private fun HintItem(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
+        modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top
     ) {
         Icon(
             imageVector = icon,
@@ -272,11 +268,9 @@ private fun TaskGalleryView(onAddNode: (TaskTypeInfo) -> Unit) {
                     shape = RoundedCornerShape(8.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    modifier = Modifier.clickable { onAddNode(typeInfo) }
-                ) {
+                    modifier = Modifier.clickable { onAddNode(typeInfo) }) {
                     Box(
-                        modifier = Modifier.padding(12.dp),
-                        contentAlignment = Alignment.Center
+                        modifier = Modifier.padding(12.dp), contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = taskTypeLabel(typeInfo),
@@ -294,10 +288,7 @@ private fun TaskGalleryView(onAddNode: (TaskTypeInfo) -> Unit) {
 
 @Composable
 private fun TaskManagementView(
-    node: TaskChainNode,
-    onRename: (String) -> Unit,
-    onDuplicate: () -> Unit,
-    onRemove: () -> Unit
+    node: TaskChainNode, onRename: (String) -> Unit, onDuplicate: () -> Unit, onRemove: () -> Unit
 ) {
     var text by remember(node.id) { mutableStateOf(node.name) }
     val typeDisplayName = taskTypeInfoForConfig(node.config)?.let { taskTypeLabel(it) }
@@ -378,7 +369,11 @@ private fun TaskManagementView(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(4.dp)
         ) {
-            Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(
+                Icons.Default.ContentCopy,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
             Spacer(modifier = Modifier.width(8.dp))
             Text(stringResource(R.string.panel_config_duplicate_task))
         }
@@ -416,5 +411,7 @@ private fun taskTypeLabel(typeInfo: TaskTypeInfo): String {
         TaskTypeInfo.MISSION -> stringResource(R.string.panel_task_type_mission)
         TaskTypeInfo.AUTO_ROGUELIKE -> stringResource(R.string.panel_task_type_auto_roguelike)
         TaskTypeInfo.RECLAMATION -> stringResource(R.string.panel_task_type_reclamation)
+        TaskTypeInfo.USER_DATA_UPDATE -> stringResource(R.string.panel_task_type_user_data_update)
+        TaskTypeInfo.DEPOT_MAINTAIN -> stringResource(R.string.panel_task_type_depot_maintain)
     }
 }

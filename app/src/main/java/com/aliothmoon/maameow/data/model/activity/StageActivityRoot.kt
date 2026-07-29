@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.data.model.activity
 import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
+import timber.log.Timber
 
 /**
  * StageActivityV2.json 根结构
@@ -25,6 +26,7 @@ object StageActivityRoot {
             val clientData = root[clientType] ?: return null
             json.decodeFromJsonElement<ClientStageActivity>(clientData)
         } catch (e: Exception) {
+            Timber.e(e,"StageActivityRoot parse error")
             null
         }
     }

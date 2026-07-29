@@ -41,6 +41,11 @@
     <string name="settings_log_export_title">Export Log Archive</string>
     <string name="settings_log_export_desc">Package all logs into a ZIP file to share</string>
     <string name="settings_log_export_chooser_title">Export Logs</string>
+    <string name="log_export_save_to_device">Save to Device</string>
+    <string name="log_export_share">Share with Other Apps</string>
+    <string name="log_export_save_success">Saved: %1$s</string>
+    <string name="log_export_failed">Export failed — make sure there are logs to export</string>
+    <string name="log_export_in_progress">Exporting…</string>
     <string name="settings_debug_mode_title">Debug Mode</string>
     <string name="settings_debug_mode_desc">Record detailed log information when enabled</string>
     <string name="settings_section_display">Display</string>
@@ -63,6 +68,20 @@
     <string name="settings_font_size_title">Page Scale</string>
     <string name="settings_font_size_summary">Adjust page content size (80-110)</string>
     <string name="settings_font_size_preview_text">Who are you? Please support Pallas! (\'- \' )</string>
+    <string name="settings_background_title">Custom Background</string>
+    <string name="settings_background_desc">Set an image background for the four main tabs</string>
+    <string name="settings_background_pick">Choose Image</string>
+    <string name="settings_background_replace">Replace Image</string>
+    <string name="settings_background_remove">Remove</string>
+    <string name="settings_background_image_alpha">Image Opacity</string>
+    <string name="settings_background_scrim">Scrim</string>
+    <string name="settings_background_blur">Blur</string>
+    <string name="settings_background_import_failed">Failed to import background image</string>
+    <string name="settings_background_crop_reset">Reset</string>
+    <string name="settings_background_crop_rotate">Rotate 90°</string>
+    <string name="settings_background_crop_save">Save Background</string>
+    <string name="settings_background_crop_zoom_in">Zoom in background</string>
+    <string name="settings_background_crop_zoom_out">Zoom out background</string>
     <string name="settings_language_title">Language</string>
     <string name="settings_language_system">Follow System</string>
     <string name="settings_language_zh">中文</string>
@@ -276,7 +295,7 @@
 
     <!-- panel: auto battle (Copilot) -->
     <string name="panel_autobattle_read_set">Load Copilot Set</string>
-    <string name="panel_autobattle_station">Copilot Hub</string>
+    <string name="panel_autobattle_station">Open Copilot Hub</string>
     <string name="panel_autobattle_clear_unchecked">Remove Unchecked</string>
     <string name="panel_autobattle_clear_list">Clear List</string>
     <string name="copilot_navigation_name_mismatch">The current stage name differs from the navigation stage name. Verify that navigation will still work correctly.</string>
@@ -285,6 +304,8 @@
     <string name="copilot_set_import_unsupported">%1$s does not support Copilot set import</string>
     <string name="copilot_local_path_unsupported">Local file paths are not supported yet. Please enter a Copilot code</string>
     <string name="copilot_import_file">Import</string>
+    <string name="copilot_builtin_picker">Built-in</string>
+    <string name="copilot_builtin_picker_empty">No built-in resources (initialize resources first)</string>
     <string name="copilot_import_float_hint">Please import files from the Background Task page</string>
     <string name="copilot_import_failed">Import failed: unable to parse file</string>
     <string name="copilot_import_success">Successfully imported %1$d copilot(s)</string>
@@ -357,6 +378,7 @@
     <string name="bg_auto_mute_on_launch">Mute game audio on launch</string>
     <string name="bg_auto_close_on_end">Close game when task ends</string>
     <string name="bg_toast_auto_closed_on_end">Task finished. Game closed automatically</string>
+    <string name="bg_toast_mute_failed">Mute operation failed. Your system may restrict this feature</string>
     <string name="bg_auto_hardware_screen_off">Turn off screen when AFK</string>
     <string name="bg_auto_show_touch_preview">Show touch preview</string>
 
@@ -614,6 +636,8 @@
     <string name="panel_task_type_mission">Collect Rewards</string>
     <string name="panel_task_type_auto_roguelike">Auto I.S.</string>
     <string name="panel_task_type_reclamation">Reclamation Algorithm</string>
+    <string name="panel_task_type_user_data_update">Update doctor data</string>
+    <string name="panel_task_type_depot_maintain">Depot Maintain</string>
 
     <!-- panel: profile -->
     <string name="panel_profile_title">Profile Management</string>
@@ -654,7 +678,7 @@
     <string name="panel_autobattle_tab_paradox">Paradox Simulation</string>
     <string name="panel_autobattle_tab_other">Other Activities</string>
     <string name="panel_autobattle_station_code_label">Copilot Code</string>
-    <string name="panel_autobattle_station_code_placeholder">Enter maa://1234 or 1234</string>
+    <string name="panel_autobattle_station_code_placeholder">Enter prts://1234, prts://s1234 or 1234</string>
     <string name="panel_autobattle_waiting">Waiting for input…</string>
     <string name="panel_autobattle_loading">Loading…</string>
     <string name="panel_autobattle_read_single">Load Copilot</string>
@@ -731,6 +755,8 @@
     <string name="panel_fight_series_title">Series</string>
     <string name="panel_fight_series_tip">• AUTO:\nAutomatically detect the maximum proxy multiplier for the stage while keeping sanity potion usage from overflowing sanity.\n\n• Numeric (1~6):\nExecute with the configured multiplier.\nIf current sanity is insufficient to complete the configured multiplier (for example, only enough for 5 runs but set to 6), battle cannot start.\nLikewise, if remaining run count is insufficient for the configured multiplier, battle cannot start.\n\n• Do not switch:\nDo not change the in-game proxy multiplier setting.</string>
     <string name="panel_fight_series_no_switch">Don\'t Switch</string>
+    <!-- TODO: remove after MaaCore adapts proxy multipliers 7~10 -->
+    <string name="panel_fight_series_locked_tip">Not yet adapted after game update. Please set the proxy multiplier manually in the game.</string>
     <string name="panel_fight_stage_reset_current">Cur/Last</string>
     <string name="panel_fight_stage_reset_ignore">Don\'t Switch</string>
     <string name="panel_fight_stage_reset_title">When activity stage is closed, reset to</string>
@@ -743,12 +769,10 @@
     <string name="panel_fight_primary_stage_closed">%1$s is not open today</string>
     <string name="panel_fight_primary_stage_closed_with_alternate">%1$s is not open today. An alternative stage will be used.</string>
     <string name="panel_fight_permanent_stage_blocks_alternate">Later alternative stages won\'t run (execution stage is permanent or current/last)</string>
-    <string name="panel_fight_alternate_stage2_label">Alternative Stage 2</string>
-    <string name="panel_fight_alternate_stage2_placeholder">For example: CE-5</string>
-    <string name="panel_fight_alternate_stage3_label">Alternative Stage 3</string>
-    <string name="panel_fight_alternate_stage3_placeholder">For example: CE-4</string>
-    <string name="panel_fight_alternate_stage4_label">Alternative Stage 4</string>
-    <string name="panel_fight_alternate_stage4_placeholder">For example: CE-3</string>
+    <string name="panel_fight_alternate_stage_label">Alternative Stage %1$d</string>
+    <string name="panel_fight_alternate_stage_placeholder">For example: CE-5</string>
+    <string name="panel_fight_add_alternate_stage">Add Alternative Stage</string>
+    <string name="panel_fight_remove_stage">Remove this alternative stage</string>
     <string name="panel_fight_stage_group_permanent">Permanent Stages</string>
     <string name="panel_fight_use_custom_annihilation">Custom Annihilation Stage</string>
     <string name="panel_fight_annihilation_title">Annihilation Stage</string>
@@ -958,8 +982,33 @@
     <string name="panel_fight_specified_drops_stage_tip">This feature does not automatically calculate the optimal stage. Please choose the stage manually.</string>
     <string name="panel_fight_material">Material</string>
     <string name="panel_fight_target_count">Target Amount</string>
+    <string name="panel_fight_drops_mode_quantity">Quantity</string>
+    <string name="panel_fight_drops_mode_target_inventory">Target inventory</string>
+    <string name="panel_fight_target_inventory">Target inventory</string>
+    <string name="panel_fight_target_inventory_tip">Refers to the inventory data saved by \"Tools - Depot Recognition\", farming only up to the target. Inventory is cached and may drift after manual runs, crafting or consumption; it is updated in real time from drops during a run, so materials farmed by earlier tasks reduce the deficit of subsequent tasks.</string>
     <string name="panel_fight_resource_collection_open_tip">· Resource collection event is active (all resource stages are open)</string>
     <string name="panel_fight_today_stage_hint_title">Today\'s stage tips (%1$s)</string>
+
+    <!-- panel: depot maintain -->
+    <string name="panel_toolbox_last_sync">Last sync: %1$s</string>
+    <string name="panel_toolbox_never_synced">Not synced yet</string>
+    <string name="panel_userdata_update_oper_box">Operator recognition</string>
+    <string name="panel_userdata_update_depot">Depot recognition</string>
+    <string name="panel_userdata_trigger_interval">Trigger interval</string>
+    <string name="panel_userdata_interval_every_time">Every time</string>
+    <string name="panel_userdata_interval_daily">Daily</string>
+    <string name="panel_userdata_interval_weekly">Weekly</string>
+
+    <string name="panel_depot_update_before_start">Update inventory before starting</string>
+    <string name="panel_depot_update_before_start_tip">Runs depot recognition first to refresh inventory data; this run\'s deficits are still based on the inventory from before that recognition</string>
+    <string name="panel_depot_skip_during_activity">Skip during event</string>
+    <string name="panel_depot_skip_during_resource">Skip while the resource collection event is active</string>
+    <string name="panel_depot_add_plan">Add</string>
+    <string name="panel_depot_collapse_all">Collapse</string>
+    <string name="panel_depot_target_inventory">Target inventory</string>
+    <string name="panel_depot_stone_count">Use up to N Originite Prime</string>
+    <string name="panel_depot_not_selected">Not selected</string>
+    <string name="panel_depot_remove_plan">Remove this plan</string>
 
     <!-- panel: mall -->
     <string name="panel_mall_advanced_options">Advanced Options</string>
@@ -1149,9 +1198,9 @@
     <string name="panel_roguelike_squad_splendid_blossoms">Blooming Flowers Squad</string>
     <string name="panel_roguelike_squad_risky_gambit">Perilous Game Squad</string>
     <string name="panel_roguelike_squad_echo_of_ages">Sui\'s Shadow Squad</string>
-    <string name="panel_roguelike_squad_agent">Agent Squad (Not Supported)</string>
-    <string name="panel_roguelike_squad_scholarly">Knowledge Squad (知学分队)</string>
-    <string name="panel_roguelike_squad_merchant">Merchant Squad (商贾分队)</string>
+    <string name="panel_roguelike_squad_agent">Proxy Squad (Not Supported)</string>
+    <string name="panel_roguelike_squad_scholarly">Knowledge Squad</string>
+    <string name="panel_roguelike_squad_merchant">Merchant Squad</string>
     <!-- i18n: shared helpers -->
     <string name="common_enumeration_separator">, </string>
 
@@ -1494,6 +1543,8 @@
     <string name="task_type_mission">Rewards</string>
     <string name="task_type_auto_roguelike">Auto I.S.</string>
     <string name="task_type_reclamation">Recl. Alg.</string>
+    <string name="task_type_user_data_update">Update doctor data</string>
+    <string name="task_type_depot_maintain">Depot Maintain</string>
 
     <!-- i18n: announcement -->
     <string name="announcement_title">Important Notice</string>
@@ -1782,6 +1833,16 @@
     <!-- runtime session log (shown in log panel / history) -->
     <string name="runlog_task_start">Starting tasks (%1$d total)</string>
     <string name="runlog_task_started">Tasks started</string>
+    <!-- TODO: remove after MaaCore adapts proxy multipliers 7~10 -->
+    <string name="runlog_series_locked">Proxy multiplier not yet adapted after game update; using \"Don\'t Switch\". Please set it manually in the game.</string>
+    <string name="runlog_depot_plan_invalid_drop">Plan %1$d: no drop item specified.</string>
+    <string name="runlog_depot_plan_zero_count">Plan %1$d: target inventory is 0.</string>
+    <string name="runlog_depot_plan_no_stage">Plan %1$d: stage not specified or is \"Current/Last\".</string>
+    <string name="runlog_depot_plan_stage_not_open">Plan %1$d: stage \'%2$s\' is not open.</string>
+    <string name="runlog_depot_plan_inventory_enough">Plan %1$s: %2$s inventory sufficient (current %3$d / target %4$d).</string>
+    <string name="runlog_depot_set_params_failed">Plan %1$s: failed to update task params; original params will be used.</string>
+    <string name="runlog_depot_skipped_activity">An event is in progress; Depot Maintain skipped.</string>
+    <string name="runlog_depot_skipped_resource">The resource collection event is active; Depot Maintain skipped.</string>
     <string name="runlog_copilot_start">Starting auto-battle</string>
     <string name="runlog_copilot_started">Auto-battle started</string>
     <string name="runlog_service_connecting">Service is starting, please try again later</string>

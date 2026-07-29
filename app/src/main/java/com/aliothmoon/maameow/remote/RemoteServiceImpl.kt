@@ -64,6 +64,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
     private var setup = false
 
     init {
+        Workarounds.apply()
         startHeartbeatWatchdog()
         RemoteBootTrace.mark("CTOR_BEFORE_MAA_SERVICE")
         Ln.i("$TAG: RemoteServiceImpl init, version: ${MaaCoreManager.maaService.GetVersion()}")
@@ -113,7 +114,6 @@ class RemoteServiceImpl : RemoteService.Stub() {
                 }
                 Ln.i("MaaCore ${AsstGetVersion()}")
             }
-            Workarounds.apply()
             PermissionGrantHelper.disablePhantomProcessKiller()
             setup = true
         }
@@ -264,12 +264,13 @@ class RemoteServiceImpl : RemoteService.Stub() {
         GameAudioMuteController.restoreAll()
     }
 
-    override fun setPlayAudioOpAllowed(packageName: String?, isAllowed: Boolean) {
-        if (packageName.isNullOrBlank()) return
+    override fun setPlayAudioOpAllowed(packageName: String?, isAllowed: Boolean): Boolean {
+        if (packageName.isNullOrBlank()) return false
         val ok = GameAudioMuteController.setMuted(packageName, muted = !isAllowed)
         if (!ok) {
             Ln.w("$TAG: setPlayAudioOpAllowed($packageName, allowed=$isAllowed) failed")
         }
+        return ok
     }
 
     override fun isAppAlive(packageName: String): Int {

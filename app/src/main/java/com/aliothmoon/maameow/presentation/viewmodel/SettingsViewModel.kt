@@ -1,7 +1,10 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
 import android.app.Application
+import android.graphics.Bitmap
+import android.net.Uri
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.BuildConfig
@@ -12,6 +15,7 @@ import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.service.AchievementReporter
@@ -42,6 +46,7 @@ class SettingsViewModel(
     private val resourceDataManager: ResourceDataManager,
     private val resourceLoader: MaaResourceLoader,
     private val achievementReporter: AchievementReporter,
+    private val backgroundImageStore: BackgroundImageStore,
 ) : ViewModel() {
 
     // ========== 导入导出 ==========
@@ -72,7 +77,8 @@ class SettingsViewModel(
                 _backupMessage.value = uiTextOf(R.string.settings_export_success)
             } catch (e: Exception) {
                 Timber.e(e, "export config failed")
-                _backupMessage.value = uiTextOf(R.string.settings_export_failed, e.message.orEmpty())
+                _backupMessage.value =
+                    uiTextOf(R.string.settings_export_failed, e.message.orEmpty())
             }
         }
     }
@@ -84,7 +90,8 @@ class SettingsViewModel(
                 _showRestartDialog.value = true
             } catch (e: Exception) {
                 Timber.e(e, "import config failed")
-                _backupMessage.value = uiTextOf(R.string.settings_import_failed, e.message.orEmpty())
+                _backupMessage.value =
+                    uiTextOf(R.string.settings_import_failed, e.message.orEmpty())
             }
         }
     }
@@ -175,8 +182,9 @@ class SettingsViewModel(
         }
     }
 
-    val forceFullscreenOnVirtualDisplay: StateFlow<Boolean> = appSettingsManager.forceFullscreenOnVirtualDisplay
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val forceFullscreenOnVirtualDisplay: StateFlow<Boolean> =
+        appSettingsManager.forceFullscreenOnVirtualDisplay
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     fun setForceFullscreenOnVirtualDisplay(enabled: Boolean) {
         viewModelScope.launch {
@@ -184,7 +192,8 @@ class SettingsViewModel(
         }
     }
 
-    val allowForegroundScheduledTask: StateFlow<Boolean> = appSettingsManager.allowForegroundScheduledTask
+    val allowForegroundScheduledTask: StateFlow<Boolean> =
+        appSettingsManager.allowForegroundScheduledTask
 
     fun setAllowForegroundScheduledTask(enabled: Boolean) {
         viewModelScope.launch {
@@ -282,11 +291,66 @@ class SettingsViewModel(
             appSettingsManager.setFontSizeScale(scale)
         }
     }
+
     // 成就 Snackbar 提示开关
     val showAchievementSnackbar: StateFlow<Boolean> = appSettingsManager.showAchievementSnackbar
     fun setShowAchievementSnackbar(enabled: Boolean) {
         viewModelScope.launch {
             appSettingsManager.setShowAchievementSnackbar(enabled)
+        }
+    }
+
+    // ============ 自定义图片背景 ============
+    val customBackgroundEnabled: StateFlow<Boolean> = appSettingsManager.customBackgroundEnabled
+    val customBackgroundImageAlpha: StateFlow<Int> = appSettingsManager.customBackgroundImageAlpha
+    val customBackgroundScrim: StateFlow<Int> = appSettingsManager.customBackgroundScrim
+    val customBackgroundBlur: StateFlow<Int> = appSettingsManager.customBackgroundBlur
+    val backgroundImage: StateFlow<ImageBitmap?> = backgroundImageStore.imageBitmap
+
+    fun setCustomBackgroundEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            appSettingsManager.setCustomBackgroundEnabled(enabled)
+        }
+    }
+
+    /** 把选中的图片复制到缓存目录，返回文件路径；失败返回 null。 */
+    suspend fun prepareBackgroundSource(uri: Uri): String? =
+        backgroundImageStore.prepareSource(uri)
+
+    /** 按 EXIF 方向解码裁剪源图片；失败返回 null。 */
+    suspend fun decodeBackgroundSource(path: String): Bitmap? =
+        backgroundImageStore.decodeSource(path)
+
+    /** 保存裁剪结果并启用背景；返回是否成功。 */
+    suspend fun saveCroppedBackground(bitmap: Bitmap): Boolean =
+        backgroundImageStore.saveCropped(bitmap)
+
+    /** 取消裁剪或保存完成后清理源图片缓存。 */
+    fun discardBackgroundSource() {
+        backgroundImageStore.clearSourceCache()
+    }
+
+    fun removeBackgroundImage() {
+        viewModelScope.launch {
+            backgroundImageStore.clear()
+        }
+    }
+
+    fun setCustomBackgroundImageAlpha(value: Int) {
+        viewModelScope.launch {
+            appSettingsManager.setCustomBackgroundImageAlpha(value)
+        }
+    }
+
+    fun setCustomBackgroundScrim(value: Int) {
+        viewModelScope.launch {
+            appSettingsManager.setCustomBackgroundScrim(value)
+        }
+    }
+
+    fun setCustomBackgroundBlur(value: Int) {
+        viewModelScope.launch {
+            appSettingsManager.setCustomBackgroundBlur(value)
         }
     }
 }

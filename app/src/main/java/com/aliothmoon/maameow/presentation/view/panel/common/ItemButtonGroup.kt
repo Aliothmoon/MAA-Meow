@@ -1,4 +1,4 @@
-package com.aliothmoon.maameow.presentation.view.panel.fight
+package com.aliothmoon.maameow.presentation.view.panel.common
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier

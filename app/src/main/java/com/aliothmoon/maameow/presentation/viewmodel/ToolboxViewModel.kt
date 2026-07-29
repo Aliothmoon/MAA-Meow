@@ -7,7 +7,11 @@ import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.repository.DepotRepository
+import com.aliothmoon.maameow.data.repository.OperBoxRepository
+import com.aliothmoon.maameow.data.repository.toSortedItems
 import com.aliothmoon.maameow.data.resource.ActivityManager
+import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
 import com.aliothmoon.maameow.domain.usecase.GameReadiness
@@ -58,6 +62,9 @@ class ToolboxViewModel(
     private val checkGameReadiness: CheckGameReadinessUseCase,
     private val chainState: TaskChainState,
     achievementRepository: AchievementRepository,
+    val depotRepository: DepotRepository,
+    val operBoxRepository: OperBoxRepository,
+    private val itemHelper: ItemHelper,
 ) : ViewModel() {
 
     val miniGame = MiniGameDelegate(appContext, activityManager, compositionService, viewModelScope, achievementRepository)
@@ -194,7 +201,7 @@ class ToolboxViewModel(
 
     private fun onStartDepot() {
         viewModelScope.launch {
-            collector.clearDepot()
+            // 不 clear 持久化快照：识别失败时仍可看历史；成功 replaceAll 后自动刷新
             _statusMessage.value = uiTextOf(R.string.toolbox_status_starting_depot)
             handleStartResult(
                 compositionService.startCopilot(listOf(MaaTaskParams(MaaTaskType.DEPOT, "{}")))
@@ -206,7 +213,6 @@ class ToolboxViewModel(
 
     private fun onStartOperBox() {
         viewModelScope.launch {
-            collector.clearOperBox()
             _statusMessage.value = uiTextOf(R.string.toolbox_status_starting_oper_box)
             handleStartResult(
                 compositionService.startCopilot(listOf(MaaTaskParams(MaaTaskType.OPER_BOX, "{}")))
@@ -214,23 +220,24 @@ class ToolboxViewModel(
         }
     }
 
-    // ==================== 导出 ====================
+    // ==================== 导出（与屏幕同源：Repository 快照）====================
 
     fun exportDepotArkPlanner(): String {
-        val items = collector.depotItems.value
+        val items = depotRepository.snapshot.value.toSortedItems(itemHelper.items.value)
         val itemsJson = items.joinToString(",") { """{"id":"${it.id}","have":${it.count}}""" }
         return """{"@type":"@penguin-statistics/depot","items":[$itemsJson]}"""
     }
 
     fun exportDepotLolicon(): String {
-        val items = collector.depotItems.value
+        val items = depotRepository.snapshot.value.toSortedItems(itemHelper.items.value)
         return "{${items.joinToString(",") { "\"${it.id}\":${it.count}" }}}"
     }
 
     /** 干员识别导出列表：owned + notOwned（全部可用干员）。 */
     fun exportOperBoxList(): List<OperBoxOperator> {
-        val result = collector.operBoxResult.value ?: return emptyList()
-        return result.owned + result.notOwned
+        val snap = operBoxRepository.snapshot.value
+        if (!snap.hasSynced) return emptyList()
+        return snap.owned + snap.notOwned
     }
 
     /** 干员识别导出为 JSON（剪贴板与 .json 文件共用）。 */

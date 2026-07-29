@@ -1,10 +1,8 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
-import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.data.log.ApplicationLogWriter
-import com.aliothmoon.maameow.domain.service.LogExportService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +17,6 @@ import java.io.File
  */
 class ErrorLogViewModel(
     private val applicationLogWriter: ApplicationLogWriter,
-    private val logExportService: LogExportService
 ) : ViewModel() {
 
     data class ErrorLogFile(
@@ -40,9 +37,6 @@ class ErrorLogViewModel(
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    private val _exportIntent = MutableStateFlow<Intent?>(null)
-    val exportIntent: StateFlow<Intent?> = _exportIntent.asStateFlow()
 
     init {
         loadLogFiles()
@@ -100,20 +94,5 @@ class ErrorLogViewModel(
             }
             loadLogFiles()
         }
-    }
-
-    fun exportLogs() {
-        viewModelScope.launch {
-            try {
-                val intent = logExportService.exportAllLogs()
-                _exportIntent.value = intent
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to export logs")
-            }
-        }
-    }
-
-    fun clearExportIntent() {
-        _exportIntent.value = null
     }
 }

@@ -1,11 +1,11 @@
 package com.aliothmoon.maameow.koin
 
+import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.api.CopilotApiService
 import com.aliothmoon.maameow.data.api.ETagCacheManager
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.api.MaaApiService
 import com.aliothmoon.maameow.data.api.MirrorChyanApiClient
-import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.datasource.AppDownloader
 import com.aliothmoon.maameow.data.datasource.AssetExtractor
@@ -14,31 +14,46 @@ import com.aliothmoon.maameow.data.datasource.ZipExtractor
 import com.aliothmoon.maameow.data.datasource.update.MirrorChyanAppVersionChecker
 import com.aliothmoon.maameow.data.datasource.update.MirrorChyanResourceVersionChecker
 import com.aliothmoon.maameow.data.log.ApplicationLogWriter
-import com.aliothmoon.maameow.domain.service.MaaSessionLogger
+import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
+import com.aliothmoon.maameow.data.notification.provider.BarkProvider
+import com.aliothmoon.maameow.data.notification.provider.CustomWebhookProvider
+import com.aliothmoon.maameow.data.notification.provider.DingTalkProvider
+import com.aliothmoon.maameow.data.notification.provider.DiscordProvider
+import com.aliothmoon.maameow.data.notification.provider.DiscordWebhookProvider
+import com.aliothmoon.maameow.data.notification.provider.GotifyProvider
+import com.aliothmoon.maameow.data.notification.provider.NotificationProvider
+import com.aliothmoon.maameow.data.notification.provider.QmsgProvider
+import com.aliothmoon.maameow.data.notification.provider.ServerChanProvider
+import com.aliothmoon.maameow.data.notification.provider.SmtpProvider
+import com.aliothmoon.maameow.data.notification.provider.TelegramProvider
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
-import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
-import com.aliothmoon.maameow.schedule.service.ScheduleTriggerLogger
-import com.aliothmoon.maameow.schedule.service.ForegroundScheduleStarter
-import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.data.repository.CopilotRepository
+import com.aliothmoon.maameow.data.repository.DepotRepository
+import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
+import com.aliothmoon.maameow.data.resource.BackgroundImageStore
+import com.aliothmoon.maameow.data.resource.CopilotResourceProvider
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
-import com.aliothmoon.maameow.domain.service.CopilotManager
-import com.aliothmoon.maameow.domain.service.LogExportService
-import com.aliothmoon.maameow.domain.service.ToolboxExportService
+import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.AppAliveChecker
+import com.aliothmoon.maameow.domain.service.AppWatchdog
+import com.aliothmoon.maameow.domain.service.CopilotManager
+import com.aliothmoon.maameow.domain.service.ExternalNotificationService
+import com.aliothmoon.maameow.domain.service.FightDropsRefresher
+import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
+import com.aliothmoon.maameow.domain.service.LogExportService
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaEventNotifier
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
-import com.aliothmoon.maameow.domain.service.AppWatchdog
-import com.aliothmoon.maameow.domain.service.AchievementReporter
+import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.RemoteAppAliveChecker
 import com.aliothmoon.maameow.domain.service.ResourceInitService
+import com.aliothmoon.maameow.domain.service.ToolboxExportService
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.domain.service.update.UpdateService
 import com.aliothmoon.maameow.domain.service.update.checker.AppVersionChecker
@@ -52,24 +67,16 @@ import com.aliothmoon.maameow.maa.callback.TaskChainHandler
 import com.aliothmoon.maameow.maa.callback.TaskChainStatusTracker
 import com.aliothmoon.maameow.maa.callback.ToolboxResultCollector
 import com.aliothmoon.maameow.manager.PermissionManager
+import com.aliothmoon.maameow.manager.RemoteGameAudioAdapter
 import com.aliothmoon.maameow.manager.ShizukuReadinessProvider
 import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.overlay.OverlayViewModelOwner
 import com.aliothmoon.maameow.overlay.border.BorderOverlayManager
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
-import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
-import com.aliothmoon.maameow.data.notification.provider.BarkProvider
-import com.aliothmoon.maameow.data.notification.provider.CustomWebhookProvider
-import com.aliothmoon.maameow.data.notification.provider.DiscordProvider
-import com.aliothmoon.maameow.data.notification.provider.DiscordWebhookProvider
-import com.aliothmoon.maameow.data.notification.provider.DingTalkProvider
-import com.aliothmoon.maameow.data.notification.provider.GotifyProvider
-import com.aliothmoon.maameow.data.notification.provider.NotificationProvider
-import com.aliothmoon.maameow.data.notification.provider.QmsgProvider
-import com.aliothmoon.maameow.data.notification.provider.ServerChanProvider
-import com.aliothmoon.maameow.data.notification.provider.SmtpProvider
-import com.aliothmoon.maameow.data.notification.provider.TelegramProvider
-import com.aliothmoon.maameow.domain.service.ExternalNotificationService
+import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
+import com.aliothmoon.maameow.schedule.service.ForegroundScheduleStarter
+import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
+import com.aliothmoon.maameow.schedule.service.ScheduleTriggerLogger
 import com.aliothmoon.maameow.utils.CrashHandler
 import com.aliothmoon.maameow.utils.log.LogTreeHolder
 import okhttp3.OkHttpClient
@@ -98,6 +105,7 @@ val appModule = module {
 
 
     singleOf(::AppSettingsManager)
+    singleOf(::BackgroundImageStore)
     singleOf(::AchievementRepository)
     singleOf(::AchievementReporter)
     singleOf(::ScheduleStrategyRepository)
@@ -142,17 +150,23 @@ val appModule = module {
     singleOf(::MaaEventNotifier)
     singleOf(::MaaNotificationCenter)
 
+    // 仓库 / 干员箱持久化（按配置档分片）
+    single { DepotRepository.create(get(), get()) }
+    single { OperBoxRepository.create(get(), get()) }
+
     // 回调处理链
     singleOf(::ConnectionInfoHandler)
     singleOf(::CopilotRuntimeStateStore)
     singleOf(::ToolboxResultCollector)
     singleOf(::TaskChainStatusTracker)
+    singleOf(::FightDropsRefresher)
     singleOf(::TaskChainHandler)
     singleOf(::SubTaskHandler)
     single<AppAliveChecker> { RemoteAppAliveChecker() }
     singleOf(::AppWatchdog)
     singleOf(::MaaCompositionService)
     single<MaaExecutionStateHolder> { get<MaaCompositionService>() }
+    single { GameMuteCoordinator(get(), RemoteGameAudioAdapter) }
     singleOf(::MaaCallbackDispatcher)
 
     singleOf(::UnifiedStateDispatcher)
@@ -174,6 +188,7 @@ val appModule = module {
     singleOf(::CopilotApiService)
     singleOf(::CopilotRepository)
     singleOf(::CopilotManager)
+    singleOf(::CopilotResourceProvider)
     singleOf(::ApplicationLogWriter)
     singleOf(::LogTreeHolder)
 

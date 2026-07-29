@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,8 +23,16 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,14 +58,18 @@ import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.StageAliasMapper
 import com.aliothmoon.maameow.data.resource.StageGroup
-import com.aliothmoon.maameow.data.resource.StageItem
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
+import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.ITextFieldWithFocus
 import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
+import com.aliothmoon.maameow.presentation.view.panel.common.GroupedStageButtonGroup
+import com.aliothmoon.maameow.presentation.view.panel.common.StageBadge
+import com.aliothmoon.maameow.presentation.view.panel.common.StageInputField
+import com.aliothmoon.maameow.presentation.view.panel.common.StageRow
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -69,6 +82,7 @@ private val MEDICINE_EXPIRE_DAY_OPTIONS = listOf(
 @Composable
 fun FightConfigPanel(
     config: FightConfig,
+    clientType: String,
     onConfigChange: (FightConfig) -> Unit,
     modifier: Modifier = Modifier,
     activityManager: ActivityManager = koinInject(),
@@ -80,7 +94,6 @@ fun FightConfigPanel(
 
     val dropItemsList by itemHelper.dropItems.collectAsStateWithLifecycle()
     val activityStages by activityManager.activityStages.collectAsStateWithLifecycle()
-    val allStageItems = remember(activityStages) { activityManager.getMergedStageList(filterByToday = false) }
     val stageTips = remember(activityStages) { activityManager.getStageTips() }
     val todayName = remember(activityStages) { activityManager.getYjDayOfWeekName() }
 
@@ -184,7 +197,7 @@ fun FightConfigPanel(
                         // 代理倍率（HideSeries=false 时显示）
                         if (!config.hideSeries) {
                             item {
-                                SeriesSection(config, onConfigChange)
+                                SeriesSection(config, clientType, onConfigChange)
                             }
                             item {
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
@@ -193,12 +206,10 @@ fun FightConfigPanel(
                         item {
                             // 关卡选择
                             // stageGroups: 分组后的关卡列表（用于分组显示）
-                            // allStageItems: 完整列表（用于剩余理智关卡选择）
                             GroupedStageSelectionSection(
                                 config = config,
                                 onConfigChange = onConfigChange,
                                 stageGroups = stageGroups,
-                                allStageItems = allStageItems,
                                 activityManager = activityManager
                             )
                         }
@@ -358,10 +369,15 @@ fun FightConfigPanel(
 @Composable
 private fun SeriesSection(
     config: FightConfig,
+    clientType: String,
     onConfigChange: (FightConfig) -> Unit
 ) {
     var tipExpanded by remember { mutableStateOf(false) }
     val seriesTipText = stringResource(R.string.panel_fight_series_tip)
+    // TODO: MaaCore 适配代理倍率 7~10 后删除锁定分支
+    val locked = remember(clientType) { SeriesLock.isLocked(clientType) }
+    // 锁定时仅影响显示与下发，不写回配置，解锁后用户原选值自动恢复
+    val displayedSeries = if (locked) -1 else config.series
 
 
 
@@ -389,6 +405,14 @@ private fun SeriesSection(
             tipText = seriesTipText
         )
 
+        if (locked) {
+            Text(
+                text = stringResource(R.string.panel_fight_series_locked_tip),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -404,11 +428,12 @@ private fun SeriesSection(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .width(72.dp)
-                        .clickable { onConfigChange(config.copy(series = value)) }
+                        .clickable(enabled = !locked) { onConfigChange(config.copy(series = value)) }
                 ) {
                     RadioButton(
-                        selected = config.series == value,
+                        selected = displayedSeries == value,
                         onClick = { onConfigChange(config.copy(series = value)) },
+                        enabled = !locked,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
@@ -481,14 +506,12 @@ private fun StageResetModeSection(
  * 支持活动关卡和常驻关卡分组显示
  *
  * @param stageGroups 分组后的关卡列表
- * @param allStageItems 完整关卡列表（用于剩余理智关卡选择）
  */
 @Composable
 private fun GroupedStageSelectionSection(
     config: FightConfig,
     onConfigChange: (FightConfig) -> Unit,
     stageGroups: List<StageGroup>,
-    allStageItems: List<StageItem>,
     activityManager: ActivityManager
 ) {
     // (i) 仅放选关机制/手动输入说明，默认折叠；实时状态（当前执行/告警）见下方状态卡片
@@ -499,30 +522,18 @@ private fun GroupedStageSelectionSection(
         stageGroups.flatMap { group -> group.stages.map { it.code } }
     }
 
-    // 构建关卡代码到 StageItem 的映射
-    val stageMap = remember(allStageItems) {
-        allStageItems.associateBy { it.code }
-    }
-
-    // 检查关卡是否今日开放
-    fun isStageOpenToday(stageCode: String): Boolean {
-        if (stageCode.isBlank()) return true
-        return stageMap[stageCode]?.isOpenToday ?: true
-    }
-
-    // 检查首选关卡开放状态
-    val stage1Open = isStageOpenToday(config.stage1)
+    // 首选关卡今日是否开放：经 activityManager.isStageOpen（getStageInfo 兜底）判定，对齐 WPF
+    // StageManager.IsStageOpen —— 主线关卡等不在候选列表中的关卡按常规关卡处理，视为开放；空关卡视为开放
+    val stage1Open = config.stage1.isBlank() || activityManager.isStageOpen(config.stage1)
     val annihilationOptions = localizedAnnihilationOptions()
 
-    // 当前执行关卡（对齐 WPF StagePlanTip）
-    val executingStage = remember(config.stage1, config.stage2, config.stage3, config.stage4, config.useAlternateStage, stageMap) {
-        if (config.stage1.isEmpty()) return@remember ""
-        val candidates = if (config.useAlternateStage) {
-            listOf(config.stage1, config.stage2, config.stage3, config.stage4)
-        } else {
-            listOf(config.stage1)
-        }.filter { it.isNotEmpty() }
-        candidates.firstOrNull { stageMap[it]?.isOpenToday == true } ?: candidates.firstOrNull() ?: ""
+    // 当前执行关卡：直接复用 config.getActiveStage(activityManager)，与实际下发 core 的选关完全一致
+    // （对齐 WPF：tip 与 SerializeTask 共用 GetFightStage，避免「显示」与「执行」分叉）
+    val executingStage = remember(
+        config.stage1, config.alternateStages, config.useAlternateStage,
+        config.customStageCode, config.stageResetMode, stageGroups, activityManager
+    ) {
+        config.getActiveStage(activityManager)
     }
     val defaultStageLabel = stringResource(R.string.panel_fight_stage_reset_current)
 
@@ -530,16 +541,16 @@ private fun GroupedStageSelectionSection(
     // getActiveStage 选关为「从上往下取第一个今日开放」，常驻关卡每天都开放、stage1 为空（当前/上次）
     // 时更会直接 return ""，两种情况下其后配置的备选关卡都永远不会被执行，需提示用户。
     val alternatesBlocked = remember(
-        config.stage1, config.stage2, config.stage3, config.stage4,
-        config.useAlternateStage, executingStage, stageMap
+        config.stage1, config.alternateStages,
+        config.useAlternateStage, executingStage
     ) {
         if (!config.useAlternateStage) return@remember false
-        val alternates = listOf(config.stage2, config.stage3, config.stage4)
+        val alternates = config.alternateStages
         // 当前/上次：getActiveStage 在 stage1 为空时直接返回 ""，备选整体失效
         if (config.stage1.isEmpty()) return@remember alternates.any { it.isNotEmpty() }
         // 执行关卡为常驻关卡时，其后配置的备选关卡永远不会被选中
         if (!activityManager.isPermanentStage(executingStage)) return@remember false
-        val candidates = listOf(config.stage1, config.stage2, config.stage3, config.stage4)
+        val candidates = (listOf(config.stage1) + config.alternateStages)
             .filter { it.isNotEmpty() }
         candidates.indexOf(executingStage) in 0 until candidates.lastIndex
     }
@@ -605,18 +616,7 @@ private fun GroupedStageSelectionSection(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
-                    Surface(
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Text(
-                            text = executingStage.ifEmpty { defaultStageLabel },
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                        )
-                    }
+                    StageBadge(text = executingStage.ifEmpty { defaultStageLabel })
                 }
                 if (stageWarning != null) {
                     Text(
@@ -628,16 +628,19 @@ private fun GroupedStageSelectionSection(
             }
         }
 
-        // 首选关卡
+        // 首选关卡：无删除按钮，标题行内用等宽占位与备选关卡对齐左右宽度
         if (config.customStageCode) {
             // 文本输入模式
-            StageInputField(
-                value = config.stage1,
-                onValueChange = { onConfigChange(config.copy(stage1 = it)) },
-                label = stringResource(R.string.panel_fight_primary_stage_label),
-                placeholder = stringResource(R.string.panel_fight_primary_stage_placeholder),
-                stageCodes = stageCodes
-            )
+            StageRow(onRemove = null) {
+                StageInputField(
+                    value = config.stage1,
+                    onValueChange = { onConfigChange(config.copy(stage1 = it)) },
+                    label = stringResource(R.string.panel_fight_primary_stage_label),
+                    placeholder = stringResource(R.string.panel_fight_primary_stage_placeholder),
+                    stageCodes = stageCodes,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         } else {
             // 分组按钮选择模式
             GroupedStageButtonGroup(
@@ -653,134 +656,86 @@ private fun GroupedStageSelectionSection(
             )
         }
 
-        // 备选关卡（UseAlternateStage 启用时显示）
+        // 备选关卡（UseAlternateStage 启用时显示，可动态增删）
         if (config.useAlternateStage) {
-            if (config.customStageCode) {
-                StageInputField(
-                    value = config.stage2,
-                    onValueChange = { onConfigChange(config.copy(stage2 = it)) },
-                    label = stringResource(R.string.panel_fight_alternate_stage2_label),
-                    placeholder = stringResource(R.string.panel_fight_alternate_stage2_placeholder),
-                    stageCodes = stageCodes
-                )
-                StageInputField(
-                    value = config.stage3,
-                    onValueChange = { onConfigChange(config.copy(stage3 = it)) },
-                    label = stringResource(R.string.panel_fight_alternate_stage3_label),
-                    placeholder = stringResource(R.string.panel_fight_alternate_stage3_placeholder),
-                    stageCodes = stageCodes
-                )
-                StageInputField(
-                    value = config.stage4,
-                    onValueChange = { onConfigChange(config.copy(stage4 = it)) },
-                    label = stringResource(R.string.panel_fight_alternate_stage4_label),
-                    placeholder = stringResource(R.string.panel_fight_alternate_stage4_placeholder),
-                    stageCodes = stageCodes
-                )
-            } else {
-                GroupedStageButtonGroup(
-                    label = stringResource(R.string.panel_fight_alternate_stage2_label),
-                    selectedValue = config.stage2,
-                    stageGroups = stageGroups,
-                    onItemSelected = { onConfigChange(config.copy(stage2 = it)) }
-                )
-                GroupedStageButtonGroup(
-                    label = stringResource(R.string.panel_fight_alternate_stage3_label),
-                    selectedValue = config.stage3,
-                    stageGroups = stageGroups,
-                    onItemSelected = { onConfigChange(config.copy(stage3 = it)) }
-                )
-                GroupedStageButtonGroup(
-                    label = stringResource(R.string.panel_fight_alternate_stage4_label),
-                    selectedValue = config.stage4,
-                    stageGroups = stageGroups,
-                    onItemSelected = { onConfigChange(config.copy(stage4 = it)) }
+            // 更新指定序号的备选关卡
+            fun updateAlternate(index: Int, value: String) {
+                onConfigChange(
+                    config.copy(
+                        alternateStages = config.alternateStages.toMutableList().also { it[index] = value }
+                    )
                 )
             }
+            // 删除指定序号的备选关卡
+            fun removeAlternate(index: Int) {
+                onConfigChange(
+                    config.copy(
+                        alternateStages = config.alternateStages.toMutableList().also { it.removeAt(index) }
+                    )
+                )
+            }
+
+            config.alternateStages.forEachIndexed { index, stage ->
+                val alternateLabel = stringResource(R.string.panel_fight_alternate_stage_label, index + 1)
+                if (config.customStageCode) {
+                    // 文本输入模式
+                    StageRow(onRemove = { removeAlternate(index) }) {
+                        StageInputField(
+                            value = stage,
+                            onValueChange = { updateAlternate(index, it) },
+                            label = alternateLabel,
+                            placeholder = stringResource(R.string.panel_fight_alternate_stage_placeholder),
+                            stageCodes = stageCodes,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                } else {
+                    // 分组按钮选择模式：删除按钮内嵌在折叠标题行内
+                    GroupedStageButtonGroup(
+                        label = alternateLabel,
+                        selectedValue = stage,
+                        stageGroups = stageGroups,
+                        onItemSelected = { updateAlternate(index, it) },
+                        onRemove = { removeAlternate(index) }
+                    )
+                }
+            }
+
+            // 添加备选关卡
+            AddAlternateStageButton(
+                onClick = { onConfigChange(config.copy(alternateStages = config.alternateStages + "")) }
+            )
         }
 
     }
 }
 
 /**
- * 分组关卡选择按钮组
- * 显示分组标题，每个分组下的关卡自动换行平铺
+ * 添加备选关卡按钮
+ * 对齐 WPF AddStageToPlan
  */
 @Composable
-private fun GroupedStageButtonGroup(
-    label: String,
-    selectedValue: String,
-    stageGroups: List<StageGroup>,
-    onItemSelected: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    annihilationDisplayName: String? = null
+private fun AddAlternateStageButton(
+    onClick: () -> Unit
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = modifier
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+        contentPadding = PaddingValues(vertical = 8.dp)
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        Icon(
+            imageVector = Icons.Default.Add,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp)
         )
-
-        // 显示每个分组
-        stageGroups.forEach { group ->
-            // TODO: i18n — 用 group.isPermanent 替代硬编码字符串比较
-            val displayTitle = if (group.isPermanent) {
-                stringResource(R.string.panel_fight_stage_group_permanent)
-            } else {
-                group.title
-            }
-            // 分组标题
-            Text(
-                text = displayTitle,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
-                // TODO: i18n — 用 group.isPermanent 替代硬编码字符串比较
-                color = if (group.isPermanent) Color(0xFF388E3C) else Color(0xFFE65100),
-                modifier = Modifier.padding(top = 4.dp)
-            )
-
-            // 分组内的关卡（自动换行平铺）
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                group.stages.forEach { stage ->
-                    val isSelected = stage.code == selectedValue
-                    val isOpen = stage.isOpenToday
-                    Surface(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .clickable { onItemSelected(stage.code) },
-                        color = when {
-                            isSelected -> MaterialTheme.colorScheme.primary
-                            !isOpen -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f)
-                            else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                        },
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Text(
-                            text = if (stage.code == "Annihilation" && annihilationDisplayName != null) {
-                                annihilationDisplayName
-                            } else {
-                                stage.displayName
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = when {
-                                isSelected -> MaterialTheme.colorScheme.onPrimary
-                                !isOpen -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
-                                else -> MaterialTheme.colorScheme.onSurface
-                            },
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
-                    }
-                }
-            }
-        }
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = stringResource(R.string.panel_fight_add_alternate_stage),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 
@@ -839,60 +794,6 @@ private fun CustomAnnihilationSection(
                 }
             }
         }
-    }
-}
-
-
-/**
- * 关卡代码输入框
- * 支持别名自动映射：失去焦点时自动转换别名为实际关卡代码
- *
- * 例如：龙门币 → CE-6，经验 → LS-6
- *
- */
-@Composable
-private fun StageInputField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    placeholder: String,
-    stageCodes: List<String>,
-    modifier: Modifier = Modifier
-) {
-    var textValue by remember(value) { mutableStateOf(value) }
-    var showConvertedHint by remember { mutableStateOf(false) }
-    var convertedCode by remember { mutableStateOf("") }
-
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        ITextFieldWithFocus(
-            value = textValue,
-            onValueChange = { newValue ->
-                textValue = newValue
-                // 检查是否是已知别名，显示转换提示
-                val mapped = StageAliasMapper.mapToStageCode(newValue, stageCodes)
-                if (mapped != newValue.uppercase() && newValue.isNotBlank()) {
-                    showConvertedHint = true
-                    convertedCode = mapped
-                } else {
-                    showConvertedHint = false
-                }
-            },
-            onFocusLost = {
-                if (textValue.isNotBlank()) {
-                    // 失去焦点时应用别名映射
-                    val mapped = StageAliasMapper.mapToStageCode(textValue, stageCodes)
-                    textValue = mapped
-                    onValueChange(mapped)
-                    showConvertedHint = false
-                }
-            },
-            label = label,
-            placeholder = placeholder,
-            singleLine = true,
-            supportingText = if (showConvertedHint) {
-                { Text(stringResource(R.string.panel_fight_converted_prefix, convertedCode), color = MaterialTheme.colorScheme.primary) }
-            } else null
-        )
     }
 }
 

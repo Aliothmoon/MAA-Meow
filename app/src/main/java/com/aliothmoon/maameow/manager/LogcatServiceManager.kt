@@ -7,6 +7,7 @@ import android.os.IBinder
 import android.os.Process
 import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.ILogcatService
+import com.aliothmoon.maameow.constant.MaaFiles
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.remote.LogcatCaptureServiceImpl
 import com.aliothmoon.maameow.root.RootServiceBootstrapRegistry
@@ -151,6 +152,7 @@ object LogcatServiceManager {
                 rootActiveLaunch = null
                 RootServiceBootstrapRegistry.unregister(token)
                 Timber.e(startError, "Root logcat service start failed")
+                dumpLaunchDebugLog()
                 return@launch
             }
 
@@ -170,6 +172,7 @@ object LogcatServiceManager {
                 if (rootActiveLaunch?.token == token) {
                     rootActiveLaunch = null
                     Timber.e(throwable, "Root logcat service bind timeout")
+                    dumpLaunchDebugLog()
                 }
             }
         }
@@ -213,11 +216,35 @@ object LogcatServiceManager {
             append(shellQuote(LogcatCaptureServiceImpl::class.java.name))
             append(" --uid=")
             append(uid)
+            // 有意不加 --keep-root：logcat 无需输入注入，shell 身份自带 log 组权限
+            append(" --log-file=")
+            append(shellQuote(debugLogFile().absolutePath))
             if (BuildConfig.DEBUG) {
                 append(" --debug-name=")
                 append(shellQuote(processName))
             }
             append(" >/dev/null 2>&1 &")
+        }
+    }
+
+    // 与主服务日志分开：launcher 以 O_TRUNC 打开，共用会互相覆盖
+    private fun debugLogFile(): File {
+        val dir = File(appContext.getExternalFilesDir(null), "${MaaFiles.MAA}/${MaaFiles.DEBUG}")
+        dir.mkdirs()
+        return File(dir, "root_logcat_launch_debug.log")
+    }
+
+    private fun dumpLaunchDebugLog() {
+        val log = debugLogFile()
+        if (!log.exists()) {
+            Timber.e("Root logcat launch debug log not found: %s", log.absolutePath)
+            return
+        }
+        val content = runCatching { log.readText().trim() }.getOrNull()
+        if (content.isNullOrBlank()) {
+            Timber.e("Root logcat launch debug log is empty (launcher may have crashed before opening it)")
+        } else {
+            Timber.e("Root logcat launch debug log (%s):\n%s", log.absolutePath, content)
         }
     }
 

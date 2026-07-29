@@ -8,5 +8,7 @@ object JsonUtils {
         encodeDefaults = true
         isLenient = true
         decodeEnumsCaseInsensitive = true
+        allowTrailingComma = true
+        allowComments = true
     }
 }

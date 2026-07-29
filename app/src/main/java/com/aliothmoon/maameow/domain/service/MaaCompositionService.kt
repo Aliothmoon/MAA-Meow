@@ -23,15 +23,19 @@ import com.aliothmoon.maameow.maa.callback.MaaCallbackDispatcher
 import com.aliothmoon.maameow.maa.callback.MaaExecutionStateHolder
 import com.aliothmoon.maameow.maa.callback.SubTaskHandler
 import com.aliothmoon.maameow.maa.callback.TaskChainStatusTracker
+import com.aliothmoon.maameow.maa.callback.ToolboxResultCollector
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.manager.RemoteAccessCoordinator
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
 import com.aliothmoon.maameow.utils.Misc
+import com.aliothmoon.maameow.utils.i18n.UiText
+import com.aliothmoon.maameow.utils.i18n.resolve
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,6 +54,7 @@ class MaaCompositionService(
     private val context: Context,
     private val resourceLoader: MaaResourceLoader,
     private val appSettings: AppSettingsManager,
+    private val gameMuteCoordinator: GameMuteCoordinator,
     private val unifiedStateDispatcher: UnifiedStateDispatcher,
     private val sessionLogger: MaaSessionLogger,
     private val activityManager: ActivityManager,
@@ -58,6 +63,8 @@ class MaaCompositionService(
     private val subTaskHandler: SubTaskHandler,
     private val taskChainStatusTracker: TaskChainStatusTracker,
     private val notificationCenter: MaaNotificationCenter,
+    private val dropsRefresher: FightDropsRefresher,
+    private val toolboxResultCollector: ToolboxResultCollector,
 ) : MaaExecutionStateHolder {
 
     private val _state = MutableStateFlow(MaaExecutionState.IDLE)
@@ -195,6 +202,9 @@ class MaaCompositionService(
         tasks: List<MaaTaskParams>,
         clientType: String,
         isScheduled: Boolean = false,
+        preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
+        /** 更新数据双识别到期：启动成功后 arm，两侧识别成功再报 DoubleSync */
+        expectDoubleSync: Boolean = false,
         onSessionStarted: (suspend () -> Unit)? = null
     ): StartResult = executeStart(
         tasks = tasks,
@@ -202,6 +212,8 @@ class MaaCompositionService(
         isScheduled = isScheduled,
         startMessage = context.getString(R.string.runlog_task_start, tasks.size),
         successMessage = context.getString(R.string.runlog_task_started),
+        preflightLogs = preflightLogs,
+        expectDoubleSync = expectDoubleSync,
         onSessionStarted = onSessionStarted,
     )
 
@@ -353,6 +365,23 @@ class MaaCompositionService(
         return asyncConnect(maa, config)
     }
 
+    /**
+     * 运行中改写已排队任务的参数（MaaCore AsstSetTaskParams）。
+     * 仅供 [FightDropsRefresher] 在 TaskChainStart 回调内同步调用。
+     *
+     * 注意：调用方在 MaaCore 回调线程上同步执行，本方法内不得再切线程，
+     * 否则参数可能来不及在 core 进入关卡前生效。
+     */
+    fun setTaskParams(taskId: Int, params: String): Boolean {
+        val maa = RemoteServiceManager.getInstanceOrNull()?.maaCoreService ?: run {
+            Timber.w("SetTaskParams 时 MaaCore 服务不可用，taskId=%d", taskId)
+            return false
+        }
+        return runCatching { maa.SetTaskParams(taskId, params) }
+            .onFailure { Timber.e(it, "SetTaskParams 失败 taskId=%d", taskId) }
+            .getOrDefault(false)
+    }
+
     private suspend fun appendTasksAndStart(
         maa: MaaCoreService,
         tasks: List<MaaTaskParams>,
@@ -360,11 +389,13 @@ class MaaCompositionService(
         mode: RunMode,
     ): StartResult {
         taskChainStatusTracker.clear()
+        dropsRefresher.clear()
         tasks.forEach { t ->
             sessionLogger.appendToFileOnly("[TaskParams] ${t.type.value}: ${t.params}")
             val taskId = maa.AppendTask(t.type.value, t.params)
             if (taskId > 0) {
                 taskChainStatusTracker.register(taskId, t.type.value, t.nodeId)
+                t.dropTarget?.let { dropsRefresher.register(taskId, it) }
             }
         }
         if (!maa.Start()) {
@@ -388,13 +419,19 @@ class MaaCompositionService(
         startMessage: String,
         successMessage: String,
         isScheduled: Boolean = false,
+        preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
+        expectDoubleSync: Boolean = false,
         onSessionStarted: (suspend () -> Unit)? = null,
     ): StartResult {
         setRunState(MaaExecutionState.STARTING)
         sessionLogger.startSession(tasks.map { it.type.value })
         subTaskHandler.resetSessionState()
+        toolboxResultCollector.clearDoubleSyncSession()
         onSessionStarted?.invoke()
         sessionLogger.appendAndWait(startMessage, LogLevel.INFO)
+        preflightLogs.forEach { (text, level) ->
+            sessionLogger.appendAndWait(text.resolve(context), level)
+        }
         sessionLogger.appendAndWait(fetchDeviceMemoryInfo(), LogLevel.INFO)
 
         val mode = appSettings.runMode.value
@@ -415,6 +452,9 @@ class MaaCompositionService(
                     val result = appendTasksAndStart(maa, tasks, successMessage, mode)
                     if (result is StartResult.Success) {
                         taskChainState.saveLastUsedClientType(clientType)
+                        if (expectDoubleSync) {
+                            toolboxResultCollector.armDoubleSyncSession()
+                        }
                     }
                     result
                 }
@@ -527,10 +567,20 @@ class MaaCompositionService(
     }
 
     suspend fun stopVirtualDisplay() {
-        appWatchdog.stopWatching()
-        _displayResolution.value = defaultResolution
-        withContext(Dispatchers.IO) {
-            RemoteServiceManager.getInstanceOrNull()?.stopVirtualDisplay()
+        try {
+            appWatchdog.stopWatching()
+            _displayResolution.value = defaultResolution
+            withContext(Dispatchers.IO) {
+                val service = RemoteServiceManager.getInstanceOrNull()
+                    ?: return@withContext
+                service.stopVirtualDisplay()
+            }
+        } finally {
+            withContext(NonCancellable) {
+                if (!gameMuteCoordinator.unmute()) {
+                    Timber.w("Virtual display close did not restore managed game audio; retry pending")
+                }
+            }
         }
     }
 }

@@ -322,6 +322,20 @@ class ActivityManager(
         return _resourceCollection.value?.isOpen == true
     }
 
+    /**
+     * 判断当前是否有 SideStory 活动进行中。
+     * 迁移自 WPF StageManager.IsActivityOpen。
+     *
+     * 只看 SideStory 类活动，排除资源收集（后者由 [isResourceCollectionOpen] 单独判定），
+     * 否则资源收集期间本方法也会为 true，库存保持的两个跳过开关就分不开了。
+     */
+    fun isActivityOpen(): Boolean {
+        return _activityStages.value.any { stage ->
+            val activity = stage.activity
+            activity != null && !activity.isResourceCollection && activity.isOpen
+        }
+    }
+
 
     /**
      * 构建合并关卡字典
@@ -449,6 +463,19 @@ class ActivityManager(
 
         // Fallback: 当作常驻关卡
         return MergedStageInfo(code = stage, displayName = stage)
+    }
+
+    /**
+     * 判断指定关卡今日是否开放（鹰角历）。
+     *
+     * 迁移自 WPF StageManager.IsStageOpen：先经 [getStageInfo] 兜底再判定开放状态，
+     * 因此不在候选列表中的「数字型主线关卡」（如 16-14）会被当作常规关卡 → 永远开放；
+     * 「两字母-数字」的过期活动关卡（如 UR-5）→ 判为未开放；空串（当前/上次）→ 视为开放。
+     *
+     * 注意：不要用 [getMergedStageList] 的成员资格来判断开放，那只是 UI 候选池、不含主线关卡。
+     */
+    fun isStageOpen(stage: String, dayOfWeek: DayOfWeek = getYjDayOfWeek()): Boolean {
+        return getStageInfo(stage).isStageOpen(dayOfWeek)
     }
 
     /**

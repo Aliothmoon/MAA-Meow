@@ -90,7 +90,7 @@ class ResourceDownloader(
                 }
             }
 
-            Result.success(tempFile!!)
+            Result.success(tempFile)
         } catch (e: Exception) {
             Timber.e(e, "下载文件失败")
             tempFile?.delete()

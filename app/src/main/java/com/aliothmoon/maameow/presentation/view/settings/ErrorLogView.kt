@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.presentation.view.settings
 
-import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -40,7 +39,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -51,6 +49,7 @@ import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.components.LogExportController
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.viewmodel.ErrorLogViewModel
 import com.aliothmoon.maameow.theme.LogTypography
@@ -70,9 +69,6 @@ fun ErrorLogView(
     val selectedContent by viewModel.selectedContent.collectAsStateWithLifecycle()
     val selectedFileName by viewModel.selectedFileName.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
-    val exportIntent by viewModel.exportIntent.collectAsStateWithLifecycle()
-
-    val context = LocalContext.current
 
     LaunchedEffect(achievementRepository) {
         achievementRepository.report {
@@ -80,14 +76,12 @@ fun ErrorLogView(
         }
     }
 
-    // 处理导出 Intent
-    val exportChooserTitle = stringResource(R.string.settings_log_export_chooser_title)
-    LaunchedEffect(exportIntent) {
-        exportIntent?.let { intent ->
-            context.startActivity(Intent.createChooser(intent, exportChooserTitle))
-            viewModel.clearExportIntent()
-        }
-    }
+    var showExportSheet by remember { mutableStateOf(false) }
+
+    LogExportController(
+        sheetVisible = showExportSheet,
+        onSheetDismiss = { showExportSheet = false },
+    )
 
     // 拦截系统返回键：详情页时先回到列表
     BackHandler(enabled = selectedContent != null) {
@@ -107,7 +101,7 @@ fun ErrorLogView(
             isLoading = isLoading,
             onFileClick = { viewModel.loadLogContent(it) },
             onCleanup = { viewModel.cleanupAll() },
-            onExport = { viewModel.exportLogs() },
+            onExport = { showExportSheet = true },
             onBack = { navController.navigateUp() }
         )
     }

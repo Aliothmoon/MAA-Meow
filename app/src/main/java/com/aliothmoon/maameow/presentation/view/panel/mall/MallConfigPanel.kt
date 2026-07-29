@@ -55,6 +55,7 @@ import androidx.compose.ui.res.stringResource
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.MallConfig
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.models.resolveMallCreditFightAvailability
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
@@ -179,8 +180,11 @@ private fun BasicMallSettings(config: MallConfig, onConfigChange: (MallConfig) -
     var shoppingTipExpanded by remember { mutableStateOf(false) }
     var creditFightTipExpanded by remember { mutableStateOf(false) }
     val taskChainState: TaskChainState = koinInject()
+    val activityManager: ActivityManager = koinInject()
     val chain by taskChainState.chain.collectAsStateWithLifecycle()
-    val creditFightAvailability = remember(chain) { resolveMallCreditFightAvailability(chain) }
+    val creditFightAvailability = remember(chain, activityManager) {
+        resolveMallCreditFightAvailability(chain, activityManager)
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // 访问好友

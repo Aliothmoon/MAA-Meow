@@ -25,6 +25,25 @@ data class CopilotSetInfo(
     val copilotIds: List<Int>
 )
 
+/** 作业站神秘代码类型 */
+enum class CopilotCodeType {
+    /** 单个作业 */
+    COPILOT,
+
+    /** 作业集 */
+    COPILOT_SET,
+}
+
+/**
+ * 解析后的作业站神秘代码
+ * @param ambiguous 旧格式（maa://、纯数字）无法区分作业/作业集，type 仅为默认值，实际类型由调用方上下文决定
+ */
+data class CopilotCode(
+    val type: CopilotCodeType,
+    val id: Int,
+    val ambiguous: Boolean = false,
+)
+
 sealed class CopilotRequestException(message: String, cause: Throwable? = null) :
     Exception(message, cause) {
     class InvalidInput(val rawInput: String, val isSet: Boolean) :
@@ -61,11 +80,22 @@ class CopilotManager(
     private val apiService: CopilotApiService,
     private val repository: CopilotRepository,
 ) {
+    companion object {
+        /** 旧格式前缀，长期保留解析兼容（见 parseCopilotCode） */
+        private const val LEGACY_ID_PREFIX = "maa://"
+
+        /** 新格式前缀，prts://12345 为作业 */
+        private const val NEW_ID_PREFIX = "prts://"
+
+        /** 新格式作业集前缀，prts://s12345 为作业集 */
+        private const val NEW_SET_ID_PREFIX = "prts://s"
+    }
+
     // ===== 作业解析 =====
 
     /**
      * 从 PRTS Plus ID 解析作业
-     * 支持 "maa://1234", "1234", "maa://1234?list=1" 格式
+     * 支持 parseCopilotCode 的全部格式
      * @return Triple(copilotId, taskData, originalJsonContent)
      */
     suspend fun parseFromId(idString: String): Result<Triple<Int, CopilotTaskData, String>> {
@@ -292,26 +322,50 @@ class CopilotManager(
     // ===== 工具方法 =====
 
     /**
-     * 从输入字符串提取 copilot ID
-     * 支持格式: "maa://1234", "1234", "maa://1234?list=1"
+     * 解析作业站神秘代码，识别所有已知格式并提取数字 ID
+     * 支持格式: "prts://1234", "prts://s1234", "s1234", "maa://1234", "maa://1234?list=1", "1234"
      */
-    private fun extractCopilotId(input: String): Int? {
+    fun parseCopilotCode(input: String): CopilotCode? {
         val trimmed = input.trim()
-        // maa://1234 or maa://1234?...
-        val maaPrefix = "maa://"
-        if (trimmed.startsWith(maaPrefix, ignoreCase = true)) {
-            val idPart = trimmed.drop(maaPrefix.length).substringBefore("?").substringBefore("/")
-            return idPart.toIntOrNull()
+        if (trimmed.isEmpty()) return null
+
+        // 带前缀的格式（从长到短匹配，避免 prts://s 被 prts:// 抢先）
+        if (trimmed.startsWith(NEW_SET_ID_PREFIX, ignoreCase = true)) {
+            val id = trimmed.drop(NEW_SET_ID_PREFIX.length).toIntOrNull() ?: return null
+            return CopilotCode(CopilotCodeType.COPILOT_SET, id)
         }
-        // Pure number
-        return trimmed.toIntOrNull()
+        if (trimmed.startsWith(NEW_ID_PREFIX, ignoreCase = true)) {
+            val id = trimmed.drop(NEW_ID_PREFIX.length).toIntOrNull() ?: return null
+            return CopilotCode(CopilotCodeType.COPILOT, id)
+        }
+        // 支持 maa:// 旧格式
+        if (trimmed.startsWith(LEGACY_ID_PREFIX, ignoreCase = true)) {
+            val rest = trimmed.drop(LEGACY_ID_PREFIX.length)
+            val id = rest.substringBefore("?").substringBefore("/").toIntOrNull() ?: return null
+            // maa://1234?list=1 为既有的作业集约定；无参数时类型不明确，默认单个作业
+            return if (rest.contains("list=", ignoreCase = true)) {
+                CopilotCode(CopilotCodeType.COPILOT_SET, id)
+            } else {
+                CopilotCode(CopilotCodeType.COPILOT, id, ambiguous = true)
+            }
+        }
+        // s1234 格式作业集
+        if (trimmed.length > 1 && (trimmed[0] == 's' || trimmed[0] == 'S')) {
+            trimmed.drop(1).toIntOrNull()?.let {
+                return CopilotCode(CopilotCodeType.COPILOT_SET, it)
+            }
+        }
+        // 纯数字，类型不明确，默认单个作业
+        return trimmed.toIntOrNull()?.let {
+            CopilotCode(CopilotCodeType.COPILOT, it, ambiguous = true)
+        }
     }
 
     /**
-     * 检查输入是否为作业集 ID (带 list 参数)
+     * 从输入字符串提取 copilot ID（不区分作业/作业集，路由由调用方负责）
      */
-    fun isSetId(input: String): Boolean {
-        return input.trim().contains("list=", ignoreCase = true)
+    private fun extractCopilotId(input: String): Int? {
+        return parseCopilotCode(input)?.id
     }
 
     /**

@@ -262,6 +262,14 @@ class AppSettingsManager(
         }
     }
 
+    val initialMutedGamePackage: String get() = initialSettings.mutedGamePackage
+
+    internal suspend fun setMutedGamePackage(packageName: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[mutedGamePackage] = packageName }
+        }
+    }
+
     // 任务结束时关闭应用
     val closeAppOnTaskEnd: StateFlow<Boolean> = settings
         .map { it.closeAppOnTaskEnd.toBooleanStrictOrNull() ?: false }
@@ -547,7 +555,11 @@ class AppSettingsManager(
     val useSystemMonetColor: StateFlow<Boolean> = settings
         .map { parseUseSystemMonetColor(it.useSystemMonetColor) }
         .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, parseUseSystemMonetColor(initialSettings.useSystemMonetColor))
+        .stateIn(
+            scope,
+            SharingStarted.Eagerly,
+            parseUseSystemMonetColor(initialSettings.useSystemMonetColor)
+        )
 
     suspend fun setUseSystemMonetColor(enabled: Boolean) {
         with(AppSettingsSchema) {
@@ -563,7 +575,10 @@ class AppSettingsManager(
 
     suspend fun setFontSizeScale(scale: Int) {
         with(AppSettingsSchema) {
-            context.dataStore.edit { it[fontSizeScale] = scale.coerceIn(FONT_SIZE_SCALE_MIN, FONT_SIZE_SCALE_MAX).toString() }
+            context.dataStore.edit {
+                it[fontSizeScale] =
+                    scale.coerceIn(FONT_SIZE_SCALE_MIN, FONT_SIZE_SCALE_MAX).toString()
+            }
         }
     }
 
@@ -571,11 +586,97 @@ class AppSettingsManager(
     val showAchievementSnackbar: StateFlow<Boolean> = settings
         .map { it.showAchievementSnackbar.toBooleanStrictOrNull() ?: true }
         .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, initialSettings.showAchievementSnackbar.toBooleanStrictOrNull() ?: true)
+        .stateIn(
+            scope,
+            SharingStarted.Eagerly,
+            initialSettings.showAchievementSnackbar.toBooleanStrictOrNull() ?: true
+        )
 
     suspend fun setShowAchievementSnackbar(enabled: Boolean) {
         with(AppSettingsSchema) {
             context.dataStore.edit { it[showAchievementSnackbar] = enabled.toString() }
+        }
+    }
+
+    // ============ 自定义图片背景（仅四个主 Tab 生效）============
+
+    /** 将 0~100 的原始字符串解析为合法百分比 */
+    private fun parsePercent(raw: String, default: Int): Int =
+        raw.toIntOrNull()?.coerceIn(0, 100) ?: default
+
+    val customBackgroundEnabled: StateFlow<Boolean> = settings
+        .map { it.customBackgroundEnabled.toBooleanStrictOrNull() ?: false }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            initialSettings.customBackgroundEnabled.toBooleanStrictOrNull() ?: false
+        )
+
+    suspend fun setCustomBackgroundEnabled(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[customBackgroundEnabled] = enabled.toString() }
+        }
+    }
+
+    val customBackgroundToken: StateFlow<String> = settings
+        .map { it.customBackgroundToken }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.customBackgroundToken)
+
+    /** 保存/清除背景时开关与令牌总是成对变更，合并为一次写入避免中间态。 */
+    suspend fun setCustomBackgroundState(enabled: Boolean, token: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                it[customBackgroundEnabled] = enabled.toString()
+                it[customBackgroundToken] = token
+            }
+        }
+    }
+
+    val customBackgroundImageAlpha: StateFlow<Int> = settings
+        .map { parsePercent(it.customBackgroundImageAlpha, 80) }
+        .distinctUntilChanged()
+        .stateIn(
+            scope,
+            SharingStarted.Eagerly,
+            parsePercent(initialSettings.customBackgroundImageAlpha, 80)
+        )
+
+    suspend fun setCustomBackgroundImageAlpha(value: Int) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                it[customBackgroundImageAlpha] = value.coerceIn(0, 100).toString()
+            }
+        }
+    }
+
+    val customBackgroundScrim: StateFlow<Int> = settings
+        .map { parsePercent(it.customBackgroundScrim, 25) }
+        .distinctUntilChanged()
+        .stateIn(
+            scope,
+            SharingStarted.Eagerly,
+            parsePercent(initialSettings.customBackgroundScrim, 25)
+        )
+
+    suspend fun setCustomBackgroundScrim(value: Int) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[customBackgroundScrim] = value.coerceIn(0, 100).toString() }
+        }
+    }
+
+    val customBackgroundBlur: StateFlow<Int> = settings
+        .map { parsePercent(it.customBackgroundBlur, 0) }
+        .distinctUntilChanged()
+        .stateIn(
+            scope,
+            SharingStarted.Eagerly,
+            parsePercent(initialSettings.customBackgroundBlur, 0)
+        )
+
+    suspend fun setCustomBackgroundBlur(value: Int) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[customBackgroundBlur] = value.coerceIn(0, 100).toString() }
         }
     }
 

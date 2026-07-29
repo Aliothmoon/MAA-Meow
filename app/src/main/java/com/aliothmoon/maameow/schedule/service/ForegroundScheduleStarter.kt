@@ -106,7 +106,9 @@ class ForegroundScheduleStarter(
                         val result = compositionService.start(
                             tasks = decision.plan.params,
                             clientType = decision.plan.clientType,
-                            isScheduled = true
+                            isScheduled = true,
+                            preflightLogs = decision.plan.preflightLogs,
+                            expectDoubleSync = decision.plan.unlockDoubleSync,
                         )
 
                         if (result is MaaCompositionService.StartResult.Success) {

@@ -5,12 +5,17 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Parcel;
 
+import com.aliothmoon.maameow.RemoteService;
 import com.aliothmoon.maameow.third.Ln;
 
 public final class RootServiceStarter {
 
     private static final String TAG = "RootServiceStarter";
     private static final int DESTROY_TRANSACTION_CODE = 16777115;
+
+    // linkToDeath 随 BinderProxy 被 GC 而失效，须持强引用保证死亡通知可送达
+    private static IBinder appLifecycleBinder;
+    private static IBinder.DeathRecipient appDeathRecipient;
 
     private RootServiceStarter() {
     }
@@ -41,27 +46,50 @@ public final class RootServiceStarter {
     }
 
     private static boolean sendBinder(RootUserService.CreatedService createdService) {
-        IBinder lifecycleBinder = RootServiceBootstrapClient.attachRemoteService(
+        RootServiceBootstrapClient.BootstrapResult result = RootServiceBootstrapClient.attachRemoteService(
                 createdService.packageName(),
                 createdService.userId(),
                 createdService.token(),
                 createdService.service()
         );
-        if (lifecycleBinder == null) {
+        if (result == null) {
             return false;
         }
 
+        primeHeartbeat(createdService.service(), result.appPid());
+
         try {
-            lifecycleBinder.linkToDeath(() -> {
+            IBinder.DeathRecipient recipient = () -> {
                 Ln.i(TAG + ": app process died, destroying root service");
                 destroyService(createdService.service());
                 Ln.i(TAG + ": root service destroy signal sent, exiting");
                 System.exit(0);
-            }, 0);
+            };
+            IBinder lifecycleBinder = result.lifecycleBinder();
+            lifecycleBinder.linkToDeath(recipient, 0);
+            appLifecycleBinder = lifecycleBinder;
+            appDeathRecipient = recipient;
             return true;
         } catch (Throwable tr) {
             Ln.e(TAG + ": failed to link app lifecycle binder", tr);
             return false;
+        }
+    }
+
+    /**
+     * 提前武装 RemoteServiceImpl 的 /proc 看门狗；
+     * 本 Starter 也用于启动 logcat 服务，非 RemoteService 的本地 binder 跳过
+     */
+    private static void primeHeartbeat(IBinder service, int appPid) {
+        if (appPid <= 0) {
+            return;
+        }
+        try {
+            if (service.queryLocalInterface(RemoteService.class.getName()) instanceof RemoteService remote) {
+                remote.heartbeat(appPid);
+            }
+        } catch (Throwable tr) {
+            Ln.w(TAG + ": prime heartbeat failed", tr);
         }
     }
 

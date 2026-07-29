@@ -27,7 +27,14 @@ class PrepareTaskStartUseCaseTest {
         every { getClientType() } returns "Official"
     }
     private val resourceDataManager = mockk<ResourceDataManager>(relaxed = true)
-    private val analyzeTaskChainUseCase = AnalyzeTaskChainUseCase(taskChainState, resourceDataManager)
+    private val analyzeTaskChainUseCase = AnalyzeTaskChainUseCase(
+        taskChainState = taskChainState,
+        resourceDataManager = resourceDataManager,
+        activityManager = mockk(relaxed = true),
+        depotRepository = mockk(relaxed = true),
+        operBoxRepository = mockk(relaxed = true),
+        itemHelper = mockk(relaxed = true),
+    )
 
     private fun useCase(aliveStatus: Int) = PrepareTaskStartUseCase(
         analyzeTaskChainUseCase = analyzeTaskChainUseCase,

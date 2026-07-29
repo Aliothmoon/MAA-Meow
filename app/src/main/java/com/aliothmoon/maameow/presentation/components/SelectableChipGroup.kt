@@ -41,12 +41,14 @@ fun <T> SelectableChipGroup(
         verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = modifier
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = labelFontWeight,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        if (label.isNotEmpty()) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = labelFontWeight,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),

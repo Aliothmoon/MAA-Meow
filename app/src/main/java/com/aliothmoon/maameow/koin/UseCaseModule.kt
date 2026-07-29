@@ -12,7 +12,14 @@ import timber.log.Timber
 
 val useCaseModule = module {
     factory {
-        AnalyzeTaskChainUseCase(get(), get())
+        AnalyzeTaskChainUseCase(
+            taskChainState = get(),
+            resourceDataManager = get(),
+            activityManager = get(),
+            depotRepository = get(),
+            operBoxRepository = get(),
+            itemHelper = get(),
+        )
     }
     factory {
         CheckGameReadinessUseCase(

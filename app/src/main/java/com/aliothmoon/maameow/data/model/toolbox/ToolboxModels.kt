@@ -1,5 +1,7 @@
 package com.aliothmoon.maameow.data.model.toolbox
 
+import kotlinx.serialization.Serializable
+
 /**
  * 公招识别结果 —— 一组标签组合对应的干员列表
  */
@@ -23,8 +25,9 @@ data class DepotItem(
 )
 
 /**
- * 干员识别结果
+ * 干员识别结果（可持久化）
  */
+@Serializable
 data class OperBoxOperator(
     val id: String,
     val name: String,
@@ -33,9 +36,4 @@ data class OperBoxOperator(
     val level: Int,
     val potential: Int,
     val own: Boolean,
-)
-
-data class OperBoxResult(
-    val owned: List<OperBoxOperator>,
-    val notOwned: List<OperBoxOperator>,
 )

@@ -89,7 +89,10 @@ fun ProfileManagementPanel(
                 text = stringResource(R.string.panel_profile_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
             OutlinedButton(
                 onClick = onCreate,
@@ -97,7 +100,11 @@ fun ProfileManagementPanel(
                 shape = RoundedCornerShape(4.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
             ) {
-                Text(stringResource(R.string.panel_new_profile), color = MaterialTheme.colorScheme.primary)
+                Text(
+                    text = stringResource(R.string.panel_new_profile),
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1
+                )
             }
         }
 

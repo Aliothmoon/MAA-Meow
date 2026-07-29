@@ -54,6 +54,7 @@ import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.domain.service.ToolboxExportFileType
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.utils.i18n.asString
+import com.aliothmoon.maameow.utils.i18n.formatToolboxSyncTime
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -62,7 +63,7 @@ fun OperBoxPanel(
     modifier: Modifier = Modifier,
     viewModel: ToolboxViewModel = koinInject()
 ) {
-    val result by viewModel.collector.operBoxResult.collectAsStateWithLifecycle()
+    val snapshot by viewModel.operBoxRepository.snapshot.collectAsStateWithLifecycle()
     val statusMessage by viewModel.statusMessage.collectAsStateWithLifecycle()
     val resolvedStatusMessage = statusMessage.asString()
     val clipboard = LocalClipboard.current
@@ -76,13 +77,12 @@ fun OperBoxPanel(
     var selectedTab by remember { mutableIntStateOf(0) }
     var exportExpanded by remember { mutableStateOf(false) }
 
-    val data = result
-    if (data == null) {
+    if (!snapshot.hasSynced) {
         OperBoxEmptyState(modifier, resolvedStatusMessage)
         return
     }
 
-    val operators = if (selectedTab == 0) data.owned else data.notOwned
+    val operators = if (selectedTab == 0) snapshot.owned else snapshot.notOwned
 
     LazyColumn(
         modifier = modifier
@@ -94,6 +94,25 @@ fun OperBoxPanel(
         // 顶部：Tab 切换 + 导出（复制 / 导出文件可展开选格式）
         item {
             Column(modifier = Modifier.fillMaxWidth()) {
+                if (snapshot.syncTimeMillis > 0L) {
+                    Text(
+                        text = stringResource(
+                            R.string.panel_toolbox_last_sync,
+                            formatToolboxSyncTime(snapshot.syncTimeMillis),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 4.dp),
+                    )
+                }
+                if (resolvedStatusMessage.isNotEmpty()) {
+                    Text(
+                        text = resolvedStatusMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 4.dp),
+                    )
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -101,8 +120,8 @@ fun OperBoxPanel(
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         val tabs = listOf(
-                            stringResource(R.string.panel_operbox_tab_owned, data.owned.size),
-                            stringResource(R.string.panel_operbox_tab_not_owned, data.notOwned.size)
+                            stringResource(R.string.panel_operbox_tab_owned, snapshot.owned.size),
+                            stringResource(R.string.panel_operbox_tab_not_owned, snapshot.notOwned.size)
                         )
                         tabs.forEachIndexed { index, label ->
                             Text(

@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.presentation.view.settings
 
-import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,12 +33,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -49,14 +46,12 @@ import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.log.LogEntry
 import com.aliothmoon.maameow.data.log.LogFileInfo
-import com.aliothmoon.maameow.domain.service.LogExportService
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.components.LogExportController
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.viewmodel.LogHistoryViewModel
 import com.aliothmoon.maameow.theme.LogTypography
-import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
-import org.koin.compose.koinInject
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -65,16 +60,18 @@ import java.time.format.DateTimeFormatter
 fun LogHistoryView(
     navController: NavController,
     viewModel: LogHistoryViewModel = koinViewModel(),
-    logExportService: LogExportService = koinInject()
 ) {
     val logFiles by viewModel.logFiles.collectAsStateWithLifecycle()
     val selectedLogEntries by viewModel.selectedLogEntries.collectAsStateWithLifecycle()
     val selectedFileName by viewModel.selectedFileName.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    val exportChooserTitle = stringResource(R.string.settings_log_export_chooser_title)
+    var showExportSheet by remember { mutableStateOf(false) }
+
+    LogExportController(
+        sheetVisible = showExportSheet,
+        onSheetDismiss = { showExportSheet = false },
+    )
 
     // 拦截系统返回键：详情页时先回到列表
     BackHandler(enabled = selectedLogEntries != null) {
@@ -95,19 +92,7 @@ fun LogHistoryView(
             onFileClick = { viewModel.loadLogContent(it) },
             onFileDelete = { viewModel.deleteLogFile(it) },
             onCleanup = { viewModel.cleanupOldLogs() },
-            onExport = {
-                coroutineScope.launch {
-                    val intent = logExportService.exportAllLogs()
-                    if (intent != null) {
-                        context.startActivity(
-                            Intent.createChooser(
-                                intent,
-                                exportChooserTitle
-                            )
-                        )
-                    }
-                }
-            },
+            onExport = { showExportSheet = true },
             onBack = { navController.navigateUp() }
         )
     }

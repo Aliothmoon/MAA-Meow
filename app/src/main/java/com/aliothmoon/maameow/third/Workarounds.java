@@ -51,6 +51,9 @@ public final class Workarounds {
     }
 
     public static void prepareMainLooper() {
+        if (Looper.myLooper() != null) {
+            return;
+        }
         // Like Looper.prepareMainLooper(), but with quitAllowed set to true
         Looper.prepare();
         synchronized (Looper.class) {

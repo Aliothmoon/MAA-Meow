@@ -6,13 +6,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.RemoteService
-import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.model.LogItem
 import com.aliothmoon.maameow.data.model.TaskParamProvider
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.AchievementReporter
@@ -59,6 +59,7 @@ class BackgroundTaskViewModel(
     private val appSettingsManager: AppSettingsManager,
     private val pathConfig: MaaPathConfig,
     private val achievementReporter: AchievementReporter,
+    private val gameMuteCoordinator: GameMuteCoordinator,
     scheduleRepository: ScheduleStrategyRepository,
     triggerLogger: ScheduleTriggerLogger,
     private val application: Context,
@@ -79,8 +80,7 @@ class BackgroundTaskViewModel(
 
     private val surfaceRef = AtomicReference<Surface>()
 
-    private val _isGameMuted = MutableStateFlow(false)
-    val isGameMuted: StateFlow<Boolean> = _isGameMuted.asStateFlow()
+    val isGameMuted: StateFlow<Boolean> = gameMuteCoordinator.isMuted
 
     // 调试截图结果（已本地化的提示文案），供 UI 以 Toast 展示
     private val _screenshotMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
@@ -456,10 +456,18 @@ class BackgroundTaskViewModel(
             }
         }
 
+        // 先静音后拉起游戏：appops 状态持久，提前设置零成本，消除游戏启动初期的漏音空窗
+        val muteRequested = appSettingsManager.muteOnGameLaunch.value
+        if (muteRequested && !gameMuteCoordinator.mute(plan.clientType)) {
+            _effects.send(UiEffect.toast(R.string.bg_toast_mute_failed))
+        }
+
         val result = compositionService.start(
             tasks = plan.params,
             clientType = plan.clientType,
             isScheduled = context.mode == TaskStartMode.SCHEDULED,
+            preflightLogs = plan.preflightLogs,
+            expectDoubleSync = plan.unlockDoubleSync,
         ) {
             if (request != null) {
                 sessionLogger.appendAndWait(
@@ -476,9 +484,6 @@ class BackgroundTaskViewModel(
                 launchesGame = plan.launchesGame,
                 gameAliveBeforeStart = plan.gameAliveBeforeStart,
             )
-            if (appSettingsManager.muteOnGameLaunch.value) {
-                onMuteGameSound(plan.clientType)
-            }
             chainState.grantGameBatteryExemption(plan.clientType)
         }
 
@@ -505,28 +510,11 @@ class BackgroundTaskViewModel(
     }
 
     fun onToggleGameSound() {
-        if (_isGameMuted.value) {
-            onUnmuteGameSound(chainState.getClientTypeOrNull())
-        } else {
-            onMuteGameSound(chainState.getClientTypeOrNull())
-        }
-    }
-
-    private fun onMuteGameSound(clientType: String?) {
-        clientType?.let {
-            val pkg = Packages[it] ?: return
-            RemoteServiceManager.getInstanceOrNull()
-                ?.setPlayAudioOpAllowed(pkg, false)
-            _isGameMuted.value = true
-        }
-    }
-
-    private fun onUnmuteGameSound(clientType: String?) {
-        clientType?.let {
-            val pkg = Packages[it] ?: return
-            RemoteServiceManager.getInstanceOrNull()
-                ?.setPlayAudioOpAllowed(pkg, true)
-            _isGameMuted.value = false
+        viewModelScope.launch {
+            val ok = gameMuteCoordinator.toggle(chainState.getClientTypeOrNull())
+            if (!ok) {
+                _effects.send(UiEffect.toast(R.string.bg_toast_mute_failed))
+            }
         }
     }
 

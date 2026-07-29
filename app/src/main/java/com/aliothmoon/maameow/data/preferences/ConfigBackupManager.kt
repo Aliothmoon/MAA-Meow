@@ -2,7 +2,6 @@ package com.aliothmoon.maameow.data.preferences
 
 import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
 import com.aliothmoon.maameow.data.model.InfrastConfig
-import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.data.notification.NotificationSettings
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
@@ -62,7 +61,14 @@ class ConfigBackupManager(
         require(backup.version <= CURRENT_VERSION) {
             "不支持的备份版本: ${backup.version}，当前最高支持: $CURRENT_VERSION"
         }
-        appSettingsManager.setSettings(backup.appSettings.normalizedForImport())
+        // 自定义背景的开关与令牌指向本机文件，导入其他设备的配置时保留本机值。
+        val localSettings = appSettingsManager.settings.first()
+        appSettingsManager.setSettings(
+            backup.appSettings.normalizedForImport().copy(
+                customBackgroundEnabled = localSettings.customBackgroundEnabled,
+                customBackgroundToken = localSettings.customBackgroundToken,
+            )
+        )
         notificationSettingsManager.updateSettings(backup.notificationSettings)
         taskChainState.importProfiles(backup.taskProfiles, backup.activeProfileId)
 
@@ -76,11 +82,19 @@ class ConfigBackupManager(
     companion object {
         const val CURRENT_VERSION = 1
 
-        private fun AppSettings.sanitized() = copy(mirrorChyanCdk = "")
+        /**
+         * 导出时剥离设备本地字段：CDK 属敏感信息；
+         * 自定义背景的开关与令牌对应本机 filesDir 下的图片文件，在其他设备上不存在。
+         */
+        private fun AppSettings.sanitized() = copy(
+            mirrorChyanCdk = "",
+            customBackgroundEnabled = "false",
+            customBackgroundToken = "",
+        )
 
         /**
          * 导入时对已废弃或非法的旧值做归一化，避免后续读取时违反非空约束。
-          */
+         */
         private fun AppSettings.normalizedForImport() = copy(
             shizukuLaunchPackage = shizukuLaunchPackage.ifBlank { OFFICIAL_SHIZUKU_PACKAGE }
         )
