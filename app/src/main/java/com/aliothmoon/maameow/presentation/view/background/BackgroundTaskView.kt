@@ -114,6 +114,7 @@ import com.aliothmoon.maameow.presentation.view.panel.ToolboxPanel
 import com.aliothmoon.maameow.presentation.view.panel.rememberSafToolboxFileExporter
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
+import com.aliothmoon.maameow.presentation.viewmodel.ToolboxTab
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.theme.MaaAnimations
 import com.aliothmoon.maameow.theme.MaaThemeAlphas
@@ -401,6 +402,17 @@ fun BackgroundTaskView(
                         if (canShowTaskActions) {
                             Spacer(modifier = Modifier.height(6.dp))
                             val inputFocusManager = LocalInputFocusManager.current
+                            val toolboxTab by toolboxViewModel.currentTab.collectAsStateWithLifecycle()
+                            val gachaDisclaimerOk by
+                                toolboxViewModel.gachaDisclaimerAccepted.collectAsStateWithLifecycle()
+                            // 牛牛抽卡：底部栏改为寻访一次/十次，避免与面板内按钮 + 开始任务重复
+                            val isGachaActions = state.current == PanelTab.TOOLS &&
+                                toolboxTab == ToolboxTab.GACHA &&
+                                gachaDisclaimerOk
+                            // 未同意免责时隐藏开始栏（只在内容区点「知道了」）
+                            val hideStartBarForGachaDisclaimer = state.current == PanelTab.TOOLS &&
+                                toolboxTab == ToolboxTab.GACHA &&
+                                !gachaDisclaimerOk
                             // 启动按钮的两种「禁用态」：① 前台模式不从后台任务页启动；
                             // ② 远程后端（Shizuku/Root）不可用。两者均显示为禁用态但仍可点击，
                             // 点击给出对应提示（防呆），与领域层 checkPreconditions 守卫一致。
@@ -414,99 +426,215 @@ fun BackgroundTaskView(
                                 R.string.home_toast_backend_unavailable,
                                 permissionState.startupBackend.display
                             )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Button(
-                                    onClick = {
-                                        inputFocusManager.clear()
-                                        if (foregroundBlocked) {
-                                            Toast.makeText(
-                                                context,
-                                                switchBackgroundModeMessage,
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                            return@Button
-                                        }
-                                        if (backendBlocked) {
-                                            Toast.makeText(
-                                                context,
-                                                backendUnavailableMessage,
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                            return@Button
-                                        }
-                                        when (state.current) {
-                                            PanelTab.TASKS -> viewModel.onStartTasks()
-                                            PanelTab.AUTO_BATTLE -> copilotViewModel.onStart()
-                                            PanelTab.TOOLS -> toolboxViewModel.onStart()
-                                            else -> {}
-                                        }
-                                    },
-                                    enabled = maaState != MaaExecutionState.RUNNING && maaState != MaaExecutionState.STARTING && maaState != MaaExecutionState.STOPPING,
-                                    colors = if (startBlocked) {
-                                        ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.onSurface.copy(
-                                                alpha = 0.12f
-                                            ),
-                                            contentColor = MaterialTheme.colorScheme.onSurface.copy(
-                                                alpha = MaaThemeAlphas.DISABLED
-                                            ),
-                                        )
-                                    } else {
-                                        ButtonDefaults.buttonColors()
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(8.dp)
+                            val canStart = maaState != MaaExecutionState.RUNNING &&
+                                maaState != MaaExecutionState.STARTING &&
+                                maaState != MaaExecutionState.STOPPING
+                            if (!hideStartBarForGachaDisclaimer) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    if (maaState == MaaExecutionState.STARTING) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(20.dp),
-                                            color = MaterialTheme.colorScheme.onPrimary,
-                                            strokeWidth = 2.dp
-                                        )
+                                    if (isGachaActions) {
+                                        // 两键等分即可完整显示；运行中换成停止，避免三键挤成换行
+                                        val gachaRunning = maaState == MaaExecutionState.RUNNING ||
+                                            maaState == MaaExecutionState.STOPPING
+                                        if (gachaRunning) {
+                                            OutlinedButton(
+                                                onClick = { toolboxViewModel.onStop() },
+                                                enabled = maaState == MaaExecutionState.RUNNING,
+                                                modifier = Modifier.weight(1f),
+                                                shape = RoundedCornerShape(8.dp),
+                                                colors = ButtonDefaults.outlinedButtonColors(
+                                                    contentColor = MaterialTheme.colorScheme.error,
+                                                ),
+                                            ) {
+                                                if (maaState == MaaExecutionState.STOPPING) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(20.dp),
+                                                        color = MaterialTheme.colorScheme.error,
+                                                        strokeWidth = 2.dp,
+                                                    )
+                                                } else {
+                                                    Text(
+                                                        text = stringResource(R.string.task_btn_stop),
+                                                        maxLines = 1,
+                                                    )
+                                                }
+                                            }
+                                        } else {
+                                            Button(
+                                                onClick = {
+                                                    inputFocusManager.clear()
+                                                    if (foregroundBlocked) {
+                                                        Toast.makeText(
+                                                            context,
+                                                            switchBackgroundModeMessage,
+                                                            Toast.LENGTH_SHORT,
+                                                        ).show()
+                                                        return@Button
+                                                    }
+                                                    if (backendBlocked) {
+                                                        Toast.makeText(
+                                                            context,
+                                                            backendUnavailableMessage,
+                                                            Toast.LENGTH_SHORT,
+                                                        ).show()
+                                                        return@Button
+                                                    }
+                                                    toolboxViewModel.onStartGacha(once = true)
+                                                },
+                                                enabled = canStart,
+                                                colors = if (startBlocked) {
+                                                    ButtonDefaults.buttonColors(
+                                                        containerColor = MaterialTheme.colorScheme.onSurface.copy(
+                                                            alpha = 0.12f,
+                                                        ),
+                                                        contentColor = MaterialTheme.colorScheme.onSurface.copy(
+                                                            alpha = MaaThemeAlphas.DISABLED,
+                                                        ),
+                                                    )
+                                                } else {
+                                                    ButtonDefaults.buttonColors()
+                                                },
+                                                modifier = Modifier.weight(1f),
+                                                shape = RoundedCornerShape(8.dp),
+                                            ) {
+                                                if (maaState == MaaExecutionState.STARTING) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(20.dp),
+                                                        color = MaterialTheme.colorScheme.onPrimary,
+                                                        strokeWidth = 2.dp,
+                                                    )
+                                                } else {
+                                                    Text(
+                                                        text = stringResource(R.string.gacha_once),
+                                                        maxLines = 1,
+                                                    )
+                                                }
+                                            }
+                                            OutlinedButton(
+                                                onClick = {
+                                                    inputFocusManager.clear()
+                                                    if (foregroundBlocked) {
+                                                        Toast.makeText(
+                                                            context,
+                                                            switchBackgroundModeMessage,
+                                                            Toast.LENGTH_SHORT,
+                                                        ).show()
+                                                        return@OutlinedButton
+                                                    }
+                                                    if (backendBlocked) {
+                                                        Toast.makeText(
+                                                            context,
+                                                            backendUnavailableMessage,
+                                                            Toast.LENGTH_SHORT,
+                                                        ).show()
+                                                        return@OutlinedButton
+                                                    }
+                                                    toolboxViewModel.onStartGacha(once = false)
+                                                },
+                                                enabled = canStart,
+                                                modifier = Modifier.weight(1f),
+                                                shape = RoundedCornerShape(8.dp),
+                                            ) {
+                                                Text(
+                                                    text = stringResource(R.string.gacha_ten_times),
+                                                    maxLines = 1,
+                                                )
+                                            }
+                                        }
                                     } else {
-                                        Text(stringResource(R.string.task_btn_start))
-                                    }
-                                }
+                                        Button(
+                                            onClick = {
+                                                inputFocusManager.clear()
+                                                if (foregroundBlocked) {
+                                                    Toast.makeText(
+                                                        context,
+                                                        switchBackgroundModeMessage,
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                    return@Button
+                                                }
+                                                if (backendBlocked) {
+                                                    Toast.makeText(
+                                                        context,
+                                                        backendUnavailableMessage,
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                    return@Button
+                                                }
+                                                when (state.current) {
+                                                    PanelTab.TASKS -> viewModel.onStartTasks()
+                                                    PanelTab.AUTO_BATTLE -> copilotViewModel.onStart()
+                                                    PanelTab.TOOLS -> toolboxViewModel.onStart()
+                                                    else -> {}
+                                                }
+                                            },
+                                            enabled = canStart,
+                                            colors = if (startBlocked) {
+                                                ButtonDefaults.buttonColors(
+                                                    containerColor = MaterialTheme.colorScheme.onSurface.copy(
+                                                        alpha = 0.12f
+                                                    ),
+                                                    contentColor = MaterialTheme.colorScheme.onSurface.copy(
+                                                        alpha = MaaThemeAlphas.DISABLED
+                                                    ),
+                                                )
+                                            } else {
+                                                ButtonDefaults.buttonColors()
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            if (maaState == MaaExecutionState.STARTING) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(20.dp),
+                                                    color = MaterialTheme.colorScheme.onPrimary,
+                                                    strokeWidth = 2.dp
+                                                )
+                                            } else {
+                                                Text(stringResource(R.string.task_btn_start))
+                                            }
+                                        }
 
-                                OutlinedButton(
-                                    onClick = {
-                                        when (state.current) {
-                                            PanelTab.TASKS -> viewModel.onStopTasks()
-                                            PanelTab.AUTO_BATTLE -> copilotViewModel.onStop()
-                                            PanelTab.TOOLS -> toolboxViewModel.onStop()
-                                            else -> {}
+                                        OutlinedButton(
+                                            onClick = {
+                                                when (state.current) {
+                                                    PanelTab.TASKS -> viewModel.onStopTasks()
+                                                    PanelTab.AUTO_BATTLE -> copilotViewModel.onStop()
+                                                    PanelTab.TOOLS -> toolboxViewModel.onStop()
+                                                    else -> {}
+                                                }
+                                            },
+                                            enabled = maaState == MaaExecutionState.RUNNING,
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(8.dp),
+                                            colors = ButtonDefaults.outlinedButtonColors(
+                                                contentColor = MaterialTheme.colorScheme.error
+                                            )
+                                        ) {
+                                            if (maaState == MaaExecutionState.STOPPING) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(20.dp),
+                                                    color = MaterialTheme.colorScheme.error,
+                                                    strokeWidth = 2.dp
+                                                )
+                                            } else {
+                                                Text(stringResource(R.string.task_btn_stop))
+                                            }
                                         }
-                                    },
-                                    enabled = maaState == MaaExecutionState.RUNNING,
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = MaterialTheme.colorScheme.error
-                                    )
-                                ) {
-                                    if (maaState == MaaExecutionState.STOPPING) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(20.dp),
-                                            color = MaterialTheme.colorScheme.error,
-                                            strokeWidth = 2.dp
-                                        )
-                                    } else {
-                                        Text(stringResource(R.string.task_btn_stop))
                                     }
-                                }
 
-                                IconButton(
-                                    onClick = { showMoreActions = !showMoreActions },
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.MoreVert,
-                                        contentDescription = stringResource(R.string.task_more_actions_cd)
-                                    )
+                                    IconButton(
+                                        onClick = { showMoreActions = !showMoreActions },
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.MoreVert,
+                                            contentDescription = stringResource(R.string.task_more_actions_cd)
+                                        )
+                                    }
                                 }
                             }
                         }

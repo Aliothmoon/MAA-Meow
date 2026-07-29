@@ -209,6 +209,8 @@ object AchievementIds {
     const val PALLAS_STARTER = "PallasStarter"
     /** 点击成就设置区帕拉斯头像（牛牛喝酒） */
     const val PALLAS_CHEERS = "PallasCheers"
+    /** 同意牛牛抽卡风险提示（对齐 WPF RealGacha）。 */
+    const val REAL_GACHA = "RealGacha"
     const val SLACKING_OFF = "SlackingOff"
 }
 
