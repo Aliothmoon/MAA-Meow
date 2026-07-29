@@ -22,6 +22,7 @@ import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.overlay.border.BorderOverlayManager
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
+import com.aliothmoon.maameow.presentation.ProvideInputFocusManager
 import com.aliothmoon.maameow.presentation.view.panel.ExpandedControlPanel
 import com.aliothmoon.maameow.schedule.model.CountdownState
 import com.aliothmoon.maameow.service.AccessibilityHelperService
@@ -223,20 +224,22 @@ class OverlayController(
                             fontScale = baseDensity.fontScale.coerceIn(0.85f, 1.3f)
                         )
                     ) {
-                        val isLocked by _isLocked.collectAsStateWithLifecycle()
-                        ExpandedControlPanel(
-                            onClose = ::onCloseControlPanel,
-                            onHome = { Misc.bringAppToFront(context) },
-                            isLocked = isLocked,
-                            onLockToggle = { locked ->
-                                _isLocked.value = locked
-                                if (locked) {
-                                    lockMainPanelPosition()
-                                } else {
-                                    unlockMainPanelPosition()
+                        ProvideInputFocusManager {
+                            val isLocked by _isLocked.collectAsStateWithLifecycle()
+                            ExpandedControlPanel(
+                                onClose = ::onCloseControlPanel,
+                                onHome = { Misc.bringAppToFront(context) },
+                                isLocked = isLocked,
+                                onLockToggle = { locked ->
+                                    _isLocked.value = locked
+                                    if (locked) {
+                                        lockMainPanelPosition()
+                                    } else {
+                                        unlockMainPanelPosition()
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }

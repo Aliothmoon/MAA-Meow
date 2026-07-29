@@ -1,12 +1,16 @@
 package com.aliothmoon.maameow.data.model
 
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.ActivityManager
+import com.aliothmoon.maameow.domain.models.DropTarget
+import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
+import com.aliothmoon.maameow.maa.task.TaskSlot
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import org.koin.core.context.GlobalContext
 
 /**
  * 未开放关卡重置策略
@@ -93,17 +97,11 @@ data class FightConfig(
      */
     val dropsItemId: String = "",
 
-    /**
-     * 掉落材料数量
-     *
-     * 默认值: 5（WPF 第644行）
-     */
+    /** 掉落数量；[isInventoryTarget]=true 时为库存目标。 */
     val dropsQuantity: Int = 5,
 
-    // TODO: 目标库存模式（WPF PR#16487 feat: 理智作战支持设定目标材料最大库存）
-    //   逻辑: 实际刷取次数 = dropsInventoryTarget - 当前仓库数
-    //   前提: 需要建立本地仓库数据持久化方案（ToolboxResultCollector.depotItems 当前为运行时 StateFlow，不持久）
-    //   待依赖: 本地仓库 base 设计完成后在此处新增 isInventoryTarget: Boolean 和 dropsInventoryTarget: Int
+    /** true：按库存缺口刷，Start 时由 FightDropsRefresher 重算。 */
+    val isInventoryTarget: Boolean = false,
 
     // ============ 常规设置 - 代理倍率与关卡 ============
 
@@ -269,8 +267,11 @@ data class FightConfig(
      * 获取实际使用的关卡
      *
      * 根据备选关卡和关卡开放状态自动选择
+     * 需要 [ActivityManager] 判定关卡开放，故由调用方显式传入 ——
+     * 早前这里用 GlobalContext 反向抓依赖，拿不到时会静默跳过全部开放判定、
+     * 返回一个可能未开放的关卡，且单测因 Koin 未启动而只覆盖了那条降级分支
      */
-    fun getActiveStage(): String {
+    fun getActiveStage(activityManager: ActivityManager): String {
         if (stage1.isEmpty()) return ""
 
         // 如果不使用备选关卡，直接返回首选关卡
@@ -278,26 +279,21 @@ data class FightConfig(
 
         var candidates = (listOf(stage1) + alternateStages).filter { it.isNotEmpty() }
 
-        val activityManager = GlobalContext.getOrNull()?.getOrNull<ActivityManager>()
-        if (activityManager != null) {
-            // customStageCode 手动输入时跳过此检查仅 CURRENT 重置策略需要按候选列表成员过滤，
-            // 故 stageList 延迟到此分支内构建，避免备选/IGNORE 场景每次白白重建整份合并关卡列表
-            if (!customStageCode && stageResetMode == StageResetMode.CURRENT) {
-                val stageList = activityManager.getMergedStageList(filterByToday = false)
-                candidates = candidates.filter { code ->
-                    stageList.any { it.code == code }
-                }
+        // customStageCode 手动输入时跳过此检查仅 CURRENT 重置策略需要按候选列表成员过滤，
+        // 故 stageList 延迟到此分支内构建，避免备选/IGNORE 场景每次白白重建整份合并关卡列表
+        if (!customStageCode && stageResetMode == StageResetMode.CURRENT) {
+            val stageList = activityManager.getMergedStageList(filterByToday = false)
+            candidates = candidates.filter { code ->
+                stageList.any { it.code == code }
             }
-
-            // 参考 WPF GetFightStage: 从上往下取第一个今日开放的关卡
-            // 用 isStageOpen（经 getStageInfo 兜底，对齐 WPF StageManager.IsStageOpen）判定，
-            // 而非「候选列表成员 + isOpenToday」；否则主线关卡（如 16-14，不在候选列表）会被误判未开放而跳过
-            val day = activityManager.getYjDayOfWeek()
-            val openStage = candidates.firstOrNull { code ->
-                activityManager.isStageOpen(code, day)
-            }
-            if (openStage != null) return openStage
         }
+
+        // 参考 WPF GetFightStage: 从上往下取第一个今日开放的关卡
+        // 用 isStageOpen（经 getStageInfo 兜底，对齐 WPF StageManager.IsStageOpen）判定，
+        // 而非「候选列表成员 + isOpenToday」；否则主线关卡（如 16-14，不在候选列表）会被误判未开放而跳过
+        val day = activityManager.getYjDayOfWeek()
+        candidates.firstOrNull { code -> activityManager.isStageOpen(code, day) }
+            ?.let { return it }
 
         // 全不开放则回退第一条候选，无候选则返回 ""
         return candidates.firstOrNull() ?: ""
@@ -316,10 +312,10 @@ data class FightConfig(
         return true
     }
 
-    override fun toTaskParams(): MaaTaskParams {
-        var stage = getActiveStage()
+    override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
+        var stage = getActiveStage(ctx.activityManager)
 
-        // 自定义剿灭替换 (WPF SerializeTask line 735-738)
+        // 自定义剿灭替换
         if (stage == "Annihilation" && useCustomAnnihilation) {
             stage = annihilationStage
         }
@@ -331,35 +327,92 @@ data class FightConfig(
         // 次数: WPF 不限制时使用 Int.MAX_VALUE (line 724)
         val actualTimes = if (hasTimesLimited) maxTimes else Int.MAX_VALUE
 
+        // TODO: MaaCore 适配代理倍率 7~10 后删除，恢复为 put("series", series)
+        val effectiveSeries = if (SeriesLock.isLocked(ctx.clientType)) -1 else series
+
+        val expireDays = if (useExpiringMedicine) {
+            var days = medicineExpireDays.coerceIn(1, 7)
+            if (useExpireMedicineForActivity) {
+                val activityExpireDays = ctx.activityManager.getActivityAwareExpireDays()
+                if (activityExpireDays > 0) {
+                    days = maxOf(days, activityExpireDays)
+                }
+            }
+            days
+        } else {
+            null
+        }
+
+        // 目标库存：未识别 skip；need≤0 不 append（times=0 仍会空导航）。
+        // times 双轨（预期）：append 用 actualTimes 兜底；Start 刷新改 MAX + drops 收束。
+        val need = if (isSpecifiedDrops && isInventoryTarget && dropsItemId.isNotBlank()) {
+            if (ctx.depotRepository.snapshot.value.syncTimeMillis <= 0L) {
+                ctx.appendLog(
+                    uiTextOf(R.string.runlog_fight_inventory_unavailable, ctx.node.name),
+                    LogLevel.WARNING,
+                )
+                return emptyList()
+            }
+            dropsQuantity - ctx.depotRepository.countOf(dropsItemId)
+        } else {
+            null
+        }
+        if (need != null && need <= 0) {
+            val dropName = ctx.itemHelper.getItemInfo(dropsItemId)?.name ?: dropsItemId
+            val current = dropsQuantity - need
+            ctx.appendLog(
+                uiTextOf(
+                    R.string.runlog_depot_plan_inventory_enough,
+                    ctx.node.name,
+                    dropName,
+                    current,
+                    dropsQuantity,
+                ),
+                LogLevel.TRACE,
+            )
+            return emptyList()
+        }
+
         val paramsJson = buildJsonObject {
             put("stage", stage)
             put("medicine", actualMedicine)
-            if (useExpiringMedicine) {
-                var expireDays = medicineExpireDays.coerceIn(1, 7)
-                if (useExpireMedicineForActivity) {
-                    val am = GlobalContext.getOrNull()?.getOrNull<ActivityManager>()
-                    if (am != null) {
-                        val activityExpireDays = am.getActivityAwareExpireDays()
-                        if (activityExpireDays > 0) {
-                            expireDays = maxOf(expireDays, activityExpireDays)
-                        }
-                    }
-                }
-                put("medicine_expire_days", expireDays)
-            }
+            expireDays?.let { put("medicine_expire_days", it) }
             put("stone", actualStone)
             put("times", actualTimes)
-            put("series", series)
+            put("series", effectiveSeries)
             if (isDrGrandet) {
                 put("DrGrandet", true)
             }
             if (isSpecifiedDrops && dropsItemId.isNotBlank()) {
+                val dropQty = need ?: dropsQuantity
                 put("drops", buildJsonObject {
-                    put(dropsItemId, dropsQuantity)
+                    put(dropsItemId, dropQty)
                 })
             }
         }
 
-        return MaaTaskParams(MaaTaskType.FIGHT, paramsJson.toString())
+        if (isSpecifiedDrops && isInventoryTarget && dropsItemId.isNotBlank()) {
+            ctx.dropsRefresher.stage(
+                slot = TaskSlot(ctx.node.id, 0),
+                target = DropTarget(
+                    dropId = dropsItemId,
+                    dropCount = dropsQuantity,
+                    stage = stage,
+                    medicine = actualMedicine,
+                    stone = actualStone,
+                    series = effectiveSeries,
+                    logLabel = ctx.node.name,
+                    medicineExpireDays = expireDays,
+                    drGrandet = isDrGrandet,
+                ),
+            )
+        }
+
+        return listOf(
+            MaaTaskParams(
+                type = MaaTaskType.FIGHT,
+                params = paramsJson.toString(),
+            ),
+        )
     }
 }

@@ -138,11 +138,11 @@ class ScheduledLaunchCoordinator(
 
         triggerLogger.append("等待任务配置加载...")
         chainState.isLoaded.filter { it }.first()
-        if (chainState.activeProfileId.value != request.profileId) {
+        if (chainState.profileId.value != request.profileId) {
             triggerLogger.append("切换任务配置: ${request.profileId}")
             chainState.switchProfile(request.profileId)
         }
-        if (chainState.activeProfileId.value != request.profileId) {
+        if (chainState.profileId.value != request.profileId) {
             reject(request, ExecutionResult.FAILED_VALIDATION, "关联的任务配置已被删除")
             return
         }

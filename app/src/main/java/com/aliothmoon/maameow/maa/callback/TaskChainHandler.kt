@@ -7,10 +7,11 @@ import com.aliothmoon.maameow.data.achievement.AchievementRepository
 
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.service.AchievementReporter
+import com.aliothmoon.maameow.domain.service.FightDropsRefresher
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
-import com.aliothmoon.maameow.maa.AsstMsg
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -32,54 +33,67 @@ class TaskChainHandler(
     private val taskChainState: TaskChainState,
     private val achievementRepository: AchievementRepository,
     private val achievementReporter: AchievementReporter,
+    private val dropsRefresher: FightDropsRefresher,
 ) {
     // 回调路径用于 suspend 的 TaskChainState 更新；独立于任一生命周期
     private val callbackScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val resources = applicationContext.resources
     private val packageName = applicationContext.packageName
+    private val appContext = applicationContext
 
     /**
-     * 处理 TaskChain 回调消息
+     * TaskChainStart (10001): 任务链开始
      */
-    fun handle(msg: AsstMsg, details: JSONObject) {
+    fun onTaskChainStart(details: JSONObject) {
         val taskId = details.getIntValue("taskid", 0)
-        when (msg) {
-            AsstMsg.TaskChainStart -> {
-                statusTracker.updateStatus(taskId, TaskRunStatus.IN_PROGRESS)
-                handleTaskChainStart(details)
+        statusTracker.updateStatus(taskId, TaskRunStatus.IN_PROGRESS)
+
+        refreshDropsIfNeeded(taskId)
+
+        val taskName = str(details.getString("taskchain") ?: "Unknown")
+        sessionLogger.append("${str("StartTask")}$taskName", LogLevel.TRACE)
+    }
+
+    private fun clearSessionScopedState() {
+        statusTracker.clear()
+        dropsRefresher.clear()
+    }
+
+    private fun refreshDropsIfNeeded(taskId: Int) {
+        val outcome = dropsRefresher.onTaskStarted(taskId)
+        val (logLabel, applied) = when (outcome) {
+            FightDropsRefresher.RefreshOutcome.Skipped -> return
+            is FightDropsRefresher.RefreshOutcome.Sufficient -> {
+                sessionLogger.append(
+                    appContext.getString(
+                        R.string.runlog_depot_plan_inventory_enough,
+                        outcome.logLabel,
+                        outcome.dropName,
+                        outcome.current,
+                        outcome.target,
+                    ),
+                    LogLevel.INFO,
+                )
+                outcome.logLabel to outcome.applied
             }
 
-            AsstMsg.TaskChainCompleted -> {
-                statusTracker.updateStatus(taskId, TaskRunStatus.COMPLETED)
-                handleTaskChainCompleted(details)
-            }
-
-            AsstMsg.TaskChainError -> {
-                statusTracker.updateStatus(taskId, TaskRunStatus.ERROR)
-                handleTaskChainError(details)
-            }
-
-            AsstMsg.TaskChainExtraInfo -> handleTaskChainExtraInfo(details)
-
-            AsstMsg.TaskChainStopped -> {
-                statusTracker.clear()
-                handleTaskChainStopped(details)
-            }
-
-            AsstMsg.AllTasksCompleted -> {
-                statusTracker.clear()
-                handleAllTasksCompleted()
-            }
-
-            else -> Timber.w("TaskChainHandler received unexpected msg: $msg")
+            is FightDropsRefresher.RefreshOutcome.Updated -> outcome.logLabel to outcome.applied
+        }
+        if (!applied) {
+            sessionLogger.append(
+                appContext.getString(R.string.runlog_depot_set_params_failed, logLabel),
+                LogLevel.WARNING,
+            )
         }
     }
 
     /**
      * TaskChainError (10000): 任务链错误
      */
-    private fun handleTaskChainError(details: JSONObject) {
+    fun onTaskChainError(details: JSONObject) {
+        statusTracker.updateStatus(details.getIntValue("taskid", 0), TaskRunStatus.ERROR)
+
         val taskchain = details.getString("taskchain") ?: "Unknown"
         val taskName = str(taskchain)
         sessionLogger.append("${str("TaskError")}$taskName", LogLevel.ERROR)
@@ -93,24 +107,17 @@ class TaskChainHandler(
     }
 
     /**
-     * TaskChainStart (10001): 任务链开始
-     */
-    private fun handleTaskChainStart(details: JSONObject) {
-        val taskchain = details.getString("taskchain") ?: "Unknown"
-        val taskName = str(taskchain)
-        sessionLogger.append("${str("StartTask")}$taskName", LogLevel.TRACE)
-    }
-
-    /**
      * TaskChainCompleted (10002): 任务链完成
      */
-    private fun handleTaskChainCompleted(details: JSONObject) {
+    fun onTaskChainCompleted(details: JSONObject) {
+        val taskId = details.getIntValue("taskid", 0)
+        statusTracker.updateStatus(taskId, TaskRunStatus.COMPLETED)
+
         val taskchain = details.getString("taskchain") ?: "Unknown"
         val taskName = str(taskchain)
         sessionLogger.append("${str("CompleteTask")}$taskName", LogLevel.SUCCESS)
 
         if (taskchain == "Infrast") {
-            val taskId = details.getIntValue("taskid", 0)
             val nodeId = statusTracker.getNodeId(taskId)
             if (nodeId != null) {
                 callbackScope.launch {
@@ -133,7 +140,7 @@ class TaskChainHandler(
     /**
      * TaskChainExtraInfo (10003): 任务链额外信息
      */
-    private fun handleTaskChainExtraInfo(details: JSONObject) {
+    fun onTaskChainExtraInfo(details: JSONObject) {
         when (val what = details.getString("what")) {
             "RoutingRestart" -> {
                 val why = details.getString("why")
@@ -157,7 +164,8 @@ class TaskChainHandler(
     /**
      * TaskChainStopped (10004): 任务链停止（用户手动停止）
      */
-    private fun handleTaskChainStopped(details: JSONObject) {
+    fun onTaskChainStopped() {
+        clearSessionScopedState()
         sessionLogger.append(str("TaskStopped"), LogLevel.INFO)
         achievementReporter.reportTaskStopped()
         callbackScope.launch {
@@ -171,7 +179,9 @@ class TaskChainHandler(
      * AllTasksCompleted (3): 所有任务完成
      * 附带任务总耗时和理智恢复时间信息
      */
-    private fun handleAllTasksCompleted() {
+    fun onAllTasksCompleted() {
+        clearSessionScopedState()
+
         val sb = StringBuilder(str("AllTasksComplete", ""))
 
         // 任务总耗时
@@ -230,7 +240,7 @@ class TaskChainHandler(
         notificationCenter.notifyAllTasksCompleted(message)
 
         callbackScope.launch {
-            taskChainState.resetRecruitConfigUseExpedited()
+            taskChainState.clearRecruitUseExpeditedFlags()
         }
     }
 

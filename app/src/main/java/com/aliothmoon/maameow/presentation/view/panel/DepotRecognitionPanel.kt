@@ -46,13 +46,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.remember
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.toolbox.DepotItem
+import com.aliothmoon.maameow.data.repository.toSortedItems
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.domain.service.ToolboxExportFileType
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.utils.i18n.asString
+import com.aliothmoon.maameow.utils.i18n.formatToolboxSyncTime
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -63,8 +66,9 @@ fun DepotRecognitionPanel(
     itemHelper: ItemHelper = koinInject(),
     iconLoader: ItemIconLoader = koinInject()
 ) {
-    val items by viewModel.collector.depotItems.collectAsStateWithLifecycle()
+    val snapshot by viewModel.depotRepository.snapshot.collectAsStateWithLifecycle()
     val itemMap by itemHelper.items.collectAsStateWithLifecycle()
+    val items = remember(snapshot, itemMap) { snapshot.toSortedItems(itemMap) }
     val statusMessage by viewModel.statusMessage.collectAsStateWithLifecycle()
     val resolvedStatusMessage = statusMessage.asString()
     val clipboard = LocalClipboard.current
@@ -81,7 +85,7 @@ fun DepotRecognitionPanel(
         Toast.makeText(context, toast, Toast.LENGTH_SHORT).show()
     }
 
-    if (items.isEmpty()) {
+    if (items.isEmpty() && snapshot.syncTimeMillis <= 0L) {
         DepotEmptyState(modifier, resolvedStatusMessage)
         return
     }
@@ -98,6 +102,23 @@ fun DepotRecognitionPanel(
         // 统计信息 + 导出按钮
         item(span = { GridItemSpan(maxLineSpan) }) {
             Column(modifier = Modifier.fillMaxWidth()) {
+                if (snapshot.syncTimeMillis > 0L) {
+                    Text(
+                        text = stringResource(
+                            R.string.panel_toolbox_last_sync,
+                            formatToolboxSyncTime(snapshot.syncTimeMillis),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (resolvedStatusMessage.isNotEmpty()) {
+                    Text(
+                        text = resolvedStatusMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
                 Text(
                     text = stringResource(R.string.panel_depot_item_count, items.size),
                     style = MaterialTheme.typography.bodySmall,

@@ -23,6 +23,7 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
+import com.aliothmoon.maameow.presentation.ProvideInputFocusManager
 import com.aliothmoon.maameow.presentation.navigation.AppNavigation
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.model.ScheduledExecutionRequest
@@ -79,7 +80,9 @@ class MainActivity : AppCompatActivity() {
                         fontScale = baseDensity.fontScale
                     )
                 ) {
-                    AppNavigation(backgroundTaskViewModel = backgroundTaskViewModel)
+                    ProvideInputFocusManager {
+                        AppNavigation(backgroundTaskViewModel = backgroundTaskViewModel)
+                    }
                 }
             }
         }

@@ -6,6 +6,7 @@ import android.os.ParcelFileDescriptor
 import com.aliothmoon.maameow.MaaCoreCallback
 import com.aliothmoon.maameow.MaaCoreService
 import com.aliothmoon.maameow.maa.AsstApiCallback
+import com.aliothmoon.maameow.maa.CallbackJsonAbbreviator
 import com.aliothmoon.maameow.maa.MaaCoreLibrary
 import com.aliothmoon.maameow.third.Ln
 import com.sun.jna.Memory
@@ -25,12 +26,20 @@ class MaaCoreServiceImpl(private val ctx: MaaCoreLibrary?) : MaaCoreService.Stub
 
     private val instance = AtomicReference<Pointer>()
     private val callback = AtomicReference<MaaCoreCallback?>()
+    /**
+     * MaaCore 回调入口，运行在 core 的 msg_proc 线程上。
+     *
+     * **先转发再记日志**：日志是诊断用途，挡在 `onCallback` 前面会给每一条回调
+     * 平白加上一次全量字符串拼接 + logcat 写入的延迟。回调送达越快越好 ——
+     * App 侧收到 `TaskChainStart` 后还要回写任务参数（见 FightDropsRefresher）。
+     */
     private val nativeRef = AsstApiCallback { msg, json, _ ->
-        runCatching {
-            Ln.i("$TAG: Callback: $msg, $json")
-            callback.get()?.onCallback(msg, json)
-        }.onFailure {
-            Ln.e("$TAG: Callback error: ${it.message}")
+        val forwarded = runCatching { callback.get()?.onCallback(msg, json) }
+        Ln.i("$TAG: Callback: $msg, ${CallbackJsonAbbreviator.abbreviate(json)}")
+        forwarded.onFailure {
+            // 转发失败是静默的行为改变（丢掉 TaskChainStart → 目标库存不再重算），
+            // 必须能在日志包里一眼看出是哪条消息掉了
+            Ln.e("$TAG: Callback DROPPED, msg=$msg: ${it.message}")
         }
     }
 

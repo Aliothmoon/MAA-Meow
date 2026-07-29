@@ -115,7 +115,7 @@ class ExpandedControlPanelViewModel(
 
     fun onDeleteProfile(profileId: String) {
         viewModelScope.launch {
-            chainState.deleteProfile(profileId)
+            chainState.removeProfile(profileId)
             _state.update { it.copy(selectedNodeId = null) }
         }
     }
@@ -277,6 +277,7 @@ class ExpandedControlPanelViewModel(
             val result = compositionService.start(
                 tasks = plan.params,
                 clientType = plan.clientType,
+                preflightLogs = plan.logs,
             )
             val message = application.formatStartResult(result)
             if (result is MaaCompositionService.StartResult.Success) {

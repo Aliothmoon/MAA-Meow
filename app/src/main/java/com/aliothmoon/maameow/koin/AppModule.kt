@@ -30,6 +30,8 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.repository.CopilotRepository
+import com.aliothmoon.maameow.data.repository.DepotRepository
+import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.data.resource.CopilotResourceProvider
@@ -41,6 +43,7 @@ import com.aliothmoon.maameow.domain.service.AppAliveChecker
 import com.aliothmoon.maameow.domain.service.AppWatchdog
 import com.aliothmoon.maameow.domain.service.CopilotManager
 import com.aliothmoon.maameow.domain.service.ExternalNotificationService
+import com.aliothmoon.maameow.domain.service.FightDropsRefresher
 import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
 import com.aliothmoon.maameow.domain.service.LogExportService
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
@@ -147,11 +150,16 @@ val appModule = module {
     singleOf(::MaaEventNotifier)
     singleOf(::MaaNotificationCenter)
 
+    // 仓库 / 干员箱持久化（按配置档分片）
+    single { DepotRepository.create(get(), get()) }
+    single { OperBoxRepository.create(get(), get()) }
+
     // 回调处理链
     singleOf(::ConnectionInfoHandler)
     singleOf(::CopilotRuntimeStateStore)
     singleOf(::ToolboxResultCollector)
     singleOf(::TaskChainStatusTracker)
+    singleOf(::FightDropsRefresher)
     singleOf(::TaskChainHandler)
     singleOf(::SubTaskHandler)
     single<AppAliveChecker> { RemoteAppAliveChecker() }

@@ -639,6 +639,8 @@
     <string name="panel_task_type_mission">Collect Rewards</string>
     <string name="panel_task_type_auto_roguelike">Auto I.S.</string>
     <string name="panel_task_type_reclamation">Reclamation Algorithm</string>
+    <string name="panel_task_type_user_data_update">Update doctor data</string>
+    <string name="panel_task_type_depot_maintain">Depot Maintain</string>
 
     <!-- panel: profile -->
     <string name="panel_profile_title">Profile Management</string>
@@ -713,6 +715,8 @@
     <string name="panel_mall_credit_fight">Combat with Support to earn Credits</string>
     <string name="panel_mall_credit_fight_tip">Combat with Support Unit in OF-1 after Visit Friends to earn 30 credits.\nThis function is invalid when the stage is selected as \"Cur/Last\".\nDo not enable it if OF-1 from Heart of Surging Flame is not unlocked.</string>
     <string name="panel_mall_credit_fight_unavailable">No valid combat stage could be resolved from the current combat task. Support OF-1 will be skipped this time.</string>
+    <!-- %1$s task name, %2$d task order (1-based), %3$d stage list index (1-based) -->
+    <string name="mall_credit_fight_blocked_by_stage">A Fight task has \"Cur/Last\" in its stage list, so Credit shopping will not run Support OF-1. Task: %1$s (order %2$d), stage index %3$d</string>
     <string name="panel_mall_credit_fight_notice">Support combat requires an available support unit in your friend list.</string>
     <string name="panel_mall_priority_title">Priority Items</string>
     <string name="panel_mall_priority_reorder_tip">Drag to adjust purchase priority. Items closer to the top are bought first.</string>
@@ -756,6 +760,8 @@
     <string name="panel_fight_series_title">Series</string>
     <string name="panel_fight_series_tip">• AUTO:\nAutomatically detect the maximum proxy multiplier for the stage while keeping sanity potion usage from overflowing sanity.\n\n• Numeric (1~6):\nExecute with the configured multiplier.\nIf current sanity is insufficient to complete the configured multiplier (for example, only enough for 5 runs but set to 6), battle cannot start.\nLikewise, if remaining run count is insufficient for the configured multiplier, battle cannot start.\n\n• Do not switch:\nDo not change the in-game proxy multiplier setting.</string>
     <string name="panel_fight_series_no_switch">Don\'t Switch</string>
+    <!-- TODO: remove after MaaCore adapts proxy multipliers 7~10 -->
+    <string name="panel_fight_series_locked_tip">Not yet adapted after game update. Please set the proxy multiplier manually in the game.</string>
     <string name="panel_fight_stage_reset_current">Cur/Last</string>
     <string name="panel_fight_stage_reset_ignore">Don\'t Switch</string>
     <string name="panel_fight_stage_reset_title">When activity stage is closed, reset to</string>
@@ -981,8 +987,38 @@
     <string name="panel_fight_specified_drops_stage_tip">This feature does not automatically calculate the optimal stage. Please choose the stage manually.</string>
     <string name="panel_fight_material">Material</string>
     <string name="panel_fight_target_count">Target Amount</string>
+    <string name="panel_fight_drops_mode_quantity">Quantity</string>
+    <string name="panel_fight_drops_mode_target_inventory">Target inventory</string>
+    <string name="panel_fight_target_inventory">Target inventory</string>
+    <string name="panel_fight_current_inventory">Current inventory: %1$s</string>
+    <string name="panel_fight_inventory_need">Estimated deficit: %1$d</string>
+    <string name="panel_fight_inventory_enough">Current inventory already meets the target</string>
+    <string name="panel_fight_target_inventory_tip">Refers to the inventory data saved by \"Tools - Depot Recognition\", farming only up to the target. Inventory is cached and may drift after manual runs, crafting or consumption; it is updated in real time from drops during a run, so materials farmed by earlier tasks reduce the deficit of subsequent tasks.</string>
     <string name="panel_fight_resource_collection_open_tip">· Resource collection event is active (all resource stages are open)</string>
     <string name="panel_fight_today_stage_hint_title">Today\'s stage tips (%1$s)</string>
+
+    <!-- panel: depot maintain -->
+    <string name="panel_toolbox_last_sync">Last sync: %1$s</string>
+    <string name="panel_toolbox_never_synced">Not synced yet</string>
+    <string name="panel_userdata_update_oper_box">Operator recognition</string>
+    <string name="panel_userdata_update_depot">Depot recognition</string>
+    <string name="panel_userdata_trigger_interval">Trigger interval</string>
+    <string name="panel_userdata_interval_every_time">Every time</string>
+    <string name="panel_userdata_interval_daily">Daily</string>
+    <string name="panel_userdata_interval_weekly">Weekly</string>
+
+    <string name="panel_depot_update_before_start">Update inventory before starting</string>
+    <string name="panel_depot_update_before_start_tip">Runs depot recognition first to refresh inventory data; each plan recomputes its deficit from the latest inventory when it starts, so this recognition takes effect immediately</string>
+    <string name="panel_depot_use_auto_series">Auto Series</string>
+    <string name="panel_depot_use_auto_series_tip">When unchecked, runs at 1×; when checked, runs at the highest series multiplier allowed by current sanity, so drops from a single run may exceed the target inventory limit.</string>
+    <string name="panel_depot_skip_during_activity">Skip during event</string>
+    <string name="panel_depot_skip_during_resource">Skip while the resource collection event is active</string>
+    <string name="panel_depot_add_plan">Add</string>
+    <string name="panel_depot_collapse_all">Collapse</string>
+    <string name="panel_depot_target_inventory">Target inventory</string>
+    <string name="panel_depot_stone_count">Use up to N Originite Prime</string>
+    <string name="panel_depot_not_selected">Not selected</string>
+    <string name="panel_depot_remove_plan">Remove this plan</string>
 
     <!-- panel: mall -->
     <string name="panel_mall_advanced_options">Advanced Options</string>
@@ -1517,6 +1553,8 @@
     <string name="task_type_mission">Rewards</string>
     <string name="task_type_auto_roguelike">Auto I.S.</string>
     <string name="task_type_reclamation">Recl. Alg.</string>
+    <string name="task_type_user_data_update">Update doctor data</string>
+    <string name="task_type_depot_maintain">Depot Maintain</string>
 
     <!-- i18n: announcement -->
     <string name="announcement_title">Important Notice</string>
@@ -1805,6 +1843,17 @@
     <!-- runtime session log (shown in log panel / history) -->
     <string name="runlog_task_start">Starting tasks (%1$d total)</string>
     <string name="runlog_task_started">Tasks started</string>
+    <!-- TODO: remove after MaaCore adapts proxy multipliers 7~10 -->
+    <string name="runlog_series_locked">Proxy multiplier not yet adapted after game update; using \"Don\'t Switch\". Please set it manually in the game.</string>
+    <string name="runlog_depot_plan_invalid_drop">Plan %1$d: no drop item specified.</string>
+    <string name="runlog_depot_plan_zero_count">Plan %1$d: target inventory is 0.</string>
+    <string name="runlog_depot_plan_no_stage">Plan %1$d: stage not specified or is \"Current/Last\".</string>
+    <string name="runlog_depot_plan_stage_not_open">Plan %1$d: stage \'%2$s\' is not open.</string>
+    <string name="runlog_depot_plan_inventory_enough">Plan %1$s: %2$s inventory sufficient (current %3$d / target %4$d).</string>
+    <string name="runlog_fight_inventory_unavailable">Task \"%1$s\" uses target inventory, but no inventory data is currently available, so it was skipped. Update it via \"Toolbox - Depot Recognition\".</string>
+    <string name="runlog_depot_set_params_failed">Plan %1$s: failed to update task params; original params will be used.</string>
+    <string name="runlog_depot_skipped_activity">An event is in progress; Depot Maintain skipped.</string>
+    <string name="runlog_depot_skipped_resource">The resource collection event is active; Depot Maintain skipped.</string>
     <string name="runlog_copilot_start">Starting auto-battle</string>
     <string name="runlog_copilot_started">Auto-battle started</string>
     <string name="runlog_service_connecting">Service is starting, please try again later</string>

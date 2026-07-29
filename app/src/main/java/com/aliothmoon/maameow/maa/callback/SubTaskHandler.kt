@@ -12,11 +12,11 @@ import com.aliothmoon.maameow.data.model.RecruitCombination
 import com.aliothmoon.maameow.data.model.RecruitOper
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
-import com.aliothmoon.maameow.maa.AsstMsg
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -38,8 +38,9 @@ class SubTaskHandler(
     private val chainState: TaskChainState,
     private val activityManager: ActivityManager,
     private val achievementRepository: AchievementRepository,
+    private val depotRepository: DepotRepository,
 ) {
-    private val achievementScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val resources = applicationContext.resources
     private val packageName = applicationContext.packageName
 
@@ -77,22 +78,9 @@ class SubTaskHandler(
         lastSanitySnapshot = null
     }
 
-    /**
-     * 主分发方法
-     */
-    fun handle(msg: AsstMsg, details: JSONObject) {
-        when (msg) {
-            AsstMsg.SubTaskError -> handleError(details)
-            AsstMsg.SubTaskStart -> handleStart(details)
-            AsstMsg.SubTaskCompleted -> handleCompleted(details)
-            AsstMsg.SubTaskExtraInfo -> handleExtraInfo(details)
-            else -> Timber.w("SubTaskHandler received unexpected msg: $msg")
-        }
-    }
-
     // ==================== SubTaskError (20000) ====================
 
-    private fun handleError(details: JSONObject) {
+    fun onSubTaskError(details: JSONObject) {
         val subtask = details.getString("subtask") ?: return
 
         when (subtask) {
@@ -140,7 +128,7 @@ class SubTaskHandler(
                     }
                     append(sb.trimEnd().toString(), LogLevel.ERROR)
                 }
-                achievementScope.launch {
+                ioScope.launch {
                     achievementRepository.report {
                         event = AchievementEvents.SUB_TASK_ERROR
                         "subtask" to subtask
@@ -149,7 +137,7 @@ class SubTaskHandler(
             }
 
             "CopilotTask" -> {
-                achievementScope.launch {
+                ioScope.launch {
                     achievementRepository.report {
                         event = AchievementEvents.SUB_TASK_ERROR
                         "subtask" to subtask
@@ -164,7 +152,7 @@ class SubTaskHandler(
             }
 
             else -> {
-                achievementScope.launch {
+                ioScope.launch {
                     achievementRepository.report {
                         event = AchievementEvents.SUB_TASK_ERROR
                         "subtask" to subtask
@@ -177,7 +165,7 @@ class SubTaskHandler(
 
     // ==================== SubTaskStart (20001) ====================
 
-    private fun handleStart(details: JSONObject) {
+    fun onSubTaskStart(details: JSONObject) {
         val subtask = details.getString("subtask") ?: return
 
         when (subtask) {
@@ -239,7 +227,7 @@ class SubTaskHandler(
 
             "RecruitRefreshConfirm" -> {
                 append(str("LabelsRefreshed"), LogLevel.INFO)
-                achievementScope.launch {
+                ioScope.launch {
                     achievementRepository.report {
                         event = AchievementEvents.PROCESS_TASK_STARTED
                         "task" to task
@@ -249,7 +237,7 @@ class SubTaskHandler(
 
             "RecruitConfirm" -> {
                 append(str("RecruitConfirm"), LogLevel.INFO)
-                achievementScope.launch {
+                ioScope.launch {
                     achievementRepository.report {
                         event = AchievementEvents.PROCESS_TASK_STARTED
                         "task" to task
@@ -263,7 +251,7 @@ class SubTaskHandler(
 
             "ExitThenAbandon" -> {
                 append(str("ExplorationAbandoned"), LogLevel.ROGUELIKE_ABANDON)
-                achievementScope.launch {
+                ioScope.launch {
                     achievementRepository.report {
                         event = AchievementEvents.PROCESS_TASK_STARTED
                         "task" to task
@@ -305,7 +293,7 @@ class SubTaskHandler(
 
             "StageTraderInvestSystemFull" -> {
                 append(str("UpperLimit"), LogLevel.INFO)
-                achievementScope.launch {
+                ioScope.launch {
                     achievementRepository.report {
                         event = AchievementEvents.PROCESS_TASK_STARTED
                         "task" to task
@@ -319,7 +307,7 @@ class SubTaskHandler(
 
             "GamePass" -> {
                 append(str("RoguelikeGamePass"), LogLevel.RARE)
-                achievementScope.launch {
+                ioScope.launch {
                     achievementRepository.report {
                         event = AchievementEvents.PROCESS_TASK_STARTED
                         "task" to task
@@ -350,7 +338,7 @@ class SubTaskHandler(
 
             "StageDrops-Stars-3", "StageDrops-Stars-Adverse" -> {
                 append(str("CompleteCombat"), LogLevel.INFO)
-                achievementScope.launch {
+                ioScope.launch {
                     achievementRepository.report {
                         event = AchievementEvents.PROCESS_TASK_STARTED
                         "task" to task
@@ -368,7 +356,7 @@ class SubTaskHandler(
 
     // ==================== SubTaskCompleted (20002) ====================
 
-    private fun handleCompleted(details: JSONObject) {
+    fun onSubTaskCompleted(details: JSONObject) {
         val subtask = details.getString("subtask") ?: return
 
         if (subtask == "ProcessTask") {
@@ -379,7 +367,7 @@ class SubTaskHandler(
             when (taskchain) {
                 "Infrast" if task == "UnlockClues" -> {
                     append(str("ClueExchangeUnlocked"), LogLevel.TRACE)
-                    achievementScope.launch {
+                    ioScope.launch {
                         achievementRepository.report {
                             event = AchievementEvents.PROCESS_TASK_COMPLETED
                             "taskchain" to taskchain
@@ -390,7 +378,7 @@ class SubTaskHandler(
 
                 "Infrast" if task == "SendClues" -> {
                     append(str("CluesSent"), LogLevel.TRACE)
-                    achievementScope.launch {
+                    ioScope.launch {
                         achievementRepository.report {
                             event = AchievementEvents.PROCESS_TASK_COMPLETED
                             "taskchain" to taskchain
@@ -402,7 +390,7 @@ class SubTaskHandler(
                 "Roguelike" if task == "StartExplore" -> {
                     val times = innerDetails.getIntValue("exec_times", 0)
                     append("${str("BegunToExplore")} $times ${str("UnitTime")}", LogLevel.INFO)
-                    achievementScope.launch {
+                    ioScope.launch {
                         val coreChar = normalizedRoguelikeCoreChar()
                         achievementRepository.report {
                             event = AchievementEvents.PROCESS_TASK_COMPLETED
@@ -417,7 +405,7 @@ class SubTaskHandler(
                 // OF-1 信用战完成现在会触发 Copilot@StageDrops-Stars-3
                 "Mall" if task == "StageDrops-Stars-3" -> {
                     append("${str("CompleteTask")}${str("CreditFight")}", LogLevel.TRACE)
-                    achievementScope.launch {
+                    ioScope.launch {
                         achievementRepository.report {
                             event = AchievementEvents.PROCESS_TASK_COMPLETED
                             "taskchain" to taskchain
@@ -435,7 +423,7 @@ class SubTaskHandler(
 
     // ==================== SubTaskExtraInfo (20003) ====================
 
-    private fun handleExtraInfo(details: JSONObject) {
+    fun onSubTaskExtraInfo(details: JSONObject) {
         // Depot / OperBox 通过 taskchain 路由（与 WPF 一致）
         val taskchain = details.getString("taskchain")
         val subDetails = details.getJSONObject("details")
@@ -558,7 +546,7 @@ class SubTaskHandler(
                 if (level >= 5) {
                     notificationCenter.notifyRecruitHighRarity(level)
                 }
-                achievementScope.launch {
+                ioScope.launch {
                     achievementRepository.report {
                         event = AchievementEvents.RECRUIT_RESULT
                         "level" to level
@@ -663,7 +651,7 @@ class SubTaskHandler(
             "UnsupportedLevel" -> {
                 val level = subDetails?.getString("level") ?: ""
                 append("${str("UnsupportedLevel")}$level", LogLevel.ERROR)
-                achievementScope.launch {
+                ioScope.launch {
                     achievementRepository.report {
                         event = AchievementEvents.SUB_TASK_EXTRA_INFO
                         "what" to what
@@ -685,16 +673,21 @@ class SubTaskHandler(
         val stats = subDetails?.getJSONArray("stats")
         val curTimes = subDetails?.getIntValue("cur_times") ?: -1
         val sb = StringBuilder("$stageCode ${str("TotalDrop")}\n")
+        val drops = mutableListOf<Pair<String, Int>>()
 
         if (stats.isNullOrEmpty()) {
             sb.append(str("NoDrop"))
         } else {
             for (i in 0 until stats.size) {
                 val item = stats.getJSONObject(i)
+                val itemId = item.getString("itemId") ?: ""
                 val itemName = item.getString("itemName") ?: ""
                 val displayName = if (itemName == "furni") str("FurnitureDrop") else itemName
                 val quantity = item.getIntValue("quantity")
                 val addQuantity = item.getIntValue("addQuantity")
+                if (itemId.isNotEmpty() && addQuantity > 0) {
+                    drops += itemId to addQuantity
+                }
                 sb.append("$displayName : $quantity")
                 if (addQuantity > 0) sb.append(" (+$addQuantity)")
                 if (i < stats.size - 1) sb.append("\n")
@@ -714,6 +707,11 @@ class SubTaskHandler(
         }
 
         sessionLogger.append(sb.toString(), LogLevel.TRACE)
+
+        if (drops.isNotEmpty()) {
+            // 同步写穿内存，下一关 TaskChainStart 立刻能 countOf 到本场掉落
+            depotRepository.merge(drops)
+        }
     }
 
     private fun handleInfrastTrainingCompleted(subDetails: JSONObject?) {
@@ -780,7 +778,7 @@ class SubTaskHandler(
 
         append(baseLog + suffix, LogLevel.INFO)
         if (count > 0) {
-            achievementScope.launch {
+            ioScope.launch {
                 achievementRepository.report {
                     event = AchievementEvents.MEDICINE_USED
                     "isExpiring" to isExpiring

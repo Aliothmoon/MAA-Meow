@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.resource
 
 import java.time.DayOfWeek
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
@@ -34,12 +35,21 @@ object ServerTimezone {
     }
 
     /**
+     * 当前时刻对应的鹰角历时间（服务器当地时间回退 4 小时）
+     */
+    private fun yjNow(clientType: String): ZonedDateTime =
+        ZonedDateTime.now(getServerZone(clientType)).minusHours(YJ_DAY_START_HOUR)
+
+    /**
      * 获取指定客户端类型的鹰角历星期几
      */
-    fun getYjDayOfWeek(clientType: String): DayOfWeek {
-        val zone = getServerZone(clientType)
-        return ZonedDateTime.now(zone).minusHours(YJ_DAY_START_HOUR).dayOfWeek
-    }
+    fun getYjDayOfWeek(clientType: String): DayOfWeek = yjNow(clientType).dayOfWeek
+
+    /**
+     * 获取指定客户端类型的鹰角历日期
+     * see WPF DateTimeExtension.ToYjDate
+     */
+    fun getYjDate(clientType: String): LocalDate = yjNow(clientType).toLocalDate()
 
     /**
      * 获取指定客户端类型的鹰角历星期几（中文名）

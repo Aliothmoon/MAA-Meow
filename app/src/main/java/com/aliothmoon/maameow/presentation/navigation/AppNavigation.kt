@@ -33,6 +33,7 @@ import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.presentation.LocalToaster
 import com.aliothmoon.maameow.presentation.components.AnnouncementDialog
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
+import com.aliothmoon.maameow.presentation.components.clearFocusOnBlankTap
 import com.aliothmoon.maameow.presentation.state.UiEffect
 import com.aliothmoon.maameow.presentation.view.notification.NotificationSettingsView
 import com.aliothmoon.maameow.presentation.view.settings.AchievementDebugView
@@ -131,8 +132,7 @@ fun AppNavigation(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        // MainScreen with HorizontalPager for smooth tab switching
+    Box(modifier = Modifier.fillMaxSize().clearFocusOnBlankTap()) {
         MainScreen(
             navController = navController,
             backgroundTaskViewModel = backgroundTaskViewModel,

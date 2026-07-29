@@ -68,21 +68,21 @@ class ActivityManager(
 
     /** 鹰历时区 */
     private val serverZone: ZoneId
-        get() = ServerTimezone.getServerZone(chainState.getClientType())
+        get() = ServerTimezone.getServerZone(chainState.clientType)
 
     /**
      * 获取当前鹰角历的星期几（根据客户端类型自动选择时区）
      * 迁移自 WPF DateTimeExtension.ToYjDateTime
      */
     fun getYjDayOfWeek(): DayOfWeek {
-        return ServerTimezone.getYjDayOfWeek(chainState.getClientType())
+        return ServerTimezone.getYjDayOfWeek(chainState.clientType)
     }
 
     /**
      * 获取当前鹰角历星期几的中文名
      */
     fun getYjDayOfWeekName(): String {
-        return ServerTimezone.getYjDayOfWeekName(chainState.getClientType())
+        return ServerTimezone.getYjDayOfWeekName(chainState.clientType)
     }
 
     suspend fun load(clientType: String) {
@@ -322,6 +322,20 @@ class ActivityManager(
         return _resourceCollection.value?.isOpen == true
     }
 
+    /**
+     * 判断当前是否有 SideStory 活动进行中。
+     * 迁移自 WPF StageManager.IsActivityOpen。
+     *
+     * 只看 SideStory 类活动，排除资源收集（后者由 [isResourceCollectionOpen] 单独判定），
+     * 否则资源收集期间本方法也会为 true，库存保持的两个跳过开关就分不开了。
+     */
+    fun isActivityOpen(): Boolean {
+        return _activityStages.value.any { stage ->
+            val activity = stage.activity
+            activity != null && !activity.isResourceCollection && activity.isOpen
+        }
+    }
+
 
     /**
      * 构建合并关卡字典
@@ -416,7 +430,7 @@ class ActivityManager(
             val stageChanged = maaApiService.checkStageActivityChanged()
             val taskChanged = maaApiService.checkTasksChanged()
             if (stageChanged || taskChanged) {
-                val clientType = chainState.getClientType()
+                val clientType = chainState.clientType
                 val type = if (clientType == "Bilibili") "Official" else clientType
                 doLoadActivityStages(type)
                 dirty = true

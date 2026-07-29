@@ -19,7 +19,7 @@ class ConnectionInfoHandler(
     private val resources = applicationContext.resources
     private val packageName = applicationContext.packageName
 
-    fun handle(details: JSONObject) {
+    fun onConnectionInfo(details: JSONObject) {
         val what = details.getString("what") ?: return
         val innerDetails = details.getJSONObject("details")
 

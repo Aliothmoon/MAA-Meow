@@ -42,7 +42,7 @@ class ConfigBackupManager(
             appSettings = appSettingsManager.settings.first().sanitized(),
             notificationSettings = notificationSettingsManager.settings.first().sanitized(),
             taskProfiles = taskChainState.profiles.value.map { it.sanitized() },
-            activeProfileId = taskChainState.activeProfileId.value,
+            activeProfileId = taskChainState.profileId.value,
             scheduleStrategies = scheduleStrategyRepository.strategies.value,
         )
         outputStream.bufferedWriter().use { writer ->

@@ -54,7 +54,7 @@ class MaaResourceLoaderTest {
                 every { tasksOverrideEnabled } returns MutableStateFlow(false)
             }
             val chainState = mockk<TaskChainState> {
-                every { getClientType() } returns "Official"
+                every { clientType } returns "Official"
             }
             val itemHelper = mockk<ItemHelper>()
             val resourceDataManager = mockk<ResourceDataManager>()

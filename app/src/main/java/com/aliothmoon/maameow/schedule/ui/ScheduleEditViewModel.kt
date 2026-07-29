@@ -102,7 +102,7 @@ class ScheduleEditViewModel(
             _state.value = ScheduleEditUiState(
                 name = defaultName,
                 profiles = profiles,
-                selectedProfileId = taskChainState.activeProfileId.value.ifEmpty { profiles.firstOrNull()?.id }
+                selectedProfileId = taskChainState.profileId.value.ifEmpty { profiles.firstOrNull()?.id }
             )
         }
     }

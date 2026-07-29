@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.MaaCoreCallback
 import com.aliothmoon.maameow.MaaCoreService
 import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
+import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.model.LogLevel
 
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
@@ -23,11 +24,15 @@ import com.aliothmoon.maameow.maa.callback.MaaCallbackDispatcher
 import com.aliothmoon.maameow.maa.callback.MaaExecutionStateHolder
 import com.aliothmoon.maameow.maa.callback.SubTaskHandler
 import com.aliothmoon.maameow.maa.callback.TaskChainStatusTracker
+import com.aliothmoon.maameow.maa.callback.ToolboxResultCollector
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.manager.RemoteAccessCoordinator
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
+import com.aliothmoon.maameow.remote.PermissionGrantRequest
 import com.aliothmoon.maameow.utils.Misc
+import com.aliothmoon.maameow.utils.i18n.UiText
+import com.aliothmoon.maameow.utils.i18n.resolve
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -60,6 +65,8 @@ class MaaCompositionService(
     private val subTaskHandler: SubTaskHandler,
     private val taskChainStatusTracker: TaskChainStatusTracker,
     private val notificationCenter: MaaNotificationCenter,
+    private val dropsRefresher: FightDropsRefresher,
+    private val toolboxResultCollector: ToolboxResultCollector,
 ) : MaaExecutionStateHolder {
 
     private val _state = MutableStateFlow(MaaExecutionState.IDLE)
@@ -174,7 +181,7 @@ class MaaCompositionService(
 
     fun handleCallback(msg: Int, json: String?) {
         if (onAsyncConnectCallback(msg, json)) return
-        callbackDispatcher.dispatch(msg, json)
+        callbackDispatcher.onEvent(msg, json)
     }
 
     val callback = object : MaaCoreCallback.Stub() {
@@ -197,6 +204,7 @@ class MaaCompositionService(
         tasks: List<MaaTaskParams>,
         clientType: String,
         isScheduled: Boolean = false,
+        preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
         onSessionStarted: (suspend () -> Unit)? = null
     ): StartResult = executeStart(
         tasks = tasks,
@@ -204,12 +212,13 @@ class MaaCompositionService(
         isScheduled = isScheduled,
         startMessage = context.getString(R.string.runlog_task_start, tasks.size),
         successMessage = context.getString(R.string.runlog_task_started),
+        preflightLogs = preflightLogs,
         onSessionStarted = onSessionStarted,
     )
 
     suspend fun startCopilot(
         tasks: List<MaaTaskParams>,
-        clientType: String = taskChainState.getClientType()
+        clientType: String = taskChainState.clientType
     ): StartResult = executeStart(
         tasks = tasks,
         clientType = clientType,
@@ -347,12 +356,27 @@ class MaaCompositionService(
         }
         // 在 MAA 连接（含 force_stop 重启游戏）之前提前授予电池优化豁免与后台不受限权限，
         // 让新进程一启动就处于受保护状态
-        taskChainState.grantGameBatteryExemption(clientType)
+        grantGameBatteryExemption(clientType)
         // 每次连接前同步「干员部署按住-暂停」开关 (对应 Core ControlFeat::SWIPE_WITH_PAUSE),
         // 用户改了设置下次启动任务即生效
         val pauseEnabled = appSettings.deploymentWithPause.value
         maa.SetInstanceOption(DEPLOYMENT_WITH_PAUSE, if (pauseEnabled) "1" else "0")
         return asyncConnect(maa, config)
+    }
+
+    private fun grantGameBatteryExemption(clientType: String) {
+        val pkg = Packages[clientType] ?: return
+        runCatching {
+            RemoteServiceManager.getInstanceOrNull()?.grantPermissions(
+                PermissionGrantRequest(
+                    packageName = pkg,
+                    permissions = PermissionGrantRequest.PERM_BATTERY or PermissionGrantRequest.PERM_BACKGROUND
+                )
+            )
+            Timber.d("Battery exemption granted for game: %s", pkg)
+        }.onFailure { e ->
+            Timber.w(e, "Failed to grant battery exemption for game")
+        }
     }
 
     private suspend fun appendTasksAndStart(
@@ -362,11 +386,13 @@ class MaaCompositionService(
         mode: RunMode,
     ): StartResult {
         taskChainStatusTracker.clear()
+        // 不清 dropsRefresher：stage 已在 Analyze 完成，会话结束/下次 Analyze 再清
         tasks.forEach { t ->
             sessionLogger.appendToFileOnly("[TaskParams] ${t.type.value}: ${t.params}")
             val taskId = maa.AppendTask(t.type.value, t.params)
             if (taskId > 0) {
-                taskChainStatusTracker.register(taskId, t.type.value, t.nodeId)
+                taskChainStatusTracker.register(taskId, t.type.value, t.slot)
+                t.slot?.let { dropsRefresher.bind(it, taskId) }
             }
         }
         if (!maa.Start()) {
@@ -390,13 +416,18 @@ class MaaCompositionService(
         startMessage: String,
         successMessage: String,
         isScheduled: Boolean = false,
+        preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
         onSessionStarted: (suspend () -> Unit)? = null,
     ): StartResult {
         setRunState(MaaExecutionState.STARTING)
         sessionLogger.startSession(tasks.map { it.type.value })
         subTaskHandler.resetSessionState()
+        toolboxResultCollector.onSessionStart()
         onSessionStarted?.invoke()
         sessionLogger.appendAndWait(startMessage, LogLevel.INFO)
+        preflightLogs.forEach { (text, level) ->
+            sessionLogger.appendAndWait(text.resolve(context), level)
+        }
         sessionLogger.appendAndWait(fetchDeviceMemoryInfo(), LogLevel.INFO)
 
         val mode = appSettings.runMode.value

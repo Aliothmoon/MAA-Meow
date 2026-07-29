@@ -7,22 +7,27 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.FightConfig
+import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.resource.ItemInfo
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.INumericField
+import com.aliothmoon.maameow.presentation.view.panel.common.ItemButtonGroup
+import org.koin.compose.koinInject
 
 /**
  * 指定材料掉落区域
@@ -31,12 +36,14 @@ import com.aliothmoon.maameow.presentation.components.INumericField
 fun SpecifiedDropsSection(
     config: FightConfig,
     onConfigChange: (FightConfig) -> Unit,
-    dropItems: List<ItemInfo>
+    dropItems: List<ItemInfo>,
+    depotRepository: DepotRepository = koinInject(),
 ) {
     // 构建材料 ID 到名称的映射
     val itemNameMap = remember(dropItems) {
         dropItems.associate { it.id to it.name }
     }
+    val depotSnapshot by depotRepository.snapshot.collectAsStateWithLifecycle()
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // 启用指定掉落复选框
@@ -48,7 +55,8 @@ fun SpecifiedDropsSection(
                         isSpecifiedDrops = it,
                         // 取消时清空材料设置
                         dropsItemId = if (!it) "" else config.dropsItemId,
-                        dropsQuantity = if (!it) 5 else config.dropsQuantity
+                        dropsQuantity = if (!it) 5 else config.dropsQuantity,
+                        isInventoryTarget = if (!it) false else config.isInventoryTarget,
                     )
                 )
             },
@@ -87,14 +95,67 @@ fun SpecifiedDropsSection(
                 displayMapper = { id -> itemNameMap[id] ?: id }
             )
 
-            // 材料数量
+            // 已选材料时展示缓存库存（与库存保持汇总一致：未识别过用「--」而非 0）
+            if (config.dropsItemId.isNotBlank()) {
+                val hasDepotData = depotSnapshot.syncTimeMillis > 0L
+                val currentHave = if (hasDepotData) {
+                    (depotSnapshot.items[config.dropsItemId] ?: 0).toString()
+                } else {
+                    "--"
+                }
+                Text(
+                    text = stringResource(R.string.panel_fight_current_inventory, currentHave),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (config.isInventoryTarget && hasDepotData) {
+                    val need = (config.dropsQuantity - (depotSnapshot.items[config.dropsItemId] ?: 0))
+                        .coerceAtLeast(0)
+                    Text(
+                        text = if (need <= 0) {
+                            stringResource(R.string.panel_fight_inventory_enough)
+                        } else {
+                            stringResource(R.string.panel_fight_inventory_need, need)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (need <= 0) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                }
+            }
+
+            // 模式切换：数量 / 目标库存
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = !config.isInventoryTarget,
+                    onClick = { onConfigChange(config.copy(isInventoryTarget = false)) },
+                    label = { Text(stringResource(R.string.panel_fight_drops_mode_quantity)) },
+                )
+                FilterChip(
+                    selected = config.isInventoryTarget,
+                    onClick = { onConfigChange(config.copy(isInventoryTarget = true)) },
+                    label = { Text(stringResource(R.string.panel_fight_drops_mode_target_inventory)) },
+                )
+            }
+
+            // 数值输入（标签随模式变化）
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = stringResource(R.string.panel_fight_target_count),
+                    text = if (config.isInventoryTarget) {
+                        stringResource(R.string.panel_fight_target_inventory)
+                    } else {
+                        stringResource(R.string.panel_fight_target_count)
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f)
                 )
@@ -104,6 +165,14 @@ fun SpecifiedDropsSection(
                     minimum = 1,
                     maximum = 1145141919,
                     modifier = Modifier.width(100.dp)
+                )
+            }
+
+            if (config.isInventoryTarget) {
+                Text(
+                    text = stringResource(R.string.panel_fight_target_inventory_tip),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
