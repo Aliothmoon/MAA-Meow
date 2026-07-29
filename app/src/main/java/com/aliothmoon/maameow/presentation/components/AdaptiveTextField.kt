@@ -72,6 +72,7 @@ fun ITextField(
     enabled: Boolean = true,
     shape: RoundedCornerShape = RoundedCornerShape(8.dp),
     supportingText: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
     outlineColor: Color? = null,
     onImeAction: (() -> Unit)? = null
 ) {
@@ -94,6 +95,7 @@ fun ITextField(
             enabled = enabled,
             shape = shape,
             outlineColor = outlineColor ?: MaterialTheme.colorScheme.outline,
+            trailingIcon = trailingIcon,
             onImeAction = handleImeDone,
             inputType = if (singleLine) InputType.TYPE_CLASS_TEXT else
                 InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
@@ -109,6 +111,7 @@ fun ITextField(
             enabled = enabled,
             shape = shape,
             supportingText = supportingText,
+            trailingIcon = trailingIcon,
             colors = if (outlineColor != null) {
                 OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = outlineColor

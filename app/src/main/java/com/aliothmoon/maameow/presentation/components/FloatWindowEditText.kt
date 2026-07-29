@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -56,6 +57,7 @@ fun FloatWindowEditText(
     backgroundColor: Color = MaterialTheme.colorScheme.surface,
     outlineColor: Color = MaterialTheme.colorScheme.outline,
     focusedOutlineColor: Color = MaterialTheme.colorScheme.primary,
+    trailingIcon: @Composable (() -> Unit)? = null,
     onImeAction: (() -> Unit)? = null,
     onFocusChange: ((Boolean) -> Unit)? = null
 ) {
@@ -110,7 +112,14 @@ fun FloatWindowEditText(
             AndroidView(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .defaultMinSize(minHeight = minHeight),
+                    .defaultMinSize(minHeight = minHeight)
+                    .then(
+                        if (trailingIcon != null) {
+                            Modifier.padding(end = 40.dp)
+                        } else {
+                            Modifier
+                        }
+                    ),
                 factory = { ctx ->
                     ExtractModeEditText(ctx).apply {
                         background = null
@@ -186,6 +195,15 @@ fun FloatWindowEditText(
                     et.setHintTextColor(hintColorInt)
                 }
             )
+            if (trailingIcon != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 4.dp)
+                ) {
+                    trailingIcon()
+                }
+            }
         }
     }
 }
