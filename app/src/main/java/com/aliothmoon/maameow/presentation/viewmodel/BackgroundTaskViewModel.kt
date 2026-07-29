@@ -43,6 +43,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
@@ -103,6 +105,30 @@ class BackgroundTaskViewModel(
         observeServiceState()
         observeTaskEnd()
         observeTouchPreviewToggle()
+        observeDefaultTaskSelection()
+    }
+
+    /**
+     * 首次进入 / 选中失效时默认打开任务链第一项，避免右侧一直停在空占位。
+     * 新增任务、配置管理模式下不自动改写选中。
+     */
+    private fun observeDefaultTaskSelection() {
+        viewModelScope.launch {
+            combine(chainState.chain, _state) { nodes, ui ->
+                resolveTaskPanelSelectedNodeId(
+                    nodes = nodes,
+                    selectedNodeId = ui.selectedNodeId,
+                    isAddingTask = ui.isAddingTask,
+                    isProfileMode = ui.isProfileMode,
+                )
+            }
+                .distinctUntilChanged()
+                .collect { resolved ->
+                    if (_state.value.selectedNodeId != resolved) {
+                        _state.update { it.copy(selectedNodeId = resolved) }
+                    }
+                }
+        }
     }
 
     private fun observeTouchPreviewToggle() {

@@ -25,6 +25,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -56,6 +58,30 @@ class ExpandedControlPanelViewModel(
                 Timber.d("Overlay result received: $endState")
                 showDialog(application.createExecutionEndDialog(endState))
             }
+        }
+        observeDefaultTaskSelection()
+    }
+
+    /**
+     * 首次展开 / 选中失效时默认打开任务链第一项，避免右侧一直停在空占位
+     * 新增任务、配置管理模式下不自动改写选中
+     */
+    private fun observeDefaultTaskSelection() {
+        viewModelScope.launch {
+            combine(chainState.chain, _state) { nodes, ui ->
+                resolveTaskPanelSelectedNodeId(
+                    nodes = nodes,
+                    selectedNodeId = ui.selectedNodeId,
+                    isAddingTask = ui.isAddingTask,
+                    isProfileMode = ui.isProfileMode,
+                )
+            }
+                .distinctUntilChanged()
+                .collect { resolved ->
+                    if (_state.value.selectedNodeId != resolved) {
+                        _state.update { it.copy(selectedNodeId = resolved) }
+                    }
+                }
         }
     }
 
@@ -89,12 +115,24 @@ class ExpandedControlPanelViewModel(
     }
 
     fun onToggleEditMode() {
-        _state.update { it.copy(isEditMode = !it.isEditMode, isAddingTask = false, isProfileMode = false) }
+        _state.update {
+            it.copy(
+                isEditMode = !it.isEditMode,
+                isAddingTask = false,
+                isProfileMode = false
+            )
+        }
         Timber.d("Edit mode toggled: %s", _state.value.isEditMode)
     }
 
     fun onToggleProfileMode() {
-        _state.update { it.copy(isProfileMode = !it.isProfileMode, isEditMode = false, isAddingTask = false) }
+        _state.update {
+            it.copy(
+                isProfileMode = !it.isProfileMode,
+                isEditMode = false,
+                isAddingTask = false
+            )
+        }
         Timber.d("Profile mode toggled: %s", _state.value.isProfileMode)
     }
 
