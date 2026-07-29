@@ -9,6 +9,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -28,6 +29,7 @@ import com.aliothmoon.maameow.schedule.model.CountdownState
 import com.aliothmoon.maameow.service.AccessibilityHelperService
 import com.aliothmoon.maameow.theme.MaaMeowTheme
 import com.aliothmoon.maameow.utils.Misc
+import com.aliothmoon.maameow.utils.UiScale
 import com.petterp.floatingx.FloatingX
 import com.petterp.floatingx.assist.FxDisplayMode
 import com.petterp.floatingx.assist.FxGravity
@@ -214,14 +216,22 @@ class OverlayController(
             }
             setContent {
                 val themeMode by appSettings.themeMode.collectAsStateWithLifecycle()
+                val fontSizeScale by appSettings.fontSizeScale.collectAsStateWithLifecycle()
 
                 MaaMeowTheme(themeMode = themeMode) {
                     val baseDensity = LocalDensity.current
+                    val configuration = LocalConfiguration.current
+                    // 浮窗跟随主界面页面缩放；fontScale 钳制保持历史行为
+                    val effectiveScale = AppSettingsManager.resolveFontSizeScale(
+                        stored = fontSizeScale,
+                        smallestWidthDp = configuration.smallestScreenWidthDp,
+                        fontScale = baseDensity.fontScale,
+                    )
                     CompositionLocalProvider(
                         LocalFloatingWindowContext provides true,
                         LocalDensity provides Density(
-                            density = baseDensity.density,
-                            fontScale = baseDensity.fontScale.coerceIn(0.85f, 1.3f)
+                            density = baseDensity.density * effectiveScale / 100f,
+                            fontScale = UiScale.clampOverlayFontScale(baseDensity.fontScale),
                         )
                     ) {
                         ProvideInputFocusManager {

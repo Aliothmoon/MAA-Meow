@@ -40,15 +40,47 @@ class AppSettingsManager(
     companion object {
         val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
 
-        /** 页面缩放范围 */
+        /** 页面缩放：0 = 自动；手动为 80–110 */
         const val FONT_SIZE_SCALE_MIN = 80
         const val FONT_SIZE_SCALE_MAX = 110
-        const val FONT_SIZE_SCALE_DEFAULT = 100
+        const val FONT_SIZE_SCALE_AUTO = 0
+        const val FONT_SIZE_SCALE_DEFAULT = FONT_SIZE_SCALE_AUTO
 
-        /** 从存储原始值解析为合法的 font size scale */
-        fun parseFontSizeScale(raw: String): Int =
-            raw.toIntOrNull()?.coerceIn(FONT_SIZE_SCALE_MIN, FONT_SIZE_SCALE_MAX)
-                ?: FONT_SIZE_SCALE_DEFAULT
+        /**
+         * 解析存储值。
+         * - `"auto"` / `"0"` → [FONT_SIZE_SCALE_AUTO]
+         * - `80`–`110` → 对应整数
+         * - 非法 → 默认自动
+         */
+        fun parseFontSizeScale(raw: String): Int {
+            if (raw.equals("auto", ignoreCase = true) || raw == "0") {
+                return FONT_SIZE_SCALE_AUTO
+            }
+            val n = raw.toIntOrNull() ?: return FONT_SIZE_SCALE_DEFAULT
+            if (n == FONT_SIZE_SCALE_AUTO) return FONT_SIZE_SCALE_AUTO
+            if (n in FONT_SIZE_SCALE_MIN..FONT_SIZE_SCALE_MAX) return n
+            return FONT_SIZE_SCALE_DEFAULT
+        }
+
+        fun isFontSizeScaleAuto(scale: Int): Boolean = scale == FONT_SIZE_SCALE_AUTO
+
+        /**
+         * 得到实际生效的页面缩放百分比。
+         * 自动模式使用 [com.aliothmoon.maameow.utils.UiScale.recommendedFontSizeScale]。
+         */
+        fun resolveFontSizeScale(
+            stored: Int,
+            smallestWidthDp: Int,
+            fontScale: Float,
+        ): Int {
+            if (!isFontSizeScaleAuto(stored)) {
+                return stored.coerceIn(FONT_SIZE_SCALE_MIN, FONT_SIZE_SCALE_MAX)
+            }
+            return com.aliothmoon.maameow.utils.UiScale.recommendedFontSizeScale(
+                smallestWidthDp = smallestWidthDp,
+                fontScale = fontScale,
+            )
+        }
     }
 
     val settings: Flow<AppSettings> = with(AppSettingsSchema) { context.dataStore.flow }
@@ -567,7 +599,7 @@ class AppSettingsManager(
         }
     }
 
-    // 页面缩放比例（80~110，默认 100）
+    // 页面缩放（0=自动，或 80~110 手动）
     val fontSizeScale: StateFlow<Int> = settings
         .map { parseFontSizeScale(it.fontSizeScale) }
         .distinctUntilChanged()
@@ -576,8 +608,11 @@ class AppSettingsManager(
     suspend fun setFontSizeScale(scale: Int) {
         with(AppSettingsSchema) {
             context.dataStore.edit {
-                it[fontSizeScale] =
+                it[fontSizeScale] = if (isFontSizeScaleAuto(scale)) {
+                    "auto"
+                } else {
                     scale.coerceIn(FONT_SIZE_SCALE_MIN, FONT_SIZE_SCALE_MAX).toString()
+                }
             }
         }
     }

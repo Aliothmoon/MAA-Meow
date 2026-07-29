@@ -86,8 +86,12 @@ data class AppSettings(
      */
     @PrefKey(default = "false") val useSystemMonetColor: String = "false",
 
-    /** 页面缩放比例（80~110，默认 100 = 1.0x） */
-    @PrefKey(default = "100") val fontSizeScale: String = "100",
+    /**
+     * 页面缩放。
+     * - `auto` / `0`：按最小宽度自动推荐（新装默认）
+     * - `80`~`110`：手动百分比（已有用户存的值保持不动）
+     */
+    @PrefKey(default = "auto") val fontSizeScale: String = "auto",
 
     /** 是否显示成就解锁时的 Snackbar 提示 */
     @PrefKey(default = "true") val showAchievementSnackbar: String = "true",

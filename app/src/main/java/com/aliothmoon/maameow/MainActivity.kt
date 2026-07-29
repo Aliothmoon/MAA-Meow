@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -74,10 +75,17 @@ class MainActivity : AppCompatActivity() {
 
             MaaMeowTheme(themeMode = themeMode, useSystemMonetColor = useSystemMonetColor) {
                 val baseDensity = LocalDensity.current
+                val configuration = LocalConfiguration.current
+                val effectiveScale = AppSettingsManager.resolveFontSizeScale(
+                    stored = fontSizeScale,
+                    smallestWidthDp = configuration.smallestScreenWidthDp,
+                    fontScale = baseDensity.fontScale,
+                )
                 CompositionLocalProvider(
                     LocalDensity provides Density(
-                        density = baseDensity.density * fontSizeScale / 100f,
-                        fontScale = baseDensity.fontScale
+                        density = baseDensity.density * effectiveScale / 100f,
+                        // 主界面保持系统 fontScale（与历史行为一致）
+                        fontScale = baseDensity.fontScale,
                     )
                 ) {
                     ProvideInputFocusManager {

@@ -56,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -78,6 +79,8 @@ import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
+import com.aliothmoon.maameow.utils.UiScale
+import kotlin.math.roundToInt
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.components.ListItemDivider
@@ -99,7 +102,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
-import kotlin.math.roundToInt
 
 @Composable
 fun SettingsView(
@@ -1019,8 +1021,8 @@ private fun BackgroundPercentSlider(
 }
 
 /**
- * 字体大小（页面缩放）设置：整数 80~110，默认 100。
- * 松手后才提交全局缩放。滑块下方带实时预览框。
+ * 页面缩放：自动（按屏幕推荐）或手动 80~110。
+ * 拖动滑块即进入手动；可一键「使用推荐」回到自动。
  */
 @Composable
 private fun FontSizeSetting(
@@ -1028,9 +1030,28 @@ private fun FontSizeSetting(
     value: Int,
     onValueChange: (Int) -> Unit
 ) {
-    var sliderValue by remember { mutableFloatStateOf(value.toFloat()) }
-    LaunchedEffect(value) {
-        sliderValue = value.toFloat()
+    val configuration = LocalConfiguration.current
+    val baseDensity = LocalDensity.current
+    val isAuto = AppSettingsManager.isFontSizeScaleAuto(value)
+    val recommended = remember(configuration.smallestScreenWidthDp, baseDensity.fontScale) {
+        UiScale.recommendedFontSizeScale(
+            smallestWidthDp = configuration.smallestScreenWidthDp,
+            fontScale = baseDensity.fontScale,
+        )
+    }
+    val effective = AppSettingsManager.resolveFontSizeScale(
+        stored = value,
+        smallestWidthDp = configuration.smallestScreenWidthDp,
+        fontScale = baseDensity.fontScale,
+    )
+
+    var sliderValue by remember {
+        mutableFloatStateOf(
+            (if (isAuto) recommended else value).toFloat()
+        )
+    }
+    LaunchedEffect(value, recommended, isAuto) {
+        sliderValue = (if (isAuto) recommended else value).toFloat()
     }
     val current = sliderValue.roundToInt()
         .coerceIn(AppSettingsManager.FONT_SIZE_SCALE_MIN, AppSettingsManager.FONT_SIZE_SCALE_MAX)
@@ -1057,10 +1078,29 @@ private fun FontSizeSetting(
                 )
             }
             Text(
-                text = current.toString(),
+                text = if (isAuto) {
+                    stringResource(R.string.settings_font_size_auto_value, effective)
+                } else {
+                    current.toString()
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = contentColor
             )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        if (!isAuto) {
+            OutlinedButton(
+                onClick = { onValueChange(AppSettingsManager.FONT_SIZE_SCALE_AUTO) },
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_font_size_use_recommended),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = contentColor
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
         }
         Spacer(modifier = Modifier.height(8.dp))
         Slider(
@@ -1095,12 +1135,16 @@ private fun FontSizeSetting(
                 )
             }
         }
-        // 实时预览框：previewDensity 已被全局缩放（D0 * value/100），
-        // 故按 current/value 还原到 D0 * current/100，避免与全局缩放叠加造成重复缩放。
+        // 预览：全局 density 已是 D0*effective/100；滑到 current 时按比例还原
         val previewDensity = LocalDensity.current
+        val previewFactor = if (effective == 0) {
+            1f
+        } else {
+            current.toFloat() / effective.toFloat()
+        }
         CompositionLocalProvider(
             LocalDensity provides Density(
-                density = previewDensity.density * current / value.toFloat(),
+                density = previewDensity.density * previewFactor,
                 fontScale = previewDensity.fontScale
             )
         ) {
