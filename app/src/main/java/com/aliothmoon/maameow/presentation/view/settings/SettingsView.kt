@@ -1158,43 +1158,48 @@ private fun FontSizeSetting(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical)
+            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
+        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
     ) {
-        // 数值只与标题同行，避免贴在多行说明文案右侧
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+        // 标题行 + 说明：与 SettingRow / 其它设置项一致用 rowTitleGap
+        Column(
+            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap),
         ) {
+            // 数值只与标题同行，避免贴在多行说明文案右侧
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_font_size_title),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = contentColor,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Text(
+                    text = if (isAuto) {
+                        stringResource(R.string.settings_font_size_auto_value, effective)
+                    } else {
+                        current.toString()
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = contentColor,
+                    modifier = Modifier.padding(start = MaaDesignTokens.Spacing.md),
+                )
+            }
             Text(
-                text = stringResource(R.string.settings_font_size_title),
-                style = MaterialTheme.typography.bodyLarge,
-                color = contentColor,
-                modifier = Modifier.weight(1f, fill = false),
-            )
-            Text(
-                text = if (isAuto) {
-                    stringResource(R.string.settings_font_size_auto_value, effective)
-                } else {
-                    current.toString()
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = contentColor,
-                modifier = Modifier.padding(start = 12.dp),
+                text = stringResource(R.string.settings_font_size_summary),
+                style = MaterialTheme.typography.bodySmall,
+                color = contentColor.copy(alpha = 0.7f),
+                modifier = Modifier.fillMaxWidth(),
             )
         }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = stringResource(R.string.settings_font_size_summary),
-            style = MaterialTheme.typography.bodySmall,
-            color = contentColor.copy(alpha = 0.6f),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(modifier = Modifier.height(8.dp))
         if (!isAuto) {
             OutlinedButton(
                 onClick = { onValueChange(AppSettingsManager.FONT_SIZE_SCALE_AUTO) },
                 modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
             ) {
                 Text(
@@ -1203,39 +1208,39 @@ private fun FontSizeSetting(
                     color = contentColor
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        Slider(
-            value = sliderValue,
-            onValueChange = { sliderValue = it },
-            onValueChangeFinished = {
-                onValueChange(
-                    sliderValue.roundToInt().coerceIn(
-                        AppSettingsManager.FONT_SIZE_SCALE_MIN,
-                        AppSettingsManager.FONT_SIZE_SCALE_MAX
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Slider(
+                value = sliderValue,
+                onValueChange = { sliderValue = it },
+                onValueChangeFinished = {
+                    onValueChange(
+                        sliderValue.roundToInt().coerceIn(
+                            AppSettingsManager.FONT_SIZE_SCALE_MIN,
+                            AppSettingsManager.FONT_SIZE_SCALE_MAX
+                        )
                     )
-                )
-            },
-            valueRange = AppSettingsManager.FONT_SIZE_SCALE_MIN.toFloat()..AppSettingsManager.FONT_SIZE_SCALE_MAX.toFloat(),
-            steps = 0,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            listOf(
-                AppSettingsManager.FONT_SIZE_SCALE_MIN,
-                90,
-                100,
-                AppSettingsManager.FONT_SIZE_SCALE_MAX
-            ).forEach { kp ->
-                Text(
-                    text = kp.toString(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = contentColor.copy(alpha = 0.5f)
-                )
+                },
+                valueRange = AppSettingsManager.FONT_SIZE_SCALE_MIN.toFloat()..AppSettingsManager.FONT_SIZE_SCALE_MAX.toFloat(),
+                steps = 0,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                listOf(
+                    AppSettingsManager.FONT_SIZE_SCALE_MIN,
+                    90,
+                    100,
+                    AppSettingsManager.FONT_SIZE_SCALE_MAX
+                ).forEach { kp ->
+                    Text(
+                        text = kp.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = contentColor.copy(alpha = 0.5f)
+                    )
+                }
             }
         }
         // 预览：全局 density 已是 D0*effective/100；滑到 current 时按比例还原
@@ -1252,15 +1257,13 @@ private fun FontSizeSetting(
             )
         ) {
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = MaaDesignTokens.Spacing.sm),
-                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ) {
                 Text(
                     text = stringResource(R.string.settings_font_size_preview_text),
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(MaaDesignTokens.Spacing.lg),
                     color = contentColor
                 )
             }

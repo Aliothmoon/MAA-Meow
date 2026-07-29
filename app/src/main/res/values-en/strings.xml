@@ -69,7 +69,7 @@
     <string name="settings_font_size_summary">Scales the whole UI (including spacing). Default is automatic by screen size; system font size still applies. Main app and floating panel both follow this setting.</string>
     <string name="settings_font_size_preview_text">Who are you? Please support Pallas! (\'- \' )</string>
     <string name="settings_font_size_auto_value">Auto · %1$d</string>
-    <string name="settings_font_size_use_recommended">Use recommended (auto)</string>
+    <string name="settings_font_size_use_recommended">Use auto (recommended)</string>
     <string name="settings_background_title">Custom Background</string>
     <string name="settings_background_desc">Set an image background for the four main tabs</string>
     <string name="settings_background_pick">Choose Image</string>

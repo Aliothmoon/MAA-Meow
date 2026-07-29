@@ -267,7 +267,7 @@
     <string name="settings_font_size_summary">调整界面整体大小（含间距）。默认按屏幕自动推荐；系统字体大小仍单独生效。主界面与悬浮窗均跟随此设置。</string>
     <string name="settings_font_size_preview_text">你是谁？请支持牛牛！(\'- \' )</string>
     <string name="settings_font_size_auto_value">自动 · %1$d</string>
-    <string name="settings_font_size_use_recommended">使用推荐（自动）</string>
+    <string name="settings_font_size_use_recommended">使用自动（推荐）</string>
     <string name="settings_background_title">自定义背景</string>
     <string name="settings_background_desc">为主界面四个标签页设置图片背景</string>
     <string name="settings_background_pick">选择图片</string>
