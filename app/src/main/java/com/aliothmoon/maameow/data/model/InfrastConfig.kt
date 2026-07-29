@@ -201,7 +201,7 @@ data class InfrastConfig(
     val customPlanNames: List<String> = emptyList()
 ) : TaskParamProvider {
 
-    override fun toTaskParams(ctx: TaskParamContext): TaskParamResult {
+    override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
         val threshold = dormThreshold / 100.0
         val paramsJson = buildJsonObject {
             put("facility", buildJsonArray {
@@ -227,7 +227,7 @@ data class InfrastConfig(
             }
         }
 
-        return TaskParamResult(listOf(MaaTaskParams(MaaTaskType.INFRAST, paramsJson.toString())))
+        return listOf(MaaTaskParams(MaaTaskType.INFRAST, paramsJson.toString()))
     }
 
     /**

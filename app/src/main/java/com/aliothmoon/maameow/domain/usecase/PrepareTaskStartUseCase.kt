@@ -20,7 +20,7 @@ class PrepareTaskStartUseCase(
                 return TaskStartDecision.Blocked(
                     reason = analyzeResult.reason.toDecisionReason(),
                     clientTypes = analyzeResult.clientTypes,
-                    details = analyzeResult.preflightLogs.map { it.first },
+                    details = analyzeResult.logs.map { it.first },
                 )
             }
         }

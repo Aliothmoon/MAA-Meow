@@ -24,16 +24,23 @@ import org.junit.Test
 class PrepareTaskStartUseCaseTest {
 
     private val taskChainState = mockk<TaskChainState> {
-        every { getClientType() } returns "Official"
+        every { clientType } returns "Official"
     }
     private val resourceDataManager = mockk<ResourceDataManager>(relaxed = true)
     private val analyzeTaskChainUseCase = AnalyzeTaskChainUseCase(
         taskChainState = taskChainState,
         resourceDataManager = resourceDataManager,
         activityManager = mockk(relaxed = true),
-        depotRepository = mockk(relaxed = true),
-        operBoxRepository = mockk(relaxed = true),
+        // isLoaded 必须显式给 —— relaxed mock 的 StateFlow 不会 emit，
+        // 分析阶段的 `isLoaded.first { it }` 会挂死
+        depotRepository = mockk(relaxed = true) {
+            every { isLoaded } returns MutableStateFlow(true)
+        },
+        operBoxRepository = mockk(relaxed = true) {
+            every { isLoaded } returns MutableStateFlow(true)
+        },
         itemHelper = mockk(relaxed = true),
+        dropsRefresher = mockk(relaxed = true),
     )
 
     private fun useCase(aliveStatus: Int) = PrepareTaskStartUseCase(

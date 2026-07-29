@@ -140,7 +140,7 @@ data class MallConfig(
         )
     }
 
-    override fun toTaskParams(ctx: TaskParamContext): TaskParamResult {
+    override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
         val mergedBlacklist = mergeFixedBlacklist(ctx.clientType)
         // 本任务自身开启，且整条链的前提也成立时才借助战
         val creditFightEnabled = creditFight && ctx.chainAllowsCreditFight
@@ -168,7 +168,7 @@ data class MallConfig(
             put("only_buy_discount", onlyBuyDiscount)
             put("reserve_max_credit", reserveMaxCredit)
         }
-        return TaskParamResult(listOf(MaaTaskParams(MaaTaskType.MALL, paramsJson.toString())))
+        return listOf(MaaTaskParams(MaaTaskType.MALL, paramsJson.toString()))
     }
 
     private fun mergeFixedBlacklist(clientType: String): List<String> {

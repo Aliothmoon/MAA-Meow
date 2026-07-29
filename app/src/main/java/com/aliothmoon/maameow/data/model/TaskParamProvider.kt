@@ -6,22 +6,19 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 sealed interface TaskParamProvider {
-    /**
-     * 展开为 MaaCore 任务参数。
-     *
-     * 返回 List 而非单个：绝大多数任务一对一，但容器型任务（如库存保持）
-     * 会展开成多个 MaaCore 任务，且可能因逐条子计划无效而产出诊断日志。
-     */
-    fun toTaskParams(ctx: TaskParamContext): TaskParamResult
+    /** 展开为 MaaCore 参数列表；诊断经 [TaskParamContext.appendLog]。 */
+    fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams>
 }
 
-/**
- * 单个任务节点的展开结果。
- *
- * [logs] 让「某条子计划为何没产出任务」能被如实告知用户 ——
- * 容器型任务会逐条校验子计划，只返回 params 的话这些原因就永久丢失了。
- */
-data class TaskParamResult(
-    val params: List<MaaTaskParams>,
-    val logs: List<Pair<UiText, LogLevel>> = emptyList(),
-)
+fun interface PreflightLogSink {
+    fun append(text: UiText, level: LogLevel)
+}
+
+class CollectingPreflightLogSink : PreflightLogSink {
+    private val _entries = mutableListOf<Pair<UiText, LogLevel>>()
+    val entries: List<Pair<UiText, LogLevel>> get() = _entries.toList()
+
+    override fun append(text: UiText, level: LogLevel) {
+        _entries += text to level
+    }
+}

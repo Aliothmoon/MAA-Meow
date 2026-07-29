@@ -78,6 +78,6 @@ private fun seriesOf(config: FightConfig, clientType: String): Int {
         clientType = clientType,
         activityManager = alwaysOpenActivityManager(),
     )
-    val params = config.toTaskParams(ctx).params.single().params
+    val params = config.toTaskParams(ctx).single().params
     return Json.parseToJsonElement(params).jsonObject["series"]!!.jsonPrimitive.content.toInt()
 }

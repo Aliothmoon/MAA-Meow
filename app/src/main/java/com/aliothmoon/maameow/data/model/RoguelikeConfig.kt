@@ -72,7 +72,7 @@ data class RoguelikeConfig(
     // 通用高级设置
     val delayAbortUntilCombatComplete: Boolean = false  // 战斗结束前延迟停止
 ) : TaskParamProvider {
-    override fun toTaskParams(ctx: TaskParamContext): TaskParamResult {
+    override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
         // WPF 条件变量
         val squadIsProfessional = mode == RoguelikeMode.Collectible && theme != "Phantom" &&
                 squad in listOf("突击战术分队", "堡垒战术分队", "远程战术分队", "破坏战术分队")
@@ -199,7 +199,7 @@ data class RoguelikeConfig(
                 put("start_with_seed", seed)
             }
         }
-        return TaskParamResult(listOf(MaaTaskParams(MaaTaskType.ROGUELIKE, paramsJson.toString())))
+        return listOf(MaaTaskParams(MaaTaskType.ROGUELIKE, paramsJson.toString()))
     }
 
     companion object {
