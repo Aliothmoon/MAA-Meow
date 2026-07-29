@@ -1092,6 +1092,7 @@
     <string name="panel_userdata_interval_every_time">每次</string>
     <string name="panel_userdata_interval_daily">每天</string>
     <string name="panel_userdata_interval_weekly">每周</string>
+    <string name="panel_userdata_profile_tip">干员与仓库库存会按当前配置分别保存。若小工具中的干员或仓库数据与预期不符，请先确认是否已切换配置。</string>
 
     <!-- panel: depot maintain -->
     <string name="panel_depot_update_before_start">任务开始前更新库存数据</string>

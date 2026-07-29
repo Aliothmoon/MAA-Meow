@@ -1037,6 +1037,7 @@
     <string name="panel_userdata_interval_every_time">Every time</string>
     <string name="panel_userdata_interval_daily">Daily</string>
     <string name="panel_userdata_interval_weekly">Weekly</string>
+    <string name="panel_userdata_profile_tip">Operator and depot inventory are saved per configuration. If toolbox data looks wrong, check whether you switched configurations.</string>
 
     <string name="panel_depot_update_before_start">Update inventory before starting</string>
     <string name="panel_depot_update_before_start_tip">Runs depot recognition first to refresh inventory data; each plan recomputes its deficit from the latest inventory when it starts, so this recognition takes effect immediately</string>
