@@ -283,6 +283,7 @@ fun AutoBattlePanel(
                     trailingIcon = {
                         IconButton(
                             onClick = viewModel::onPasteAndParse,
+                            enabled = controlsEnabled,
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(

@@ -213,17 +213,20 @@ class CopilotViewModel(
     }
 
     fun onPasteAndParse() {
-        val clipboard = appContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clipboard = appContext.getSystemService(ClipboardManager::class.java) ?: return
         val text = clipboard.primaryClip
             ?.takeIf { it.itemCount > 0 }
             ?.getItemAt(0)
-            ?.text
+            ?.coerceToText(appContext)
             ?.toString()
             .orEmpty()
-        if (text.isNotBlank()) {
-            onInputChanged(text.trim())
-            onParseSingleInput()
+            .trim()
+        if (text.isBlank()) {
+            _state.update { it.copy(statusMessage = text(R.string.copilot_clipboard_empty)) }
+            return
         }
+        onInputChanged(text)
+        onParseSingleInput()
     }
 
     fun onParseSingleInput() {
