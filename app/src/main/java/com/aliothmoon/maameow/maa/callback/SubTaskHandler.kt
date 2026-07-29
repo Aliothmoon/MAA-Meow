@@ -710,7 +710,7 @@ class SubTaskHandler(
 
         if (drops.isNotEmpty()) {
             // 同步写穿内存，下一关 TaskChainStart 立刻能 countOf 到本场掉落
-            depotRepository.applyDropsSync(drops)
+            depotRepository.merge(drops)
         }
     }
 

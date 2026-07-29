@@ -1,9 +1,6 @@
 package com.aliothmoon.maameow.data.repository
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.aliothmoon.maameow.data.model.toolbox.DepotItem
 import com.aliothmoon.maameow.data.preferences.TaskChainState
@@ -12,26 +9,23 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
 /**
- * 用内存 [FakePreferencesDataStore] 而非 `PreferenceDataStoreFactory`：
- * 后者在 Windows JVM 上第二次写入必然失败（临时文件无法 rename 覆盖已存在的目标），
- * 会让「多次写入」类用例变成平台缺陷的牺牲品。内存实现保留 updateData 的串行语义，
- * 测的是本类逻辑而非 DataStore 的文件 IO。
+ * 仓库自身的语义：全量覆盖、掉落累加、排除集、缺口查询、分片隔离。
+ *
+ * 分片装载、写回队列等共享机制在 [ProfileShardStoreTest] 里测。
  */
 class DepotRepositoryTest {
 
@@ -47,23 +41,26 @@ class DepotRepositoryTest {
     }
 
     private fun fakeChainState(): TaskChainState = mockk {
-        every { this@mockk.activeProfileId } returns this@DepotRepositoryTest.activeProfileId
+        every { this@mockk.profileId } returns this@DepotRepositoryTest.activeProfileId
         every { isLoaded } returns MutableStateFlow(true)
         every { this@mockk.profileDeleted } returns this@DepotRepositoryTest.profileDeleted
     }
 
-    /** 直接读存储解码，用于断言「写入已发生」这类确定性事实。 */
-    private suspend fun storedSnapshot(profileId: String = PROFILE_A): DepotSnapshot =
-        rawShardOf(profileId)?.let { JsonUtils.common.decodeFromString<DepotSnapshot>(it) }
-            ?: DepotSnapshot()
-
     private suspend fun rawShardOf(profileId: String): String? =
         store.data.first()[stringPreferencesKey("depot_$profileId")]
 
-    /**
-     * 等待 StateFlow 传播，仅用于断言「快照跟随变化」。谓词必须描述终态 ——
-     * StateFlow 是 conflated 的，中间态可能被跳过。
-     */
+    private suspend fun awaitDiskShard(profileId: String = PROFILE_A): DepotSnapshot =
+        withTimeout(AWAIT_TIMEOUT_MS) {
+            while (true) {
+                val raw = rawShardOf(profileId)
+                if (raw != null) {
+                    return@withTimeout JsonUtils.common.decodeFromString(raw)
+                }
+                yield()
+            }
+            error("unreachable")
+        }
+
     private suspend fun awaitSnapshot(predicate: (DepotSnapshot) -> Boolean): DepotSnapshot =
         withTimeout(AWAIT_TIMEOUT_MS) { repository.snapshot.first(predicate) }
 
@@ -73,120 +70,110 @@ class DepotRepositoryTest {
     }
 
     @Test
-    fun replaceAll_storesItemsAndStampsSyncTime() = runBlocking {
-        repository.replaceAll(listOf(DepotItem("30011", 200), DepotItem("30012", 5)))
+    fun set_updatesMemoryAndStampsSyncTime() {
+        repository.set(listOf(DepotItem("30011", 200), DepotItem("30012", 5)))
 
-        val stored = storedSnapshot()
-        assertEquals(mapOf("30011" to 200, "30012" to 5), stored.items)
-        assertTrue("replaceAll 必须刷新识别时间", stored.syncTimeMillis > 0)
+        val snap = repository.snapshot.value
+        assertEquals(mapOf("30011" to 200, "30012" to 5), snap.items)
+        assertTrue(snap.syncTimeMillis > 0)
     }
 
     @Test
-    fun replaceAll_overwritesInsteadOfMerging() = runBlocking {
-        repository.replaceAll(listOf(DepotItem("30011", 200)))
+    fun set_overwritesInsteadOfMerging() {
+        repository.set(listOf(DepotItem("30011", 200)))
+        repository.set(listOf(DepotItem("30012", 5)))
 
-        repository.replaceAll(listOf(DepotItem("30012", 5)))
-
-        assertEquals(mapOf("30012" to 5), storedSnapshot().items)
+        assertEquals(mapOf("30012" to 5), repository.snapshot.value.items)
     }
 
     @Test
-    fun replaceAll_keepsExcludedIds() = runBlocking {
+    fun set_keepsExcludedIds() {
         // 识别结果即仓库事实：家具/碳/经验若真在仓库里就该记录
-        repository.replaceAll(listOf(DepotItem("3401", 12), DepotItem("5001", 999)))
+        repository.set(listOf(DepotItem("3401", 12), DepotItem("5001", 999)))
 
-        assertEquals(mapOf("3401" to 12, "5001" to 999), storedSnapshot().items)
+        assertEquals(mapOf("3401" to 12, "5001" to 999), repository.snapshot.value.items)
     }
 
     @Test
-    fun applyDrops_addsToExistingItem() = runBlocking {
-        repository.replaceAll(listOf(DepotItem("30011", 100)))
+    fun merge_addsToExistingItem() {
+        repository.set(listOf(DepotItem("30011", 100)))
+        repository.merge(listOf("30011" to 20))
 
-        repository.applyDrops(listOf("30011" to 20))
-
-        assertEquals(120, storedSnapshot().items["30011"])
+        assertEquals(120, repository.countOf("30011"))
     }
 
     @Test
-    fun applyDrops_insertsUnknownItem() = runBlocking {
-        repository.replaceAll(listOf(DepotItem("30011", 100)))
+    fun merge_insertsUnknownItem() {
+        repository.set(listOf(DepotItem("30011", 100)))
+        repository.merge(listOf("30012" to 5))
 
-        repository.applyDrops(listOf("30012" to 5))
-
-        assertEquals(mapOf("30011" to 100, "30012" to 5), storedSnapshot().items)
+        assertEquals(mapOf("30011" to 100, "30012" to 5), repository.snapshot.value.items)
     }
 
     @Test
-    fun applyDrops_accumulatesOnlyEligibleEntries() = runBlocking {
-        repository.applyDrops(
+    fun merge_accumulatesOnlyEligibleEntries() {
+        repository.merge(
             listOf(
-                "3401" to 10,      // 家具
-                "3112" to 10,      // 碳
+                "3401" to 10,
+                "3112" to 10,
                 "3113" to 10,
                 "3114" to 10,
-                "5001" to 10,      // 经验
-                "furni" to 3,      // 非数字 id
-                "" to 3,           // 空 id
-                "30011abc" to 3,   // 混合 id
-                "30011" to 0,      // 非正数
+                "5001" to 10,
+                "furni" to 3,
+                "" to 3,
+                "30011abc" to 3,
+                "30011" to 0,
                 "30012" to -5,
-                "30013" to 7,      // 唯一合法项
+                "30013" to 7,
             )
         )
 
-        assertEquals(mapOf("30013" to 7), storedSnapshot().items)
+        assertEquals(mapOf("30013" to 7), repository.snapshot.value.items)
     }
 
     @Test
-    fun applyDrops_withNoEligibleEntries_writesNothing() = runBlocking {
-        repository.applyDrops(listOf("3401" to 10, "furni" to 3, "30011" to 0))
+    fun merge_withNoEligibleEntries_writesNothing() {
+        repository.merge(listOf("3401" to 10, "furni" to 3, "30011" to 0))
 
-        assertNull("全部被过滤时不应创建分片", rawShardOf(PROFILE_A))
+        assertEquals(emptyMap<String, Int>(), repository.snapshot.value.items)
+        assertEquals(0L, repository.snapshot.value.syncTimeMillis)
     }
 
     @Test
-    fun applyDrops_doesNotTouchSyncTime() = runBlocking {
-        repository.replaceAll(listOf(DepotItem("30011", 100)))
-        val syncTime = storedSnapshot().syncTimeMillis
+    fun merge_doesNotTouchSyncTime() {
+        repository.set(listOf(DepotItem("30011", 100)))
+        val syncTime = repository.snapshot.value.syncTimeMillis
 
-        repository.applyDrops(listOf("30011" to 20))
+        repository.merge(listOf("30011" to 20))
 
-        val after = storedSnapshot()
-        assertEquals(120, after.items["30011"])
+        assertEquals(120, repository.countOf("30011"))
         assertEquals(
             "syncTime 表示上次完整识别时间，掉落累加不应改变它",
             syncTime,
-            after.syncTimeMillis,
+            repository.snapshot.value.syncTimeMillis,
         )
     }
 
     @Test
-    fun applyDrops_accumulatesAcrossRepeatedCalls() = runBlocking {
-        repeat(5) { repository.applyDrops(listOf("30011" to 1)) }
+    fun merge_accumulatesAcrossRepeatedCalls() {
+        repeat(5) { repository.merge(listOf("30011" to 1)) }
 
-        assertEquals(5, storedSnapshot().items["30011"])
+        assertEquals(5, repository.countOf("30011"))
     }
 
     /**
-     * 回归：`store.data` 的 emission 是异步消费的，一条携带旧值的 emission 可能排在
-     * 自己那次落盘之后才被处理。若那时用它覆盖内存分片，下一次累加就会从旧值起算，
-     * 悄悄少记一次掉落（无异常、无日志）。次数放大到 50 是为了让这个窄窗口必然被撞上。
+     * 护栏：磁盘只写不读，多写不丢累加。
      */
     @Test
-    fun applyDrops_neverLosesUpdates_whenDiskEmissionsLagBehind() = runBlocking {
-        repeat(50) { repository.applyDrops(listOf("30011" to 1)) }
+    fun merge_neverLosesUpdates_acrossManyWrites() {
+        repeat(50) { repository.merge(listOf("30011" to 1)) }
 
-        assertEquals(50, storedSnapshot().items["30011"])
         assertEquals(50, repository.countOf("30011"))
     }
 
-    /**
-     * 内存是权威读取源：已加载过的分片不再受磁盘影响。
-     * 这里直接往存储里塞一个不同的值，断言它不会回冲内存。
-     */
     @Test
     fun diskWriteAfterHydrate_doesNotOverrideMemory() = runBlocking {
-        repository.applyDrops(listOf("30011" to 7))
+        repository.merge(listOf("30011" to 7))
         awaitSnapshot { it.items["30011"] == 7 }
 
         store.edit { prefs ->
@@ -196,15 +183,13 @@ class DepotRepositoryTest {
         withTimeout(AWAIT_TIMEOUT_MS) { repeat(50) { yield() } }
 
         assertEquals("已加载的分片不得被磁盘值覆盖", 7, repository.countOf("30011"))
-        assertEquals(7, repository.snapshot.value.items["30011"])
     }
 
     @Test
-    fun concurrentApplyDrops_doNotLoseUpdates() = runBlocking {
-        // 事务内读-改-写的核心保证：并发累加不丢更新
-        (1..20).map { async { repository.applyDrops(listOf("30011" to 1)) } }.awaitAll()
+    fun concurrentMerge_doNotLoseUpdates() = runBlocking {
+        (1..20).map { async { repository.merge(listOf("30011" to 1)) } }.awaitAll()
 
-        assertEquals(20, storedSnapshot().items["30011"])
+        assertEquals(20, repository.countOf("30011"))
     }
 
     @Test
@@ -215,17 +200,24 @@ class DepotRepositoryTest {
     }
 
     @Test
-    fun countOf_reflectsPersistedItems() = runBlocking {
-        repository.replaceAll(listOf(DepotItem("30011", 42)))
-        awaitSnapshot { it.items.containsKey("30011") }
+    fun syncTime_stampedAfterSet_includingEmptyWarehouse() {
+        assertEquals(0L, repository.snapshot.value.syncTimeMillis)
 
-        assertEquals(42, repository.countOf("30011"))
+        repository.set(emptyList())
+        assertTrue(
+            "已识别空仓应 stamp syncTime，按 count=0 算缺口",
+            repository.snapshot.value.syncTimeMillis > 0L,
+        )
+        assertTrue(repository.snapshot.value.items.isEmpty())
+
+        repository.set(listOf(DepotItem("30011", 1)))
+        assertTrue(repository.snapshot.value.syncTimeMillis > 0L)
+        assertEquals(1, repository.countOf("30011"))
     }
 
     @Test
-    fun countOf_visibleImmediatelyAfterReplaceAllSync_withoutAwaitingStore() {
-        // 模拟 MaaCore 回调线程：只 Sync 写内存，不等落盘
-        repository.replaceAllSync(listOf(DepotItem("30011", 90)))
+    fun countOf_visibleImmediatelyAfterSet() {
+        repository.set(listOf(DepotItem("30011", 90)))
         assertEquals(
             "TaskChainStart 重算必须立刻读到识别结果，不能等 DataStore",
             90,
@@ -234,27 +226,17 @@ class DepotRepositoryTest {
     }
 
     @Test
-    fun applyDropsSync_visibleToCountOfBeforePersist() {
-        repository.replaceAllSync(listOf(DepotItem("30011", 100)))
-        repository.applyDropsSync(listOf("30011" to 7))
+    fun merge_visibleToCountOfImmediately() {
+        repository.set(listOf(DepotItem("30011", 100)))
+        repository.merge(listOf("30011" to 7))
         assertEquals(107, repository.countOf("30011"))
     }
 
     @Test
-    fun dropProfile_removesShard() = runBlocking {
-        repository.replaceAll(listOf(DepotItem("30011", 100)))
-
-        repository.dropProfile(PROFILE_A)
-
-        assertNull(rawShardOf(PROFILE_A))
-        assertEquals(emptyMap<String, Int>(), awaitSnapshot { it.items.isEmpty() }.items)
-    }
-
-    @Test
-    fun start_dropsShardWhenProfileDeleted() = runBlocking {
-        repository.replaceAll(listOf(DepotItem("30011", 100)))
+    fun start_removesShardWhenProfileDeleted() = runBlocking {
+        repository.set(listOf(DepotItem("30011", 100)))
+        awaitDiskShard()
         repository.start()
-        // 订阅在 IO 调度器上异步建立，emit 早于订阅会丢事件（replay=0）
         withTimeout(AWAIT_TIMEOUT_MS) {
             while (profileDeleted.subscriptionCount.value == 0) yield()
         }
@@ -268,18 +250,20 @@ class DepotRepositoryTest {
 
     @Test
     fun profilesAreStoredInSeparateShards() = runBlocking {
-        repository.replaceAll(listOf(DepotItem("30011", 100)))
+        repository.set(listOf(DepotItem("30011", 100)))
+        awaitDiskShard(PROFILE_A)
 
         activeProfileId.value = PROFILE_B
-        repository.replaceAll(listOf(DepotItem("30012", 7)))
+        repository.set(listOf(DepotItem("30012", 7)))
+        awaitDiskShard(PROFILE_B)
 
-        assertEquals(mapOf("30011" to 100), storedSnapshot(PROFILE_A).items)
-        assertEquals(mapOf("30012" to 7), storedSnapshot(PROFILE_B).items)
+        assertEquals(mapOf("30011" to 100), awaitDiskShard(PROFILE_A).items)
+        assertEquals(mapOf("30012" to 7), awaitDiskShard(PROFILE_B).items)
     }
 
     @Test
     fun switchingProfile_swapsSnapshot() = runBlocking {
-        repository.replaceAll(listOf(DepotItem("30011", 100)))
+        repository.set(listOf(DepotItem("30011", 100)))
         awaitSnapshot { it.items.containsKey("30011") }
 
         activeProfileId.value = PROFILE_B
@@ -289,48 +273,30 @@ class DepotRepositoryTest {
         assertEquals(100, awaitSnapshot { it.items.containsKey("30011") }.items["30011"])
     }
 
-    /**
-     * 损坏数据只可能在 hydrate（冷启动 / 切到未加载过的档）时被读到 ——
-     * 运行期内存是权威，不再回读磁盘。故用「切到一个盘上是脏数据的档」构造该场景。
-     */
     @Test
-    fun corruptedShard_fallsBackToEmptySnapshotOnHydrate() = runBlocking {
-        store.edit { it[stringPreferencesKey("depot_$PROFILE_B")] = "{ this is not json" }
+    fun corruptedShard_fallsBackToEmptySnapshotOnPreload() = runBlocking {
+        val freshStore = FakePreferencesDataStore()
+        freshStore.edit { it[stringPreferencesKey("depot_$PROFILE_A")] = "{ this is not json" }
 
-        activeProfileId.value = PROFILE_B
+        val freshRepository = DepotRepository(freshStore, fakeChainState())
 
-        // 回退为空快照而不是抛异常终结收集协程
-        assertEquals(emptyMap<String, Int>(), awaitSnapshot { it.items.isEmpty() }.items)
-        assertEquals(0, repository.countOf("30011"))
+        withTimeout(AWAIT_TIMEOUT_MS) { freshRepository.isLoaded.first { it } }
+        assertEquals(emptyMap<String, Int>(), freshRepository.snapshot.value.items)
+        assertEquals(0, freshRepository.countOf("30011"))
     }
 
     @Test
-    fun emptyProfileId_skipsWrite() = runBlocking {
+    fun emptyProfileId_skipsWrite() {
         activeProfileId.value = ""
 
-        repository.replaceAll(listOf(DepotItem("30011", 100)))
+        repository.set(listOf(DepotItem("30011", 100)))
 
-        assertNull(rawShardOf(""))
+        assertEquals(emptyMap<String, Int>(), repository.snapshot.value.items)
     }
 
     private companion object {
         const val PROFILE_A = "profile-a"
         const val PROFILE_B = "profile-b"
         const val AWAIT_TIMEOUT_MS = 5_000L
-    }
-}
-
-/** 内存 Preferences DataStore，`updateData` 与真实实现一样串行执行。 */
-private class FakePreferencesDataStore : DataStore<Preferences> {
-
-    private val state = MutableStateFlow(emptyPreferences())
-    private val writeLock = Mutex()
-
-    override val data: Flow<Preferences> = state
-
-    override suspend fun updateData(
-        transform: suspend (t: Preferences) -> Preferences,
-    ): Preferences = writeLock.withLock {
-        transform(state.value).also { state.value = it }
     }
 }

@@ -1,22 +1,16 @@
 package com.aliothmoon.maameow.data.repository
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.utils.JsonUtils
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
@@ -27,34 +21,43 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * 内存 DataStore 单测，与 [DepotRepositoryTest] 对称。
- * 不测真实 PreferenceDataStoreFactory（Windows 二次写入 rename 会失败）。
+ * 干员箱自身的语义：全量覆盖、识别时间、分片隔离。
+ *
+ * 分片装载、写回队列等共享机制在 [ProfileShardStoreTest] 里测。
  */
 class OperBoxRepositoryTest {
 
     private val activeProfileId = MutableStateFlow(PROFILE_A)
     private val profileDeleted = MutableSharedFlow<String>(extraBufferCapacity = 8)
-    private lateinit var store: FakeOperBoxPreferencesDataStore
+    private lateinit var store: FakePreferencesDataStore
     private lateinit var repository: OperBoxRepository
 
     @Before
     fun setUp() {
-        store = FakeOperBoxPreferencesDataStore()
+        store = FakePreferencesDataStore()
         repository = OperBoxRepository(store, fakeChainState())
     }
 
     private fun fakeChainState(): TaskChainState = mockk {
-        every { this@mockk.activeProfileId } returns this@OperBoxRepositoryTest.activeProfileId
+        every { this@mockk.profileId } returns this@OperBoxRepositoryTest.activeProfileId
         every { isLoaded } returns MutableStateFlow(true)
         every { this@mockk.profileDeleted } returns this@OperBoxRepositoryTest.profileDeleted
     }
 
-    private suspend fun storedSnapshot(profileId: String = PROFILE_A): OperBoxSnapshot =
-        rawShardOf(profileId)?.let { JsonUtils.common.decodeFromString<OperBoxSnapshot>(it) }
-            ?: OperBoxSnapshot()
-
     private suspend fun rawShardOf(profileId: String): String? =
         store.data.first()[stringPreferencesKey("operbox_$profileId")]
+
+    private suspend fun awaitDiskShard(profileId: String = PROFILE_A): OperBoxSnapshot =
+        withTimeout(AWAIT_TIMEOUT_MS) {
+            while (true) {
+                val raw = rawShardOf(profileId)
+                if (raw != null) {
+                    return@withTimeout JsonUtils.common.decodeFromString(raw)
+                }
+                yield()
+            }
+            error("unreachable")
+        }
 
     private suspend fun awaitSnapshot(predicate: (OperBoxSnapshot) -> Boolean): OperBoxSnapshot =
         withTimeout(AWAIT_TIMEOUT_MS) { repository.snapshot.first(predicate) }
@@ -74,42 +77,33 @@ class OperBoxRepositoryTest {
     }
 
     @Test
-    fun replaceAll_storesListsAndStampsSyncTime() = runBlocking {
-        repository.replaceAll(sampleOwned(), sampleNotOwned())
+    fun set_updatesMemoryAndStampsSyncTime() {
+        repository.set(sampleOwned(), sampleNotOwned())
 
-        val stored = storedSnapshot()
-        assertEquals(sampleOwned(), stored.owned)
-        assertEquals(sampleNotOwned(), stored.notOwned)
-        assertTrue("replaceAll 必须刷新识别时间", stored.syncTimeMillis > 0)
-        assertTrue(stored.hasSynced)
+        val snap = repository.snapshot.value
+        assertEquals(sampleOwned(), snap.owned)
+        assertEquals(sampleNotOwned(), snap.notOwned)
+        assertTrue(snap.hasSynced)
+        assertTrue(snap.syncTimeMillis > 0)
     }
 
     @Test
-    fun replaceAll_overwritesInsteadOfMerging() = runBlocking {
-        repository.replaceAll(sampleOwned(), sampleNotOwned())
+    fun set_overwritesInsteadOfMerging() {
+        repository.set(sampleOwned(), sampleNotOwned())
         val onlyOwned = listOf(
             OperBoxOperator("char_003_kalts", "凯尔希", 6, 2, 90, 5, true),
         )
-        repository.replaceAll(onlyOwned, emptyList())
+        repository.set(onlyOwned, emptyList())
 
-        val stored = storedSnapshot()
-        assertEquals(onlyOwned, stored.owned)
-        assertTrue(stored.notOwned.isEmpty())
+        val snap = repository.snapshot.value
+        assertEquals(onlyOwned, snap.owned)
+        assertTrue(snap.notOwned.isEmpty())
     }
 
     @Test
-    fun dropProfile_removesShard() = runBlocking {
-        repository.replaceAll(sampleOwned(), emptyList())
-
-        repository.dropProfile(PROFILE_A)
-
-        assertNull(rawShardOf(PROFILE_A))
-        assertFalse(awaitSnapshot { !it.hasSynced }.hasSynced)
-    }
-
-    @Test
-    fun start_dropsShardWhenProfileDeleted() = runBlocking {
-        repository.replaceAll(sampleOwned(), emptyList())
+    fun start_removesShardWhenProfileDeleted() = runBlocking {
+        repository.set(sampleOwned(), emptyList())
+        awaitDiskShard()
         repository.start()
         withTimeout(AWAIT_TIMEOUT_MS) {
             while (profileDeleted.subscriptionCount.value == 0) yield()
@@ -124,20 +118,22 @@ class OperBoxRepositoryTest {
 
     @Test
     fun profilesAreStoredInSeparateShards() = runBlocking {
-        repository.replaceAll(sampleOwned(), emptyList())
+        repository.set(sampleOwned(), emptyList())
+        awaitDiskShard(PROFILE_A)
 
         activeProfileId.value = PROFILE_B
-        repository.replaceAll(sampleNotOwned().map { it.copy(own = true) }, emptyList())
+        repository.set(sampleNotOwned().map { it.copy(own = true) }, emptyList())
+        awaitDiskShard(PROFILE_B)
 
-        assertEquals(1, storedSnapshot(PROFILE_A).owned.size)
-        assertEquals("char_002_amiya", storedSnapshot(PROFILE_A).owned.single().id)
-        assertEquals(1, storedSnapshot(PROFILE_B).owned.size)
-        assertEquals("char_1001_amiya2", storedSnapshot(PROFILE_B).owned.single().id)
+        assertEquals(1, awaitDiskShard(PROFILE_A).owned.size)
+        assertEquals("char_002_amiya", awaitDiskShard(PROFILE_A).owned.single().id)
+        assertEquals(1, awaitDiskShard(PROFILE_B).owned.size)
+        assertEquals("char_1001_amiya2", awaitDiskShard(PROFILE_B).owned.single().id)
     }
 
     @Test
     fun switchingProfile_swapsSnapshot() = runBlocking {
-        repository.replaceAll(sampleOwned(), emptyList())
+        repository.set(sampleOwned(), emptyList())
         awaitSnapshot { it.owned.isNotEmpty() }
 
         activeProfileId.value = PROFILE_B
@@ -147,41 +143,49 @@ class OperBoxRepositoryTest {
         assertEquals("阿米娅", awaitSnapshot { it.owned.isNotEmpty() }.owned.single().name)
     }
 
+    /**
+     * 回归 F4：冷启动装载完成后，`syncTimeMillis` 必须是盘上的真值。
+     */
     @Test
-    fun corruptedShard_fallsBackToEmptySnapshot() = runBlocking {
-        repository.replaceAll(sampleOwned(), emptyList())
-        awaitSnapshot { it.owned.isNotEmpty() }
+    fun preload_exposesPersistedSyncTimeOnceLoaded() = runBlocking {
+        val freshStore = FakePreferencesDataStore()
+        freshStore.edit {
+            it[stringPreferencesKey("operbox_$PROFILE_A")] = JsonUtils.common.encodeToString(
+                OperBoxSnapshot(owned = sampleOwned(), syncTimeMillis = 1_700_000_000_000L)
+            )
+        }
 
-        store.edit { it[stringPreferencesKey("operbox_$PROFILE_A")] = "{ this is not json" }
+        val freshRepository = OperBoxRepository(freshStore, fakeChainState())
+        withTimeout(AWAIT_TIMEOUT_MS) { freshRepository.isLoaded.first { it } }
 
-        assertTrue(awaitSnapshot { it.owned.isEmpty() && !it.hasSynced }.owned.isEmpty())
+        assertTrue("装载完成后不得再读到 syncTime=0", freshRepository.snapshot.value.hasSynced)
+        assertEquals(1_700_000_000_000L, freshRepository.snapshot.value.syncTimeMillis)
     }
 
     @Test
-    fun emptyProfileId_skipsWrite() = runBlocking {
+    fun corruptedShard_fallsBackToEmptySnapshotOnPreload() = runBlocking {
+        val freshStore = FakePreferencesDataStore()
+        freshStore.edit { it[stringPreferencesKey("operbox_$PROFILE_A")] = "{ this is not json" }
+
+        val freshRepository = OperBoxRepository(freshStore, fakeChainState())
+        withTimeout(AWAIT_TIMEOUT_MS) { freshRepository.isLoaded.first { it } }
+
+        assertEquals(OperBoxSnapshot(), freshRepository.snapshot.value)
+        assertFalse(freshRepository.snapshot.value.hasSynced)
+    }
+
+    @Test
+    fun emptyProfileId_skipsWrite() {
         activeProfileId.value = ""
 
-        repository.replaceAll(sampleOwned(), emptyList())
+        repository.set(sampleOwned(), emptyList())
 
-        assertNull(rawShardOf(""))
+        assertEquals(OperBoxSnapshot(), repository.snapshot.value)
     }
 
     private companion object {
         const val PROFILE_A = "profile-a"
         const val PROFILE_B = "profile-b"
         const val AWAIT_TIMEOUT_MS = 5_000L
-    }
-}
-
-private class FakeOperBoxPreferencesDataStore : DataStore<Preferences> {
-    private val state = MutableStateFlow(emptyPreferences())
-    private val writeLock = Mutex()
-
-    override val data: Flow<Preferences> = state
-
-    override suspend fun updateData(
-        transform: suspend (t: Preferences) -> Preferences,
-    ): Preferences = writeLock.withLock {
-        transform(state.value).also { state.value = it }
     }
 }

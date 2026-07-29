@@ -9,7 +9,6 @@ import com.aliothmoon.maameow.data.model.toolbox.RecruitCalcResult
 import com.aliothmoon.maameow.data.model.toolbox.RecruitOperator
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.OperBoxRepository
-import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,62 +18,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * 工具类任务的结构化结果收集器
- * 由 SubTaskHandler 在收到对应回调时转发数据
- */
+/** 工具类任务结果：SubTaskHandler 回调转发。 */
 class ToolboxResultCollector(
     private val resourceDataManager: ResourceDataManager,
     private val achievementRepository: AchievementRepository,
-    private val itemHelper: ItemHelper,
     private val depotRepository: DepotRepository,
     private val operBoxRepository: OperBoxRepository,
 ) {
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val achievement = DoubleSyncAchievement()
 
-    /**
-     * DoubleSync 成就：同一会话内干员识别与仓库识别**都真的成功**才解锁。
-     *
-     * 由识别结果本身判定，不需要启动前的「预期」标志 ——
-     * 会话边界由 [clearDoubleSyncSession] 划定（启动时 + 任务链结束/停止时各清一次），
-     * 小工具单跑两次识别属于两个会话，不会误触。
-     */
-    @Volatile
-    private var doubleSyncOperDone = false
-
-    @Volatile
-    private var doubleSyncDepotDone = false
-
-    /** 会话开始与结束/停止时清除，避免跨会话误报。 */
-    fun clearDoubleSyncSession() {
-        doubleSyncOperDone = false
-        doubleSyncDepotDone = false
-    }
-
-    private fun noteDoubleSyncOperSuccess() {
-        doubleSyncOperDone = true
-        tryReportDoubleSync()
-    }
-
-    private fun noteDoubleSyncDepotSuccess() {
-        doubleSyncDepotDone = true
-        tryReportDoubleSync()
-    }
-
-    private fun tryReportDoubleSync() {
-        if (!doubleSyncOperDone || !doubleSyncDepotDone) return
-        // 置回，避免同一会话内重复识别时反复上报
-        doubleSyncOperDone = false
-        doubleSyncDepotDone = false
-        ioScope.launch {
-            achievementRepository.report {
-                event = AchievementEvents.TOOLBOX_RESULT
-                "tool" to "DepotOperBox"
-            }
-        }
-    }
-
-    // ==================== 公招识别 ====================
+    fun onSessionStart() = achievement.clear()
 
     private val _recruitTags = MutableStateFlow<List<String>>(emptyList())
     val recruitTags: StateFlow<List<String>> = _recruitTags.asStateFlow()
@@ -113,13 +67,6 @@ class ToolboxResultCollector(
         _recruitResults.value = emptyList()
     }
 
-    // ==================== 仓库识别 ====================
-
-    /**
-     * 解析仓库识别结果并写入 [DepotRepository]（小工具 UI 读持久化快照）。
-     * MaaCore 回调 taskchain="Depot" 时 details 格式：
-     * { "done": true, "data": "{\"30011\":200,...}" }
-     */
     fun onDepotResult(details: JSONObject?) {
         details ?: return
         if (!details.getBooleanValue("done")) return
@@ -130,9 +77,8 @@ class ToolboxResultCollector(
             val count = (value as? Number)?.toInt() ?: return@mapNotNull null
             if (count > 0) DepotItem(id, count) else null
         }
-        // 同步写穿内存，保证随后 TaskChainStart 重算能读到最新库存
-        depotRepository.replaceAllSync(items)
-        noteDoubleSyncDepotSuccess()
+        depotRepository.set(items)
+        achievement.onDepotSuccess()
         ioScope.launch {
             achievementRepository.report {
                 event = AchievementEvents.TOOLBOX_RESULT
@@ -142,13 +88,6 @@ class ToolboxResultCollector(
         }
     }
 
-    // ==================== 干员识别 ====================
-
-    /**
-     * 解析干员识别结果并写入 [OperBoxRepository]。
-     * MaaCore 回调 taskchain="OperBox" 时 details 格式：
-     * { "done": true, "own_opers": [ { id, name, rarity, elite, level, potential, own } ] }
-     */
     fun onOperBoxResult(details: JSONObject?) {
         details ?: return
         if (!details.getBooleanValue("done")) return
@@ -190,15 +129,50 @@ class ToolboxResultCollector(
         )
         val notOwnedSorted = notOwned.sortedByDescending { it.rarity }
 
-        // 识别成功即记 DoubleSync 半边（不等落盘）；写盘仍异步
-        noteDoubleSyncOperSuccess()
+        operBoxRepository.set(ownedSorted, notOwnedSorted)
+        achievement.onOperSuccess()
         ioScope.launch {
-            operBoxRepository.replaceAll(ownedSorted, notOwnedSorted)
             achievementRepository.report {
                 event = AchievementEvents.TOOLBOX_RESULT
                 "tool" to "OperBox"
                 "hasPallas" to ownOpers.any {
                     it.name == "帕拉斯" || it.name.equals("Pallas", ignoreCase = true)
+                }
+            }
+        }
+    }
+
+    /** 本会话 Oper+Depot 成功回调后上报 DepotOperBox。 */
+    private inner class DoubleSyncAchievement {
+        @Volatile
+        private var operDone = false
+
+        @Volatile
+        private var depotDone = false
+
+        fun clear() {
+            operDone = false
+            depotDone = false
+        }
+
+        fun onOperSuccess() {
+            operDone = true
+            tryReport()
+        }
+
+        fun onDepotSuccess() {
+            depotDone = true
+            tryReport()
+        }
+
+        private fun tryReport() {
+            if (!operDone || !depotDone) return
+            operDone = false
+            depotDone = false
+            ioScope.launch {
+                achievementRepository.report {
+                    event = AchievementEvents.TOOLBOX_RESULT
+                    "tool" to "DepotOperBox"
                 }
             }
         }
