@@ -54,7 +54,7 @@ class ForegroundScheduleStarter(
             }
 
             chainState.isLoaded.first { it }
-            if (chainState.activeProfileId.value != request.profileId) {
+            if (chainState.profileId.value != request.profileId) {
                 triggerLogger.append("切换任务配置: ${request.profileId}")
                 chainState.switchProfile(request.profileId)
             }
@@ -107,7 +107,7 @@ class ForegroundScheduleStarter(
                             tasks = decision.plan.params,
                             clientType = decision.plan.clientType,
                             isScheduled = true,
-                            preflightLogs = decision.plan.preflightLogs,
+                            preflightLogs = decision.plan.logs,
                         )
 
                         if (result is MaaCompositionService.StartResult.Success) {

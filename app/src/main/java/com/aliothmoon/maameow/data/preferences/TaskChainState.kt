@@ -21,9 +21,11 @@ import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.remote.PermissionGrantRequest
 import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,13 +33,14 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.io.IOException
 import java.util.Locale
 import java.util.UUID
+
 
 class TaskChainState(
     private val context: Context,
@@ -46,13 +49,14 @@ class TaskChainState(
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
     private val json = JsonUtils.common
 
     companion object {
         private val Context.store: DataStore<Preferences> by preferencesDataStore(
             name = "task_chain"
         )
-        private val CHAIN_KEY = stringPreferencesKey("chain")
+
         private val PROFILES_KEY = stringPreferencesKey("profiles")
         private val ACTIVE_PROFILE_KEY = stringPreferencesKey("active_profile_id")
 
@@ -67,83 +71,155 @@ class TaskChainState(
     private val _profiles = MutableStateFlow<List<TaskProfile>>(emptyList())
     val profiles: StateFlow<List<TaskProfile>> = _profiles.asStateFlow()
 
-    private val _activeProfileId = MutableStateFlow("")
-    val activeProfileId: StateFlow<String> = _activeProfileId.asStateFlow()
+    private val _profileId = MutableStateFlow("")
+    val profileId: StateFlow<String> = _profileId.asStateFlow()
 
     private val _isLoaded = MutableStateFlow(false)
     val isLoaded: StateFlow<Boolean> = _isLoaded.asStateFlow()
 
-    /**
-     * 配置档被删除事件（携带 profileId）。
-     * 供 DepotRepository 等按 profileId 分片存储的组件清理数据；
-     * 用单向事件流而非直接调用，避免与本类形成循环依赖。
-     */
     private val _profileDeleted = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val profileDeleted: SharedFlow<String> = _profileDeleted.asSharedFlow()
 
     private val _lastUsedClientType = MutableStateFlow<String?>(null)
 
-    init {
-        scope.launch {
-            val prefs = context.store.data.first()
-            val profilesJson = prefs[PROFILES_KEY]
+    private sealed interface PersistOp {
+        data object Sync : PersistOp
+        data class Flush(val done: CompletableDeferred<Unit>) : PersistOp
+    }
 
-            if (profilesJson != null) {
-                // 已有 Profile 数据
-                val loadedProfiles = decodeProfiles(profilesJson)
-                val activeId = prefs[ACTIVE_PROFILE_KEY] ?: loadedProfiles.firstOrNull()?.id ?: ""
-                _profiles.value = loadedProfiles
-                _activeProfileId.value = activeId
-                val activeProfile = loadedProfiles.find { it.id == activeId }
-                    ?: loadedProfiles.firstOrNull()
-                if (activeProfile != null) {
-                    _activeProfileId.value = activeProfile.id
-                    _chain.value = activeProfile.chain
+    private val persistOps = Channel<PersistOp>(Channel.UNLIMITED)
+
+    val clientType: String
+        get() = getClientTypeOrNull() ?: "Official"
+
+    private fun doSync() {
+        persistOps.trySend(PersistOp.Sync)
+    }
+
+    /**
+     * 等到本 Flush 之前的 Sync 全部处理完。
+     * 期间若有写盘失败，抛出 [IOException]（[importProfiles] 等「确认落盘」路径依赖此契约）。
+     */
+    suspend fun flush() {
+        val done = CompletableDeferred<Unit>()
+        persistOps.send(PersistOp.Flush(done))
+        done.await()
+    }
+
+    private suspend fun doConsume() {
+        var pendingError: IOException? = null
+        for (op in persistOps) {
+            try {
+                when (op) {
+                    PersistOp.Sync -> {
+                        try {
+                            sync()
+                            pendingError = null
+                        } catch (e: IOException) {
+                            Timber.e(e, "写入任务链配置失败")
+                            pendingError = e
+                        }
+                    }
+
+                    is PersistOp.Flush -> {
+                        val err = pendingError
+                        if (err != null) {
+                            pendingError = null
+                            op.done.completeExceptionally(err)
+                        } else {
+                            op.done.complete(Unit)
+                        }
+                    }
                 }
-            } else {
-                // 迁移: 旧版数据无 profiles key, 将现有 chain 包装为单个 Profile
-                val legacyChain = decodeChain(prefs[CHAIN_KEY])
-                val profile = TaskProfile(
-                    name = "${PROFILE_NAME_PREFIX}1",
-                    chain = legacyChain
-                )
-                _profiles.value = listOf(profile)
-                _activeProfileId.value = profile.id
-                _chain.value = legacyChain
-                // 持久化迁移结果
-                persistProfiles(listOf(profile), profile.id)
+            } catch (e: Throwable) {
+                Timber.e(e, "任务链配置持久化队列处理失败")
+                if (op is PersistOp.Flush) {
+                    op.done.completeExceptionally(e)
+                } else if (e is IOException) {
+                    pendingError = e
+                }
             }
-            _isLoaded.value = true
+        }
+    }
+
+    private suspend fun sync() {
+        context.store.edit { prefs ->
+            prefs[PROFILES_KEY] = json.encodeToString<List<TaskProfile>>(_profiles.value)
+            prefs[ACTIVE_PROFILE_KEY] = _profileId.value
+        }
+    }
+
+    init {
+        syncScope.launch { doConsume() }
+        scope.launch {
+            try {
+                val prefs = context.store.data.first()
+
+                val storedProfiles = prefs[PROFILES_KEY]?.let {
+                    runCatching { json.decodeFromString<List<TaskProfile>>(it) }.onFailure { e ->
+                        Timber.e(e, "TaskChainState decodeFromString error")
+                    }.getOrNull()
+                }
+
+                val needsDefaultProfile = storedProfiles.isNullOrEmpty()
+
+                val profiles = storedProfiles?.takeIf { it.isNotEmpty() } ?: listOf(
+                    TaskProfile(
+                        name = "${PROFILE_NAME_PREFIX}1",
+                        chain = buildDefaultChain(),
+                    )
+                )
+
+                val storedActiveId = prefs[ACTIVE_PROFILE_KEY]
+
+                val activeProfile =
+                    profiles.firstOrNull { it.id == storedActiveId } ?: profiles.first()
+
+                val needsSync = needsDefaultProfile || storedActiveId != activeProfile.id
+
+                _profiles.value = profiles
+                _profileId.value = activeProfile.id
+                _chain.value = activeProfile.chain
+                _isLoaded.value = true
+
+                if (needsSync) {
+                    doSync()
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to load profiles")
+                _isLoaded.value = true
+            }
         }
     }
 
 
     suspend fun addNode(typeInfo: TaskTypeInfo, afterIndex: Int = -1): String {
-        var newNodeId = ""
-        updateChain { current ->
+        val nodeId = mutate {
             val node = TaskChainNode(
                 id = UUID.randomUUID().toString(),
                 name = defaultTaskName(typeInfo),
                 enabled = true,
                 config = typeInfo.defaultConfig()
             )
-            newNodeId = node.id
-            if (afterIndex < 0 || afterIndex >= current.size) {
-                current.add(node)
+            if (afterIndex < 0 || afterIndex >= it.size) {
+                it.add(node)
             } else {
-                current.add(afterIndex + 1, node)
+                it.add(afterIndex + 1, node)
             }
             Timber.d("Added node: %s (%s)", node.name, typeInfo.name)
+            node.id
         }
         achievementRepository.report {
             event = AchievementEvents.TASK_NODE_ADDED
         }
-        return newNodeId
+        return nodeId
     }
 
     suspend fun removeNode(nodeId: String) {
-        updateChain { current ->
-            current.removeAll { it.id == nodeId }
+        mutate {
+            it.removeAll { iter ->
+                iter.id == nodeId
+            }
             Timber.d("Removed node: %s", nodeId)
         }
         achievementRepository.report {
@@ -151,47 +227,36 @@ class TaskChainState(
         }
     }
 
-    /**
-     * 复制任务节点，插入到原节点正下方
-     * 名称规则：去掉末尾已有的 " N" 后缀得到基础名，取当前链中最小未占用的正整数 N，
-     * 命名为 "baseName N"，例如：作战 → 作战 2 → 作战 3
-     * 对应 WPF GuideUserControl PR#16733 复制按钮
-     *
-     * @return 新节点的 id，失败时返回空字符串
-     */
     suspend fun duplicateNode(nodeId: String): String {
-        var newNodeId = ""
-        updateChain { current ->
+        return mutate { current ->
             val idx = current.indexOfFirst { it.id == nodeId }
             if (idx >= 0) {
                 val src = current[idx]
                 // 去掉末尾 " N"（空格+数字）得到基础名
                 val baseName = src.name.replace(Regex(" \\d+$"), "")
                 // 收集链中所有以 "baseName N" 形式命名已占用的编号
-                val usedNumbers = current
-                    .mapNotNull { node ->
-                        Regex("^${Regex.escape(baseName)} (\\d+)$").matchEntire(node.name)
-                            ?.groupValues?.get(1)?.toIntOrNull()
-                    }
-                    .toSet()
+                val usedNumbers = current.mapNotNull { node ->
+                    Regex("^${Regex.escape(baseName)} (\\d+)$").matchEntire(node.name)?.groupValues?.get(
+                        1
+                    )?.toIntOrNull()
+                }.toSet()
                 // 取最小未占用的正整数（从 2 开始，1 留给源名称本身）
                 val nextNum = generateSequence(2) { it + 1 }.first { it !in usedNumbers }
                 val copy = src.copy(
-                    id = UUID.randomUUID().toString(),
-                    name = "$baseName $nextNum"
+                    id = UUID.randomUUID().toString(), name = "$baseName $nextNum"
                 )
-                newNodeId = copy.id
                 current.add(idx + 1, copy)
                 Timber.d("Duplicated node %s → %s (\"%s\")", nodeId, copy.id, copy.name)
+                copy.id
             } else {
                 Timber.w("duplicateNode: node %s not found", nodeId)
+                ""
             }
         }
-        return newNodeId
     }
 
     suspend fun renameNode(nodeId: String, newName: String) {
-        updateChain { current ->
+        mutate { current ->
             val idx = current.indexOfFirst { it.id == nodeId }
             if (idx >= 0) {
                 current[idx] = current[idx].copy(name = newName)
@@ -203,7 +268,7 @@ class TaskChainState(
     }
 
     suspend fun setNodeEnabled(nodeId: String, enabled: Boolean) {
-        updateChain { current ->
+        mutate { current ->
             val idx = current.indexOfFirst { it.id == nodeId }
             if (idx >= 0) {
                 current[idx] = current[idx].copy(enabled = enabled)
@@ -215,7 +280,7 @@ class TaskChainState(
     }
 
     suspend fun updateNodeConfig(nodeId: String, config: TaskParamProvider) {
-        updateChain { current ->
+        mutate { current ->
             val idx = current.indexOfFirst { it.id == nodeId }
             if (idx >= 0) {
                 current[idx] = current[idx].copy(config = config)
@@ -225,9 +290,18 @@ class TaskChainState(
         }
     }
 
+    suspend fun reorderNodes(fromIndex: Int, toIndex: Int) {
+        mutate { current ->
+            require(fromIndex in current.indices) { "fromIndex out of bounds: $fromIndex" }
+            require(toIndex in current.indices) { "toIndex out of bounds: $toIndex" }
+            val node = current.removeAt(fromIndex)
+            current.add(toIndex, node)
+            Timber.d("Moved node from %d to %d", fromIndex, toIndex)
+        }
+    }
 
-    suspend fun resetRecruitConfigUseExpedited() {
-        updateChain { current ->
+    suspend fun clearRecruitUseExpeditedFlags() {
+        mutate { current ->
             for (i in current.indices) {
                 val node = current[i]
                 if (!node.enabled) continue
@@ -235,8 +309,7 @@ class TaskChainState(
                     is RecruitConfig -> if (cfg.useExpedited) {
                         current[i] = node.copy(config = cfg.copy(useExpedited = false))
                         Timber.d(
-                            "resetTemporaryVariables: cleared useExpedited on node %s",
-                            node.id
+                            "clearRecruitUseExpeditedFlags on node %s", node.id
                         )
                     }
 
@@ -276,67 +349,21 @@ class TaskChainState(
         return next to cfg.customPlanNames.getOrNull(next)
     }
 
-    suspend fun reorderNodes(fromIndex: Int, toIndex: Int) {
-        updateChain { current ->
-            require(fromIndex in current.indices) { "fromIndex out of bounds: $fromIndex" }
-            require(toIndex in current.indices) { "toIndex out of bounds: $toIndex" }
-            val node = current.removeAt(fromIndex)
-            current.add(toIndex, node)
-            Timber.d("Moved node from %d to %d", fromIndex, toIndex)
-        }
-    }
-
-    inline fun <reified T : TaskParamProvider> firstConfigFlow(): Flow<T?> {
-        return chain.map { nodes ->
-            nodes.firstNotNullOfOrNull { it.config as? T }
-        }.distinctUntilChanged()
-    }
-
-    inline fun <reified T : TaskParamProvider> findFirstConfig(): T? {
-        return chain.value.firstNotNullOfOrNull { it.config as? T }
-    }
-
-    fun getClientType(): String {
-        return getClientTypeOrNull() ?: "Official"
-    }
-
     fun getClientTypeOrNull(): String? {
-        return findFirstEnabledConfig<WakeUpConfig>()?.clientType
-            ?: _lastUsedClientType.value
+        return findFirstEnabledConfig<WakeUpConfig>()?.clientType ?: _lastUsedClientType.value
     }
-
-    fun getLastUsedClientType(): String? = _lastUsedClientType.value
 
     fun saveLastUsedClientType(clientType: String) {
         _lastUsedClientType.value = clientType
     }
 
     inline fun <reified T : TaskParamProvider> findFirstEnabledConfig(): T? {
-        return chain.value
-            .filter { it.enabled }
-            .firstNotNullOfOrNull { it.config as? T }
+        return chain.value.filter { it.enabled }.firstNotNullOfOrNull { it.config as? T }
     }
 
     inline fun <reified T : TaskParamProvider> firstEnabledConfigFlow(): Flow<T?> {
         return chain.map { nodes ->
             nodes.filter { it.enabled }.firstNotNullOfOrNull { it.config as? T }
-        }
-    }
-
-    fun grantGameBatteryExemption(clientType: String) {
-        val pkg = Packages[clientType] ?: return
-        runCatching {
-            RemoteServiceManager.getInstanceOrNull()?.grantPermissions(
-                PermissionGrantRequest(
-                    packageName = pkg,
-                    permissions =
-                        PermissionGrantRequest.PERM_BATTERY
-                                or PermissionGrantRequest.PERM_BACKGROUND
-                )
-            )
-            Timber.d("Battery exemption granted for game: %s", pkg)
-        }.onFailure { e ->
-            Timber.w(e, "Failed to grant battery exemption for game")
         }
     }
 
@@ -350,14 +377,14 @@ class TaskChainState(
         }
         // 保存当前链到旧 Profile
         val updatedProfiles = currentProfiles.map { p ->
-            if (p.id == _activeProfileId.value) p.copy(chain = _chain.value) else p
+            if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
         }
         // 加载新 Profile 的链
         _chain.value = target.chain
-        _activeProfileId.value = profileId
+        _profileId.value = profileId
         _profiles.value = updatedProfiles
         // 持久化
-        persistProfiles(updatedProfiles, profileId)
+        doSync()
         Timber.d("Switched to profile: %s (%s)", target.name, profileId)
     }
 
@@ -369,23 +396,22 @@ class TaskChainState(
         }
         // 先保存当前活跃 Profile 的链
         val savedProfiles = currentProfiles.map { p ->
-            if (p.id == _activeProfileId.value) p.copy(chain = _chain.value) else p
+            if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
         }
         val newProfile = TaskProfile(
-            name = nextProfileName(savedProfiles),
-            chain = buildDefaultChain()
+            name = nextProfileName(savedProfiles), chain = buildDefaultChain()
         )
         val updatedProfiles = savedProfiles + newProfile
         // 切换到新 Profile
         _chain.value = newProfile.chain
-        _activeProfileId.value = newProfile.id
+        _profileId.value = newProfile.id
         _profiles.value = updatedProfiles
-        persistProfiles(updatedProfiles, newProfile.id)
+        doSync()
         Timber.d("Created profile: %s (%s)", newProfile.name, newProfile.id)
         return newProfile.id
     }
 
-    suspend fun deleteProfile(profileId: String) {
+    suspend fun removeProfile(profileId: String) {
         val currentProfiles = _profiles.value
         if (currentProfiles.size <= 1) {
             Timber.w("deleteProfile: cannot delete last profile")
@@ -393,7 +419,7 @@ class TaskChainState(
         }
         // 先保存当前链
         val savedProfiles = currentProfiles.map { p ->
-            if (p.id == _activeProfileId.value) p.copy(chain = _chain.value) else p
+            if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
         }
         val remaining = savedProfiles.filter { it.id != profileId }
         if (remaining.size == savedProfiles.size) {
@@ -401,16 +427,16 @@ class TaskChainState(
             return
         }
         // 若删除的是活跃 Profile,切换到列表第一个
-        val newActiveId = if (_activeProfileId.value == profileId) {
+        val newActiveId = if (_profileId.value == profileId) {
             val first = remaining.first()
             _chain.value = first.chain
             first.id
         } else {
-            _activeProfileId.value
+            _profileId.value
         }
-        _activeProfileId.value = newActiveId
+        _profileId.value = newActiveId
         _profiles.value = remaining
-        persistProfiles(remaining, newActiveId)
+        doSync()
         _profileDeleted.tryEmit(profileId)
         Timber.d("Deleted profile: %s", profileId)
     }
@@ -426,7 +452,7 @@ class TaskChainState(
             if (p.id == profileId) p.copy(name = trimmed) else p
         }
         _profiles.value = updatedProfiles
-        persistProfiles(updatedProfiles, _activeProfileId.value)
+        doSync()
         Timber.d("Renamed profile %s to: %s", profileId, trimmed)
     }
 
@@ -438,7 +464,7 @@ class TaskChainState(
         }
         // 先保存当前活跃 Profile 的链
         val savedProfiles = currentProfiles.map { p ->
-            if (p.id == _activeProfileId.value) p.copy(chain = _chain.value) else p
+            if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
         }
         val source = savedProfiles.find { it.id == profileId } ?: run {
             Timber.w("duplicateProfile: profile %s not found", profileId)
@@ -447,12 +473,11 @@ class TaskChainState(
         // 复制链时为每个节点生成新 ID
         val duplicatedChain = source.chain.map { it.copy(id = UUID.randomUUID().toString()) }
         val newProfile = TaskProfile(
-            name = nextProfileName(savedProfiles),
-            chain = duplicatedChain
+            name = nextProfileName(savedProfiles), chain = duplicatedChain
         )
         val updatedProfiles = savedProfiles + newProfile
         _profiles.value = updatedProfiles
-        persistProfiles(updatedProfiles, _activeProfileId.value)
+        doSync()
         Timber.d("Duplicated profile %s as: %s (%s)", profileId, newProfile.name, newProfile.id)
         return newProfile.id
     }
@@ -462,7 +487,9 @@ class TaskChainState(
         if (fromIndex !in current.indices || toIndex !in current.indices) {
             Timber.w(
                 "reorderProfiles: invalid index from=%d to=%d size=%d",
-                fromIndex, toIndex, current.size
+                fromIndex,
+                toIndex,
+                current.size
             )
             return
         }
@@ -470,64 +497,31 @@ class TaskChainState(
 
         // 顺便把当前未保存的链快照写回 active profile, 避免重排时丢失正在编辑的内容
         val savedProfiles = current.map { p ->
-            if (p.id == _activeProfileId.value) p.copy(chain = _chain.value) else p
+            if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
         }.toMutableList()
         val moved = savedProfiles.removeAt(fromIndex)
         savedProfiles.add(toIndex, moved)
 
         _profiles.value = savedProfiles
-        persistProfiles(savedProfiles, _activeProfileId.value)
+        doSync()
         Timber.d("Reordered profile from %d to %d", fromIndex, toIndex)
     }
 
     // ========== 内部工具方法 ==========
 
-    private suspend inline fun updateChain(
-        crossinline block: (MutableList<TaskChainNode>) -> Unit
-    ) {
+    private suspend inline fun <T> mutate(
+        crossinline block: (MutableList<TaskChainNode>) -> T
+    ): T {
         val current = _chain.value.toMutableList()
-        block(current)
+        val ret = block(current)
         reindex(current)
         val snapshot = current.toList()
-        _chain.value = snapshot              // 同步更新，立即可见
-        // 同步更新 profiles 中活跃 Profile 的 chain
-        val updatedProfiles = _profiles.value.map { p ->
-            if (p.id == _activeProfileId.value) p.copy(chain = snapshot) else p
+        _chain.value = snapshot
+        _profiles.value = _profiles.value.map { p ->
+            if (p.id == _profileId.value) p.copy(chain = snapshot) else p
         }
-        _profiles.value = updatedProfiles
-        context.store.edit { prefs ->        // 异步持久化
-            prefs[CHAIN_KEY] = json.encodeToString<List<TaskChainNode>>(snapshot)
-            prefs[PROFILES_KEY] = json.encodeToString<List<TaskProfile>>(updatedProfiles)
-        }
-    }
-
-    private fun decodeChain(raw: String?): List<TaskChainNode> {
-        if (raw.isNullOrEmpty()) return buildDefaultChain()
-        return runCatching {
-            json.decodeFromString<List<TaskChainNode>>(raw)
-        }.getOrElse {
-            Timber.w(it, "Failed to decode task chain, using defaults")
-            buildDefaultChain()
-        }
-    }
-
-    private fun decodeProfiles(raw: String): List<TaskProfile> {
-        return runCatching {
-            json.decodeFromString<List<TaskProfile>>(raw)
-        }.getOrElse {
-            Timber.w(it, "Failed to decode profiles")
-            emptyList()
-        }
-    }
-
-    private suspend fun persistProfiles(profiles: List<TaskProfile>, activeId: String) {
-        context.store.edit { prefs ->
-            prefs[PROFILES_KEY] = json.encodeToString<List<TaskProfile>>(profiles)
-            prefs[ACTIVE_PROFILE_KEY] = activeId
-            // 同步更新 CHAIN_KEY 以保持兼容
-            val activeChain = profiles.find { it.id == activeId }?.chain ?: _chain.value
-            prefs[CHAIN_KEY] = json.encodeToString<List<TaskChainNode>>(activeChain)
-        }
+        doSync()
+        return ret
     }
 
     private fun reindex(nodes: MutableList<TaskChainNode>) {
@@ -552,19 +546,20 @@ class TaskChainState(
         val localizedContext = context.createConfigurationContext(
             Configuration(context.resources.configuration).apply {
                 setLocale(Locale.forLanguageTag(tag))
-            }
-        )
+            })
         return typeInfo.defaultName(localizedContext)
     }
 
     suspend fun importProfiles(profiles: List<TaskProfile>, activeId: String) {
-        val resolvedActiveId = profiles.find { it.id == activeId }?.id
-            ?: profiles.firstOrNull()?.id ?: return
+        val resolvedActiveId =
+            profiles.find { it.id == activeId }?.id ?: profiles.firstOrNull()?.id ?: return
         val activeChain = profiles.find { it.id == resolvedActiveId }?.chain ?: buildDefaultChain()
         _profiles.value = profiles
-        _activeProfileId.value = resolvedActiveId
+        _profileId.value = resolvedActiveId
         _chain.value = activeChain
-        persistProfiles(profiles, resolvedActiveId)
+        doSync()
+        // 导入是用户可见的终态操作（随后会提示「导入成功」），必须确认落盘再返回
+        flush()
         Timber.d("Imported %d profiles, active: %s", profiles.size, resolvedActiveId)
     }
 

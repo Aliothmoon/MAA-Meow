@@ -158,9 +158,9 @@ fun BackgroundTaskView(
     val toolboxDialog by toolboxViewModel.dialog.collectAsStateWithLifecycle()
     val nodes by viewModel.chainState.chain.collectAsStateWithLifecycle()
     val profiles by viewModel.chainState.profiles.collectAsStateWithLifecycle()
-    val activeProfileId by viewModel.chainState.activeProfileId.collectAsStateWithLifecycle()
+    val profileId by viewModel.chainState.profileId.collectAsStateWithLifecycle()
     val selectedNode = nodes.find { it.id == state.selectedNodeId }
-    val clientType = remember(nodes) { viewModel.chainState.getClientType() }
+    val clientType = remember(nodes) { viewModel.chainState.clientType }
     val canShowTaskActions = PanelTab.canShowTaskActions(state.current)
 
     val pagerState = rememberPagerState(
@@ -379,7 +379,7 @@ fun BackgroundTaskView(
                                                     isAddingTask = state.isAddingTask,
                                                     isProfileMode = state.isProfileMode,
                                                     profiles = profiles,
-                                                    activeProfileId = activeProfileId,
+                                                    activeProfileId = profileId,
                                                     clientType = clientType,
                                                     onConfigChange = { config ->
                                                         val nodeId = selectedNode?.id

@@ -68,21 +68,21 @@ class ActivityManager(
 
     /** 鹰历时区 */
     private val serverZone: ZoneId
-        get() = ServerTimezone.getServerZone(chainState.getClientType())
+        get() = ServerTimezone.getServerZone(chainState.clientType)
 
     /**
      * 获取当前鹰角历的星期几（根据客户端类型自动选择时区）
      * 迁移自 WPF DateTimeExtension.ToYjDateTime
      */
     fun getYjDayOfWeek(): DayOfWeek {
-        return ServerTimezone.getYjDayOfWeek(chainState.getClientType())
+        return ServerTimezone.getYjDayOfWeek(chainState.clientType)
     }
 
     /**
      * 获取当前鹰角历星期几的中文名
      */
     fun getYjDayOfWeekName(): String {
-        return ServerTimezone.getYjDayOfWeekName(chainState.getClientType())
+        return ServerTimezone.getYjDayOfWeekName(chainState.clientType)
     }
 
     suspend fun load(clientType: String) {
@@ -430,7 +430,7 @@ class ActivityManager(
             val stageChanged = maaApiService.checkStageActivityChanged()
             val taskChanged = maaApiService.checkTasksChanged()
             if (stageChanged || taskChanged) {
-                val clientType = chainState.getClientType()
+                val clientType = chainState.clientType
                 val type = if (clientType == "Bilibili") "Official" else clientType
                 doLoadActivityStages(type)
                 dirty = true

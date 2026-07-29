@@ -72,9 +72,9 @@ fun ExpandedControlPanel(
 
     val nodes by viewModel.chainState.chain.collectAsStateWithLifecycle()
     val profiles by viewModel.chainState.profiles.collectAsStateWithLifecycle()
-    val activeProfileId by viewModel.chainState.activeProfileId.collectAsStateWithLifecycle()
+    val profileId by viewModel.chainState.profileId.collectAsStateWithLifecycle()
     val selectedNode = nodes.find { it.id == uiState.selectedNodeId }
-    val clientType = remember(nodes) { viewModel.chainState.getClientType() }
+    val clientType = remember(nodes) { viewModel.chainState.clientType }
     val inputFocusManager = LocalInputFocusManager.current
     val context = LocalContext.current
 
@@ -176,7 +176,7 @@ fun ExpandedControlPanel(
                                     isAddingTask = uiState.isAddingTask,
                                     isProfileMode = uiState.isProfileMode,
                                     profiles = profiles,
-                                    activeProfileId = activeProfileId,
+                                    activeProfileId = profileId,
                                     clientType = clientType,
                                     onConfigChange = { config ->
                                         val nodeId = selectedNode?.id ?: return@TaskConfigPanel

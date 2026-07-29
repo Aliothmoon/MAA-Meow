@@ -1024,7 +1024,7 @@ class CopilotViewModel(
             if (!validateStart(snapshot)) return@launch
 
             when (val readiness = checkGameReadiness(
-                clientType = chainState.getClientType(),
+                clientType = chainState.clientType,
                 launchesGame = false,
                 context = context,
             )) {

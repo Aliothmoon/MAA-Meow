@@ -45,7 +45,7 @@ class AppWatchdog(
     fun startWatching() {
         stopWatching()
 
-        val clientType = chainState.getClientType()
+        val clientType = chainState.clientType
         val packageName = Packages[clientType]
         if (packageName == null) {
             Timber.w(

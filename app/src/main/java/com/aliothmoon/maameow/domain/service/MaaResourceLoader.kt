@@ -50,7 +50,7 @@ class MaaResourceLoader(
     private val _state = MutableStateFlow<State>(State.NotLoaded)
     val state: StateFlow<State> = _state.asStateFlow()
 
-    suspend fun load(clientType: String = chainState.getClientType()): Result<Unit> {
+    suspend fun load(clientType: String = chainState.clientType): Result<Unit> {
         _state.value = State.Loading()
         if (!pathConfig.isResourceReady) {
             Timber.e("MaaResourceLoader.load() aborted: resource not ready (version.json missing or app version mismatch)")

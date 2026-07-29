@@ -100,7 +100,7 @@ class ToolboxViewModel(
     private fun onStart(context: TaskStartContext) {
         viewModelScope.launch {
             when (val readiness = checkGameReadiness(
-                clientType = chainState.getClientType(),
+                clientType = chainState.clientType,
                 launchesGame = false,
                 context = context,
             )) {
@@ -201,7 +201,7 @@ class ToolboxViewModel(
 
     private fun onStartDepot() {
         viewModelScope.launch {
-            // 不 clear 持久化快照：识别失败时仍可看历史；成功 replaceAll 后自动刷新
+            // 不 clear 持久化快照：识别失败时仍可看历史；成功 set 后自动刷新
             _statusMessage.value = uiTextOf(R.string.toolbox_status_starting_depot)
             handleStartResult(
                 compositionService.startCopilot(listOf(MaaTaskParams(MaaTaskType.DEPOT, "{}")))
