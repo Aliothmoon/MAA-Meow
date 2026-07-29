@@ -125,6 +125,13 @@ fun DepotMaintainConfigPanel(
             tipText = stringResource(R.string.panel_fight_custom_stage_code_tip),
         )
 
+        CheckBoxWithExpandableTip(
+            checked = config.useAutoSeries,
+            onCheckedChange = { onConfigChange(config.copy(useAutoSeries = it)) },
+            label = stringResource(R.string.panel_depot_use_auto_series),
+            tipText = stringResource(R.string.panel_depot_use_auto_series_tip),
+        )
+
         // 汇总区：i: 关卡 - 材料 当前/目标
         if (config.plans.isNotEmpty()) {
             Surface(

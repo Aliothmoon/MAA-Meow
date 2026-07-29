@@ -767,6 +767,8 @@
     <string name="panel_mall_credit_fight">借助战打 OF-1 赚信用</string>
     <string name="panel_mall_credit_fight_tip">访问好友后借助战打一把 OF-1 赚 30 信用。\n关卡选择为 ｢当前/上次｣ 时此功能无效。\n别传 ｢火蓝之心｣ 关卡 OF-1 未解锁时请勿勾选。</string>
     <string name="panel_mall_credit_fight_unavailable">当前存在无法解析有效关卡的理智作战任务，本次不会借助战打一把 OF-1。</string>
+    <!-- %1$s 任务名, %2$d 任务序号(1-based), %3$d 关卡列表中的序号(1-based) -->
+    <string name="mall_credit_fight_blocked_by_stage">存在 ｢理智作战｣ 任务关卡列表中有 ｢当前/上次｣, ｢信用收支｣ 任务不再借助战打一把 OF-1. 任务名: %1$s (序号%2$d), 关卡序号 %3$d</string>
     <string name="panel_mall_credit_fight_notice">借助战需要好友支援，确保好友列表有可用支援干员</string>
     <string name="panel_mall_priority_title">优先购买物品</string>
     <string name="panel_mall_priority_reorder_tip">拖动调整购买优先级，越靠上优先级越高</string>
@@ -1060,6 +1062,8 @@
     <!-- panel: depot maintain -->
     <string name="panel_depot_update_before_start">任务开始前更新库存数据</string>
     <string name="panel_depot_update_before_start_tip">任务开始时先执行一次仓库识别刷新库存数据；每条计划开始时都会按最新库存重算缺口，本次识别结果立即生效</string>
+    <string name="panel_depot_use_auto_series">AUTO 代理倍率</string>
+    <string name="panel_depot_use_auto_series_tip">未勾选时以 1 倍代理；勾选后按当前理智允许的最大倍率代理，单次掉落可能超过目标库存上限。</string>
     <string name="panel_depot_skip_during_activity">活动期间跳过</string>
     <string name="panel_depot_skip_during_resource">资源收集限时全天开放期间跳过</string>
     <string name="panel_depot_add_plan">添加</string>
@@ -1900,6 +1904,7 @@
     <string name="runlog_depot_plan_no_stage">计划 %1$d：关卡未指定或为「当前/上次」。</string>
     <string name="runlog_depot_plan_stage_not_open">计划 %1$d：关卡「%2$s」未开放。</string>
     <string name="runlog_depot_plan_inventory_enough">计划 %1$s：%2$s 库存已充足（当前 %3$d / 目标 %4$d）。</string>
+    <string name="runlog_fight_inventory_unavailable">任务「%1$s」启用了目标库存，但当前没有可用的库存数据，已跳过。可通过「工具箱 - 仓库识别」更新库存。</string>
     <string name="runlog_depot_set_params_failed">计划 %1$s：更新任务参数失败，将按原参数执行。</string>
     <string name="runlog_depot_skipped_activity">当前有活动进行中，已跳过库存保持。</string>
     <string name="runlog_depot_skipped_resource">当前处于资源收集限时全天开放期间，已跳过库存保持。</string>

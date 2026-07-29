@@ -712,6 +712,8 @@
     <string name="panel_mall_credit_fight">Combat with Support to earn Credits</string>
     <string name="panel_mall_credit_fight_tip">Combat with Support Unit in OF-1 after Visit Friends to earn 30 credits.\nThis function is invalid when the stage is selected as \"Cur/Last\".\nDo not enable it if OF-1 from Heart of Surging Flame is not unlocked.</string>
     <string name="panel_mall_credit_fight_unavailable">No valid combat stage could be resolved from the current combat task. Support OF-1 will be skipped this time.</string>
+    <!-- %1$s task name, %2$d task order (1-based), %3$d stage list index (1-based) -->
+    <string name="mall_credit_fight_blocked_by_stage">A Fight task has \"Cur/Last\" in its stage list, so Credit shopping will not run Support OF-1. Task: %1$s (order %2$d), stage index %3$d</string>
     <string name="panel_mall_credit_fight_notice">Support combat requires an available support unit in your friend list.</string>
     <string name="panel_mall_priority_title">Priority Items</string>
     <string name="panel_mall_priority_reorder_tip">Drag to adjust purchase priority. Items closer to the top are bought first.</string>
@@ -1004,6 +1006,8 @@
 
     <string name="panel_depot_update_before_start">Update inventory before starting</string>
     <string name="panel_depot_update_before_start_tip">Runs depot recognition first to refresh inventory data; each plan recomputes its deficit from the latest inventory when it starts, so this recognition takes effect immediately</string>
+    <string name="panel_depot_use_auto_series">Auto Series</string>
+    <string name="panel_depot_use_auto_series_tip">When unchecked, runs at 1×; when checked, runs at the highest series multiplier allowed by current sanity, so drops from a single run may exceed the target inventory limit.</string>
     <string name="panel_depot_skip_during_activity">Skip during event</string>
     <string name="panel_depot_skip_during_resource">Skip while the resource collection event is active</string>
     <string name="panel_depot_add_plan">Add</string>
@@ -1843,6 +1847,7 @@
     <string name="runlog_depot_plan_no_stage">Plan %1$d: stage not specified or is \"Current/Last\".</string>
     <string name="runlog_depot_plan_stage_not_open">Plan %1$d: stage \'%2$s\' is not open.</string>
     <string name="runlog_depot_plan_inventory_enough">Plan %1$s: %2$s inventory sufficient (current %3$d / target %4$d).</string>
+    <string name="runlog_fight_inventory_unavailable">Task \"%1$s\" uses target inventory, but no inventory data is currently available, so it was skipped. Update it via \"Toolbox - Depot Recognition\".</string>
     <string name="runlog_depot_set_params_failed">Plan %1$s: failed to update task params; original params will be used.</string>
     <string name="runlog_depot_skipped_activity">An event is in progress; Depot Maintain skipped.</string>
     <string name="runlog_depot_skipped_resource">The resource collection event is active; Depot Maintain skipped.</string>
