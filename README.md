@@ -73,6 +73,10 @@
 
 如果觉得项目有用，欢迎点一个 Star ⭐ 让更多人看到！
 
+### 加入我们
+
+开发者群：[QQ 群](https://jq.qq.com/?_wv=1027&k=JM9oCk3C)
+
 ## 致谢
 
 - [MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights) — 明日方舟游戏小助手，基于图像识别技术
