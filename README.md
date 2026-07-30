@@ -12,7 +12,7 @@
 [![GitHub Stars](https://img.shields.io/github/stars/Aliothmoon/MAA-Meow?style=flat-square)](https://github.com/Aliothmoon/MAA-Meow/stargazers)
 [![GitHub Downloads](https://img.shields.io/github/downloads/Aliothmoon/MAA-Meow/total?style=flat-square&label=Downloads)](https://github.com/Aliothmoon/MAA-Meow/releases)
 
-[下载最新版](https://github.com/Aliothmoon/MAA-Meow/releases/latest) · [问题反馈](https://github.com/Aliothmoon/MAA-Meow/issues) · [QQ 交流群](https://qm.qq.com/q/j4CFbeDQXu)
+[下载最新版](https://github.com/Aliothmoon/MAA-Meow/releases/latest) · [问题反馈](https://github.com/Aliothmoon/MAA-Meow/issues) · [QQ 交流群](https://join.maameow.com/)
 
 **[English](README_EN.md)** | **中文**
 
