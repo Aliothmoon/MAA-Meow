@@ -15,7 +15,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -106,6 +109,7 @@ import com.aliothmoon.maameow.presentation.viewmodel.SettingsViewModel
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
+import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.resolve
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -138,6 +142,15 @@ fun SettingsView(
     var showDriftDelayDialog by remember { mutableStateOf(false) }
     val allowForegroundScheduledTask by viewModel.allowForegroundScheduledTask.collectAsStateWithLifecycle()
     val runScheduleWhenLocked by viewModel.runScheduleWhenLocked.collectAsStateWithLifecycle()
+    // ─── 定时唤醒 + 解锁 ───
+    val wakeFeatureAvailable by viewModel.wakeFeatureAvailable.collectAsStateWithLifecycle()
+    val wakeScheduleEnabled by viewModel.wakeScheduleEnabled.collectAsStateWithLifecycle()
+    var showWakeNeedRootDialog by remember { mutableStateOf(false) }
+    val wakeScheduleTimesCsv by viewModel.wakeScheduleTimesCsv.collectAsStateWithLifecycle()
+    val wakeUnlockType by viewModel.wakeUnlockType.collectAsStateWithLifecycle()
+    val wakeCredential by viewModel.wakeCredential.collectAsStateWithLifecycle()
+    val wakeAutoSleepDelaySec by viewModel.wakeAutoSleepDelaySec.collectAsStateWithLifecycle()
+    val wakeTestResult by viewModel.wakeTestResult.collectAsStateWithLifecycle()
     val tasksOverrideEnabled by viewModel.tasksOverrideEnabled.collectAsStateWithLifecycle()
     val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
@@ -240,6 +253,19 @@ fun SettingsView(
             dismissButton = {
                 TextButton(onClick = { showDriftDelayDialog = false }) {
                     Text(stringResource(android.R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showWakeNeedRootDialog) {
+        AlertDialog(
+            onDismissRequest = { showWakeNeedRootDialog = false },
+            title = { Text(stringResource(R.string.settings_wake_need_root_dialog_title)) },
+            text = { Text(stringResource(R.string.settings_wake_need_root_dialog_message)) },
+            confirmButton = {
+                TextButton(onClick = { showWakeNeedRootDialog = false }) {
+                    Text(stringResource(android.R.string.ok))
                 }
             }
         )
@@ -763,6 +789,25 @@ fun SettingsView(
                         contentColor = contentColor,
                         checked = allowForegroundScheduledTask,
                         onCheckedChange = { viewModel.setAllowForegroundScheduledTask(it) }
+                    )
+                    ListItemDivider()
+                    // ─── 定时唤醒 + 解锁（点击跳转二级页） ───
+                    SettingClickItem(
+                        title = stringResource(R.string.settings_wake_schedule_section),
+                        description = if (!wakeFeatureAvailable)
+                            stringResource(R.string.settings_wake_need_root_disabled)
+                        else if (wakeScheduleEnabled)
+                            stringResource(R.string.settings_wake_status_enabled)
+                        else
+                            stringResource(R.string.settings_wake_status_disabled),
+                        contentColor = contentColor,
+                        onClick = {
+                            if (!wakeFeatureAvailable) {
+                                showWakeNeedRootDialog = true
+                            } else {
+                                navController.navigate(Routes.WAKE_SCHEDULE_EDITOR)
+                            }
+                        }
                     )
                     ListItemDivider()
                     SettingSwitchItem(
@@ -1390,9 +1435,11 @@ private fun SettingSwitchItem(
     SettingRow(
         title = title,
         description = description,
-        titleColor = contentColor,
-        descriptionColor = contentColor.copy(alpha = 0.7f),
-        enabled = enabled,
+        // Row 始终可点，保证 disabled 态下点整行仍能触发 onCheckedChange（用来弹「为什么不可用」说明弹窗）。
+        // 实际启用/禁用的视觉反馈通过 titleColor / descriptionColor + Switch.enabled 表达。
+        enabled = true,
+        titleColor = if (enabled) contentColor else contentColor.copy(alpha = 0.6f),
+        descriptionColor = if (enabled) contentColor.copy(alpha = 0.7f) else contentColor.copy(alpha = 0.4f),
         trailing = {
             Switch(
                 checked = checked,
@@ -1400,6 +1447,7 @@ private fun SettingSwitchItem(
                 onCheckedChange = onCheckedChange
             )
         },
+        onClick = { onCheckedChange(!checked) }
     )
 }
 
@@ -1682,4 +1730,179 @@ private fun loadShizukuLaunchApps(context: Context): List<ShizukuLaunchAppOption
         }
         .distinctBy { it.packageName }
         .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.label })
+}
+
+
+/**
+ * 「定时唤醒 + 解锁」功能区的详情面板（仅当开关开启时展示）。
+ * 包含：唤醒时间输入、解锁方式、密码、息屏延迟、测试按钮。
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun WakeScheduleContent(
+    contentColor: Color,
+    timesCsv: String,
+    unlockType: String,
+    credential: String,
+    autoSleepSec: Int,
+    testResult: UiText?,
+    onTimesChange: (String) -> Unit,
+    onUnlockTypeChange: (String) -> Unit,
+    onCredentialChange: (String) -> Unit,
+    onAutoSleepChange: (Int) -> Unit,
+    onTestClick: () -> Unit,
+    onTestDismiss: () -> Unit,
+) {
+    val parsed = remember(timesCsv) {
+        timesCsv.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+    }
+    var newTimeInput by remember { mutableStateOf("") }
+
+    // 时间添加行
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OutlinedTextField(
+            value = newTimeInput,
+            onValueChange = { newTimeInput = it.take(5) },
+            placeholder = { Text(stringResource(R.string.settings_wake_schedule_times_hint)) },
+            singleLine = true,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(Modifier.width(8.dp))
+        Button(
+            onClick = {
+                val token = newTimeInput.trim()
+                val parts = token.split(':')
+                val ok = parts.size == 2 &&
+                        (parts[0].toIntOrNull() ?: -1) in 0..23 &&
+                        (parts[1].toIntOrNull() ?: -1) in 0..59
+                if (ok) {
+                    val next = (parsed + token).joinToString(",")
+                    onTimesChange(next)
+                    newTimeInput = ""
+                }
+            }
+        ) { Text("+") }
+    }
+
+    // 时间 Chips
+    if (parsed.isNotEmpty()) {
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            parsed.forEach { t ->
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(t, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "×",
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.clickable {
+                                onTimesChange((parsed - t).joinToString(","))
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    ListItemDivider()
+
+    // 解锁方式（循环切换：swipe → pin → password → keyguard → swipe …）
+    val unlockCycle = listOf("swipe", "pin", "password", "keyguard")
+    SettingClickItem(
+        title = stringResource(R.string.settings_wake_unlock_type),
+        description = wakeUnlockTypeLabel(unlockType),
+        contentColor = contentColor,
+    ) {
+        val idx = unlockCycle.indexOf(unlockType).coerceAtLeast(0)  // 未知值当成 swipe
+        val next = unlockCycle[(idx + 1) % unlockCycle.size]         // 最后一个回到第一个
+        onUnlockTypeChange(next)
+    }
+
+    // 密码输入（仅 PIN / password 显示）
+    if (unlockType == "pin" || unlockType == "password") {
+        ListItemDivider()
+        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            OutlinedTextField(
+                value = credential,
+                onValueChange = onCredentialChange,
+                label = { Text(stringResource(R.string.settings_wake_credential)) },
+                placeholder = { Text(stringResource(R.string.settings_wake_credential_hint)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+
+    ListItemDivider()
+
+    // 自动息屏延迟（0~300 秒）
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(
+            stringResource(R.string.settings_wake_auto_sleep),
+            style = MaterialTheme.typography.bodyLarge,
+            color = contentColor,
+        )
+        Text(
+            stringResource(R.string.settings_wake_auto_sleep_desc, autoSleepSec),
+            style = MaterialTheme.typography.bodySmall,
+            color = contentColor.copy(alpha = 0.7f),
+        )
+        Slider(
+            value = autoSleepSec.toFloat(),
+            onValueChange = { onAutoSleepChange(it.roundToInt()) },
+            valueRange = 0f..300f,
+            steps = 29,
+        )
+    }
+
+    ListItemDivider()
+
+    // 测试按钮：先息屏上锁 → 再唤醒解锁，完整验证全链路
+    SettingClickItem(
+        title = stringResource(R.string.settings_wake_test_button),
+        description = stringResource(R.string.settings_wake_test_hint),
+        contentColor = contentColor,
+        onClick = onTestClick,
+    )
+
+    // 测试结果 Toast
+    testResult?.let { result ->
+        val ctx = LocalContext.current
+        LaunchedEffect(result) {
+            if (result is UiText.Empty) return@LaunchedEffect
+            val msg = when (result) {
+                is UiText.Dynamic -> if (result.value == "OK") {
+                    ctx.getString(R.string.settings_wake_test_ok)
+                } else {
+                    ctx.getString(R.string.settings_wake_test_fail, result.value)
+                }
+                is UiText.Resource -> result.resolve(ctx).toString()
+                else -> return@LaunchedEffect
+            }
+            Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show()
+            onTestDismiss()
+        }
+    }
+}
+
+private fun wakeUnlockTypeLabel(type: String): String = when (type) {
+    "swipe" -> "Swipe (no lock)"
+    "pin" -> "PIN"
+    "password" -> "Password"
+    "keyguard" -> "Force dismiss keyguard"
+    else -> type
 }

@@ -110,6 +110,34 @@
     <string name="settings_drift_auto_repin_enabled_desc">In background mode, some systems (e.g. Samsung One UI) or channel-login SDKs may move the game back to the main screen, breaking recognition. When enabled, the game is moved back to the virtual display once it has been away longer than the configured delay</string>
     <string name="settings_drift_auto_repin_delay_sec">Move-back delay</string>
     <string name="settings_drift_auto_repin_delay_sec_desc">Wait %1$d seconds after the game leaves the virtual display before moving it back, to avoid interrupting login or verification pop-ups</string>
+    <!-- Scheduled wake + unlock -->
+    <string name="settings_wake_schedule_section">Scheduled wake &amp; unlock</string>
+    <string name="settings_wake_schedule_editor_title">Scheduled wake &amp; unlock</string>
+    <string name="settings_wake_status_enabled">Enabled</string>
+    <string name="settings_wake_status_disabled">Disabled</string>
+    <string name="settings_wake_schedule_section_desc">Wake and unlock the device at specified times; handy for timed foreground automation</string>
+    <string name="settings_wake_schedule_enabled">Enable scheduled wake</string>
+    <string name="settings_wake_schedule_times">Wake times</string>
+    <string name="settings_wake_schedule_times_hint">HH:mm comma-separated, e.g. 07:30,12:00,19:00</string>
+    <string name="settings_wake_unlock_type">Unlock method</string>
+    <string name="settings_wake_unlock_type_swipe">Swipe up (no lock)</string>
+    <string name="settings_wake_unlock_type_pin">PIN</string>
+    <string name="settings_wake_unlock_type_password">Password</string>
+    <string name="settings_wake_unlock_type_keyguard">Force dismiss keyguard</string>
+    <string name="settings_wake_credential">PIN / Password</string>
+    <string name="settings_wake_credential_hint">Enter unlock PIN or password</string>
+    <string name="settings_wake_auto_sleep">Auto sleep after wake</string>
+    <string name="settings_wake_auto_sleep_desc">Sleep the screen %1$d s after unlock if idle (0 = disabled)</string>
+    <string name="settings_wake_test_button">Test now</string>
+    <string name="settings_wake_test_running">Running wake sequence…</string>
+    <string name="settings_wake_test_ok">Wake + unlock succeeded</string>
+    <string name="settings_wake_test_fail">Wake / unlock failed: %1$s</string>
+    <string name="settings_wake_test_hint">The test runs Sleep → Lock → Wake → Unlock in sequence. Set a system PIN / password lock first (and make sure "Power button instantly locks" is enabled) to fully verify the unlock flow.</string>
+    <string name="settings_wake_need_root">Requires Root or Shizuku backend</string>
+    <string name="settings_wake_need_root_dialog_title">Root backend required</string>
+    <string name="settings_wake_need_root_dialog_message">"Scheduled wake &amp; unlock" relies on the elevated process to run shell commands; only the Root backend is reliable.\n\nShizuku runs as shell uid and can do KEYCODE_WAKEUP / input swipe / input text, but:\n• svc keyguard disable is blocked by SELinux\n• Some ROMs reject shell input injection while the screen is locked\n• After reboot Shizuku needs manual authorization, so the alarm may fire before it is ready\n\nPlease switch to Root mode under "Startup backend" before enabling this feature.</string>
+    <string name="settings_wake_need_root_disabled">Not available with current backend</string>
+    <string name="settings_wake_invalid_time">Invalid time format, ignored</string>
     <string name="settings_drift_auto_repin_delay_hint">Unit: seconds, range 1~60</string>
     <string name="settings_allow_foreground_scheduled_task">Allow scheduled tasks in foreground</string>
     <string name="settings_run_schedule_when_locked">Skip lock screen check for scheduled tasks</string>

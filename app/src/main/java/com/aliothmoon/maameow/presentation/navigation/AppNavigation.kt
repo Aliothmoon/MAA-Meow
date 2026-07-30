@@ -41,6 +41,7 @@ import com.aliothmoon.maameow.presentation.view.settings.AchievementView
 import com.aliothmoon.maameow.presentation.view.settings.ErrorLogView
 import com.aliothmoon.maameow.presentation.view.settings.LogHistoryView
 import com.aliothmoon.maameow.presentation.view.settings.TaskOverrideEditorView
+import com.aliothmoon.maameow.presentation.view.settings.WakeScheduleEditorView
 import com.aliothmoon.maameow.presentation.viewmodel.AppEventsViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.model.CountdownState
@@ -180,6 +181,9 @@ fun AppNavigation(
                 }
                 composable(Routes.TASK_OVERRIDE_EDITOR) {
                     TaskOverrideEditorView(navController = navController)
+                }
+                composable(Routes.WAKE_SCHEDULE_EDITOR) {
+                    WakeScheduleEditorView(navController = navController)
                 }
             }
         }

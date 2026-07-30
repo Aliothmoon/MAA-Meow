@@ -749,4 +749,69 @@ class AppSettingsManager(
         }
     }
 
+    // ───────────────── 定时唤醒 + 解锁 ─────────────────
+
+    val wakeScheduleEnabled: StateFlow<Boolean> = settings
+        .map { it.wakeScheduleEnabled.toBooleanStrictOrNull() ?: false }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            initialSettings.wakeScheduleEnabled.toBooleanStrictOrNull() ?: false
+        )
+
+    suspend fun setWakeScheduleEnabled(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wakeScheduleEnabled] = enabled.toString() }
+        }
+    }
+
+    val wakeScheduleTimesCsv: StateFlow<String> = settings
+        .map { it.wakeScheduleTimesCsv }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wakeScheduleTimesCsv)
+
+    suspend fun setWakeScheduleTimesCsv(csv: String) {
+        // 限制长度，避免无限添加
+        val trimmed = csv.take(256)
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wakeScheduleTimesCsv] = trimmed }
+        }
+    }
+
+    val wakeUnlockType: StateFlow<String> = settings
+        .map { it.wakeUnlockType }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wakeUnlockType)
+
+    suspend fun setWakeUnlockType(type: String) {
+        val allowed = setOf("swipe", "pin", "password", "keyguard")
+        if (type !in allowed) return
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wakeUnlockType] = type }
+        }
+    }
+
+    val wakeCredential: StateFlow<String> = settings
+        .map { it.wakeCredential }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wakeCredential)
+
+    suspend fun setWakeCredential(credential: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wakeCredential] = credential.take(64) }
+        }
+    }
+
+    val wakeAutoSleepDelaySec: StateFlow<Int> = settings
+        .map { it.wakeAutoSleepDelaySec.toIntOrNull()?.coerceIn(0, 600) ?: 0 }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, 0)
+
+    suspend fun setWakeAutoSleepDelaySec(seconds: Int) {
+        val clamped = seconds.coerceIn(0, 600)
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wakeAutoSleepDelaySec] = clamped.toString() }
+        }
+    }
+
 }

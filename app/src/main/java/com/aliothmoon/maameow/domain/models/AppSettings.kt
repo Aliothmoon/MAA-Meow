@@ -127,4 +127,24 @@ data class AppSettings(
 
     /** 背景模糊强度 0~100（默认 0，仅 API 31+ 生效） */
     @PrefKey(default = "0") val customBackgroundBlur: String = "0",
+
+    // ───────────────── 定时唤醒 + 解锁 ─────────────────
+
+    /** 是否启用定时唤醒 + 解锁功能 */
+    @PrefKey(default = "false") val wakeScheduleEnabled: String = "false",
+
+    /**
+     * 唤醒时间点列表，逗号分隔的 `HH:mm` 格式，如 `"07:30,12:00,19:00"`。
+     * 非法项在解析时被过滤；为空或开关关闭时不设置任何闹钟。
+     */
+    @PrefKey(default = "") val wakeScheduleTimesCsv: String = "",
+
+    /** 解锁策略：swipe / pin / password / keyguard */
+    @PrefKey(default = "swipe") val wakeUnlockType: String = "swipe",
+
+    /** 解锁密码 / PIN。空字符串表示不输入。 */
+    @PrefKey(default = "") val wakeCredential: String = "",
+
+    /** 解锁完成后等待 N 秒再自动息屏（默认 0 = 不息屏，用户自行管理） */
+    @PrefKey(default = "0") val wakeAutoSleepDelaySec: String = "0",
 )

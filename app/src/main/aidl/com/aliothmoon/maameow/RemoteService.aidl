@@ -71,4 +71,10 @@ interface RemoteService {
 
     // 把漂移到其它 display 的应用任务拉回虚拟显示器，成功返回 true
     boolean moveAppToVirtualDisplay(String packageName) = 32;
+
+    // 在提权进程执行 shell 命令，返回 exit code。用于定时唤醒解锁序列。
+    int executeShellCommand(String script) = 33;
+
+    // 探测提权进程是否具备 root 权限（uid=0）。失败返回 false。
+    boolean hasRootPrivilege() = 34;
 }

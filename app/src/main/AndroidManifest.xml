@@ -114,6 +114,15 @@
             </intent-filter>
         </receiver>
 
+        <!-- 定时唤醒 + 解锁闹钟接收器（由 WakeAlarmScheduler 设置，触发后重新排期下一次） -->
+        <receiver
+            android:name=".domain.service.WakeAlarmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.aliothmoon.maameow.action.WAKE_ALARM" />
+            </intent-filter>
+        </receiver>
+
         <!-- 定时任务执行服务 -->
         <service
             android:name=".schedule.service.ScheduleExecutionService"

@@ -20,17 +20,22 @@ import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
+import com.aliothmoon.maameow.domain.service.WakeAlarmScheduler
+import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.toLocaleList
 import com.aliothmoon.maameow.utils.i18n.UiText
+import com.aliothmoon.maameow.utils.i18n.uiTextDynamic
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -47,6 +52,8 @@ class SettingsViewModel(
     private val resourceLoader: MaaResourceLoader,
     private val achievementReporter: AchievementReporter,
     private val backgroundImageStore: BackgroundImageStore,
+    private val wakeUnlockEngine: WakeUnlockEngine,
+    private val wakeAlarmScheduler: WakeAlarmScheduler,
 ) : ViewModel() {
 
     // ========== 导入导出 ==========
@@ -190,6 +197,94 @@ class SettingsViewModel(
         viewModelScope.launch {
             appSettingsManager.setForceFullscreenOnVirtualDisplay(enabled)
         }
+    }
+
+    // ───────────────── 定时唤醒 + 解锁 ─────────────────
+
+    /**
+     * 「定时唤醒 + 解锁」功能是否可用：
+     * 仅当后端 = Root 且 RemoteService 已连接时可用。
+     *
+     * 为什么 Shizuku 不行：Shizuku 进程以 shell uid 跑 shell 命令，
+     * 可以执行 KEYCODE_WAKEUP / input swipe / input text，但：
+     *  - `svc keyguard disable` 被 SELinux 拒绝（shell uid 无此权限）
+     *  - 屏幕完全锁定下部分 ROM 不允许 shell 注入 input 事件
+     *  - 设备重启后 Shizuku 需要手动授权一次，定时闹钟醒来时 Shizuku 往往还没就绪
+     * 所以这个功能仅推荐 Root 后端。
+     */
+    val wakeFeatureAvailable: StateFlow<Boolean> =
+        combine(
+            RemoteServiceManager.state,
+            appSettingsManager.startupBackend
+        ) { svcState, backend ->
+            backend == RemoteBackend.ROOT && svcState is RemoteServiceManager.ServiceState.Connected
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val wakeScheduleEnabled: StateFlow<Boolean> =
+        appSettingsManager.wakeScheduleEnabled
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun setWakeScheduleEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            appSettingsManager.setWakeScheduleEnabled(enabled)
+            wakeAlarmScheduler.reschedule()
+        }
+    }
+
+    val wakeScheduleTimesCsv: StateFlow<String> =
+        appSettingsManager.wakeScheduleTimesCsv
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    fun setWakeScheduleTimesCsv(csv: String) {
+        viewModelScope.launch {
+            appSettingsManager.setWakeScheduleTimesCsv(csv)
+            wakeAlarmScheduler.reschedule()
+        }
+    }
+
+    val wakeUnlockType: StateFlow<String> =
+        appSettingsManager.wakeUnlockType
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "swipe")
+
+    fun setWakeUnlockType(type: String) {
+        viewModelScope.launch { appSettingsManager.setWakeUnlockType(type) }
+    }
+
+    val wakeCredential: StateFlow<String> =
+        appSettingsManager.wakeCredential
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    fun setWakeCredential(credential: String) {
+        viewModelScope.launch { appSettingsManager.setWakeCredential(credential) }
+    }
+
+    val wakeAutoSleepDelaySec: StateFlow<Int> =
+        appSettingsManager.wakeAutoSleepDelaySec
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    fun setWakeAutoSleepDelaySec(seconds: Int) {
+        viewModelScope.launch { appSettingsManager.setWakeAutoSleepDelaySec(seconds) }
+    }
+
+    /** 唤醒测试结果：null=未测，UiText.Empty=进行中，其它=结果文案。 */
+    private val _wakeTestResult = MutableStateFlow<UiText?>(null)
+    val wakeTestResult: StateFlow<UiText?> = _wakeTestResult.asStateFlow()
+
+    fun runWakeTest() {
+        viewModelScope.launch {
+            _wakeTestResult.value = UiText.Empty
+            val typeKey = appSettingsManager.wakeUnlockType.first()
+            val credential = appSettingsManager.wakeCredential.first()
+            val type = WakeUnlockEngine.UnlockType.fromKey(typeKey)
+            val cfg = WakeUnlockEngine.WakeConfig(unlockType = type, credential = credential)
+            // 走「先息屏上锁 → 再唤醒解锁」完整序列，才叫真正的测试。
+            val ok = wakeUnlockEngine.lockThenWakeAndUnlock(cfg)
+            _wakeTestResult.value = if (ok) uiTextDynamic("OK") else uiTextDynamic("FAIL")
+        }
+    }
+
+    fun clearWakeTestResult() {
+        _wakeTestResult.value = null
     }
 
     // 后台虚拟显示器模式：游戏漂移自动拉回开关

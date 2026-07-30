@@ -308,6 +308,34 @@
     <string name="settings_drift_auto_repin_enabled_desc">后台运行时，部分系统（如三星 One UI）或渠道服登录 SDK 可能把游戏移回主屏幕，导致识别与实际画面脱节。开启后，游戏离开虚拟显示器超过设定延迟仍未恢复时，会自动将其移回虚拟显示器</string>
     <string name="settings_drift_auto_repin_delay_sec">自动拉回延迟</string>
     <string name="settings_drift_auto_repin_delay_sec_desc">游戏离开虚拟显示器后等待 %1$d 秒再拉回，避免打断登录或验证弹窗</string>
+    <!-- 定时唤醒 + 解锁 -->
+    <string name="settings_wake_schedule_section">定时唤醒 + 解锁</string>
+    <string name="settings_wake_schedule_editor_title">定时唤醒 + 解锁</string>
+    <string name="settings_wake_status_enabled">已开启</string>
+    <string name="settings_wake_status_disabled">未开启</string>
+    <string name="settings_wake_schedule_section_desc">在指定时间自动唤醒设备并解锁锁屏，适合配合前台模式定时挂机</string>
+    <string name="settings_wake_schedule_enabled">启用定时唤醒</string>
+    <string name="settings_wake_schedule_times">唤醒时间</string>
+    <string name="settings_wake_schedule_times_hint">HH:mm 逗号分隔，如 07:30,12:00,19:00</string>
+    <string name="settings_wake_unlock_type">解锁方式</string>
+    <string name="settings_wake_unlock_type_swipe">上滑解锁（无锁屏）</string>
+    <string name="settings_wake_unlock_type_pin">PIN 码</string>
+    <string name="settings_wake_unlock_type_password">密码</string>
+    <string name="settings_wake_unlock_type_keyguard">强制解除锁屏</string>
+    <string name="settings_wake_credential">密码 / PIN</string>
+    <string name="settings_wake_credential_hint">输入解锁密码或 PIN</string>
+    <string name="settings_wake_auto_sleep">唤醒后自动息屏</string>
+    <string name="settings_wake_auto_sleep_desc">解锁后 %1$d 秒未操作则自动息屏（0 = 不息屏）</string>
+    <string name="settings_wake_test_button">立即测试</string>
+    <string name="settings_wake_test_running">正在执行唤醒序列…</string>
+    <string name="settings_wake_test_ok">唤醒 + 解锁成功</string>
+    <string name="settings_wake_test_fail">唤醒 / 解锁失败：%1$s</string>
+    <string name="settings_wake_test_hint">测试会按「息屏 → 上锁 → 唤醒 → 解锁」顺序跑。测试前请给系统设 PIN 或密码锁（并确认「按电源键立即锁定」已开启），这样才能验证完整解锁流程。</string>
+    <string name="settings_wake_need_root">需要 Root 或 Shizuku 后端</string>
+    <string name="settings_wake_need_root_dialog_title">需要 Root 后端</string>
+    <string name="settings_wake_need_root_dialog_message">「定时唤醒 + 解锁」依赖提权进程跑 shell 命令，仅 Root 后端可靠。\n\nShizuku 跑 shell uid 可以执行 KEYCODE_WAKEUP / input swipe / input text，但：\n• svc keyguard disable 会被 SELinux 拒绝\n• 部分 ROM 锁屏下不允许 shell 注入输入\n• 设备重启后 Shizuku 需要手动授权，闹钟醒来时往往未就绪\n\n请在「启动后端」里切换到 Root 模式后再启用此功能。</string>
+    <string name="settings_wake_need_root_disabled">当前后端不支持，无法启用</string>
+    <string name="settings_wake_invalid_time">时间点格式非法，已忽略</string>
     <string name="settings_drift_auto_repin_delay_hint">单位：秒，范围 1~60</string>
     <string name="settings_allow_foreground_scheduled_task">允许在前台模式执行定时任务</string>
     <string name="settings_run_schedule_when_locked">定时任务跳过锁屏检查</string>

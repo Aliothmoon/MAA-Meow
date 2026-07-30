@@ -316,6 +316,44 @@ class RemoteServiceImpl : RemoteService.Stub() {
         return ActivityUtils.repinAppToDisplay(packageName, targetDisplayId)
     }
 
+    /**
+     * 在提权进程跑任意 shell 脚本（sh -c）。用于定时唤醒解锁序列。
+     * 返回值是 exit code，非 0 表示失败。异常也返回 -1。
+     */
+    override fun executeShellCommand(script: String): Int {
+        if (script.isBlank()) return 0
+        return try {
+            // 调试日志：完整脚本 + 字节级转义，避免 logcat 截断导致看不到关键信息
+            Ln.i("$TAG: executeShellCommand START script.length=${script.length}")
+            Ln.i("$TAG: executeShellCommand SCRIPT=[[$script]]")
+            val proc = ProcessBuilder("sh", "-c", script)
+                .redirectErrorStream(true)
+                .start()
+            val output = proc.inputStream.bufferedReader().readText()
+            val rc = proc.waitFor()
+            Ln.i("$TAG: executeShellCommand END rc=$rc")
+            if (output.isNotBlank()) {
+                Ln.i("$TAG: executeShellCommand stdout=[${output.trim()}]")
+            }
+            rc
+        } catch (t: Throwable) {
+            Ln.w("$TAG: executeShellCommand failed", t)
+            -1
+        }
+    }
+
+    /** 探测当前提权进程是否为 root（uid=0）。 */
+    override fun hasRootPrivilege(): Boolean {
+        return try {
+            val proc = ProcessBuilder("id").redirectErrorStream(true).start()
+            val out = proc.inputStream.bufferedReader().readText()
+            proc.waitFor()
+            out.contains("uid=0")
+        } catch (t: Throwable) {
+            false
+        }
+    }
+
     override fun isPackageInstalled(packageName: String): Boolean {
         return try {
             FakeContext.get().packageManager.getPackageInfo(packageName, 0)
