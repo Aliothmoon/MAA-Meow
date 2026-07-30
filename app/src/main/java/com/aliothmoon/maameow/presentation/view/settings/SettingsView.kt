@@ -846,7 +846,7 @@ fun SettingsView(
                         contentColor = contentColor
                     ) {
                         achievementReporter.reportFeedbackGroupOpened()
-                        Misc.openUriSafely(context, "https://qm.qq.com/q/j4CFbeDQXu")
+                        Misc.openUriSafely(context, "https://join.maameow.com/")
                     }
                     ListItemDivider()
                     SettingClickItem(

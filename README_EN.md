@@ -12,7 +12,7 @@ One-click automation for all daily tasks, powered by image recognition
 [![GitHub Stars](https://img.shields.io/github/stars/Aliothmoon/MAA-Meow?style=flat-square)](https://github.com/Aliothmoon/MAA-Meow/stargazers)
 [![GitHub Downloads](https://img.shields.io/github/downloads/Aliothmoon/MAA-Meow/total?style=flat-square&label=Downloads)](https://github.com/Aliothmoon/MAA-Meow/releases)
 
-[Download](https://github.com/Aliothmoon/MAA-Meow/releases/latest) · [Issues](https://github.com/Aliothmoon/MAA-Meow/issues) · [QQ Group](https://qm.qq.com/q/j4CFbeDQXu)
+[Download](https://github.com/Aliothmoon/MAA-Meow/releases/latest) · [Issues](https://github.com/Aliothmoon/MAA-Meow/issues) · [QQ Group](https://join.maameow.com/)
 
 **English** | **[中文](README.md)**
 
