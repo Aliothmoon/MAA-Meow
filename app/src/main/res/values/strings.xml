@@ -304,6 +304,11 @@
     <string name="settings_deployment_with_pause">暂停时部署干员</string>
     <string name="settings_deployment_with_pause_tip">部署干员前模拟按住 ESC 暂停游戏，提高部署精确度。如遇 ESC 注入异常或部分干员部署不到位，可关闭改用普通滑动</string>
     <string name="settings_force_fullscreen_on_virtual_display">强制 FULLSCREEN 模式</string>
+    <string name="settings_drift_auto_repin_enabled">自动拉回漂移的游戏</string>
+    <string name="settings_drift_auto_repin_enabled_desc">部分 ROM（如三星 One UI、B 服 U8 SDK）会在启动或 SDK 登录窗口期把游戏挪回主屏。开启后 AppWatchdog 会在漂移持续一段时间后再尝试把任务移回虚拟显示器，避免反复拉回打断登录</string>
+    <string name="settings_drift_auto_repin_delay_sec">漂移拉回延迟</string>
+    <string name="settings_drift_auto_repin_delay_sec_desc">检测到漂移后等待 %1$d 秒再拉回，让游戏启动期的 SDK 鉴权窗口自行回落</string>
+    <string name="settings_drift_auto_repin_delay_hint">单位：秒，范围 1~60</string>
     <string name="settings_allow_foreground_scheduled_task">允许在前台模式执行定时任务</string>
     <string name="settings_run_schedule_when_locked">定时任务跳过锁屏检查</string>
     <string name="dialog_run_schedule_when_locked_title">实验性功能</string>

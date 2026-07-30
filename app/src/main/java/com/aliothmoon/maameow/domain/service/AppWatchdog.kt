@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.domain.service
 
 import com.aliothmoon.maameow.constant.Packages
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.remote.AppAliveStatus
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +22,7 @@ import timber.log.Timber
 class AppWatchdog(
     private val chainState: TaskChainState,
     private val appAliveChecker: AppAliveChecker,
+    private val appSettingsManager: AppSettingsManager,
 ) {
     enum class WatchdogState {
         IDLE,
@@ -47,9 +49,17 @@ class AppWatchdog(
     private var watchJob: Job? = null
     private var driftNotified = false
 
+    /**
+     * 游戏离开虚拟显示器的首次检测时间戳（毫秒）。
+     * 仅在漂移开关开启时使用，用于实现「延迟 N 秒后再拉回」的宽限期，
+     * 避免游戏启动后的 SDK 登录/鉴权弹窗被拉回打断。
+     */
+    private var driftFirstSeenMs: Long = 0L
+
     fun startWatching() {
         stopWatching()
         driftNotified = false
+        driftFirstSeenMs = 0L
 
         val clientType = chainState.clientType
         val packageName = Packages[clientType]
@@ -111,17 +121,46 @@ class AppWatchdog(
 
     /**
      * 后台模式下部分 ROM（如 One UI）会把游戏从虚拟屏挪回主屏，导致识别与真实画面分离。
-     * 运行中持续检测漂移，发现后先尝试拉回，拉不回再上报事件提醒用户。
+     * 运行中持续检测漂移：
+     * - 若漂移自动拉回开关关闭，则跳过（保留旧版本行为由用户自行管理）。
+     * - 若启用，先记录首次漂移时间，等待配置的宽限期（默认 5s）后再拉回，
+     *   让游戏 SDK 登录/鉴权弹窗的瞬态漂移自行回落，避免反复拉回死循环。
+     * - 仅对「持续」漂移才介入；拉不回再上报事件提醒用户。
      */
     private suspend fun checkDisplayPinned(packageName: String) {
         val onDisplay = appAliveChecker.isAppOnBackgroundDisplay(packageName) ?: return
         if (onDisplay) {
             driftNotified = false
+            driftFirstSeenMs = 0L
             return
         }
-        Timber.w("AppWatchdog: app %s left the virtual display, trying to move it back", packageName)
+
+        if (!appSettingsManager.driftAutoRepinEnabled.value) {
+            return
+        }
+
+        val nowMs = System.currentTimeMillis()
+        val delayMs = appSettingsManager.driftAutoRepinDelaySec.value * 1000L
+        if (driftFirstSeenMs == 0L) {
+            driftFirstSeenMs = nowMs
+            Timber.i(
+                "AppWatchdog: app %s left the virtual display, will repin in %d ms (grace period)",
+                packageName, delayMs
+            )
+            return
+        }
+        if (nowMs - driftFirstSeenMs < delayMs) {
+            // 宽限期内不做动作，等待游戏瞬态自行回落
+            return
+        }
+
+        Timber.w(
+            "AppWatchdog: app %s drifted for %d ms, trying to move it back",
+            packageName, nowMs - driftFirstSeenMs
+        )
         if (appAliveChecker.moveAppToBackgroundDisplay(packageName) == true) {
             Timber.i("AppWatchdog: app %s moved back to the virtual display", packageName)
+            driftFirstSeenMs = 0L
             return
         }
         if (!driftNotified) {
