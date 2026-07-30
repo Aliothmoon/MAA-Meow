@@ -177,6 +177,16 @@ class MaaCompositionService(
                 )
             }
         }
+
+        scope.launch {
+            appWatchdog.displayDriftEvent.collect { packageName ->
+                Timber.w("App watchdog detected display drift: %s", packageName)
+                sessionLogger.appendAndWait(
+                    context.getString(R.string.runlog_game_left_virtual_display, packageName),
+                    LogLevel.WARNING
+                )
+            }
+        }
     }
 
     fun handleCallback(msg: Int, json: String?) {

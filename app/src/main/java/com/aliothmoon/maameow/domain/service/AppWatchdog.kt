@@ -40,10 +40,16 @@ class AppWatchdog(
     private val _appDiedEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val appDiedEvent: SharedFlow<String> = _appDiedEvent.asSharedFlow()
 
+    // 游戏窗口离开虚拟显示器且自动拉回失败（每次漂移只上报一次）
+    private val _displayDriftEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val displayDriftEvent: SharedFlow<String> = _displayDriftEvent.asSharedFlow()
+
     private var watchJob: Job? = null
+    private var driftNotified = false
 
     fun startWatching() {
         stopWatching()
+        driftNotified = false
 
         val clientType = chainState.clientType
         val packageName = Packages[clientType]
@@ -66,7 +72,7 @@ class AppWatchdog(
                     return@launch
                 }
                 when (appAliveStatus) {
-                    AppAliveStatus.ALIVE -> Unit
+                    AppAliveStatus.ALIVE -> checkDisplayPinned(packageName)
                     AppAliveStatus.UNKNOWN -> {
                         Timber.w(
                             "AppWatchdog: unable to determine whether %s is alive",
@@ -101,5 +107,26 @@ class AppWatchdog(
 
     private suspend fun checkAppAliveStatus(packageName: String): Int {
         return appAliveChecker.isAppAlive(packageName)
+    }
+
+    /**
+     * 后台模式下部分 ROM（如 One UI）会把游戏从虚拟屏挪回主屏，导致识别与真实画面分离。
+     * 运行中持续检测漂移，发现后先尝试拉回，拉不回再上报事件提醒用户。
+     */
+    private suspend fun checkDisplayPinned(packageName: String) {
+        val onDisplay = appAliveChecker.isAppOnBackgroundDisplay(packageName) ?: return
+        if (onDisplay) {
+            driftNotified = false
+            return
+        }
+        Timber.w("AppWatchdog: app %s left the virtual display, trying to move it back", packageName)
+        if (appAliveChecker.moveAppToBackgroundDisplay(packageName) == true) {
+            Timber.i("AppWatchdog: app %s moved back to the virtual display", packageName)
+            return
+        }
+        if (!driftNotified) {
+            driftNotified = true
+            _displayDriftEvent.tryEmit(packageName)
+        }
     }
 }

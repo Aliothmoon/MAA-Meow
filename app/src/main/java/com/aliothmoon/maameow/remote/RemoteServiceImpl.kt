@@ -306,6 +306,16 @@ class RemoteServiceImpl : RemoteService.Stub() {
         return ActivityUtils.isAppOnDisplay(packageName, targetDisplayId)
     }
 
+    override fun moveAppToVirtualDisplay(packageName: String): Boolean {
+        val targetDisplayId = VirtualDisplayManager.getDisplayId()
+        if (targetDisplayId == DefaultDisplayConfig.DISPLAY_NONE) {
+            Ln.w("$TAG: moveAppToVirtualDisplay: no active virtual display")
+            return false
+        }
+        Ln.i("$TAG: moveAppToVirtualDisplay($packageName) -> display $targetDisplayId")
+        return ActivityUtils.repinAppToDisplay(packageName, targetDisplayId)
+    }
+
     override fun isPackageInstalled(packageName: String): Boolean {
         return try {
             FakeContext.get().packageManager.getPackageInfo(packageName, 0)

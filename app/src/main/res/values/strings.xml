@@ -562,6 +562,7 @@
     <!-- background task: toast -->
     <string name="bg_toast_service_died">MaaService 异常关闭，请尝试重新启动</string>
     <string name="bg_toast_app_died">游戏进程未启动或被异常关闭</string>
+    <string name="bg_toast_display_drift">游戏已离开虚拟显示器且自动拉回失败，可尝试开启「强制 FULLSCREEN 模式」</string>
 
     <!-- task action buttons -->
     <string name="task_btn_start">开始任务</string>
@@ -1937,4 +1938,5 @@
     <string name="runlog_task_stopped">任务停止，状态: %1$s</string>
     <string name="runlog_service_terminated">MAA服务异常终止</string>
     <string name="runlog_game_process_gone">游戏进程未启动或被异常关闭(%1$s)</string>
+    <string name="runlog_game_left_virtual_display">游戏窗口已离开虚拟显示器且自动拉回失败(%1$s)，请尝试开启「强制 FULLSCREEN 模式」或改用前台模式</string>
 </resources>
