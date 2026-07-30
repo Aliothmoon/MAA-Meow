@@ -38,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -323,10 +324,16 @@ private fun UnlockConfigCard(
         // PIN / 密码字段
         if (unlockType == "pin" || unlockType == "password") {
             ListItemDivider()
+            // 本地持有输入值，避免 DataStore 异步 round-trip 导致光标跳动
+            var localCredential by rememberSaveable { mutableStateOf(credential) }
             Box(modifier = Modifier.padding(vertical = 8.dp)) {
                 OutlinedTextField(
-                    value = credential,
-                    onValueChange = onCredentialChange,
+                    value = localCredential,
+                    onValueChange = {
+                        val truncated = it.take(64)
+                        localCredential = truncated
+                        onCredentialChange(truncated)
+                    },
                     label = { Text(stringResource(R.string.settings_wake_credential)) },
                     placeholder = { Text(stringResource(R.string.settings_wake_credential_hint)) },
                     singleLine = true,
