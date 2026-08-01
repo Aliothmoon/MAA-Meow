@@ -304,6 +304,11 @@
     <string name="settings_deployment_with_pause">暂停时部署干员</string>
     <string name="settings_deployment_with_pause_tip">部署干员前模拟按住 ESC 暂停游戏，提高部署精确度。如遇 ESC 注入异常或部分干员部署不到位，可关闭改用普通滑动</string>
     <string name="settings_force_fullscreen_on_virtual_display">强制 FULLSCREEN 模式</string>
+    <string name="settings_drift_auto_repin_enabled">自动拉回漂移的游戏</string>
+    <string name="settings_drift_auto_repin_enabled_desc">部分 ROM（如三星 One UI、B 服 U8 SDK）会在启动或 SDK 登录窗口期把游戏挪回主屏。开启后 AppWatchdog 会在漂移持续一段时间后再尝试把任务移回虚拟显示器，避免反复拉回打断登录</string>
+    <string name="settings_drift_auto_repin_delay_sec">漂移拉回延迟</string>
+    <string name="settings_drift_auto_repin_delay_sec_desc">检测到漂移后等待 %1$d 秒再拉回，让游戏启动期的 SDK 鉴权窗口自行回落</string>
+    <string name="settings_drift_auto_repin_delay_hint">单位：秒，范围 1~60</string>
     <string name="settings_allow_foreground_scheduled_task">允许在前台模式执行定时任务</string>
     <string name="settings_run_schedule_when_locked">定时任务跳过锁屏检查</string>
     <string name="dialog_run_schedule_when_locked_title">实验性功能</string>
@@ -560,6 +565,7 @@
     <!-- background task: toast -->
     <string name="bg_toast_service_died">MaaService 异常关闭，请尝试重新启动</string>
     <string name="bg_toast_app_died">游戏进程未启动或被异常关闭</string>
+    <string name="bg_toast_display_drift">游戏已离开虚拟显示器且自动拉回失败，可尝试开启「强制 FULLSCREEN 模式」</string>
 
     <!-- task action buttons -->
     <string name="task_btn_start">开始任务</string>
@@ -1966,4 +1972,5 @@
     <string name="runlog_task_stopped">任务停止，状态: %1$s</string>
     <string name="runlog_service_terminated">MAA服务异常终止</string>
     <string name="runlog_game_process_gone">游戏进程未启动或被异常关闭(%1$s)</string>
+    <string name="runlog_game_left_virtual_display">游戏窗口已离开虚拟显示器且自动拉回失败(%1$s)，请尝试开启「强制 FULLSCREEN 模式」或改用前台模式</string>
 </resources>
