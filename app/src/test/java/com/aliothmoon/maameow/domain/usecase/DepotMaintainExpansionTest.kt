@@ -10,14 +10,11 @@ import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemInfo
-import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.utils.i18n.UiText
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkObject
-import io.mockk.unmockkObject
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -295,40 +292,26 @@ class DepotMaintainExpansionTest {
         assertTrue(result.logs.isEmpty())
     }
 
-    /**
-     * 代理倍率锁定期必须显式下发 -1。
-     * 省略该字段会让 MaaCore 取默认值 1 并去点改版后的倍率控件（FightTask.cpp: series 缺省 1）。
-     */
+    /** 对齐 WPF：默认 series=1；UseAutoSeries 勾选时 series=0（AUTO） */
     @Test
-    fun fightJson_disablesSeriesWhenLocked() {
-        mockkObject(SeriesLock)
-        try {
-            every { SeriesLock.isLocked(any(), any()) } returns true
-            every { SeriesLock.isLocked(any()) } returns true
-            val locked = config(plan(), useAutoSeries = true).expand()
-            assertEquals(-1, locked.params[0].json()["series"]!!.jsonPrimitive.content.toInt())
+    fun fightJson_seriesDefaultsToOne_andAutoSeriesEmitsZero() {
+        val defaultSeries = config(plan()).expand()
+        assertEquals(1, defaultSeries.params[0].json()["series"]!!.jsonPrimitive.content.toInt())
 
-            every { SeriesLock.isLocked(any(), any()) } returns false
-            every { SeriesLock.isLocked(any()) } returns false
-            val unlocked = config(plan()).expand()
-            assertEquals(1, unlocked.params[0].json()["series"]!!.jsonPrimitive.content.toInt())
-        } finally {
-            unmockkObject(SeriesLock)
-        }
+        val auto = config(plan(), useAutoSeries = true).expand()
+        assertEquals(0, auto.params[0].json()["series"]!!.jsonPrimitive.content.toInt())
     }
 
-    /** 对齐 WPF UseAutoSeries：勾选时 series=0（理智允许的最大倍率） */
+    /**
+     * 对齐 WPF 6.16：库存已够时先跳过，不再判断关卡是否开放。
+     * 避免关卡关闭时把「库存已够」误报成「关卡未开放」。
+     */
     @Test
-    fun fightJson_useAutoSeries_emitsZero() {
-        mockkObject(SeriesLock)
-        try {
-            every { SeriesLock.isLocked(any(), any()) } returns false
-            every { SeriesLock.isLocked(any()) } returns false
-            val result = config(plan(), useAutoSeries = true).expand()
-            assertEquals(0, result.params[0].json()["series"]!!.jsonPrimitive.content.toInt())
-        } finally {
-            unmockkObject(SeriesLock)
-        }
+    fun sufficientInventory_skipsBeforeStageOpenCheck() {
+        val result = config(plan(dropCount = 100, stage = "XX-9"))
+            .expand(inventory = mapOf(ITEM to 100), openStages = emptySet())
+        assertTrue(result.params.isEmpty())
+        assertEquals(listOf(R.string.runlog_depot_plan_inventory_enough), result.logs.resIds())
     }
 
     /** 开关关闭时数量必须归零，而不是沿用已保存的值 */

@@ -1,9 +1,7 @@
 package com.aliothmoon.maameow.domain.usecase
 
-import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.model.CollectingPreflightLogSink
-import com.aliothmoon.maameow.data.model.DepotMaintainConfig
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.model.TaskChainNode
@@ -17,13 +15,11 @@ import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.data.resource.ServerTimezone
 import com.aliothmoon.maameow.domain.models.MallCreditFightAvailability
-import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.domain.service.FightDropsRefresher
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.maa.task.TaskSlot
 import com.aliothmoon.maameow.utils.i18n.UiText
-import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import java.time.DayOfWeek
@@ -63,12 +59,6 @@ class AnalyzeTaskChainUseCase(
 
         val clientType = taskChainState.clientType
         val log = CollectingPreflightLogSink()
-        // TODO: MaaCore 适配代理倍率 7~10 后删除
-        if (SeriesLock.isLocked(clientType) &&
-            nodes.any { it.config is FightConfig || it.config is DepotMaintainConfig }
-        ) {
-            log.append(uiTextOf(R.string.runlog_series_locked), LogLevel.WARNING)
-        }
 
         val serverDayOfWeek = ServerTimezone.getYjDayOfWeek(clientType)
         val expanded = nodes.flatMap { node ->

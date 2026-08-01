@@ -2,7 +2,6 @@ package com.aliothmoon.maameow.data.model
 
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.models.DropTarget
-import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.maa.task.TaskSlot
@@ -29,7 +28,7 @@ data class DepotMaintainPlan(
 data class DepotMaintainConfig(
     val updateDepot: Boolean = true,
     val customStageCode: Boolean = false,
-    /** false→series=1；true→series=0（AUTO）；SeriesLock 时 -1。 */
+    /** false→series=1；true→series=0（AUTO）。对齐 WPF UseAutoSeries。 */
     val useAutoSeries: Boolean = false,
     val skipDuringActivity: Boolean = false,
     val skipDuringResourceCollection: Boolean = false,
@@ -53,12 +52,7 @@ data class DepotMaintainConfig(
             params += MaaTaskParams(MaaTaskType.DEPOT, "{}")
         }
 
-        // TODO: MaaCore 适配代理倍率 7~10 后，SeriesLock 钳制可删
-        val series = when {
-            SeriesLock.isLocked(ctx.clientType) -> -1
-            useAutoSeries -> 0
-            else -> 1
-        }
+        val series = if (useAutoSeries) 0 else 1
 
         plans.forEachIndexed { index, plan ->
             val no = index + 1
@@ -74,13 +68,6 @@ data class DepotMaintainConfig(
                 ctx.appendLog(uiTextOf(R.string.runlog_depot_plan_no_stage, no), LogLevel.ERROR)
                 return@forEachIndexed
             }
-            if (!ctx.activityManager.isStageOpen(plan.stage)) {
-                ctx.appendLog(
-                    uiTextOf(R.string.runlog_depot_plan_stage_not_open, no, plan.stage),
-                    LogLevel.TRACE,
-                )
-                return@forEachIndexed
-            }
 
             val current = ctx.depotRepository.countOf(plan.dropId)
             val need = plan.dropCount - current
@@ -91,6 +78,14 @@ data class DepotMaintainConfig(
                         R.string.runlog_depot_plan_inventory_enough,
                         no.toString(), dropName, current, plan.dropCount,
                     ),
+                    LogLevel.TRACE,
+                )
+                return@forEachIndexed
+            }
+
+            if (!ctx.activityManager.isStageOpen(plan.stage)) {
+                ctx.appendLog(
+                    uiTextOf(R.string.runlog_depot_plan_stage_not_open, no, plan.stage),
                     LogLevel.TRACE,
                 )
                 return@forEachIndexed

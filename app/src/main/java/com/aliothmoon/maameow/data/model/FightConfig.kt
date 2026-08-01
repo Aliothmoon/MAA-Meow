@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.data.model
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.models.DropTarget
-import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.maa.task.TaskSlot
@@ -327,9 +326,6 @@ data class FightConfig(
         // 次数: WPF 不限制时使用 Int.MAX_VALUE (line 724)
         val actualTimes = if (hasTimesLimited) maxTimes else Int.MAX_VALUE
 
-        // TODO: MaaCore 适配代理倍率 7~10 后删除，恢复为 put("series", series)
-        val effectiveSeries = if (SeriesLock.isLocked(ctx.clientType)) -1 else series
-
         val expireDays = if (useExpiringMedicine) {
             var days = medicineExpireDays.coerceIn(1, 7)
             if (useExpireMedicineForActivity) {
@@ -379,7 +375,7 @@ data class FightConfig(
             expireDays?.let { put("medicine_expire_days", it) }
             put("stone", actualStone)
             put("times", actualTimes)
-            put("series", effectiveSeries)
+            put("series", series)
             if (isDrGrandet) {
                 put("DrGrandet", true)
             }
@@ -400,7 +396,7 @@ data class FightConfig(
                     stage = stage,
                     medicine = actualMedicine,
                     stone = actualStone,
-                    series = effectiveSeries,
+                    series = series,
                     logLabel = ctx.node.name,
                     medicineExpireDays = expireDays,
                     drGrandet = isDrGrandet,

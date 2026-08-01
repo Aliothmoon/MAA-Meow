@@ -51,7 +51,6 @@ import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.StageGroup
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
-import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
@@ -188,7 +187,7 @@ fun FightConfigPanel(
                         // 代理倍率（HideSeries=false 时显示）
                         if (!config.hideSeries) {
                             item {
-                                SeriesSection(config, clientType, onConfigChange)
+                                SeriesSection(config, onConfigChange)
                             }
                             item {
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
@@ -360,17 +359,10 @@ fun FightConfigPanel(
 @Composable
 private fun SeriesSection(
     config: FightConfig,
-    clientType: String,
     onConfigChange: (FightConfig) -> Unit
 ) {
     var tipExpanded by remember { mutableStateOf(false) }
     val seriesTipText = stringResource(R.string.panel_fight_series_tip)
-    // TODO: MaaCore 适配代理倍率 7~10 后删除锁定分支
-    val locked = remember(clientType) { SeriesLock.isLocked(clientType) }
-    // 锁定时仅影响显示与下发，不写回配置，解锁后用户原选值自动恢复
-    val displayedSeries = if (locked) -1 else config.series
-
-
 
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -396,14 +388,6 @@ private fun SeriesSection(
             tipText = seriesTipText
         )
 
-        if (locked) {
-            Text(
-                text = stringResource(R.string.panel_fight_series_locked_tip),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.error
-            )
-        }
-
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -419,12 +403,11 @@ private fun SeriesSection(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .width(72.dp)
-                        .clickable(enabled = !locked) { onConfigChange(config.copy(series = value)) }
+                        .clickable { onConfigChange(config.copy(series = value)) }
                 ) {
                     RadioButton(
-                        selected = displayedSeries == value,
+                        selected = config.series == value,
                         onClick = { onConfigChange(config.copy(series = value)) },
-                        enabled = !locked,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
