@@ -106,6 +106,11 @@
     <string name="settings_deployment_with_pause">Deploy operators while paused</string>
     <string name="settings_deployment_with_pause_tip">Hold ESC to pause the game while deploying operators for higher precision. Disable if ESC injection misbehaves or some operators are not placed correctly; deployment will fall back to plain swipe</string>
     <string name="settings_force_fullscreen_on_virtual_display">Force FULLSCREEN mode</string>
+    <string name="settings_drift_auto_repin_enabled">Auto-repin drifted game</string>
+    <string name="settings_drift_auto_repin_enabled_desc">Some ROMs (e.g. Samsung One UI, Bilibili U8 SDK) move the game back to the main display during launch or SDK login. When enabled, AppWatchdog waits a grace period before repinning, avoiding repeated repins that interrupt login</string>
+    <string name="settings_drift_auto_repin_delay_sec">Repin delay</string>
+    <string name="settings_drift_auto_repin_delay_sec_desc">Wait %1$d seconds after drift is first detected, so transient SDK login overlays can settle on their own</string>
+    <string name="settings_drift_auto_repin_delay_hint">Unit: seconds, range 1~60</string>
     <string name="settings_allow_foreground_scheduled_task">Allow scheduled tasks in foreground</string>
     <string name="settings_run_schedule_when_locked">Skip lock screen check for scheduled tasks</string>
     <string name="dialog_run_schedule_when_locked_title">Experimental feature</string>
@@ -356,6 +361,7 @@
     <!-- background task: toast -->
     <string name="bg_toast_service_died">MaaService terminated unexpectedly. Please try restarting</string>
     <string name="bg_toast_app_died">Game process is not running or was killed unexpectedly</string>
+    <string name="bg_toast_display_drift">Game left the virtual display and could not be moved back. Try enabling \"Force FULLSCREEN mode\"</string>
 
     <!-- task action buttons -->
     <string name="task_btn_start">Start Task</string>
@@ -1909,4 +1915,5 @@
     <string name="runlog_task_stopped">Tasks stopped, status: %1$s</string>
     <string name="runlog_service_terminated">MAA service terminated unexpectedly</string>
     <string name="runlog_game_process_gone">Game process not started or closed unexpectedly (%1$s)</string>
+    <string name="runlog_game_left_virtual_display">Game window left the virtual display and could not be moved back (%1$s). Try enabling \"Force FULLSCREEN mode\" or switch to foreground mode</string>
 </resources>

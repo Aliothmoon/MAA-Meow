@@ -187,6 +187,7 @@ fun BackgroundTaskView(
     val context = LocalContext.current
     val serviceDiedMessage = stringResource(R.string.bg_toast_service_died)
     val appDiedMessage = stringResource(R.string.bg_toast_app_died)
+    val displayDriftMessage = stringResource(R.string.bg_toast_display_drift)
 
     ShizukuReadinessGate()
 
@@ -211,6 +212,14 @@ fun BackgroundTaskView(
         appWatchdog.appDiedEvent.collect {
             Toast.makeText(
                 context, appDiedMessage, Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        appWatchdog.displayDriftEvent.collect {
+            Toast.makeText(
+                context, displayDriftMessage, Toast.LENGTH_LONG
             ).show()
         }
     }

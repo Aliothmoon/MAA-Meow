@@ -68,4 +68,7 @@ interface RemoteService {
     // 调试用：抓取当前帧缓冲，编码为 PNG 写入 dirPath 目录（由远端 shell 进程直接落盘，
     // 避免跨进程读取 ashmem 被 SELinux 拒绝）。返回保存的绝对路径，失败返回 null。仅调试模式 UI 调用。
     String captureFramePng(String dirPath) = 31;
+
+    // 把漂移到其它 display 的应用任务拉回虚拟显示器，成功返回 true
+    boolean moveAppToVirtualDisplay(String packageName) = 32;
 }
