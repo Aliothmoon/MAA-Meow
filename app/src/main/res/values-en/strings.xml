@@ -337,7 +337,7 @@
     <string name="copilot_mixed_list">Using \";Battle list\";, mixing different Copilot types is not supported</string>
     <string name="copilot_task_name_empty">Copilot jobs with empty names exist</string>
     <string name="copilot_single_list_warning">You\'re using \";Battle list\"; to execute a single task, which is not recommended. For single tasks, run them directly instead.</string>
-    <string name="copilot_unsupported_stage">Unsupported stage %1$s. Try updating resources</string>
+    <string name="copilot_unsupported_stage">Unsupported stage %1$s. If this is a stage from a new event, please wait for the map resource update before using auto-combat</string>
     <string name="copilot_invalid_operator">Invalid operator: %1$s</string>
     <string name="copilot_status_completed">Completed: %1$s</string>
     <string name="copilot_rate_failed">An error occurred, the like failed: &lt;</string>

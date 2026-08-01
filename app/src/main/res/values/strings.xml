@@ -541,7 +541,7 @@
     <string name="copilot_mixed_list">正在使用 ｢战斗列表｣，不支持混用不同类型作业</string>
     <string name="copilot_task_name_empty">存在关卡名为空的作业</string>
     <string name="copilot_single_list_warning">正在使用 ｢战斗列表｣ 执行单个作业, 不推荐此行为。 单个作业请直接运行</string>
-    <string name="copilot_unsupported_stage">不支持的关卡 %1$s，请尝试更新资源</string>
+    <string name="copilot_unsupported_stage">不支持的关卡 %1$s，如果是新活动的关卡，请等待地图资源更新后再使用自动战斗</string>
     <string name="copilot_invalid_operator">错误的干员: %1$s</string>
     <string name="copilot_status_completed">已完成: %1$s</string>
     <string name="copilot_rate_failed">出现错误，评价失败 : &lt;</string>
