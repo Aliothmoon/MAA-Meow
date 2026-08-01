@@ -539,9 +539,15 @@ class AppSettingsManager(
 
     // 漂移拉回延迟（秒）。合法范围 1~60；非法值回落到 5。
     val driftAutoRepinDelaySec: StateFlow<Int> = settings
-        .map { it.driftAutoRepinDelaySec.toIntOrNull()?.coerceIn(1, 60) ?: 5 }
+        .map { coerceDriftAutoRepinDelaySec(it.driftAutoRepinDelaySec) }
         .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, 5)
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            coerceDriftAutoRepinDelaySec(initialSettings.driftAutoRepinDelaySec)
+        )
+
+    private fun coerceDriftAutoRepinDelaySec(raw: String): Int =
+        raw.toIntOrNull()?.coerceIn(1, 60) ?: 5
 
     suspend fun setDriftAutoRepinDelaySec(seconds: Int) {
         val clamped = seconds.coerceIn(1, 60)
