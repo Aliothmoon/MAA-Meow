@@ -507,7 +507,7 @@
     <string name="copilot_tab_main_story_side_story">主线/故事集/SideStory</string>
     <string name="copilot_status_parsing">正在解析…</string>
     <string name="copilot_local_path_unsupported">暂不支持本地文件路径，请输入神秘代码</string>
-    <string name="copilot_import_file">导入文件</string>
+    <string name="copilot_import_file">导入作业文件</string>
     <string name="copilot_builtin_picker">内置作业</string>
     <string name="copilot_builtin_picker_empty">暂无内置作业（请先初始化资源）</string>
     <string name="copilot_import_float_hint">请在后台管理页面导入文件</string>

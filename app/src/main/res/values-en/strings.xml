@@ -303,7 +303,7 @@
     <string name="copilot_tab_main_story_side_story">Main Theme / Story Collection / Side Story</string>
     <string name="copilot_status_parsing">Parsing…</string>
     <string name="copilot_local_path_unsupported">Local file paths are not supported yet. Please enter a Copilot code</string>
-    <string name="copilot_import_file">Import</string>
+    <string name="copilot_import_file">Import File</string>
     <string name="copilot_builtin_picker">Built-in</string>
     <string name="copilot_builtin_picker_empty">No built-in resources (initialize resources first)</string>
     <string name="copilot_import_float_hint">Please import files from the Background Task page</string>
