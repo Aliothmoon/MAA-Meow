@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -274,29 +275,48 @@ fun AutoBattlePanel(
                     label = stringResource(R.string.panel_autobattle_station_code_label),
                     placeholder = stringResource(R.string.panel_autobattle_station_code_placeholder),
                     trailingIcon = {
-                        IconButton(
-                            onClick = viewModel::onPasteAndParse,
-                            enabled = controlsEnabled,
-                            modifier = Modifier.size(32.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.offset(x = (-4).dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.ContentPaste,
-                                contentDescription = stringResource(R.string.copilot_paste_parse),
-                                modifier = Modifier.size(18.dp)
-                            )
+                            IconButton(
+                                onClick = viewModel::onPasteAndParse,
+                                enabled = controlsEnabled,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentPaste,
+                                    contentDescription = stringResource(R.string.copilot_paste_parse),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            IconButton(
+                                onClick = viewModel::onToggleBuiltinPicker,
+                                enabled = controlsEnabled,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (state.builtinPickerExpanded) {
+                                        Icons.Default.ExpandLess
+                                    } else {
+                                        Icons.Default.ExpandMore
+                                    },
+                                    contentDescription = stringResource(R.string.copilot_builtin_picker),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 )
             }
 
             item {
-                BuiltinCopilotPicker(
+                BuiltinCopilotTree(
                     expanded = state.builtinPickerExpanded,
                     loaded = state.builtinLoaded,
                     tree = state.builtinTree,
                     expandedFolders = state.builtinExpandedFolders,
                     enabled = controlsEnabled,
-                    onToggle = viewModel::onToggleBuiltinPicker,
                     onToggleFolder = viewModel::onToggleBuiltinFolder,
                     onSelectFile = viewModel::onSelectBuiltinFile,
                 )
@@ -936,41 +956,22 @@ private data class BuiltinVisibleEntry(
 )
 
 @Composable
-private fun BuiltinCopilotPicker(
+private fun BuiltinCopilotTree(
     expanded: Boolean,
     loaded: Boolean,
     tree: List<CopilotResourceProvider.Node>,
     expandedFolders: Set<String>,
     enabled: Boolean,
-    onToggle: () -> Unit,
     onToggleFolder: (String) -> Unit,
     onSelectFile: (CopilotResourceProvider.Node) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier) {
-        OutlinedButton(
-            onClick = onToggle,
-            enabled = enabled,
-            shape = RoundedCornerShape(8.dp),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                text = stringResource(R.string.copilot_builtin_picker),
-                modifier = Modifier.weight(1f)
-            )
-            Icon(
-                imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-
-        AnimatedVisibility(
-            visible = expanded,
-            enter = expandVertically() + fadeIn(),
-            exit = shrinkVertically() + fadeOut(),
-        ) {
+    AnimatedVisibility(
+        visible = expanded,
+        enter = expandVertically() + fadeIn(),
+        exit = shrinkVertically() + fadeOut(),
+        modifier = modifier,
+    ) {
             val visibleNodes = remember(tree, expandedFolders) {
                 flattenVisibleNodes(tree, expandedFolders)
             }
@@ -1019,7 +1020,6 @@ private fun BuiltinCopilotPicker(
                     }
                 }
             }
-        }
     }
 }
 
