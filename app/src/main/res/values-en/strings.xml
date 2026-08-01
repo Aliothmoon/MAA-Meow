@@ -296,14 +296,12 @@
     <string name="panel_new_profile">New Profile</string>
 
     <!-- panel: auto battle (Copilot) -->
-    <string name="panel_autobattle_read_set">Load Copilot Set</string>
     <string name="panel_autobattle_station">Open Copilot Hub</string>
     <string name="panel_autobattle_clear_unchecked">Remove Unchecked</string>
     <string name="panel_autobattle_clear_list">Clear List</string>
     <string name="copilot_navigation_name_mismatch">The current stage name differs from the navigation stage name. Verify that navigation will still work correctly.</string>
     <string name="copilot_tab_main_story_side_story">Main Theme / Story Collection / Side Story</string>
     <string name="copilot_status_parsing">Parsing…</string>
-    <string name="copilot_set_import_unsupported">%1$s does not support Copilot set import</string>
     <string name="copilot_local_path_unsupported">Local file paths are not supported yet. Please enter a Copilot code</string>
     <string name="copilot_import_file">Import</string>
     <string name="copilot_builtin_picker">Built-in</string>

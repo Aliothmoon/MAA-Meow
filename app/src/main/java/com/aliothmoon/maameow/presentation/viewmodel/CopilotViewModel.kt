@@ -226,15 +226,11 @@ class CopilotViewModel(
             return
         }
         onInputChanged(text)
-        onParseSingleInput()
+        onParseInput()
     }
 
-    fun onParseSingleInput() {
-        parseInput(forceSet = false)
-    }
-
-    fun onParseSetInput() {
-        parseInput(forceSet = true)
+    fun onParseInput() {
+        parseInput()
     }
 
     /**
@@ -373,34 +369,17 @@ class CopilotViewModel(
         }
     }
 
-    private fun parseInput(forceSet: Boolean) {
+    private fun parseInput() {
         val input = _state.value.inputText.trim()
         if (input.isEmpty()) return
 
         viewModelScope.launch {
             _state.update { it.startingParse() }
-            // 新格式神秘代码（prts://、prts://s、s 前缀）自带类型信息，无论点的是哪个按钮都按解析结果路由；
-            // 旧格式（maa://、纯数字）类型不明确，沿用按钮上下文
+            // 神秘代码自带类型信息（prts:// 单作业、prts://s / s 前缀作业集），
+            // 旧格式（maa://、纯数字）无法区分，默认当单个作业（与 WPF 6.16 对齐）
             val code = copilotManager.parseCopilotCode(input)
-            val asSet = if (code != null && !code.ambiguous) {
-                code.type == CopilotCodeType.COPILOT_SET
-            } else {
-                forceSet
-            }
+            val asSet = code?.type == CopilotCodeType.COPILOT_SET
             if (asSet) {
-                val tabIndex = _state.value.tabIndex
-                if (!supportsCopilotSetImport(tabIndex)) {
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            statusMessage = text(
-                                R.string.copilot_set_import_unsupported,
-                                currentTabDisplayName(tabIndex)
-                            )
-                        )
-                    }
-                    return@launch
-                }
                 importCopilotSet(input)
             } else {
                 parseSingleCopilot(input)
@@ -1231,10 +1210,6 @@ class CopilotViewModel(
 
     private fun supportsRegularCopilotOptions(tabIndex: Int): Boolean {
         return tabIndex == TAB_MAIN || tabIndex == TAB_OTHER_ACTIVITY
-    }
-
-    private fun supportsCopilotSetImport(tabIndex: Int): Boolean {
-        return tabIndex == TAB_MAIN || tabIndex == TAB_PARADOX || tabIndex == TAB_SSS
     }
 
     private fun supportsLoopCount(tabIndex: Int): Boolean {

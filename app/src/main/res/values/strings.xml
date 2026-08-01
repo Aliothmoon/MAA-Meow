@@ -500,14 +500,12 @@
     <string name="panel_new_profile">新建配置</string>
 
     <!-- panel: auto battle (Copilot) -->
-    <string name="panel_autobattle_read_set">读取作业集</string>
     <string name="panel_autobattle_station">打开作业站</string>
     <string name="panel_autobattle_clear_unchecked">清除未勾选</string>
     <string name="panel_autobattle_clear_list">清空列表</string>
     <string name="copilot_navigation_name_mismatch">当前作业关卡名与导航关卡名不一致，请确认是否仍可正确导航</string>
     <string name="copilot_tab_main_story_side_story">主线/故事集/SideStory</string>
     <string name="copilot_status_parsing">正在解析…</string>
-    <string name="copilot_set_import_unsupported">%1$s不支持作业集导入</string>
     <string name="copilot_local_path_unsupported">暂不支持本地文件路径，请输入神秘代码</string>
     <string name="copilot_import_file">导入文件</string>
     <string name="copilot_builtin_picker">内置作业</string>

@@ -39,7 +39,6 @@ import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Search
@@ -100,7 +99,6 @@ private data class CopilotTabUiSpec(
     @param:StringRes val titleRes: Int,
     @param:StringRes val subtitleRes: Int? = null,
     val supportsBattleList: Boolean,
-    val supportsSetImport: Boolean,
     val supportsRegularOptions: Boolean,
 )
 
@@ -155,28 +153,24 @@ fun AutoBattlePanel(
             titleRes = R.string.panel_autobattle_tab_mainline,
             subtitleRes = R.string.panel_autobattle_tab_mainline_subtitle,
             supportsBattleList = true,
-            supportsSetImport = true,
             supportsRegularOptions = true,
         ),
         CopilotTabUiSpec(
             index = 1,
             titleRes = R.string.panel_autobattle_tab_security,
             supportsBattleList = false,
-            supportsSetImport = false,
             supportsRegularOptions = false,
         ),
         CopilotTabUiSpec(
             index = 2,
             titleRes = R.string.panel_autobattle_tab_paradox,
             supportsBattleList = true,
-            supportsSetImport = true,
             supportsRegularOptions = false,
         ),
         CopilotTabUiSpec(
             index = 3,
             titleRes = R.string.panel_autobattle_tab_other,
             supportsBattleList = false,
-            supportsSetImport = false,
             supportsRegularOptions = true,
         )
     )
@@ -184,7 +178,6 @@ fun AutoBattlePanel(
     val regularCopilotTab = current.supportsRegularOptions
     val loopCountSupportedTab = current.index == 1 || current.index == 3
     val battleListSupportedTab = current.supportsBattleList
-    val setImportSupported = current.supportsSetImport
 
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -353,14 +346,7 @@ fun AutoBattlePanel(
                             icon = Icons.Default.Search,
                             filled = true,
                             enabled = controlsEnabled,
-                            onClick = viewModel::onParseSingleInput,
-                        )
-                        CopilotActionButton(
-                            text = stringResource(R.string.panel_autobattle_read_set),
-                            icon = Icons.Default.GridView,
-                            filled = true,
-                            enabled = controlsEnabled && setImportSupported,
-                            onClick = viewModel::onParseSetInput,
+                            onClick = viewModel::onParseInput,
                         )
                     }
                     // 导入 / 外链：描边次级
