@@ -92,7 +92,7 @@ import com.aliothmoon.maameow.presentation.components.ListItemDivider
 import com.aliothmoon.maameow.presentation.components.LogExportController
 import com.aliothmoon.maameow.presentation.components.ReInitializeConfirmDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
-import com.aliothmoon.maameow.presentation.components.SectionHeader
+import com.aliothmoon.maameow.presentation.components.CollapsibleSection
 import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.SettingsGroupCard
 import com.aliothmoon.maameow.presentation.components.TopAppBar
@@ -458,130 +458,145 @@ fun SettingsView(
         ) {
             // 更新管理
             item {
-                SectionHeader(stringResource(R.string.settings_section_update))
-                SettingsGroupCard {
-                    SettingClickItem(
-                        title = stringResource(R.string.settings_reinit_resource_title),
-                        description = stringResource(R.string.settings_reinit_resource_desc),
-                        contentColor = contentColor
-                    ) {
-                        showReInitConfirm = true
+                CollapsibleSection(
+                    title = stringResource(R.string.settings_section_update),
+                    sectionKey = "settings_section_update",
+                ) {
+                    SettingsGroupCard {
+                        SettingClickItem(
+                            title = stringResource(R.string.settings_reinit_resource_title),
+                            description = stringResource(R.string.settings_reinit_resource_desc),
+                            contentColor = contentColor
+                        ) {
+                            showReInitConfirm = true
+                        }
+                        ListItemDivider()
+                        SettingSwitchItem(
+                            title = stringResource(R.string.settings_auto_check_update_title),
+                            description = stringResource(R.string.settings_auto_check_update_desc),
+                            contentColor = contentColor,
+                            checked = autoCheckUpdate,
+                            onCheckedChange = { viewModel.setAutoCheckUpdate(it) }
+                        )
+                        ListItemDivider()
+                        SettingSwitchItem(
+                            title = stringResource(R.string.settings_auto_download_update_title),
+                            description = stringResource(R.string.settings_auto_download_update_desc),
+                            contentColor = contentColor,
+                            checked = autoDownloadUpdate,
+                            enabled = autoCheckUpdate,
+                            onCheckedChange = { viewModel.setAutoDownloadUpdate(it) }
+                        )
+                        ListItemDivider()
+                        SettingChannelItem(
+                            contentColor = contentColor,
+                            selectedChannel = updateChannel,
+                            onChannelSelected = { viewModel.setUpdateChannel(it) }
+                        )
                     }
-                    ListItemDivider()
-                    SettingSwitchItem(
-                        title = stringResource(R.string.settings_auto_check_update_title),
-                        description = stringResource(R.string.settings_auto_check_update_desc),
-                        contentColor = contentColor,
-                        checked = autoCheckUpdate,
-                        onCheckedChange = { viewModel.setAutoCheckUpdate(it) }
-                    )
-                    ListItemDivider()
-                    SettingSwitchItem(
-                        title = stringResource(R.string.settings_auto_download_update_title),
-                        description = stringResource(R.string.settings_auto_download_update_desc),
-                        contentColor = contentColor,
-                        checked = autoDownloadUpdate,
-                        enabled = autoCheckUpdate,
-                        onCheckedChange = { viewModel.setAutoDownloadUpdate(it) }
-                    )
-                    ListItemDivider()
-                    SettingChannelItem(
-                        contentColor = contentColor,
-                        selectedChannel = updateChannel,
-                        onChannelSelected = { viewModel.setUpdateChannel(it) }
-                    )
                 }
             }
 
             // 日志
             item {
-                SectionHeader(stringResource(R.string.settings_section_log))
-                SettingsGroupCard {
-                    SettingClickItem(
-                        title = stringResource(R.string.settings_log_history_title),
-                        description = stringResource(R.string.settings_log_history_desc),
-                        contentColor = contentColor
-                    ) {
-                        navController.navigate("log_history")
-                    }
-                    ListItemDivider()
-                    SettingClickItem(
-                        title = stringResource(R.string.settings_log_error_title),
-                        description = stringResource(R.string.settings_log_error_desc),
-                        contentColor = contentColor
-                    ) {
-                        navController.navigate("error_log")
-                    }
-                    ListItemDivider()
-                    SettingClickItem(
-                        title = stringResource(R.string.settings_log_export_title),
-                        description = stringResource(R.string.settings_log_export_desc),
-                        contentColor = contentColor
-                    ) {
-                        showExportSheet = true
-                    }
-                    ListItemDivider()
-                    SettingSwitchItem(
-                        title = stringResource(R.string.settings_debug_mode_title),
-                        description = stringResource(R.string.settings_debug_mode_desc),
-                        contentColor = contentColor,
-                        checked = debugMode,
-                        onCheckedChange = { enabled ->
-                            if (enabled) {
-                                showDebugModeConfirm = true
-                            } else {
-                                viewModel.setDebugMode(false)
-                            }
+                CollapsibleSection(
+                    title = stringResource(R.string.settings_section_log),
+                    sectionKey = "settings_section_log",
+                ) {
+                    SettingsGroupCard {
+                        SettingClickItem(
+                            title = stringResource(R.string.settings_log_history_title),
+                            description = stringResource(R.string.settings_log_history_desc),
+                            contentColor = contentColor
+                        ) {
+                            navController.navigate("log_history")
                         }
-                    )
+                        ListItemDivider()
+                        SettingClickItem(
+                            title = stringResource(R.string.settings_log_error_title),
+                            description = stringResource(R.string.settings_log_error_desc),
+                            contentColor = contentColor
+                        ) {
+                            navController.navigate("error_log")
+                        }
+                        ListItemDivider()
+                        SettingClickItem(
+                            title = stringResource(R.string.settings_log_export_title),
+                            description = stringResource(R.string.settings_log_export_desc),
+                            contentColor = contentColor
+                        ) {
+                            showExportSheet = true
+                        }
+                        ListItemDivider()
+                        SettingSwitchItem(
+                            title = stringResource(R.string.settings_debug_mode_title),
+                            description = stringResource(R.string.settings_debug_mode_desc),
+                            contentColor = contentColor,
+                            checked = debugMode,
+                            onCheckedChange = { enabled ->
+                                if (enabled) {
+                                    showDebugModeConfirm = true
+                                } else {
+                                    viewModel.setDebugMode(false)
+                                }
+                            }
+                        )
+                    }
                 }
             }
 
             // 显示设置
             item {
-                SectionHeader(stringResource(R.string.settings_section_display))
-                SettingsGroupCard {
-                    SettingLanguageItem(
-                        contentColor = contentColor,
-                        selectedLanguage = language,
-                        onLanguageSelected = { viewModel.setLanguage(it) }
-                    )
-                    ListItemDivider()
-                    SettingThemeSection(
-                        contentColor = contentColor,
-                        selectedMode = themeMode,
-                        onModeSelected = { viewModel.setThemeMode(it) },
-                        useSystemMonetColor = useSystemMonetColor,
-                        onMonetColorChanged = { viewModel.setUseSystemMonetColor(it) },
-                        fontSizeScale = fontSizeScale,
-                        onFontSizeScaleChanged = { viewModel.setFontSizeScale(it) }
-                    )
-                    ListItemDivider()
-                    SettingCustomBackgroundSection(
-                        contentColor = contentColor,
-                        enabled = customBackgroundEnabled,
-                        previewImage = backgroundImage,
-                        imageAlpha = customBackgroundImageAlpha,
-                        scrim = customBackgroundScrim,
-                        blur = customBackgroundBlur,
-                        onEnabledChange = { viewModel.setCustomBackgroundEnabled(it) },
-                        onPickImage = {
-                            pickBackgroundLauncher.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
-                        },
-                        onRemoveImage = { viewModel.removeBackgroundImage() },
-                        onImageAlphaChange = { viewModel.setCustomBackgroundImageAlpha(it) },
-                        onScrimChange = { viewModel.setCustomBackgroundScrim(it) },
-                        onBlurChange = { viewModel.setCustomBackgroundBlur(it) },
-                    )
+                CollapsibleSection(
+                    title = stringResource(R.string.settings_section_display),
+                    sectionKey = "settings_section_display",
+                ) {
+                    SettingsGroupCard {
+                        SettingLanguageItem(
+                            contentColor = contentColor,
+                            selectedLanguage = language,
+                            onLanguageSelected = { viewModel.setLanguage(it) }
+                        )
+                        ListItemDivider()
+                        SettingThemeSection(
+                            contentColor = contentColor,
+                            selectedMode = themeMode,
+                            onModeSelected = { viewModel.setThemeMode(it) },
+                            useSystemMonetColor = useSystemMonetColor,
+                            onMonetColorChanged = { viewModel.setUseSystemMonetColor(it) },
+                            fontSizeScale = fontSizeScale,
+                            onFontSizeScaleChanged = { viewModel.setFontSizeScale(it) }
+                        )
+                        ListItemDivider()
+                        SettingCustomBackgroundSection(
+                            contentColor = contentColor,
+                            enabled = customBackgroundEnabled,
+                            previewImage = backgroundImage,
+                            imageAlpha = customBackgroundImageAlpha,
+                            scrim = customBackgroundScrim,
+                            blur = customBackgroundBlur,
+                            onEnabledChange = { viewModel.setCustomBackgroundEnabled(it) },
+                            onPickImage = {
+                                pickBackgroundLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                            onRemoveImage = { viewModel.removeBackgroundImage() },
+                            onImageAlphaChange = { viewModel.setCustomBackgroundImageAlpha(it) },
+                            onScrimChange = { viewModel.setCustomBackgroundScrim(it) },
+                            onBlurChange = { viewModel.setCustomBackgroundBlur(it) },
+                        )
+                    }
                 }
             }
 
             // 其他设置
             item {
-                SectionHeader(stringResource(R.string.settings_section_other))
-                SettingsGroupCard {
+                CollapsibleSection(
+                    title = stringResource(R.string.settings_section_other),
+                    sectionKey = "settings_section_other",
+                ) {
+                    SettingsGroupCard {
                     SettingRemoteBackendItem(
                         contentColor = contentColor,
                         selectedBackend = startupBackend,
@@ -710,115 +725,128 @@ fun SettingsView(
                             }
                         }
                     }
+                    }
                 }
             }
 
             // 数据管理
             item {
-                SectionHeader(stringResource(R.string.settings_section_data))
-                SettingsGroupCard {
-                    SettingClickItem(
-                        title = stringResource(R.string.settings_export_config_title),
-                        description = stringResource(R.string.settings_export_config_desc),
-                        contentColor = contentColor
-                    ) {
-                        exportLauncher.launch("maameow_config.json")
-                    }
-                    ListItemDivider()
-                    SettingClickItem(
-                        title = stringResource(R.string.settings_import_config_title),
-                        description = stringResource(R.string.settings_import_config_desc),
-                        contentColor = contentColor
-                    ) {
-                        importLauncher.launch(arrayOf("application/json"))
+                CollapsibleSection(
+                    title = stringResource(R.string.settings_section_data),
+                    sectionKey = "settings_section_data",
+                ) {
+                    SettingsGroupCard {
+                        SettingClickItem(
+                            title = stringResource(R.string.settings_export_config_title),
+                            description = stringResource(R.string.settings_export_config_desc),
+                            contentColor = contentColor
+                        ) {
+                            exportLauncher.launch("maameow_config.json")
+                        }
+                        ListItemDivider()
+                        SettingClickItem(
+                            title = stringResource(R.string.settings_import_config_title),
+                            description = stringResource(R.string.settings_import_config_desc),
+                            contentColor = contentColor
+                        ) {
+                            importLauncher.launch(arrayOf("application/json"))
+                        }
                     }
                 }
             }
 
             // 通知
             item {
-                SectionHeader(stringResource(R.string.settings_section_notification))
-                SettingsGroupCard {
-                    SettingClickItem(
-                        title = stringResource(R.string.settings_notification_title),
-                        description = stringResource(R.string.settings_notification_desc),
-                        contentColor = contentColor
-                    ) {
-                        navController.navigate(Routes.NOTIFICATION)
+                CollapsibleSection(
+                    title = stringResource(R.string.settings_section_notification),
+                    sectionKey = "settings_section_notification",
+                ) {
+                    SettingsGroupCard {
+                        SettingClickItem(
+                            title = stringResource(R.string.settings_notification_title),
+                            description = stringResource(R.string.settings_notification_desc),
+                            contentColor = contentColor
+                        ) {
+                            navController.navigate(Routes.NOTIFICATION)
+                        }
                     }
                 }
             }
 
             // 成就（帕拉斯头像在分栏卡片内第一项）
             item {
-                SectionHeader(stringResource(R.string.settings_section_achievement))
-                SettingsGroupCard {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = MaaDesignTokens.Spacing.md),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
-                    ) {
-                        PallasMedal(
-                            debugActive = achievementUiState.pallasDebugActive,
-                            onClick = {
-                                achievementViewModel.onEvent(AchievementEvent.PallasAvatarClicked)
-                            },
-                        )
-                        AnimatedVisibility(
-                            visible = achievementUiState.pallasDebugActive,
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically(),
+                CollapsibleSection(
+                    title = stringResource(R.string.settings_section_achievement),
+                    sectionKey = "settings_section_achievement",
+                ) {
+                    SettingsGroupCard {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = MaaDesignTokens.Spacing.md),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(
-                                    MaaDesignTokens.Spacing.sm,
-                                    Alignment.CenterHorizontally,
-                                ),
+                            PallasMedal(
+                                debugActive = achievementUiState.pallasDebugActive,
+                                onClick = {
+                                    achievementViewModel.onEvent(AchievementEvent.PallasAvatarClicked)
+                                },
+                            )
+                            AnimatedVisibility(
+                                visible = achievementUiState.pallasDebugActive,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically(),
                             ) {
-                                Button(
-                                    onClick = {
-                                        achievementViewModel.onEvent(AchievementEvent.UnlockAll)
-                                    },
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(
+                                        MaaDesignTokens.Spacing.sm,
+                                        Alignment.CenterHorizontally,
+                                    ),
                                 ) {
-                                    Text(stringResource(R.string.achievement_debug_unlock_all))
-                                }
-                                OutlinedButton(
-                                    onClick = {
-                                        achievementViewModel.onEvent(AchievementEvent.ClearAllRecords)
-                                    },
-                                ) {
-                                    Text(stringResource(R.string.achievement_debug_clear_all))
+                                    Button(
+                                        onClick = {
+                                            achievementViewModel.onEvent(AchievementEvent.UnlockAll)
+                                        },
+                                    ) {
+                                        Text(stringResource(R.string.achievement_debug_unlock_all))
+                                    }
+                                    OutlinedButton(
+                                        onClick = {
+                                            achievementViewModel.onEvent(AchievementEvent.ClearAllRecords)
+                                        },
+                                    ) {
+                                        Text(stringResource(R.string.achievement_debug_clear_all))
+                                    }
                                 }
                             }
                         }
-                    }
-                    ListItemDivider()
-                    SettingClickItem(
-                        title = stringResource(R.string.settings_achievement_title),
-                        description = stringResource(R.string.settings_achievement_desc),
-                        contentColor = contentColor
-                    ) {
-                        navController.navigate(Routes.ACHIEVEMENT)
-                    }
-                    ListItemDivider()
-                    SettingSwitchItem(
-                        title = stringResource(R.string.settings_achievement_snackbar_title),
-                        description = stringResource(R.string.settings_achievement_snackbar_desc),
-                        contentColor = contentColor,
-                        checked = showAchievementSnackbar,
-                        onCheckedChange = { viewModel.setShowAchievementSnackbar(it) }
-                    )
-                    if (BuildConfig.DEBUG) {
                         ListItemDivider()
                         SettingClickItem(
-                            title = stringResource(R.string.settings_achievement_debug_title),
-                            description = stringResource(R.string.settings_achievement_debug_desc),
+                            title = stringResource(R.string.settings_achievement_title),
+                            description = stringResource(R.string.settings_achievement_desc),
                             contentColor = contentColor
                         ) {
-                            navController.navigate(Routes.ACHIEVEMENT_DEBUG)
+                            navController.navigate(Routes.ACHIEVEMENT)
+                        }
+                        ListItemDivider()
+                        SettingSwitchItem(
+                            title = stringResource(R.string.settings_achievement_snackbar_title),
+                            description = stringResource(R.string.settings_achievement_snackbar_desc),
+                            contentColor = contentColor,
+                            checked = showAchievementSnackbar,
+                            onCheckedChange = { viewModel.setShowAchievementSnackbar(it) }
+                        )
+                        if (BuildConfig.DEBUG) {
+                            ListItemDivider()
+                            SettingClickItem(
+                                title = stringResource(R.string.settings_achievement_debug_title),
+                                description = stringResource(R.string.settings_achievement_debug_desc),
+                                contentColor = contentColor
+                            ) {
+                                navController.navigate(Routes.ACHIEVEMENT_DEBUG)
+                            }
                         }
                     }
                 }
@@ -826,52 +854,56 @@ fun SettingsView(
 
             // 关于
             item {
-                SectionHeader(stringResource(R.string.settings_section_about))
-                SettingsGroupCard {
-                    SettingInfoRow(
-                        label = stringResource(R.string.settings_about_version),
-                        value = BuildConfig.VERSION_NAME,
-                        contentColor = contentColor,
-                    )
-                    ListItemDivider()
-                    SettingInfoRow(
-                        label = stringResource(R.string.settings_about_developer),
-                        value = "Aliothmoon",
-                        contentColor = contentColor
-                    )
-                    ListItemDivider()
-                    SettingClickItem(
-                        title = stringResource(R.string.settings_about_qq_group_title),
-                        description = stringResource(R.string.settings_about_qq_group_desc),
-                        contentColor = contentColor
-                    ) {
-                        achievementReporter.reportFeedbackGroupOpened()
-                        Misc.openUriSafely(context, "https://join.maameow.com/")
+                CollapsibleSection(
+                    title = stringResource(R.string.settings_section_about),
+                    sectionKey = "settings_section_about",
+                ) {
+                    SettingsGroupCard {
+                        SettingInfoRow(
+                            label = stringResource(R.string.settings_about_version),
+                            value = BuildConfig.VERSION_NAME,
+                            contentColor = contentColor,
+                        )
+                        ListItemDivider()
+                        SettingInfoRow(
+                            label = stringResource(R.string.settings_about_developer),
+                            value = "Aliothmoon",
+                            contentColor = contentColor
+                        )
+                        ListItemDivider()
+                        SettingClickItem(
+                            title = stringResource(R.string.settings_about_qq_group_title),
+                            description = stringResource(R.string.settings_about_qq_group_desc),
+                            contentColor = contentColor
+                        ) {
+                            achievementReporter.reportFeedbackGroupOpened()
+                            Misc.openUriSafely(context, "https://join.maameow.com/")
+                        }
+                        ListItemDivider()
+                        SettingClickItem(
+                            title = stringResource(R.string.settings_about_announcement),
+                            contentColor = contentColor
+                        ) {
+                            onViewAnnouncement()
+                        }
+                        ListItemDivider()
+                        Text(
+                            text = stringResource(R.string.settings_about_star),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = contentColor,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    Misc.openUriSafely(
+                                        context,
+                                        "https://github.com/Aliothmoon/MAA-Meow"
+                                    )
+                                }
+                                .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
+                            textAlign = TextAlign.Center
+                        )
                     }
-                    ListItemDivider()
-                    SettingClickItem(
-                        title = stringResource(R.string.settings_about_announcement),
-                        contentColor = contentColor
-                    ) {
-                        onViewAnnouncement()
-                    }
-                    ListItemDivider()
-                    Text(
-                        text = stringResource(R.string.settings_about_star),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = contentColor,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                Misc.openUriSafely(
-                                    context,
-                                    "https://github.com/Aliothmoon/MAA-Meow"
-                                )
-                            }
-                            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-                        textAlign = TextAlign.Center
-                    )
                 }
             }
 
