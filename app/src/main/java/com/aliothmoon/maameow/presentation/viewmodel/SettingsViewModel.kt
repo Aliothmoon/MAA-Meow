@@ -266,6 +266,42 @@ class SettingsViewModel(
         viewModelScope.launch { appSettingsManager.setWakeAutoSleepDelaySec(seconds) }
     }
 
+    /** 滑动起点 X 百分比（0.0–1.0），-1.0 表示未校准 */
+    val swipeStartXPercent: StateFlow<Float> =
+        appSettingsManager.swipeStartXPercent
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), -1.0f)
+
+    /** 滑动起点 Y 百分比（0.0–1.0），-1.0 表示未校准 */
+    val swipeStartYPercent: StateFlow<Float> =
+        appSettingsManager.swipeStartYPercent
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), -1.0f)
+
+    fun setSwipeCalibration(xPercent: Float, yPercent: Float) {
+        viewModelScope.launch { appSettingsManager.setSwipeCalibration(xPercent, yPercent) }
+    }
+
+    fun clearSwipeCalibration() {
+        viewModelScope.launch { appSettingsManager.clearSwipeCalibration() }
+    }
+
+    /** swipe 后等待秒数（PIN 键盘弹出 + 密码框获焦预留时间） */
+    val wakePinWaitSec: StateFlow<Float> =
+        appSettingsManager.wakePinWaitSec
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1.5f)
+
+    fun setWakePinWaitSec(seconds: Float) {
+        viewModelScope.launch { appSettingsManager.setWakePinWaitSec(seconds) }
+    }
+
+    /** 解锁失败最大重试次数 */
+    val wakeUnlockMaxRetries: StateFlow<Int> =
+        appSettingsManager.wakeUnlockMaxRetries
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 2)
+
+    fun setWakeUnlockMaxRetries(retries: Int) {
+        viewModelScope.launch { appSettingsManager.setWakeUnlockMaxRetries(retries) }
+    }
+
     /** 唤醒测试结果：null=未测，UiText.Empty=进行中，其它=结果文案。 */
     private val _wakeTestResult = MutableStateFlow<UiText?>(null)
     val wakeTestResult: StateFlow<UiText?> = _wakeTestResult.asStateFlow()
@@ -276,11 +312,27 @@ class SettingsViewModel(
             val typeKey = appSettingsManager.wakeUnlockType.first()
             val credential = appSettingsManager.wakeCredential.first()
             val type = WakeUnlockEngine.UnlockType.fromKey(typeKey)
-            val cfg = WakeUnlockEngine.WakeConfig(unlockType = type, credential = credential)
+            val calibration = currentSwipeCalibration()
+            val pinWait = appSettingsManager.wakePinWaitSec.first()
+            val retries = appSettingsManager.wakeUnlockMaxRetries.first()
+            val cfg = WakeUnlockEngine.WakeConfig(
+                unlockType = type,
+                credential = credential,
+                swipeStartCalibration = calibration,
+                pinWaitSec = pinWait,
+                maxRetries = retries,
+            )
             // 走「先息屏上锁 → 再唤醒解锁」完整序列，才叫真正的测试。
             val ok = wakeUnlockEngine.lockThenWakeAndUnlock(cfg)
             _wakeTestResult.value = if (ok) uiTextDynamic("OK") else uiTextDynamic("FAIL")
         }
+    }
+
+    /** 读取当前校准数据，未校准返回 null */
+    private suspend fun currentSwipeCalibration(): WakeUnlockEngine.SwipeCalibration? {
+        val x = appSettingsManager.swipeStartXPercent.first()
+        val y = appSettingsManager.swipeStartYPercent.first()
+        return if (x >= 0f && y >= 0f) WakeUnlockEngine.SwipeCalibration(x, y) else null
     }
 
     fun clearWakeTestResult() {

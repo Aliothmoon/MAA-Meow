@@ -784,7 +784,7 @@ class AppSettingsManager(
         .stateIn(scope, SharingStarted.Eagerly, initialSettings.wakeUnlockType)
 
     suspend fun setWakeUnlockType(type: String) {
-        val allowed = setOf("swipe", "pin", "password", "keyguard")
+        val allowed = setOf("none", "swipe", "pin", "password", "keyguard")
         if (type !in allowed) return
         with(AppSettingsSchema) {
             context.dataStore.edit { it[wakeUnlockType] = type }
@@ -811,6 +811,64 @@ class AppSettingsManager(
         val clamped = seconds.coerceIn(0, 600)
         with(AppSettingsSchema) {
             context.dataStore.edit { it[wakeAutoSleepDelaySec] = clamped.toString() }
+        }
+    }
+
+    /** 解锁滑动起点 X 百分比（0.0–1.0），-1.0 表示未校准 */
+    val swipeStartXPercent: StateFlow<Float> = settings
+        .map { it.swipeStartXPercent.toFloatOrNull()?.coerceIn(-1.0f, 1.0f) ?: -1.0f }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, -1.0f)
+
+    /** 解锁滑动起点 Y 百分比（0.0–1.0），-1.0 表示未校准 */
+    val swipeStartYPercent: StateFlow<Float> = settings
+        .map { it.swipeStartYPercent.toFloatOrNull()?.coerceIn(-1.0f, 1.0f) ?: -1.0f }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, -1.0f)
+
+    suspend fun setSwipeCalibration(xPercent: Float, yPercent: Float) {
+        val x = xPercent.coerceIn(0.0f, 1.0f)
+        val y = yPercent.coerceIn(0.0f, 1.0f)
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                it[swipeStartXPercent] = x.toString()
+                it[swipeStartYPercent] = y.toString()
+            }
+        }
+    }
+
+    suspend fun clearSwipeCalibration() {
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                it[swipeStartXPercent] = "-1.0"
+                it[swipeStartYPercent] = "-1.0"
+            }
+        }
+    }
+
+    /** swipe 后等待秒数（PIN 键盘弹出 + 密码框获焦预留时间） */
+    val wakePinWaitSec: StateFlow<Float> = settings
+        .map { it.wakePinWaitSec.toFloatOrNull()?.coerceIn(0.0f, 10.0f) ?: 1.5f }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, 1.5f)
+
+    suspend fun setWakePinWaitSec(seconds: Float) {
+        val clamped = seconds.coerceIn(0.0f, 10.0f)
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wakePinWaitSec] = clamped.toString() }
+        }
+    }
+
+    /** 解锁失败最大重试次数（0 = 不重试） */
+    val wakeUnlockMaxRetries: StateFlow<Int> = settings
+        .map { it.wakeUnlockMaxRetries.toIntOrNull()?.coerceIn(0, 5) ?: 2 }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, 2)
+
+    suspend fun setWakeUnlockMaxRetries(retries: Int) {
+        val clamped = retries.coerceIn(0, 5)
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wakeUnlockMaxRetries] = clamped.toString() }
         }
     }
 

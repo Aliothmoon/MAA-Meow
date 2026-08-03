@@ -12,6 +12,8 @@ data class ScheduledExecutionRequest(
     val profileId: String,
     val scheduledTimeMs: Long,
     val forceStart: Boolean = false,
+    val wakeUnlockEnabled: Boolean = false,
+    val autoSleepAfterTask: Boolean = false,
 ) {
     companion object {
         const val ACTION_SHOW_SCHEDULE_EXECUTION =
@@ -24,6 +26,8 @@ data class ScheduledExecutionRequest(
         const val EXTRA_PROFILE_ID = "extra_profile_id"
         const val EXTRA_SCHEDULED_TIME = "extra_scheduled_time"
         const val EXTRA_FORCE_START = "extra_force_start"
+        const val EXTRA_WAKE_UNLOCK_ENABLED = "extra_wake_unlock_enabled"
+        const val EXTRA_AUTO_SLEEP_AFTER_TASK = "extra_auto_sleep_after_task"
         const val COUNTDOWN_SECONDS = 30
 
         fun fromIntent(intent: Intent?): ScheduledExecutionRequest? {
@@ -45,6 +49,8 @@ data class ScheduledExecutionRequest(
                 profileId = profileId,
                 scheduledTimeMs = scheduledTimeMs,
                 forceStart = intent.getBooleanExtra(EXTRA_FORCE_START, false),
+                wakeUnlockEnabled = intent.getBooleanExtra(EXTRA_WAKE_UNLOCK_ENABLED, false),
+                autoSleepAfterTask = intent.getBooleanExtra(EXTRA_AUTO_SLEEP_AFTER_TASK, false),
             )
         }
 
@@ -74,6 +80,8 @@ data class ScheduledExecutionRequest(
             putExtra(EXTRA_PROFILE_ID, profileId)
             putExtra(EXTRA_SCHEDULED_TIME, scheduledTimeMs)
             putExtra(EXTRA_FORCE_START, forceStart)
+            putExtra(EXTRA_WAKE_UNLOCK_ENABLED, wakeUnlockEnabled)
+            putExtra(EXTRA_AUTO_SLEEP_AFTER_TASK, autoSleepAfterTask)
         }
     }
 }

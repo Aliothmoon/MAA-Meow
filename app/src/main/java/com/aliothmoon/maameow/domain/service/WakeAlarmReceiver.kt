@@ -59,12 +59,21 @@ class WakeAlarmReceiver : BroadcastReceiver(), KoinComponent {
                 val typeKey = settings.wakeUnlockType.first()
                 val credential = settings.wakeCredential.first()
                 val type = WakeUnlockEngine.UnlockType.fromKey(typeKey)
+                val calibration = currentSwipeCalibration()
+                val pinWait = settings.wakePinWaitSec.first()
+                val retries = settings.wakeUnlockMaxRetries.first()
                 val cfg = WakeUnlockEngine.WakeConfig(
                     unlockType = type,
                     credential = credential,
+                    swipeStartCalibration = calibration,
+                    pinWaitSec = pinWait,
+                    maxRetries = retries,
                 )
                 val ok = engine.wakeAndUnlock(cfg)
-                Timber.i("$TAG: wake+unlock result=%b", ok)
+                Timber.i(
+                    "$TAG: wake+unlock result=%b, calibrated=%b, pinWait=%.1fs, retries=%d",
+                    ok, calibration != null, pinWait, retries,
+                )
             } catch (t: Throwable) {
                 Timber.w(t, "$TAG: unlock sequence failed")
             } finally {
@@ -74,5 +83,11 @@ class WakeAlarmReceiver : BroadcastReceiver(), KoinComponent {
                 pending.finish()
             }
         }
+    }
+
+    private suspend fun currentSwipeCalibration(): WakeUnlockEngine.SwipeCalibration? {
+        val x = settings.swipeStartXPercent.first()
+        val y = settings.swipeStartYPercent.first()
+        return if (x >= 0f && y >= 0f) WakeUnlockEngine.SwipeCalibration(x, y) else null
     }
 }

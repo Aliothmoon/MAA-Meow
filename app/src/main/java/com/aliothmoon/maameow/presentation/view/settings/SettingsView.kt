@@ -791,15 +791,13 @@ fun SettingsView(
                         onCheckedChange = { viewModel.setAllowForegroundScheduledTask(it) }
                     )
                     ListItemDivider()
-                    // ─── 定时唤醒 + 解锁（点击跳转二级页） ───
+                    // ─── 锁屏解锁配置（点击跳转二级页） ───
                     SettingClickItem(
                         title = stringResource(R.string.settings_wake_schedule_section),
                         description = if (!wakeFeatureAvailable)
                             stringResource(R.string.settings_wake_need_root_disabled)
-                        else if (wakeScheduleEnabled)
-                            stringResource(R.string.settings_wake_status_enabled)
                         else
-                            stringResource(R.string.settings_wake_status_disabled),
+                            stringResource(R.string.settings_wake_status_configured),
                         contentColor = contentColor,
                         onClick = {
                             if (!wakeFeatureAvailable) {

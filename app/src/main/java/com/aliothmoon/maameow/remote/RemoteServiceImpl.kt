@@ -342,6 +342,27 @@ class RemoteServiceImpl : RemoteService.Stub() {
         }
     }
 
+    /**
+     * 在提权进程跑 shell 脚本，返回 stdout（stderr 已合并）。用于需要解析输出的场景
+     * （如 `wm size` 解析分辨率、`dumpsys window` 校验解锁状态）。异常返回空字符串。
+     */
+    override fun executeShellCommandCaptureOutput(script: String): String {
+        if (script.isBlank()) return ""
+        return try {
+            Ln.i("$TAG: executeShellCommandCaptureOutput START script.length=${script.length}")
+            val proc = ProcessBuilder("sh", "-c", script)
+                .redirectErrorStream(true)
+                .start()
+            val output = proc.inputStream.bufferedReader().readText()
+            val rc = proc.waitFor()
+            Ln.i("$TAG: executeShellCommandCaptureOutput END rc=$rc output.length=${output.length}")
+            output
+        } catch (t: Throwable) {
+            Ln.w("$TAG: executeShellCommandCaptureOutput failed", t)
+            ""
+        }
+    }
+
     /** 探测当前提权进程是否为 root（uid=0）。 */
     override fun hasRootPrivilege(): Boolean {
         return try {

@@ -38,30 +38,111 @@ class WakeUnlockEngine {
         val credential: String,
         val screenWidth: Int = 1080,
         val screenHeight: Int = 2400,
+        /** 用户校准的滑动起点（屏幕百分比 0.0–1.0）。null 表示未校准，引擎回退到默认坐标。 */
+        val swipeStartCalibration: SwipeCalibration? = null,
+        /** swipe 后等待秒数（给 PIN 键盘弹出 + 密码框获焦预留时间）。默认 1.5s。 */
+        val pinWaitSec: Float = 1.5f,
+        /** 解锁失败最大重试次数（「shell 成功但仍锁屏」时重试）。0 表示不重试。 */
+        val maxRetries: Int = 2,
     )
+
+    /**
+     * 用户校准的滑动起点坐标（屏幕百分比）。
+     * 通过「设置 → 校准滑动起点」功能让用户在真机上触摸一次得到。
+     */
+    data class SwipeCalibration(
+        val xPercent: Float,  // 0.0–1.0，相对屏幕宽度
+        val yPercent: Float,  // 0.0–1.0，相对屏幕高度
+    )
+
+    // 屏幕尺寸缓存：同一进程生命周期内分辨率不会变，避免每次 wakeAndUnlock 都跑 wm size。
+    @Volatile
+    private var cachedScreenWidth: Int? = null
+    @Volatile
+    private var cachedScreenHeight: Int? = null
 
     /**
      * 执行「唤醒 → 解锁」完整序列。
      * 如果 [RemoteService] 尚未连接（比如设备刚重启 / Shizuku 未启动），
      * 会通过 [RemoteServiceManager.useRemoteService] 等待连接建立（最多 12s）。
-     * @return true 表示 shell 命令跑完（不保证解锁成功，需调用方自行校验）
+     *
+     * 内部流程：
+     *  1) 通过 `wm size` 动态查询屏幕分辨率（首次查询后缓存，失败回退默认值）
+     *  2) 按分辨率计算 swipe 坐标（起点 90% 高度，终点 30% 高度）
+     *  3) 执行唤醒 + 解锁 shell 序列
+     *  4) 通过 `dumpsys window` 校验是否真的解锁
+     *  5) 若「shell 成功但仍锁屏」且未达重试上限，等待 1s 后重新执行整个序列
+     *
+     * @return true 表示 shell 命令跑完（不保证解锁成功，需看日志确认）
      */
     suspend fun wakeAndUnlock(config: WakeConfig): Boolean = withContext(Dispatchers.IO) {
-        val seq = buildCommandSequence(config)
-        Timber.i("WakeUnlockEngine: executing %d commands, type=%s", seq.size, config.unlockType)
-        // buildCommandSequence 返回的每条命令已经 shell-safe（凭证由 escapeCredential 单独处理），
-        // 这里只需拼接，不再整体转义，避免双层转义引号冲突。
-        val script = seq.joinToString(" ; ")
-        runCatching {
-            RemoteServiceManager.useRemoteService(timeoutMs = 12_000) { svc ->
-                val rc = svc.executeShellCommand(script)
-                Timber.i("WakeUnlockEngine: shell rc=%d", rc)
-                rc == 0
+        // 1) 动态查询屏幕分辨率（优先用缓存，避免每次都跑 wm size）
+        val (screenW, screenH) = queryScreenSize(
+            fallbackW = config.screenWidth,
+            fallbackH = config.screenHeight,
+        )
+        Timber.i(
+            "WakeUnlockEngine: screen=%dx%d, type=%s, calibrated=%s, " +
+                "pinWait=%.1fs, maxRetries=%d",
+            screenW, screenH, config.unlockType,
+            config.swipeStartCalibration?.let { "(%.2f,%.2f)".format(it.xPercent, it.yPercent) }
+                ?: "no (fallback 50%,90%)",
+            config.pinWaitSec,
+            config.maxRetries,
+        )
+
+        val effectiveConfig = config.copy(screenWidth = screenW, screenHeight = screenH)
+        // PIN/PASSWORD/SWIPE 需要解锁校验，失败才重试；KEYGUARD 直接相信 shell rc
+        val shouldVerify = config.unlockType != UnlockType.KEYGUARD
+
+        var lastShellOk = false
+        // 最多跑 1 + maxRetries 次（首次 + 重试）
+        val maxAttempts = 1 + config.maxRetries.coerceAtLeast(0)
+        for (attempt in 1..maxAttempts) {
+            if (attempt > 1) {
+                Timber.w("WakeUnlockEngine: retry attempt %d/%d", attempt, maxAttempts)
+                kotlinx.coroutines.delay(1000)
             }
-        }.getOrElse {
-            Timber.w(it, "WakeUnlockEngine: IPC failure")
-            false
+
+            // 2) 构建命令序列（swipe 坐标基于实际分辨率计算）
+            val seq = buildCommandSequence(effectiveConfig)
+            Timber.i("WakeUnlockEngine: executing %d commands (attempt %d)", seq.size, attempt)
+            val script = seq.joinToString(" ; ")
+
+            // 3) 执行主序列
+            lastShellOk = runCatching {
+                RemoteServiceManager.useRemoteService(timeoutMs = 12_000) { svc ->
+                    val rc = svc.executeShellCommand(script)
+                    Timber.i("WakeUnlockEngine: shell rc=%d", rc)
+                    rc == 0
+                }
+            }.getOrElse {
+                Timber.w(it, "WakeUnlockEngine: IPC failure")
+                false
+            }
+
+            // 4) 解锁校验
+            if (!lastShellOk || !shouldVerify) break
+            val unlocked = verifyUnlocked()
+            if (unlocked == true) {
+                Timber.i("WakeUnlockEngine: unlock verified ✓ (attempt %d)", attempt)
+                break
+            } else if (unlocked == false) {
+                Timber.w(
+                    "WakeUnlockEngine: still locked after attempt %d ✗ — " +
+                        "possible causes: swipe coordinate missed, PIN rejected, " +
+                        "PIN box not focused, or ROM blocked input injection",
+                    attempt,
+                )
+                // 若还有重试机会就 continue，否则 fall through
+                if (attempt < maxAttempts) continue
+            } else {
+                Timber.w("WakeUnlockEngine: unlock state unknown (dumpsys parse failed)")
+                break
+            }
         }
+
+        lastShellOk
     }
 
     /**
@@ -120,29 +201,28 @@ class WakeUnlockEngine {
         add("input keyevent KEYCODE_WAKEUP")
         add("sleep 1")
         when (config.unlockType) {
-            UnlockType.SWIPE -> {
-                // 上滑解锁：从 80% 高度滑到 30%
-                val x = config.screenWidth / 2
-                val y1 = config.screenHeight * 4 / 5
+            UnlockType.SWIPE, UnlockType.PIN, UnlockType.PASSWORD -> {
+                // 滑动起点：优先用用户校准值，否则回退到屏幕宽度 50% / 高度 90%
+                // （MIUI/ColorOS/AOSP 手势区一般在底部 ~15%，90% 高度能覆盖绝大多数设备）
+                val (x, y1) = config.swipeStartCalibration?.let { cal ->
+                    (config.screenWidth * cal.xPercent).toInt() to
+                        (config.screenHeight * cal.yPercent).toInt()
+                } ?: (config.screenWidth / 2) to (config.screenHeight * 9 / 10)
                 val y2 = config.screenHeight * 3 / 10
                 add("input swipe $x $y1 $x $y2 300")
-            }
-            UnlockType.PIN, UnlockType.PASSWORD -> {
-                // 先上滑进入密码页
-                val x = config.screenWidth / 2
-                val y1 = config.screenHeight * 4 / 5
-                val y2 = config.screenHeight * 3 / 10
-                add("input swipe $x $y1 $x $y2 300")
-                add("sleep 0.5")
-                if (config.credential.isNotBlank()) {
-                    // 凭证用「整体包裹单引号」的 escapeCredential 处理：
-                    // 保证空格、分号、单引号等特殊字符都能被 shell 正确还原。
-                    // 这里不再走外层 joinToString 的 escape（那套是为整条命令设计的，
-                    // 不会包裹引号，会让空格被当成参数分隔符）。
-                    val safeCredential = escapeCredential(config.credential)
-                    add("input text $safeCredential")
-                    add("sleep 0.2")
-                    add("input keyevent KEYCODE_ENTER")
+                if (config.unlockType == UnlockType.PIN || config.unlockType == UnlockType.PASSWORD) {
+                    // 等待 PIN 键盘弹出 + 密码框获焦（MIUI/ColorOS 动画较慢，默认 1.5s）
+                    add("sleep ${config.pinWaitSec}")
+                    if (config.credential.isNotBlank()) {
+                        // 凭证用「整体包裹单引号」的 escapeCredential 处理：
+                        // 保证空格、分号、单引号等特殊字符都能被 shell 正确还原。
+                        // 这里不再走外层 joinToString 的 escape（那套是为整条命令设计的，
+                        // 不会包裹引号，会让空格被当成参数分隔符）。
+                        val safeCredential = escapeCredential(config.credential)
+                        add("input text $safeCredential")
+                        add("sleep 0.2")
+                        add("input keyevent KEYCODE_ENTER")
+                    }
                 }
             }
             UnlockType.KEYGUARD -> {
@@ -152,6 +232,72 @@ class WakeUnlockEngine {
                 add("svc keyguard disable || true")
             }
         }
+    }
+
+    /**
+     * 通过 `wm size` 查询当前屏幕分辨率。首次查询后缓存，后续调用直接返回缓存值。
+     * 查询失败（比如提权进程未连上、wm 命令不可用）返回 [fallbackW] × [fallbackH]。
+     *
+     * 输出示例：`Physical size: 1440x3200`（MIUI 可能带 `Override size: ...` 行，取 Physical）
+     */
+    private suspend fun queryScreenSize(fallbackW: Int = 1080, fallbackH: Int = 2400): Pair<Int, Int> {
+        cachedScreenWidth?.let { w ->
+            cachedScreenHeight?.let { h -> return w to h }
+        }
+        val (w, h) = runCatching {
+            RemoteServiceManager.useRemoteService(timeoutMs = 6_000) { svc ->
+                val out = svc.executeShellCommandCaptureOutput("wm size")
+                parseWmSize(out)
+            }
+        }.getOrNull() ?: (fallbackW to fallbackH)
+        cachedScreenWidth = w
+        cachedScreenHeight = h
+        if (w != fallbackW || h != fallbackH) {
+            Timber.i("WakeUnlockEngine: wm size resolved to %dx%d", w, h)
+        } else {
+            Timber.w("WakeUnlockEngine: wm size failed, fallback to %dx%d", fallbackW, fallbackH)
+        }
+        return w to h
+    }
+
+    /**
+     * 解析 `wm size` 输出。支持多行（Physical / Override），优先取 Physical。
+     * 示例输入：
+     * ```
+     * Physical size: 1440x3200
+     * Override size: 1080x2400
+     * ```
+     */
+    private fun parseWmSize(output: String): Pair<Int, Int>? {
+        val physical = Regex("""Physical size:\s*(\d+)x(\d+)""").find(output)
+            ?: Regex("""(\d+)x(\d+)""").find(output)
+            ?: return null
+        val w = physical.groupValues[1].toIntOrNull() ?: return null
+        val h = physical.groupValues[2].toIntOrNull() ?: return null
+        if (w <= 0 || h <= 0) return null
+        return w to h
+    }
+
+    /**
+     * 通过 `dumpsys window` 校验当前是否已解锁。
+     * @return true=已解锁, false=仍在锁屏, null=无法解析（输出为空或关键字缺失）
+     *
+     * 判定逻辑：扫描输出中的 `mDreamingLockscreen=true` / `mShowingLockscreen=true`，
+     * 任意一个为 true 即认为仍锁屏。不同 ROM 字段命名有差异（MIUI/ColorOS/AOSP）
+     * 但这两个字段在绝大多数 ROM 都存在，作为 MVP 判定基准。
+     */
+    private suspend fun verifyUnlocked(): Boolean? {
+        val output = runCatching {
+            RemoteServiceManager.useRemoteService(timeoutMs = 6_000) { svc ->
+                svc.executeShellCommandCaptureOutput("dumpsys window")
+            }
+        }.getOrNull() ?: return null
+        if (output.isBlank()) return null
+        val stillLocked = output.lineSequence().any { line ->
+            line.contains("mDreamingLockscreen=true") ||
+                line.contains("mShowingLockscreen=true")
+        }
+        return !stillLocked
     }
 
     /**

@@ -309,9 +309,9 @@
     <string name="settings_drift_auto_repin_delay_sec">自动拉回延迟</string>
     <string name="settings_drift_auto_repin_delay_sec_desc">游戏离开虚拟显示器后等待 %1$d 秒再拉回，避免打断登录或验证弹窗</string>
     <!-- 定时唤醒 + 解锁 -->
-    <string name="settings_wake_schedule_section">定时唤醒 + 解锁</string>
-    <string name="settings_wake_schedule_editor_title">定时唤醒 + 解锁</string>
-    <string name="settings_wake_status_enabled">已开启</string>
+    <string name="settings_wake_schedule_section">锁屏解锁配置</string>
+    <string name="settings_wake_schedule_editor_title">锁屏解锁配置</string>
+    <string name="settings_wake_status_configured">点击配置解锁方式和密码</string>
     <string name="settings_wake_status_disabled">未开启</string>
     <string name="settings_wake_schedule_section_desc">在指定时间自动唤醒设备并解锁锁屏，适合配合前台模式定时挂机</string>
     <string name="settings_wake_schedule_enabled">启用定时唤醒</string>
@@ -1560,6 +1560,12 @@
     <string name="schedule_section_advanced">高级选项</string>
     <string name="schedule_force_start">强制启动</string>
     <string name="schedule_force_start_tip">强制启动任务，会中断正在运行的游戏和任务</string>
+    <string name="schedule_section_wake_unlock">唤醒与解锁</string>
+    <string name="schedule_wake_unlock_enabled">启用锁屏解锁</string>
+    <string name="schedule_wake_unlock_tip">定时任务触发时先唤醒屏幕并解锁，需在设置页配置解锁方式和密码</string>
+    <string name="schedule_wake_unlock_not_configured">需要先在「设置 → 锁屏解锁配置」中配置解锁方式和密码</string>
+    <string name="schedule_auto_sleep_after_task">任务结束后自动熄屏</string>
+    <string name="schedule_auto_sleep_tip">定时任务执行完成后自动熄屏，节省电量</string>
     <string name="schedule_permission_tip_battery_optimization">关闭电池优化</string>
     <string name="schedule_permission_tip_exact_alarm">允许精确闹钟</string>
     <string name="schedule_permission_title">权限提示</string>
@@ -2028,4 +2034,24 @@
     <string name="runlog_service_terminated">MAA服务异常终止</string>
     <string name="runlog_game_process_gone">游戏进程未启动或被异常关闭(%1$s)</string>
     <string name="runlog_game_left_virtual_display">游戏窗口已离开虚拟显示器且自动拉回失败(%1$s)，请尝试开启「强制 FULLSCREEN 模式」或改用前台模式</string>
+
+    <!-- 滑动起点校准 -->
+    <string name="settings_swipe_calibration_title">滑动起点校准</string>
+    <string name="settings_swipe_calibration_button">校准滑动起点</string>
+    <string name="settings_swipe_calibration_hint">解锁时默认从屏幕底部 10%% 上滑，若解锁失败可点击校准</string>
+    <string name="settings_swipe_calibration_calibrated">已校准：X=%1$d%%, Y=%2$d%%（点击重新校准）</string>
+    <string name="settings_swipe_calibration_clear">清除校准</string>
+    <string name="settings_swipe_calibration_clear_hint">恢复为默认坐标（屏幕宽度 50%%、高度 90%%）</string>
+    <string name="settings_swipe_calibration_saved">校准已保存：%1$s</string>
+    <string name="settings_swipe_calibration_cleared">已清除校准，恢复默认坐标</string>
+    <string name="swipe_calibration_dialog_title">校准滑动起点</string>
+    <string name="swipe_calibration_dialog_hint">请像平时解锁一样，\n在屏幕上点一下你通常上滑的起点位置</string>
+    <string name="swipe_calibration_dialog_cancel">取消</string>
+
+    <!-- 高级：等待时间 + 重试 -->
+    <string name="settings_wake_advanced_title">高级</string>
+    <string name="settings_wake_pin_wait_sec">PIN 等待时间</string>
+    <string name="settings_wake_pin_wait_sec_value">当前 %.1f 秒（swipe 后等待 PIN 键盘弹出 + 密码框获焦）</string>
+    <string name="settings_wake_unlock_max_retries">解锁失败重试</string>
+    <string name="settings_wake_unlock_max_retries_value">当前 %d 次（shell 成功但仍锁屏时重新执行整个解锁序列）</string>
 </resources>

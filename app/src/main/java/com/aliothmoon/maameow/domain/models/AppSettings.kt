@@ -139,7 +139,7 @@ data class AppSettings(
      */
     @PrefKey(default = "") val wakeScheduleTimesCsv: String = "",
 
-    /** 解锁策略：swipe / pin / password / keyguard */
+    /** 解锁策略：none / swipe / pin / password / keyguard */
     @PrefKey(default = "swipe") val wakeUnlockType: String = "swipe",
 
     /** 解锁密码 / PIN。空字符串表示不输入。 */
@@ -147,4 +147,28 @@ data class AppSettings(
 
     /** 解锁完成后等待 N 秒再自动息屏（默认 0 = 不息屏，用户自行管理） */
     @PrefKey(default = "0") val wakeAutoSleepDelaySec: String = "0",
+
+    /**
+     * 解锁滑动起点 X 坐标（屏幕宽度百分比 0.0–1.0）。`-1.0` 表示未校准，
+     * 引擎回退到屏幕宽度 50%（居中）。用户通过「校准滑动起点」功能设置。
+     */
+    @PrefKey(default = "-1.0") val swipeStartXPercent: String = "-1.0",
+
+    /**
+     * 解锁滑动起点 Y 坐标（屏幕高度百分比 0.0–1.0）。`-1.0` 表示未校准，
+     * 引擎回退到屏幕高度 90%（底部 10%）。用户通过「校准滑动起点」功能设置。
+     */
+    @PrefKey(default = "-1.0") val swipeStartYPercent: String = "-1.0",
+
+    /**
+     * swipe 后等待秒数（浮点字符串，如 "1.5"）。给锁屏动画 + PIN 键盘弹出 + 密码框
+     * 获取焦点预留的时间。MIUI/ColorOS 等 ROM 动画较慢，默认 1.5s；AOSP 可以调低到 0.8s。
+     */
+    @PrefKey(default = "1.5") val wakePinWaitSec: String = "1.5",
+
+    /**
+     * 解锁失败最大重试次数。引擎在「shell 成功但仍锁屏」时会重新执行整个解锁序列，
+     * 直到成功或达到上限。0 表示不重试。
+     */
+    @PrefKey(default = "2") val wakeUnlockMaxRetries: String = "2",
 )

@@ -75,6 +75,10 @@ interface RemoteService {
     // 在提权进程执行 shell 命令，返回 exit code。用于定时唤醒解锁序列。
     int executeShellCommand(String script) = 33;
 
+    // 在提权进程执行 shell 命令，返回 stdout（合并 stderr）。用于需要解析命令输出的场景
+    // （如 `wm size` 解析分辨率、`dumpsys window` 校验解锁状态）。异常返回空字符串。
+    String executeShellCommandCaptureOutput(String script) = 35;
+
     // 探测提权进程是否具备 root 权限（uid=0）。失败返回 false。
     boolean hasRootPrivilege() = 34;
 }
