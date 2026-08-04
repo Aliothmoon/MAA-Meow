@@ -9,15 +9,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      maa_repo:
-        description: 'MAA Core GitHub repo (owner/repo)'
-        required: false
-        default: 'MaaAssistantArknights/MaaAssistantArknights'
-      maa_tag:
-        description: 'MAA Core release tag'
-        required: false
-        default: 'latest'
 
 jobs:
   build:
@@ -57,27 +48,14 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install OCR conversion deps
-        run: python -m pip install -r scripts/requirements.txt
-
-      - name: Download and deploy MAA Core
+      - name: Download and deploy Star Rail Core
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_ARG=""
-          MAA_TAG="${{ github.event.inputs.maa_tag }}"
-          if [ -n "$MAA_TAG" ] && [ "$MAA_TAG" != "latest" ]; then
-            TAG_ARG="--tag $MAA_TAG"
-          fi
-          MAA_REPO="${{ github.event.inputs.maa_repo }}"
-          REPO_ARG=""
-          if [ -n "$MAA_REPO" ]; then
-            REPO_ARG="--repo $MAA_REPO"
-          fi
-          python scripts/setup_maa_core.py --clean $TAG_ARG $REPO_ARG
+          python scripts/setup_maa_core.py
 
-      - name: Print MAA Resource version
-        run: cat app/src/main/assets/MaaSync/MaaResource/version.json
+      - name: Print engine version
+        run: cat .starrailengineversion
 
       - name: Build Debug APK
         run: |
