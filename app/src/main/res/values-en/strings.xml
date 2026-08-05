@@ -110,34 +110,6 @@
     <string name="settings_drift_auto_repin_enabled_desc">In background mode, some systems (e.g. Samsung One UI) or channel-login SDKs may move the game back to the main screen, breaking recognition. When enabled, the game is moved back to the virtual display once it has been away longer than the configured delay</string>
     <string name="settings_drift_auto_repin_delay_sec">Move-back delay</string>
     <string name="settings_drift_auto_repin_delay_sec_desc">Wait %1$d seconds after the game leaves the virtual display before moving it back, to avoid interrupting login or verification pop-ups</string>
-    <!-- Scheduled wake + unlock -->
-    <string name="settings_wake_schedule_section">Wake Unlock Config</string>
-    <string name="settings_wake_schedule_editor_title">Wake Unlock Config</string>
-    <string name="settings_wake_status_configured">Tap to configure unlock method</string>
-    <string name="settings_wake_status_disabled">Disabled</string>
-    <string name="settings_wake_schedule_section_desc">Wake and unlock the device at specified times; handy for timed foreground automation</string>
-    <string name="settings_wake_schedule_enabled">Enable scheduled wake</string>
-    <string name="settings_wake_schedule_times">Wake times</string>
-    <string name="settings_wake_schedule_times_hint">HH:mm comma-separated, e.g. 07:30,12:00,19:00</string>
-    <string name="settings_wake_unlock_type">Unlock method</string>
-    <string name="settings_wake_unlock_type_swipe">Swipe up (no lock)</string>
-    <string name="settings_wake_unlock_type_pin">PIN</string>
-    <string name="settings_wake_unlock_type_password">Password</string>
-    <string name="settings_wake_unlock_type_keyguard">Force dismiss keyguard</string>
-    <string name="settings_wake_credential">PIN / Password</string>
-    <string name="settings_wake_credential_hint">Enter unlock PIN or password</string>
-    <string name="settings_wake_auto_sleep">Auto sleep after wake</string>
-    <string name="settings_wake_auto_sleep_desc">Sleep the screen %1$d s after unlock if idle (0 = disabled)</string>
-    <string name="settings_wake_test_button">Test now</string>
-    <string name="settings_wake_test_running">Running wake sequence…</string>
-    <string name="settings_wake_test_ok">Wake + unlock succeeded</string>
-    <string name="settings_wake_test_fail">Wake / unlock failed: %1$s</string>
-    <string name="settings_wake_test_hint">The test runs Sleep → Lock → Wake → Unlock in sequence. Set a system PIN / password lock first (and make sure "Power button instantly locks" is enabled) to fully verify the unlock flow.</string>
-    <string name="settings_wake_need_root">Requires Root or Shizuku backend</string>
-    <string name="settings_wake_need_root_dialog_title">Root backend required</string>
-    <string name="settings_wake_need_root_dialog_message">"Scheduled wake &amp; unlock" relies on the elevated process to run shell commands; only the Root backend is reliable.\n\nShizuku runs as shell uid and can do KEYCODE_WAKEUP / input swipe / input text, but:\n• svc keyguard disable is blocked by SELinux\n• Some ROMs reject shell input injection while the screen is locked\n• After reboot Shizuku needs manual authorization, so the alarm may fire before it is ready\n\nPlease switch to Root mode under "Startup backend" before enabling this feature.</string>
-    <string name="settings_wake_need_root_disabled">Not available with current backend</string>
-    <string name="settings_wake_invalid_time">Invalid time format, ignored</string>
     <string name="settings_drift_auto_repin_delay_hint">Unit: seconds, range 1~60</string>
     <string name="settings_allow_foreground_scheduled_task">Allow scheduled tasks in foreground</string>
     <string name="settings_run_schedule_when_locked">Skip lock screen check for scheduled tasks</string>
@@ -375,7 +347,6 @@
     <string name="copilot_rate_success">Thanks for the likes!\nThe comment section is already open on the web page, please feel free to leave your comment!</string>
     <string name="copilot_paste_parse">Paste and load</string>
     <string name="copilot_clipboard_empty">Clipboard is empty</string>
-
 
     <!-- panel: fight config -->
     <string name="panel_fight_converted_prefix">Will convert to: %1$s</string>
@@ -1978,23 +1949,25 @@
     <string name="runlog_game_process_gone">Game process not started or closed unexpectedly (%1$s)</string>
     <string name="runlog_game_left_virtual_display">Game window left the virtual display and could not be moved back (%1$s). Try enabling \"Force FULLSCREEN mode\" or switch to foreground mode</string>
 
-    <!-- Swipe start calibration -->
-    <string name="settings_swipe_calibration_title">Swipe start calibration</string>
-    <string name="settings_swipe_calibration_button">Calibrate swipe start</string>
-    <string name="settings_swipe_calibration_hint">Default swipe starts at bottom 10%% of screen. Tap to calibrate if unlock fails</string>
-    <string name="settings_swipe_calibration_calibrated">Calibrated: X=%1$d%%, Y=%2$d%% (tap to recalibrate)</string>
-    <string name="settings_swipe_calibration_clear">Clear calibration</string>
-    <string name="settings_swipe_calibration_clear_hint">Reset to default (50%% width, 90%% height)</string>
-    <string name="settings_swipe_calibration_saved">Calibration saved: %1$s</string>
-    <string name="settings_swipe_calibration_cleared">Calibration cleared, using defaults</string>
-    <string name="swipe_calibration_dialog_title">Calibrate swipe start</string>
-    <string name="swipe_calibration_dialog_hint">Tap the spot where you\nusually start the unlock swipe</string>
-    <string name="swipe_calibration_dialog_cancel">Cancel</string>
-
-    <!-- Advanced: wait + retry -->
-    <string name="settings_wake_advanced_title">Advanced</string>
-    <string name="settings_wake_pin_wait_sec">PIN wait time</string>
-    <string name="settings_wake_pin_wait_sec_value">Current: %.1f s (wait for PIN keyboard + focus after swipe)</string>
-    <string name="settings_wake_unlock_max_retries">Unlock retry on failure</string>
-    <string name="settings_wake_unlock_max_retries_value">Current: %d (re-run full unlock sequence if shell succeeds but still locked)</string>
+    <!-- Wake + unlock -->
+    <string name="settings_wake_unlock_section">Wake &amp; unlock</string>
+    <string name="settings_wake_unlock_section_desc">Turn the screen on and dismiss the lock screen before a scheduled task runs. The lock screen covers the virtual display, blocking both foreground and background modes</string>
+    <string name="settings_wake_unlock_type">Unlock method</string>
+    <string name="settings_wake_unlock_type_none">Do not unlock</string>
+    <string name="settings_wake_unlock_type_swipe">No password / swipe</string>
+    <string name="settings_wake_unlock_type_pin">PIN</string>
+    <string name="settings_wake_credential">PIN</string>
+    <string name="settings_wake_credential_hint">Enter the lock screen PIN (digits only)</string>
+    <string name="settings_wake_credential_show">Show PIN</string>
+    <string name="settings_wake_credential_hide">Hide PIN</string>
+    <string name="settings_wake_credential_warning">The PIN is stored in plain text on this device. It is stripped from exported config, but can still leak if someone gets hold of the device. Pattern locks are not supported — use a PIN or no password.</string>
+    <string name="settings_wake_test_button">Test now</string>
+    <string name="settings_wake_test_hint">Checks that the screen turns on and the lock screen is dismissed. To test the full flow, lock the screen and let a scheduled task fire</string>
+    <string name="wake_result_ok">Wake + unlock succeeded</string>
+    <string name="wake_result_wake_failed">Screen would not turn on</string>
+    <string name="wake_result_credential_required">A PIN is required for this lock screen</string>
+    <string name="wake_result_credential_rejected">Unlock failed, the PIN may be wrong. Stopped retrying to avoid triggering a system lockout</string>
+    <string name="wake_result_bouncer_not_ready">The lock screen credential prompt did not appear</string>
+    <string name="wake_result_unsupported">Not supported on this system</string>
+    <string name="wake_result_ipc_failed">Elevated service not connected</string>
 </resources>

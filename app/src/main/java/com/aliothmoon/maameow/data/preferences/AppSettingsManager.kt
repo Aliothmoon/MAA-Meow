@@ -40,6 +40,10 @@ class AppSettingsManager(
     companion object {
         val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
 
+        /** 解锁方式取值。不支持图案锁。 */
+        val WAKE_UNLOCK_TYPES = setOf("none", "swipe", "pin")
+        const val MAX_PIN_LENGTH = 16
+
         /** 页面缩放：0 = 自动；手动为 80–110 */
         const val FONT_SIZE_SCALE_MIN = 80
         const val FONT_SIZE_SCALE_MAX = 110
@@ -749,126 +753,32 @@ class AppSettingsManager(
         }
     }
 
-    // ───────────────── 定时唤醒 + 解锁 ─────────────────
+    // ───────────────── 唤醒 + 解锁 ─────────────────
 
-    val wakeScheduleEnabled: StateFlow<Boolean> = settings
-        .map { it.wakeScheduleEnabled.toBooleanStrictOrNull() ?: false }
-        .distinctUntilChanged()
-        .stateIn(
-            scope, SharingStarted.Eagerly,
-            initialSettings.wakeScheduleEnabled.toBooleanStrictOrNull() ?: false
-        )
-
-    suspend fun setWakeScheduleEnabled(enabled: Boolean) {
-        with(AppSettingsSchema) {
-            context.dataStore.edit { it[wakeScheduleEnabled] = enabled.toString() }
-        }
-    }
-
-    val wakeScheduleTimesCsv: StateFlow<String> = settings
-        .map { it.wakeScheduleTimesCsv }
-        .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wakeScheduleTimesCsv)
-
-    suspend fun setWakeScheduleTimesCsv(csv: String) {
-        // 限制长度，避免无限添加
-        val trimmed = csv.take(256)
-        with(AppSettingsSchema) {
-            context.dataStore.edit { it[wakeScheduleTimesCsv] = trimmed }
-        }
-    }
-
+    /** 解锁方式：none / swipe / pin */
     val wakeUnlockType: StateFlow<String> = settings
         .map { it.wakeUnlockType }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, initialSettings.wakeUnlockType)
 
     suspend fun setWakeUnlockType(type: String) {
-        val allowed = setOf("none", "swipe", "pin", "password", "keyguard")
-        if (type !in allowed) return
+        if (type !in WAKE_UNLOCK_TYPES) return
         with(AppSettingsSchema) {
             context.dataStore.edit { it[wakeUnlockType] = type }
         }
     }
 
+    /** 解锁 PIN，仅 wakeUnlockType = pin 时有意义。 */
     val wakeCredential: StateFlow<String> = settings
         .map { it.wakeCredential }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, initialSettings.wakeCredential)
 
     suspend fun setWakeCredential(credential: String) {
+        // 注入走 KEYCODE_0..9，非数字没有对应键位
+        val digits = credential.filter { it.isDigit() }.take(MAX_PIN_LENGTH)
         with(AppSettingsSchema) {
-            context.dataStore.edit { it[wakeCredential] = credential.take(64) }
-        }
-    }
-
-    val wakeAutoSleepDelaySec: StateFlow<Int> = settings
-        .map { it.wakeAutoSleepDelaySec.toIntOrNull()?.coerceIn(0, 600) ?: 0 }
-        .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, 0)
-
-    suspend fun setWakeAutoSleepDelaySec(seconds: Int) {
-        val clamped = seconds.coerceIn(0, 600)
-        with(AppSettingsSchema) {
-            context.dataStore.edit { it[wakeAutoSleepDelaySec] = clamped.toString() }
-        }
-    }
-
-    /** 解锁滑动起点 X 百分比（0.0–1.0），-1.0 表示未校准 */
-    val swipeStartXPercent: StateFlow<Float> = settings
-        .map { it.swipeStartXPercent.toFloatOrNull()?.coerceIn(-1.0f, 1.0f) ?: -1.0f }
-        .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, -1.0f)
-
-    /** 解锁滑动起点 Y 百分比（0.0–1.0），-1.0 表示未校准 */
-    val swipeStartYPercent: StateFlow<Float> = settings
-        .map { it.swipeStartYPercent.toFloatOrNull()?.coerceIn(-1.0f, 1.0f) ?: -1.0f }
-        .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, -1.0f)
-
-    suspend fun setSwipeCalibration(xPercent: Float, yPercent: Float) {
-        val x = xPercent.coerceIn(0.0f, 1.0f)
-        val y = yPercent.coerceIn(0.0f, 1.0f)
-        with(AppSettingsSchema) {
-            context.dataStore.edit {
-                it[swipeStartXPercent] = x.toString()
-                it[swipeStartYPercent] = y.toString()
-            }
-        }
-    }
-
-    suspend fun clearSwipeCalibration() {
-        with(AppSettingsSchema) {
-            context.dataStore.edit {
-                it[swipeStartXPercent] = "-1.0"
-                it[swipeStartYPercent] = "-1.0"
-            }
-        }
-    }
-
-    /** swipe 后等待秒数（PIN 键盘弹出 + 密码框获焦预留时间） */
-    val wakePinWaitSec: StateFlow<Float> = settings
-        .map { it.wakePinWaitSec.toFloatOrNull()?.coerceIn(0.0f, 10.0f) ?: 1.5f }
-        .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, 1.5f)
-
-    suspend fun setWakePinWaitSec(seconds: Float) {
-        val clamped = seconds.coerceIn(0.0f, 10.0f)
-        with(AppSettingsSchema) {
-            context.dataStore.edit { it[wakePinWaitSec] = clamped.toString() }
-        }
-    }
-
-    /** 解锁失败最大重试次数（0 = 不重试） */
-    val wakeUnlockMaxRetries: StateFlow<Int> = settings
-        .map { it.wakeUnlockMaxRetries.toIntOrNull()?.coerceIn(0, 5) ?: 2 }
-        .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, 2)
-
-    suspend fun setWakeUnlockMaxRetries(retries: Int) {
-        val clamped = retries.coerceIn(0, 5)
-        with(AppSettingsSchema) {
-            context.dataStore.edit { it[wakeUnlockMaxRetries] = clamped.toString() }
+            context.dataStore.edit { it[wakeCredential] = digits }
         }
     }
 

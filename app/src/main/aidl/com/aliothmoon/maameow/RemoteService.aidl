@@ -72,13 +72,10 @@ interface RemoteService {
     // 把漂移到其它 display 的应用任务拉回虚拟显示器，成功返回 true
     boolean moveAppToVirtualDisplay(String packageName) = 32;
 
-    // 在提权进程执行 shell 命令，返回 exit code。用于定时唤醒解锁序列。
-    int executeShellCommand(String script) = 33;
+    // 点亮屏幕并解除锁屏。credential 为数字 PIN，无凭证锁屏传空串。
+    // 返回码见 WakeUnlockController.Result，0 表示成功。
+    int wakeAndUnlock(String credential) = 33;
 
-    // 在提权进程执行 shell 命令，返回 stdout（合并 stderr）。用于需要解析命令输出的场景
-    // （如 `wm size` 解析分辨率、`dumpsys window` 校验解锁状态）。异常返回空字符串。
-    String executeShellCommandCaptureOutput(String script) = 35;
-
-    // 探测提权进程是否具备 root 权限（uid=0）。失败返回 false。
-    boolean hasRootPrivilege() = 34;
+    // 仅点亮屏幕，不解锁
+    boolean wakeScreen() = 34;
 }

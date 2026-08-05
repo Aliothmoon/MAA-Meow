@@ -342,4 +342,67 @@ public final class WindowManager {
             throw new RuntimeException("captureDisplay failed", e);
         }
     }
+
+    // ───────────────── Keyguard ─────────────────
+
+    private Method isKeyguardLockedMethod;
+    private Method isKeyguardSecureMethod;
+    private int isKeyguardSecureMethodVersion;
+    private Method dismissKeyguardMethod;
+
+    /** 当前是否处于锁屏（含无密码的滑动锁屏）。反射不可用时返回 null。 */
+    public Boolean isKeyguardLocked() {
+        try {
+            if (isKeyguardLockedMethod == null) {
+                isKeyguardLockedMethod = manager.getClass().getMethod("isKeyguardLocked");
+            }
+            return (boolean) isKeyguardLockedMethod.invoke(manager);
+        } catch (ReflectiveOperationException e) {
+            Ln.e("Could not invoke isKeyguardLocked", e);
+            return null;
+        }
+    }
+
+    /** 锁屏是否设了凭证（PIN/密码/图案）。反射不可用时返回 null。 */
+    public Boolean isKeyguardSecure(int userId) {
+        try {
+            if (isKeyguardSecureMethod == null) {
+                try {
+                    // API 30+ 带 userId
+                    isKeyguardSecureMethod = manager.getClass().getMethod("isKeyguardSecure", int.class);
+                    isKeyguardSecureMethodVersion = 0;
+                } catch (NoSuchMethodException e) {
+                    isKeyguardSecureMethod = manager.getClass().getMethod("isKeyguardSecure");
+                    isKeyguardSecureMethodVersion = 1;
+                }
+            }
+            if (isKeyguardSecureMethodVersion == 0) {
+                return (boolean) isKeyguardSecureMethod.invoke(manager, userId);
+            }
+            return (boolean) isKeyguardSecureMethod.invoke(manager);
+        } catch (ReflectiveOperationException e) {
+            Ln.e("Could not invoke isKeyguardSecure", e);
+            return null;
+        }
+    }
+
+    /**
+     * 请求解除锁屏（API 26+）。无凭证锁屏直接解除，有凭证时系统弹出 bouncer。
+     *
+     * @return 反射调用是否成功；不代表已解锁，需另行轮询 isKeyguardLocked
+     */
+    @TargetApi(AndroidVersions.API_26_ANDROID_8_0)
+    public boolean dismissKeyguard() {
+        try {
+            if (dismissKeyguardMethod == null) {
+                Class<?> callbackClass = Class.forName("com.android.internal.policy.IKeyguardDismissCallback");
+                dismissKeyguardMethod = manager.getClass().getMethod("dismissKeyguard", callbackClass, CharSequence.class);
+            }
+            dismissKeyguardMethod.invoke(manager, null, null);
+            return true;
+        } catch (ReflectiveOperationException e) {
+            Ln.e("Could not invoke dismissKeyguard", e);
+            return false;
+        }
+    }
 }

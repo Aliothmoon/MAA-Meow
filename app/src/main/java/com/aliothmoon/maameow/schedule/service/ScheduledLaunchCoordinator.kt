@@ -233,17 +233,19 @@ class ScheduledLaunchCoordinator(
                 message = message,
             )
         } finally {
-            // 任务启动成功且需要自动熄屏：启动后台协程等任务完成后熄屏
+            // 任务启动成功且需要自动熄屏：等任务真正跑完再熄屏
             if (result == ExecutionResult.STARTED && request.autoSleepAfterTask) {
                 scope.launch {
                     triggerLogger.append("等待任务完成后自动熄屏...")
-                    withTimeoutOrNull(AUTO_SLEEP_TIMEOUT_MS) {
-                        compositionService.state
-                            .filter { it == MaaExecutionState.IDLE }
-                            .first()
+                    val finished = withTimeoutOrNull(AUTO_SLEEP_TIMEOUT_MS) {
+                        // 先等离开 IDLE 再等回到 IDLE，否则刚启动就会被立刻命中
+                        compositionService.state.filter { it != MaaExecutionState.IDLE }.first()
+                        compositionService.state.filter { it == MaaExecutionState.IDLE }.first()
                     }
-                    triggerLogger.append("任务完成，执行自动熄屏")
-                    wakeUnlockEngine.justSleep()
+                    triggerLogger.append(
+                        if (finished != null) "任务完成，执行自动熄屏" else "等待任务完成超时，仍执行熄屏"
+                    )
+                    wakeUnlockEngine.turnScreenOff()
                 }
             }
             clearFlow()

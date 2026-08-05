@@ -5,6 +5,7 @@ import android.os.IInterface;
 import android.os.SystemClock;
 
 import com.aliothmoon.maameow.constant.AndroidVersions;
+import com.aliothmoon.maameow.third.FakeContext;
 import com.aliothmoon.maameow.third.Ln;
 
 import java.lang.reflect.Method;
@@ -74,6 +75,68 @@ public final class PowerManager {
             method.invoke(manager, time, USER_ACTIVITY_EVENT_OTHER, 0);
         } catch (ReflectiveOperationException e) {
             Ln.e("Could not invoke method", e);
+        }
+    }
+
+    // ───────────────── wakeUp ─────────────────
+    // 比注入 KEYCODE_WAKEUP 可靠：不经过 PhoneWindowManager 的按键策略
+
+    private static final int WAKE_REASON_APPLICATION = 2;
+
+    private Method wakeUpMethod;
+    private int wakeUpMethodVersion = -1;
+
+    private Method getWakeUpMethod() throws NoSuchMethodException {
+        if (wakeUpMethod == null) {
+            Class<?> cls = manager.getClass();
+            try {
+                // API 29+: wakeUp(long time, int reason, String details, String opPackageName)
+                wakeUpMethod = cls.getMethod("wakeUp", long.class, int.class, String.class, String.class);
+                wakeUpMethodVersion = 0;
+            } catch (NoSuchMethodException e1) {
+                try {
+                    // API 28: wakeUp(long time, String reason, String opPackageName)
+                    wakeUpMethod = cls.getMethod("wakeUp", long.class, String.class, String.class);
+                    wakeUpMethodVersion = 1;
+                } catch (NoSuchMethodException e2) {
+                    // 兜底: wakeUp(long time)
+                    wakeUpMethod = cls.getMethod("wakeUp", long.class);
+                    wakeUpMethodVersion = 2;
+                }
+            }
+        }
+        return wakeUpMethod;
+    }
+
+    /** 反射命中的 wakeUp 重载，-1 表示未找到。 */
+    public int resolveWakeUpVariant() {
+        try {
+            getWakeUpMethod();
+        } catch (NoSuchMethodException e) {
+            return -1;
+        }
+        return wakeUpMethodVersion;
+    }
+
+    /** @return 反射调用是否成功；不代表屏幕已亮，需另行轮询 isScreenOn */
+    public boolean wakeUp() {
+        try {
+            Method method = getWakeUpMethod();
+            long time = SystemClock.uptimeMillis();
+            switch (wakeUpMethodVersion) {
+                case 0:
+                    method.invoke(manager, time, WAKE_REASON_APPLICATION, "maameow:wake", FakeContext.PACKAGE_NAME);
+                    return true;
+                case 1:
+                    method.invoke(manager, time, "maameow:wake", FakeContext.PACKAGE_NAME);
+                    return true;
+                default:
+                    method.invoke(manager, time);
+                    return true;
+            }
+        } catch (ReflectiveOperationException e) {
+            Ln.e("Could not invoke wakeUp", e);
+            return false;
         }
     }
 

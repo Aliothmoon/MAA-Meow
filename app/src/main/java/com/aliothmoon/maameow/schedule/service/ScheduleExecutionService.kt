@@ -16,6 +16,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
+import com.aliothmoon.maameow.utils.i18n.resolve
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
@@ -99,32 +100,16 @@ class ScheduleExecutionService : Service() {
         triggerLogger.begin(strategy.id, strategy.name, scheduledTimeMs)
         triggerLogger.append("策略加载完成: ${strategy.name}")
 
-        // ─── 前置：唤醒+解锁 ───
+        // ─── 前置：唤醒 + 解锁（锁屏会盖住虚拟显示器，两种运行模式都跑不了）───
+        var wakeUnlocked = false
         if (strategy.wakeUnlockEnabled) {
             triggerLogger.append("执行唤醒+解锁...")
-            val typeKey = appSettingsManager.wakeUnlockType.value
-            val credential = appSettingsManager.wakeCredential.value
-            val type = WakeUnlockEngine.UnlockType.fromKey(typeKey)
-            val calibration = currentSwipeCalibration()
-            val pinWait = appSettingsManager.wakePinWaitSec.value
-            val retries = appSettingsManager.wakeUnlockMaxRetries.value
-            val config = WakeUnlockEngine.WakeConfig(
-                unlockType = type,
-                credential = credential,
-                swipeStartCalibration = calibration,
-                pinWaitSec = pinWait,
-                maxRetries = retries,
+            val result = wakeUnlockEngine.wakeAndUnlock(appSettingsManager.wakeCredential.value)
+            wakeUnlocked = result.isSuccess
+            triggerLogger.append(
+                if (wakeUnlocked) "唤醒+解锁成功"
+                else "唤醒+解锁失败: ${result.message.resolve(this@ScheduleExecutionService)}"
             )
-            if (calibration != null) {
-                triggerLogger.append(
-                    "使用校准滑动起点: (%.0f%%,%.0f%%)".format(
-                        calibration.xPercent * 100, calibration.yPercent * 100,
-                    ),
-                )
-            }
-            triggerLogger.append("PIN 等待: ${pinWait}s, 最大重试: $retries")
-            val ok = wakeUnlockEngine.wakeAndUnlock(config)
-            triggerLogger.append(if (ok) "唤醒+解锁执行完毕" else "唤醒+解锁失败（继续执行）")
         }
 
         val request = ScheduledExecutionRequest(
@@ -137,11 +122,10 @@ class ScheduleExecutionService : Service() {
             autoSleepAfterTask = strategy.autoSleepAfterTask,
         )
 
-        // 仅后台虚拟显示器模式下允许跳过锁屏检查：前台模式锁屏通常无法正常截屏
-        // 如果已执行唤醒+解锁，同样跳过（屏幕已解锁）
+        // 仅后台虚拟显示器模式下允许跳过锁屏检查；唤醒解锁必须确实成功才算数
         val skipKeyguardCheck = (appSettingsManager.runScheduleWhenLocked.value
                 && appSettingsManager.runMode.value == RunMode.BACKGROUND)
-                || strategy.wakeUnlockEnabled
+                || wakeUnlocked
         if (skipKeyguardCheck) {
             triggerLogger.append("已跳过锁屏检查")
         } else {
@@ -295,12 +279,6 @@ class ScheduleExecutionService : Service() {
         stopSelf()
     }
 
-    /** 读取当前滑动起点校准数据，未校准返回 null */
-    private fun currentSwipeCalibration(): WakeUnlockEngine.SwipeCalibration? {
-        val x = appSettingsManager.swipeStartXPercent.value
-        val y = appSettingsManager.swipeStartYPercent.value
-        return if (x >= 0f && y >= 0f) WakeUnlockEngine.SwipeCalibration(x, y) else null
-    }
 
     override fun onDestroy() {
         serviceScope.cancel()
