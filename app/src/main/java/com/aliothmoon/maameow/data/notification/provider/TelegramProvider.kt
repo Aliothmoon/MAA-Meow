@@ -1,8 +1,10 @@
 package com.aliothmoon.maameow.data.notification.provider
 
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
 import com.aliothmoon.maameow.utils.JsonUtils
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -15,10 +17,16 @@ class TelegramProvider(
 
     override val id = "Telegram"
 
-    override suspend fun send(title: String, content: String): Boolean {
+    override suspend fun send(title: String, content: String): NotificationSendResult {
         val settings = settingsManager.settings.first()
-        val botToken = settings.telegramBotToken.takeIf { it.isNotEmpty() } ?: return false
-        val chatId = settings.telegramChatId.takeIf { it.isNotEmpty() } ?: return false
+        val botToken = settings.telegramBotToken.takeIf { it.isNotEmpty() }
+            ?: return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_telegram_token_empty)
+            )
+        val chatId = settings.telegramChatId.takeIf { it.isNotEmpty() }
+            ?: return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_telegram_chat_empty)
+            )
 
         val url = "https://api.telegram.org/bot$botToken/sendMessage"
         val topicId = settings.telegramTopicId.takeIf { it.isNotEmpty() }
@@ -33,11 +41,20 @@ class TelegramProvider(
         return runCatching {
             httpClient.post(url, body).use { response ->
                 val responseBody = response.body.string()
-                response.isSuccessful && JsonUtils.common.decodeFromString<TelegramResponse>(responseBody).ok
+                if (response.isSuccessful &&
+                    JsonUtils.common.decodeFromString<TelegramResponse>(responseBody).ok
+                ) {
+                    NotificationSendResult.Success
+                } else {
+                    Timber.w("Telegram rejected: HTTP %d, body=%s", response.code, responseBody)
+                    NotificationSendResult.Failed(
+                        uiTextOf(R.string.notification_err_http_status, response.code),
+                    )
+                }
             }
         }.getOrElse {
             Timber.e(it, "Telegram send failed")
-            false
+            NotificationSendResult.Transient(uiTextOf(R.string.notification_err_network))
         }
     }
 

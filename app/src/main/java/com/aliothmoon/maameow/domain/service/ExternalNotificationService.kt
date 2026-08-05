@@ -3,7 +3,9 @@ package com.aliothmoon.maameow.domain.service
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
 import com.aliothmoon.maameow.data.notification.provider.NotificationProvider
+import com.aliothmoon.maameow.data.notification.provider.NotificationSendResult
 import com.aliothmoon.maameow.utils.i18n.UiText
+import com.aliothmoon.maameow.utils.i18n.uiTextJoin
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -66,19 +68,42 @@ class ExternalNotificationService(
             val provider = providers[id]
             val result = if (provider == null) {
                 Timber.w("未知通知渠道: $id")
-                false
+                null
             } else {
                 runCatching { provider.send(prefixedTitle, content) }
-                    .onFailure { Timber.e(it, "通知渠道 $id 发送失败") }
-                    .getOrDefault(false)
-            }
+                    .getOrElse {
+                        Timber.e(it, "通知渠道 $id 发送异常")
+                        NotificationSendResult.Transient(uiTextOf(R.string.notification_err_network))
+                    }
+            } ?: continue
 
-            if (isTest || !result) {
-                _feedbackMessages.tryEmit(
-                    if (result) uiTextOf(R.string.notification_feedback_send_success, id)
-                    else uiTextOf(R.string.notification_feedback_send_failed, id)
-                )
+            when (result) {
+                is NotificationSendResult.Success -> {
+                    if (isTest) {
+                        _feedbackMessages.tryEmit(uiTextOf(R.string.notification_feedback_send_success, id))
+                    }
+                }
+
+                is NotificationSendResult.Failed -> {
+                    Timber.w("通知渠道 %s 发送失败: Failed", id)
+                    emitFailure(id, result.message)
+                }
+
+                is NotificationSendResult.Transient -> {
+                    Timber.w("通知渠道 %s 发送失败: Transient", id)
+                    if (isTest) emitFailure(id, result.message)
+                }
             }
         }
+    }
+
+    private fun emitFailure(id: String, message: UiText) {
+        _feedbackMessages.tryEmit(
+            uiTextJoin(
+                uiTextOf(R.string.notification_feedback_send_failed, id),
+                message,
+                separator = UiText.Dynamic("："),
+            )
+        )
     }
 }

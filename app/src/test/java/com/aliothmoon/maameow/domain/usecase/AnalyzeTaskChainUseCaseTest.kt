@@ -15,12 +15,9 @@ import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.repository.OperBoxSnapshot
 import com.aliothmoon.maameow.data.resource.CharacterInfo
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
-import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkObject
-import io.mockk.unmockkObject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -101,45 +98,35 @@ class AnalyzeTaskChainUseCaseTest {
 
     @Test
     fun returnsBlocked_whenWeeklyScheduleFiltersOutAllTasks() = runBlocking {
-        // SeriesLock 按日期生效（2026-08-01 起对官服/B服返回 true），会向预检日志追加警告；
-        // mock 掉避免断言结果随墙钟日期变化
-        mockkObject(SeriesLock)
-        try {
-            every { SeriesLock.isLocked(any(), any()) } returns false
-            every { SeriesLock.isLocked(any()) } returns false
+        val disabledEveryDay = mapOf(
+            "MONDAY" to false,
+            "TUESDAY" to false,
+            "WEDNESDAY" to false,
+            "THURSDAY" to false,
+            "FRIDAY" to false,
+            "SATURDAY" to false,
+            "SUNDAY" to false,
+        )
 
-            val disabledEveryDay = mapOf(
-                "MONDAY" to false,
-                "TUESDAY" to false,
-                "WEDNESDAY" to false,
-                "THURSDAY" to false,
-                "FRIDAY" to false,
-                "SATURDAY" to false,
-                "SUNDAY" to false,
-            )
-
-            val result = useCase(
-                listOf(
-                    TaskChainNode(
-                        name = "理智作战",
-                        enabled = true,
-                        config = FightConfig(
-                            useWeeklySchedule = true,
-                            weeklySchedule = disabledEveryDay,
-                        ),
-                    )
+        val result = useCase(
+            listOf(
+                TaskChainNode(
+                    name = "理智作战",
+                    enabled = true,
+                    config = FightConfig(
+                        useWeeklySchedule = true,
+                        weeklySchedule = disabledEveryDay,
+                    ),
                 )
             )
+        )
 
-            assertEquals(
-                AnalyzeTaskChainResult.Blocked(
-                    reason = AnalyzeTaskChainFailureReason.NO_EXECUTABLE_TASKS,
-                ),
-                result
-            )
-        } finally {
-            unmockkObject(SeriesLock)
-        }
+        assertEquals(
+            AnalyzeTaskChainResult.Blocked(
+                reason = AnalyzeTaskChainFailureReason.NO_EXECUTABLE_TASKS,
+            ),
+            result
+        )
     }
 
     @Test

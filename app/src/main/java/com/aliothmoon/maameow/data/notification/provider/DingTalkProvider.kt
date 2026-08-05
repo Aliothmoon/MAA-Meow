@@ -1,9 +1,11 @@
 package com.aliothmoon.maameow.data.notification.provider
 
 import android.util.Base64
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
 import com.aliothmoon.maameow.utils.JsonUtils
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import timber.log.Timber
@@ -18,9 +20,12 @@ class DingTalkProvider(
 
     override val id = "DingTalk"
 
-    override suspend fun send(title: String, content: String): Boolean {
+    override suspend fun send(title: String, content: String): NotificationSendResult {
         val settings = settingsManager.settings.first()
-        val accessToken = settings.dingTalkAccessToken.takeIf { it.isNotEmpty() } ?: return false
+        val accessToken = settings.dingTalkAccessToken.takeIf { it.isNotEmpty() }
+            ?: return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_dingtalk_token_empty)
+            )
 
         var url = "https://oapi.dingtalk.com/robot/send?access_token=$accessToken"
         val secret = settings.dingTalkSecret.takeIf { it.isNotEmpty() }
@@ -46,11 +51,20 @@ class DingTalkProvider(
         return runCatching {
             httpClient.post(url, body).use { response ->
                 val responseBody = response.body.string()
-                response.isSuccessful && JsonUtils.common.decodeFromString<DingTalkResponse>(responseBody).errcode == 0
+                if (response.isSuccessful &&
+                    JsonUtils.common.decodeFromString<DingTalkResponse>(responseBody).errcode == 0
+                ) {
+                    NotificationSendResult.Success
+                } else {
+                    Timber.w("DingTalk rejected: HTTP %d, body=%s", response.code, responseBody)
+                    NotificationSendResult.Failed(
+                        uiTextOf(R.string.notification_err_http_status, response.code),
+                    )
+                }
             }
         }.getOrElse {
             Timber.e(it, "DingTalk send failed")
-            false
+            NotificationSendResult.Transient(uiTextOf(R.string.notification_err_network))
         }
     }
 

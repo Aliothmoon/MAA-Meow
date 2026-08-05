@@ -1334,6 +1334,33 @@
     <string name="notification_feedback_send_success">%1$s sent successfully</string>
     <string name="notification_feedback_send_failed">%1$s failed to send</string>
 
+    <!-- Notification send failure reasons -->
+    <string name="notification_err_webhook_url_empty">Webhook URL is not set</string>
+    <string name="notification_err_webhook_body_empty">Webhook request body is not set</string>
+    <string name="notification_err_bark_server_empty">Bark server address is not set</string>
+    <string name="notification_err_bark_key_empty">Bark SendKey is not set</string>
+    <string name="notification_err_dingtalk_token_empty">DingTalk access_token is not set</string>
+    <string name="notification_err_discord_token_empty">Discord Bot Token is not set</string>
+    <string name="notification_err_discord_user_empty">Discord user ID is not set</string>
+    <string name="notification_err_discord_dm_failed">Failed to create Discord DM channel</string>
+    <string name="notification_err_discord_webhook_empty">Discord Webhook URL is not set</string>
+    <string name="notification_err_gotify_server_empty">Gotify server address is not set</string>
+    <string name="notification_err_gotify_token_empty">Gotify token is not set</string>
+    <string name="notification_err_gotify_scheme">Gotify server address must use http(s)</string>
+    <string name="notification_err_qmsg_server_empty">Qmsg server address is not set</string>
+    <string name="notification_err_qmsg_key_empty">Qmsg key is not set</string>
+    <string name="notification_err_serverchan_key_empty">ServerChan SendKey is not set</string>
+    <string name="notification_err_serverchan_sctp_fmt">Invalid ServerChan sctp key format</string>
+    <string name="notification_err_smtp_server_empty">SMTP server address is not set</string>
+    <string name="notification_err_smtp_port_invalid">SMTP port is invalid</string>
+    <string name="notification_err_smtp_from_empty">SMTP sender address is not set</string>
+    <string name="notification_err_smtp_to_empty">SMTP recipient address is not set</string>
+    <string name="notification_err_smtp_auth_empty">SMTP authentication enabled but account or password is not set</string>
+    <string name="notification_err_telegram_token_empty">Telegram Bot Token is not set</string>
+    <string name="notification_err_telegram_chat_empty">Telegram Chat ID is not set</string>
+    <string name="notification_err_http_status">Server responded with HTTP %1$d</string>
+    <string name="notification_err_network">Network request failed</string>
+
     <!-- i18n: accessibility -->
     <string name="accessibility_navigation">Navigation</string>
     <string name="accessibility_tip">Tip</string>

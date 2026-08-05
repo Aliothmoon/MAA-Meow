@@ -1,7 +1,9 @@
 package com.aliothmoon.maameow.data.notification.provider
 
 import androidx.core.text.htmlEncode
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import jakarta.mail.Authenticator
 import jakarta.mail.Message
 import jakarta.mail.PasswordAuthentication
@@ -20,19 +22,33 @@ class SmtpProvider(
 
     override val id = "SMTP"
 
-    override suspend fun send(title: String, content: String): Boolean {
+    override suspend fun send(title: String, content: String): NotificationSendResult {
         val settings = settingsManager.settings.first()
-        val server = settings.smtpServer.takeIf { it.isNotBlank() } ?: return false
-        val port = settings.smtpPort.toIntOrNull() ?: return false
-        val from = settings.smtpFrom.takeIf { it.isNotBlank() } ?: return false
-        val to = settings.smtpTo.takeIf { it.isNotBlank() } ?: return false
+        val server = settings.smtpServer.takeIf { it.isNotBlank() }
+            ?: return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_smtp_server_empty)
+            )
+        val port = settings.smtpPort.toIntOrNull()
+            ?: return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_smtp_port_invalid)
+            )
+        val from = settings.smtpFrom.takeIf { it.isNotBlank() }
+            ?: return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_smtp_from_empty)
+            )
+        val to = settings.smtpTo.takeIf { it.isNotBlank() }
+            ?: return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_smtp_to_empty)
+            )
         val useSsl = settings.smtpUseSsl.toBooleanStrictOrNull() ?: false
         val requireAuthentication = settings.smtpRequireAuthentication.toBooleanStrictOrNull() ?: false
         val user = settings.smtpUser
         val password = settings.smtpPassword
 
         if (requireAuthentication && (user.isBlank() || password.isBlank())) {
-            return false
+            return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_smtp_auth_empty)
+            )
         }
 
         val properties = Properties().apply {
@@ -69,10 +85,10 @@ class SmtpProvider(
                 setContent(htmlBody, "text/html; charset=UTF-8")
             }
             Transport.send(message)
-            true
+            NotificationSendResult.Success
         }.getOrElse {
             Timber.e(it, "SMTP send failed")
-            false
+            NotificationSendResult.Transient(uiTextOf(R.string.notification_err_network))
         }
     }
 

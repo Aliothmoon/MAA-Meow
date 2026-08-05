@@ -1391,6 +1391,33 @@
     <string name="notification_feedback_send_success">%1$s 发送成功</string>
     <string name="notification_feedback_send_failed">%1$s 发送失败</string>
 
+    <!-- 通知发送失败原因 -->
+    <string name="notification_err_webhook_url_empty">Webhook 地址未填写</string>
+    <string name="notification_err_webhook_body_empty">Webhook 请求体未填写</string>
+    <string name="notification_err_bark_server_empty">Bark 服务器地址未填写</string>
+    <string name="notification_err_bark_key_empty">Bark SendKey 未填写</string>
+    <string name="notification_err_dingtalk_token_empty">钉钉 access_token 未填写</string>
+    <string name="notification_err_discord_token_empty">Discord Bot Token 未填写</string>
+    <string name="notification_err_discord_user_empty">Discord 用户 ID 未填写</string>
+    <string name="notification_err_discord_dm_failed">创建 Discord 私信频道失败</string>
+    <string name="notification_err_discord_webhook_empty">Discord Webhook 地址未填写</string>
+    <string name="notification_err_gotify_server_empty">Gotify 服务器地址未填写</string>
+    <string name="notification_err_gotify_token_empty">Gotify Token 未填写</string>
+    <string name="notification_err_gotify_scheme">Gotify 服务器地址必须为 http(s)</string>
+    <string name="notification_err_qmsg_server_empty">Qmsg 服务器地址未填写</string>
+    <string name="notification_err_qmsg_key_empty">Qmsg Key 未填写</string>
+    <string name="notification_err_serverchan_key_empty">Server 酱 SendKey 未填写</string>
+    <string name="notification_err_serverchan_sctp_fmt">Server 酱 sctp 推送 Key 格式无效</string>
+    <string name="notification_err_smtp_server_empty">SMTP 服务器地址未填写</string>
+    <string name="notification_err_smtp_port_invalid">SMTP 端口无效</string>
+    <string name="notification_err_smtp_from_empty">SMTP 发件人地址未填写</string>
+    <string name="notification_err_smtp_to_empty">SMTP 收件人地址未填写</string>
+    <string name="notification_err_smtp_auth_empty">已开启 SMTP 认证但未填写账号或密码</string>
+    <string name="notification_err_telegram_token_empty">Telegram Bot Token 未填写</string>
+    <string name="notification_err_telegram_chat_empty">Telegram Chat ID 未填写</string>
+    <string name="notification_err_http_status">服务端返回状态码 %1$d</string>
+    <string name="notification_err_network">网络请求失败</string>
+
     <!-- i18n: accessibility -->
     <string name="accessibility_navigation">导航</string>
     <string name="accessibility_tip">提示</string>

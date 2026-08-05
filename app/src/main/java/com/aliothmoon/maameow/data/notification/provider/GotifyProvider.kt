@@ -1,8 +1,10 @@
 package com.aliothmoon.maameow.data.notification.provider
 
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
 import com.aliothmoon.maameow.utils.JsonUtils
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import timber.log.Timber
@@ -15,13 +17,24 @@ class GotifyProvider(
 
     override val id = "Gotify"
 
-    override suspend fun send(title: String, content: String): Boolean {
+    override suspend fun send(title: String, content: String): NotificationSendResult {
         val settings = settingsManager.settings.first()
-        val server = (settings.gotifyServer.takeIf { it.isNotBlank() }?.trim()?.trimEnd('/') ?: return false) + "/"
-        val token = settings.gotifyToken.takeIf { it.isNotBlank() } ?: return false
-        val baseUri = runCatching { URI.create(server) }.getOrNull() ?: return false
+        val rawServer = settings.gotifyServer.takeIf { it.isNotBlank() }?.trim()?.trimEnd('/')
+            ?: return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_gotify_server_empty)
+            )
+        val token = settings.gotifyToken.takeIf { it.isNotBlank() }
+            ?: return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_gotify_token_empty)
+            )
+        val baseUri = runCatching { URI.create("$rawServer/") }.getOrNull()
+            ?: return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_gotify_scheme)
+            )
         if (baseUri.scheme !in setOf("http", "https")) {
-            return false
+            return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_gotify_scheme)
+            )
         }
 
         val url = baseUri.resolve("message").toString()
@@ -39,11 +52,20 @@ class GotifyProvider(
                 headers = mapOf("X-Gotify-Key" to token)
             ).use { response ->
                 val responseBody = response.body.string()
-                response.isSuccessful && JsonUtils.common.decodeFromString<GotifyResponse>(responseBody).id != null
+                if (response.isSuccessful &&
+                    JsonUtils.common.decodeFromString<GotifyResponse>(responseBody).id != null
+                ) {
+                    NotificationSendResult.Success
+                } else {
+                    Timber.w("Gotify rejected: HTTP %d, body=%s", response.code, responseBody)
+                    NotificationSendResult.Failed(
+                        uiTextOf(R.string.notification_err_http_status, response.code),
+                    )
+                }
             }
         }.getOrElse {
             Timber.e(it, "Gotify send failed")
-            false
+            NotificationSendResult.Transient(uiTextOf(R.string.notification_err_network))
         }
     }
 

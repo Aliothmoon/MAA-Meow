@@ -1,8 +1,10 @@
 package com.aliothmoon.maameow.data.notification.provider
 
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
 import com.aliothmoon.maameow.utils.JsonUtils
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -15,10 +17,16 @@ class QmsgProvider(
 
     override val id = "Qmsg"
 
-    override suspend fun send(title: String, content: String): Boolean {
+    override suspend fun send(title: String, content: String): NotificationSendResult {
         val settings = settingsManager.settings.first()
-        val server = settings.qmsgServer.takeIf { it.isNotBlank() }?.trimEnd('/') ?: return false
-        val key = settings.qmsgKey.takeIf { it.isNotBlank() } ?: return false
+        val server = settings.qmsgServer.takeIf { it.isNotBlank() }?.trimEnd('/')
+            ?: return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_qmsg_server_empty)
+            )
+        val key = settings.qmsgKey.takeIf { it.isNotBlank() }
+            ?: return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_qmsg_key_empty)
+            )
         val body = JsonUtils.common.encodeToString(
             QmsgRequest(
                 msg = content,
@@ -30,11 +38,20 @@ class QmsgProvider(
         return runCatching {
             httpClient.post("$server/jsend/$key", body).use { response ->
                 val responseBody = response.body.string()
-                response.isSuccessful && JsonUtils.common.decodeFromString<QmsgResponse>(responseBody).success
+                if (response.isSuccessful &&
+                    JsonUtils.common.decodeFromString<QmsgResponse>(responseBody).success
+                ) {
+                    NotificationSendResult.Success
+                } else {
+                    Timber.w("Qmsg rejected: HTTP %d, body=%s", response.code, responseBody)
+                    NotificationSendResult.Failed(
+                        uiTextOf(R.string.notification_err_http_status, response.code),
+                    )
+                }
             }
         }.getOrElse {
             Timber.e(it, "Qmsg send failed")
-            false
+            NotificationSendResult.Transient(uiTextOf(R.string.notification_err_network))
         }
     }
 

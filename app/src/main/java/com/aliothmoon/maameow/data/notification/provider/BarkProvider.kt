@@ -1,8 +1,10 @@
 package com.aliothmoon.maameow.data.notification.provider
 
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
 import com.aliothmoon.maameow.utils.JsonUtils
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -16,10 +18,16 @@ class BarkProvider(
 
     override val id = "Bark"
 
-    override suspend fun send(title: String, content: String): Boolean {
+    override suspend fun send(title: String, content: String): NotificationSendResult {
         val settings = settingsManager.settings.first()
-        val barkServer = settings.barkServer.takeIf { it.isNotEmpty() } ?: return false
-        val sendKey = settings.barkSendKey.takeIf { it.isNotEmpty() } ?: return false
+        val barkServer = settings.barkServer.takeIf { it.isNotEmpty() }
+            ?: return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_bark_server_empty)
+            )
+        val sendKey = settings.barkSendKey.takeIf { it.isNotEmpty() }
+            ?: return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_bark_key_empty)
+            )
 
         val normalizedBase = barkServer.trimEnd('/') + "/"
         val url = URI.create(normalizedBase).resolve("push").toString()
@@ -34,11 +42,20 @@ class BarkProvider(
         return runCatching {
             httpClient.post(url, body).use { response ->
                 val responseBody = response.body.string()
-                response.isSuccessful && JsonUtils.common.decodeFromString<BarkResponse>(responseBody).code == 200
+                if (response.isSuccessful &&
+                    JsonUtils.common.decodeFromString<BarkResponse>(responseBody).code == 200
+                ) {
+                    NotificationSendResult.Success
+                } else {
+                    Timber.w("Bark rejected: HTTP %d, body=%s", response.code, responseBody)
+                    NotificationSendResult.Failed(
+                        uiTextOf(R.string.notification_err_http_status, response.code),
+                    )
+                }
             }
         }.getOrElse {
             Timber.e(it, "Bark send failed")
-            false
+            NotificationSendResult.Transient(uiTextOf(R.string.notification_err_network))
         }
     }
 

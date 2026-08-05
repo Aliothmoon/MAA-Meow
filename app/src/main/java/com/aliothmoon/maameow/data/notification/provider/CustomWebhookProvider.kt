@@ -1,7 +1,9 @@
 package com.aliothmoon.maameow.data.notification.provider
 
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import java.time.LocalDateTime
@@ -14,10 +16,16 @@ class CustomWebhookProvider(
 
     override val id = "CustomWebhook"
 
-    override suspend fun send(title: String, content: String): Boolean {
+    override suspend fun send(title: String, content: String): NotificationSendResult {
         val settings = settingsManager.settings.first()
-        val url = settings.customWebhookUrl.takeIf { it.isNotEmpty() } ?: return false
-        val bodyTemplate = settings.customWebhookBody.takeIf { it.isNotEmpty() } ?: return false
+        val url = settings.customWebhookUrl.takeIf { it.isNotEmpty() }
+            ?: return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_webhook_url_empty)
+            )
+        val bodyTemplate = settings.customWebhookBody.takeIf { it.isNotEmpty() }
+            ?: return NotificationSendResult.Failed(
+                uiTextOf(R.string.notification_err_webhook_body_empty)
+            )
 
         val now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
         val body = bodyTemplate
@@ -38,11 +46,19 @@ class CustomWebhookProvider(
 
         return runCatching {
             httpClient.post(url, body, headers = headers).use { response ->
-                response.isSuccessful
+                if (response.isSuccessful) {
+                    NotificationSendResult.Success
+                } else {
+                    val responseBody = response.body.string()
+                    Timber.w("CustomWebhook rejected: HTTP %d, body=%s", response.code, responseBody)
+                    NotificationSendResult.Failed(
+                        uiTextOf(R.string.notification_err_http_status, response.code),
+                    )
+                }
             }
         }.getOrElse {
             Timber.e(it, "CustomWebhook send failed")
-            false
+            NotificationSendResult.Transient(uiTextOf(R.string.notification_err_network))
         }
     }
 }
