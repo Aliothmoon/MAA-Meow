@@ -71,4 +71,11 @@ interface RemoteService {
 
     // 把漂移到其它 display 的应用任务拉回虚拟显示器，成功返回 true
     boolean moveAppToVirtualDisplay(String packageName) = 32;
+
+    // 点亮屏幕并解除锁屏。credential 为数字 PIN，无凭证锁屏传空串。
+    // 返回码见 WakeUnlockController.Result，0 表示成功。
+    int wakeAndUnlock(String credential) = 33;
+
+    // 仅点亮屏幕，不解锁
+    boolean wakeScreen() = 34;
 }

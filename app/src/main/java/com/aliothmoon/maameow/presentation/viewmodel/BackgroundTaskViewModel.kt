@@ -16,6 +16,7 @@ import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.AchievementReporter
+import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
@@ -64,6 +65,7 @@ class BackgroundTaskViewModel(
     private val gameMuteCoordinator: GameMuteCoordinator,
     scheduleRepository: ScheduleStrategyRepository,
     triggerLogger: ScheduleTriggerLogger,
+    private val wakeUnlockEngine: WakeUnlockEngine,
     private val application: Context,
 ) : ViewModel() {
 
@@ -74,6 +76,7 @@ class BackgroundTaskViewModel(
         appSettingsManager = appSettingsManager,
         chainState = chainState,
         triggerLogger = triggerLogger,
+        wakeUnlockEngine = wakeUnlockEngine,
     )
 
     private val _state = MutableStateFlow(BackgroundTaskState())

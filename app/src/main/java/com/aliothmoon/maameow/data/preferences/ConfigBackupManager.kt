@@ -83,11 +83,12 @@ class ConfigBackupManager(
         const val CURRENT_VERSION = 1
 
         /**
-         * 导出时剥离设备本地字段：CDK 属敏感信息；
+         * 导出时剥离设备本地字段：CDK 与解锁 PIN 属敏感信息；
          * 自定义背景的开关与令牌对应本机 filesDir 下的图片文件，在其他设备上不存在。
          */
         private fun AppSettings.sanitized() = copy(
             mirrorChyanCdk = "",
+            wakeCredential = "",
             customBackgroundEnabled = "false",
             customBackgroundToken = "",
         )

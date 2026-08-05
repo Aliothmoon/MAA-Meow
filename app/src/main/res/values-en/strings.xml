@@ -348,7 +348,6 @@
     <string name="copilot_paste_parse">Paste and load</string>
     <string name="copilot_clipboard_empty">Clipboard is empty</string>
 
-
     <!-- panel: fight config -->
     <string name="panel_fight_converted_prefix">Will convert to: %1$s</string>
 
@@ -1475,6 +1474,12 @@
     <string name="schedule_section_advanced">Advanced options</string>
     <string name="schedule_force_start">Force scheduled start</string>
     <string name="schedule_force_start_tip">Stop the current task, restart the game, and start the new tasks</string>
+    <string name="schedule_section_wake_unlock">Wake &amp; Unlock</string>
+    <string name="schedule_wake_unlock_enabled">Enable wake &amp; unlock</string>
+    <string name="schedule_wake_unlock_tip">Wake the screen and unlock before the scheduled task starts. Requires unlock method configured in Settings.</string>
+    <string name="schedule_wake_unlock_not_configured">Configure unlock method in Settings → Wake Unlock Config first</string>
+    <string name="schedule_auto_sleep_after_task">Auto sleep after task</string>
+    <string name="schedule_auto_sleep_tip">Automatically turn off the screen after the scheduled task completes to save battery</string>
     <string name="schedule_permission_tip_battery_optimization">Disable battery optimization</string>
     <string name="schedule_permission_tip_exact_alarm">Allow exact alarms</string>
     <string name="schedule_permission_title">Permission reminder</string>
@@ -1943,4 +1948,26 @@
     <string name="runlog_service_terminated">MAA service terminated unexpectedly</string>
     <string name="runlog_game_process_gone">Game process not started or closed unexpectedly (%1$s)</string>
     <string name="runlog_game_left_virtual_display">Game window left the virtual display and could not be moved back (%1$s). Try enabling \"Force FULLSCREEN mode\" or switch to foreground mode</string>
+
+    <!-- Wake + unlock -->
+    <string name="settings_wake_unlock_section">Wake &amp; unlock</string>
+    <string name="settings_wake_unlock_section_desc">Turn the screen on and dismiss the lock screen before a scheduled task runs. The lock screen covers the virtual display, blocking both foreground and background modes</string>
+    <string name="settings_wake_unlock_type">Unlock method</string>
+    <string name="settings_wake_unlock_type_none">Do not unlock</string>
+    <string name="settings_wake_unlock_type_swipe">No password / swipe</string>
+    <string name="settings_wake_unlock_type_pin">PIN</string>
+    <string name="settings_wake_credential">PIN</string>
+    <string name="settings_wake_credential_hint">Enter the lock screen PIN (digits only)</string>
+    <string name="settings_wake_credential_show">Show PIN</string>
+    <string name="settings_wake_credential_hide">Hide PIN</string>
+    <string name="settings_wake_credential_warning">The PIN is stored in plain text on this device. It is stripped from exported config, but can still leak if someone gets hold of the device. Pattern locks are not supported — use a PIN or no password.</string>
+    <string name="settings_wake_test_button">Test now</string>
+    <string name="settings_wake_test_hint">Checks that the screen turns on and the lock screen is dismissed. To test the full flow, lock the screen and let a scheduled task fire</string>
+    <string name="wake_result_ok">Wake + unlock succeeded</string>
+    <string name="wake_result_wake_failed">Screen would not turn on</string>
+    <string name="wake_result_credential_required">A PIN is required for this lock screen</string>
+    <string name="wake_result_credential_rejected">Unlock failed, the PIN may be wrong. Stopped retrying to avoid triggering a system lockout</string>
+    <string name="wake_result_bouncer_not_ready">The lock screen credential prompt did not appear</string>
+    <string name="wake_result_unsupported">Not supported on this system</string>
+    <string name="wake_result_ipc_failed">Elevated service not connected</string>
 </resources>

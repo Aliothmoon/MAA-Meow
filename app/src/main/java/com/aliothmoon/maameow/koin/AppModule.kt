@@ -41,6 +41,7 @@ import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.AppAliveChecker
 import com.aliothmoon.maameow.domain.service.AppWatchdog
+import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.service.CopilotManager
 import com.aliothmoon.maameow.domain.service.ExternalNotificationService
 import com.aliothmoon.maameow.domain.service.FightDropsRefresher
@@ -168,6 +169,9 @@ val appModule = module {
     single<MaaExecutionStateHolder> { get<MaaCompositionService>() }
     single { GameMuteCoordinator(get(), RemoteGameAudioAdapter) }
     singleOf(::MaaCallbackDispatcher)
+
+    // 定时唤醒 + 解锁
+    singleOf(::WakeUnlockEngine)
 
     singleOf(::UnifiedStateDispatcher)
     singleOf(::LogExportService)

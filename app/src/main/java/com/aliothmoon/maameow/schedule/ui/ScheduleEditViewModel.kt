@@ -8,6 +8,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskProfile
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
@@ -42,6 +44,11 @@ data class ScheduleEditUiState(
     val profiles: List<TaskProfile> = emptyList(),
     val selectedProfileId: String? = null,
     val forceStart: Boolean = false,
+    // 唤醒+解锁
+    val wakeUnlockEnabled: Boolean = false,
+    val autoSleepAfterTask: Boolean = false,
+    /** 设置页是否已配置解锁方式+密码 */
+    val wakeUnlockConfigured: Boolean = false,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
     val needBatteryOptimization: Boolean = false,
@@ -53,6 +60,7 @@ class ScheduleEditViewModel(
     private val repository: ScheduleStrategyRepository,
     private val taskChainState: TaskChainState,
     private val scheduleAlarmManager: ScheduleAlarmManager,
+    private val appSettingsManager: AppSettingsManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ScheduleEditUiState())
@@ -89,6 +97,9 @@ class ScheduleEditViewModel(
                         profiles = profiles,
                         selectedProfileId = strategy.profileId,
                         forceStart = strategy.forceStart,
+                        wakeUnlockEnabled = strategy.wakeUnlockEnabled,
+                        autoSleepAfterTask = strategy.autoSleepAfterTask,
+                        wakeUnlockConfigured = isWakeUnlockConfigured(),
                     )
                     return@launch
                 }
@@ -102,7 +113,8 @@ class ScheduleEditViewModel(
             _state.value = ScheduleEditUiState(
                 name = defaultName,
                 profiles = profiles,
-                selectedProfileId = taskChainState.profileId.value.ifEmpty { profiles.firstOrNull()?.id }
+                selectedProfileId = taskChainState.profileId.value.ifEmpty { profiles.firstOrNull()?.id },
+                wakeUnlockConfigured = isWakeUnlockConfigured(),
             )
         }
     }
@@ -169,6 +181,24 @@ class ScheduleEditViewModel(
         _state.update { it.copy(forceStart = value) }
     }
 
+    fun onWakeUnlockEnabledChanged(value: Boolean) {
+        _state.update { it.copy(wakeUnlockEnabled = value) }
+    }
+
+    fun onAutoSleepAfterTaskChanged(value: Boolean) {
+        _state.update { it.copy(autoSleepAfterTask = value) }
+    }
+
+    /** 唤醒解锁能否启用：默认值 "swipe" 会让任何配置都判定成已就绪，所以要连后端一起看。 */
+    private fun isWakeUnlockConfigured(): Boolean {
+        if (appSettingsManager.startupBackend.value != RemoteBackend.ROOT) return false
+        return when (appSettingsManager.wakeUnlockType.value) {
+            "pin" -> appSettingsManager.wakeCredential.value.isNotBlank()
+            "swipe" -> true
+            else -> false
+        }
+    }
+
     fun onReplaceTime(old: LocalTime, new: LocalTime) {
         _state.update { state ->
             val updated =
@@ -229,6 +259,8 @@ class ScheduleEditViewModel(
                     intervalMinutes = intervalMinutes,
                     profileId = current.selectedProfileId,
                     forceStart = current.forceStart,
+                    wakeUnlockEnabled = current.wakeUnlockEnabled,
+                    autoSleepAfterTask = current.autoSleepAfterTask,
                 ) ?: ScheduleStrategy(
                     id = strategyId ?: UUID.randomUUID().toString(),
                     name = current.name.trim(),
@@ -240,6 +272,8 @@ class ScheduleEditViewModel(
                     intervalMinutes = intervalMinutes,
                     profileId = current.selectedProfileId,
                     forceStart = current.forceStart,
+                    wakeUnlockEnabled = current.wakeUnlockEnabled,
+                    autoSleepAfterTask = current.autoSleepAfterTask,
                 )
 
                 if (current.isNew) {

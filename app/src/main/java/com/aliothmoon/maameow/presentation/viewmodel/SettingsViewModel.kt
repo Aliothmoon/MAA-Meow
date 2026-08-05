@@ -20,6 +20,7 @@ import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
+import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.utils.Misc
@@ -31,6 +32,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -47,6 +50,7 @@ class SettingsViewModel(
     private val resourceLoader: MaaResourceLoader,
     private val achievementReporter: AchievementReporter,
     private val backgroundImageStore: BackgroundImageStore,
+    private val wakeUnlockEngine: WakeUnlockEngine,
 ) : ViewModel() {
 
     // ========== 导入导出 ==========
@@ -191,6 +195,65 @@ class SettingsViewModel(
             appSettingsManager.setForceFullscreenOnVirtualDisplay(enabled)
         }
     }
+
+    // ───────────────── 唤醒 + 解锁 ─────────────────
+
+    /**
+     * 功能是否对当前后端可用。只看用户选定的后端，不看运行时连接状态：
+     * 按连接状态隐藏会让设置项在服务没连上时凭空消失，用户会以为功能丢了。
+     *
+     * 为什么限定 Root：唤醒解锁要调 IPowerManager.wakeUp 和
+     * IWindowManager.dismissKeyguard，并往 display 0 注入按键。Shizuku 的 shell uid
+     * 未必够，且设备重启后 Shizuku 需要手动授权，定时任务醒来时往往还没就绪。
+     */
+    val wakeFeatureAvailable: StateFlow<Boolean> =
+        appSettingsManager.startupBackend
+            .map { it == RemoteBackend.ROOT }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val wakeUnlockType: StateFlow<String> =
+        appSettingsManager.wakeUnlockType
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "swipe")
+
+    fun setWakeUnlockType(type: String) {
+        viewModelScope.launch { appSettingsManager.setWakeUnlockType(type) }
+    }
+
+    val wakeCredential: StateFlow<String> =
+        appSettingsManager.wakeCredential
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    fun setWakeCredential(credential: String) {
+        viewModelScope.launch { appSettingsManager.setWakeCredential(credential) }
+    }
+
+    /** null=未测试，Testing=进行中，Done=已出结果 */
+    sealed interface WakeTestState {
+        data object Testing : WakeTestState
+        data class Done(val result: WakeUnlockEngine.WakeResult) : WakeTestState
+    }
+
+    private val _wakeTestState = MutableStateFlow<WakeTestState?>(null)
+    val wakeTestState: StateFlow<WakeTestState?> = _wakeTestState.asStateFlow()
+
+    /**
+     * 测试唤醒解锁。不主动息屏上锁——那需要先让设备真的锁上，而在前台点按钮的场景下
+     * 做不到可靠复现。这里只验证「当前状态 -> 亮屏且未锁屏」这一段，
+     * 用户想测完整链路可以自己锁屏后用定时任务触发。
+     */
+    fun runWakeTest() {
+        if (_wakeTestState.value == WakeTestState.Testing) return
+        viewModelScope.launch {
+            _wakeTestState.value = WakeTestState.Testing
+            val credential = appSettingsManager.wakeCredential.value
+            _wakeTestState.value = WakeTestState.Done(wakeUnlockEngine.wakeAndUnlock(credential))
+        }
+    }
+
+    fun clearWakeTestResult() {
+        _wakeTestState.value = null
+    }
+
 
     // 后台虚拟显示器模式：游戏漂移自动拉回开关
     val driftAutoRepinEnabled: StateFlow<Boolean> =

@@ -15,7 +15,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -106,6 +109,7 @@ import com.aliothmoon.maameow.presentation.viewmodel.SettingsViewModel
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
+import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.resolve
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -138,6 +142,8 @@ fun SettingsView(
     var showDriftDelayDialog by remember { mutableStateOf(false) }
     val allowForegroundScheduledTask by viewModel.allowForegroundScheduledTask.collectAsStateWithLifecycle()
     val runScheduleWhenLocked by viewModel.runScheduleWhenLocked.collectAsStateWithLifecycle()
+    // ─── 定时唤醒 + 解锁 ───
+    val wakeFeatureAvailable by viewModel.wakeFeatureAvailable.collectAsStateWithLifecycle()
     val tasksOverrideEnabled by viewModel.tasksOverrideEnabled.collectAsStateWithLifecycle()
     val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
@@ -244,6 +250,7 @@ fun SettingsView(
             }
         )
     }
+
 
     val backgroundCrop = rememberBackgroundCropController(viewModel)
     val pickBackgroundLauncher = rememberLauncherForActivityResult(
@@ -765,6 +772,17 @@ fun SettingsView(
                         onCheckedChange = { viewModel.setAllowForegroundScheduledTask(it) }
                     )
                     ListItemDivider()
+                    // 仅 Root 后端展示：其它后端下这个功能不可用，与其灰着再弹窗解释，
+                    // 不如不出现（弹窗那套还逼着 SettingSwitchItem 的禁用态可点，副作用更大）
+                    if (wakeFeatureAvailable) {
+                        SettingClickItem(
+                            title = stringResource(R.string.settings_wake_unlock_section),
+                            description = stringResource(R.string.settings_wake_unlock_section_desc),
+                            contentColor = contentColor,
+                            onClick = { navController.navigate(Routes.WAKE_SCHEDULE_EDITOR) }
+                        )
+                        ListItemDivider()
+                    }
                     SettingSwitchItem(
                         title = stringResource(R.string.settings_run_schedule_when_locked),
                         contentColor = contentColor,

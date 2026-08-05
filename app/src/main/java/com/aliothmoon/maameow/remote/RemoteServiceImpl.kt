@@ -19,6 +19,7 @@ import com.aliothmoon.maameow.remote.internal.PrimaryDisplayManager
 import com.aliothmoon.maameow.remote.internal.RemoteUtils
 import com.aliothmoon.maameow.remote.internal.ScreenManager
 import com.aliothmoon.maameow.remote.internal.VirtualDisplayManager
+import com.aliothmoon.maameow.remote.internal.WakeUnlockController
 import com.aliothmoon.maameow.third.FakeContext
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.Workarounds
@@ -315,6 +316,12 @@ class RemoteServiceImpl : RemoteService.Stub() {
         Ln.i("$TAG: moveAppToVirtualDisplay($packageName) -> display $targetDisplayId")
         return ActivityUtils.repinAppToDisplay(packageName, targetDisplayId)
     }
+
+    /** 见 [WakeUnlockController.wakeAndUnlock]。 */
+    override fun wakeAndUnlock(credential: String?): Int =
+        WakeUnlockController.wakeAndUnlock(credential.orEmpty())
+
+    override fun wakeScreen(): Boolean = WakeUnlockController.wakeOnly()
 
     override fun isPackageInstalled(packageName: String): Boolean {
         return try {

@@ -114,6 +114,7 @@
             </intent-filter>
         </receiver>
 
+
         <!-- 定时任务执行服务 -->
         <service
             android:name=".schedule.service.ScheduleExecutionService"

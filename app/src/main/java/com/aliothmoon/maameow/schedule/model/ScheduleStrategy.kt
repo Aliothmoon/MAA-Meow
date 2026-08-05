@@ -68,6 +68,10 @@ data class ScheduleStrategy(
     val profileId: String,
     /** 触发时若有任务运行，强制停止后再启动 */
     val forceStart: Boolean = false,
+    /** 触发时先唤醒+解锁屏幕（需在设置页配置解锁方式） */
+    val wakeUnlockEnabled: Boolean = false,
+    /** 任务结束后自动熄屏 */
+    val autoSleepAfterTask: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val lastExecutedAt: Long? = null,
     val lastResult: ExecutionResult? = null,

@@ -40,6 +40,10 @@ class AppSettingsManager(
     companion object {
         val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
 
+        /** 解锁方式取值。不支持图案锁。 */
+        val WAKE_UNLOCK_TYPES = setOf("none", "swipe", "pin")
+        const val MAX_PIN_LENGTH = 16
+
         /** 页面缩放：0 = 自动；手动为 80–110 */
         const val FONT_SIZE_SCALE_MIN = 80
         const val FONT_SIZE_SCALE_MAX = 110
@@ -746,6 +750,35 @@ class AppSettingsManager(
     suspend fun setCustomBackgroundBlur(value: Int) {
         with(AppSettingsSchema) {
             context.dataStore.edit { it[customBackgroundBlur] = value.coerceIn(0, 100).toString() }
+        }
+    }
+
+    // ───────────────── 唤醒 + 解锁 ─────────────────
+
+    /** 解锁方式：none / swipe / pin */
+    val wakeUnlockType: StateFlow<String> = settings
+        .map { it.wakeUnlockType }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wakeUnlockType)
+
+    suspend fun setWakeUnlockType(type: String) {
+        if (type !in WAKE_UNLOCK_TYPES) return
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wakeUnlockType] = type }
+        }
+    }
+
+    /** 解锁 PIN，仅 wakeUnlockType = pin 时有意义。 */
+    val wakeCredential: StateFlow<String> = settings
+        .map { it.wakeCredential }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wakeCredential)
+
+    suspend fun setWakeCredential(credential: String) {
+        // 注入走 KEYCODE_0..9，非数字没有对应键位
+        val digits = credential.filter { it.isDigit() }.take(MAX_PIN_LENGTH)
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wakeCredential] = digits }
         }
     }
 

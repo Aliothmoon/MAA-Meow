@@ -4,6 +4,7 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.CountdownState
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 
 class ScheduledLaunchCoordinator(
@@ -31,6 +33,7 @@ class ScheduledLaunchCoordinator(
     private val appSettingsManager: AppSettingsManager,
     private val chainState: TaskChainState,
     private val triggerLogger: ScheduleTriggerLogger,
+    private val wakeUnlockEngine: WakeUnlockEngine,
 ) {
     private val _countdownState = MutableStateFlow<CountdownState>(CountdownState.Idle)
     val countdownState: StateFlow<CountdownState> = _countdownState.asStateFlow()
@@ -230,6 +233,21 @@ class ScheduledLaunchCoordinator(
                 message = message,
             )
         } finally {
+            // 任务启动成功且需要自动熄屏：等任务真正跑完再熄屏
+            if (result == ExecutionResult.STARTED && request.autoSleepAfterTask) {
+                scope.launch {
+                    triggerLogger.append("等待任务完成后自动熄屏...")
+                    val finished = withTimeoutOrNull(AUTO_SLEEP_TIMEOUT_MS) {
+                        // 先等离开 IDLE 再等回到 IDLE，否则刚启动就会被立刻命中
+                        compositionService.state.filter { it != MaaExecutionState.IDLE }.first()
+                        compositionService.state.filter { it == MaaExecutionState.IDLE }.first()
+                    }
+                    triggerLogger.append(
+                        if (finished != null) "任务完成，执行自动熄屏" else "等待任务完成超时，仍执行熄屏"
+                    )
+                    wakeUnlockEngine.turnScreenOff()
+                }
+            }
             clearFlow()
         }
     }
@@ -245,5 +263,9 @@ class ScheduledLaunchCoordinator(
     private fun cancelCountdown() {
         countdownJob?.cancel()
         countdownJob = null
+    }
+
+    companion object {
+        private const val AUTO_SLEEP_TIMEOUT_MS = 30L * 60 * 1000 // 30 分钟
     }
 }

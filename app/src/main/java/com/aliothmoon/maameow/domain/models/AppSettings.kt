@@ -127,4 +127,14 @@ data class AppSettings(
 
     /** 背景模糊强度 0~100（默认 0，仅 API 31+ 生效） */
     @PrefKey(default = "0") val customBackgroundBlur: String = "0",
+
+    // ───────────────── 定时唤醒 + 解锁 ─────────────────
+
+
+    /** 解锁策略：none / swipe / pin / password / keyguard */
+    @PrefKey(default = "swipe") val wakeUnlockType: String = "swipe",
+
+    /** 解锁密码 / PIN。空字符串表示不输入。 */
+    @PrefKey(default = "") val wakeCredential: String = "",
+
 )

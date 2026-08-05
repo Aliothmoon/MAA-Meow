@@ -15,6 +15,8 @@ import com.aliothmoon.maameow.MainActivity
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
+import com.aliothmoon.maameow.utils.i18n.resolve
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
@@ -47,6 +49,7 @@ class ScheduleExecutionService : Service() {
     private val appSettingsManager: AppSettingsManager by inject()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val silentStarter: ForegroundScheduleStarter by inject()
+    private val wakeUnlockEngine: WakeUnlockEngine by inject()
 
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -97,17 +100,32 @@ class ScheduleExecutionService : Service() {
         triggerLogger.begin(strategy.id, strategy.name, scheduledTimeMs)
         triggerLogger.append("策略加载完成: ${strategy.name}")
 
+        // ─── 前置：唤醒 + 解锁（锁屏会盖住虚拟显示器，两种运行模式都跑不了）───
+        var wakeUnlocked = false
+        if (strategy.wakeUnlockEnabled) {
+            triggerLogger.append("执行唤醒+解锁...")
+            val result = wakeUnlockEngine.wakeAndUnlock(appSettingsManager.wakeCredential.value)
+            wakeUnlocked = result.isSuccess
+            triggerLogger.append(
+                if (wakeUnlocked) "唤醒+解锁成功"
+                else "唤醒+解锁失败: ${result.message.resolve(this@ScheduleExecutionService)}"
+            )
+        }
+
         val request = ScheduledExecutionRequest(
             strategyId = strategy.id,
             strategyName = strategy.name,
             profileId = strategy.profileId,
             scheduledTimeMs = scheduledTimeMs,
             forceStart = strategy.forceStart,
+            wakeUnlockEnabled = strategy.wakeUnlockEnabled,
+            autoSleepAfterTask = strategy.autoSleepAfterTask,
         )
 
-        // 仅后台虚拟显示器模式下允许跳过锁屏检查：前台模式锁屏通常无法正常截屏
-        val skipKeyguardCheck = appSettingsManager.runScheduleWhenLocked.value
-                && appSettingsManager.runMode.value == RunMode.BACKGROUND
+        // 仅后台虚拟显示器模式下允许跳过锁屏检查；唤醒解锁必须确实成功才算数
+        val skipKeyguardCheck = (appSettingsManager.runScheduleWhenLocked.value
+                && appSettingsManager.runMode.value == RunMode.BACKGROUND)
+                || wakeUnlocked
         if (skipKeyguardCheck) {
             triggerLogger.append("已跳过锁屏检查")
         } else {
@@ -260,6 +278,7 @@ class ScheduleExecutionService : Service() {
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
+
 
     override fun onDestroy() {
         serviceScope.cancel()
