@@ -37,9 +37,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
@@ -57,6 +61,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,6 +75,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
@@ -141,7 +148,9 @@ fun SettingsView(
     val driftAutoRepinDelaySec by viewModel.driftAutoRepinDelaySec.collectAsStateWithLifecycle()
     var showDriftDelayDialog by remember { mutableStateOf(false) }
     val allowForegroundScheduledTask by viewModel.allowForegroundScheduledTask.collectAsStateWithLifecycle()
-    val runScheduleWhenLocked by viewModel.runScheduleWhenLocked.collectAsStateWithLifecycle()
+    val wakeUnlockType by viewModel.wakeUnlockType.collectAsStateWithLifecycle()
+    val wakeCredential by viewModel.wakeCredential.collectAsStateWithLifecycle()
+    val wakeTestState by viewModel.wakeTestState.collectAsStateWithLifecycle()
     val tasksOverrideEnabled by viewModel.tasksOverrideEnabled.collectAsStateWithLifecycle()
     val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
@@ -182,6 +191,18 @@ fun SettingsView(
                 ).show()
                 AchievementEffect.Unlocked -> Unit
             }
+        }
+    }
+
+    wakeTestState?.let { state ->
+        LaunchedEffect(state) {
+            val done = state as? SettingsViewModel.WakeTestState.Done ?: return@LaunchedEffect
+            Toast.makeText(
+                context,
+                done.result.message.resolve(context),
+                Toast.LENGTH_LONG,
+            ).show()
+            viewModel.clearWakeTestResult()
         }
     }
 
@@ -305,8 +326,6 @@ fun SettingsView(
         sheetVisible = showExportSheet,
         onSheetDismiss = { showExportSheet = false },
     )
-    var showRunScheduleWhenLockedConfirm by remember { mutableStateOf(false) }
-
     if (showRestartDialog) {
         AdaptiveTaskPromptDialog(
             visible = true,
@@ -354,22 +373,6 @@ fun SettingsView(
             },
             onDismissRequest = { showDebugModeConfirm = false },
             confirmText = stringResource(R.string.common_confirm_restart),
-            dismissText = stringResource(R.string.common_cancel),
-            icon = Icons.Rounded.Build
-        )
-    }
-
-    if (showRunScheduleWhenLockedConfirm) {
-        AdaptiveTaskPromptDialog(
-            visible = true,
-            title = stringResource(R.string.dialog_run_schedule_when_locked_title),
-            message = stringResource(R.string.dialog_run_schedule_when_locked_message),
-            onConfirm = {
-                showRunScheduleWhenLockedConfirm = false
-                viewModel.setRunScheduleWhenLocked(true)
-            },
-            onDismissRequest = { showRunScheduleWhenLockedConfirm = false },
-            confirmText = stringResource(R.string.dialog_run_schedule_when_locked_confirm),
             dismissText = stringResource(R.string.common_cancel),
             icon = Icons.Rounded.Build
         )
@@ -770,26 +773,26 @@ fun SettingsView(
                         onCheckedChange = { viewModel.setAllowForegroundScheduledTask(it) }
                     )
                     ListItemDivider()
-                    SettingClickItem(
-                        title = stringResource(R.string.settings_wake_unlock_section),
-                        description = stringResource(R.string.settings_wake_unlock_section_desc),
+                    SettingWakeUnlockTypeItem(
                         contentColor = contentColor,
-                        onClick = { navController.navigate(Routes.WAKE_SCHEDULE_EDITOR) }
+                        selectedType = wakeUnlockType,
+                        onTypeSelected = { viewModel.setWakeUnlockType(it) },
                     )
-                    ListItemDivider()
-                    SettingSwitchItem(
-                        title = stringResource(R.string.settings_run_schedule_when_locked),
-                        description = stringResource(R.string.settings_run_schedule_when_locked_desc),
-                        contentColor = contentColor,
-                        checked = runScheduleWhenLocked,
-                        onCheckedChange = { enabled ->
-                            if (enabled) {
-                                showRunScheduleWhenLockedConfirm = true
-                            } else {
-                                viewModel.setRunScheduleWhenLocked(false)
-                            }
+                    AnimatedVisibility(
+                        visible = wakeUnlockType == "pin",
+                        enter = expandVertically(),
+                        exit = shrinkVertically(),
+                    ) {
+                        Column {
+                            ListItemDivider()
+                            SettingWakePinSection(
+                                contentColor = contentColor,
+                                wakeCredential = wakeCredential,
+                                onCredentialChange = { viewModel.setWakeCredential(it) },
+                                onTest = { viewModel.runWakeTest() },
+                            )
                         }
-                    )
+                    }
                     ListItemDivider()
                     SettingSwitchItem(
                         title = stringResource(R.string.settings_tasks_override_title),
@@ -1103,6 +1106,126 @@ private fun SettingClickItem(
         descriptionColor = contentColor.copy(alpha = 0.7f),
         onClick = onClick,
     )
+}
+
+@Composable
+private fun SettingWakeUnlockTypeItem(
+    contentColor: Color,
+    selectedType: String,
+    onTypeSelected: (String) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.settings_wake_unlock_type),
+            style = MaterialTheme.typography.bodyLarge,
+            color = contentColor,
+            modifier = Modifier.weight(1f),
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val options = listOf(
+                "swipe" to stringResource(R.string.settings_wake_unlock_type_swipe),
+                "pin" to stringResource(R.string.settings_wake_unlock_type_pin),
+            )
+            options.forEach { (type, label) ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .selectable(
+                            selected = type == selectedType,
+                            onClick = { onTypeSelected(type) },
+                            role = Role.RadioButton,
+                        ),
+                ) {
+                    RadioButton(
+                        selected = type == selectedType,
+                        onClick = null,
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = contentColor,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingWakePinSection(
+    contentColor: Color,
+    wakeCredential: String,
+    onCredentialChange: (String) -> Unit,
+    onTest: () -> Unit,
+) {
+    var localPin by rememberSaveable { mutableStateOf(wakeCredential) }
+    var pinVisible by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(wakeCredential) {
+        if (wakeCredential != localPin) localPin = wakeCredential
+    }
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        OutlinedTextField(
+            value = localPin,
+            onValueChange = {
+                val digits = it.filter { c -> c.isDigit() }
+                    .take(AppSettingsManager.MAX_PIN_LENGTH)
+                localPin = digits
+                onCredentialChange(digits)
+            },
+            label = { Text(stringResource(R.string.settings_wake_credential)) },
+            placeholder = { Text(stringResource(R.string.settings_wake_credential_hint)) },
+            singleLine = true,
+            visualTransformation = if (pinVisible) {
+                VisualTransformation.None
+            } else {
+                PasswordVisualTransformation()
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            trailingIcon = {
+                IconButton(onClick = { pinVisible = !pinVisible }) {
+                    Icon(
+                        imageVector = if (pinVisible) {
+                            Icons.Filled.VisibilityOff
+                        } else {
+                            Icons.Filled.Visibility
+                        },
+                        contentDescription = stringResource(
+                            if (pinVisible) {
+                                R.string.settings_wake_credential_hide
+                            } else {
+                                R.string.settings_wake_credential_show
+                            },
+                        ),
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            text = stringResource(R.string.settings_wake_credential_warning),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+        )
+        SettingRow(
+            title = stringResource(R.string.settings_wake_test_button),
+            description = stringResource(R.string.settings_wake_test_hint),
+            titleColor = contentColor,
+            descriptionColor = contentColor.copy(alpha = 0.7f),
+            onClick = onTest,
+        )
+    }
 }
 
 @Composable

@@ -78,4 +78,7 @@ interface RemoteService {
 
     // 仅点亮屏幕，不解锁
     boolean wakeScreen() = 34;
+
+    // 设置页测试：先锁屏+息屏，延时后再解锁。返回码同 wakeAndUnlock
+    int testWakeAndUnlock(String credential) = 35;
 }

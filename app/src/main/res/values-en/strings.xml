@@ -112,11 +112,9 @@
     <string name="settings_drift_auto_repin_delay_sec_desc">Wait %1$d seconds after the game leaves the virtual display before moving it back, to avoid interrupting login or verification pop-ups</string>
     <string name="settings_drift_auto_repin_delay_hint">Unit: seconds, range 1~60</string>
     <string name="settings_allow_foreground_scheduled_task">Allow scheduled tasks in foreground</string>
-    <string name="settings_run_schedule_when_locked">Skip lock check (stay locked)</string>
-    <string name="settings_run_schedule_when_locked_desc">Background mode only: do not unlock; still allow scheduled tasks while locked. Different from Wake &amp; unlock — prefer per-strategy unlock; this is a no-unlock fallback and may vary by device</string>
-    <string name="dialog_run_schedule_when_locked_title">Experimental feature</string>
-    <string name="dialog_run_schedule_when_locked_message">This does not unlock the device; it only skips SKIPPED_LOCKED in background mode. Prefer configuring Wake &amp; unlock above and enabling it on the strategy. Not guaranteed on all devices.</string>
-    <string name="dialog_run_schedule_when_locked_confirm">Enable anyway</string>
+    <string name="settings_wake_unlock_type">Schedule unlock method</string>
+    <string name="settings_wake_unlock_type_swipe">Swipe unlock</string>
+    <string name="settings_wake_unlock_type_pin">PIN</string>
     <string name="settings_tasks_override_title">MAA Task Override</string>
     <string name="settings_tasks_override_desc">Do not modify unless you know what you are doing — incorrect values will break MAA</string>
     <string name="settings_tasks_override_edit_title">Edit Config JSON</string>
@@ -1475,10 +1473,6 @@
     <string name="schedule_section_advanced">Advanced options</string>
     <string name="schedule_force_start">Force scheduled start</string>
     <string name="schedule_force_start_tip">Stop the current task, restart the game, and start the new tasks</string>
-    <string name="schedule_section_wake_unlock">Wake &amp; Unlock</string>
-    <string name="schedule_wake_unlock_enabled">Enable wake &amp; unlock</string>
-    <string name="schedule_wake_unlock_tip">Wake and unlock before the task (elevated service required). Set method/PIN in Settings → Wake &amp; unlock. More reliable than Skip lock check; also works for foreground schedules</string>
-    <string name="schedule_wake_unlock_not_configured">Configure unlock method in Settings → Wake &amp; unlock first; for PIN, enter the digits</string>
     <string name="schedule_auto_sleep_after_task">Auto sleep after task</string>
     <string name="schedule_auto_sleep_tip">Automatically turn off the screen after the scheduled task completes to save battery</string>
     <string name="schedule_permission_tip_battery_optimization">Disable battery optimization</string>
@@ -1553,6 +1547,7 @@
     <string name="notification_schedule_title">Scheduled Task</string>
     <string name="notification_schedule_preparing">Preparing to launch…</string>
     <string name="notification_schedule_device_locked">Device is locked</string>
+    <string name="notification_schedule_pin_required">A lock password is set. Configure a PIN in settings, or disable the system lock screen</string>
     <string name="notification_schedule_detail">\"%1$s\": %2$s</string>
 
     <!-- i18n: schedule trigger journal (pipeline) -->
@@ -1563,6 +1558,7 @@
     <string name="schedule_log_wake_start">Waking and unlocking…</string>
     <string name="schedule_log_wake_ok">Wake and unlock succeeded</string>
     <string name="schedule_log_wake_failed">Wake and unlock failed: %1$s</string>
+    <string name="schedule_log_wake_pin_required">Lock password set but PIN not configured; skipped</string>
     <string name="schedule_log_keyguard_skipped">Keyguard check skipped</string>
     <string name="schedule_log_mode_not_allowed">Foreground mode without “allow foreground scheduled tasks”</string>
     <string name="schedule_log_wait_profile">Waiting for task profile…</string>
@@ -1979,25 +1975,20 @@
     <string name="runlog_game_process_gone">Game process not started or closed unexpectedly (%1$s)</string>
     <string name="runlog_game_left_virtual_display">Game window left the virtual display and could not be moved back (%1$s). Try enabling \"Force FULLSCREEN mode\" or switch to foreground mode</string>
 
-    <!-- Wake + unlock -->
-    <string name="settings_wake_unlock_section">Wake &amp; unlock</string>
-    <string name="settings_wake_unlock_section_desc">Global unlock method (swipe / PIN). Enable per schedule strategy. Works with Root or Shizuku when the elevated service is connected</string>
-    <string name="settings_wake_unlock_type">Unlock method</string>
-    <string name="settings_wake_unlock_type_none">Do not unlock</string>
-    <string name="settings_wake_unlock_type_swipe">No password / swipe</string>
-    <string name="settings_wake_unlock_type_pin">PIN</string>
+    <!-- Scheduled lock · PIN -->
     <string name="settings_wake_credential">PIN</string>
-    <string name="settings_wake_credential_hint">Lock screen PIN (digits only, 4–16 digits OK)</string>
+    <string name="settings_wake_credential_hint">4–16 digits</string>
     <string name="settings_wake_credential_show">Show PIN</string>
     <string name="settings_wake_credential_hide">Hide PIN</string>
-    <string name="settings_wake_credential_warning">The PIN is stored in plain text on this device. It is stripped from exported config, but can still leak if someone gets hold of the device. Pattern locks and alphanumeric passwords are not supported — use a numeric PIN or no lock.</string>
-    <string name="settings_wake_test_button">Test now</string>
-    <string name="settings_wake_test_hint">Checks that the screen turns on and the lock screen is dismissed. To test the full flow, lock the screen and let a scheduled task fire</string>
+    <string name="settings_wake_credential_warning">Pattern and alphanumeric passwords are not supported</string>
+    <string name="settings_wake_test_button">Test</string>
+    <string name="settings_wake_test_hint">Lock first, then auto-unlock after ~0.5s</string>
     <string name="wake_result_ok">Wake + unlock succeeded</string>
     <string name="wake_result_wake_failed">Screen would not turn on</string>
     <string name="wake_result_credential_required">A PIN is required for this lock screen</string>
     <string name="wake_result_credential_rejected">Unlock failed, the PIN may be wrong. Stopped retrying to avoid triggering a system lockout</string>
     <string name="wake_result_bouncer_not_ready">The lock screen credential prompt did not appear</string>
     <string name="wake_result_unsupported">Not supported on this system</string>
+    <string name="wake_result_lock_failed">Could not enter lock screen</string>
     <string name="wake_result_ipc_failed">Elevated service not connected</string>
 </resources>

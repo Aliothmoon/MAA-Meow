@@ -140,4 +140,44 @@ public final class PowerManager {
         }
     }
 
+    // ───────────────── goToSleep ─────────────────
+
+    private static final int GO_TO_SLEEP_REASON_APPLICATION = 2;
+
+    private Method goToSleepMethod;
+    private int goToSleepMethodVersion = -1;
+
+    private Method getGoToSleepMethod() throws NoSuchMethodException {
+        if (goToSleepMethod == null) {
+            Class<?> cls = manager.getClass();
+            try {
+                // goToSleep(long time, int reason, int flags)
+                goToSleepMethod = cls.getMethod("goToSleep", long.class, int.class, int.class);
+                goToSleepMethodVersion = 0;
+            } catch (NoSuchMethodException e1) {
+                // goToSleep(long time)
+                goToSleepMethod = cls.getMethod("goToSleep", long.class);
+                goToSleepMethodVersion = 1;
+            }
+        }
+        return goToSleepMethod;
+    }
+
+    /** @return 反射调用是否成功；不代表已息屏/上锁 */
+    public boolean goToSleep() {
+        try {
+            Method method = getGoToSleepMethod();
+            long time = SystemClock.uptimeMillis();
+            if (goToSleepMethodVersion == 0) {
+                method.invoke(manager, time, GO_TO_SLEEP_REASON_APPLICATION, 0);
+            } else {
+                method.invoke(manager, time);
+            }
+            return true;
+        } catch (ReflectiveOperationException e) {
+            Ln.e("Could not invoke goToSleep", e);
+            return false;
+        }
+    }
+
 }

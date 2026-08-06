@@ -17,6 +17,10 @@ object WakeUnlockController {
     private const val POLL_INTERVAL_MS = 100L
     private const val DIGIT_GAP_MS = 50L
 
+    /** 测试：上锁/息屏后等待系统稳定再解锁 */
+    private const val LOCK_SETTLE_MS = 500L
+    private const val SCREEN_OFF_TIMEOUT_MS = 3_000L
+
     /** 与 AIDL 约定的返回码 */
     object Result {
         const val OK = 0
@@ -25,6 +29,42 @@ object WakeUnlockController {
         const val CREDENTIAL_REJECTED = 3
         const val BOUNCER_NOT_READY = 4
         const val UNSUPPORTED = 5
+        const val LOCK_FAILED = 6
+    }
+
+    /**
+     * 设置页测试：先 lockNow + goToSleep，等待 [LOCK_SETTLE_MS] 后再 [wakeAndUnlock]
+     * 整段在提权进程内完成，避免息屏后 App 侧协程被挂起
+     */
+    fun testWakeAndUnlock(credential: String): Int {
+        val lockCode = lockScreen()
+        if (lockCode != Result.OK) return lockCode
+        Ln.i("$TAG: locked for test, settle ${LOCK_SETTLE_MS}ms")
+        Thread.sleep(LOCK_SETTLE_MS)
+        return wakeAndUnlock(credential)
+    }
+
+    /** lockNow 上锁并 goToSleep 息屏 */
+    fun lockScreen(): Int {
+        val pm = ServiceManager.getPowerManager()
+        val wm = ServiceManager.getWindowManager()
+
+        if (!wm.lockNow()) {
+            Ln.w("$TAG: lockNow unavailable")
+            return Result.UNSUPPORTED
+        }
+        if (!pollUntil(KEYGUARD_GONE_TIMEOUT_MS) { wm.isKeyguardLocked == true }) {
+            Ln.w("$TAG: keyguard did not lock after lockNow")
+            return Result.LOCK_FAILED
+        }
+
+        if (!pm.goToSleep()) {
+            Ln.w("$TAG: goToSleep unavailable (keyguard already locked)")
+            return Result.OK
+        }
+        pollUntil(SCREEN_OFF_TIMEOUT_MS) { !pm.isScreenOn(0) }
+        Ln.i("$TAG: screen locked and off")
+        return Result.OK
     }
 
     /** @param credential 纯数字 PIN；无凭证锁屏传空串 */
@@ -32,7 +72,6 @@ object WakeUnlockController {
         val pm = ServiceManager.getPowerManager()
         val wm = ServiceManager.getWindowManager()
 
-        // 须先亮屏，息屏下 dismissKeyguard 会被推迟
         if (!pm.isScreenOn(0)) {
             if (!pm.wakeUp()) {
                 Ln.w("$TAG: wakeUp() unavailable on this ROM")
@@ -45,7 +84,7 @@ object WakeUnlockController {
         }
         Ln.i("$TAG: screen on")
 
-        val locked = wm.isKeyguardLocked()
+        val locked = wm.isKeyguardLocked
         if (locked == null) {
             Ln.w("$TAG: isKeyguardLocked unavailable")
             return Result.UNSUPPORTED

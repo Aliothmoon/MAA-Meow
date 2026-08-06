@@ -196,7 +196,7 @@ class SettingsViewModel(
         }
     }
 
-    // ───────────────── 唤醒 + 解锁 ─────────────────
+    // ───────────────── 定时唤醒解锁 ─────────────────
 
     val wakeUnlockType: StateFlow<String> =
         appSettingsManager.wakeUnlockType
@@ -228,14 +228,15 @@ class SettingsViewModel(
         viewModelScope.launch {
             _wakeTestState.value = WakeTestState.Testing
             val credential = appSettingsManager.wakeCredential.value
-            _wakeTestState.value = WakeTestState.Done(wakeUnlockEngine.wakeAndUnlock(credential))
+            _wakeTestState.value = WakeTestState.Done(
+                wakeUnlockEngine.testWakeAndUnlock(credential),
+            )
         }
     }
 
     fun clearWakeTestResult() {
         _wakeTestState.value = null
     }
-
 
     // 后台虚拟显示器模式：游戏漂移自动拉回开关
     val driftAutoRepinEnabled: StateFlow<Boolean> =
@@ -265,14 +266,6 @@ class SettingsViewModel(
     fun setAllowForegroundScheduledTask(enabled: Boolean) {
         viewModelScope.launch {
             appSettingsManager.setAllowForegroundScheduledTask(enabled)
-        }
-    }
-
-    val runScheduleWhenLocked: StateFlow<Boolean> = appSettingsManager.runScheduleWhenLocked
-
-    fun setRunScheduleWhenLocked(enabled: Boolean) {
-        viewModelScope.launch {
-            appSettingsManager.setRunScheduleWhenLocked(enabled)
         }
     }
 

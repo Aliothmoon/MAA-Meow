@@ -405,4 +405,38 @@ public final class WindowManager {
             return false;
         }
     }
+
+    private Method lockNowMethod;
+    private int lockNowMethodVersion = -1;
+
+    private Method getLockNowMethod() throws NoSuchMethodException {
+        if (lockNowMethod == null) {
+            Class<?> cls = manager.getClass();
+            try {
+                // lockNow(Bundle options)
+                lockNowMethod = cls.getMethod("lockNow", android.os.Bundle.class);
+                lockNowMethodVersion = 0;
+            } catch (NoSuchMethodException e) {
+                lockNowMethod = cls.getMethod("lockNow");
+                lockNowMethodVersion = 1;
+            }
+        }
+        return lockNowMethod;
+    }
+
+    /** 立即上锁（弹出 keyguard）。@return 反射调用是否成功 */
+    public boolean lockNow() {
+        try {
+            Method method = getLockNowMethod();
+            if (lockNowMethodVersion == 0) {
+                method.invoke(manager, new android.os.Bundle());
+            } else {
+                method.invoke(manager);
+            }
+            return true;
+        } catch (ReflectiveOperationException e) {
+            Ln.e("Could not invoke lockNow", e);
+            return false;
+        }
+    }
 }

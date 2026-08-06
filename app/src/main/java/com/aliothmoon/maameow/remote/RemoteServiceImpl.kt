@@ -323,6 +323,9 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun wakeScreen(): Boolean = WakeUnlockController.wakeOnly()
 
+    override fun testWakeAndUnlock(credential: String?): Int =
+        WakeUnlockController.testWakeAndUnlock(credential.orEmpty())
+
     override fun isPackageInstalled(packageName: String): Boolean {
         return try {
             FakeContext.get().packageManager.getPackageInfo(packageName, 0)

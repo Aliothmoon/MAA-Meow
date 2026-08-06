@@ -19,6 +19,7 @@ class WakeUnlockEngine {
         CREDENTIAL_REJECTED(3, uiTextOf(R.string.wake_result_credential_rejected)),
         BOUNCER_NOT_READY(4, uiTextOf(R.string.wake_result_bouncer_not_ready)),
         UNSUPPORTED(5, uiTextOf(R.string.wake_result_unsupported)),
+        LOCK_FAILED(6, uiTextOf(R.string.wake_result_lock_failed)),
         IPC_FAILED(-1, uiTextOf(R.string.wake_result_ipc_failed));
 
         val isSuccess: Boolean get() = this == OK
@@ -40,6 +41,20 @@ class WakeUnlockEngine {
             WakeResult.IPC_FAILED
         }
         Timber.i("wakeAndUnlock -> %s", result)
+        result
+    }
+
+    /** 设置页测试：锁屏 → 延时 → 解锁（提权进程内串行） */
+    suspend fun testWakeAndUnlock(credential: String): WakeResult = withContext(Dispatchers.IO) {
+        val result = runCatching {
+            RemoteServiceManager.useRemoteService(timeoutMs = IPC_TIMEOUT_MS) { svc ->
+                WakeResult.fromCode(svc.testWakeAndUnlock(credential))
+            }
+        }.getOrElse { t ->
+            Timber.w(t, "testWakeAndUnlock: IPC failed")
+            WakeResult.IPC_FAILED
+        }
+        Timber.i("testWakeAndUnlock -> %s", result)
         result
     }
 

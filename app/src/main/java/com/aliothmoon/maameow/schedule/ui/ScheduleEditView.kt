@@ -499,47 +499,6 @@ fun ScheduleEditView(
                 )
             }
 
-            // ─── 唤醒+解锁 ───
-            item {
-                SectionHeader(stringResource(R.string.schedule_section_wake_unlock))
-                val (wakeExpanded, setWakeExpanded) = remember { mutableStateOf(false) }
-                val wakeConfigured = state.wakeUnlockConfigured
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            stringResource(R.string.schedule_wake_unlock_enabled),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (wakeConfigured) MaterialTheme.colorScheme.onSurface
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        ExpandableTipIcon(
-                            modifier = Modifier.padding(start = 8.dp),
-                            expanded = wakeExpanded,
-                            onExpandedChange = { setWakeExpanded(it) })
-                    }
-                    Switch(
-                        checked = state.wakeUnlockEnabled,
-                        onCheckedChange = { viewModel.onWakeUnlockEnabledChanged(it) },
-                        enabled = wakeConfigured
-                    )
-                }
-                ExpandableTipContent(
-                    visible = wakeExpanded,
-                    tipText = if (wakeConfigured)
-                        stringResource(R.string.schedule_wake_unlock_tip)
-                    else
-                        stringResource(R.string.schedule_wake_unlock_not_configured),
-                )
-            }
-
             item {
                 val (sleepExpanded, setSleepExpanded) = remember { mutableStateOf(false) }
                 Row(

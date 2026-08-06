@@ -155,6 +155,10 @@ val appModule = module {
                 val km = appContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
                 km.isKeyguardLocked
             },
+            deviceSecure = {
+                val km = appContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+                km.isDeviceSecure
+            },
             activityLauncher = { request: LaunchRequest ->
                 withTimeoutOrNull(10.seconds) {
                     runCatching {

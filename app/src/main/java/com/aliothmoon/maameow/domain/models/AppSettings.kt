@@ -91,10 +91,6 @@ data class AppSettings(
 
     @PrefKey(default = "false") val allowForegroundScheduledTask: String = "false",
 
-    /** 定时任务触发时跳过锁屏检查 */
-    @PrefKey(default = "false") val runScheduleWhenLocked: String = "false",
-
-
     /**
      * 是否启用系统莫奈主题色（Android 12+ Material You）
      * 启用后主题跟随系统壁纸动态取色，关闭则使用内置硬编码蓝色主题
@@ -131,10 +127,10 @@ data class AppSettings(
 
     // ───────────────── 定时唤醒 + 解锁 ─────────────────
 
-    /** 解锁策略：none / swipe / pin */
+    /** 解锁方式：swipe / pin，默认滑动（无密码） */
     @PrefKey(default = "swipe") val wakeUnlockType: String = "swipe",
 
-    /** 解锁 PIN（纯数字）；空字符串表示不输入 */
+    /** 解锁 PIN（纯数字）；仅 type=pin 时使用 */
     @PrefKey(default = "") val wakeCredential: String = "",
 
 )

@@ -53,13 +53,14 @@ class LaunchPipelineTest {
     private lateinit var startTaskChain: StartTaskChainUseCase
 
     private val keyguardLocked = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val deviceSecure = java.util.concurrent.atomic.AtomicBoolean(false)
     private val startCalls = AtomicInteger(0)
     private val recorded = CopyOnWriteArrayList<ExecutionResult>()
     private val stopCalls = AtomicInteger(0)
 
     private val runMode = MutableStateFlow(RunMode.BACKGROUND)
     private val allowFg = MutableStateFlow(false)
-    private val runWhenLocked = MutableStateFlow(false)
+    private val unlockType = MutableStateFlow("swipe")
     private val overlayMode = MutableStateFlow(OverlayControlMode.ACCESSIBILITY)
     private val wakeCred = MutableStateFlow("")
     private val compositionState = MutableStateFlow(MaaExecutionState.IDLE)
@@ -109,17 +110,18 @@ class LaunchPipelineTest {
         stopCalls.set(0)
         recorded.clear()
         keyguardLocked.set(false)
+        deviceSecure.set(false)
+        unlockType.value = "swipe"
         runMode.value = RunMode.BACKGROUND
         allowFg.value = false
-        runWhenLocked.value = false
         compositionState.value = MaaExecutionState.IDLE
 
         settings = mockk(relaxed = true) {
             every { runMode } returns this@LaunchPipelineTest.runMode
             every { allowForegroundScheduledTask } returns allowFg
-            every { runScheduleWhenLocked } returns runWhenLocked
             every { overlayControlMode } returns overlayMode
             every { wakeCredential } returns wakeCred
+            every { wakeUnlockType } returns unlockType
         }
         wake = mockk(relaxed = true)
         coEvery { wake.wakeAndUnlock(any()) } returns WakeUnlockEngine.WakeResult.OK
@@ -196,6 +198,7 @@ class LaunchPipelineTest {
         startTaskChain = startTaskChain,
         countdownUI = countdown,
         keyguardLocked = { keyguardLocked.get() },
+        deviceSecure = { deviceSecure.get() },
         activityLauncher = { true },
     )
 
@@ -249,9 +252,10 @@ class LaunchPipelineTest {
     }
 
     @Test
-    fun scheduleKeyguardLocked_skipsWithoutWake() = runBlocking<Unit> {
+    fun scheduleKeyguardLocked_skipsWhenSecureWithoutPin() = runBlocking<Unit> {
         keyguardLocked.set(true)
-        runWhenLocked.value = false
+        deviceSecure.set(true)
+        unlockType.value = "swipe"
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
         assertEquals(0, startCalls.get())

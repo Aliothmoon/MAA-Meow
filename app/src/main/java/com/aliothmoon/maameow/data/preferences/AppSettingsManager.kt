@@ -40,8 +40,8 @@ class AppSettingsManager(
     companion object {
         val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
 
-        /** 解锁方式取值；不支持图案锁 */
-        val WAKE_UNLOCK_TYPES = setOf("none", "swipe", "pin")
+        /** 解锁方式：滑动 / PIN */
+        val WAKE_UNLOCK_TYPES = setOf("swipe", "pin")
         /** 纯数字 PIN 最大位数 */
         const val MAX_PIN_LENGTH = 16
 
@@ -603,21 +603,6 @@ class AppSettingsManager(
         }
     }
 
-    val runScheduleWhenLocked: StateFlow<Boolean> = settings
-        .map { it.runScheduleWhenLocked.toBooleanStrictOrNull() ?: false }
-        .distinctUntilChanged()
-        .stateIn(
-            scope, SharingStarted.Eagerly,
-            initialSettings.runScheduleWhenLocked.toBooleanStrictOrNull() ?: false
-        )
-
-    suspend fun setRunScheduleWhenLocked(enabled: Boolean) {
-        with(AppSettingsSchema) {
-            context.dataStore.edit { it[runScheduleWhenLocked] = enabled.toString() }
-        }
-    }
-
-
     // 是否启用系统莫奈主题色（Android 12+ Material You）
     private fun parseUseSystemMonetColor(raw: String): Boolean =
         raw.toBooleanStrictOrNull() ?: true
@@ -756,9 +741,12 @@ class AppSettingsManager(
     // ───────────────── 唤醒 + 解锁 ─────────────────
 
     val wakeUnlockType: StateFlow<String> = settings
-        .map { it.wakeUnlockType }
+        .map {
+            val t = it.wakeUnlockType
+            if (t in WAKE_UNLOCK_TYPES) t else "swipe"
+        }
         .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, initialSettings.wakeUnlockType)
+        .stateIn(scope, SharingStarted.Eagerly, "swipe")
 
     suspend fun setWakeUnlockType(type: String) {
         if (type !in WAKE_UNLOCK_TYPES) return

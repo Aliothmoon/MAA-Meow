@@ -22,7 +22,6 @@ object LaunchIntentMapper {
         displayName = strategy.name,
         scheduledTimeMs = scheduledTimeMs,
         forceStart = strategy.forceStart,
-        wakeUnlock = strategy.wakeUnlockEnabled,
         autoSleepAfterTask = strategy.autoSleepAfterTask,
         strategyId = strategy.id,
         countdownSeconds = ScheduledExecutionRequest.COUNTDOWN_SECONDS,
@@ -58,7 +57,6 @@ object LaunchIntentMapper {
             putExtra(ScheduledExecutionRequest.EXTRA_PROFILE_ID, request.profileId)
             putExtra(ScheduledExecutionRequest.EXTRA_SCHEDULED_TIME, request.scheduledTimeMs)
             putExtra(ScheduledExecutionRequest.EXTRA_FORCE_START, request.forceStart)
-            putExtra(ScheduledExecutionRequest.EXTRA_WAKE_UNLOCK_ENABLED, request.wakeUnlock)
             putExtra(
                 ScheduledExecutionRequest.EXTRA_AUTO_SLEEP_AFTER_TASK,
                 request.autoSleepAfterTask,

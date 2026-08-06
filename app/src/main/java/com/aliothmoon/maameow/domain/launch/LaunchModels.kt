@@ -16,7 +16,6 @@ data class LaunchRequest(
     val displayName: String,
     val scheduledTimeMs: Long,
     val forceStart: Boolean = false,
-    val wakeUnlock: Boolean = false,
     val autoSleepAfterTask: Boolean = false,
     val strategyId: String = "",
     val countdownSeconds: Int = DEFAULT_COUNTDOWN_SECONDS,

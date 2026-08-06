@@ -309,11 +309,9 @@
     <string name="settings_drift_auto_repin_delay_sec_desc">游戏离开虚拟显示器后等待 %1$d 秒再拉回，避免打断登录或验证弹窗</string>
     <string name="settings_drift_auto_repin_delay_hint">单位：秒，范围 1~60</string>
     <string name="settings_allow_foreground_scheduled_task">允许在前台模式执行定时任务</string>
-    <string name="settings_run_schedule_when_locked">跳过锁屏检查（不解锁）</string>
-    <string name="settings_run_schedule_when_locked_desc">仅后台模式：不唤醒解锁，定时任务在锁屏状态下仍继续。与「唤醒+解锁」不同——推荐优先用策略内的唤醒解锁；本项是不解锁的兜底，效果因机型而异</string>
-    <string name="dialog_run_schedule_when_locked_title">实验性功能</string>
-    <string name="dialog_run_schedule_when_locked_message">跳过锁屏检查不会解除锁屏，只是不因锁屏而跳过定时任务（仅后台模式生效）。若设备有 PIN，更推荐在上方配置「唤醒+解锁」并在策略中启用。本功能不保证在所有设备上正常工作。</string>
-    <string name="dialog_run_schedule_when_locked_confirm">仍要启用</string>
+    <string name="settings_wake_unlock_type">定时任务解锁方式</string>
+    <string name="settings_wake_unlock_type_swipe">滑动解锁</string>
+    <string name="settings_wake_unlock_type_pin">PIN</string>
     <string name="settings_tasks_override_title">MAA 任务覆盖</string>
     <string name="settings_tasks_override_desc">如果你不知道这是什么请不要修改，会导致 MAA 无法正常工作</string>
     <string name="settings_tasks_override_edit_title">编辑配置 JSON</string>
@@ -1531,10 +1529,6 @@
     <string name="schedule_section_advanced">高级选项</string>
     <string name="schedule_force_start">强制启动</string>
     <string name="schedule_force_start_tip">强制启动任务，会中断正在运行的游戏和任务</string>
-    <string name="schedule_section_wake_unlock">唤醒与解锁</string>
-    <string name="schedule_wake_unlock_enabled">启用锁屏解锁</string>
-    <string name="schedule_wake_unlock_tip">触发时先点亮屏幕并解除锁屏（需提权服务已连接）。PIN 等凭证在「设置 → 唤醒+解锁」中配置。比「跳过锁屏检查」更可靠，前台定时也可用</string>
-    <string name="schedule_wake_unlock_not_configured">请先在「设置 → 唤醒+解锁」中选择解锁方式；若为 PIN，还需填写 PIN 码</string>
     <string name="schedule_auto_sleep_after_task">任务结束后自动熄屏</string>
     <string name="schedule_auto_sleep_tip">定时任务执行完成后自动熄屏，节省电量</string>
     <string name="schedule_permission_tip_battery_optimization">关闭电池优化</string>
@@ -1609,6 +1603,7 @@
     <string name="notification_schedule_title">定时任务</string>
     <string name="notification_schedule_preparing">正在准备拉起界面…</string>
     <string name="notification_schedule_device_locked">设备处于锁屏状态</string>
+    <string name="notification_schedule_pin_required">系统已设置锁屏密码，请在设置中配置 PIN，或关闭系统锁屏密码</string>
     <string name="notification_schedule_detail">「%1$s」: %2$s</string>
 
     <!-- i18n: schedule trigger journal (pipeline) -->
@@ -1619,6 +1614,7 @@
     <string name="schedule_log_wake_start">执行唤醒+解锁…</string>
     <string name="schedule_log_wake_ok">唤醒+解锁成功</string>
     <string name="schedule_log_wake_failed">唤醒+解锁失败: %1$s</string>
+    <string name="schedule_log_wake_pin_required">系统有锁屏密码但未配置 PIN，已跳过</string>
     <string name="schedule_log_keyguard_skipped">已跳过锁屏检查</string>
     <string name="schedule_log_mode_not_allowed">当前运行模式不是后台模式，且未开启「允许前台定时任务」开关</string>
     <string name="schedule_log_wait_profile">等待任务配置加载…</string>
@@ -2035,25 +2031,20 @@
     <string name="runlog_game_process_gone">游戏进程未启动或被异常关闭(%1$s)</string>
     <string name="runlog_game_left_virtual_display">游戏窗口已离开虚拟显示器且自动拉回失败(%1$s)，请尝试开启「强制 FULLSCREEN 模式」或改用前台模式</string>
 
-    <!-- 唤醒 + 解锁 -->
-    <string name="settings_wake_unlock_section">唤醒 + 解锁</string>
-    <string name="settings_wake_unlock_section_desc">配置全局解锁方式（滑动 / PIN）。在定时策略中可按条开启「启用锁屏解锁」。Root 与 Shizuku 均可用，需提权服务已连接</string>
-    <string name="settings_wake_unlock_type">解锁方式</string>
-    <string name="settings_wake_unlock_type_none">不解锁</string>
-    <string name="settings_wake_unlock_type_swipe">无密码锁 / 滑动解锁</string>
-    <string name="settings_wake_unlock_type_pin">PIN 码</string>
-    <string name="settings_wake_credential">PIN 码</string>
-    <string name="settings_wake_credential_hint">输入锁屏 PIN（纯数字，4～16 位均可）</string>
+    <!-- 定时任务锁屏 · PIN -->
+    <string name="settings_wake_credential">PIN</string>
+    <string name="settings_wake_credential_hint">4～16 位数字</string>
     <string name="settings_wake_credential_show">显示 PIN</string>
     <string name="settings_wake_credential_hide">隐藏 PIN</string>
-    <string name="settings_wake_credential_warning">PIN 以明文保存在本机。导出配置时会自动剔除，但设备被他人取得时仍有泄露风险。图案锁与字母密码不支持，请改用纯数字 PIN 或无密码锁。</string>
-    <string name="settings_wake_test_button">立即测试</string>
-    <string name="settings_wake_test_hint">验证能否点亮屏幕并解除锁屏。想测完整链路可先锁屏，再用定时任务触发</string>
-    <string name="wake_result_ok">唤醒 + 解锁成功</string>
-    <string name="wake_result_wake_failed">屏幕点不亮</string>
-    <string name="wake_result_credential_required">当前是密码锁屏，请先填写 PIN</string>
-    <string name="wake_result_credential_rejected">解锁失败，PIN 可能不正确。已停止重试以免触发系统锁定</string>
+    <string name="settings_wake_credential_warning">不支持图案和字母密码</string>
+    <string name="settings_wake_test_button">测试</string>
+    <string name="settings_wake_test_hint">先锁屏，约 0.5 秒后自动解锁</string>
+    <string name="wake_result_ok">唤醒并解锁成功</string>
+    <string name="wake_result_wake_failed">屏幕无法点亮</string>
+    <string name="wake_result_credential_required">当前为密码锁屏，请先填写 PIN</string>
+    <string name="wake_result_credential_rejected">解锁失败，PIN 可能不正确，已停止重试以免触发系统锁定</string>
     <string name="wake_result_bouncer_not_ready">锁屏密码输入界面未出现</string>
     <string name="wake_result_unsupported">当前系统不支持该操作</string>
+    <string name="wake_result_lock_failed">无法进入锁屏</string>
     <string name="wake_result_ipc_failed">提权服务未连接</string>
 </resources>

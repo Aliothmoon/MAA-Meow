@@ -52,6 +52,7 @@ class LaunchPipeline(
     private val startTaskChain: StartTaskChainUseCase,
     private val countdownUI: CountdownUI,
     private val keyguardLocked: () -> Boolean,
+    private val deviceSecure: () -> Boolean,
     private val activityLauncher: suspend (LaunchRequest) -> Boolean,
 ) {
     private val _session = MutableStateFlow<LaunchSession>(LaunchSession.Idle)
@@ -152,30 +153,30 @@ class LaunchPipeline(
                 }
             }
 
-            // wake
-            var wakeUnlocked = false
-            if (request.wakeUnlock) {
+            // wake + keyguard：仅 Schedule；默认滑动解锁，有密码且未配 PIN 则跳过
+            if (request.source == LaunchSource.Schedule) {
+                val unlockType = appSettingsManager.wakeUnlockType.value
+                val pin = appSettingsManager.wakeCredential.value
+                val pinReady = unlockType == "pin" && pin.isNotBlank()
+                if (deviceSecure() && !pinReady) {
+                    log.append(uiTextOf(R.string.schedule_log_wake_pin_required))
+                    terminalResult = ExecutionResult.SKIPPED_LOCKED
+                    terminalMessage = uiTextOf(R.string.notification_schedule_pin_required)
+                    return
+                }
+                val credential = if (unlockType == "pin") pin else ""
                 log.append(uiTextOf(R.string.schedule_log_wake_start))
-                val wake = wakeUnlockEngine.wakeAndUnlock(appSettingsManager.wakeCredential.value)
-                wakeUnlocked = wake.isSuccess
-                if (wakeUnlocked) {
+                val wake = wakeUnlockEngine.wakeAndUnlock(credential)
+                if (wake.isSuccess) {
                     log.append(uiTextOf(R.string.schedule_log_wake_ok))
+                    log.append(uiTextOf(R.string.schedule_log_keyguard_skipped))
                 } else {
                     log.append(uiTextOf(R.string.schedule_log_wake_failed, wake.message))
-                }
-            }
-
-            // keyguard：仅 Schedule；wake 成功或「跳过锁屏检查」+ 后台则放行
-            if (request.source == LaunchSource.Schedule) {
-                val skipWhileLocked = appSettingsManager.runScheduleWhenLocked.value
-                    && appSettingsManager.runMode.value == RunMode.BACKGROUND
-                val skipKeyguard = wakeUnlocked || skipWhileLocked
-                if (skipKeyguard) {
-                    log.append(uiTextOf(R.string.schedule_log_keyguard_skipped))
-                } else if (keyguardLocked()) {
-                    terminalResult = ExecutionResult.SKIPPED_LOCKED
-                    terminalMessage = uiTextOf(R.string.notification_schedule_device_locked)
-                    return
+                    if (keyguardLocked()) {
+                        terminalResult = ExecutionResult.SKIPPED_LOCKED
+                        terminalMessage = uiTextOf(R.string.notification_schedule_device_locked)
+                        return
+                    }
                 }
             }
 
