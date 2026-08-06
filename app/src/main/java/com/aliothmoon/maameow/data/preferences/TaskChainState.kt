@@ -61,7 +61,6 @@ class TaskChainState(
         private val ACTIVE_PROFILE_KEY = stringPreferencesKey("active_profile_id")
 
         private const val PROFILE_NAME_PREFIX = "配置-"
-        private const val MAX_PROFILES = 10
         private const val MAX_PROFILE_NAME_LENGTH = 20
     }
 
@@ -388,12 +387,8 @@ class TaskChainState(
         Timber.d("Switched to profile: %s (%s)", target.name, profileId)
     }
 
-    suspend fun createProfile(): String? {
+    suspend fun createProfile(): String {
         val currentProfiles = _profiles.value
-        if (currentProfiles.size >= MAX_PROFILES) {
-            Timber.w("createProfile: max profiles (%d) reached", MAX_PROFILES)
-            return null
-        }
         // 先保存当前活跃 Profile 的链
         val savedProfiles = currentProfiles.map { p ->
             if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
@@ -458,10 +453,6 @@ class TaskChainState(
 
     suspend fun duplicateProfile(profileId: String): String? {
         val currentProfiles = _profiles.value
-        if (currentProfiles.size >= MAX_PROFILES) {
-            Timber.w("duplicateProfile: max profiles (%d) reached", MAX_PROFILES)
-            return null
-        }
         // 先保存当前活跃 Profile 的链
         val savedProfiles = currentProfiles.map { p ->
             if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
