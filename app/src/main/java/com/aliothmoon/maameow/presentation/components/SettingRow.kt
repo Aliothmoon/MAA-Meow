@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 
 @Composable
@@ -22,6 +23,7 @@ fun SettingRow(
     titleColor: Color = MaterialTheme.colorScheme.onSurface,
     descriptionColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     enabled: Boolean = true,
+    verticalPadding: Dp = MaaDesignTokens.Spacing.listItemVertical,
     trailing: @Composable (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
 ) {
@@ -33,12 +35,18 @@ fun SettingRow(
                     enabled = enabled, onClick = onClick
                 ) else Modifier
             )
-            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
+            .padding(vertical = verticalPadding),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
-            modifier = if (trailing != null) Modifier.weight(1f) else Modifier,
+            modifier = if (trailing != null) {
+                Modifier
+                    .weight(1f)
+                    .padding(end = MaaDesignTokens.Spacing.lg)
+            } else {
+                Modifier
+            },
             verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap),
         ) {
             Text(

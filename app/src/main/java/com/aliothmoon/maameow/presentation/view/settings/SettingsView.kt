@@ -1015,79 +1015,73 @@ private fun SettingThemeSection(
     fontSizeScale: Int,
     onFontSizeScaleChanged: (Int) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // 标题
-        Text(
-            text = stringResource(R.string.settings_theme_title),
-            style = MaterialTheme.typography.bodyLarge,
-            color = contentColor
-        )
-        // 主题模式选择
-        Row(modifier = Modifier.fillMaxWidth()) {
-            val modes = listOf(
-                AppSettingsManager.ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
-                AppSettingsManager.ThemeMode.WHITE to stringResource(R.string.settings_theme_white),
-                AppSettingsManager.ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
-                AppSettingsManager.ThemeMode.PURE_DARK to stringResource(R.string.settings_theme_pure_dark)
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
+            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.md),
+        ) {
+            Text(
+                text = stringResource(R.string.settings_theme_title),
+                style = MaterialTheme.typography.bodyLarge,
+                color = contentColor,
             )
-            modes.forEach { (mode, label) ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .selectable(
+            Row(modifier = Modifier.fillMaxWidth()) {
+                val modes = listOf(
+                    AppSettingsManager.ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
+                    AppSettingsManager.ThemeMode.WHITE to stringResource(R.string.settings_theme_white),
+                    AppSettingsManager.ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
+                    AppSettingsManager.ThemeMode.PURE_DARK to stringResource(R.string.settings_theme_pure_dark),
+                )
+                modes.forEach { (mode, label) ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .selectable(
+                                selected = mode == selectedMode,
+                                onClick = { onModeSelected(mode) },
+                                role = Role.RadioButton,
+                            ),
+                    ) {
+                        RadioButton(
                             selected = mode == selectedMode,
-                            onClick = { onModeSelected(mode) },
-                            role = Role.RadioButton
+                            onClick = null,
                         )
-                ) {
-                    RadioButton(
-                        selected = mode == selectedMode,
-                        onClick = null
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = contentColor,
-                        maxLines = 1
-                    )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = contentColor,
+                            maxLines = 1,
+                        )
+                    }
                 }
             }
         }
-        // 莫奈主题色（SDK >= S）
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.settings_monet_color_title),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = contentColor
+            ListItemDivider()
+            SettingRow(
+                title = stringResource(R.string.settings_monet_color_title),
+                description = stringResource(R.string.settings_monet_color_desc),
+                titleColor = contentColor,
+                descriptionColor = contentColor.copy(alpha = 0.7f),
+                trailing = {
+                    Switch(
+                        checked = useSystemMonetColor,
+                        onCheckedChange = onMonetColorChanged,
                     )
-                    Text(
-                        text = stringResource(R.string.settings_monet_color_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = contentColor.copy(alpha = 0.6f)
-                    )
-                }
-                Switch(checked = useSystemMonetColor, onCheckedChange = onMonetColorChanged)
-            }
+                },
+            )
         }
-        // 页面缩放
+        ListItemDivider()
         FontSizeSetting(
             contentColor = contentColor,
             value = fontSizeScale,
-            onValueChange = onFontSizeScaleChanged
+            onValueChange = onFontSizeScaleChanged,
         )
     }
 }
