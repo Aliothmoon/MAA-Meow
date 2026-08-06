@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.domain.service
 import android.os.SystemClock
 import androidx.annotation.VisibleForTesting
 import com.aliothmoon.maameow.constant.Packages
-import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.remote.AppAliveStatus
 import kotlinx.coroutines.CoroutineScope
@@ -24,7 +23,6 @@ import timber.log.Timber
 class AppWatchdog(
     private val chainState: TaskChainState,
     private val appAliveChecker: AppAliveChecker,
-    private val appSettingsManager: AppSettingsManager,
 ) {
     enum class WatchdogState {
         IDLE,
@@ -34,6 +32,10 @@ class AppWatchdog(
 
     companion object {
         private const val POLL_INTERVAL_MS = 5000L
+
+        /** 首次发现离开虚拟屏后，等待再拉回，避开登录/SDK 瞬态漂移 */
+        @VisibleForTesting
+        internal const val REPIN_GRACE_MS = 5_000L
 
         // 连续拉回失败的上限：超过后停止重试（拉回兜底会重投放启动 intent，
         // 无限重试等于每个 tick 都向游戏投放一次启动请求）
@@ -136,13 +138,10 @@ class AppWatchdog(
 
     /**
      * 后台模式下部分 ROM（如 One UI）会把游戏从虚拟屏挪回主屏，导致识别与真实画面分离。
-     * 运行中持续检测漂移：
-     * - 若漂移自动拉回开关关闭，则跳过（保留旧版本行为由用户自行管理）。
-     * - 若启用，先记录首次漂移时间，等待配置的宽限期（默认 5s）后再拉回，
-     *   让游戏 SDK 登录/鉴权弹窗的瞬态漂移自行回落，避免反复拉回死循环。
-     * - 连续拉回失败 [MAX_REPIN_ATTEMPTS] 次后上报事件并停止重试
-     *   （拉回兜底会重投放启动 intent，无限重试会持续干扰游戏）；
-     *   游戏回到虚拟屏后计数清零，下一次漂移重新处理。
+     * 默认始终自动拉回：
+     * - 首次发现离开虚拟屏后等待 [REPIN_GRACE_MS]，让 SDK 登录/鉴权瞬态自行回落
+     * - 连续拉回失败 [MAX_REPIN_ATTEMPTS] 次后上报并停止重试
+     * - 游戏回到虚拟屏后计数清零，下一次漂移重新处理
      */
     @VisibleForTesting
     internal suspend fun checkDisplayPinned(packageName: String) {
@@ -154,25 +153,20 @@ class AppWatchdog(
             return
         }
 
-        if (!appSettingsManager.driftAutoRepinEnabled.value) {
-            return
-        }
         if (driftRepinAttempts >= MAX_REPIN_ATTEMPTS) {
             return
         }
 
         val nowMs = clock()
-        val delayMs = appSettingsManager.driftAutoRepinDelaySec.value * 1000L
         if (driftFirstSeenMs == 0L) {
             driftFirstSeenMs = nowMs
             Timber.i(
                 "AppWatchdog: app %s left the virtual display, will repin in %d ms (grace period)",
-                packageName, delayMs
+                packageName, REPIN_GRACE_MS
             )
             return
         }
-        if (nowMs - driftFirstSeenMs < delayMs) {
-            // 宽限期内不做动作，等待游戏瞬态自行回落
+        if (nowMs - driftFirstSeenMs < REPIN_GRACE_MS) {
             return
         }
 

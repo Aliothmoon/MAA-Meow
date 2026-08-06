@@ -527,40 +527,6 @@ class AppSettingsManager(
         }
     }
 
-    // 后台虚拟显示器模式：游戏漂移自动拉回开关
-    val driftAutoRepinEnabled: StateFlow<Boolean> = settings
-        .map { it.driftAutoRepinEnabled.toBooleanStrictOrNull() ?: true }
-        .distinctUntilChanged()
-        .stateIn(
-            scope, SharingStarted.Eagerly,
-            initialSettings.driftAutoRepinEnabled.toBooleanStrictOrNull() ?: true
-        )
-
-    suspend fun setDriftAutoRepinEnabled(enabled: Boolean) {
-        with(AppSettingsSchema) {
-            context.dataStore.edit { it[driftAutoRepinEnabled] = enabled.toString() }
-        }
-    }
-
-    // 漂移拉回延迟（秒）。合法范围 1~60；非法值回落到 5。
-    val driftAutoRepinDelaySec: StateFlow<Int> = settings
-        .map { coerceDriftAutoRepinDelaySec(it.driftAutoRepinDelaySec) }
-        .distinctUntilChanged()
-        .stateIn(
-            scope, SharingStarted.Eagerly,
-            coerceDriftAutoRepinDelaySec(initialSettings.driftAutoRepinDelaySec)
-        )
-
-    private fun coerceDriftAutoRepinDelaySec(raw: String): Int =
-        raw.toIntOrNull()?.coerceIn(1, 60) ?: 5
-
-    suspend fun setDriftAutoRepinDelaySec(seconds: Int) {
-        val clamped = seconds.coerceIn(1, 60)
-        with(AppSettingsSchema) {
-            context.dataStore.edit { it[driftAutoRepinDelaySec] = clamped.toString() }
-        }
-    }
-
     // Android 任务配置覆盖开关
     val tasksOverrideEnabled: StateFlow<Boolean> = settings
         .map { it.tasksOverrideEnabled.toBooleanStrictOrNull() ?: false }

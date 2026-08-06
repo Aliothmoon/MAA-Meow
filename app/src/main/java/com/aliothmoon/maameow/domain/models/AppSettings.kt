@@ -69,21 +69,6 @@ data class AppSettings(
     @PrefKey(default = "false") val forceFullscreenOnVirtualDisplay: String = "false",
 
     /**
-     * 后台虚拟显示器模式下，游戏漂移到主屏时是否自动拉回。
-     * 部分 ROM（如 One UI / B 服 U8 SDK）会在启动或登录切换时把游戏挪回主屏，
-     * 启用后 AppWatchdog 会周期检测并尝试把任务移回虚拟显示器。
-     */
-    @PrefKey(default = "true") val driftAutoRepinEnabled: String = "true",
-
-    /**
-     * 检测到漂移后等待多少秒再拉回（默认 5）。
-     * 游戏启动后常有一段「登录弹窗 / SDK 鉴权」窗口期，立刻拉回会被游戏视为异常并
-     * 重复弹出登录流程。留足延迟窗口让瞬态漂移自行回落，仅对持续漂移才介入。
-     * 合法范围 1~60 秒。
-     */
-    @PrefKey(default = "5") val driftAutoRepinDelaySec: String = "5",
-
-    /**
      * 是否启用 Android 特化任务覆盖（overrides/resource/tasks/tasks.json）
      * 启用后该目录作为最高优先级覆盖层，在加载链末位加载
      */

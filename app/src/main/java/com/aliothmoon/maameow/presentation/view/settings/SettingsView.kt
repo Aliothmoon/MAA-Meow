@@ -144,9 +144,6 @@ fun SettingsView(
     val shizukuLaunchPackage by viewModel.shizukuLaunchPackage.collectAsStateWithLifecycle()
     val deploymentWithPause by viewModel.deploymentWithPause.collectAsStateWithLifecycle()
     val forceFullscreenOnVirtualDisplay by viewModel.forceFullscreenOnVirtualDisplay.collectAsStateWithLifecycle()
-    val driftAutoRepinEnabled by viewModel.driftAutoRepinEnabled.collectAsStateWithLifecycle()
-    val driftAutoRepinDelaySec by viewModel.driftAutoRepinDelaySec.collectAsStateWithLifecycle()
-    var showDriftDelayDialog by remember { mutableStateOf(false) }
     val allowForegroundScheduledTask by viewModel.allowForegroundScheduledTask.collectAsStateWithLifecycle()
     val wakeUnlockType by viewModel.wakeUnlockType.collectAsStateWithLifecycle()
     val wakeCredential by viewModel.wakeCredential.collectAsStateWithLifecycle()
@@ -227,49 +224,6 @@ fun SettingsView(
             ),
         )
     }
-
-    if (showDriftDelayDialog) {
-        var delayInput by remember(showDriftDelayDialog) {
-            mutableStateOf(driftAutoRepinDelaySec.toString())
-        }
-        AlertDialog(
-            onDismissRequest = { showDriftDelayDialog = false },
-            title = { Text(stringResource(R.string.settings_drift_auto_repin_delay_sec)) },
-            text = {
-                Column {
-                    Text(
-                        stringResource(R.string.settings_drift_auto_repin_delay_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    OutlinedTextField(
-                        value = delayInput,
-                        onValueChange = { s ->
-                            delayInput = s.filter { it.isDigit() }.take(2)
-                        },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = delayInput.toIntOrNull() in 1..60,
-                    onClick = {
-                        delayInput.toIntOrNull()?.let { viewModel.setDriftAutoRepinDelaySec(it) }
-                        showDriftDelayDialog = false
-                    }
-                ) { Text(stringResource(android.R.string.ok)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDriftDelayDialog = false }) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-            }
-        )
-    }
-
 
     val backgroundCrop = rememberBackgroundCropController(viewModel)
     val pickBackgroundLauncher = rememberLauncherForActivityResult(
@@ -738,33 +692,6 @@ fun SettingsView(
                         checked = forceFullscreenOnVirtualDisplay,
                         onCheckedChange = { viewModel.setForceFullscreenOnVirtualDisplay(it) }
                     )
-                    ListItemDivider()
-                    SettingSwitchItem(
-                        title = stringResource(R.string.settings_drift_auto_repin_enabled),
-                        description = stringResource(R.string.settings_drift_auto_repin_enabled_desc),
-                        contentColor = contentColor,
-                        checked = driftAutoRepinEnabled,
-                        onCheckedChange = { viewModel.setDriftAutoRepinEnabled(it) }
-                    )
-                    AnimatedVisibility(
-                        visible = driftAutoRepinEnabled,
-                        enter = expandVertically(),
-                        exit = shrinkVertically()
-                    ) {
-                        Column {
-                            ListItemDivider()
-                            SettingClickItem(
-                                title = stringResource(R.string.settings_drift_auto_repin_delay_sec),
-                                description = stringResource(
-                                    R.string.settings_drift_auto_repin_delay_sec_desc,
-                                    driftAutoRepinDelaySec
-                                ),
-                                contentColor = contentColor
-                            ) {
-                                showDriftDelayDialog = true
-                            }
-                        }
-                    }
                     ListItemDivider()
                     SettingSwitchItem(
                         title = stringResource(R.string.settings_allow_foreground_scheduled_task),

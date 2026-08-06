@@ -1,15 +1,12 @@
 package com.aliothmoon.maameow.domain.service
 
-import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.remote.AppAliveStatus
-import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
@@ -32,21 +29,6 @@ class AppWatchdogTest {
     }
 
     @Test
-    fun driftWithRepinDisabledSkipsIntervention() = runBlocking {
-        val fixture = fixture(enabled = false)
-        fixture.checker.onDisplay = false
-
-        repeat(5) {
-            fixture.watchdog.checkDisplayPinned(GAME_PACKAGE)
-            fixture.advance(10_000L)
-        }
-
-        assertTrue(fixture.checker.moveCalls.isEmpty())
-        assertTrue(fixture.events.isEmpty())
-        fixture.close()
-    }
-
-    @Test
     fun firstDriftOnlyStartsGracePeriod() = runBlocking {
         val fixture = fixture()
         fixture.checker.onDisplay = false
@@ -59,11 +41,11 @@ class AppWatchdogTest {
 
     @Test
     fun repinWaitsForGracePeriodToExpire() = runBlocking {
-        val fixture = fixture(delaySec = 5)
+        val fixture = fixture()
         fixture.checker.onDisplay = false
 
         fixture.watchdog.checkDisplayPinned(GAME_PACKAGE) // 首见，宽限期开始
-        fixture.advance(4_999L)
+        fixture.advance(AppWatchdog.REPIN_GRACE_MS - 1)
         fixture.watchdog.checkDisplayPinned(GAME_PACKAGE) // 宽限期内
         assertTrue(fixture.checker.moveCalls.isEmpty())
 
@@ -78,21 +60,21 @@ class AppWatchdogTest {
 
     @Test
     fun successfulRepinResetsGraceForNextDrift() = runBlocking {
-        val fixture = fixture(delaySec = 5)
+        val fixture = fixture()
         fixture.checker.onDisplay = false
         fixture.checker.moveResult = true
 
         fixture.watchdog.checkDisplayPinned(GAME_PACKAGE)
-        fixture.advance(5_000L)
+        fixture.advance(AppWatchdog.REPIN_GRACE_MS)
         fixture.watchdog.checkDisplayPinned(GAME_PACKAGE) // 拉回成功
         assertEquals(1, fixture.checker.moveCalls.size)
 
         // ROM 再次把游戏挪走：应重新经历完整宽限期，而不是立刻拉回
-        fixture.advance(5_000L)
+        fixture.advance(AppWatchdog.REPIN_GRACE_MS)
         fixture.watchdog.checkDisplayPinned(GAME_PACKAGE)
         assertEquals(1, fixture.checker.moveCalls.size)
 
-        fixture.advance(5_000L)
+        fixture.advance(AppWatchdog.REPIN_GRACE_MS)
         fixture.watchdog.checkDisplayPinned(GAME_PACKAGE)
         assertEquals(2, fixture.checker.moveCalls.size)
         assertTrue(fixture.events.isEmpty())
@@ -101,13 +83,13 @@ class AppWatchdogTest {
 
     @Test
     fun repinFailuresCapAndNotifyOnce() = runBlocking {
-        val fixture = fixture(delaySec = 5)
+        val fixture = fixture()
         fixture.checker.onDisplay = false
         fixture.checker.moveResult = false
 
         fixture.watchdog.checkDisplayPinned(GAME_PACKAGE) // 首见
         repeat(AppWatchdog.MAX_REPIN_ATTEMPTS) {
-            fixture.advance(5_000L)
+            fixture.advance(AppWatchdog.REPIN_GRACE_MS)
             fixture.watchdog.checkDisplayPinned(GAME_PACKAGE)
         }
         yield()
@@ -117,7 +99,7 @@ class AppWatchdogTest {
 
         // 达到上限后不再重试、不再重复上报
         repeat(3) {
-            fixture.advance(5_000L)
+            fixture.advance(AppWatchdog.REPIN_GRACE_MS)
             fixture.watchdog.checkDisplayPinned(GAME_PACKAGE)
         }
         yield()
@@ -129,13 +111,13 @@ class AppWatchdogTest {
 
     @Test
     fun returningToDisplayResetsFailureCap() = runBlocking {
-        val fixture = fixture(delaySec = 5)
+        val fixture = fixture()
         fixture.checker.onDisplay = false
         fixture.checker.moveResult = false
 
         fixture.watchdog.checkDisplayPinned(GAME_PACKAGE)
         repeat(AppWatchdog.MAX_REPIN_ATTEMPTS) {
-            fixture.advance(5_000L)
+            fixture.advance(AppWatchdog.REPIN_GRACE_MS)
             fixture.watchdog.checkDisplayPinned(GAME_PACKAGE)
         }
         yield()
@@ -149,7 +131,7 @@ class AppWatchdogTest {
         fixture.checker.onDisplay = false
         fixture.watchdog.checkDisplayPinned(GAME_PACKAGE)
         repeat(AppWatchdog.MAX_REPIN_ATTEMPTS) {
-            fixture.advance(5_000L)
+            fixture.advance(AppWatchdog.REPIN_GRACE_MS)
             fixture.watchdog.checkDisplayPinned(GAME_PACKAGE)
         }
         yield()
@@ -159,12 +141,9 @@ class AppWatchdogTest {
         fixture.close()
     }
 
-    private fun fixture(enabled: Boolean = true, delaySec: Int = 5): Fixture {
-        val settings = mockk<AppSettingsManager>()
-        every { settings.driftAutoRepinEnabled } returns MutableStateFlow(enabled)
-        every { settings.driftAutoRepinDelaySec } returns MutableStateFlow(delaySec)
+    private fun fixture(): Fixture {
         val checker = FakeAppAliveChecker()
-        val watchdog = AppWatchdog(mockk<TaskChainState>(), checker, settings)
+        val watchdog = AppWatchdog(mockk<TaskChainState>(), checker)
         val fixture = Fixture(checker, watchdog)
         watchdog.clock = { fixture.now }
         fixture.scope.launch { watchdog.displayDriftEvent.collect { fixture.events += it } }

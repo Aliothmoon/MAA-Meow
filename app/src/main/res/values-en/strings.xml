@@ -106,11 +106,6 @@
     <string name="settings_deployment_with_pause">Deploy operators while paused</string>
     <string name="settings_deployment_with_pause_tip">Hold ESC to pause the game while deploying operators for higher precision. Disable if ESC injection misbehaves or some operators are not placed correctly; deployment will fall back to plain swipe</string>
     <string name="settings_force_fullscreen_on_virtual_display">Force FULLSCREEN mode</string>
-    <string name="settings_drift_auto_repin_enabled">Move game back automatically</string>
-    <string name="settings_drift_auto_repin_enabled_desc">In background mode, some systems (e.g. Samsung One UI) or channel-login SDKs may move the game back to the main screen, breaking recognition. When enabled, the game is moved back to the virtual display once it has been away longer than the configured delay</string>
-    <string name="settings_drift_auto_repin_delay_sec">Move-back delay</string>
-    <string name="settings_drift_auto_repin_delay_sec_desc">Wait %1$d seconds after the game leaves the virtual display before moving it back, to avoid interrupting login or verification pop-ups</string>
-    <string name="settings_drift_auto_repin_delay_hint">Unit: seconds, range 1~60</string>
     <string name="settings_allow_foreground_scheduled_task">Allow scheduled tasks in foreground</string>
     <string name="settings_wake_unlock_type">Schedule unlock method</string>
     <string name="settings_wake_unlock_type_swipe">Swipe unlock</string>

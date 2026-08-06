@@ -238,28 +238,6 @@ class SettingsViewModel(
         _wakeTestState.value = null
     }
 
-    // 后台虚拟显示器模式：游戏漂移自动拉回开关
-    val driftAutoRepinEnabled: StateFlow<Boolean> =
-        appSettingsManager.driftAutoRepinEnabled
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-
-    fun setDriftAutoRepinEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            appSettingsManager.setDriftAutoRepinEnabled(enabled)
-        }
-    }
-
-    // 漂移拉回延迟（秒）
-    val driftAutoRepinDelaySec: StateFlow<Int> =
-        appSettingsManager.driftAutoRepinDelaySec
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 5)
-
-    fun setDriftAutoRepinDelaySec(seconds: Int) {
-        viewModelScope.launch {
-            appSettingsManager.setDriftAutoRepinDelaySec(seconds)
-        }
-    }
-
     val allowForegroundScheduledTask: StateFlow<Boolean> =
         appSettingsManager.allowForegroundScheduledTask
 

@@ -303,11 +303,6 @@
     <string name="settings_deployment_with_pause">暂停时部署干员</string>
     <string name="settings_deployment_with_pause_tip">部署干员前模拟按住 ESC 暂停游戏，提高部署精确度。如遇 ESC 注入异常或部分干员部署不到位，可关闭改用普通滑动</string>
     <string name="settings_force_fullscreen_on_virtual_display">强制 FULLSCREEN 模式</string>
-    <string name="settings_drift_auto_repin_enabled">游戏移回主屏时自动拉回</string>
-    <string name="settings_drift_auto_repin_enabled_desc">后台运行时，部分系统（如三星 One UI）或渠道服登录 SDK 可能把游戏移回主屏幕，导致识别与实际画面脱节。开启后，游戏离开虚拟显示器超过设定延迟仍未恢复时，会自动将其移回虚拟显示器</string>
-    <string name="settings_drift_auto_repin_delay_sec">自动拉回延迟</string>
-    <string name="settings_drift_auto_repin_delay_sec_desc">游戏离开虚拟显示器后等待 %1$d 秒再拉回，避免打断登录或验证弹窗</string>
-    <string name="settings_drift_auto_repin_delay_hint">单位：秒，范围 1~60</string>
     <string name="settings_allow_foreground_scheduled_task">允许在前台模式执行定时任务</string>
     <string name="settings_wake_unlock_type">定时任务解锁方式</string>
     <string name="settings_wake_unlock_type_swipe">滑动解锁</string>
