@@ -829,17 +829,20 @@ private fun FacilitiesSection(
             facilities = config.facilities,
             onFacilitiesChange = { onConfigChange(config.copy(facilities = it)) })
 
-        // 全选/清除按钮
         Row(
-            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Button(
                 onClick = {
                     onConfigChange(
                         config.copy(
-                            facilities = config.facilities.map { it.first to true })
+                            facilities = config.facilities.map { it.first to true },
+                        ),
                     )
-                }, modifier = Modifier.weight(1f)
+                },
+                modifier = Modifier.weight(1f),
+                shape = MaterialTheme.shapes.small,
             ) {
                 Text(stringResource(R.string.common_select_all))
             }
@@ -848,9 +851,12 @@ private fun FacilitiesSection(
                 onClick = {
                     onConfigChange(
                         config.copy(
-                            facilities = config.facilities.map { it.first to false })
+                            facilities = config.facilities.map { it.first to false },
+                        ),
                     )
-                }, modifier = Modifier.weight(1f)
+                },
+                modifier = Modifier.weight(1f),
+                shape = MaterialTheme.shapes.small,
             ) {
                 Text(stringResource(R.string.common_clear))
             }
