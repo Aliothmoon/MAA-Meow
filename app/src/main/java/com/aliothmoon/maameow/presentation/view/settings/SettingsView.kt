@@ -273,6 +273,7 @@ fun SettingsView(
 
     var showReInitConfirm by remember { mutableStateOf(false) }
     var showDebugModeConfirm by remember { mutableStateOf(false) }
+    var showForceFullscreenConfirm by remember { mutableStateOf(false) }
     var showExportSheet by remember { mutableStateOf(false) }
 
     LogExportController(
@@ -326,6 +327,22 @@ fun SettingsView(
             },
             onDismissRequest = { showDebugModeConfirm = false },
             confirmText = stringResource(R.string.common_confirm_restart),
+            dismissText = stringResource(R.string.common_cancel),
+            icon = Icons.Rounded.Build
+        )
+    }
+
+    if (showForceFullscreenConfirm) {
+        AdaptiveTaskPromptDialog(
+            visible = true,
+            title = stringResource(R.string.dialog_enable_force_fullscreen_title),
+            message = stringResource(R.string.dialog_enable_force_fullscreen_message),
+            onConfirm = {
+                showForceFullscreenConfirm = false
+                viewModel.setForceFullscreenOnVirtualDisplay(true)
+            },
+            onDismissRequest = { showForceFullscreenConfirm = false },
+            confirmText = stringResource(R.string.common_confirm),
             dismissText = stringResource(R.string.common_cancel),
             icon = Icons.Rounded.Build
         )
@@ -678,18 +695,17 @@ fun SettingsView(
                     )
                     ListItemDivider()
                     SettingSwitchItem(
-                        title = stringResource(R.string.settings_deployment_with_pause),
-                        description = stringResource(R.string.settings_deployment_with_pause_tip),
-                        contentColor = contentColor,
-                        checked = deploymentWithPause,
-                        onCheckedChange = { viewModel.setDeploymentWithPause(it) }
-                    )
-                    ListItemDivider()
-                    SettingSwitchItem(
                         title = stringResource(R.string.settings_force_fullscreen_on_virtual_display),
+                        description = stringResource(R.string.settings_force_fullscreen_on_virtual_display_desc),
                         contentColor = contentColor,
                         checked = forceFullscreenOnVirtualDisplay,
-                        onCheckedChange = { viewModel.setForceFullscreenOnVirtualDisplay(it) }
+                        onCheckedChange = { enabled ->
+                            if (enabled) {
+                                showForceFullscreenConfirm = true
+                            } else {
+                                viewModel.setForceFullscreenOnVirtualDisplay(false)
+                            }
+                        }
                     )
                     ListItemDivider()
                     SettingWakeUnlockTypeItem(
@@ -712,29 +728,47 @@ fun SettingsView(
                             )
                         }
                     }
-                    ListItemDivider()
-                    SettingSwitchItem(
-                        title = stringResource(R.string.settings_tasks_override_title),
-                        description = stringResource(R.string.settings_tasks_override_desc),
-                        contentColor = contentColor,
-                        checked = tasksOverrideEnabled,
-                        onCheckedChange = { viewModel.setTasksOverrideEnabled(it) }
-                    )
-                    AnimatedVisibility(
-                        visible = tasksOverrideEnabled,
-                        enter = expandVertically(),
-                        exit = shrinkVertically()
-                    ) {
-                        Column {
-                            ListItemDivider()
-                            SettingClickItem(
-                                title = stringResource(R.string.settings_tasks_override_edit_title),
-                                contentColor = contentColor
-                            ) {
-                                navController.navigate(Routes.TASK_OVERRIDE_EDITOR)
+                    }
+                }
+            }
+
+            // 任务设置：暂停时部署干员、MAA 任务覆盖
+            item {
+                CollapsibleSection(
+                    title = stringResource(R.string.settings_section_task),
+                    sectionKey = "settings_section_task",
+                ) {
+                    SettingsGroupCard {
+                        SettingSwitchItem(
+                            title = stringResource(R.string.settings_deployment_with_pause),
+                            description = stringResource(R.string.settings_deployment_with_pause_tip),
+                            contentColor = contentColor,
+                            checked = deploymentWithPause,
+                            onCheckedChange = { viewModel.setDeploymentWithPause(it) }
+                        )
+                        ListItemDivider()
+                        SettingSwitchItem(
+                            title = stringResource(R.string.settings_tasks_override_title),
+                            description = stringResource(R.string.settings_tasks_override_desc),
+                            contentColor = contentColor,
+                            checked = tasksOverrideEnabled,
+                            onCheckedChange = { viewModel.setTasksOverrideEnabled(it) }
+                        )
+                        AnimatedVisibility(
+                            visible = tasksOverrideEnabled,
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
+                            Column {
+                                ListItemDivider()
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_tasks_override_edit_title),
+                                    contentColor = contentColor
+                                ) {
+                                    navController.navigate(Routes.TASK_OVERRIDE_EDITOR)
+                                }
                             }
                         }
-                    }
                     }
                 }
             }

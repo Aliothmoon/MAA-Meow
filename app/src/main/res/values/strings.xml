@@ -247,6 +247,7 @@
     <!-- settings: other section -->
     <string name="settings_section_display">显示设置</string>
     <string name="settings_section_other">其他设置</string>
+    <string name="settings_section_task">任务设置</string>
     <string name="settings_startup_backend_title">启动模式</string>
     <string name="settings_startup_backend_desc">选择应用获取系统权限的方式</string>
     <!-- settings: monet theme color (system Material You toggle, Android 12+) -->
@@ -302,7 +303,10 @@
     <string name="settings_shizuku_launch_app_empty">未找到匹配应用</string>
     <string name="settings_deployment_with_pause">暂停时部署干员</string>
     <string name="settings_deployment_with_pause_tip">部署干员前模拟按住 ESC 暂停游戏，提高部署精确度。如遇 ESC 注入异常或部分干员部署不到位，可关闭改用普通滑动</string>
-    <string name="settings_force_fullscreen_on_virtual_display">强制 FULLSCREEN 模式</string>
+    <string name="settings_force_fullscreen_on_virtual_display">后台模式强制全屏模式</string>
+    <string name="settings_force_fullscreen_on_virtual_display_desc">仅后台虚拟屏生效。效果因机型而异，不一定生效，也可能带来额外问题</string>
+    <string name="dialog_enable_force_fullscreen_title">启用后台强制全屏？</string>
+    <string name="dialog_enable_force_fullscreen_message">此选项不一定在所有设备上生效，开启后可能出现兼容性问题。确认继续？</string>
     <string name="settings_wake_unlock_type">定时任务解锁方式</string>
     <string name="settings_wake_unlock_type_swipe">滑动解锁</string>
     <string name="settings_wake_unlock_type_pin">PIN</string>
