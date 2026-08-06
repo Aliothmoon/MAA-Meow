@@ -44,6 +44,12 @@ object WakeUnlockController {
             return WakeUnlockResult.UNSUPPORTED
         }
         if (!pollUntil(KEYGUARD_GONE_TIMEOUT_MS) { wm.isKeyguardLocked == true }) {
+            // 锁屏方式为「无」时 lockNow 后 keyguard 永不出现；滑动/密码锁屏均会出现，
+            // 超时且非 secure 即视为未设置锁屏，此时也无需息屏验证
+            if (wm.isKeyguardSecure(0) != true) {
+                Ln.i("$TAG: keyguard never appeared and not secure — no lock screen configured")
+                return WakeUnlockResult.NO_KEYGUARD
+            }
             Ln.w("$TAG: keyguard did not lock after lockNow")
             return WakeUnlockResult.LOCK_FAILED
         }

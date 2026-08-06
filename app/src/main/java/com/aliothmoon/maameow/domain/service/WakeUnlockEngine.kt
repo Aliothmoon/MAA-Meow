@@ -22,9 +22,9 @@ class WakeUnlockEngine {
             WakeUnlockResult.CREDENTIAL_REJECTED,
             uiTextOf(R.string.wake_result_credential_rejected),
         ),
-        BOUNCER_NOT_READY(
-            WakeUnlockResult.BOUNCER_NOT_READY,
-            uiTextOf(R.string.wake_result_bouncer_not_ready),
+        NO_KEYGUARD(
+            WakeUnlockResult.NO_KEYGUARD,
+            uiTextOf(R.string.wake_result_no_keyguard),
         ),
         UNSUPPORTED(WakeUnlockResult.UNSUPPORTED, uiTextOf(R.string.wake_result_unsupported)),
         LOCK_FAILED(WakeUnlockResult.LOCK_FAILED, uiTextOf(R.string.wake_result_lock_failed)),

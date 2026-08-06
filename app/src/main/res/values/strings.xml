@@ -2031,7 +2031,7 @@
     <string name="runlog_task_stopped">任务停止，状态: %1$s</string>
     <string name="runlog_service_terminated">MAA服务异常终止</string>
     <string name="runlog_game_process_gone">游戏进程未启动或被异常关闭(%1$s)</string>
-    <string name="runlog_game_left_virtual_display">游戏窗口已离开虚拟显示器且自动拉回失败(%1$s)，请尝试开启「强制 FULLSCREEN 模式」或改用前台模式</string>
+    <string name="runlog_game_left_virtual_display">游戏窗口已离开虚拟显示器且自动拉回失败(%1$s)，请尝试开启「后台模式强制全屏模式」或改用前台模式</string>
 
     <!-- 定时任务锁屏 · PIN -->
     <string name="settings_wake_credential">PIN</string>
@@ -2045,7 +2045,7 @@
     <string name="wake_result_wake_failed">屏幕无法点亮</string>
     <string name="wake_result_credential_required">当前为密码锁屏，请先填写 PIN</string>
     <string name="wake_result_credential_rejected">解锁失败，PIN 可能不正确，已停止重试以免触发系统锁定</string>
-    <string name="wake_result_bouncer_not_ready">锁屏密码输入界面未出现</string>
+    <string name="wake_result_no_keyguard">未设置锁屏，无需解锁</string>
     <string name="wake_result_unsupported">当前系统不支持该操作</string>
     <string name="wake_result_lock_failed">无法进入锁屏</string>
     <string name="wake_result_ipc_failed">提权服务未连接</string>

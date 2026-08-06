@@ -35,7 +35,6 @@ class ScheduleExecutionService : Service() {
     companion object {
         private const val TAG = "ScheduleExec"
         private const val NOTIFICATION_ID = 9001
-        private const val RESULT_NOTIFICATION_ID = 9002
         private const val CHANNEL_ID = "schedule_execution"
         private const val DATA_READY_TIMEOUT_MS = 5_000L
     }

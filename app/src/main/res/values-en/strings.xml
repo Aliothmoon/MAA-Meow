@@ -1975,7 +1975,7 @@
     <string name="runlog_task_stopped">Tasks stopped, status: %1$s</string>
     <string name="runlog_service_terminated">MAA service terminated unexpectedly</string>
     <string name="runlog_game_process_gone">Game process not started or closed unexpectedly (%1$s)</string>
-    <string name="runlog_game_left_virtual_display">Game window left the virtual display and could not be moved back (%1$s). Try enabling \"Force FULLSCREEN mode\" or switch to foreground mode</string>
+    <string name="runlog_game_left_virtual_display">Game window left the virtual display and could not be moved back (%1$s). Try enabling \"Force fullscreen in background mode\" or switch to foreground mode</string>
 
     <!-- Scheduled lock · PIN -->
     <string name="settings_wake_credential">PIN</string>
@@ -1989,7 +1989,7 @@
     <string name="wake_result_wake_failed">Screen would not turn on</string>
     <string name="wake_result_credential_required">A PIN is required for this lock screen</string>
     <string name="wake_result_credential_rejected">Unlock failed, the PIN may be wrong. Stopped retrying to avoid triggering a system lockout</string>
-    <string name="wake_result_bouncer_not_ready">The lock screen credential prompt did not appear</string>
+    <string name="wake_result_no_keyguard">No lock screen set; unlocking is not needed</string>
     <string name="wake_result_unsupported">Not supported on this system</string>
     <string name="wake_result_lock_failed">Could not enter lock screen</string>
     <string name="wake_result_ipc_failed">Elevated service not connected</string>
