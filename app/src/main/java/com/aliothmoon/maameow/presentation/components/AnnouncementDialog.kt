@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,11 +32,13 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -46,6 +49,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -60,6 +65,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.runtime.snapshotFlow
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.announcement.AnnouncementSectionParser
 import kotlinx.coroutines.flow.distinctUntilChanged
 import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.delay
@@ -72,6 +78,7 @@ fun AnnouncementDialog(
     imageAssetPath: String?,
     markdown: String,
     onDismiss: (dontShowAgain: Boolean) -> Unit,
+    onStubbornUnlock: () -> Unit = {},
 ) {
     // 是否已滚动至底部
     var scrolledToBottom by remember { mutableStateOf(false) }
@@ -79,8 +86,21 @@ fun AnnouncementDialog(
     var elapsedSeconds by remember { mutableIntStateOf(0) }
     // "不再显示"勾选状态
     var dontShowAgain by remember { mutableStateOf(false) }
+    // 未读完时点确认的累计次数
+    var stubbornClicks by remember { mutableIntStateOf(0) }
 
     val scrollState = rememberScrollState()
+
+    // 分节：`## ` 切分，0 = 全部；切节内容回顶
+    val sections = remember(markdown) { AnnouncementSectionParser.parse(markdown) }
+    val fullContent = remember(markdown) { AnnouncementSectionParser.fullContent(markdown) }
+    var selectedSection by remember(markdown) { mutableIntStateOf(0) }
+    val shownMarkdown = if (selectedSection in 1..sections.size) {
+        sections[selectedSection - 1].content
+    } else {
+        fullContent
+    }
+    LaunchedEffect(selectedSection) { scrollState.scrollTo(0) }
 
     // 检测是否滚动到底部（内容不足一屏时 maxValue==0 视为已到底）
     LaunchedEffect(scrollState) {
@@ -96,6 +116,7 @@ fun AnnouncementDialog(
     // 停留计时器：滚动到底部后才开始计时，使倒计时提示得以显示
     LaunchedEffect(scrolledToBottom) {
         if (!scrolledToBottom) return@LaunchedEffect
+        stubbornClicks = 0
         elapsedSeconds = 0
         repeat(STAY_SECONDS_REQUIRED) {
             delay(1000)
@@ -106,6 +127,26 @@ fun AnnouncementDialog(
     // 勾选框是否可启用
     val canCheck by remember {
         derivedStateOf { scrolledToBottom && elapsedSeconds >= STAY_SECONDS_REQUIRED }
+    }
+
+    // 未读完点确认不关闭：文案逐次升级，累计 20+ 次解锁成就并放行（对齐 WPF）
+    val confirmLabel = when {
+        stubbornClicks <= 0 -> stringResource(R.string.announcement_confirm)
+        stubbornClicks == 1 -> stringResource(R.string.announcement_not_finished_confirm_1)
+        stubbornClicks == 2 -> stringResource(R.string.announcement_not_finished_confirm_2)
+        else -> stringResource(R.string.announcement_not_finished_confirm_3) +
+                "?".repeat(stubbornClicks - 3)
+    }
+    val onConfirmClick = {
+        if (scrolledToBottom || dontShowAgain) {
+            onDismiss(dontShowAgain)
+        } else {
+            stubbornClicks++
+            if (stubbornClicks > 20) {
+                onStubbornUnlock()
+                onDismiss(false)
+            }
+        }
     }
 
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
@@ -248,13 +289,39 @@ fun AnnouncementDialog(
                             }
                         }
                         TextButton(
-                            onClick = { onDismiss(dontShowAgain) },
+                            onClick = onConfirmClick,
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = stringResource(R.string.announcement_confirm),
+                                text = confirmLabel,
                                 maxLines = 1,
                                 style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                }
+
+                // 分节导航：≥2 节才显示，NEW 节带红点
+                if (sections.size >= 2) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        SectionChip(
+                            label = stringResource(R.string.announcement_section_all),
+                            selected = selectedSection == 0,
+                            isNew = false,
+                            onClick = { selectedSection = 0 },
+                        )
+                        sections.forEachIndexed { index, section ->
+                            SectionChip(
+                                label = section.title,
+                                selected = selectedSection == index + 1,
+                                isNew = section.isNew,
+                                onClick = { selectedSection = index + 1 },
                             )
                         }
                     }
@@ -264,29 +331,52 @@ fun AnnouncementDialog(
 
                 // 公告内容（可滚动）——用 weight 占据中间剩余空间（而非固定 0.55×屏高），
                 // 保证底部勾选框与确认按钮在任何屏幕高度/字体缩放下都不会被挤出弹窗裁掉
-                Column(
+                val atBottomNow by remember {
+                    derivedStateOf { scrollState.value >= scrollState.maxValue }
+                }
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f, fill = false)
-                        .verticalScroll(scrollState),
+                        .weight(1f, fill = false),
                 ) {
-                    if (imageBitmap != null) {
-                        Image(
-                            bitmap = imageBitmap,
-                            contentDescription = null,
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 140.dp),
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                    }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(scrollState),
+                    ) {
+                        if (imageBitmap != null) {
+                            Image(
+                                bitmap = imageBitmap,
+                                contentDescription = null,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 140.dp),
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
 
-                    MarkdownText(
-                        markdown = markdown,
-                        modifier = Modifier.fillMaxWidth(),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                        MarkdownText(
+                            markdown = shownMarkdown,
+                            modifier = Modifier.fillMaxWidth(),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    // 未滚到底时底部渐隐，提示下方还有内容
+                    if (!atBottomNow) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .height(28.dp)
+                                .background(
+                                    Brush.verticalGradient(
+                                        0f to Color.Transparent,
+                                        1f to MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp),
+                                    )
+                                ),
+                        )
+                    }
                 }
 
                 if (!inLandscape) {
@@ -348,15 +438,43 @@ fun AnnouncementDialog(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Button(
-                        onClick = { onDismiss(dontShowAgain) },
+                        onClick = onConfirmClick,
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.large,
                     ) {
-                        Text(stringResource(R.string.announcement_confirm))
+                        Text(confirmLabel)
                     }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun SectionChip(
+    label: String,
+    selected: Boolean,
+    isNew: Boolean,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(text = label, maxLines = 1)
+                if (isNew) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .background(MaterialTheme.colorScheme.error, CircleShape),
+                    )
+                }
+            }
+        },
+    )
 }

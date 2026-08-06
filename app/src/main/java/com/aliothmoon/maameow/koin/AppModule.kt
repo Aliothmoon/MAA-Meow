@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.koin
 
+import com.aliothmoon.maameow.announcement.AnnouncementManager
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.api.CopilotApiService
 import com.aliothmoon.maameow.data.api.ETagCacheManager
@@ -116,6 +117,7 @@ val appModule = module {
     singleOf(::HttpClientHelper)
     singleOf(::ETagCacheManager)
     singleOf(::MaaApiService)
+    singleOf(::AnnouncementManager)
     singleOf(::PermissionManager)
     singleOf(::ShizukuReadinessProvider)
 

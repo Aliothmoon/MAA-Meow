@@ -25,6 +25,10 @@ object MaaApi {
         MAA_API_BACKUP
     )
 
+    // MaaMeow 公告（远端热更 markdown，nginx 静态文件自带 ETag/304）
+    const val ANNOUNCEMENT_ZH = "https://maameow.com/announcement/announcement_zh.md"
+    const val ANNOUNCEMENT_EN = "https://maameow.com/announcement/announcement_en.md"
+
 
     // MirrorChyan 基础地址
     const val MIRROR_CHYAN_BASE = "https://mirrorchyan.com/"

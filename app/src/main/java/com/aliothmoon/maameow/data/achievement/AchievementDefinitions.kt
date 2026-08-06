@@ -782,6 +782,13 @@ object AchievementDefinitions {
         ) {
             trigger(AchievementEvents.MINI_GAME_STARTED, AchievementTriggerMode.UNLOCK)
         }
+        achievement(
+            id = AchievementIds.ANNOUNCEMENT_STUBBORN_CLICK,
+            category = AchievementCategory.EASTER_EGG,
+            hidden = true,
+        ) {
+            trigger(AchievementEvents.ANNOUNCEMENT_STUBBORN_CLICK, AchievementTriggerMode.UNLOCK)
+        }
         // endregion
     }
 }

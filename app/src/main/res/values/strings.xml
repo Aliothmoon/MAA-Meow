@@ -1711,6 +1711,10 @@
     <string name="announcement_dont_show_again_hint">请阅读完公告并停留 %1$d 秒后可勾选</string>
     <string name="announcement_scroll_to_bottom_hint">请阅读完公告内容</string>
     <string name="announcement_confirm">确认</string>
+    <string name="announcement_section_all">全部公告</string>
+    <string name="announcement_not_finished_confirm_1">没看完点什么确认</string>
+    <string name="announcement_not_finished_confirm_2">说的就是你，还点</string>
+    <string name="announcement_not_finished_confirm_3">还点</string>
 
     <!-- i18n: overlay floatball -->
     <string name="overlay_floatball_countdown_desc">正在倒计时，剩余 %1$s 秒</string>
@@ -1998,6 +2002,9 @@
     <string name="achievement_SlackingOff_title">不务正业</string>
     <string name="achievement_SlackingOff_desc">正事做累了，玩点别的。</string>
     <string name="achievement_SlackingOff_condition">启动一次小游戏</string>
+    <string name="achievement_AnnouncementStubbornClick_title">死不悔改</string>
+    <string name="achievement_AnnouncementStubbornClick_desc">即使提示了这么多次，你依然选择不看公告。</string>
+    <string name="achievement_AnnouncementStubbornClick_condition">在未滚动到底部的情况下点击确认按钮超过 20 次</string>
 
     <!-- runtime session log (shown in log panel / history) -->
     <string name="runlog_task_start">开始执行任务，共 %1$d 项</string>

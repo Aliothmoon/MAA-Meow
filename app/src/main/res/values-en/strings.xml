@@ -1655,6 +1655,10 @@
     <string name="announcement_dont_show_again_hint">Please read the full announcement and stay for %1$d seconds to enable</string>
     <string name="announcement_scroll_to_bottom_hint">Please read the full announcement first</string>
     <string name="announcement_confirm">Confirm</string>
+    <string name="announcement_section_all">All Announcements</string>
+    <string name="announcement_not_finished_confirm_1">You haven\'t finished reading. Please confirm after you finish.</string>
+    <string name="announcement_not_finished_confirm_2">Yes, you — still clicking</string>
+    <string name="announcement_not_finished_confirm_3">Still clicking</string>
 
     <!-- i18n: overlay floatball -->
     <string name="overlay_floatball_countdown_desc">Countdown, %1$s seconds remaining</string>
@@ -1942,6 +1946,9 @@
     <string name="achievement_SlackingOff_title">Slacking Off</string>
     <string name="achievement_SlackingOff_desc">Done with serious business, time to play something else.</string>
     <string name="achievement_SlackingOff_condition">Launch a mini-game once</string>
+    <string name="achievement_AnnouncementStubbornClick_title">Stubborn</string>
+    <string name="achievement_AnnouncementStubbornClick_desc">Even after being prompted so many times, you still choose not to read the announcement.</string>
+    <string name="achievement_AnnouncementStubbornClick_condition">Click the confirm button more than 20 times without scrolling to the bottom</string>
 
     <!-- runtime session log (shown in log panel / history) -->
     <string name="runlog_task_start">Starting tasks (%1$d total)</string>

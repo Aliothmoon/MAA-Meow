@@ -25,6 +25,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.aliothmoon.maameow.announcement.AnnouncementConfig
+import com.aliothmoon.maameow.announcement.AnnouncementContent
+import com.aliothmoon.maameow.announcement.AnnouncementManager
+import com.aliothmoon.maameow.data.achievement.AchievementEvents
+import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.launch.LaunchEffect
@@ -68,6 +72,8 @@ fun AppNavigation(
     appSettings: AppSettingsManager = koinInject(),
     notificationService: ExternalNotificationService = koinInject(),
     overlayController: OverlayController = koinInject(),
+    announcementManager: AnnouncementManager = koinInject(),
+    achievementRepository: AchievementRepository = koinInject(),
     appEventsViewModel: AppEventsViewModel = koinViewModel(),
 ) {
     val navController = rememberNavController()
@@ -87,6 +93,12 @@ fun AppNavigation(
     val runMode by appSettings.runMode.collectAsStateWithLifecycle()
     val announcementReadVersion by appSettings.announcementReadVersion.collectAsStateWithLifecycle()
     val language by appSettings.language.collectAsStateWithLifecycle()
+    val announcementContent by announcementManager.content.collectAsStateWithLifecycle()
+
+    // 远端公告：ETag 条件请求，304（内容未变）不会触发弹窗；语言切换时重拉
+    LaunchedEffect(language) {
+        announcementManager.refresh(language)
+    }
     val scheduledCountdownState by backgroundTaskViewModel.countdownState.collectAsStateWithLifecycle()
 
     // 判断是否处于主 Tab 页面
@@ -209,28 +221,39 @@ fun AppNavigation(
                 onStartNow = { backgroundTaskViewModel.onScheduledStartNow() },
             )
         }
-        // 长期公告弹窗：每次公告版本变更后首次启动自动弹出，或从设置中手动打开
-        val needsToShow = announcementReadVersion != AnnouncementConfig.CURRENT_VERSION
+        // 长期公告弹窗：远端内容变化（哈希与已读标记不符）后首次启动自动弹出，或从设置中手动打开
+        val current = announcementContent
+        val needsToShow = current != null && current.hash != announcementReadVersion
         val showAnnouncement = forceShowAnnouncement || (needsToShow && !announcementDismissedOnce)
-        val announcementMarkdown = remember(showAnnouncement, language) {
-            if (showAnnouncement) {
-                AnnouncementConfig.loadContent(context, language)
-            } else {
+        val shownAnnouncement = remember(showAnnouncement, language, current) {
+            if (!showAnnouncement) {
                 null
+            } else {
+                // 手动打开时拉取可能尚未完成，回退内置 assets
+                current ?: AnnouncementConfig.loadContent(context, language)
+                    .takeIf { it.isNotBlank() }
+                    ?.let { AnnouncementContent.of(it) }
             }
         }
-        if (announcementMarkdown != null) {
+        if (shownAnnouncement != null) {
             AnnouncementDialog(
                 imageAssetPath = remember(language) { AnnouncementConfig.imageAssetPath(language) },
-                markdown = announcementMarkdown,
+                markdown = shownAnnouncement.markdown,
                 onDismiss = { dontShowAgain ->
                     forceShowAnnouncement = false
                     if (dontShowAgain) {
                         coroutineScope.launch {
-                            appSettings.setAnnouncementReadVersion(AnnouncementConfig.CURRENT_VERSION)
+                            appSettings.setAnnouncementReadVersion(shownAnnouncement.hash)
                         }
                     } else {
                         announcementDismissedOnce = true
+                    }
+                },
+                onStubbornUnlock = {
+                    coroutineScope.launch {
+                        achievementRepository.report {
+                            event = AchievementEvents.ANNOUNCEMENT_STUBBORN_CLICK
+                        }
                     }
                 },
             )
