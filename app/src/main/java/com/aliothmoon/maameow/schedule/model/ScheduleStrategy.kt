@@ -70,6 +70,8 @@ data class ScheduleStrategy(
     val forceStart: Boolean = false,
     /** 任务结束后自动熄屏 */
     val autoSleepAfterTask: Boolean = false,
+    /** 任务自然结束后关闭游戏，仅后台模式；全局同名开关已开时以全局为准 */
+    val closeGameAfterTask: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val lastExecutedAt: Long? = null,
     val lastResult: ExecutionResult? = null,

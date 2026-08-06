@@ -17,6 +17,7 @@ data class LaunchRequest(
     val scheduledTimeMs: Long,
     val forceStart: Boolean = false,
     val autoSleepAfterTask: Boolean = false,
+    val closeGameAfterTask: Boolean = false,
     val strategyId: String = "",
     val countdownSeconds: Int = DEFAULT_COUNTDOWN_SECONDS,
 ) {

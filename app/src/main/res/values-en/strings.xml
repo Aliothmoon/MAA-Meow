@@ -1475,6 +1475,12 @@
     <string name="schedule_force_start_tip">Stop the current task, restart the game, and start the new tasks</string>
     <string name="schedule_auto_sleep_after_task">Auto sleep after task</string>
     <string name="schedule_auto_sleep_tip">Automatically turn off the screen after the scheduled task completes to save battery</string>
+    <string name="schedule_close_game_after_task">Close game after task</string>
+    <string name="schedule_close_game_tip">Background mode only. If "Close game when task ends" is already enabled in the "More" menu at the right of the bottom action bar on the Tasks page, that switch takes precedence; this strategy setting applies only when it is off. Manually stopping a task will not close the game</string>
+    <string name="schedule_close_game_effect_foreground">Current effect: run mode is foreground, so this option does nothing</string>
+    <string name="schedule_close_game_effect_global">Current effect: the global switch is on, so the game closes when the task ends</string>
+    <string name="schedule_close_game_effect_strategy">Current effect: this strategy closes the game after the task ends normally</string>
+    <string name="schedule_close_game_effect_inactive">Current effect: the game is not closed when the task ends</string>
     <string name="schedule_permission_tip_battery_optimization">Disable battery optimization</string>
     <string name="schedule_permission_tip_exact_alarm">Allow exact alarms</string>
     <string name="schedule_permission_title">Permission reminder</string>

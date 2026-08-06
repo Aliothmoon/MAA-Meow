@@ -124,6 +124,7 @@ class LaunchPipeline(
         var terminalResult: ExecutionResult? = null
         var terminalMessage: UiText? = null
         var presentUi = true
+        var backgroundRun = false
         // 每次触发独占一个日志 Session（独立文件），无全局 writer 竞态
         val log = triggerLogger.open(
             strategyId = request.strategyId,
@@ -205,6 +206,7 @@ class LaunchPipeline(
             // 未启动时任务仍可跑，但无悬浮球/边框/快捷键，需先开控制层再挂机
             val isForeground = appSettingsManager.runMode.value == RunMode.FOREGROUND
             presentUi = !isForeground
+            backgroundRun = !isForeground
             val needsActivityLaunch = request.source == LaunchSource.Schedule && presentUi
 
             if (needsActivityLaunch) {
@@ -282,7 +284,7 @@ class LaunchPipeline(
         } finally {
             // 协程已 cancel 时仍须落库 / 关本 Session
             withContext(NonCancellable) {
-                finalizePipeline(request, log, terminalResult, terminalMessage)
+                finalizePipeline(request, log, terminalResult, terminalMessage, backgroundRun)
             }
         }
     }
@@ -292,16 +294,16 @@ class LaunchPipeline(
         log: ScheduleTriggerLogger.Session,
         terminalResult: ExecutionResult?,
         terminalMessage: UiText?,
+        backgroundRun: Boolean,
     ) {
         val result = terminalResult ?: ExecutionResult.CANCELLED
-        val message = terminalMessage
         try {
-            log.end(result, message)
+            log.end(result, terminalMessage)
             if (request.strategyId.isNotEmpty()) {
                 scheduleRepository.recordExecutionResult(
                     strategyId = request.strategyId,
                     result = result,
-                    message = triggerLogger.resolveMessage(message),
+                    message = triggerLogger.resolveMessage(terminalMessage),
                 )
             }
             if (result != ExecutionResult.STARTED && result != ExecutionResult.CANCELLED) {
@@ -310,7 +312,7 @@ class LaunchPipeline(
                         uiTextOf(
                             R.string.notification_schedule_detail,
                             request.displayName,
-                            message ?: uiTextOf(R.string.schedule_result_failed_start),
+                            terminalMessage ?: uiTextOf(R.string.schedule_result_failed_start),
                         ),
                     ),
                 )
@@ -328,8 +330,14 @@ class LaunchPipeline(
                     cur
                 }
             }
-            if (result == ExecutionResult.STARTED && request.autoSleepAfterTask) {
-                scope.launch { awaitAutoSleep() }
+            // 全局「任务自动结束时关闭游戏」已开时由后台任务页统一处理，这里不重复关
+            val closeGame = backgroundRun
+                    && request.closeGameAfterTask
+                    && !appSettingsManager.closeAppOnTaskEnd.value
+            if (result == ExecutionResult.STARTED
+                && (closeGame || request.autoSleepAfterTask)
+            ) {
+                scope.launch { awaitTaskEnd(closeGame, request.autoSleepAfterTask) }
             }
         }
     }
@@ -403,20 +411,36 @@ class LaunchPipeline(
         }
     }
 
-    private suspend fun awaitAutoSleep() {
-        val finished = withTimeoutOrNull(AUTO_SLEEP_TIMEOUT_MS) {
-            compositionService.state.filter { it != MaaExecutionState.IDLE }.first()
-            compositionService.state.filter { it == MaaExecutionState.IDLE }.first()
+    /** 关游戏只认自然结束（RUNNING → IDLE/ERROR），手动停止不关；熄屏不区分结束方式 */
+    private suspend fun awaitTaskEnd(closeGame: Boolean, autoSleep: Boolean) {
+        var prev = MaaExecutionState.IDLE
+        var started = false
+        val endedNaturally = withTimeoutOrNull(POST_TASK_TIMEOUT_MS) {
+            compositionService.state.first { cur ->
+                val ended = started
+                        && (cur == MaaExecutionState.IDLE || cur == MaaExecutionState.ERROR)
+                if (!ended) {
+                    started = started || cur != MaaExecutionState.IDLE
+                    prev = cur
+                }
+                ended
+            }
+            prev == MaaExecutionState.RUNNING
         }
         Timber.i(
-            "LaunchPipeline: autoSleep finished=%s",
-            finished != null,
+            "LaunchPipeline: task end natural=%s closeGame=%s autoSleep=%s",
+            endedNaturally, closeGame, autoSleep,
         )
-        wakeUnlockEngine.lockAndSleep()
+        if (closeGame && endedNaturally == true) {
+            compositionService.stopVirtualDisplay()
+        }
+        if (autoSleep) {
+            wakeUnlockEngine.lockAndSleep()
+        }
     }
 
     companion object {
-        private const val AUTO_SLEEP_TIMEOUT_MS = 30L * 60 * 1000
+        private const val POST_TASK_TIMEOUT_MS = 30L * 60 * 1000
         private const val PREEMPT_JOIN_TIMEOUT_MS = 15_000L
     }
 }

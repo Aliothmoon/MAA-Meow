@@ -8,7 +8,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskProfile
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import com.aliothmoon.maameow.schedule.model.ScheduleType
@@ -16,10 +18,13 @@ import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
@@ -43,6 +48,7 @@ data class ScheduleEditUiState(
     val selectedProfileId: String? = null,
     val forceStart: Boolean = false,
     val autoSleepAfterTask: Boolean = false,
+    val closeGameAfterTask: Boolean = false,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
     val needBatteryOptimization: Boolean = false,
@@ -50,14 +56,37 @@ data class ScheduleEditUiState(
     val errorMessage: UiText? = null
 )
 
+/** 「任务结束后关闭游戏」当前实际会不会生效 */
+enum class CloseGameEffect {
+    ForegroundInactive,
+    GlobalOverride,
+    StrategyActive,
+    Inactive,
+}
+
 class ScheduleEditViewModel(
     private val repository: ScheduleStrategyRepository,
     private val taskChainState: TaskChainState,
     private val scheduleAlarmManager: ScheduleAlarmManager,
+    appSettings: AppSettingsManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ScheduleEditUiState())
     val state: StateFlow<ScheduleEditUiState> = _state.asStateFlow()
+
+    /** 与 LaunchPipeline 的判定同源，改一处必须改另一处 */
+    val closeGameEffect: StateFlow<CloseGameEffect> = combine(
+        _state,
+        appSettings.runMode,
+        appSettings.closeAppOnTaskEnd,
+    ) { state, runMode, globalOn ->
+        when {
+            runMode != RunMode.BACKGROUND -> CloseGameEffect.ForegroundInactive
+            globalOn -> CloseGameEffect.GlobalOverride
+            state.closeGameAfterTask -> CloseGameEffect.StrategyActive
+            else -> CloseGameEffect.Inactive
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CloseGameEffect.Inactive)
 
     private var strategyId: String? = null
     private var existingStrategy: ScheduleStrategy? = null
@@ -91,6 +120,7 @@ class ScheduleEditViewModel(
                         selectedProfileId = strategy.profileId,
                         forceStart = strategy.forceStart,
                         autoSleepAfterTask = strategy.autoSleepAfterTask,
+                        closeGameAfterTask = strategy.closeGameAfterTask,
                     )
                     return@launch
                 }
@@ -175,6 +205,10 @@ class ScheduleEditViewModel(
         _state.update { it.copy(autoSleepAfterTask = value) }
     }
 
+    fun onCloseGameAfterTaskChanged(value: Boolean) {
+        _state.update { it.copy(closeGameAfterTask = value) }
+    }
+
     fun onReplaceTime(old: LocalTime, new: LocalTime) {
         _state.update { state ->
             val updated =
@@ -236,6 +270,7 @@ class ScheduleEditViewModel(
                     profileId = current.selectedProfileId,
                     forceStart = current.forceStart,
                     autoSleepAfterTask = current.autoSleepAfterTask,
+                    closeGameAfterTask = current.closeGameAfterTask,
                 ) ?: ScheduleStrategy(
                     id = strategyId ?: UUID.randomUUID().toString(),
                     name = current.name.trim(),
@@ -248,6 +283,7 @@ class ScheduleEditViewModel(
                     profileId = current.selectedProfileId,
                     forceStart = current.forceStart,
                     autoSleepAfterTask = current.autoSleepAfterTask,
+                    closeGameAfterTask = current.closeGameAfterTask,
                 )
 
                 if (current.isNew) {

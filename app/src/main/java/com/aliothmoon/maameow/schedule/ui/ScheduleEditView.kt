@@ -539,6 +539,56 @@ fun ScheduleEditView(
                     tipText = stringResource(R.string.schedule_auto_sleep_tip),
                 )
             }
+
+            item {
+                // 优先级规则容易踩坑，默认展开
+                val (closeExpanded, setCloseExpanded) = remember { mutableStateOf(true) }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            stringResource(R.string.schedule_close_game_after_task),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        ExpandableTipIcon(
+                            modifier = Modifier.padding(start = 8.dp),
+                            expanded = closeExpanded,
+                            onExpandedChange = { setCloseExpanded(it) })
+                    }
+                    Switch(
+                        checked = state.closeGameAfterTask,
+                        onCheckedChange = { viewModel.onCloseGameAfterTaskChanged(it) }
+                    )
+                }
+                val closeEffect by viewModel.closeGameEffect.collectAsStateWithLifecycle()
+                val willClose = closeEffect == CloseGameEffect.GlobalOverride
+                        || closeEffect == CloseGameEffect.StrategyActive
+                Text(
+                    text = stringResource(
+                        when (closeEffect) {
+                            CloseGameEffect.ForegroundInactive -> R.string.schedule_close_game_effect_foreground
+                            CloseGameEffect.GlobalOverride -> R.string.schedule_close_game_effect_global
+                            CloseGameEffect.StrategyActive -> R.string.schedule_close_game_effect_strategy
+                            CloseGameEffect.Inactive -> R.string.schedule_close_game_effect_inactive
+                        }
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (willClose) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = MaaDesignTokens.Spacing.sm)
+                )
+                ExpandableTipContent(
+                    visible = closeExpanded,
+                    tipText = stringResource(R.string.schedule_close_game_tip),
+                )
+            }
         }
     }
 
