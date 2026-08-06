@@ -509,7 +509,7 @@ private fun PresetButtonGroup(
             fontWeight = FontWeight.Medium
         )
 
-        UiUsageConstants.defaultInfrastPresets.forEach { (key, _) ->
+        UiUsageConstants.defaultInfrastPresets.forEach { key ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.clickable { onPresetSelected(key) }) {

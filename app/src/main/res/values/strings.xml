@@ -869,7 +869,7 @@
     <string name="panel_infrast_scheduler_builder">自定义基建排班制作器</string>
     <string name="panel_infrast_import_background_only">请在后台模式下导入自定义配置文件</string>
     <string name="panel_infrast_presets_title">内置配置</string>
-    <string name="panel_infrast_preset_user_defined">自定义文件</string>
+    <string name="panel_infrast_preset_user_defined">点击选择自定义文件</string>
     <string name="panel_infrast_preset_153_3x">153 一天 3 换</string>
     <string name="panel_infrast_preset_153_4x">153 一天 4 换</string>
     <string name="panel_infrast_preset_243_3x">243 一天 3 换</string>

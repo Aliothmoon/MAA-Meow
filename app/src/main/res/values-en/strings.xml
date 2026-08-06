@@ -815,7 +815,7 @@
     <string name="panel_infrast_scheduler_builder">Custom Base JSON Generator</string>
     <string name="panel_infrast_import_background_only">Please import custom configuration files in background mode.</string>
     <string name="panel_infrast_presets_title">Default Base infrastructure</string>
-    <string name="panel_infrast_preset_user_defined">User defined</string>
+    <string name="panel_infrast_preset_user_defined">Tap to choose custom file</string>
     <string name="panel_infrast_preset_153_3x">153 3 times a day</string>
     <string name="panel_infrast_preset_153_4x">153 4 times a day</string>
     <string name="panel_infrast_preset_243_3x">243 3 times a day</string>

@@ -1,28 +1,21 @@
 package com.aliothmoon.maameow.domain.enums
 
 object UiUsageConstants {
-    val annihilations = listOf(
-        "当期剿灭" to "Annihilation",
-        "切尔诺伯格" to "Chernobog@Annihilation",
-        "龙门外环" to "LungmenOutskirts@Annihilation",
-        "龙门市区" to "LungmenDowntown@Annihilation"
-    )
-
     /** 用户自定义文件的 key */
     const val USER_DEFINED_INFRAST = "user_defined"
 
     /**
-     * 内置自定义基建配置预设
-     * Pair<文件名(不含.json), 显示名称>
-     * 对应 WPF: DefaultInfrastList
+     * 内置自定义基建配置预设 key
+     * 用户自定义为 [USER_DEFINED_INFRAST]，其余为 resource 下文件名
+     * 展示文案见 strings `panel_infrast_preset_*`
      */
     val defaultInfrastPresets = listOf(
-        USER_DEFINED_INFRAST to "自定义文件",
-        "153_layout_3_times_a_day.json" to "153 一天 3 换",
-        "153_layout_4_times_a_day.json" to "153 一天 4 换",
-        "243_layout_3_times_a_day.json" to "243 一天 3 换",
-        "243_layout_4_times_a_day.json" to "243 一天 4 换",
-        "333_layout_for_Orundum_3_times_a_day.json" to "333 一天 3 换",
+        USER_DEFINED_INFRAST,
+        "153_layout_3_times_a_day.json",
+        "153_layout_4_times_a_day.json",
+        "243_layout_3_times_a_day.json",
+        "243_layout_4_times_a_day.json",
+        "333_layout_for_Orundum_3_times_a_day.json",
     )
 
 
