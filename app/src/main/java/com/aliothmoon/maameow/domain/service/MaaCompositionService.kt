@@ -90,14 +90,12 @@ class MaaCompositionService(
 
     private fun setRunState(state: MaaExecutionState) {
         _state.value = state
-        when (state) {
-            MaaExecutionState.STARTING ->
-                TaskExecutionService.start(context)
-
-            MaaExecutionState.IDLE, MaaExecutionState.ERROR ->
-                TaskExecutionService.stop(context)
-
-            MaaExecutionState.STOPPING, MaaExecutionState.RUNNING -> {}
+        // 仅在 STARTING 拉起前台服务；终态不做外部 stopService —
+        // 快速失败时 stopService 可能抢在服务创建之前到达，系统会因
+        // startForeground 契约未履行直接杀进程（RemoteServiceException）。
+        // 服务自身观察状态流，startForeground 后对 IDLE/ERROR 自行 stopSelf
+        if (state == MaaExecutionState.STARTING) {
+            TaskExecutionService.start(context)
         }
     }
 

@@ -63,13 +63,12 @@ class TaskExecutionService : Service() {
             "CloseDown" to R.string.maa_close_down,
         )
 
+        // 只提供 start 不提供外部 stop：startForegroundService 后若 stopService
+        // 抢在服务创建前到达，系统会因 startForeground 未调用直接杀进程；
+        // 终态退出由服务观察状态流自行 stopSelf 完成
         fun start(context: Context) {
             val intent = Intent(context, TaskExecutionService::class.java)
             context.startForegroundService(intent)
-        }
-
-        fun stop(context: Context) {
-            context.stopService(Intent(context, TaskExecutionService::class.java))
         }
     }
 
@@ -113,7 +112,7 @@ class TaskExecutionService : Service() {
     }
 
     override fun onDestroy() {
-        // 外部 stopService 与 StateFlow 收集存在竞态；此处兜底确保 Live Update 通知被清除。
+        // 系统侧终止与 StateFlow 收集存在竞态；此处兜底确保 Live Update 通知被清除。
         // observeProgress 的 collector 由 serviceScope.cancel() 结构化取消。
         progressJob = null
         removeActiveNotification()
