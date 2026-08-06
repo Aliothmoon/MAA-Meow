@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -178,6 +180,7 @@ fun ScheduleEditView(
             }
 
             item {
+                Spacer(Modifier.height(MaaDesignTokens.Spacing.sectionGap))
                 SectionHeader(stringResource(R.string.schedule_section_type))
             }
             item {
@@ -209,6 +212,7 @@ fun ScheduleEditView(
             when (state.scheduleType) {
                 ScheduleType.FIXED_TIME -> {
                     item {
+                        Spacer(Modifier.height(MaaDesignTokens.Spacing.sectionGap))
                         SectionHeader(stringResource(R.string.schedule_section_days))
                     }
                     item {
@@ -240,6 +244,7 @@ fun ScheduleEditView(
                     }
 
                     item {
+                        Spacer(Modifier.height(MaaDesignTokens.Spacing.sectionGap))
                         SectionHeader(stringResource(R.string.schedule_section_times))
                     }
                     item {
@@ -291,6 +296,7 @@ fun ScheduleEditView(
 
                 ScheduleType.INTERVAL -> {
                     item {
+                        Spacer(Modifier.height(MaaDesignTokens.Spacing.sectionGap))
                         SectionHeader(stringResource(R.string.schedule_section_start_time))
                     }
                     item {
@@ -373,6 +379,7 @@ fun ScheduleEditView(
                     }
 
                     item {
+                        Spacer(Modifier.height(MaaDesignTokens.Spacing.sectionGap))
                         SectionHeader(stringResource(R.string.schedule_section_interval))
                     }
                     item {
@@ -423,6 +430,7 @@ fun ScheduleEditView(
             }
 
             item {
+                Spacer(Modifier.height(MaaDesignTokens.Spacing.sectionGap))
                 SectionHeader(stringResource(R.string.schedule_section_task_config))
             }
             item {
@@ -460,13 +468,14 @@ fun ScheduleEditView(
                             text = stringResource(R.string.schedule_enabled_tasks, enabledTasks),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp)
+                            modifier = Modifier.padding(top = MaaDesignTokens.Spacing.sm)
                         )
                     }
                 }
             }
 
             item {
+                Spacer(Modifier.height(MaaDesignTokens.Spacing.sectionGap))
                 SectionHeader(stringResource(R.string.schedule_section_advanced))
                 val (expanded, setExpanded) = remember { mutableStateOf(false) }
                 Row(
