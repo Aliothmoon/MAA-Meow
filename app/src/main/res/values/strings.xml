@@ -264,7 +264,7 @@
     <string name="settings_theme_dark">暗色</string>
     <string name="settings_theme_pure_dark">纯黑</string>
     <string name="settings_font_size_title">页面缩放</string>
-    <string name="settings_font_size_summary">调整界面整体大小（含间距）。默认按屏幕自动推荐；系统字体大小仍单独生效。主界面与悬浮窗均跟随此设置。</string>
+    <string name="settings_font_size_summary">调整界面整体大小（含间距）。默认按屏幕与系统字体大小自动推荐。主界面与悬浮窗均跟随此设置。</string>
     <string name="settings_font_size_preview_text">你是谁？请支持牛牛！(\'- \' )</string>
     <string name="settings_font_size_auto_value">自动 · %1$d</string>
     <string name="settings_font_size_use_recommended">使用自动（推荐）</string>
