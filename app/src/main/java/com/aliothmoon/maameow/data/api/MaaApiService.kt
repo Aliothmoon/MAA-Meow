@@ -77,9 +77,9 @@ class MaaApiService(
     }
 
     suspend fun requestWithCache(api: String, allowFallback: Boolean = true): String? {
-        API_URLS.forEach {
+        API_URLS.forEach { base ->
             val result = withContext(Dispatchers.IO) {
-                fetchWithETag("$it${api}")
+                fetchWithETag(base, api)
             }
             if (result != null) {
                 return result
@@ -97,31 +97,47 @@ class MaaApiService(
      */
     data class FetchResult(val data: String?, val changed: Boolean)
 
-    private suspend fun fetchWithETag(url: String): String? {
-        return fetchWithETagDetailed(url).data
+    private suspend fun fetchWithETag(base: String, api: String): String? {
+        return fetchWithETagDetailed(base, api).data
     }
 
-    private suspend fun fetchWithETagDetailed(url: String): FetchResult {
+    /**
+     * 条件请求头与正文缓存共用 api 路径作键，在 200 分支一起写入
+     * 因此 304 命中的一定是这份正文，与来自哪个源无关
+     * @param conditional false 时不带条件头，用于正文丢失后的当场重取
+     */
+    private suspend fun fetchWithETagDetailed(
+        base: String,
+        api: String,
+        conditional: Boolean = true,
+    ): FetchResult {
+        val url = "$base$api"
         return try {
-            val header = eTagCache.getConditionalHeader(url)
+            val header = if (conditional) eTagCache.getConditionalHeader(api) else emptyMap()
             val response = httpClient.get(
                 url,
                 headers = header
             )
 
-            handleResponse(url, response)
+            handleResponse(base, api, response, conditional)
         } catch (e: IOException) {
             Timber.e(e, "$TAG: request failed: $url")
             FetchResult(null, false)
         }
     }
 
-    private fun handleResponse(url: String, response: Response): FetchResult {
-        return response.use { resp ->
-            val api = getRealKey(url)
+    private suspend fun handleResponse(
+        base: String,
+        api: String,
+        response: Response,
+        conditional: Boolean,
+    ): FetchResult {
+        val url = "$base$api"
+        // null 表示 304 但正文缺失，需在响应关闭后重取
+        val settled: FetchResult? = response.use { resp ->
             when (resp.code) {
                 200 -> {
-                    eTagCache.updateConditionalHeaders(url, resp.headers)
+                    eTagCache.updateConditionalHeaders(api, resp.headers)
                     val body = resp.body.string()
                     internalCache.put(api, body)
                     Timber.d("$TAG: request succeeded: $url (${body.length} bytes)")
@@ -132,11 +148,10 @@ class MaaApiService(
                     Timber.d("$TAG: 304 Not Modified: $url")
                     val cached = internalCache.get(api)
                     if (cached == null) {
-                        // 磁盘缓存已丢失但 ETag 还在，清掉让下次强制 200
-                        Timber.w("$TAG: 304 but cache missing, invalidating ETag: $url")
-                        eTagCache.invalidateUrl(url)
+                        Timber.w("$TAG: 304 but cache missing, refetching: $url")
+                        eTagCache.invalidateKey(api)
                     }
-                    FetchResult(cached, false)
+                    cached?.let { FetchResult(it, false) }
                 }
 
                 else -> {
@@ -145,6 +160,14 @@ class MaaApiService(
                 }
             }
         }
+        if (settled != null) return settled
+        // 不再重试，避免打转
+        return if (conditional) {
+            fetchWithETagDetailed(base, api, conditional = false)
+        } else {
+            Timber.w("$TAG: unconditional request still returned 304: $url")
+            FetchResult(null, false)
+        }
     }
 
     /**
@@ -152,23 +175,15 @@ class MaaApiService(
      * @return true 表示有新数据（200），false 表示无变化（304）或请求失败
      */
     private suspend fun checkChanged(api: String): Boolean {
-        API_URLS.forEach {
+        API_URLS.forEach { base ->
             val result = withContext(Dispatchers.IO) {
-                fetchWithETagDetailed("$it${api}")
+                fetchWithETagDetailed(base, api)
             }
             if (result.data != null) {
                 return result.changed
             }
         }
         return false
-    }
-
-    private fun getRealKey(url: String): String {
-        return when {
-            url.contains(MaaApi.MAA_API) -> url.removePrefix(MaaApi.MAA_API)
-            url.contains(MaaApi.MAA_API_BACKUP) -> url.removePrefix(MaaApi.MAA_API_BACKUP)
-            else -> url.substringAfterLast("/")
-        }
     }
 
 

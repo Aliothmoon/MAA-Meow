@@ -5,7 +5,7 @@ import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,8 +21,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -47,8 +47,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -63,22 +65,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.runtime.snapshotFlow
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.announcement.AnnouncementSectionParser
-import kotlinx.coroutines.flow.distinctUntilChanged
 import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 /** 勾选"不再显示"前需停留的秒数 */
 private const val STAY_SECONDS_REQUIRED = 5
+
+/** 未读完狂点确认：超过该次数放行并解锁成就 */
+private const val STUBBORN_CLICKS_TO_UNLOCK = 20
 
 @Composable
 fun AnnouncementDialog(
     imageAssetPath: String?,
     markdown: String,
     onDismiss: (dontShowAgain: Boolean) -> Unit,
-    onStubbornUnlock: () -> Unit = {},
+    onStubbornUnlock: () -> Unit,
 ) {
     // 是否已滚动至底部
     var scrolledToBottom by remember { mutableStateOf(false) }
@@ -142,7 +146,7 @@ fun AnnouncementDialog(
             onDismiss(dontShowAgain)
         } else {
             stubbornClicks++
-            if (stubbornClicks > 20) {
+            if (stubbornClicks > STUBBORN_CLICKS_TO_UNLOCK) {
                 onStubbornUnlock()
                 onDismiss(false)
             }
@@ -344,23 +348,25 @@ fun AnnouncementDialog(
                             .fillMaxWidth()
                             .verticalScroll(scrollState),
                     ) {
+                        MarkdownText(
+                            markdown = shownMarkdown,
+                            modifier = Modifier.fillMaxWidth(),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+
+                        // 图片作为内容收尾：首屏留给正文，读完滚到底自然看到
                         if (imageBitmap != null) {
+                            Spacer(modifier = Modifier.height(12.dp))
                             Image(
                                 bitmap = imageBitmap,
                                 contentDescription = null,
                                 contentScale = ContentScale.Fit,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .heightIn(max = 140.dp),
+                                    .heightIn(max = 120.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
                         }
-
-                        MarkdownText(
-                            markdown = shownMarkdown,
-                            modifier = Modifier.fillMaxWidth(),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
                     }
                     // 未滚到底时底部渐隐，提示下方还有内容
                     if (!atBottomNow) {

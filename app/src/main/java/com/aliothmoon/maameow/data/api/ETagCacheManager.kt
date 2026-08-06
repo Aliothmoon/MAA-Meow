@@ -28,12 +28,13 @@ class ETagCacheManager(
     }
 
 
-    fun getConditionalHeader(url: String): Map<String, String> {
+    /** [key] 必须与调用方存放正文的键一致，否则 304 可能命中别的正文 */
+    fun getConditionalHeader(key: String): Map<String, String> {
         return buildMap {
-            prefs.getString(ETAG_KEY_MAKER(url), null)?.let {
+            prefs.getString(ETAG_KEY_MAKER(key), null)?.let {
                 put(IF_NONE_MATCH, it)
             }
-            prefs.getString(LAST_MODIFIED_KEY_MAKER(url), null)?.let {
+            prefs.getString(LAST_MODIFIED_KEY_MAKER(key), null)?.let {
                 put(IF_MODIFIED_SINCE, it)
             }
         }
@@ -42,13 +43,13 @@ class ETagCacheManager(
     /**
      * 同时保存 ETag 和 Last-Modified
      */
-    fun updateConditionalHeaders(url: String, headers: Headers) {
+    fun updateConditionalHeaders(key: String, headers: Headers) {
         prefs.edit {
             headers[ETAG]?.let {
-                putString(ETAG_KEY_MAKER(url), it)
+                putString(ETAG_KEY_MAKER(key), it)
             }
             headers[LAST_MODIFIED]?.let {
-                putString(LAST_MODIFIED_KEY_MAKER(url), it)
+                putString(LAST_MODIFIED_KEY_MAKER(key), it)
             }
         }
     }
@@ -62,12 +63,12 @@ class ETagCacheManager(
     }
 
     /**
-     * 清除单个 URL 的条件请求头，下次请求会强制拿完整响应
+     * 清除单个键的条件请求头，下次请求会强制拿完整响应
      */
-    fun invalidateUrl(url: String) {
+    fun invalidateKey(key: String) {
         prefs.edit {
-            remove(ETAG_KEY_MAKER(url))
-            remove(LAST_MODIFIED_KEY_MAKER(url))
+            remove(ETAG_KEY_MAKER(key))
+            remove(LAST_MODIFIED_KEY_MAKER(key))
         }
     }
 }

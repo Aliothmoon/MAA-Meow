@@ -542,15 +542,14 @@ class AppSettingsManager(
         }
     }
 
-    // 长期公告已读版本
-    val announcementReadVersion: StateFlow<String> = settings
-        .map { it.announcementReadVersion }
+    val announcementReadHash: StateFlow<String> = settings
+        .map { it.announcementReadHash }
         .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, initialSettings.announcementReadVersion)
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.announcementReadHash)
 
-    suspend fun setAnnouncementReadVersion(version: String) {
+    suspend fun setAnnouncementReadHash(hash: String) {
         with(AppSettingsSchema) {
-            context.dataStore.edit { it[announcementReadVersion] = version }
+            context.dataStore.edit { it[announcementReadHash] = hash }
         }
     }
 

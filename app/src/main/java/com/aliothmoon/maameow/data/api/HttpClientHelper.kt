@@ -18,6 +18,10 @@ class HttpClientHelper(
     }
 
 
+    /**
+     * 不要在 [headers] 里传 Accept-Encoding：那会关掉 OkHttp 的透明 gzip，
+     * 服务端随之把 ETag 在强/弱之间切换，api2.maa.plus 会静默退化成每次全量下载
+     */
     suspend fun get(
         url: String,
         query: Map<String, String?> = emptyMap(),

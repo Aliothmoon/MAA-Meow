@@ -27,12 +27,11 @@ import androidx.navigation.compose.rememberNavController
 import com.aliothmoon.maameow.announcement.AnnouncementConfig
 import com.aliothmoon.maameow.announcement.AnnouncementContent
 import com.aliothmoon.maameow.announcement.AnnouncementManager
-import com.aliothmoon.maameow.data.achievement.AchievementEvents
-import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.launch.LaunchEffect
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.ExternalNotificationService
 import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.presentation.LocalToaster
@@ -73,7 +72,7 @@ fun AppNavigation(
     notificationService: ExternalNotificationService = koinInject(),
     overlayController: OverlayController = koinInject(),
     announcementManager: AnnouncementManager = koinInject(),
-    achievementRepository: AchievementRepository = koinInject(),
+    achievementReporter: AchievementReporter = koinInject(),
     appEventsViewModel: AppEventsViewModel = koinViewModel(),
 ) {
     val navController = rememberNavController()
@@ -91,7 +90,7 @@ fun AppNavigation(
     val coroutineScope = rememberCoroutineScope()
 
     val runMode by appSettings.runMode.collectAsStateWithLifecycle()
-    val announcementReadVersion by appSettings.announcementReadVersion.collectAsStateWithLifecycle()
+    val announcementReadHash by appSettings.announcementReadHash.collectAsStateWithLifecycle()
     val language by appSettings.language.collectAsStateWithLifecycle()
     val announcementContent by announcementManager.content.collectAsStateWithLifecycle()
 
@@ -223,7 +222,7 @@ fun AppNavigation(
         }
         // 长期公告弹窗：远端内容变化（哈希与已读标记不符）后首次启动自动弹出，或从设置中手动打开
         val current = announcementContent
-        val needsToShow = current != null && current.hash != announcementReadVersion
+        val needsToShow = current != null && current.hash != announcementReadHash
         val showAnnouncement = forceShowAnnouncement || (needsToShow && !announcementDismissedOnce)
         val shownAnnouncement = remember(showAnnouncement, language, current) {
             if (!showAnnouncement) {
@@ -243,19 +242,13 @@ fun AppNavigation(
                     forceShowAnnouncement = false
                     if (dontShowAgain) {
                         coroutineScope.launch {
-                            appSettings.setAnnouncementReadVersion(shownAnnouncement.hash)
+                            appSettings.setAnnouncementReadHash(shownAnnouncement.hash)
                         }
                     } else {
                         announcementDismissedOnce = true
                     }
                 },
-                onStubbornUnlock = {
-                    coroutineScope.launch {
-                        achievementRepository.report {
-                            event = AchievementEvents.ANNOUNCEMENT_STUBBORN_CLICK
-                        }
-                    }
-                },
+                onStubbornUnlock = { achievementReporter.reportAnnouncementStubbornClick() },
             )
         }
     }

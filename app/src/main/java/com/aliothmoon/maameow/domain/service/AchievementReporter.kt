@@ -68,6 +68,10 @@ class AchievementReporter(
         report { event = AchievementEvents.FEEDBACK_GROUP_OPENED }
     }
 
+    fun reportAnnouncementStubbornClick() {
+        report { event = AchievementEvents.ANNOUNCEMENT_STUBBORN_CLICK }
+    }
+
     fun reportDebugModeChanged(enabled: Boolean) {
         report {
             event = AchievementEvents.DEBUG_MODE_CHANGED
