@@ -1,3 +1,23 @@
+## Temporary Note on Proxy Multiplier Changes (NEW!!!)
+
+After the game update on August 1, the maximum proxy battle multiplier is increased from 6 to 10.
+
+Since the update also changes how the multiplier is switched in-game, MAA's current switching logic is temporarily incompatible with the new multiplier UI. Support will be added in a future release.
+
+Until then, MAA will temporarily force the "Do not switch" multiplier option. During this period, MAA will not switch the proxy multiplier after navigating to a stage — it will fight with whatever multiplier is already selected on the stage screen. If you need a specific multiplier, set it manually in-game for the stage before starting MAA's sanity farming task.
+
+---
+
+## Black Forest Money Farming (NEW!!!)
+
+The map is too complex, so here is a quick money-farming script first.
+
+Location: floating panel task list → Mini-game → Black Forest money farming
+
+It does not use new templates, so it works without updating the app — but it needs a network connection to pull hot-update data. If you can see this announcement, your connection is fine. If the entry does not appear in the mini-game list, restart the app and try again.
+
+---
+
 ## Important Notice
 
 Please do not discuss any MAA-related content under **official posts** by Arknights and HyperGryph on any platform (including but not limited to: Skland, Bilibili, Weibo).
