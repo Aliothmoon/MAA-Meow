@@ -37,6 +37,17 @@ object ShizukuManager : RemoteAccessPermissionBackend {
 
     fun isShizukuAvailable(): Boolean = isAvailable()
 
+    /** Shizuku 服务是否以 root 身份运行（uid 0，如 Root 授权启动的 Shizuku 或 Sui） */
+    fun isRunningAsRoot(): Boolean {
+        if (!isAvailable()) return false
+        return try {
+            Shizuku.getUid() == 0
+        } catch (e: Exception) {
+            Timber.w(e, "Shizuku.getUid failed")
+            false
+        }
+    }
+
     override fun isAvailable(): Boolean {
         return try {
             Shizuku.pingBinder()

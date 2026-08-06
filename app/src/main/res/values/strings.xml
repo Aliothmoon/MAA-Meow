@@ -1463,6 +1463,7 @@
     <string name="task_start_error_invalid_aspect_ratio">当前分辨率不是 16:9，请调整分辨率或改用后台模式</string>
     <string name="task_start_error_display_mode">显示模式设置失败，请重试</string>
     <string name="task_start_error_virtual_display">虚拟屏幕启动失败，请检查服务权限</string>
+    <string name="task_start_error_virtual_display_shizuku_as_root">虚拟屏幕启动失败：Shizuku 正以 Root 身份运行，请改用内置 Root 模式，不要使用 Root 授权 Shizuku 的形式</string>
     <string name="task_start_error_connect_timeout">启动 MaaCore 超时，请重试</string>
     <string name="task_start_error_start_failed">MaaCore 启动失败，请检查任务配置</string>
     <string name="task_start_success">Maa启动成功</string>
@@ -2023,6 +2024,7 @@
     <string name="runlog_maa_connect_failed">启动 MaaCore 超时或失败</string>
     <string name="runlog_display_mode_failed">设置显示模式失败</string>
     <string name="runlog_virtual_display_failed">启动虚拟显示失败</string>
+    <string name="runlog_virtual_display_failed_shizuku_as_root">启动虚拟显示失败：检测到 Shizuku 以 Root 身份运行（uid 0），请改用内置 Root 模式，不要使用 Root 授权 Shizuku 的形式</string>
     <string name="runlog_maa_start_failed">MaaCore 启动失败</string>
     <string name="runlog_remote_connect_failed">无法连接远程服务：%1$s</string>
     <string name="runlog_task_stopping">正在停止任务...</string>

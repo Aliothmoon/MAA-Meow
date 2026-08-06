@@ -275,6 +275,10 @@ object RemoteServiceManager {
         return if (current is ServiceState.Connected) current.service else null
     }
 
+    /** 当前已连接的后端；未连接返回 null */
+    fun connectedBackendOrNull(): RemoteBackend? =
+        if (_state.value is ServiceState.Connected) boundBackend else null
+
 
     suspend fun <R> useRemoteService(
         timeoutMs: Long = 12_000,
