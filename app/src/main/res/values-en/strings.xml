@@ -112,9 +112,10 @@
     <string name="settings_drift_auto_repin_delay_sec_desc">Wait %1$d seconds after the game leaves the virtual display before moving it back, to avoid interrupting login or verification pop-ups</string>
     <string name="settings_drift_auto_repin_delay_hint">Unit: seconds, range 1~60</string>
     <string name="settings_allow_foreground_scheduled_task">Allow scheduled tasks in foreground</string>
-    <string name="settings_run_schedule_when_locked">Skip lock screen check for scheduled tasks</string>
+    <string name="settings_run_schedule_when_locked">Skip lock check (stay locked)</string>
+    <string name="settings_run_schedule_when_locked_desc">Background mode only: do not unlock; still allow scheduled tasks while locked. Different from Wake &amp; unlock — prefer per-strategy unlock; this is a no-unlock fallback and may vary by device</string>
     <string name="dialog_run_schedule_when_locked_title">Experimental feature</string>
-    <string name="dialog_run_schedule_when_locked_message">Skipping the lock screen check is experimental and not guaranteed to work on all devices. Please verify it works on your device.</string>
+    <string name="dialog_run_schedule_when_locked_message">This does not unlock the device; it only skips SKIPPED_LOCKED in background mode. Prefer configuring Wake &amp; unlock above and enabling it on the strategy. Not guaranteed on all devices.</string>
     <string name="dialog_run_schedule_when_locked_confirm">Enable anyway</string>
     <string name="settings_tasks_override_title">MAA Task Override</string>
     <string name="settings_tasks_override_desc">Do not modify unless you know what you are doing — incorrect values will break MAA</string>
@@ -1476,8 +1477,8 @@
     <string name="schedule_force_start_tip">Stop the current task, restart the game, and start the new tasks</string>
     <string name="schedule_section_wake_unlock">Wake &amp; Unlock</string>
     <string name="schedule_wake_unlock_enabled">Enable wake &amp; unlock</string>
-    <string name="schedule_wake_unlock_tip">Wake the screen and unlock before the scheduled task starts. Requires unlock method configured in Settings.</string>
-    <string name="schedule_wake_unlock_not_configured">Configure unlock method in Settings → Wake Unlock Config first</string>
+    <string name="schedule_wake_unlock_tip">Wake and unlock before the task (elevated service required). Set method/PIN in Settings → Wake &amp; unlock. More reliable than Skip lock check; also works for foreground schedules</string>
+    <string name="schedule_wake_unlock_not_configured">Configure unlock method in Settings → Wake &amp; unlock first; for PIN, enter the digits</string>
     <string name="schedule_auto_sleep_after_task">Auto sleep after task</string>
     <string name="schedule_auto_sleep_tip">Automatically turn off the screen after the scheduled task completes to save battery</string>
     <string name="schedule_permission_tip_battery_optimization">Disable battery optimization</string>
@@ -1551,10 +1552,39 @@
     <string name="notification_channel_schedule_desc">Scheduled task execution and result notifications</string>
     <string name="notification_schedule_title">Scheduled Task</string>
     <string name="notification_schedule_preparing">Preparing to launch…</string>
-    <string name="notification_schedule_skipped">Scheduled Task Skipped</string>
-    <string name="notification_schedule_failed">Scheduled Task Failed</string>
     <string name="notification_schedule_device_locked">Device is locked</string>
     <string name="notification_schedule_detail">\"%1$s\": %2$s</string>
+
+    <!-- i18n: schedule trigger journal (pipeline) -->
+    <string name="schedule_log_received">Launch request received: %1$s</string>
+    <string name="schedule_log_skipped_busy">Another scheduled launch is already in progress</string>
+    <string name="schedule_log_task_running_busy">A task is already running</string>
+    <string name="schedule_log_force_stop_running">Force start: stopping the running task</string>
+    <string name="schedule_log_wake_start">Waking and unlocking…</string>
+    <string name="schedule_log_wake_ok">Wake and unlock succeeded</string>
+    <string name="schedule_log_wake_failed">Wake and unlock failed: %1$s</string>
+    <string name="schedule_log_keyguard_skipped">Keyguard check skipped</string>
+    <string name="schedule_log_mode_not_allowed">Foreground mode without “allow foreground scheduled tasks”</string>
+    <string name="schedule_log_wait_profile">Waiting for task profile…</string>
+    <string name="schedule_log_switch_profile">Switching profile: %1$s</string>
+    <string name="schedule_log_profile_missing">Linked task profile was deleted</string>
+    <string name="schedule_log_empty_chain">No enabled tasks in the linked profile</string>
+    <string name="schedule_log_launch_ui">Launching UI…</string>
+    <string name="schedule_log_ui_launch_failed">Failed to launch UI</string>
+    <string name="schedule_log_countdown_start">Countdown started (%1$d s)</string>
+    <string name="schedule_log_countdown_done">Countdown finished, starting</string>
+    <string name="schedule_log_start_now">User chose Start now</string>
+    <string name="schedule_log_user_cancelled">User cancelled the scheduled launch</string>
+    <string name="schedule_log_starting_tasks">Preconditions OK, %1$d task(s), starting…</string>
+    <string name="schedule_log_start_success">Task start succeeded</string>
+    <string name="schedule_log_start_failed">Task start failed: %1$s</string>
+    <string name="schedule_log_maa_start_failed">MaaCore start failed: %1$s</string>
+    <string name="schedule_log_task_blocked">Task blocked: %1$s</string>
+    <string name="schedule_log_task_needs_confirmation">Confirmation required; automation rejected</string>
+    <string name="schedule_log_exception">Exception: %1$s</string>
+    <string name="schedule_log_cancelled_preempt">Launch cancelled or preempted</string>
+    <string name="schedule_log_external_name">External trigger</string>
+    <string name="schedule_log_strategy_missing">Strategy missing or not loaded</string>
 
     <!-- i18n: notification level -->
     <string name="notification_level_off">Off</string>
@@ -1951,16 +1981,16 @@
 
     <!-- Wake + unlock -->
     <string name="settings_wake_unlock_section">Wake &amp; unlock</string>
-    <string name="settings_wake_unlock_section_desc">Turn the screen on and dismiss the lock screen before a scheduled task runs. The lock screen covers the virtual display, blocking both foreground and background modes</string>
+    <string name="settings_wake_unlock_section_desc">Global unlock method (swipe / PIN). Enable per schedule strategy. Works with Root or Shizuku when the elevated service is connected</string>
     <string name="settings_wake_unlock_type">Unlock method</string>
     <string name="settings_wake_unlock_type_none">Do not unlock</string>
     <string name="settings_wake_unlock_type_swipe">No password / swipe</string>
     <string name="settings_wake_unlock_type_pin">PIN</string>
     <string name="settings_wake_credential">PIN</string>
-    <string name="settings_wake_credential_hint">Enter the lock screen PIN (digits only)</string>
+    <string name="settings_wake_credential_hint">Lock screen PIN (digits only, 4–16 digits OK)</string>
     <string name="settings_wake_credential_show">Show PIN</string>
     <string name="settings_wake_credential_hide">Hide PIN</string>
-    <string name="settings_wake_credential_warning">The PIN is stored in plain text on this device. It is stripped from exported config, but can still leak if someone gets hold of the device. Pattern locks are not supported — use a PIN or no password.</string>
+    <string name="settings_wake_credential_warning">The PIN is stored in plain text on this device. It is stripped from exported config, but can still leak if someone gets hold of the device. Pattern locks and alphanumeric passwords are not supported — use a numeric PIN or no lock.</string>
     <string name="settings_wake_test_button">Test now</string>
     <string name="settings_wake_test_hint">Checks that the screen turns on and the lock screen is dismissed. To test the full flow, lock the screen and let a scheduled task fire</string>
     <string name="wake_result_ok">Wake + unlock succeeded</string>

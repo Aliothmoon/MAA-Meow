@@ -44,13 +44,7 @@ import com.aliothmoon.maameow.presentation.viewmodel.SettingsViewModel
 import com.aliothmoon.maameow.utils.i18n.resolve
 import org.koin.androidx.compose.koinViewModel
 
-/**
- * 「唤醒 + 解锁」配置页。定时任务触发时先解锁，避免任务在锁屏状态下跑
- * —— 锁屏会盖在虚拟显示器上，前后台两种运行模式都会被挡住。
- *
- * 只配置解锁方式和 PIN。没有滑动坐标校准、没有等待秒数、没有重试次数：
- * 解锁走 IWindowManager.dismissKeyguard，不需要模拟上滑，时序靠状态轮询。
- */
+/** 「唤醒 + 解锁」配置页 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WakeScheduleEditorView(
@@ -172,7 +166,8 @@ fun WakeScheduleEditorView(
 }
 
 private const val TYPE_PIN = "pin"
-private const val MAX_PIN_LENGTH = 16
+private const val MAX_PIN_LENGTH =
+    com.aliothmoon.maameow.data.preferences.AppSettingsManager.MAX_PIN_LENGTH
 private val UNLOCK_TYPES = listOf("none", "swipe", TYPE_PIN)
 
 private fun unlockTypeLabelRes(type: String): Int = when (type) {

@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.schedule.service
 
-import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -13,15 +12,13 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.aliothmoon.maameow.MainActivity
 import com.aliothmoon.maameow.R
-import com.aliothmoon.maameow.data.preferences.AppSettingsManager
-import com.aliothmoon.maameow.domain.models.RunMode
-import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
-import com.aliothmoon.maameow.utils.i18n.resolve
+import com.aliothmoon.maameow.domain.launch.LaunchPipeline
 import com.aliothmoon.maameow.manager.RemoteServiceManager
+import com.aliothmoon.maameow.schedule.LaunchIntentMapper
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
-import com.aliothmoon.maameow.schedule.model.ScheduledExecutionRequest
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -31,8 +28,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.android.ext.android.inject
 import timber.log.Timber
-import kotlin.time.Duration.Companion.seconds
 
+/** 定时触发 FGS：构造 [LaunchRequest] → [LaunchPipeline.execute] join → scheduleNext */
 class ScheduleExecutionService : Service() {
 
     companion object {
@@ -46,26 +43,19 @@ class ScheduleExecutionService : Service() {
     private val repository: ScheduleStrategyRepository by inject()
     private val alarmManager: ScheduleAlarmManager by inject()
     private val triggerLogger: ScheduleTriggerLogger by inject()
-    private val appSettingsManager: AppSettingsManager by inject()
+    private val launchPipeline: LaunchPipeline by inject()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val silentStarter: ForegroundScheduleStarter by inject()
-    private val wakeUnlockEngine: WakeUnlockEngine by inject()
-
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    override fun onStartCommand(
-        intent: Intent?,
-        flags: Int,
-        startId: Int,
-    ): Int {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ScheduleAlarmManager.ACTION_SCHEDULE_TRIGGER -> {
                 val strategyId = intent.getStringExtra(ScheduleAlarmManager.EXTRA_STRATEGY_ID)
                 val scheduledTime =
                     intent.getLongExtra(ScheduleAlarmManager.EXTRA_SCHEDULED_TIME, 0L)
                 if (strategyId.isNullOrEmpty()) {
-                    Timber.w("$TAG: 收到触发指令但缺少 strategyId")
+                    Timber.w("$TAG: missing strategyId")
                     shutdownService()
                 } else {
                     serviceScope.launch {
@@ -73,9 +63,8 @@ class ScheduleExecutionService : Service() {
                     }
                 }
             }
-
             else -> {
-                Timber.w("$TAG: 未知 action: %s", intent?.action)
+                Timber.w("$TAG: unknown action: %s", intent?.action)
                 shutdownService()
             }
         }
@@ -86,107 +75,35 @@ class ScheduleExecutionService : Service() {
         ensureNotificationChannel()
         startAsForeground(buildPreparingNotification())
 
-        triggerLogger.append("调度触发，等待策略数据加载...")
         val strategy = awaitStrategy(strategyId)
         if (strategy == null) {
-            Timber.w("$TAG: 策略不存在或配置未加载完成: %s", strategyId)
-            triggerLogger.append("策略不存在或数据未加载完成，放弃执行")
-            triggerLogger.end(ExecutionResult.FAILED_VALIDATION, "策略不存在")
+            Timber.w("$TAG: strategy missing: %s", strategyId)
+            val msg = uiTextOf(R.string.schedule_log_strategy_missing)
+            // 独立文件，不碰其他触发的 Session
+            triggerLogger.writeClosed(
+                strategyId = strategyId,
+                strategyName = strategyId,
+                scheduledTimeMs = scheduledTimeMs,
+                result = ExecutionResult.FAILED_VALIDATION,
+                message = msg,
+            )
+            repository.recordExecutionResult(
+                strategyId = strategyId,
+                result = ExecutionResult.FAILED_VALIDATION,
+                message = triggerLogger.resolveMessage(msg),
+            )
             shutdownService()
             return
         }
 
-        // 策略加载成功，开启正式的触发日志
-        triggerLogger.begin(strategy.id, strategy.name, scheduledTimeMs)
-        triggerLogger.append("策略加载完成: ${strategy.name}")
-
-        // ─── 前置：唤醒 + 解锁（锁屏会盖住虚拟显示器，两种运行模式都跑不了）───
-        var wakeUnlocked = false
-        if (strategy.wakeUnlockEnabled) {
-            triggerLogger.append("执行唤醒+解锁...")
-            val result = wakeUnlockEngine.wakeAndUnlock(appSettingsManager.wakeCredential.value)
-            wakeUnlocked = result.isSuccess
-            triggerLogger.append(
-                if (wakeUnlocked) "唤醒+解锁成功"
-                else "唤醒+解锁失败: ${result.message.resolve(this@ScheduleExecutionService)}"
-            )
+        val request = LaunchIntentMapper.fromStrategy(strategy, scheduledTimeMs)
+        try {
+            launchPipeline.execute(request).join()
+        } finally {
+            alarmManager.scheduleNext(strategy, scheduledTimeMs)
+            Timber.i("$TAG: pipeline finished for %s", request.requestId)
+            shutdownService()
         }
-
-        val request = ScheduledExecutionRequest(
-            strategyId = strategy.id,
-            strategyName = strategy.name,
-            profileId = strategy.profileId,
-            scheduledTimeMs = scheduledTimeMs,
-            forceStart = strategy.forceStart,
-            wakeUnlockEnabled = strategy.wakeUnlockEnabled,
-            autoSleepAfterTask = strategy.autoSleepAfterTask,
-        )
-
-        // 仅后台虚拟显示器模式下允许跳过锁屏检查；唤醒解锁必须确实成功才算数
-        val skipKeyguardCheck = (appSettingsManager.runScheduleWhenLocked.value
-                && appSettingsManager.runMode.value == RunMode.BACKGROUND)
-                || wakeUnlocked
-        if (skipKeyguardCheck) {
-            triggerLogger.append("已跳过锁屏检查")
-        } else {
-            triggerLogger.append("检查锁屏状态...")
-            val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
-            if (keyguardManager.isKeyguardLocked) {
-                Timber.i("$TAG: 设备锁屏中，跳过本次定时执行: %s", strategy.name)
-                triggerLogger.append("设备锁屏，跳过本次执行")
-                triggerLogger.end(ExecutionResult.SKIPPED_LOCKED, "设备处于锁屏状态")
-                val lockedMsg = getString(R.string.notification_schedule_device_locked)
-                repository.recordExecutionResult(
-                    strategyId = strategy.id,
-                    result = ExecutionResult.SKIPPED_LOCKED,
-                    message = lockedMsg,
-                )
-                showResultNotification(
-                    getString(R.string.notification_schedule_skipped),
-                    getString(R.string.notification_schedule_detail, strategy.name, lockedMsg)
-                )
-                alarmManager.scheduleNext(strategy, scheduledTimeMs)
-                shutdownService()
-                return
-            }
-            triggerLogger.append("设备未锁屏，连接服务...")
-        }
-
-        // 前台 + 允许前台定时：不拉起 Activity，通过 Starter 静默提交
-        val isForegroundSilent = appSettingsManager.runMode.value == RunMode.FOREGROUND
-                && appSettingsManager.allowForegroundScheduledTask.value
-
-        var launched = true
-
-        if (isForegroundSilent) {
-            triggerLogger.append("前台模式（已允许静默），直接提交定时请求")
-            silentStarter.executeSilentStart(request)
-        } else {
-            val ctx = this
-            launched = withTimeoutOrNull(10.seconds) {
-                runCatching {
-                    RemoteServiceManager.useRemoteService(timeoutMs = 8_000L) {
-                        it.startActivity(request.toLaunchIntent(ctx))
-                    }
-                }.getOrElse { error ->
-                    Timber.w(error, "$TAG: 拉起界面前连接服务失败")
-                    triggerLogger.append("连接服务失败: ${error.message}")
-                    false
-                }
-            } ?: false
-        }
-
-        if (!launched) {
-            triggerLogger.append("未能拉起界面")
-            triggerLogger.end(ExecutionResult.FAILED_UI_LAUNCH, "未能拉起界面")
-            recordUiLaunchFailure(strategy, "未能拉起界面", scheduledTimeMs)
-            return
-        }
-
-        triggerLogger.append("服务连接成功，App待启动")
-        alarmManager.scheduleNext(strategy, scheduledTimeMs)
-        Timber.i("$TAG: 已将定时请求交给 UI: %s", request.requestId)
-        shutdownService()
     }
 
     private suspend fun awaitStrategy(strategyId: String): ScheduleStrategy? {
@@ -194,24 +111,6 @@ class ScheduleExecutionService : Service() {
             repository.isLoaded.first { it }
             repository.getById(strategyId)
         }
-    }
-
-    private suspend fun recordUiLaunchFailure(
-        strategy: ScheduleStrategy,
-        message: String,
-        scheduledTimeMs: Long
-    ) {
-        repository.recordExecutionResult(
-            strategyId = strategy.id,
-            result = ExecutionResult.FAILED_UI_LAUNCH,
-            message = message,
-        )
-        showResultNotification(
-            getString(R.string.notification_schedule_failed),
-            getString(R.string.notification_schedule_detail, strategy.name, message)
-        )
-        alarmManager.scheduleNext(strategy, scheduledTimeMs)
-        shutdownService()
     }
 
     private fun ensureNotificationChannel() {
@@ -244,7 +143,7 @@ class ScheduleExecutionService : Service() {
         }
         return PendingIntent.getActivity(
             this, 0, intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
     }
 
@@ -262,23 +161,10 @@ class ScheduleExecutionService : Service() {
             .build()
     }
 
-    private fun showResultNotification(title: String, text: String) {
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_maa_logo)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setContentIntent(buildContentIntent())
-            .setAutoCancel(true)
-            .build()
-        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(RESULT_NOTIFICATION_ID, notification)
-    }
-
     private fun shutdownService() {
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
-
 
     override fun onDestroy() {
         serviceScope.cancel()

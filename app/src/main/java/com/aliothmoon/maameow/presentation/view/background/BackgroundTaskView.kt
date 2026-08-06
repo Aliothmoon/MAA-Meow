@@ -192,13 +192,7 @@ fun BackgroundTaskView(
     ShizukuReadinessGate()
 
 
-    val pendingExecution by viewModel.coordinator.pendingExecution.collectAsStateWithLifecycle()
-
-    LaunchedEffect(pendingExecution?.requestId) {
-        pendingExecution?.let { request ->
-            viewModel.onScheduledExecutionPageReady(request.requestId)
-        }
-    }
+    // pageReady 栅栏已移除：启动由 LaunchPipeline 驱动，无需等本页 Surface
 
     LaunchedEffect(Unit) {
         dispatcher.serviceDiedEvent.collect {

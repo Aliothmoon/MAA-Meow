@@ -68,10 +68,10 @@ fun ScheduleTriggerLogView(
 
     // 详情模式
     if (detail.isNotEmpty()) {
-        BackHandler { viewModel.clearDetail() }
+        BackHandler { viewModel.onClearDetail() }
         DetailView(
             entries = detail,
-            onBack = { viewModel.clearDetail() }
+            onBack = { viewModel.onClearDetail() }
         )
         return
     }
@@ -140,7 +140,7 @@ fun ScheduleTriggerLogView(
                     items(summaries, key = { it.fileName }) { summary ->
                         SummaryCard(
                             summary = summary,
-                            onClick = { viewModel.loadDetail(summary.fileName) },
+                            onClick = { viewModel.onLoadDetail(summary.fileName) },
                             onDelete = { deleteConfirmFileName = summary.fileName }
                         )
                     }
@@ -155,7 +155,7 @@ fun ScheduleTriggerLogView(
                 text = { Text(stringResource(R.string.schedule_log_clear_message)) },
                 confirmButton = {
                     TextButton(onClick = {
-                        viewModel.clearAll()
+                        viewModel.onClearAll()
                         showClearConfirm = false
                     }) { Text(stringResource(R.string.schedule_log_clear_title), color = MaterialTheme.colorScheme.error) }
                 },
@@ -172,7 +172,7 @@ fun ScheduleTriggerLogView(
                 text = { Text(stringResource(R.string.schedule_log_delete_message)) },
                 confirmButton = {
                     TextButton(onClick = {
-                        viewModel.deleteLog(deleteConfirmFileName!!)
+                        viewModel.onDeleteLog(deleteConfirmFileName!!)
                         deleteConfirmFileName = null
                     }) { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) }
                 },

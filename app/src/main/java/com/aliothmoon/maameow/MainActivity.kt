@@ -27,7 +27,7 @@ import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.presentation.ProvideInputFocusManager
 import com.aliothmoon.maameow.presentation.navigation.AppNavigation
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
-import com.aliothmoon.maameow.schedule.model.ScheduledExecutionRequest
+import com.aliothmoon.maameow.schedule.LaunchIntentMapper
 import com.aliothmoon.maameow.theme.MaaMeowTheme
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
@@ -103,9 +103,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun dispatchScheduledLaunchIntent(intent: Intent?) {
-        val request = ScheduledExecutionRequest.fromIntent(intent)
-            ?: ScheduledExecutionRequest.fromExternalIntent(intent)
-        request?.let { backgroundTaskViewModel.onScheduledLaunch(it) }
+        // SHOW：仅拉起 UI，禁止二次 execute（Service 已拥有 Schedule 管线）
+        if (LaunchIntentMapper.isShowScheduleIntent(intent)) {
+            return
+        }
+        LaunchIntentMapper.fromExternalIntent(this, intent)?.let { request ->
+            backgroundTaskViewModel.onExternalLaunch(request)
+        }
     }
 
     private fun doObserveKeepScreenOn() {

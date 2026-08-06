@@ -8,12 +8,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
-/**
- * 唤醒 + 解锁的 App 侧入口，实际序列在提权进程的 `WakeUnlockController` 里。
- */
+/** 唤醒 + 解锁的 App 侧入口；实际序列在提权进程 `WakeUnlockController` */
 class WakeUnlockEngine {
 
-    /** 与 `WakeUnlockController.Result` 一一对应。 */
+    /** 与 `WakeUnlockController.Result` 一一对应 */
     enum class WakeResult(val code: Int, val message: UiText) {
         OK(0, uiTextOf(R.string.wake_result_ok)),
         WAKE_FAILED(1, uiTextOf(R.string.wake_result_wake_failed)),
@@ -31,7 +29,7 @@ class WakeUnlockEngine {
         }
     }
 
-    /** 点亮屏幕并解除锁屏。失败不重试，由调用方把原因告知用户。 */
+    /** 点亮屏幕并解除锁屏；失败不重试 */
     suspend fun wakeAndUnlock(credential: String): WakeResult = withContext(Dispatchers.IO) {
         val result = runCatching {
             RemoteServiceManager.useRemoteService(timeoutMs = IPC_TIMEOUT_MS) { svc ->
@@ -45,14 +43,14 @@ class WakeUnlockEngine {
         result
     }
 
-    /** 仅点亮屏幕，不解锁。 */
+    /** 仅点亮屏幕，不解锁 */
     suspend fun wakeScreen(): Boolean = withContext(Dispatchers.IO) {
         runCatching {
             RemoteServiceManager.useRemoteService(timeoutMs = IPC_TIMEOUT_MS) { it.wakeScreen() }
         }.getOrDefault(false)
     }
 
-    /** 熄屏。硬件关背光，系统保持解锁状态，避免下次定时任务还要再解一遍。 */
+    /** 熄屏；保持解锁状态，避免下次定时再解 */
     suspend fun turnScreenOff(): Boolean = withContext(Dispatchers.IO) {
         runCatching {
             RemoteServiceManager.useRemoteService(timeoutMs = IPC_TIMEOUT_MS) { svc ->

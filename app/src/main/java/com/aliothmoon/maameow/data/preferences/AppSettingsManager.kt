@@ -40,8 +40,9 @@ class AppSettingsManager(
     companion object {
         val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
 
-        /** 解锁方式取值。不支持图案锁。 */
+        /** 解锁方式取值；不支持图案锁 */
         val WAKE_UNLOCK_TYPES = setOf("none", "swipe", "pin")
+        /** 纯数字 PIN 最大位数 */
         const val MAX_PIN_LENGTH = 16
 
         /** 页面缩放：0 = 自动；手动为 80–110 */
@@ -602,7 +603,6 @@ class AppSettingsManager(
         }
     }
 
-    // 定时任务触发时跳过锁屏检查
     val runScheduleWhenLocked: StateFlow<Boolean> = settings
         .map { it.runScheduleWhenLocked.toBooleanStrictOrNull() ?: false }
         .distinctUntilChanged()
@@ -755,7 +755,6 @@ class AppSettingsManager(
 
     // ───────────────── 唤醒 + 解锁 ─────────────────
 
-    /** 解锁方式：none / swipe / pin */
     val wakeUnlockType: StateFlow<String> = settings
         .map { it.wakeUnlockType }
         .distinctUntilChanged()
@@ -768,14 +767,13 @@ class AppSettingsManager(
         }
     }
 
-    /** 解锁 PIN，仅 wakeUnlockType = pin 时有意义。 */
     val wakeCredential: StateFlow<String> = settings
         .map { it.wakeCredential }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, initialSettings.wakeCredential)
 
     suspend fun setWakeCredential(credential: String) {
-        // 注入走 KEYCODE_0..9，非数字没有对应键位
+        // 注入走 KEYCODE_0..9，仅保留数字
         val digits = credential.filter { it.isDigit() }.take(MAX_PIN_LENGTH)
         with(AppSettingsSchema) {
             context.dataStore.edit { it[wakeCredential] = digits }

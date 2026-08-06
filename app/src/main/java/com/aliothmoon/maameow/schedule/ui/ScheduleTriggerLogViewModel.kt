@@ -35,24 +35,24 @@ class ScheduleTriggerLogViewModel(
         }
     }
 
-    fun loadDetail(fileName: String) {
+    fun onLoadDetail(fileName: String) {
         viewModelScope.launch {
             _detail.value = logger.readLogFile(fileName)
         }
     }
 
-    fun clearDetail() {
+    fun onClearDetail() {
         _detail.value = emptyList()
     }
 
-    fun deleteLog(fileName: String) {
+    fun onDeleteLog(fileName: String) {
         viewModelScope.launch {
             logger.deleteLog(fileName)
             _summaries.value = _summaries.value.filter { it.fileName != fileName }
         }
     }
 
-    fun clearAll() {
+    fun onClearAll() {
         viewModelScope.launch {
             logger.clearAll()
             _summaries.value = emptyList()

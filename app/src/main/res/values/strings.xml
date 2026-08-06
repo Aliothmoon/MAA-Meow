@@ -309,9 +309,10 @@
     <string name="settings_drift_auto_repin_delay_sec_desc">游戏离开虚拟显示器后等待 %1$d 秒再拉回，避免打断登录或验证弹窗</string>
     <string name="settings_drift_auto_repin_delay_hint">单位：秒，范围 1~60</string>
     <string name="settings_allow_foreground_scheduled_task">允许在前台模式执行定时任务</string>
-    <string name="settings_run_schedule_when_locked">定时任务跳过锁屏检查</string>
+    <string name="settings_run_schedule_when_locked">跳过锁屏检查（不解锁）</string>
+    <string name="settings_run_schedule_when_locked_desc">仅后台模式：不唤醒解锁，定时任务在锁屏状态下仍继续。与「唤醒+解锁」不同——推荐优先用策略内的唤醒解锁；本项是不解锁的兜底，效果因机型而异</string>
     <string name="dialog_run_schedule_when_locked_title">实验性功能</string>
-    <string name="dialog_run_schedule_when_locked_message">跳过锁屏检查是一项实验性功能，不保证在所有设备上正常工作，具体效果请自行确认。</string>
+    <string name="dialog_run_schedule_when_locked_message">跳过锁屏检查不会解除锁屏，只是不因锁屏而跳过定时任务（仅后台模式生效）。若设备有 PIN，更推荐在上方配置「唤醒+解锁」并在策略中启用。本功能不保证在所有设备上正常工作。</string>
     <string name="dialog_run_schedule_when_locked_confirm">仍要启用</string>
     <string name="settings_tasks_override_title">MAA 任务覆盖</string>
     <string name="settings_tasks_override_desc">如果你不知道这是什么请不要修改，会导致 MAA 无法正常工作</string>
@@ -1532,8 +1533,8 @@
     <string name="schedule_force_start_tip">强制启动任务，会中断正在运行的游戏和任务</string>
     <string name="schedule_section_wake_unlock">唤醒与解锁</string>
     <string name="schedule_wake_unlock_enabled">启用锁屏解锁</string>
-    <string name="schedule_wake_unlock_tip">定时任务触发时先唤醒屏幕并解锁，需在设置页配置解锁方式和密码</string>
-    <string name="schedule_wake_unlock_not_configured">需要先在「设置 → 锁屏解锁配置」中配置解锁方式和密码</string>
+    <string name="schedule_wake_unlock_tip">触发时先点亮屏幕并解除锁屏（需提权服务已连接）。PIN 等凭证在「设置 → 唤醒+解锁」中配置。比「跳过锁屏检查」更可靠，前台定时也可用</string>
+    <string name="schedule_wake_unlock_not_configured">请先在「设置 → 唤醒+解锁」中选择解锁方式；若为 PIN，还需填写 PIN 码</string>
     <string name="schedule_auto_sleep_after_task">任务结束后自动熄屏</string>
     <string name="schedule_auto_sleep_tip">定时任务执行完成后自动熄屏，节省电量</string>
     <string name="schedule_permission_tip_battery_optimization">关闭电池优化</string>
@@ -1607,10 +1608,39 @@
     <string name="notification_channel_schedule_desc">定时任务执行与结果通知</string>
     <string name="notification_schedule_title">定时任务</string>
     <string name="notification_schedule_preparing">正在准备拉起界面…</string>
-    <string name="notification_schedule_skipped">定时任务跳过</string>
-    <string name="notification_schedule_failed">定时任务失败</string>
     <string name="notification_schedule_device_locked">设备处于锁屏状态</string>
     <string name="notification_schedule_detail">「%1$s」: %2$s</string>
+
+    <!-- i18n: schedule trigger journal (pipeline) -->
+    <string name="schedule_log_received">收到启动请求: %1$s</string>
+    <string name="schedule_log_skipped_busy">已有定时任务正在处理中</string>
+    <string name="schedule_log_task_running_busy">有任务正在运行</string>
+    <string name="schedule_log_force_stop_running">强制启动: 停止当前运行任务</string>
+    <string name="schedule_log_wake_start">执行唤醒+解锁…</string>
+    <string name="schedule_log_wake_ok">唤醒+解锁成功</string>
+    <string name="schedule_log_wake_failed">唤醒+解锁失败: %1$s</string>
+    <string name="schedule_log_keyguard_skipped">已跳过锁屏检查</string>
+    <string name="schedule_log_mode_not_allowed">当前运行模式不是后台模式，且未开启「允许前台定时任务」开关</string>
+    <string name="schedule_log_wait_profile">等待任务配置加载…</string>
+    <string name="schedule_log_switch_profile">切换任务配置: %1$s</string>
+    <string name="schedule_log_profile_missing">关联的任务配置已被删除</string>
+    <string name="schedule_log_empty_chain">关联的任务配置中没有启用任务</string>
+    <string name="schedule_log_launch_ui">拉起界面…</string>
+    <string name="schedule_log_ui_launch_failed">未能拉起界面</string>
+    <string name="schedule_log_countdown_start">开始倒计时（%1$d 秒）</string>
+    <string name="schedule_log_countdown_done">倒计时结束，提交执行</string>
+    <string name="schedule_log_start_now">用户点击立即执行</string>
+    <string name="schedule_log_user_cancelled">用户取消了定时任务执行</string>
+    <string name="schedule_log_starting_tasks">前置条件通过，启用任务 %1$d 项，正在启动…</string>
+    <string name="schedule_log_start_success">任务启动成功</string>
+    <string name="schedule_log_start_failed">任务启动失败: %1$s</string>
+    <string name="schedule_log_maa_start_failed">MaaCore 启动失败: %1$s</string>
+    <string name="schedule_log_task_blocked">任务被拦截，原因: %1$s</string>
+    <string name="schedule_log_task_needs_confirmation">任务需要确认，自动化路径已拒绝</string>
+    <string name="schedule_log_exception">执行异常: %1$s</string>
+    <string name="schedule_log_cancelled_preempt">启动流被取消或抢占</string>
+    <string name="schedule_log_external_name">外部触发</string>
+    <string name="schedule_log_strategy_missing">策略不存在或数据未加载完成</string>
 
     <!-- i18n: notification level -->
     <string name="notification_level_off">关闭</string>
@@ -2007,16 +2037,16 @@
 
     <!-- 唤醒 + 解锁 -->
     <string name="settings_wake_unlock_section">唤醒 + 解锁</string>
-    <string name="settings_wake_unlock_section_desc">定时任务触发时先点亮屏幕并解除锁屏。锁屏会盖在虚拟显示器上，前后台模式都会被挡住</string>
+    <string name="settings_wake_unlock_section_desc">配置全局解锁方式（滑动 / PIN）。在定时策略中可按条开启「启用锁屏解锁」。Root 与 Shizuku 均可用，需提权服务已连接</string>
     <string name="settings_wake_unlock_type">解锁方式</string>
     <string name="settings_wake_unlock_type_none">不解锁</string>
     <string name="settings_wake_unlock_type_swipe">无密码锁 / 滑动解锁</string>
     <string name="settings_wake_unlock_type_pin">PIN 码</string>
     <string name="settings_wake_credential">PIN 码</string>
-    <string name="settings_wake_credential_hint">输入锁屏 PIN（仅支持纯数字）</string>
+    <string name="settings_wake_credential_hint">输入锁屏 PIN（纯数字，4～16 位均可）</string>
     <string name="settings_wake_credential_show">显示 PIN</string>
     <string name="settings_wake_credential_hide">隐藏 PIN</string>
-    <string name="settings_wake_credential_warning">PIN 以明文保存在本机。导出配置时会自动剔除，但设备被他人取得时仍有泄露风险。图案锁不支持，请改用 PIN 或无密码锁。</string>
+    <string name="settings_wake_credential_warning">PIN 以明文保存在本机。导出配置时会自动剔除，但设备被他人取得时仍有泄露风险。图案锁与字母密码不支持，请改用纯数字 PIN 或无密码锁。</string>
     <string name="settings_wake_test_button">立即测试</string>
     <string name="settings_wake_test_hint">验证能否点亮屏幕并解除锁屏。想测完整链路可先锁屏，再用定时任务触发</string>
     <string name="wake_result_ok">唤醒 + 解锁成功</string>

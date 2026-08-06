@@ -6,9 +6,7 @@ import com.aliothmoon.maameow.maa.InputControlUtils
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
 
-/**
- * 唤醒 + 解锁，整条序列在提权进程内完成，App 侧只发一次 IPC。
- */
+/** 唤醒 + 解锁；提权进程内完成，仅支持纯数字 PIN */
 object WakeUnlockController {
 
     private const val TAG = "WakeUnlock"
@@ -17,8 +15,9 @@ object WakeUnlockController {
     private const val KEYGUARD_GONE_TIMEOUT_MS = 5_000L
     private const val BOUNCER_SETTLE_MS = 1_200L
     private const val POLL_INTERVAL_MS = 100L
+    private const val DIGIT_GAP_MS = 50L
 
-    /** 与 AIDL 约定的返回码。 */
+    /** 与 AIDL 约定的返回码 */
     object Result {
         const val OK = 0
         const val WAKE_FAILED = 1
@@ -28,14 +27,12 @@ object WakeUnlockController {
         const val UNSUPPORTED = 5
     }
 
-    /**
-     * @param credential 数字 PIN；无凭证锁屏传空串。图案锁不支持。
-     */
+    /** @param credential 纯数字 PIN；无凭证锁屏传空串 */
     fun wakeAndUnlock(credential: String): Int {
         val pm = ServiceManager.getPowerManager()
         val wm = ServiceManager.getWindowManager()
 
-        // 必须先亮屏：dismissKeyguard 只管锁屏状态，息屏下解锁会被推迟到亮屏之后
+        // 须先亮屏，息屏下 dismissKeyguard 会被推迟
         if (!pm.isScreenOn(0)) {
             if (!pm.wakeUp()) {
                 Ln.w("$TAG: wakeUp() unavailable on this ROM")
@@ -61,7 +58,6 @@ object WakeUnlockController {
         val secure = wm.isKeyguardSecure(0) ?: false
         Ln.i("$TAG: keyguard locked, secure=$secure")
 
-        // 无凭证锁屏会直接解除；有凭证锁屏由系统弹出 bouncer
         if (!wm.dismissKeyguard()) {
             Ln.w("$TAG: dismissKeyguard unavailable on this ROM")
             return Result.UNSUPPORTED
@@ -82,21 +78,21 @@ object WakeUnlockController {
             return Result.CREDENTIAL_REQUIRED
         }
         if (credential.any { !it.isDigit() }) {
-            Ln.w("$TAG: credential contains non-digit characters; only numeric PIN is supported")
+            Ln.w("$TAG: only numeric PIN is supported")
             return Result.CREDENTIAL_REQUIRED
         }
 
-        // isKeyguardLocked 在 bouncer 弹出期间仍为 true，判断不了「可以输入了」。
-        // TODO 在设了 PIN 的真机上确认 bouncer 窗口名后，换成轮询真实信号
+        // bouncer 弹出期间 isKeyguardLocked 仍为 true，先 settle
         Thread.sleep(BOUNCER_SETTLE_MS)
-        Ln.i("$TAG: injecting ${credential.length} digits after ${BOUNCER_SETTLE_MS}ms settle")
+        Ln.i("$TAG: injecting ${credential.length} PIN digits after ${BOUNCER_SETTLE_MS}ms settle")
 
         for (c in credential) {
             val keyCode = KeyEvent.KEYCODE_0 + (c - '0')
             InputControlUtils.keyDown(keyCode, 0)
             InputControlUtils.keyUp(keyCode, 0)
+            Thread.sleep(DIGIT_GAP_MS)
         }
-        // 位数够时系统一般自动提交，开了「需要确认」才要回车；多按一次无害
+        // 部分 ROM 会自动提交；补 ENTER 兼容需确认的 PIN
         InputControlUtils.keyDown(KeyEvent.KEYCODE_ENTER, 0)
         InputControlUtils.keyUp(KeyEvent.KEYCODE_ENTER, 0)
 
@@ -104,13 +100,13 @@ object WakeUnlockController {
             Ln.i("$TAG: unlocked (PIN accepted)")
             Result.OK
         } else {
-            // 不重试：PIN 连续输错会触发系统锁定倒计时，有 MDM 策略的设备可能触发擦除
-            Ln.w("$TAG: still locked after PIN injection — wrong PIN, or this ROM's keyguard ignores injected keys")
+            // 不重试，避免连续输错触发系统锁定
+            Ln.w("$TAG: still locked after PIN injection — wrong PIN, or keyguard ignores injected keys")
             Result.CREDENTIAL_REJECTED
         }
     }
 
-    /** 仅点亮屏幕，不解锁。 */
+    /** 仅点亮屏幕，不解锁 */
     fun wakeOnly(): Boolean {
         val pm = ServiceManager.getPowerManager()
         if (pm.isScreenOn(0)) return true

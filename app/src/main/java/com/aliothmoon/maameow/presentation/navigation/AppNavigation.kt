@@ -27,6 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import com.aliothmoon.maameow.announcement.AnnouncementConfig
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.launch.LaunchEffect
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.ExternalNotificationService
 import com.aliothmoon.maameow.overlay.OverlayController
@@ -87,21 +88,25 @@ fun AppNavigation(
     val runMode by appSettings.runMode.collectAsStateWithLifecycle()
     val announcementReadVersion by appSettings.announcementReadVersion.collectAsStateWithLifecycle()
     val language by appSettings.language.collectAsStateWithLifecycle()
-    val scheduledCountdownState by backgroundTaskViewModel.coordinator.countdownState.collectAsStateWithLifecycle()
+    val scheduledCountdownState by backgroundTaskViewModel.countdownState.collectAsStateWithLifecycle()
 
     // 判断是否处于主 Tab 页面
     val isOnMainTab = currentNavRoute == null || currentNavRoute in MAIN_TAB_ROUTES
 
     LaunchedEffect(backgroundTaskViewModel) {
-        backgroundTaskViewModel.coordinator.feedbackMessages.collect { message ->
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        backgroundTaskViewModel.launchEffects.collect { effect ->
+            when (effect) {
+                is LaunchEffect.Feedback -> {
+                    Toast.makeText(
+                        context,
+                        effect.message.resolve(context),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+            }
         }
     }
-    LaunchedEffect(backgroundTaskViewModel) {
-        backgroundTaskViewModel.coordinator.countdownState.collect { state ->
-            overlayController.updateCountdownState(state)
-        }
-    }
+    // Overlay 仅由 CountdownUIImpl 写入（Silent 模式禁止触碰 Overlay）
     LaunchedEffect(backgroundTaskViewModel) {
         overlayController.onCountdownClick = {
             backgroundTaskViewModel.onScheduledStartNow()

@@ -198,19 +198,6 @@ class SettingsViewModel(
 
     // ───────────────── 唤醒 + 解锁 ─────────────────
 
-    /**
-     * 功能是否对当前后端可用。只看用户选定的后端，不看运行时连接状态：
-     * 按连接状态隐藏会让设置项在服务没连上时凭空消失，用户会以为功能丢了。
-     *
-     * 为什么限定 Root：唤醒解锁要调 IPowerManager.wakeUp 和
-     * IWindowManager.dismissKeyguard，并往 display 0 注入按键。Shizuku 的 shell uid
-     * 未必够，且设备重启后 Shizuku 需要手动授权，定时任务醒来时往往还没就绪。
-     */
-    val wakeFeatureAvailable: StateFlow<Boolean> =
-        appSettingsManager.startupBackend
-            .map { it == RemoteBackend.ROOT }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-
     val wakeUnlockType: StateFlow<String> =
         appSettingsManager.wakeUnlockType
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "swipe")
@@ -236,11 +223,6 @@ class SettingsViewModel(
     private val _wakeTestState = MutableStateFlow<WakeTestState?>(null)
     val wakeTestState: StateFlow<WakeTestState?> = _wakeTestState.asStateFlow()
 
-    /**
-     * 测试唤醒解锁。不主动息屏上锁——那需要先让设备真的锁上，而在前台点按钮的场景下
-     * 做不到可靠复现。这里只验证「当前状态 -> 亮屏且未锁屏」这一段，
-     * 用户想测完整链路可以自己锁屏后用定时任务触发。
-     */
     fun runWakeTest() {
         if (_wakeTestState.value == WakeTestState.Testing) return
         viewModelScope.launch {

@@ -142,8 +142,6 @@ fun SettingsView(
     var showDriftDelayDialog by remember { mutableStateOf(false) }
     val allowForegroundScheduledTask by viewModel.allowForegroundScheduledTask.collectAsStateWithLifecycle()
     val runScheduleWhenLocked by viewModel.runScheduleWhenLocked.collectAsStateWithLifecycle()
-    // ─── 定时唤醒 + 解锁 ───
-    val wakeFeatureAvailable by viewModel.wakeFeatureAvailable.collectAsStateWithLifecycle()
     val tasksOverrideEnabled by viewModel.tasksOverrideEnabled.collectAsStateWithLifecycle()
     val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
@@ -772,19 +770,16 @@ fun SettingsView(
                         onCheckedChange = { viewModel.setAllowForegroundScheduledTask(it) }
                     )
                     ListItemDivider()
-                    // 仅 Root 后端展示：其它后端下这个功能不可用，与其灰着再弹窗解释，
-                    // 不如不出现（弹窗那套还逼着 SettingSwitchItem 的禁用态可点，副作用更大）
-                    if (wakeFeatureAvailable) {
-                        SettingClickItem(
-                            title = stringResource(R.string.settings_wake_unlock_section),
-                            description = stringResource(R.string.settings_wake_unlock_section_desc),
-                            contentColor = contentColor,
-                            onClick = { navController.navigate(Routes.WAKE_SCHEDULE_EDITOR) }
-                        )
-                        ListItemDivider()
-                    }
+                    SettingClickItem(
+                        title = stringResource(R.string.settings_wake_unlock_section),
+                        description = stringResource(R.string.settings_wake_unlock_section_desc),
+                        contentColor = contentColor,
+                        onClick = { navController.navigate(Routes.WAKE_SCHEDULE_EDITOR) }
+                    )
+                    ListItemDivider()
                     SettingSwitchItem(
                         title = stringResource(R.string.settings_run_schedule_when_locked),
+                        description = stringResource(R.string.settings_run_schedule_when_locked_desc),
                         contentColor = contentColor,
                         checked = runScheduleWhenLocked,
                         onCheckedChange = { enabled ->

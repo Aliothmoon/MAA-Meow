@@ -317,7 +317,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
         return ActivityUtils.repinAppToDisplay(packageName, targetDisplayId)
     }
 
-    /** 见 [WakeUnlockController.wakeAndUnlock]。 */
+    /** 见 [WakeUnlockController.wakeAndUnlock] */
     override fun wakeAndUnlock(credential: String?): Int =
         WakeUnlockController.wakeAndUnlock(credential.orEmpty())
 

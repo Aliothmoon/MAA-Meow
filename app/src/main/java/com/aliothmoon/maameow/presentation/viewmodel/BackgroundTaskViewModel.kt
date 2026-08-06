@@ -12,11 +12,15 @@ import com.aliothmoon.maameow.data.model.TaskParamProvider
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.domain.launch.LaunchPipeline
+import com.aliothmoon.maameow.domain.launch.LaunchRequest
+import com.aliothmoon.maameow.domain.launch.LaunchSession
+import com.aliothmoon.maameow.domain.launch.LaunchUserEvent
+import com.aliothmoon.maameow.domain.launch.toCountdownState
+import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
-import com.aliothmoon.maameow.domain.service.AchievementReporter
-import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
@@ -29,10 +33,7 @@ import com.aliothmoon.maameow.presentation.state.UiEffect
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogConfirmAction
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogUiState
 import com.aliothmoon.maameow.presentation.view.panel.PanelTab
-import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
-import com.aliothmoon.maameow.schedule.model.ScheduledExecutionRequest
-import com.aliothmoon.maameow.schedule.service.ScheduleTriggerLogger
-import com.aliothmoon.maameow.schedule.service.ScheduledLaunchCoordinator
+import com.aliothmoon.maameow.schedule.model.CountdownState
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.resolve
 import kotlinx.coroutines.Dispatchers
@@ -41,13 +42,16 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -63,21 +67,36 @@ class BackgroundTaskViewModel(
     private val pathConfig: MaaPathConfig,
     private val achievementReporter: AchievementReporter,
     private val gameMuteCoordinator: GameMuteCoordinator,
-    scheduleRepository: ScheduleStrategyRepository,
-    triggerLogger: ScheduleTriggerLogger,
-    private val wakeUnlockEngine: WakeUnlockEngine,
+    private val launchPipeline: LaunchPipeline,
     private val application: Context,
 ) : ViewModel() {
 
-    val coordinator = ScheduledLaunchCoordinator(
-        scope = viewModelScope,
-        scheduleRepository = scheduleRepository,
-        compositionService = compositionService,
-        appSettingsManager = appSettingsManager,
-        chainState = chainState,
-        triggerLogger = triggerLogger,
-        wakeUnlockEngine = wakeUnlockEngine,
-    )
+    val launchSession: StateFlow<LaunchSession> = launchPipeline.session
+    val launchEffects = launchPipeline.effects
+    val countdownState: StateFlow<CountdownState> = launchPipeline.session
+        .map { it.toCountdownState() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, CountdownState.Idle)
+
+    /**
+     * 导航用：仅 [LaunchSession.InFlight.presentUi] 为 true（Dialog 路径）时置位。
+     * FG Silent/Overlay 不导航，避免强行拉回主 Tab。
+     */
+    val pendingNavigateRequestId: StateFlow<String?> = launchPipeline.session
+        .map { session ->
+            when (session) {
+                is LaunchSession.InFlight -> {
+                    if (!session.presentUi) null
+                    else when (session.phase) {
+                        is LaunchSession.Phase.Counting,
+                        LaunchSession.Phase.Preparing,
+                        LaunchSession.Phase.Starting -> session.request.requestId
+                        else -> null
+                    }
+                }
+                LaunchSession.Idle -> null
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val _state = MutableStateFlow(BackgroundTaskState())
     val state: StateFlow<BackgroundTaskState> = _state.asStateFlow()
@@ -100,7 +119,6 @@ class BackgroundTaskViewModel(
 
     private data class PendingStart(
         val context: TaskStartContext,
-        val request: ScheduledExecutionRequest? = null,
     )
 
     init {
@@ -194,33 +212,27 @@ class BackgroundTaskViewModel(
 
     // ==================== Scheduled Launch ====================
 
-    fun onScheduledLaunch(request: ScheduledExecutionRequest) {
-        coordinator.onLaunch(request)
+    fun onExternalLaunch(request: LaunchRequest) {
+        launchPipeline.execute(request)
     }
 
     fun onScheduledCountdownCancel() {
-        coordinator.onCancel()
+        launchPipeline.submit(LaunchUserEvent.Cancel)
     }
 
     fun onScheduledStartNow() {
-        coordinator.onStartNow()
+        launchPipeline.submit(LaunchUserEvent.StartNow)
     }
 
-    fun onScheduledExecutionPageReady(requestId: String) {
-        coordinator.onPageReady(requestId) { request ->
-            _state.update {
-                it.copy(
-                    current = PanelTab.TASKS,
-                    selectedNodeId = null,
-                    isAddingTask = false,
-                    isEditMode = false,
-                    isProfileMode = false,
-                )
-            }
-            startTasksInternal(
-                request = request,
-                context = TaskStartContext(mode = TaskStartMode.SCHEDULED),
-            )?.resolve(application)
+    fun onNavigateForScheduledLaunch() {
+        _state.update {
+            it.copy(
+                current = PanelTab.TASKS,
+                selectedNodeId = null,
+                isAddingTask = false,
+                isEditMode = false,
+                isProfileMode = false,
+            )
         }
     }
 
@@ -442,18 +454,10 @@ class BackgroundTaskViewModel(
         }
     }
 
-    private suspend fun doSwitchProfile(request: ScheduledExecutionRequest?) {
-        if (request != null && chainState.profileId.value != request.profileId) {
-            chainState.switchProfile(request.profileId)
-        }
-    }
-
+    /** 手动启动（定时走 [LaunchPipeline] + [StartTaskChainUseCase]）。 */
     private suspend fun startTasksInternal(
-        request: ScheduledExecutionRequest? = null,
         context: TaskStartContext,
     ): UiText? {
-        doSwitchProfile(request)
-
         val plan = when (
             val decision = prepareTaskStart(
                 chain = chainState.chain.value,
@@ -469,16 +473,12 @@ class BackgroundTaskViewModel(
                 pendingStart = null
                 val message = application.resolveTaskStartDecisionMessage(decision)
                 Timber.w("Validation failed: %s", message.resolve(application))
-                if (request != null) {
-                    showStartFailedDialog(message)
-                } else {
-                    showDialog(application.createStartBlockedDialog(message))
-                }
+                showDialog(application.createStartBlockedDialog(message))
                 return message
             }
 
             is TaskStartDecision.RequiresConfirmation -> {
-                pendingStart = PendingStart(context.acknowledged(decision.acknowledgement), request)
+                pendingStart = PendingStart(context.acknowledged(decision.acknowledgement))
                 val message = application.resolveTaskStartDecisionMessage(decision)
                 showDialog(application.createStartWarningDialog(message))
                 return message
@@ -494,18 +494,9 @@ class BackgroundTaskViewModel(
         val result = compositionService.start(
             tasks = plan.params,
             clientType = plan.clientType,
-            isScheduled = context.mode == TaskStartMode.SCHEDULED,
+            isScheduled = false,
             preflightLogs = plan.logs,
-        ) {
-            if (request != null) {
-                sessionLogger.appendAndWait(
-                    application.getString(
-                        R.string.task_start_triggered_by_schedule,
-                        request.strategyName,
-                    ),
-                )
-            }
-        }
+        )
         if (result is MaaCompositionService.StartResult.Success) {
             achievementReporter.reportTaskStarted(
                 taskCount = plan.params.size,
@@ -517,9 +508,6 @@ class BackgroundTaskViewModel(
         val message = application.resolveTaskStartFailureMessage(result)
         if (message != null) {
             Timber.w("Start failed: %s", message.resolve(application))
-            if (request != null) {
-                showStartFailedDialog(message)
-            }
             return message
         }
         return null
@@ -594,10 +582,7 @@ class BackgroundTaskViewModel(
                 pendingStart = null
                 if (pending != null) {
                     viewModelScope.launch {
-                        val message = startTasksInternal(
-                            request = pending.request,
-                            context = pending.context,
-                        )
+                        val message = startTasksInternal(context = pending.context)
                         if (message != null && state.value.dialog == null) {
                             showStartFailedDialog(message)
                         }
@@ -623,7 +608,6 @@ class BackgroundTaskViewModel(
     }
 
     override fun onCleared() {
-        coordinator.cancel()
         touchPreviewController.onClear()
         super.onCleared()
     }

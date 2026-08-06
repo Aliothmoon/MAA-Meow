@@ -72,11 +72,12 @@ fun MainScreen(
 
     // 定时任务触发时：若正处于子页面，先弹回主 Tab 浮出主界面，再滑到后台任务页
     // （恢复旧导航 navigate(BACKGROUND){popUpTo(HOME)} 的“自动浮出后台页”语义）。
-    val pendingScheduledExecution by backgroundTaskViewModel.coordinator.pendingExecution.collectAsStateWithLifecycle()
-    LaunchedEffect(pendingScheduledExecution?.requestId) {
-        if (pendingScheduledExecution != null) {
+    val pendingNavigateRequestId by backgroundTaskViewModel.pendingNavigateRequestId.collectAsStateWithLifecycle()
+    LaunchedEffect(pendingNavigateRequestId) {
+        if (pendingNavigateRequestId != null) {
             navController.popBackStack(Routes.HOME, false)
             goToPage(BottomNavTab.all.indexOf(BottomNavTab.BACKGROUND))
+            backgroundTaskViewModel.onNavigateForScheduledLaunch()
         }
     }
 
