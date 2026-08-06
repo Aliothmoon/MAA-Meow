@@ -554,21 +554,6 @@ class AppSettingsManager(
         }
     }
 
-    // 允许在前台模式执行定时任务
-    val allowForegroundScheduledTask: StateFlow<Boolean> = settings
-        .map { it.allowForegroundScheduledTask.toBooleanStrictOrNull() ?: false }
-        .distinctUntilChanged()
-        .stateIn(
-            scope, SharingStarted.Eagerly,
-            initialSettings.allowForegroundScheduledTask.toBooleanStrictOrNull() ?: false
-        )
-
-    suspend fun setAllowForegroundScheduledTask(enabled: Boolean) {
-        with(AppSettingsSchema) {
-            context.dataStore.edit { it[allowForegroundScheduledTask] = enabled.toString() }
-        }
-    }
-
     // 是否启用系统莫奈主题色（Android 12+ Material You）
     private fun parseUseSystemMonetColor(raw: String): Boolean =
         raw.toBooleanStrictOrNull() ?: true

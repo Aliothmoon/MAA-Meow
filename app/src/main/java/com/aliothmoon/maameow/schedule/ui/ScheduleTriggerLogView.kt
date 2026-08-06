@@ -243,6 +243,14 @@ private fun SummaryCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                runModeLabel(summary.header.runMode)?.let { modeLabel ->
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.schedule_log_run_mode, modeLabel),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 if (summary.footer?.message != null) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
@@ -307,6 +315,13 @@ private fun DetailView(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        runModeLabel(entry.runMode)?.let { modeLabel ->
+                            Text(
+                                text = stringResource(R.string.schedule_log_run_mode, modeLabel),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     }
 
@@ -359,6 +374,13 @@ private fun DetailView(
 }
 
 // ==================== 工具方法 ====================
+
+@Composable
+private fun runModeLabel(runMode: String): String? = when (runMode) {
+    "FOREGROUND" -> stringResource(R.string.home_run_mode_foreground)
+    "BACKGROUND" -> stringResource(R.string.home_run_mode_background)
+    else -> null
+}
 
 @Composable
 private fun resultColor(result: ExecutionResult) = when (result) {

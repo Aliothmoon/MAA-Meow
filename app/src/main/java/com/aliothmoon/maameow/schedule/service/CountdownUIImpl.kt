@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.schedule.service
 
-import com.aliothmoon.maameow.domain.launch.CountdownMode
 import com.aliothmoon.maameow.domain.launch.CountdownUI
 import com.aliothmoon.maameow.domain.launch.LaunchRequest
 import com.aliothmoon.maameow.domain.launch.LaunchUserEvent
@@ -10,7 +9,7 @@ import kotlinx.coroutines.delay
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Silent = delay only；Overlay = OverlayController；DialogAndOverlay = 写 Overlay
+ * 后台倒计时：写 Overlay 倒计时状态 + 支持立即执行
  * Dialog 由 presentation 订 LaunchPipeline.session
  */
 class CountdownUIImpl(
@@ -20,39 +19,26 @@ class CountdownUIImpl(
 
     override suspend fun await(
         request: LaunchRequest,
-        mode: CountdownMode,
         onTick: (remainingSeconds: Int) -> Unit,
         shouldAbort: () -> Boolean,
     ): Boolean {
         val startNow = AtomicBoolean(false)
-        when (mode) {
-            CountdownMode.Silent -> {
-                for (remaining in request.countdownSeconds downTo 1) {
-                    if (shouldAbort() || startNow.get()) break
-                    onTick(remaining)
-                    delay(1000)
-                }
+        try {
+            overlayController.setTemporaryCountdownListener {
+                startNow.set(true)
+                onUserEvent(LaunchUserEvent.StartNow)
             }
-            CountdownMode.Overlay,
-            CountdownMode.DialogAndOverlay -> {
-                try {
-                    overlayController.setTemporaryCountdownListener {
-                        startNow.set(true)
-                        onUserEvent(LaunchUserEvent.StartNow)
-                    }
-                    for (remaining in request.countdownSeconds downTo 1) {
-                        if (shouldAbort() || startNow.get()) break
-                        onTick(remaining)
-                        overlayController.updateCountdownState(
-                            CountdownState.Counting(request.displayName, remaining),
-                        )
-                        delay(1000)
-                    }
-                } finally {
-                    overlayController.updateCountdownState(CountdownState.Idle)
-                    overlayController.setTemporaryCountdownListener(null)
-                }
+            for (remaining in request.countdownSeconds downTo 1) {
+                if (shouldAbort() || startNow.get()) break
+                onTick(remaining)
+                overlayController.updateCountdownState(
+                    CountdownState.Counting(request.displayName, remaining),
+                )
+                delay(1000)
             }
+        } finally {
+            overlayController.updateCountdownState(CountdownState.Idle)
+            overlayController.setTemporaryCountdownListener(null)
         }
         return startNow.get()
     }

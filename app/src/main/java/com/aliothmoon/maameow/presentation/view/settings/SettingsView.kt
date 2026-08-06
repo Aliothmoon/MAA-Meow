@@ -144,7 +144,6 @@ fun SettingsView(
     val shizukuLaunchPackage by viewModel.shizukuLaunchPackage.collectAsStateWithLifecycle()
     val deploymentWithPause by viewModel.deploymentWithPause.collectAsStateWithLifecycle()
     val forceFullscreenOnVirtualDisplay by viewModel.forceFullscreenOnVirtualDisplay.collectAsStateWithLifecycle()
-    val allowForegroundScheduledTask by viewModel.allowForegroundScheduledTask.collectAsStateWithLifecycle()
     val wakeUnlockType by viewModel.wakeUnlockType.collectAsStateWithLifecycle()
     val wakeCredential by viewModel.wakeCredential.collectAsStateWithLifecycle()
     val wakeTestState by viewModel.wakeTestState.collectAsStateWithLifecycle()
@@ -691,13 +690,6 @@ fun SettingsView(
                         contentColor = contentColor,
                         checked = forceFullscreenOnVirtualDisplay,
                         onCheckedChange = { viewModel.setForceFullscreenOnVirtualDisplay(it) }
-                    )
-                    ListItemDivider()
-                    SettingSwitchItem(
-                        title = stringResource(R.string.settings_allow_foreground_scheduled_task),
-                        contentColor = contentColor,
-                        checked = allowForegroundScheduledTask,
-                        onCheckedChange = { viewModel.setAllowForegroundScheduledTask(it) }
                     )
                     ListItemDivider()
                     SettingWakeUnlockTypeItem(

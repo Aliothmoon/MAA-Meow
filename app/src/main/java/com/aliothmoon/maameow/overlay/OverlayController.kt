@@ -156,6 +156,8 @@ class OverlayController(
     }
 
     private suspend fun onMaaStateChanged(previous: MaaExecutionState, current: MaaExecutionState) {
+        // 仅在 show() 之后才响应 RUNNING 切换
+        // 前台定时任务不会自动 show：未开控制层时这里直接 return，无悬浮球/音量键
         if (!_isActive.value) return
 
         val wasActive =
@@ -431,6 +433,10 @@ class OverlayController(
         }
     }
 
+    /**
+     * 首页手动启动控制层后才 _isActive
+     * 定时/LAUNCH_PROFILE 前台静默启动不会走这里，需用户事先 show 过才能在 RUNNING 时出球/边框
+     */
     fun show(mode: OverlayControlMode = OverlayControlMode.ACCESSIBILITY) {
         if (appSettings.runMode.value != RunMode.FOREGROUND) {
             Timber.w("OverlayController: 非前台模式，忽略 show 请求")

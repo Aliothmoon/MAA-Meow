@@ -10,9 +10,13 @@ import android.util.DisplayMetrics
 import android.view.WindowManager
 import androidx.core.net.toUri
 import timber.log.Timber
+import kotlin.math.abs
 import kotlin.system.exitProcess
 
 object Misc {
+
+    /** 16:9 容差（相对目标比例），与首页悬浮层启动校验一致 */
+    private const val ASPECT_16X9_TOLERANCE = 0.05f
 
     fun getScreenSize(context: Context): Pair<Int, Int> {
         val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -25,6 +29,16 @@ object Misc {
             windowManager.defaultDisplay.getRealMetrics(displayMetrics)
             displayMetrics.widthPixels to displayMetrics.heightPixels
         }
+    }
+
+    /** 是否接近 16:9（长短边比，与横竖屏无关） */
+    fun isAspectRatio16x9(width: Int, height: Int, tolerance: Float = ASPECT_16X9_TOLERANCE): Boolean {
+        val longSide = maxOf(width, height)
+        val shortSide = minOf(width, height)
+        if (shortSide <= 0) return false
+        val ratio = longSide.toFloat() / shortSide.toFloat()
+        val target = 16f / 9f
+        return abs(ratio - target) <= target * tolerance
     }
 
     fun getPhysicalSize(context: Context): Pair<Int, Int> {

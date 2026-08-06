@@ -74,8 +74,6 @@ data class AppSettings(
      */
     @PrefKey(default = "false") val tasksOverrideEnabled: String = "false",
 
-    @PrefKey(default = "false") val allowForegroundScheduledTask: String = "false",
-
     /**
      * 是否启用系统莫奈主题色（Android 12+ Material You）
      * 启用后主题跟随系统壁纸动态取色，关闭则使用内置硬编码蓝色主题

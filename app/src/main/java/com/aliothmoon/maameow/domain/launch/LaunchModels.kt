@@ -32,8 +32,8 @@ sealed interface LaunchSession {
         val request: LaunchRequest,
         val phase: Phase,
         /**
-         * 是否需要主界面导航到后台页（Dialog 路径）
-         * FG 静默 Silent/Overlay 为 false，避免强行拉回主 Tab
+         * 是否导航/展示倒计时 UI
+         * 前台无倒计时为 false；后台 Dialog 倒计时为 true
          */
         val presentUi: Boolean = true,
     ) : LaunchSession
@@ -51,15 +51,8 @@ sealed interface LaunchUserEvent {
     data object StartNow : LaunchUserEvent
 }
 
-/** 一次性 UI 反馈（导航由 [LaunchSession.InFlight.presentUi] 驱动，不再双轨） */
 sealed interface LaunchEffect {
     data class Feedback(val message: UiText) : LaunchEffect
-}
-
-enum class CountdownMode {
-    Silent,
-    Overlay,
-    DialogAndOverlay,
 }
 
 fun LaunchSession.toCountdownState(): CountdownState {

@@ -141,6 +141,9 @@ class MaaCompositionService(
         /** 前台模式下检测到竖屏（高 > 宽），需要横屏才能运行 */
         data object PortraitOrientationError : StartResult()
 
+        /** 前台模式下物理分辨率不是 16:9，MAA 识别要求 16:9 */
+        data object InvalidAspectRatioError : StartResult()
+
         /** 远程服务正在连接中，任务无法立即启动 */
         data object ServiceConnecting : StartResult()
 
@@ -213,13 +216,11 @@ class MaaCompositionService(
     suspend fun start(
         tasks: List<MaaTaskParams>,
         clientType: String,
-        isScheduled: Boolean = false,
         preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
         onSessionStarted: (suspend () -> Unit)? = null
     ): StartResult = executeStart(
         tasks = tasks,
         clientType = clientType,
-        isScheduled = isScheduled,
         startMessage = context.getString(R.string.runlog_task_start, tasks.size),
         successMessage = context.getString(R.string.runlog_task_started),
         preflightLogs = preflightLogs,
@@ -255,10 +256,7 @@ class MaaCompositionService(
         return result
     }
 
-    private suspend fun checkPreconditions(
-        mode: RunMode,
-        isScheduled: Boolean = false
-    ): StartResult? {
+    private suspend fun checkPreconditions(mode: RunMode): StartResult? {
         // 服务连接中时直接拒绝，避免与后台自动 load() 并发触发 LoadResource
         val serviceState = RemoteServiceManager.state.value
         if (serviceState is RemoteServiceManager.ServiceState.Connecting) {
@@ -287,12 +285,20 @@ class MaaCompositionService(
                 StartResult.ResourceError(loaded.exceptionOrNull())
             )
         }
-        if (mode == RunMode.FOREGROUND && !isScheduled) {
+        // 前台（含定时 / LAUNCH_PROFILE）必须横屏且 16:9；后台走虚拟屏自带 16:9
+        if (mode == RunMode.FOREGROUND) {
             val (width, height) = Misc.getScreenSize(context)
             if (height > width) {
                 return failStart(
                     context.getString(R.string.runlog_portrait_orientation), "PORTRAIT",
                     StartResult.PortraitOrientationError
+                )
+            }
+            if (!Misc.isAspectRatio16x9(width, height)) {
+                return failStart(
+                    context.getString(R.string.runlog_invalid_aspect_ratio, width, height),
+                    "INVALID_ASPECT_RATIO",
+                    StartResult.InvalidAspectRatioError
                 )
             }
         }
@@ -425,11 +431,13 @@ class MaaCompositionService(
         clientType: String,
         startMessage: String,
         successMessage: String,
-        isScheduled: Boolean = false,
         preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
         onSessionStarted: (suspend () -> Unit)? = null,
     ): StartResult {
-        setRunState(MaaExecutionState.STARTING)
+        // 会话与日志先开；STARTING/FGS 必须在前置检查通过后再进入。
+        // 否则竖屏等快速失败会 stop 尚未 startForeground 的 FGS，触发
+        // ForegroundServiceDidNotStartInTimeException。
+        val mode = appSettings.runMode.value
         sessionLogger.startSession(tasks.map { it.type.value })
         subTaskHandler.resetSessionState()
         toolboxResultCollector.onSessionStart()
@@ -440,9 +448,10 @@ class MaaCompositionService(
         }
         sessionLogger.appendAndWait(fetchDeviceMemoryInfo(), LogLevel.INFO)
 
-        val mode = appSettings.runMode.value
         return withContext(Dispatchers.IO) {
-            checkPreconditions(mode, isScheduled)?.let { return@withContext it }
+            checkPreconditions(mode)?.let { return@withContext it }
+
+            setRunState(MaaExecutionState.STARTING)
 
             try {
                 useRemoteService { service ->

@@ -105,7 +105,7 @@ fun AppNavigation(
             }
         }
     }
-    // Overlay 仅由 CountdownUIImpl 写入（Silent 模式禁止触碰 Overlay）
+    // 后台倒计时 Overlay 由 CountdownUIImpl 写入；前台无倒计时不触碰
     LaunchedEffect(backgroundTaskViewModel) {
         overlayController.onCountdownClick = {
             backgroundTaskViewModel.onScheduledStartNow()

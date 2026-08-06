@@ -22,6 +22,8 @@ import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.presentation.state.HomeUiState
 import com.aliothmoon.maameow.presentation.state.StatusColorType
 import com.aliothmoon.maameow.presentation.state.UiEffect
+import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
+import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.remoteBackendPermissionLabel
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
@@ -36,7 +38,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
-import kotlin.math.abs
 
 class HomeViewModel(
     private val application: Context,
@@ -47,6 +48,8 @@ class HomeViewModel(
     private val resourceLoader: MaaResourceLoader,
     private val compositionService: MaaCompositionService,
     private val resourceInitService: ResourceInitService,
+    private val scheduleAlarmManager: ScheduleAlarmManager,
+    private val scheduleStrategyRepository: ScheduleStrategyRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -521,20 +524,11 @@ class HomeViewModel(
         // 减去系统栏的值）。改用 Misc.getScreenSize，其底层走 Display.getRealMetrics /
         // WindowMetrics.getBounds，能正确读到 IWindowManager 层的 forced size。
         val (width, height) = Misc.getScreenSize(application)
-
-        val longSide = maxOf(width, height)
-        val shortSide = minOf(width, height)
-
-        val ratio = longSide.toFloat() / shortSide.toFloat()
-        val targetRatio = 16f / 9f
-        val tolerance = 0.05f
-        val isValid = abs(ratio - targetRatio) <= targetRatio * tolerance
-
+        val isValid = Misc.isAspectRatio16x9(width, height)
         if (!isValid) {
             _effects.trySend(UiEffect.toast(R.string.home_toast_not_16_9_resolution, long = true))
-            Timber.w("resolution check failed: ${longSide}x${shortSide}, required 16:9")
+            Timber.w("resolution check failed: ${width}x${height}, required 16:9")
         }
-
         return isValid
     }
 
@@ -554,6 +548,8 @@ class HomeViewModel(
                 if (isBackground) RunMode.BACKGROUND
                 else RunMode.FOREGROUND
             )
+            // lead 时间依赖 runMode（FG 0s / BG 30s），切换后立即重排避免沿用旧偏移
+            scheduleAlarmManager.rescheduleAll(scheduleStrategyRepository.strategies.value)
             val mode = if (isBackground) {
                 DisplayMode.BACKGROUND
             } else {

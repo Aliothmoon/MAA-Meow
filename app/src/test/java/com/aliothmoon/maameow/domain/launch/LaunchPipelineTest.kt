@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.domain.launch
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
-import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
@@ -59,9 +58,7 @@ class LaunchPipelineTest {
     private val stopCalls = AtomicInteger(0)
 
     private val runMode = MutableStateFlow(RunMode.BACKGROUND)
-    private val allowFg = MutableStateFlow(false)
     private val unlockType = MutableStateFlow("swipe")
-    private val overlayMode = MutableStateFlow(OverlayControlMode.ACCESSIBILITY)
     private val wakeCred = MutableStateFlow("")
     private val compositionState = MutableStateFlow(MaaExecutionState.IDLE)
     private val profileId = MutableStateFlow("profile-1")
@@ -77,7 +74,6 @@ class LaunchPipelineTest {
     private fun instantCountdown(): CountdownUI = object : CountdownUI {
         override suspend fun await(
             request: LaunchRequest,
-            mode: CountdownMode,
             onTick: (remainingSeconds: Int) -> Unit,
             shouldAbort: () -> Boolean,
         ): Boolean {
@@ -91,7 +87,6 @@ class LaunchPipelineTest {
         object : CountdownUI {
             override suspend fun await(
                 request: LaunchRequest,
-                mode: CountdownMode,
                 onTick: (remainingSeconds: Int) -> Unit,
                 shouldAbort: () -> Boolean,
             ): Boolean {
@@ -113,13 +108,10 @@ class LaunchPipelineTest {
         deviceSecure.set(false)
         unlockType.value = "swipe"
         runMode.value = RunMode.BACKGROUND
-        allowFg.value = false
         compositionState.value = MaaExecutionState.IDLE
 
         settings = mockk(relaxed = true) {
             every { runMode } returns this@LaunchPipelineTest.runMode
-            every { allowForegroundScheduledTask } returns allowFg
-            every { overlayControlMode } returns overlayMode
             every { wakeCredential } returns wakeCred
             every { wakeUnlockType } returns unlockType
         }
@@ -147,7 +139,7 @@ class LaunchPipelineTest {
             every { end(any(), any()) } just runs
         }
         logger = mockk(relaxed = true) {
-            every { open(any(), any(), any()) } returns logSession
+            every { open(any(), any(), any(), any()) } returns logSession
             every {
                 writeClosed(
                     strategyId = any(),
@@ -155,6 +147,7 @@ class LaunchPipelineTest {
                     scheduledTimeMs = any(),
                     result = any(),
                     message = any(),
+                    runMode = any(),
                 )
             } just runs
             every { resolveMessage(any()) } answers { firstArg<UiText?>()?.toString() }
@@ -236,7 +229,7 @@ class LaunchPipelineTest {
         p.execute(scheduleRequest("b")).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_BUSY), recorded.toList())
         // busy：writeClosed 独立文件；in-flight 用 open 一次
-        io.mockk.verify(exactly = 1) { logger.open(any(), any(), any()) }
+        io.mockk.verify(exactly = 1) { logger.open(any(), any(), any(), any()) }
         io.mockk.verify(exactly = 1) {
             logger.writeClosed(
                 strategyId = any(),
@@ -244,11 +237,12 @@ class LaunchPipelineTest {
                 scheduledTimeMs = any(),
                 result = ExecutionResult.SKIPPED_BUSY,
                 message = any(),
+                runMode = any(),
             )
         }
         release.complete(Unit)
         first.join()
-        io.mockk.verify(exactly = 1) { logger.open(any(), any(), any()) }
+        io.mockk.verify(exactly = 1) { logger.open(any(), any(), any(), any()) }
     }
 
     @Test
@@ -270,11 +264,11 @@ class LaunchPipelineTest {
     }
 
     @Test
-    fun foregroundWithoutAllow_failsValidation() = runBlocking<Unit> {
+    fun foregroundSchedule_isAllowed() = runBlocking<Unit> {
         runMode.value = RunMode.FOREGROUND
-        allowFg.value = false
         pipeline().execute(scheduleRequest()).join()
-        assertEquals(listOf(ExecutionResult.FAILED_VALIDATION), recorded.toList())
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        assertEquals(1, startCalls.get())
     }
 
     @Test
@@ -292,7 +286,6 @@ class LaunchPipelineTest {
         val p = pipeline(countdown = object : CountdownUI {
             override suspend fun await(
                 request: LaunchRequest,
-                mode: CountdownMode,
                 onTick: (remainingSeconds: Int) -> Unit,
                 shouldAbort: () -> Boolean,
             ): Boolean {
@@ -329,7 +322,7 @@ class LaunchPipelineTest {
         assertEquals(listOf(ExecutionResult.SKIPPED_BUSY), recorded.toList())
         assertEquals(0, startCalls.get())
         // 已拿到 mutex 并 open 后发现 composition 忙：本 Session end（非 writeClosed）
-        io.mockk.verify(exactly = 1) { logger.open(any(), any(), any()) }
+        io.mockk.verify(exactly = 1) { logger.open(any(), any(), any(), any()) }
         io.mockk.verify(exactly = 0) {
             logger.writeClosed(
                 strategyId = any(),
@@ -337,28 +330,63 @@ class LaunchPipelineTest {
                 scheduledTimeMs = any(),
                 result = any(),
                 message = any(),
+                runMode = any(),
             )
         }
     }
 
-    /** FG + allow + 非悬浮球 → Silent；presentUi=false，不驱动主界面导航。 */
+    /** 前台无倒计时：不 presentUi，直接启动。 */
     @Test
-    fun foregroundSilent_presentUiIsFalseDuringCountdown() = runBlocking<Unit> {
+    fun foreground_skipsCountdownAndStarts() = runBlocking<Unit> {
         runMode.value = RunMode.FOREGROUND
-        allowFg.value = true
-        overlayMode.value = OverlayControlMode.ACCESSIBILITY
+        var countdownCalled = false
+        val p = pipeline(countdown = object : CountdownUI {
+            override suspend fun await(
+                request: LaunchRequest,
+                onTick: (remainingSeconds: Int) -> Unit,
+                shouldAbort: () -> Boolean,
+            ): Boolean {
+                countdownCalled = true
+                return false
+            }
+        })
+        p.execute(scheduleRequest("fg-1")).join()
+        assertTrue(!countdownCalled)
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        assertEquals(1, startCalls.get())
+    }
+
+    /** LAUNCH_PROFILE 前台同样跳过倒计时。 */
+    @Test
+    fun foregroundExternal_alsoSkipsCountdown() = runBlocking<Unit> {
+        runMode.value = RunMode.FOREGROUND
+        var countdownCalled = false
+        val p = pipeline(countdown = object : CountdownUI {
+            override suspend fun await(
+                request: LaunchRequest,
+                onTick: (remainingSeconds: Int) -> Unit,
+                shouldAbort: () -> Boolean,
+            ): Boolean {
+                countdownCalled = true
+                return false
+            }
+        })
+        p.execute(externalRequest("ext-fg")).join()
+        assertTrue(!countdownCalled)
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+    }
+
+    /** 后台无论 Schedule/External 都有 Dialog 倒计时（presentUi=true）。 */
+    @Test
+    fun background_alwaysPresentUiCountdown() = runBlocking<Unit> {
+        runMode.value = RunMode.BACKGROUND
         val entered = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
         val p = pipeline(countdown = gatedCountdown(entered, release))
-        val job = p.execute(scheduleRequest("silent-1"))
+        val job = p.execute(scheduleRequest("bg-1"))
         withTimeout(5_000) { entered.await() }
         val session = p.session.value
-        assertTrue(session is LaunchSession.InFlight)
-        assertTrue(session is LaunchSession.InFlight && !session.presentUi)
-        assertTrue(
-            session is LaunchSession.InFlight
-                && session.phase is LaunchSession.Phase.Counting,
-        )
+        assertTrue(session is LaunchSession.InFlight && session.presentUi)
         release.complete(Unit)
         job.join()
         assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
@@ -383,7 +411,6 @@ class LaunchPipelineTest {
         val p = pipeline(countdown = object : CountdownUI {
             override suspend fun await(
                 request: LaunchRequest,
-                mode: CountdownMode,
                 onTick: (remainingSeconds: Int) -> Unit,
                 shouldAbort: () -> Boolean,
             ): Boolean {
@@ -416,7 +443,6 @@ class LaunchPipelineTest {
             countdown = object : CountdownUI {
                 override suspend fun await(
                     request: LaunchRequest,
-                    mode: CountdownMode,
                     onTick: (remainingSeconds: Int) -> Unit,
                     shouldAbort: () -> Boolean,
                 ): Boolean {

@@ -106,7 +106,6 @@
     <string name="settings_deployment_with_pause">Deploy operators while paused</string>
     <string name="settings_deployment_with_pause_tip">Hold ESC to pause the game while deploying operators for higher precision. Disable if ESC injection misbehaves or some operators are not placed correctly; deployment will fall back to plain swipe</string>
     <string name="settings_force_fullscreen_on_virtual_display">Force FULLSCREEN mode</string>
-    <string name="settings_allow_foreground_scheduled_task">Allow scheduled tasks in foreground</string>
     <string name="settings_wake_unlock_type">Schedule unlock method</string>
     <string name="settings_wake_unlock_type_swipe">Swipe unlock</string>
     <string name="settings_wake_unlock_type_pin">PIN</string>
@@ -1401,6 +1400,7 @@
     <string name="task_start_error_maa_create_instance">MaaCore initialization failed. Restart the app</string>
     <string name="task_start_error_set_touch_mode">Failed to set touch mode. Restart the app</string>
     <string name="task_start_error_portrait_orientation">The screen is in portrait mode. Switch to landscape before starting</string>
+    <string name="task_start_error_invalid_aspect_ratio">Current resolution is not 16:9. Adjust resolution or use background mode</string>
     <string name="task_start_error_display_mode">Failed to set display mode. Please try again</string>
     <string name="task_start_error_virtual_display">Failed to start the virtual display. Check service permissions</string>
     <string name="task_start_error_connect_timeout">Timed out while starting MaaCore. Please try again</string>
@@ -1495,6 +1495,7 @@
     <string name="schedule_result_in_progress">In progress…</string>
     <string name="schedule_log_scheduled_time">Scheduled: %1$s</string>
     <string name="schedule_log_triggered_time">Triggered: %1$s</string>
+    <string name="schedule_log_run_mode">Run mode: %1$s</string>
     <string name="schedule_log_detail_title">Trigger details</string>
     <string name="schedule_log_result">Result: %1$s</string>
     <string name="schedule_day_full_monday">Monday</string>
@@ -1555,7 +1556,7 @@
     <string name="schedule_log_wake_failed">Wake and unlock failed: %1$s</string>
     <string name="schedule_log_wake_pin_required">Lock password set but PIN not configured; skipped</string>
     <string name="schedule_log_keyguard_skipped">Keyguard check skipped</string>
-    <string name="schedule_log_mode_not_allowed">Foreground mode without “allow foreground scheduled tasks”</string>
+
     <string name="schedule_log_wait_profile">Waiting for task profile…</string>
     <string name="schedule_log_switch_profile">Switching profile: %1$s</string>
     <string name="schedule_log_profile_missing">Linked task profile was deleted</string>
@@ -1569,7 +1570,6 @@
     <string name="schedule_log_starting_tasks">Preconditions OK, %1$d task(s), starting…</string>
     <string name="schedule_log_start_success">Task start succeeded</string>
     <string name="schedule_log_start_failed">Task start failed: %1$s</string>
-    <string name="schedule_log_maa_start_failed">MaaCore start failed: %1$s</string>
     <string name="schedule_log_task_blocked">Task blocked: %1$s</string>
     <string name="schedule_log_task_needs_confirmation">Confirmation required; automation rejected</string>
     <string name="schedule_log_exception">Exception: %1$s</string>
@@ -1957,6 +1957,7 @@
     <string name="runlog_backend_unavailable">%1$s is unavailable; start canceled</string>
     <string name="runlog_resource_load_failed">Failed to load resources</string>
     <string name="runlog_portrait_orientation">Currently in portrait mode; foreground mode requires landscape</string>
+    <string name="runlog_invalid_aspect_ratio">Current resolution %1$dx%2$d is not 16:9; cannot run in foreground mode</string>
     <string name="runlog_create_instance_failed">Failed to create MaaCore instance</string>
     <string name="runlog_set_touch_mode_failed">Failed to set touch mode</string>
     <string name="runlog_maa_connect_failed">MaaCore connection timed out or failed</string>

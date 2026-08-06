@@ -303,7 +303,6 @@
     <string name="settings_deployment_with_pause">暂停时部署干员</string>
     <string name="settings_deployment_with_pause_tip">部署干员前模拟按住 ESC 暂停游戏，提高部署精确度。如遇 ESC 注入异常或部分干员部署不到位，可关闭改用普通滑动</string>
     <string name="settings_force_fullscreen_on_virtual_display">强制 FULLSCREEN 模式</string>
-    <string name="settings_allow_foreground_scheduled_task">允许在前台模式执行定时任务</string>
     <string name="settings_wake_unlock_type">定时任务解锁方式</string>
     <string name="settings_wake_unlock_type_swipe">滑动解锁</string>
     <string name="settings_wake_unlock_type_pin">PIN</string>
@@ -1457,6 +1456,7 @@
     <string name="task_start_error_maa_create_instance">MaaCore 初始化失败，请重启应用</string>
     <string name="task_start_error_set_touch_mode">触控模式设置失败，请重启应用</string>
     <string name="task_start_error_portrait_orientation">当前屏幕为竖屏，请切换为横屏后启动</string>
+    <string name="task_start_error_invalid_aspect_ratio">当前分辨率不是 16:9，请调整分辨率或改用后台模式</string>
     <string name="task_start_error_display_mode">显示模式设置失败，请重试</string>
     <string name="task_start_error_virtual_display">虚拟屏幕启动失败，请检查服务权限</string>
     <string name="task_start_error_connect_timeout">启动 MaaCore 超时，请重试</string>
@@ -1551,6 +1551,7 @@
     <string name="schedule_result_in_progress">进行中…</string>
     <string name="schedule_log_scheduled_time">预定: %1$s</string>
     <string name="schedule_log_triggered_time">触发: %1$s</string>
+    <string name="schedule_log_run_mode">运行模式: %1$s</string>
     <string name="schedule_log_detail_title">触发详情</string>
     <string name="schedule_log_result">结果: %1$s</string>
     <string name="schedule_day_full_monday">周一</string>
@@ -1606,12 +1607,12 @@
     <string name="schedule_log_skipped_busy">已有定时任务正在处理中</string>
     <string name="schedule_log_task_running_busy">有任务正在运行</string>
     <string name="schedule_log_force_stop_running">强制启动: 停止当前运行任务</string>
-    <string name="schedule_log_wake_start">执行唤醒+解锁…</string>
-    <string name="schedule_log_wake_ok">唤醒+解锁成功</string>
-    <string name="schedule_log_wake_failed">唤醒+解锁失败: %1$s</string>
+    <string name="schedule_log_wake_start">执行唤醒解锁…</string>
+    <string name="schedule_log_wake_ok">唤醒解锁成功</string>
+    <string name="schedule_log_wake_failed">唤醒解锁失败: %1$s</string>
     <string name="schedule_log_wake_pin_required">系统有锁屏密码但未配置 PIN，已跳过</string>
     <string name="schedule_log_keyguard_skipped">已跳过锁屏检查</string>
-    <string name="schedule_log_mode_not_allowed">当前运行模式不是后台模式，且未开启「允许前台定时任务」开关</string>
+
     <string name="schedule_log_wait_profile">等待任务配置加载…</string>
     <string name="schedule_log_switch_profile">切换任务配置: %1$s</string>
     <string name="schedule_log_profile_missing">关联的任务配置已被删除</string>
@@ -1625,7 +1626,6 @@
     <string name="schedule_log_starting_tasks">前置条件通过，启用任务 %1$d 项，正在启动…</string>
     <string name="schedule_log_start_success">任务启动成功</string>
     <string name="schedule_log_start_failed">任务启动失败: %1$s</string>
-    <string name="schedule_log_maa_start_failed">MaaCore 启动失败: %1$s</string>
     <string name="schedule_log_task_blocked">任务被拦截，原因: %1$s</string>
     <string name="schedule_log_task_needs_confirmation">任务需要确认，自动化路径已拒绝</string>
     <string name="schedule_log_exception">执行异常: %1$s</string>
@@ -2013,6 +2013,7 @@
     <string name="runlog_backend_unavailable">%1$s 不可用，已取消启动</string>
     <string name="runlog_resource_load_failed">资源加载失败</string>
     <string name="runlog_portrait_orientation">当前为竖屏，无法在前台模式运行</string>
+    <string name="runlog_invalid_aspect_ratio">当前分辨率 %1$dx%2$d 不是 16:9，无法在前台模式运行</string>
     <string name="runlog_create_instance_failed">创建 MaaCore 实例失败</string>
     <string name="runlog_set_touch_mode_failed">设置触控模式失败</string>
     <string name="runlog_maa_connect_failed">启动 MaaCore 超时或失败</string>

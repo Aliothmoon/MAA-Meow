@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.presentation.viewmodel
 import android.content.Context
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.service.resolveStartResultMessage
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.TaskStartAcknowledgement
 import com.aliothmoon.maameow.domain.usecase.TaskStartDecision
@@ -69,54 +70,9 @@ internal fun Context.resolveTaskStartDecisionMessage(decision: TaskStartDecision
             )
     }
 
-internal fun Context.resolveTaskStartFailureMessage(result: MaaCompositionService.StartResult): UiText? {
-    return when (result) {
-        is MaaCompositionService.StartResult.Success -> null
-        is MaaCompositionService.StartResult.ResourceError -> {
-            uiTextOf(R.string.task_start_error_resource_load_failed)
-        }
-
-        is MaaCompositionService.StartResult.InitializationError -> when (result.phase) {
-            MaaCompositionService.StartResult.InitializationError.InitPhase.CREATE_INSTANCE -> {
-                uiTextOf(R.string.task_start_error_maa_create_instance)
-            }
-
-            MaaCompositionService.StartResult.InitializationError.InitPhase.SET_TOUCH_MODE -> {
-                uiTextOf(R.string.task_start_error_set_touch_mode)
-            }
-        }
-
-        is MaaCompositionService.StartResult.PortraitOrientationError -> {
-            uiTextOf(R.string.task_start_error_portrait_orientation)
-        }
-
-        is MaaCompositionService.StartResult.ConnectionError -> when (result.phase) {
-            MaaCompositionService.StartResult.ConnectionError.ConnectPhase.DISPLAY_MODE -> {
-                uiTextOf(R.string.task_start_error_display_mode)
-            }
-
-            MaaCompositionService.StartResult.ConnectionError.ConnectPhase.VIRTUAL_DISPLAY -> {
-                uiTextOf(R.string.task_start_error_virtual_display)
-            }
-
-            MaaCompositionService.StartResult.ConnectionError.ConnectPhase.MAA_CONNECT -> {
-                uiTextOf(R.string.task_start_error_connect_timeout)
-            }
-        }
-
-        is MaaCompositionService.StartResult.StartError -> {
-            uiTextOf(R.string.task_start_error_start_failed)
-        }
-
-        is MaaCompositionService.StartResult.ServiceConnecting -> {
-            uiTextOf(R.string.task_start_error_service_connecting)
-        }
-
-        is MaaCompositionService.StartResult.RemoteAccessUnavailable -> {
-            uiTextOf(R.string.task_start_error_backend_unavailable, result.backend.display)
-        }
-    }
-}
+internal fun Context.resolveTaskStartFailureMessage(
+    result: MaaCompositionService.StartResult,
+): UiText? = resolveStartResultMessage(result)
 
 internal fun Context.formatStartResult(
     result: MaaCompositionService.StartResult,

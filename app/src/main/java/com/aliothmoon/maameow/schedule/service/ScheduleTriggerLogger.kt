@@ -50,6 +50,7 @@ class ScheduleTriggerLogger(
         strategyId: String,
         strategyName: String,
         scheduledTimeMs: Long,
+        runMode: String = "",
     ): Session {
         val now = System.currentTimeMillis()
         val timeStr = Instant.ofEpochMilli(now)
@@ -65,6 +66,7 @@ class ScheduleTriggerLogger(
                     strategyName = strategyName,
                     scheduledTimeMs = scheduledTimeMs,
                     actualTimeMs = now,
+                    runMode = runMode,
                 ),
             )
         } catch (e: Exception) {
@@ -81,8 +83,9 @@ class ScheduleTriggerLogger(
         scheduledTimeMs: Long,
         result: ExecutionResult,
         message: UiText? = null,
+        runMode: String = "",
     ) {
-        val session = open(strategyId, strategyName, scheduledTimeMs)
+        val session = open(strategyId, strategyName, scheduledTimeMs, runMode)
         if (message != null) {
             session.append(message)
         }

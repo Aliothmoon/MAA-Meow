@@ -78,8 +78,8 @@ class BackgroundTaskViewModel(
         .stateIn(viewModelScope, SharingStarted.Eagerly, CountdownState.Idle)
 
     /**
-     * 导航用：仅 [LaunchSession.InFlight.presentUi] 为 true（Dialog 路径）时置位。
-     * FG Silent/Overlay 不导航，避免强行拉回主 Tab。
+     * 导航用：仅 [LaunchSession.InFlight.presentUi] 为 true（后台 Dialog 倒计时）时置位
+     * 前台无倒计时不导航，避免强行拉回主 Tab
      */
     val pendingNavigateRequestId: StateFlow<String?> = launchPipeline.session
         .map { session ->
@@ -494,7 +494,6 @@ class BackgroundTaskViewModel(
         val result = compositionService.start(
             tasks = plan.params,
             clientType = plan.clientType,
-            isScheduled = false,
             preflightLogs = plan.logs,
         )
         if (result is MaaCompositionService.StartResult.Success) {

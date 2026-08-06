@@ -12,8 +12,8 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.aliothmoon.maameow.MainActivity
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.launch.LaunchPipeline
-import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.schedule.LaunchIntentMapper
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
@@ -44,6 +44,7 @@ class ScheduleExecutionService : Service() {
     private val alarmManager: ScheduleAlarmManager by inject()
     private val triggerLogger: ScheduleTriggerLogger by inject()
     private val launchPipeline: LaunchPipeline by inject()
+    private val appSettings: AppSettingsManager by inject()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -63,6 +64,7 @@ class ScheduleExecutionService : Service() {
                     }
                 }
             }
+
             else -> {
                 Timber.w("$TAG: unknown action: %s", intent?.action)
                 shutdownService()
@@ -86,6 +88,7 @@ class ScheduleExecutionService : Service() {
                 scheduledTimeMs = scheduledTimeMs,
                 result = ExecutionResult.FAILED_VALIDATION,
                 message = msg,
+                runMode = appSettings.runMode.value.name,
             )
             repository.recordExecutionResult(
                 strategyId = strategyId,

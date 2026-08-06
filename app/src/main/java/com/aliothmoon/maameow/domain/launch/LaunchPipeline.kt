@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.domain.launch
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
-import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
@@ -130,6 +129,7 @@ class LaunchPipeline(
             strategyId = request.strategyId,
             strategyName = request.displayName,
             scheduledTimeMs = request.scheduledTimeMs,
+            runMode = appSettingsManager.runMode.value.name,
         )
 
         try {
@@ -180,15 +180,6 @@ class LaunchPipeline(
                 }
             }
 
-            // mode gate
-            if (appSettingsManager.runMode.value == RunMode.FOREGROUND
-                && !appSettingsManager.allowForegroundScheduledTask.value
-            ) {
-                terminalResult = ExecutionResult.FAILED_VALIDATION
-                terminalMessage = uiTextOf(R.string.schedule_log_mode_not_allowed)
-                return
-            }
-
             // profile
             log.append(uiTextOf(R.string.schedule_log_wait_profile))
             chainState.isLoaded.filter { it }.first()
@@ -208,9 +199,12 @@ class LaunchPipeline(
                 return
             }
 
-            val countdownMode = selectCountdownMode(request)
-            // 仅 DialogAndOverlay 需要拉 Activity / 主界面导航；FG Silent/Overlay 不碰导航
-            presentUi = countdownMode == CountdownMode.DialogAndOverlay
+            // 前台：无倒计时、不拉主界面；后台：Dialog 倒计时 + 可拉 UI
+            // 前台定时/LAUNCH_PROFILE 不会调用 OverlayController.show
+            // 悬浮球与音量快捷键依赖用户曾在首页手动启动控制层（_isActive）
+            // 未启动时任务仍可跑，但无悬浮球/边框/快捷键，需先开控制层再挂机
+            val isForeground = appSettingsManager.runMode.value == RunMode.FOREGROUND
+            presentUi = !isForeground
             val needsActivityLaunch = request.source == LaunchSource.Schedule && presentUi
 
             if (needsActivityLaunch) {
@@ -223,29 +217,31 @@ class LaunchPipeline(
                 }
             }
 
-            // countdown
-            log.append(uiTextOf(R.string.schedule_log_countdown_start, request.countdownSeconds))
-            val startNow = countdownUI.await(
-                request = request,
-                mode = countdownMode,
-                onTick = { remaining ->
-                    setPhase(request, LaunchSession.Phase.Counting(remaining), presentUi)
-                },
-                shouldAbort = {
-                    cancelRequested.get() || startNowRequested.get()
-                        || activeRequestId.get() != request.requestId
-                },
-            )
+            if (!isForeground) {
+                log.append(
+                    uiTextOf(R.string.schedule_log_countdown_start, request.countdownSeconds),
+                )
+                val startNow = countdownUI.await(
+                    request = request,
+                    onTick = { remaining ->
+                        setPhase(request, LaunchSession.Phase.Counting(remaining), presentUi)
+                    },
+                    shouldAbort = {
+                        cancelRequested.get() || startNowRequested.get()
+                            || activeRequestId.get() != request.requestId
+                    },
+                )
 
-            if (cancelRequested.get() && !startNowRequested.get()) {
-                terminalResult = ExecutionResult.CANCELLED
-                terminalMessage = uiTextOf(R.string.schedule_log_user_cancelled)
-                return
-            }
-            if (startNow || startNowRequested.get()) {
-                log.append(uiTextOf(R.string.schedule_log_start_now))
-            } else {
-                log.append(uiTextOf(R.string.schedule_log_countdown_done))
+                if (cancelRequested.get() && !startNowRequested.get()) {
+                    terminalResult = ExecutionResult.CANCELLED
+                    terminalMessage = uiTextOf(R.string.schedule_log_user_cancelled)
+                    return
+                }
+                if (startNow || startNowRequested.get()) {
+                    log.append(uiTextOf(R.string.schedule_log_start_now))
+                } else {
+                    log.append(uiTextOf(R.string.schedule_log_countdown_done))
+                }
             }
 
             // start
@@ -369,6 +365,7 @@ class LaunchPipeline(
                 scheduledTimeMs = request.scheduledTimeMs,
                 result = result,
                 message = message,
+                runMode = appSettingsManager.runMode.value.name,
             )
             if (request.strategyId.isNotEmpty()) {
                 scheduleRepository.recordExecutionResult(
@@ -400,18 +397,6 @@ class LaunchPipeline(
                     LaunchSession.InFlight(request, phase, presentUi)
                 else -> cur // 已被其他 request 占用，不覆盖
             }
-        }
-    }
-
-    private fun selectCountdownMode(request: LaunchRequest): CountdownMode {
-        val fgSilentSchedule = request.source == LaunchSource.Schedule
-            && appSettingsManager.runMode.value == RunMode.FOREGROUND
-            && appSettingsManager.allowForegroundScheduledTask.value
-        if (!fgSilentSchedule) return CountdownMode.DialogAndOverlay
-        return if (appSettingsManager.overlayControlMode.value == OverlayControlMode.FLOAT_BALL) {
-            CountdownMode.Overlay
-        } else {
-            CountdownMode.Silent
         }
     }
 

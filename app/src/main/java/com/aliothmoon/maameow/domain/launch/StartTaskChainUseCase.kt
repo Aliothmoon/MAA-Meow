@@ -8,13 +8,13 @@ import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
+import com.aliothmoon.maameow.domain.service.resolveStartResultMessage
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
 import com.aliothmoon.maameow.domain.usecase.TaskStartDecision
 import com.aliothmoon.maameow.domain.usecase.TaskStartMode
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.utils.i18n.UiText
-import com.aliothmoon.maameow.utils.i18n.uiTextDynamic
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 
 /**
@@ -69,7 +69,6 @@ class StartTaskChainUseCase(
         val startResult = composition.start(
             tasks = plan.params,
             clientType = plan.clientType,
-            isScheduled = context.mode == TaskStartMode.SCHEDULED,
             preflightLogs = plan.logs,
         ) {
             if (scheduleLabel != null) {
@@ -93,10 +92,8 @@ class StartTaskChainUseCase(
             }
             else -> Result.Failed(
                 executionResult = ExecutionResult.FAILED_START,
-                message = uiTextOf(
-                    R.string.schedule_log_maa_start_failed,
-                    uiTextDynamic(startResult.toString()),
-                ),
+                message = resolveStartResultMessage(startResult)
+                    ?: uiTextOf(R.string.task_start_error_start_failed),
             )
         }
     }

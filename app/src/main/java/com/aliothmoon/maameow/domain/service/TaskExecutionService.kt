@@ -78,31 +78,58 @@ class TaskExecutionService : Service() {
     private val taskChainStatusTracker: TaskChainStatusTracker by inject()
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var progressJob: Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         ensureNotificationChannel()
-        val initial = TaskNotificationSnapshot(
-            state = compositionService.state.value,
-            statusText = sessionLogger.logs.value.lastOrNull()?.content,
-            tasks = taskChainStatusTracker.tasks.value,
-        )
+        // 必须先 startForeground，再做任何可能读到 IDLE/ERROR 并 stop 的逻辑，
+        // 避免与 Composition 快速失败/stopService 竞态触发
+        // ForegroundServiceDidNotStartInTimeException。
+        val initial = currentSnapshot()
         startAsForeground(buildNotification(initial))
-        observeProgress()
+        if (initial.state == MaaExecutionState.IDLE || initial.state == MaaExecutionState.ERROR) {
+            handleTerminalState(initial)
+            return
+        }
+        ensureObserveProgress()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // 系统可能只走 onStartCommand；再保证一次 FGS 提升
+        // onCreate 若因终态提前 return 未启动观察，随后竞态进入 STARTING 时须在此补上
+        val snapshot = currentSnapshot()
+        startAsForeground(buildNotification(snapshot))
+        when (snapshot.state) {
+            MaaExecutionState.IDLE,
+            MaaExecutionState.ERROR -> handleTerminalState(snapshot)
+            MaaExecutionState.STARTING,
+            MaaExecutionState.RUNNING,
+            MaaExecutionState.STOPPING -> ensureObserveProgress()
+        }
+        return START_NOT_STICKY
     }
 
     override fun onDestroy() {
         // 外部 stopService 与 StateFlow 收集存在竞态；此处兜底确保 Live Update 通知被清除。
         // observeProgress 的 collector 由 serviceScope.cancel() 结构化取消。
+        progressJob = null
         removeActiveNotification()
         serviceScope.cancel()
         super.onDestroy()
     }
 
-    private fun observeProgress() {
-        serviceScope.launch {
+    private fun currentSnapshot(): TaskNotificationSnapshot = TaskNotificationSnapshot(
+        state = compositionService.state.value,
+        statusText = sessionLogger.logs.value.lastOrNull()?.content,
+        tasks = taskChainStatusTracker.tasks.value,
+    )
+
+    private fun ensureObserveProgress() {
+        if (progressJob?.isActive == true) return
+        progressJob = serviceScope.launch {
             var lastUpdateTime = 0L
             var pending: TaskNotificationSnapshot? = null
             var scheduledJob: Job? = null

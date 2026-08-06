@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import com.aliothmoon.maameow.MainActivity
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.schedule.model.ScheduleType
 import com.aliothmoon.maameow.schedule.model.ScheduledExecutionRequest
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
@@ -14,7 +16,10 @@ import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.ZoneId
 
-class ScheduleAlarmManager(private val context: Context) {
+class ScheduleAlarmManager(
+    private val context: Context,
+    private val appSettingsManager: AppSettingsManager,
+) {
 
     companion object {
         const val ACTION_SCHEDULE_TRIGGER = "com.aliothmoon.maameow.SCHEDULE_TRIGGER"
@@ -26,8 +31,8 @@ class ScheduleAlarmManager(private val context: Context) {
 
     /**
      * 为策略注册下一个闹钟。
-     * 计算 computeNextTrigger，然后提前 COUNTDOWN_LEAD_SECONDS 触发（留给倒计时弹窗）。
-     * 如果没有下一个触发时间（策略禁用或无匹配日期），则不注册。
+     * 后台：提前 [ScheduledExecutionRequest.COUNTDOWN_SECONDS] 触发，留给倒计时弹窗
+     * 前台：准时触发（无倒计时）
      */
     fun scheduleNext(strategy: ScheduleStrategy, afterEpochMs: Long = 0L) {
         if (!strategy.enabled) {
@@ -42,7 +47,12 @@ class ScheduleAlarmManager(private val context: Context) {
         }
 
         val scheduledTimeMs = nextTrigger.toInstant().toEpochMilli()
-        val triggerMs = scheduledTimeMs - ScheduledExecutionRequest.COUNTDOWN_SECONDS * 1000L
+        val leadSec = if (appSettingsManager.runMode.value == RunMode.FOREGROUND) {
+            0
+        } else {
+            ScheduledExecutionRequest.COUNTDOWN_SECONDS
+        }
+        val triggerMs = scheduledTimeMs - leadSec * 1000L
 
         val pendingIntent = buildPendingIntent(strategy.id, scheduledTimeMs)
 
@@ -69,7 +79,7 @@ class ScheduleAlarmManager(private val context: Context) {
             "已为策略 [%s] 注册闹钟，触发时间: %s（提前 %ds）",
             strategy.id,
             nextTrigger,
-            ScheduledExecutionRequest.COUNTDOWN_SECONDS
+            leadSec,
         )
     }
 

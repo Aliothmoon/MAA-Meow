@@ -13,6 +13,8 @@ sealed class TriggerLogEntry {
         val strategyName: String,
         val scheduledTimeMs: Long,
         val actualTimeMs: Long,
+        /** [com.aliothmoon.maameow.domain.models.RunMode.name]，旧日志可能为空 */
+        val runMode: String = "",
     ) : TriggerLogEntry()
 
     @Serializable
