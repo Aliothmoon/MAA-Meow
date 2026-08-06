@@ -317,14 +317,16 @@ class RemoteServiceImpl : RemoteService.Stub() {
         return ActivityUtils.repinAppToDisplay(packageName, targetDisplayId)
     }
 
-    /** 见 [WakeUnlockController.wakeAndUnlock] */
-    override fun wakeAndUnlock(credential: String?): Int =
-        WakeUnlockController.wakeAndUnlock(credential.orEmpty())
+    /** @return [com.aliothmoon.maameow.constant.WakeUnlockResult] */
+    override fun unlock(credential: String?): Int =
+        WakeUnlockController.unlock(credential.orEmpty())
 
-    override fun wakeScreen(): Boolean = WakeUnlockController.wakeOnly()
+    /** @return [com.aliothmoon.maameow.constant.WakeUnlockResult] */
+    override fun lockAndSleep(): Int = WakeUnlockController.lockAndSleep()
 
-    override fun testWakeAndUnlock(credential: String?): Int =
-        WakeUnlockController.testWakeAndUnlock(credential.orEmpty())
+    /** @return [com.aliothmoon.maameow.constant.WakeUnlockResult] */
+    override fun testUnlock(credential: String?): Int =
+        WakeUnlockController.testUnlock(credential.orEmpty())
 
     override fun isPackageInstalled(packageName: String): Boolean {
         return try {

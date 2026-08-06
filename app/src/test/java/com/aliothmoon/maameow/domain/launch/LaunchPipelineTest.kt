@@ -116,8 +116,8 @@ class LaunchPipelineTest {
             every { wakeUnlockType } returns unlockType
         }
         wake = mockk(relaxed = true)
-        coEvery { wake.wakeAndUnlock(any()) } returns WakeUnlockEngine.WakeResult.OK
-        coEvery { wake.turnScreenOff() } returns true
+        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.OK
+        coEvery { wake.lockAndSleep() } returns WakeUnlockEngine.WakeResult.OK
 
         chainState = mockk(relaxed = true) {
             every { isLoaded } returns this@LaunchPipelineTest.isLoaded

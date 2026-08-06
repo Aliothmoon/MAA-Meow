@@ -229,7 +229,7 @@ class SettingsViewModel(
             _wakeTestState.value = WakeTestState.Testing
             val credential = appSettingsManager.wakeCredential.value
             _wakeTestState.value = WakeTestState.Done(
-                wakeUnlockEngine.testWakeAndUnlock(credential),
+                wakeUnlockEngine.testUnlock(credential),
             )
         }
     }

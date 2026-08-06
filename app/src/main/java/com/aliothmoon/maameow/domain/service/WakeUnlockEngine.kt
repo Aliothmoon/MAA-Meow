@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.domain.service
 
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.constant.WakeUnlockResult
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
@@ -8,18 +9,25 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
-/** 唤醒 + 解锁的 App 侧入口；实际序列在提权进程 `WakeUnlockController` */
 class WakeUnlockEngine {
 
-    /** 与 `WakeUnlockController.Result` 一一对应 */
     enum class WakeResult(val code: Int, val message: UiText) {
-        OK(0, uiTextOf(R.string.wake_result_ok)),
-        WAKE_FAILED(1, uiTextOf(R.string.wake_result_wake_failed)),
-        CREDENTIAL_REQUIRED(2, uiTextOf(R.string.wake_result_credential_required)),
-        CREDENTIAL_REJECTED(3, uiTextOf(R.string.wake_result_credential_rejected)),
-        BOUNCER_NOT_READY(4, uiTextOf(R.string.wake_result_bouncer_not_ready)),
-        UNSUPPORTED(5, uiTextOf(R.string.wake_result_unsupported)),
-        LOCK_FAILED(6, uiTextOf(R.string.wake_result_lock_failed)),
+        OK(WakeUnlockResult.OK, uiTextOf(R.string.wake_result_ok)),
+        WAKE_FAILED(WakeUnlockResult.WAKE_FAILED, uiTextOf(R.string.wake_result_wake_failed)),
+        CREDENTIAL_REQUIRED(
+            WakeUnlockResult.CREDENTIAL_REQUIRED,
+            uiTextOf(R.string.wake_result_credential_required),
+        ),
+        CREDENTIAL_REJECTED(
+            WakeUnlockResult.CREDENTIAL_REJECTED,
+            uiTextOf(R.string.wake_result_credential_rejected),
+        ),
+        BOUNCER_NOT_READY(
+            WakeUnlockResult.BOUNCER_NOT_READY,
+            uiTextOf(R.string.wake_result_bouncer_not_ready),
+        ),
+        UNSUPPORTED(WakeUnlockResult.UNSUPPORTED, uiTextOf(R.string.wake_result_unsupported)),
+        LOCK_FAILED(WakeUnlockResult.LOCK_FAILED, uiTextOf(R.string.wake_result_lock_failed)),
         IPC_FAILED(-1, uiTextOf(R.string.wake_result_ipc_failed));
 
         val isSuccess: Boolean get() = this == OK
@@ -30,49 +38,46 @@ class WakeUnlockEngine {
         }
     }
 
-    /** 点亮屏幕并解除锁屏；失败不重试 */
-    suspend fun wakeAndUnlock(credential: String): WakeResult = withContext(Dispatchers.IO) {
+    /** 亮屏并解锁 */
+    suspend fun unlock(credential: String): WakeResult = withContext(Dispatchers.IO) {
         val result = runCatching {
             RemoteServiceManager.useRemoteService(timeoutMs = IPC_TIMEOUT_MS) { svc ->
-                WakeResult.fromCode(svc.wakeAndUnlock(credential))
+                WakeResult.fromCode(svc.unlock(credential))
             }
         }.getOrElse { t ->
-            Timber.w(t, "wakeAndUnlock: IPC failed")
+            Timber.w(t, "unlock: IPC failed")
             WakeResult.IPC_FAILED
         }
-        Timber.i("wakeAndUnlock -> %s", result)
+        Timber.i("unlock -> %s", result)
         result
     }
 
-    /** 设置页测试：锁屏 → 延时 → 解锁（提权进程内串行） */
-    suspend fun testWakeAndUnlock(credential: String): WakeResult = withContext(Dispatchers.IO) {
+    /** 设置页自测：先锁屏息屏再解锁 */
+    suspend fun testUnlock(credential: String): WakeResult = withContext(Dispatchers.IO) {
         val result = runCatching {
             RemoteServiceManager.useRemoteService(timeoutMs = IPC_TIMEOUT_MS) { svc ->
-                WakeResult.fromCode(svc.testWakeAndUnlock(credential))
+                WakeResult.fromCode(svc.testUnlock(credential))
             }
         }.getOrElse { t ->
-            Timber.w(t, "testWakeAndUnlock: IPC failed")
+            Timber.w(t, "testUnlock: IPC failed")
             WakeResult.IPC_FAILED
         }
-        Timber.i("testWakeAndUnlock -> %s", result)
+        Timber.i("testUnlock -> %s", result)
         result
     }
 
-    /** 仅点亮屏幕，不解锁 */
-    suspend fun wakeScreen(): Boolean = withContext(Dispatchers.IO) {
-        runCatching {
-            RemoteServiceManager.useRemoteService(timeoutMs = IPC_TIMEOUT_MS) { it.wakeScreen() }
-        }.getOrDefault(false)
-    }
-
-    /** 熄屏；保持解锁状态，避免下次定时再解 */
-    suspend fun turnScreenOff(): Boolean = withContext(Dispatchers.IO) {
-        runCatching {
+    /** 锁屏并息屏（任务结束后自动休眠） */
+    suspend fun lockAndSleep(): WakeResult = withContext(Dispatchers.IO) {
+        val result = runCatching {
             RemoteServiceManager.useRemoteService(timeoutMs = IPC_TIMEOUT_MS) { svc ->
-                svc.setDisplayPower(false)
-                true
+                WakeResult.fromCode(svc.lockAndSleep())
             }
-        }.getOrDefault(false)
+        }.getOrElse { t ->
+            Timber.w(t, "lockAndSleep: IPC failed")
+            WakeResult.IPC_FAILED
+        }
+        Timber.i("lockAndSleep -> %s", result)
+        result
     }
 
     private companion object {

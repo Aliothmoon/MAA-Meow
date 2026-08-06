@@ -166,7 +166,7 @@ class LaunchPipeline(
                 }
                 val credential = if (unlockType == "pin") pin else ""
                 log.append(uiTextOf(R.string.schedule_log_wake_start))
-                val wake = wakeUnlockEngine.wakeAndUnlock(credential)
+                val wake = wakeUnlockEngine.unlock(credential)
                 if (wake.isSuccess) {
                     log.append(uiTextOf(R.string.schedule_log_wake_ok))
                     log.append(uiTextOf(R.string.schedule_log_keyguard_skipped))
@@ -228,7 +228,7 @@ class LaunchPipeline(
                     },
                     shouldAbort = {
                         cancelRequested.get() || startNowRequested.get()
-                            || activeRequestId.get() != request.requestId
+                                || activeRequestId.get() != request.requestId
                     },
                 )
 
@@ -261,6 +261,7 @@ class LaunchPipeline(
                     terminalMessage = null
                     log.append(uiTextOf(R.string.schedule_log_start_success))
                 }
+
                 is StartTaskChainUseCase.Result.Failed -> {
                     terminalResult = result.executionResult
                     terminalMessage = result.message
@@ -392,16 +393,17 @@ class LaunchPipeline(
             when {
                 cur is LaunchSession.Idle ->
                     LaunchSession.InFlight(request, phase, presentUi)
+
                 cur is LaunchSession.InFlight
-                    && cur.request.requestId == request.requestId ->
+                        && cur.request.requestId == request.requestId ->
                     LaunchSession.InFlight(request, phase, presentUi)
+
                 else -> cur // 已被其他 request 占用，不覆盖
             }
         }
     }
 
     private suspend fun awaitAutoSleep() {
-        // journal 已 end；仅熄屏，不再 append
         val finished = withTimeoutOrNull(AUTO_SLEEP_TIMEOUT_MS) {
             compositionService.state.filter { it != MaaExecutionState.IDLE }.first()
             compositionService.state.filter { it == MaaExecutionState.IDLE }.first()
@@ -410,7 +412,7 @@ class LaunchPipeline(
             "LaunchPipeline: autoSleep finished=%s",
             finished != null,
         )
-        wakeUnlockEngine.turnScreenOff()
+        wakeUnlockEngine.lockAndSleep()
     }
 
     companion object {
