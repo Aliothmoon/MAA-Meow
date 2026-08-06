@@ -26,7 +26,13 @@ class ResourceInitService(
     val state: StateFlow<ResourceInitState> = _state.asStateFlow()
 
     suspend fun checkAndInit() {
-        _state.value = ResourceInitState.Checking
+        val cur = _state.value
+        if (cur !is ResourceInitState.NotChecked && cur !is ResourceInitState.Failed) {
+            return
+        }
+        if (!_state.compareAndSet(cur, ResourceInitState.Checking)) {
+            return
+        }
 
         if (pathConfig.isResourceReady) {
             _state.value = ResourceInitState.Ready

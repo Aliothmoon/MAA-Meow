@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -72,6 +73,19 @@ class UnifiedStateDispatcher(
                 }
         }
         Timber.i("Started observing unified state")
+
+        // 资源初始化检查不依赖首页组合，进程启动即执行 —
+        // 定时任务/开机自启/锁屏拉起的进程同样能走通资源加载门
+        scope.launch {
+            resourceInitService.checkAndInit()
+        }
+
+        scope.launch {
+            chainState.isLoaded.first { it }
+            runCatching { activityManager.load(chainState.clientType) }
+                .onFailure { Timber.w(it, "Startup activity data load failed") }
+            activityManager.startPeriodicCheck()
+        }
 
         // 服务已连接 + 资源已初始化 → 触发资源加载
         scope.launch {
