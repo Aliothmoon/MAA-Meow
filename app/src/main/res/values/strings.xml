@@ -1101,6 +1101,12 @@
     <string name="panel_depot_skip_during_resource">资源收集限时全天开放期间跳过</string>
     <string name="panel_depot_add_plan">添加</string>
     <string name="panel_depot_collapse_all">折叠</string>
+    <string name="panel_depot_preset">预设</string>
+    <string name="panel_depot_preset_chip_1">低级芯片（全职业）</string>
+    <string name="panel_depot_preset_chip_2">高级芯片组（全职业）</string>
+    <string name="panel_depot_preset_lmd">龙门币</string>
+    <string name="panel_depot_preset_certificate">采购凭证（红票）</string>
+    <string name="panel_depot_preset_skill_summary">技巧概要·卷3</string>
     <string name="panel_depot_target_inventory">目标库存</string>
     <string name="panel_depot_stone_count">最多使用 N 个源石</string>
     <string name="panel_depot_not_selected">未选择</string>

@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -18,12 +19,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.UnfoldLess
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -33,7 +37,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -89,6 +95,7 @@ fun DepotMaintainConfigPanel(
 
     // 展开态是纯 UI 局部状态，不持久化；删除时重映射下标，避免落到相邻计划。
     val expandedIndices = remember { mutableStateListOf<Int>() }
+    var presetMenuExpanded by remember { mutableStateOf(false) }
 
     val notSelectedLabel = stringResource(R.string.panel_depot_not_selected)
 
@@ -190,6 +197,40 @@ fun DepotMaintainConfigPanel(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(stringResource(R.string.panel_depot_collapse_all))
+            }
+        }
+
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { presetMenuExpanded = true },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                Text(stringResource(R.string.panel_depot_preset))
+                Spacer(modifier = Modifier.width(6.dp))
+                Icon(
+                    Icons.Default.ArrowDropDown,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            DropdownMenu(
+                expanded = presetMenuExpanded,
+                onDismissRequest = { presetMenuExpanded = false },
+            ) {
+                DepotMaintainPreset.entries.forEach { preset ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(preset.labelRes)) },
+                        onClick = {
+                            presetMenuExpanded = false
+                            onConfigChange(
+                                config.copy(
+                                    plans = appendDepotMaintainPreset(config.plans, preset),
+                                )
+                            )
+                        },
+                    )
+                }
             }
         }
 

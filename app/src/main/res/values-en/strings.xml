@@ -1046,6 +1046,12 @@
     <string name="panel_depot_skip_during_resource">Skip while the resource collection event is active</string>
     <string name="panel_depot_add_plan">Add</string>
     <string name="panel_depot_collapse_all">Collapse</string>
+    <string name="panel_depot_preset">Preset</string>
+    <string name="panel_depot_preset_chip_1">Chips (All Classes)</string>
+    <string name="panel_depot_preset_chip_2">Chip Packs (All Classes)</string>
+    <string name="panel_depot_preset_lmd">LMD</string>
+    <string name="panel_depot_preset_certificate">Purchase Certificates</string>
+    <string name="panel_depot_preset_skill_summary">Skill Summary - III</string>
     <string name="panel_depot_target_inventory">Target inventory</string>
     <string name="panel_depot_stone_count">Use up to N Originite Prime</string>
     <string name="panel_depot_not_selected">Not selected</string>
