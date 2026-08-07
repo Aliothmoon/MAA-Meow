@@ -82,8 +82,9 @@ jobs:
         run: |
           SO=app/src/main/jniLibs/arm64-v8a/libopencv_world4.so
           echo "before: $(shasum -a 256 "$SO" | cut -d' ' -f1)"
-          python scripts/patch_kleidicv_sve.py "$SO"
-          python scripts/patch_kleidicv_sve.py "$SO" --verify
+          # 显式写死 neon：sve 模式会产出必崩的库，不能靠默认值兜底
+          python scripts/patch_kleidicv_sve.py "$SO" --mode neon
+          python scripts/patch_kleidicv_sve.py "$SO" --mode neon --verify
           echo "after:  $(shasum -a 256 "$SO" | cut -d' ' -f1)"
 
       - name: Override ABI filter
