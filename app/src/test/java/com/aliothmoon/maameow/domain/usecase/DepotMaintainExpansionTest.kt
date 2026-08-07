@@ -81,12 +81,18 @@ class DepotMaintainExpansionTest {
         useAutoSeries: Boolean = false,
         skipDuringActivity: Boolean = false,
         skipDuringResourceCollection: Boolean = false,
+        useMedicine: Boolean = true,
+        useStone: Boolean = true,
+        useExpiringMedicine: Boolean = false,
     ) = DepotMaintainConfig(
         updateDepot = updateDepot,
         customStageCode = customStageCode,
         useAutoSeries = useAutoSeries,
         skipDuringActivity = skipDuringActivity,
         skipDuringResourceCollection = skipDuringResourceCollection,
+        useMedicine = useMedicine,
+        useStone = useStone,
+        useExpiringMedicine = useExpiringMedicine,
         plans = plans.toList(),
     )
 
@@ -314,6 +320,26 @@ class DepotMaintainExpansionTest {
         assertEquals(listOf(R.string.runlog_depot_plan_inventory_enough), result.logs.resIds())
     }
 
+    /** 空关卡同样排在库存检查之后：已达标就报「库存已足」，不报 ERROR 级的「未指定关卡」 */
+    @Test
+    fun sufficientInventory_skipsBeforeBlankStageCheck() {
+        val result = config(plan(dropCount = 100, stage = ""))
+            .expand(inventory = mapOf(ITEM to 100))
+        assertTrue(result.params.isEmpty())
+        assertEquals(listOf(R.string.runlog_depot_plan_inventory_enough), result.logs.resIds())
+        assertEquals(LogLevel.TRACE, result.logs[0].second)
+    }
+
+    /** 配置不完整的两项仍排在库存检查之前：没选材料时连缺口都算不了 */
+    @Test
+    fun incompleteConfig_isReportedBeforeInventoryCheck() {
+        val noItem = config(plan(dropId = "", dropCount = 1)).expand(inventory = mapOf(ITEM to 999))
+        assertEquals(listOf(R.string.runlog_depot_plan_invalid_drop), noItem.logs.resIds())
+
+        val zeroTarget = config(plan(dropCount = 0)).expand(inventory = mapOf(ITEM to 999))
+        assertEquals(listOf(R.string.runlog_depot_plan_zero_count), zeroTarget.logs.resIds())
+    }
+
     /** 开关关闭时数量必须归零，而不是沿用已保存的值 */
     @Test
     fun fightJson_zeroesConsumablesWhenSwitchesOff() {
@@ -323,6 +349,67 @@ class DepotMaintainExpansionTest {
         val json = result.params[0].json()
         assertEquals(0, json["medicine"]!!.jsonPrimitive.content.toInt())
         assertEquals(0, json["stone"]!!.jsonPrimitive.content.toInt())
+    }
+
+    // --- 任务级药/源石总开关 ---
+
+    /** 总开关关掉后，计划自己勾着也得归零；计划里的勾选值不清空，重开即恢复 */
+    @Test
+    fun taskLevelSwitchesOff_zeroConsumablesEvenWhenPlanChecked() {
+        val checked = plan(useMedicine = true, medicineCount = 5, useStone = true, stoneCount = 2)
+
+        val medicineOff = config(checked, useMedicine = false).expand().params[0].json()
+        assertEquals(0, medicineOff["medicine"]!!.jsonPrimitive.content.toInt())
+        assertEquals(2, medicineOff["stone"]!!.jsonPrimitive.content.toInt())
+
+        val stoneOff = config(checked, useStone = false).expand().params[0].json()
+        assertEquals(5, stoneOff["medicine"]!!.jsonPrimitive.content.toInt())
+        assertEquals(0, stoneOff["stone"]!!.jsonPrimitive.content.toInt())
+    }
+
+    /** 总开关默认开，行为与改动前一致 */
+    @Test
+    fun taskLevelSwitchesDefaultOn_keepPlanValues() {
+        val result = config(
+            plan(useMedicine = true, medicineCount = 5, useStone = true, stoneCount = 2)
+        ).expand()
+        val json = result.params[0].json()
+        assertEquals(5, json["medicine"]!!.jsonPrimitive.content.toInt())
+        assertEquals(2, json["stone"]!!.jsonPrimitive.content.toInt())
+    }
+
+    // --- 临期药 ---
+
+    /** 关掉时不下发 medicine_expire_days，让 core 用默认值 */
+    @Test
+    fun expiringMedicineOff_omitsExpireDays() {
+        val json = config(plan()).expand().params[0].json()
+        assertTrue("medicine_expire_days" !in json)
+    }
+
+    /** 阈值固定 2 天，不随计划或理智作战的设置变化 */
+    @Test
+    fun expiringMedicineOn_emitsFixedThreshold() {
+        val json = config(plan(), useExpiringMedicine = true).expand().params[0].json()
+        assertEquals(
+            DepotMaintainConfig.EXPIRING_MEDICINE_DAYS,
+            json["medicine_expire_days"]!!.jsonPrimitive.content.toInt(),
+        )
+    }
+
+    /** 临期药与药剂总开关互不影响：药关了照样带阈值（medicine=0 时 core 自行忽略） */
+    @Test
+    fun expiringMedicine_isIndependentOfUseMedicineSwitch() {
+        val json = config(
+            plan(useMedicine = true, medicineCount = 5),
+            useMedicine = false,
+            useExpiringMedicine = true,
+        ).expand().params[0].json()
+        assertEquals(0, json["medicine"]!!.jsonPrimitive.content.toInt())
+        assertEquals(
+            DepotMaintainConfig.EXPIRING_MEDICINE_DAYS,
+            json["medicine_expire_days"]!!.jsonPrimitive.content.toInt(),
+        )
     }
 
     // --- 空计划 ---

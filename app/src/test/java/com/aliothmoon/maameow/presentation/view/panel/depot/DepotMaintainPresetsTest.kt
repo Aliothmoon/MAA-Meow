@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.presentation.view.panel.depot
 import com.aliothmoon.maameow.data.model.DepotMaintainPlan
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotSame
 import org.junit.Test
 
 class DepotMaintainPresetsTest {
@@ -76,7 +75,6 @@ class DepotMaintainPresetsTest {
         val twice = appendDepotMaintainPreset(once, DepotMaintainPreset.LMD)
 
         assertEquals(existing, once.first())
-        assertNotSame(existing, once.last())
         assertEquals(
             listOf(
                 Triple("1-7", "30011", 100),

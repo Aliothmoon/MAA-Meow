@@ -20,9 +20,39 @@ data class DepotMaintainPlan(
     val stoneCount: Int = 0,
 )
 
+/** 一条计划在本次运行里会被怎么处理 */
+enum class DepotPlanOutcome {
+    NoItem,
+    ZeroTarget,
+    Enough,
+    StageRequired,
+    StageClosed,
+    Runnable,
+}
+
 /**
- * 库存保持：展开为可选 Depot + N 个 Fight。
- * 无库存记录按 0 满量刷（与 Fight 目标库存「未识别 skip」不同）。
+ * 判定一条计划的去向，执行侧据此跳过并打日志，配置页据此渲染
+ *
+ * 分支顺序对齐上游 SerializeTask：先查配置完整性，再查库存，最后才查关卡
+ * —— 库存已够就不必再报关卡问题
+ */
+fun depotPlanOutcome(
+    plan: DepotMaintainPlan,
+    currentCount: Int,
+    isStageOpen: (String) -> Boolean,
+): DepotPlanOutcome = when {
+    plan.dropId.isBlank() -> DepotPlanOutcome.NoItem
+    plan.dropCount <= 0 -> DepotPlanOutcome.ZeroTarget
+    currentCount >= plan.dropCount -> DepotPlanOutcome.Enough
+    // 空串是合法关卡参数（当前/上次），但库存保持算不出缺口，必须落到具体关卡
+    plan.stage.isBlank() -> DepotPlanOutcome.StageRequired
+    !isStageOpen(plan.stage) -> DepotPlanOutcome.StageClosed
+    else -> DepotPlanOutcome.Runnable
+}
+
+/**
+ * 库存保持：展开为可选 Depot + N 个 Fight
+ * 无库存记录按 0 满量刷（与 Fight 目标库存「未识别 skip」不同）
  */
 @Serializable
 data class DepotMaintainConfig(
@@ -32,6 +62,12 @@ data class DepotMaintainConfig(
     val useAutoSeries: Boolean = false,
     val skipDuringActivity: Boolean = false,
     val skipDuringResourceCollection: Boolean = false,
+    /** 关掉后各计划隐藏理智药行，且一律按 0 下发 */
+    val useMedicine: Boolean = true,
+    /** 关掉后各计划隐藏源石行，且一律按 0 下发 */
+    val useStone: Boolean = true,
+    /** 对全部计划生效，阈值固定 [EXPIRING_MEDICINE_DAYS] 天 */
+    val useExpiringMedicine: Boolean = false,
     val plans: List<DepotMaintainPlan> = emptyList(),
 ) : TaskParamProvider {
 
@@ -56,50 +92,58 @@ data class DepotMaintainConfig(
 
         plans.forEachIndexed { index, plan ->
             val no = index + 1
-            if (plan.dropId.isBlank()) {
-                ctx.appendLog(uiTextOf(R.string.runlog_depot_plan_invalid_drop, no), LogLevel.ERROR)
-                return@forEachIndexed
-            }
-            if (plan.dropCount <= 0) {
-                ctx.appendLog(uiTextOf(R.string.runlog_depot_plan_zero_count, no), LogLevel.ERROR)
-                return@forEachIndexed
-            }
-            if (plan.stage.isBlank()) {
-                ctx.appendLog(uiTextOf(R.string.runlog_depot_plan_no_stage, no), LogLevel.ERROR)
-                return@forEachIndexed
-            }
-
             val current = ctx.depotRepository.countOf(plan.dropId)
+            val outcome = depotPlanOutcome(plan, current) { ctx.activityManager.isStageOpen(it) }
+            when (outcome) {
+                DepotPlanOutcome.NoItem -> {
+                    ctx.appendLog(uiTextOf(R.string.runlog_depot_plan_invalid_drop, no), LogLevel.ERROR)
+                    return@forEachIndexed
+                }
+
+                DepotPlanOutcome.ZeroTarget -> {
+                    ctx.appendLog(uiTextOf(R.string.runlog_depot_plan_zero_count, no), LogLevel.ERROR)
+                    return@forEachIndexed
+                }
+
+                DepotPlanOutcome.Enough -> {
+                    val dropName = ctx.itemHelper.getItemInfo(plan.dropId)?.name ?: plan.dropId
+                    ctx.appendLog(
+                        uiTextOf(
+                            R.string.runlog_depot_plan_inventory_enough,
+                            no.toString(), dropName, current, plan.dropCount,
+                        ),
+                        LogLevel.TRACE,
+                    )
+                    return@forEachIndexed
+                }
+
+                DepotPlanOutcome.StageRequired -> {
+                    ctx.appendLog(uiTextOf(R.string.runlog_depot_plan_no_stage, no), LogLevel.ERROR)
+                    return@forEachIndexed
+                }
+
+                DepotPlanOutcome.StageClosed -> {
+                    ctx.appendLog(
+                        uiTextOf(R.string.runlog_depot_plan_stage_not_open, no, plan.stage),
+                        LogLevel.TRACE,
+                    )
+                    return@forEachIndexed
+                }
+
+                DepotPlanOutcome.Runnable -> Unit
+            }
+
             val need = plan.dropCount - current
-            if (need <= 0) {
-                val dropName = ctx.itemHelper.getItemInfo(plan.dropId)?.name ?: plan.dropId
-                ctx.appendLog(
-                    uiTextOf(
-                        R.string.runlog_depot_plan_inventory_enough,
-                        no.toString(), dropName, current, plan.dropCount,
-                    ),
-                    LogLevel.TRACE,
-                )
-                return@forEachIndexed
-            }
-
-            if (!ctx.activityManager.isStageOpen(plan.stage)) {
-                ctx.appendLog(
-                    uiTextOf(R.string.runlog_depot_plan_stage_not_open, no, plan.stage),
-                    LogLevel.TRACE,
-                )
-                return@forEachIndexed
-            }
-
             val listIndex = params.size
             val target = DropTarget(
                 dropId = plan.dropId,
                 dropCount = plan.dropCount,
                 stage = plan.stage,
-                medicine = if (plan.useMedicine) plan.medicineCount else 0,
-                stone = if (plan.useStone) plan.stoneCount else 0,
+                medicine = if (useMedicine && plan.useMedicine) plan.medicineCount else 0,
+                stone = if (useStone && plan.useStone) plan.stoneCount else 0,
                 series = series,
                 logLabel = no.toString(),
+                medicineExpireDays = if (useExpiringMedicine) EXPIRING_MEDICINE_DAYS else null,
             )
             ctx.dropsRefresher.stage(TaskSlot(ctx.node.id, listIndex), target)
             params += MaaTaskParams(
@@ -109,5 +153,10 @@ data class DepotMaintainConfig(
         }
 
         return params
+    }
+
+    companion object {
+        /** 临期药阈值，对齐上游 DepotMaintainTask.ExpiringMedicineDays，不开放给用户调 */
+        const val EXPIRING_MEDICINE_DAYS = 2
     }
 }

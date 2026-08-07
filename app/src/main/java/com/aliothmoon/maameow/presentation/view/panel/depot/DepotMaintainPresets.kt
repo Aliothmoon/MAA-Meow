@@ -5,9 +5,9 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.DepotMaintainPlan
 
 /**
- * 库存保持的 UI 内置预设。
+ * 库存保持的 UI 内置预设
  *
- * 数据与 MAA WPF DepotMaintainTaskUserControlModel.PresetData 保持一致。
+ * 数据与 MAA WPF DepotMaintainTaskUserControlModel.PresetData 保持一致
  */
 internal enum class DepotMaintainPreset(
     @get:StringRes val labelRes: Int,
