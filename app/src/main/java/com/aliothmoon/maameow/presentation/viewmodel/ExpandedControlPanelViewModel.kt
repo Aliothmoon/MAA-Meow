@@ -333,4 +333,32 @@ class ExpandedControlPanelViewModel(
             }
         }
     }
+
+    fun onAddProfilesToSequence(profileIds: List<String>) {
+        viewModelScope.launch { chainState.addProfilesToSequence(profileIds) }
+    }
+    fun onRemoveSequenceEntry(entryId: String) {
+        viewModelScope.launch { chainState.removeSequenceEntry(entryId) }
+    }
+    fun onReorderSequence(fromIndex: Int, toIndex: Int) {
+        viewModelScope.launch {
+            runCatching { chainState.reorderSequence(fromIndex, toIndex) }
+        }
+    }
+    fun onSetProfileSequenceEnabled(enabled: Boolean) {
+        viewModelScope.launch { chainState.setProfileSequenceEnabled(enabled) }
+    }
+    fun onSwitchSequenceConfig(configId: String) {
+        viewModelScope.launch { chainState.switchSequenceConfig(configId) }
+    }
+    fun onCreateSequenceConfig() {
+        viewModelScope.launch { chainState.createSequenceConfig() }
+    }
+    fun onRenameSequenceConfig(configId: String, name: String) {
+        viewModelScope.launch { chainState.renameSequenceConfig(configId, name) }
+    }
+    fun onDeleteSequenceConfig(configId: String) {
+        viewModelScope.launch { chainState.deleteSequenceConfig(configId) }
+    }
+
 }
