@@ -1,23 +1,8 @@
 package com.aliothmoon.maameow.presentation.view.panel.fight
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,20 +10,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
+import com.aliothmoon.maameow.presentation.components.InlineConfirmPanel
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 
 
 /**
  * 允许保存源石使用区域
- * 使用内嵌式确认面板替代 AlertDialog（悬浮窗不支持 Dialog）
+ * 启用前二次确认走 InlineConfirmPanel（悬浮窗弹不出 Dialog）
  */
 @Composable
 private fun AllowUseStoneSaveSection(
@@ -61,61 +45,17 @@ private fun AllowUseStoneSaveSection(
             label = stringResource(R.string.panel_stone_allow_save)
         )
 
-        // 内嵌式警告确认面板
-        AnimatedVisibility(
+        InlineConfirmPanel(
             visible = showWarningPanel,
-            enter = expandVertically(),
-            exit = shrinkVertically()
-        ) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.errorContainer,
-                shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
-            ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.common_warning),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                    Text(
-                        text = stringResource(R.string.panel_stone_warning_message),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
-                    ) {
-                        OutlinedButton(
-                            onClick = { showWarningPanel = false },
-                            modifier = Modifier.height(32.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
-                        ) {
-                            Text(stringResource(R.string.common_cancel), style = MaterialTheme.typography.bodySmall)
-                        }
-                        Button(
-                            onClick = {
-                                onConfigChange(config.copy(allowUseStoneSave = true))
-                                showWarningPanel = false
-                            },
-                            modifier = Modifier.height(32.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Text(stringResource(R.string.panel_stone_enable_confirm), style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                }
-            }
-        }
+            title = stringResource(R.string.common_warning),
+            message = stringResource(R.string.panel_stone_warning_message),
+            confirmText = stringResource(R.string.panel_stone_enable_confirm),
+            onConfirm = {
+                onConfigChange(config.copy(allowUseStoneSave = true))
+                showWarningPanel = false
+            },
+            onDismiss = { showWarningPanel = false },
+        )
     }
 }
 
