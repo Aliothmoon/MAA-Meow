@@ -112,16 +112,38 @@ class LogExportService(
                 }
             }
 
+            val unreadableFiles = mutableListOf<Pair<String, String>>()
             for (file in logFiles) {
                 val relativePath = file.relativeTo(baseDir).path
                 val entry = ZipEntry(relativePath)
                 entry.time = file.lastModified()
                 zos.putNextEntry(entry)
 
-                FileInputStream(file).use { fis ->
-                    fis.copyTo(zos, bufferSize = 8192)
+                try {
+                    FileInputStream(file).use { fis ->
+                        fis.copyTo(zos, bufferSize = 8192)
+                    }
+                } catch (e: Exception) {
+                    // 提权进程写入的文件可能对 App 不可读（EACCES），跳过而不是让整个导出失败
+                    Timber.w(e, "Skipping unreadable log file during export: ${file.absolutePath}")
+                    unreadableFiles += relativePath to (e.message ?: e.javaClass.simpleName)
                 }
                 zos.closeEntry()
+            }
+
+            if (unreadableFiles.isNotEmpty()) {
+                zos.putNextEntry(ZipEntry("unreadable.txt"))
+                val content = buildString {
+                    appendLine("以下文件因权限问题未能导出（多为提权进程写入的日志）：")
+                    appendLine()
+                    unreadableFiles.forEach { (path, reason) ->
+                        appendLine(path)
+                        appendLine("  reason: $reason")
+                    }
+                }
+                zos.write(content.toByteArray(Charsets.UTF_8))
+                zos.closeEntry()
+                Timber.w("Exported ${unreadableFiles.size} unreadable log file(s), see unreadable.txt in the zip")
             }
         }
     }

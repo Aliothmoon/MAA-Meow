@@ -35,7 +35,9 @@ abstract class GenerateAssetManifestTask : DefaultTask() {
     private fun listFilesRecursively(dir: File, basePath: String): List<String> {
         val result = mutableListOf<String>()
         dir.listFiles()?.forEach { file ->
-            val relativePath = if (basePath.isEmpty()) file.name else "$basePath/${file.name}"
+            val name = file.name
+            if (shouldSkip(name)) return@forEach
+            val relativePath = if (basePath.isEmpty()) name else "$basePath/$name"
             if (file.isDirectory) {
                 result.addAll(listFilesRecursively(file, relativePath))
             } else {
@@ -43,6 +45,12 @@ abstract class GenerateAssetManifestTask : DefaultTask() {
             }
         }
         return result
+    }
+
+    private fun shouldSkip(name: String): Boolean {
+        // 与 AAPT2 默认 ignoreAssetsPattern 对齐：跳过 macOS 元数据与隐藏文件，
+        // 避免清单列出但 APK 实际不含的文件导致设备端解压失败
+        return name == ".DS_Store" || name.startsWith("._") || name.startsWith(".")
     }
 }
 
