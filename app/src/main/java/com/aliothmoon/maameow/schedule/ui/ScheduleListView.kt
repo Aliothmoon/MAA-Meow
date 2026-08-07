@@ -137,7 +137,13 @@ fun ScheduleListView(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentPadding = PaddingValues(horizontal = MaaDesignTokens.Spacing.listHorizontal, vertical = MaaDesignTokens.Spacing.sm),
+                // Bottom inset clears the FAB so the last card's Switch stays tappable.
+                contentPadding = PaddingValues(
+                    start = MaaDesignTokens.Spacing.listHorizontal,
+                    end = MaaDesignTokens.Spacing.listHorizontal,
+                    top = MaaDesignTokens.Spacing.sm,
+                    bottom = 88.dp,
+                ),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(state.strategies, key = { it.id }) { strategy ->
