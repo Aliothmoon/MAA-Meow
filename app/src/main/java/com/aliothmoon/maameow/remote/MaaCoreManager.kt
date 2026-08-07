@@ -25,6 +25,12 @@ object MaaCoreManager {
 
     val maaService: MaaCoreServiceImpl = MaaCoreServiceImpl(MaaContext)
 
+    /**
+     * setup() 记录的 userDir，用于 CreateInstance 后修复 debug 日志权限。
+     */
+    @Volatile
+    var userDir: String? = null
+
     fun destroy() {
         Ln.i("$TAG: destroy()")
         maaService.DestroyInstance()
