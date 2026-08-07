@@ -1,0 +1,134 @@
+name: Build Compat APK (no SVE)
+
+# 给 BlueStacks 一类谎报 HWCAP2_SVE2 的模拟器环境出包，见 issue #202
+# 在 setup_maa_core.py 之后把 libopencv_world4.so 的 KleidiCV SVE2 分派改成恒选 NEON
+
+on:
+  push:
+    branches:
+      - 'fix/kleidicv-sve-compat'
+  workflow_dispatch:
+    inputs:
+      maa_repo:
+        description: 'MAA Core GitHub repo (owner/repo)'
+        required: false
+        default: 'MaaAssistantArknights/MaaAssistantArknights'
+      maa_tag:
+        description: 'MAA Core release tag'
+        required: false
+        default: 'latest'
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK and CMake
+        run: |
+          sdkmanager --install "ndk;29.0.13113456" "cmake;3.22.1"
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install OCR conversion deps
+        run: python -m pip install -r scripts/requirements.txt
+
+      - name: Download and deploy MAA Core
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_ARG=""
+          MAA_TAG="${{ github.event.inputs.maa_tag }}"
+          if [ -n "$MAA_TAG" ] && [ "$MAA_TAG" != "latest" ]; then
+            TAG_ARG="--tag $MAA_TAG"
+          fi
+          REPO_ARG=""
+          MAA_REPO="${{ github.event.inputs.maa_repo }}"
+          if [ -n "$MAA_REPO" ]; then
+            REPO_ARG="--repo $MAA_REPO"
+          fi
+          python scripts/setup_maa_core.py --clean --abi arm64-v8a $TAG_ARG $REPO_ARG
+
+      - name: Print MAA Resource version
+        run: cat app/src/main/assets/MaaSync/MaaResource/version.json
+
+      - name: Disable KleidiCV SVE2 dispatch
+        run: |
+          SO=app/src/main/jniLibs/arm64-v8a/libopencv_world4.so
+          echo "before: $(shasum -a 256 "$SO" | cut -d' ' -f1)"
+          python scripts/patch_kleidicv_sve.py "$SO"
+          python scripts/patch_kleidicv_sve.py "$SO" --verify
+          echo "after:  $(shasum -a 256 "$SO" | cut -d' ' -f1)"
+
+      - name: Override ABI filter
+        run: |
+          cat >> app/build.gradle.kts << 'EOF'
+
+          android.defaultConfig.ndk.abiFilters.clear()
+          android.defaultConfig.ndk.abiFilters += "arm64-v8a"
+          EOF
+
+      - name: Decode keystore
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "${{ github.workspace }}/release.jks"
+            echo "path=${{ github.workspace }}/release.jks" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::KEYSTORE_BASE64 未配置，产出未签名 APK"
+            echo "path=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build Release APK
+        env:
+          KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean assembleRelease
+
+      - name: Rename APK
+        run: |
+          cd app/build/outputs/apk/release
+          TAG="${GITHUB_REF_NAME:-dev}"
+          SAFE_TAG="${TAG//\//-}"
+          for f in *.apk; do
+            mv "$f" "MaaMeow-${SAFE_TAG}-arm64-v8a-nosve.apk"
+          done
+          ls -l
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: compat-apk-arm64-v8a-nosve
+          path: app/build/outputs/apk/release/*.apk
