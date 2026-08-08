@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -181,25 +182,24 @@ class LaunchPipeline(
                 }
             }
 
-            // profile
+            // profile / sequence
             log.append(uiTextOf(R.string.schedule_log_wait_profile))
             chainState.isLoaded.filter { it }.first()
-            if (chainState.profileId.value != request.profileId) {
-                log.append(uiTextOf(R.string.schedule_log_switch_profile, request.profileId))
-                chainState.switchProfile(request.profileId)
-            }
-            if (chainState.profileId.value != request.profileId) {
+            val profileIds = resolveLaunchProfileIds(request)
+            if (profileIds == null) {
                 terminalResult = ExecutionResult.FAILED_VALIDATION
-                terminalMessage = uiTextOf(R.string.schedule_log_profile_missing)
+                terminalMessage = if (request.useSequence) {
+                    uiTextOf(R.string.schedule_error_sequence_empty)
+                } else {
+                    uiTextOf(R.string.schedule_log_profile_missing)
+                }
                 return
             }
-            val enabled = chainState.chain.value.filter { it.enabled }
-            if (enabled.isEmpty()) {
+            if (profileIds.isEmpty()) {
                 terminalResult = ExecutionResult.FAILED_VALIDATION
                 terminalMessage = uiTextOf(R.string.schedule_log_empty_chain)
                 return
             }
-
             // 前台：无倒计时、不拉主界面；后台：Dialog 倒计时 + 可拉 UI
             // 前台定时/LAUNCH_PROFILE 不会调用 OverlayController.show
             // 悬浮球与音量快捷键依赖用户曾在首页手动启动控制层（_isActive）
@@ -246,30 +246,19 @@ class LaunchPipeline(
                 }
             }
 
-            // start
+            // start: 与手动一致，任务链按用户配置逐个执行
             setPhase(request, LaunchSession.Phase.Preparing, presentUi)
             setPhase(request, LaunchSession.Phase.Starting, presentUi)
-            log.append(uiTextOf(R.string.schedule_log_starting_tasks, enabled.size))
-
-            when (
-                val result = startTaskChain(
-                    chain = enabled,
-                    context = TaskStartContext(mode = TaskStartMode.SCHEDULED),
-                    scheduleLabel = request.displayName,
-                )
-            ) {
-                StartTaskChainUseCase.Result.Success -> {
-                    terminalResult = ExecutionResult.STARTED
-                    terminalMessage = null
-                    log.append(uiTextOf(R.string.schedule_log_start_success))
-                }
-
-                is StartTaskChainUseCase.Result.Failed -> {
-                    terminalResult = result.executionResult
-                    terminalMessage = result.message
-                    log.append(uiTextOf(R.string.schedule_log_start_failed, result.message))
-                }
-            }
+            val startOutcome = runSequentialProfiles(
+                request = request,
+                profileIds = profileIds,
+                log = log,
+                shouldAbort = {
+                    cancelRequested.get() || activeRequestId.get() != request.requestId
+                },
+            )
+            terminalResult = startOutcome.result
+            terminalMessage = startOutcome.message
         } catch (e: CancellationException) {
             terminalResult = ExecutionResult.CANCELLED
             terminalMessage = uiTextOf(R.string.schedule_log_cancelled_preempt)
@@ -412,6 +401,138 @@ class LaunchPipeline(
     }
 
     /** 关游戏只认自然结束（RUNNING → IDLE/ERROR），手动停止不关；熄屏不区分结束方式 */
+    private data class SequentialStartOutcome(
+        val result: ExecutionResult,
+        val message: UiText?,
+    )
+
+    private fun resolveLaunchProfileIds(request: LaunchRequest): List<String>? {
+        val profiles = chainState.profiles.value
+        val validIds = profiles.map { it.id }.toSet()
+        if (request.useSequence) {
+            val seq = chainState.sequenceConfigs.value.find { it.id == request.sequenceConfigId }
+                ?: return null
+            return seq.entries.map { it.profileId }.filter { it in validIds }
+        }
+        if (request.profileId.isEmpty() || request.profileId !in validIds) {
+            return null
+        }
+        return listOf(request.profileId)
+    }
+
+    private suspend fun runSequentialProfiles(
+        request: LaunchRequest,
+        profileIds: List<String>,
+        log: ScheduleTriggerLogger.Session,
+        shouldAbort: () -> Boolean,
+    ): SequentialStartOutcome {
+        val total = profileIds.size
+        var anyStarted = false
+        var lastFailure: SequentialStartOutcome? = null
+        for ((offset, profileId) in profileIds.withIndex()) {
+            if (shouldAbort()) {
+                return SequentialStartOutcome(
+                    result = ExecutionResult.CANCELLED,
+                    message = uiTextOf(R.string.schedule_log_user_cancelled),
+                )
+            }
+            val index = offset + 1
+            val profileName = chainState.profiles.value.find { it.id == profileId }?.name ?: profileId
+            if (chainState.profileId.value != profileId) {
+                log.append(uiTextOf(R.string.schedule_log_switch_profile, profileName))
+                chainState.switchProfile(profileId)
+            }
+            if (chainState.profileId.value != profileId) {
+                return SequentialStartOutcome(
+                    result = ExecutionResult.FAILED_VALIDATION,
+                    message = uiTextOf(R.string.schedule_log_profile_missing),
+                )
+            }
+            val enabled = chainState.chain.value.filter { it.enabled }
+            if (enabled.isEmpty()) {
+                log.append(uiTextOf(R.string.schedule_log_empty_chain))
+                lastFailure = SequentialStartOutcome(
+                    result = ExecutionResult.FAILED_VALIDATION,
+                    message = uiTextOf(R.string.schedule_log_empty_chain),
+                )
+                continue
+            }
+            val enabledNames = enabled.joinToString("、") { it.name }.ifEmpty { "-" }
+            if (total > 1) {
+                log.append(
+                    uiTextOf(
+                        R.string.runlog_sequence_profile_start,
+                        index,
+                        total,
+                        profileName,
+                        enabled.size,
+                        enabledNames,
+                    ),
+                )
+            }
+            log.append(uiTextOf(R.string.schedule_log_starting_tasks, enabled.size))
+            when (
+                val result = startTaskChain(
+                    chain = enabled,
+                    context = TaskStartContext(mode = TaskStartMode.SCHEDULED),
+                    scheduleLabel = request.displayName,
+                )
+            ) {
+                StartTaskChainUseCase.Result.Success -> {
+                    anyStarted = true
+                    log.append(uiTextOf(R.string.schedule_log_start_success))
+                }
+                is StartTaskChainUseCase.Result.Failed -> {
+                    log.append(uiTextOf(R.string.schedule_log_start_failed, result.message))
+                    return SequentialStartOutcome(
+                        result = result.executionResult,
+                        message = result.message,
+                    )
+                }
+            }
+            if (offset < profileIds.lastIndex) {
+                val ended = waitProfileIdleOrError(shouldAbort)
+                if (shouldAbort()) {
+                    return SequentialStartOutcome(
+                        result = ExecutionResult.CANCELLED,
+                        message = uiTextOf(R.string.schedule_log_user_cancelled),
+                    )
+                }
+                if (!ended) {
+                    return SequentialStartOutcome(
+                        result = ExecutionResult.FAILED_START,
+                        message = uiTextOf(R.string.task_start_error_start_failed),
+                    )
+                }
+                runCatching { compositionService.stopVirtualDisplay() }
+                delay(800)
+            }
+        }
+        return when {
+            anyStarted -> SequentialStartOutcome(ExecutionResult.STARTED, null)
+            lastFailure != null -> lastFailure
+            else -> SequentialStartOutcome(
+                ExecutionResult.FAILED_VALIDATION,
+                uiTextOf(R.string.schedule_log_empty_chain),
+            )
+        }
+    }
+
+    private suspend fun waitProfileIdleOrError(shouldAbort: () -> Boolean): Boolean {
+        var seenNonIdle = false
+        val ok = withTimeoutOrNull(POST_TASK_TIMEOUT_MS) {
+            compositionService.state.first { cur ->
+                if (shouldAbort()) return@first true
+                if (cur != MaaExecutionState.IDLE && cur != MaaExecutionState.ERROR) {
+                    seenNonIdle = true
+                }
+                seenNonIdle && (cur == MaaExecutionState.IDLE || cur == MaaExecutionState.ERROR)
+            }
+            true
+        }
+        return ok == true && !shouldAbort()
+    }
+
     private suspend fun awaitTaskEnd(closeGame: Boolean, autoSleep: Boolean) {
         var prev = MaaExecutionState.IDLE
         var started = false

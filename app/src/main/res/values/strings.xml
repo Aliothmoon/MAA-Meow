@@ -1573,6 +1573,14 @@
     <string name="schedule_default_name">定时任务-%1$d</string>
     <string name="schedule_error_name_required">请输入策略名称</string>
     <string name="schedule_error_profile_required">请选择任务配置</string>
+    <string name="schedule_target_profile">用户配置</string>
+    <string name="schedule_target_sequence">任务链</string>
+    <string name="schedule_no_sequence_configs">请先在配置管理中创建任务链配置</string>
+    <string name="schedule_sequence_entries">顺序: %1$s</string>
+    <string name="schedule_sequence_start_hint">到点后将按该任务链顺序，逐个执行用户配置</string>
+    <string name="schedule_error_sequence_required">请选择任务链配置</string>
+    <string name="schedule_error_sequence_empty">该任务链没有可执行配置，请先添加</string>
+    <string name="schedule_target_label_sequence">任务链 · %1$s</string>
     <string name="schedule_error_days_required">请选择执行日期</string>
     <string name="schedule_error_times_required">请添加执行时间</string>
     <string name="schedule_error_start_time_required">请选择开始时间</string>

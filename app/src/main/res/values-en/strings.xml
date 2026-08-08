@@ -1517,6 +1517,14 @@
     <string name="schedule_default_name">Schedule-%1$d</string>
     <string name="schedule_error_name_required">Enter a schedule name</string>
     <string name="schedule_error_profile_required">Select a task profile</string>
+    <string name="schedule_target_profile">User profile</string>
+    <string name="schedule_target_sequence">Task sequence</string>
+    <string name="schedule_no_sequence_configs">Create a sequence config in profile management first</string>
+    <string name="schedule_sequence_entries">Order: %1$s</string>
+    <string name="schedule_sequence_start_hint">At trigger time, user profiles in this sequence run one by one</string>
+    <string name="schedule_error_sequence_required">Select a sequence config</string>
+    <string name="schedule_error_sequence_empty">This sequence has no runnable profiles; add some first</string>
+    <string name="schedule_target_label_sequence">Sequence · %1$s</string>
     <string name="schedule_error_days_required">Select execution days</string>
     <string name="schedule_error_times_required">Add at least one execution time</string>
     <string name="schedule_error_start_time_required">Select a start time</string>
