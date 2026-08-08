@@ -44,6 +44,10 @@ class ConfigBackupManager(
             taskProfiles = taskChainState.profiles.value.map { it.sanitized() },
             activeProfileId = taskChainState.profileId.value,
             scheduleStrategies = scheduleStrategyRepository.strategies.value,
+            profileSequence = taskChainState.profileSequence.value,
+            profileSequenceEnabled = taskChainState.profileSequenceEnabled.value,
+            sequenceConfigs = taskChainState.sequenceConfigs.value,
+            activeSequenceConfigId = taskChainState.activeSequenceConfigId.value,
         )
         outputStream.bufferedWriter().use { writer ->
             writer.write(json.encodeToString(ConfigBackup.serializer(), backup))
@@ -70,7 +74,14 @@ class ConfigBackupManager(
             )
         )
         notificationSettingsManager.updateSettings(backup.notificationSettings)
-        taskChainState.importProfiles(backup.taskProfiles, backup.activeProfileId)
+        taskChainState.importProfiles(
+            profiles = backup.taskProfiles,
+            activeId = backup.activeProfileId,
+            sequence = backup.profileSequence,
+            sequenceEnabled = backup.profileSequenceEnabled,
+            sequenceConfigs = backup.sequenceConfigs,
+            activeSequenceConfigId = backup.activeSequenceConfigId,
+        )
 
         // 先取消旧闹钟，再导入并重新注册
         val oldStrategies = scheduleStrategyRepository.strategies.value
