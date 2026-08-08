@@ -70,6 +70,10 @@ fun ExpandedControlPanel(
 
     val nodes by viewModel.chainState.chain.collectAsStateWithLifecycle()
     val profiles by viewModel.chainState.profiles.collectAsStateWithLifecycle()
+    val sequenceConfigs by viewModel.chainState.sequenceConfigs.collectAsStateWithLifecycle()
+    val activeSequenceConfigId by viewModel.chainState.activeSequenceConfigId.collectAsStateWithLifecycle()
+    val profileSequence by viewModel.chainState.profileSequence.collectAsStateWithLifecycle()
+    val profileSequenceEnabled by viewModel.chainState.profileSequenceEnabled.collectAsStateWithLifecycle()
     val profileId by viewModel.chainState.profileId.collectAsStateWithLifecycle()
     val selectedNode = nodes.find { it.id == uiState.selectedNodeId }
     val clientType = remember(nodes) { viewModel.chainState.clientType }
@@ -159,6 +163,10 @@ fun ExpandedControlPanel(
                                 isProfileMode = uiState.isProfileMode,
                                 profiles = profiles,
                                 activeProfileId = profileId,
+                                sequenceConfigs = sequenceConfigs,
+                                activeSequenceConfigId = activeSequenceConfigId,
+                                sequence = profileSequence,
+                                sequenceEnabled = profileSequenceEnabled,
                                 clientType = clientType,
                                 onNodeEnabledChange = viewModel::onNodeEnabledChange,
                                 onNodeSelected = viewModel::onNodeSelected,
@@ -181,6 +189,14 @@ fun ExpandedControlPanel(
                                 onDeleteProfile = viewModel::onDeleteProfile,
                                 onCreateProfile = viewModel::onCreateProfile,
                                 onReorderProfile = viewModel::onReorderProfile,
+                                onAddProfilesToSequence = viewModel::onAddProfilesToSequence,
+                                onRemoveSequenceEntry = viewModel::onRemoveSequenceEntry,
+                                onReorderSequence = viewModel::onReorderSequence,
+                                onSwitchSequenceConfig = viewModel::onSwitchSequenceConfig,
+                                onCreateSequenceConfig = viewModel::onCreateSequenceConfig,
+                                onRenameSequenceConfig = viewModel::onRenameSequenceConfig,
+                                onDeleteSequenceConfig = viewModel::onDeleteSequenceConfig,
+                                onSequenceEnabledChange = viewModel::onSetProfileSequenceEnabled,
                                 modifier = Modifier.fillMaxSize(),
                             )
                         }

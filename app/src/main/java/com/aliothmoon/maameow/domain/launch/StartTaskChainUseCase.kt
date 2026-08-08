@@ -42,6 +42,7 @@ class StartTaskChainUseCase(
         chain: List<TaskChainNode>,
         context: TaskStartContext,
         scheduleLabel: String? = null,
+        onSessionStarted: (suspend () -> Unit)? = null,
     ): Result {
         val plan = when (val decision = prepare(chain, context)) {
             is TaskStartDecision.Ready -> decision.plan
@@ -71,6 +72,7 @@ class StartTaskChainUseCase(
             clientType = plan.clientType,
             preflightLogs = plan.logs,
         ) {
+            onSessionStarted?.invoke()
             if (scheduleLabel != null) {
                 sessionLogger.appendAndWait(
                     appContext.getString(

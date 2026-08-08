@@ -3,9 +3,11 @@ package com.aliothmoon.maameow.schedule.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.data.model.TaskProfile
+import com.aliothmoon.maameow.data.model.TaskSequenceConfig
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
+import com.aliothmoon.maameow.schedule.model.ScheduleTargetKind
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,6 +19,7 @@ import java.time.format.DateTimeFormatter
 data class ScheduleListUiState(
     val strategies: List<ScheduleStrategy> = emptyList(),
     val profiles: List<TaskProfile> = emptyList(),
+    val sequenceConfigs: List<TaskSequenceConfig> = emptyList(),
     val isLoading: Boolean = false
 )
 
@@ -25,7 +28,6 @@ class ScheduleListViewModel(
     private val taskChainState: TaskChainState,
     private val alarmManager: ScheduleAlarmManager,
 ) : ViewModel() {
-
     private val _state = MutableStateFlow(ScheduleListUiState())
     val state: StateFlow<ScheduleListUiState> = _state.asStateFlow()
 
@@ -40,6 +42,11 @@ class ScheduleListViewModel(
                 _state.update { it.copy(profiles = profiles) }
             }
         }
+        viewModelScope.launch {
+            taskChainState.sequenceConfigs.collect { configs ->
+                _state.update { it.copy(sequenceConfigs = configs) }
+            }
+        }
     }
 
     fun onToggleEnabled(strategyId: String, enabled: Boolean) {
@@ -47,7 +54,6 @@ class ScheduleListViewModel(
             val strategy = repository.getById(strategyId) ?: return@launch
             val updated = strategy.copy(enabled = enabled)
             repository.setEnabled(strategyId, enabled)
-
             if (enabled) {
                 alarmManager.scheduleNext(updated)
             } else {
@@ -69,6 +75,15 @@ class ScheduleListViewModel(
         return next?.let {
             val formatter = DateTimeFormatter.ofPattern("MM-dd HH:mm")
             it.format(formatter)
+        }
+    }
+
+    fun resolveTargetLabel(strategy: ScheduleStrategy): String? {
+        return when (strategy.targetKind) {
+            ScheduleTargetKind.PROFILE ->
+                _state.value.profiles.find { it.id == strategy.profileId }?.name
+            ScheduleTargetKind.SEQUENCE ->
+                _state.value.sequenceConfigs.find { it.id == strategy.sequenceConfigId }?.name
         }
     }
 }
