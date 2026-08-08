@@ -76,7 +76,12 @@ class ConfigBackupManager(
         val oldStrategies = scheduleStrategyRepository.strategies.value
         oldStrategies.forEach { scheduleAlarmManager.cancel(it.id) }
         scheduleStrategyRepository.importStrategies(backup.scheduleStrategies)
-        scheduleAlarmManager.rescheduleAll(backup.scheduleStrategies)
+        val orphaned = scheduleStrategyRepository.sanitizeInvalidTargets(
+            profiles = taskChainState.profiles.value,
+            sequenceConfigs = taskChainState.sequenceConfigs.value,
+        )
+        orphaned.forEach { scheduleAlarmManager.cancel(it) }
+        scheduleAlarmManager.rescheduleAll(scheduleStrategyRepository.strategies.value)
     }
 
     companion object {

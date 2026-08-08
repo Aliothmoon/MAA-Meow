@@ -1517,6 +1517,7 @@
     <string name="schedule_default_name">Schedule-%1$d</string>
     <string name="schedule_error_name_required">Enter a schedule name</string>
     <string name="schedule_error_profile_required">Select a task profile</string>
+    <string name="schedule_error_profile_empty">This user profile has no runnable tasks</string>
     <string name="schedule_target_profile">User profile</string>
     <string name="schedule_target_sequence">Task sequence</string>
     <string name="schedule_no_sequence_configs">Create a sequence config in profile management first</string>

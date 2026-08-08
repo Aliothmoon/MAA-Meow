@@ -52,6 +52,7 @@ import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
+import com.aliothmoon.maameow.schedule.model.ScheduleTargetKind
 import com.aliothmoon.maameow.schedule.service.AutoStartHelper
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import org.koin.androidx.compose.koinViewModel
@@ -147,10 +148,15 @@ fun ScheduleListView(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(state.strategies, key = { it.id }) { strategy ->
-                    val profileName = state.profiles.find { it.id == strategy.profileId }?.name
+                    val targetName = viewModel.resolveTargetLabel(strategy)
+                    val targetLabel = when {
+                        strategy.targetKind == ScheduleTargetKind.SEQUENCE && targetName != null ->
+                            stringResource(R.string.schedule_target_label_sequence, targetName)
+                        else -> targetName
+                    }
                     StrategyCard(
                         strategy = strategy,
-                        profileName = profileName,
+                        profileName = targetLabel,
                         nextTrigger = viewModel.getNextTriggerTime(strategy),
                         onToggleEnabled = { viewModel.onToggleEnabled(strategy.id, it) },
                         onClick = { navController.navigate("schedule_edit/${strategy.id}") },

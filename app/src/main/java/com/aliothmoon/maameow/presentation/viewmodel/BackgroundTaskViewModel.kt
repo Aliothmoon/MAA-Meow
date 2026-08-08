@@ -13,6 +13,8 @@ import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.launch.LaunchPipeline
+import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
+import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
 import com.aliothmoon.maameow.domain.launch.LaunchRequest
 import com.aliothmoon.maameow.domain.launch.LaunchSession
 import com.aliothmoon.maameow.domain.launch.LaunchUserEvent
@@ -72,6 +74,8 @@ class BackgroundTaskViewModel(
     private val achievementReporter: AchievementReporter,
     private val gameMuteCoordinator: GameMuteCoordinator,
     private val launchPipeline: LaunchPipeline,
+    private val scheduleRepository: ScheduleStrategyRepository,
+    private val scheduleAlarmManager: ScheduleAlarmManager,
     private val application: Context,
 ) : ViewModel() {
 
@@ -406,6 +410,15 @@ class BackgroundTaskViewModel(
     fun onDeleteProfile(profileId: String) {
         viewModelScope.launch {
             chainState.removeProfile(profileId)
+            // PROFILE 定时解绑 + 可能因此变空的 SEQUENCE 定时一并消毒
+            val detached = scheduleRepository.detachProfileConfig(profileId)
+            val emptied = scheduleRepository.sanitizeInvalidTargets(
+                profiles = chainState.profiles.value,
+                sequenceConfigs = chainState.sequenceConfigs.value,
+            )
+            (detached + emptied).distinct().forEach { strategyId ->
+                scheduleAlarmManager.cancel(strategyId)
+            }
             _state.update { it.copy(selectedNodeId = null) }
         }
     }
@@ -523,6 +536,11 @@ class BackgroundTaskViewModel(
     fun onDeleteSequenceConfig(configId: String) {
         viewModelScope.launch {
             chainState.deleteSequenceConfig(configId)
+            // 删除任务链后：禁用并解绑引用它的定时策略，同时取消已注册闹钟
+            val detached = scheduleRepository.detachSequenceConfig(configId)
+            detached.forEach { strategyId ->
+                scheduleAlarmManager.cancel(strategyId)
+            }
         }
     }
 

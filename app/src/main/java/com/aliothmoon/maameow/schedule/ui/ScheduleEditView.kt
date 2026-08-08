@@ -70,6 +70,7 @@ import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
+import com.aliothmoon.maameow.schedule.model.ScheduleTargetKind
 import com.aliothmoon.maameow.schedule.model.ScheduleType
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.i18n.asString
@@ -434,42 +435,126 @@ fun ScheduleEditView(
                 SectionHeader(stringResource(R.string.schedule_section_task_config))
             }
             item {
-                if (state.profiles.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.schedule_no_profiles),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    FlowRow(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = state.targetKind == ScheduleTargetKind.PROFILE,
+                        onClick = { viewModel.onTargetKindChanged(ScheduleTargetKind.PROFILE) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                     ) {
-                        state.profiles.forEach { profile ->
-                            FilterChip(
-                                selected = profile.id == state.selectedProfileId,
-                                onClick = { viewModel.onSelectProfile(profile.id) },
-                                label = { Text(profile.name) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                                )
+                        Text(stringResource(R.string.schedule_target_profile))
+                    }
+                    SegmentedButton(
+                        selected = state.targetKind == ScheduleTargetKind.SEQUENCE,
+                        onClick = { viewModel.onTargetKindChanged(ScheduleTargetKind.SEQUENCE) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                    ) {
+                        Text(stringResource(R.string.schedule_target_sequence))
+                    }
+                }
+
+                when (state.targetKind) {
+                    ScheduleTargetKind.PROFILE -> {
+                        if (state.profiles.isEmpty()) {
+                            Text(
+                                text = stringResource(R.string.schedule_no_profiles),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 8.dp),
                             )
+                        } else {
+                            FlowRow(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                state.profiles.forEach { profile ->
+                                    FilterChip(
+                                        selected = profile.id == state.selectedProfileId,
+                                        onClick = { viewModel.onSelectProfile(profile.id) },
+                                        label = { Text(profile.name) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    )
+                                }
+                            }
+                            val selectedProfile =
+                                state.profiles.find { it.id == state.selectedProfileId }
+                            val enabledTasks = selectedProfile?.chain
+                                ?.filter { it.enabled }
+                                ?.joinToString("、") { it.name }
+                            if (!enabledTasks.isNullOrEmpty()) {
+                                Text(
+                                    text = stringResource(
+                                        R.string.schedule_enabled_tasks,
+                                        enabledTasks
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = MaaDesignTokens.Spacing.sm)
+                                )
+                            }
                         }
                     }
-                    // 显示选中 Profile 的已启用任务摘要
-                    val selectedProfile = state.profiles.find { it.id == state.selectedProfileId }
-                    val enabledTasks = selectedProfile?.chain
-                        ?.filter { it.enabled }
-                        ?.joinToString("、") { it.name }
-                    if (!enabledTasks.isNullOrEmpty()) {
-                        Text(
-                            text = stringResource(R.string.schedule_enabled_tasks, enabledTasks),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = MaaDesignTokens.Spacing.sm)
-                        )
+
+                    ScheduleTargetKind.SEQUENCE -> {
+                        if (state.sequenceConfigs.isEmpty()) {
+                            Text(
+                                text = stringResource(R.string.schedule_no_sequence_configs),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 8.dp),
+                            )
+                        } else {
+                            FlowRow(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                state.sequenceConfigs.forEach { config ->
+                                    FilterChip(
+                                        selected = config.id == state.selectedSequenceConfigId,
+                                        onClick = { viewModel.onSelectSequenceConfig(config.id) },
+                                        label = { Text(config.name) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    )
+                                }
+                            }
+                            val selectedSeq = state.sequenceConfigs.find {
+                                it.id == state.selectedSequenceConfigId
+                            }
+                            if (selectedSeq != null) {
+                                val profileMap = state.profiles.associateBy { it.id }
+                                val missingProfile =
+                                    stringResource(R.string.panel_sequence_missing_profile)
+                                val summary = selectedSeq.entries.joinToString(" → ") { entry ->
+                                    profileMap[entry.profileId]?.name ?: missingProfile
+                                }
+                                if (summary.isNotEmpty()) {
+                                    Text(
+                                        text = stringResource(
+                                            R.string.schedule_sequence_entries,
+                                            summary
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(top = MaaDesignTokens.Spacing.sm)
+                                    )
+                                }
+                                Text(
+                                    text = stringResource(R.string.schedule_sequence_start_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }

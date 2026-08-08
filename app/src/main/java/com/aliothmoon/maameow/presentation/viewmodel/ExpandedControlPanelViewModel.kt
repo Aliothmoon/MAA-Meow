@@ -10,6 +10,8 @@ import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.AchievementReporter
+import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
+import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
 import com.aliothmoon.maameow.domain.usecase.TaskStartDecision
@@ -41,6 +43,8 @@ class ExpandedControlPanelViewModel(
     private val overlayController: OverlayController,
     private val sessionLogger: MaaSessionLogger,
     private val achievementReporter: AchievementReporter,
+    private val scheduleRepository: ScheduleStrategyRepository,
+    private val scheduleAlarmManager: ScheduleAlarmManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(FloatingPanelState())
@@ -154,6 +158,14 @@ class ExpandedControlPanelViewModel(
     fun onDeleteProfile(profileId: String) {
         viewModelScope.launch {
             chainState.removeProfile(profileId)
+            val detached = scheduleRepository.detachProfileConfig(profileId)
+            val emptied = scheduleRepository.sanitizeInvalidTargets(
+                profiles = chainState.profiles.value,
+                sequenceConfigs = chainState.sequenceConfigs.value,
+            )
+            (detached + emptied).distinct().forEach { strategyId ->
+                scheduleAlarmManager.cancel(strategyId)
+            }
             _state.update { it.copy(selectedNodeId = null) }
         }
     }
@@ -358,7 +370,13 @@ class ExpandedControlPanelViewModel(
         viewModelScope.launch { chainState.renameSequenceConfig(configId, name) }
     }
     fun onDeleteSequenceConfig(configId: String) {
-        viewModelScope.launch { chainState.deleteSequenceConfig(configId) }
+        viewModelScope.launch {
+            chainState.deleteSequenceConfig(configId)
+            val detached = scheduleRepository.detachSequenceConfig(configId)
+            detached.forEach { strategyId ->
+                scheduleAlarmManager.cancel(strategyId)
+            }
+        }
     }
 
 }
