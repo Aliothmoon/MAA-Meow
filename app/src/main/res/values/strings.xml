@@ -1357,6 +1357,7 @@
     <string name="notification_provider_telegram">Telegram</string>
     <string name="notification_provider_discord">Discord</string>
     <string name="notification_provider_ding_talk">钉钉机器人</string>
+    <string name="notification_provider_kook">KOOK 机器人</string>
     <string name="notification_provider_discord_webhook">Discord Webhook</string>
     <string name="notification_provider_smtp">SMTP</string>
     <string name="notification_provider_bark">Bark</string>
@@ -1372,6 +1373,9 @@
     <string name="notification_placeholder_optional">可选</string>
     <string name="notification_label_user_id">User ID</string>
     <string name="notification_label_access_token">Access Token</string>
+    <string name="notification_label_kook_target_id">频道 ID / 用户 ID</string>
+    <string name="notification_placeholder_kook_target_id">私聊填用户 ID，频道填频道 ID</string>
+    <string name="notification_kook_direct_message">发送私聊消息</string>
     <string name="notification_label_secret">Secret</string>
     <string name="notification_placeholder_optional_signing_secret">可选，加签密钥</string>
     <string name="notification_label_webhook_url">Webhook URL</string>
@@ -1416,6 +1420,8 @@
     <string name="notification_err_bark_server_empty">Bark 服务器地址未填写</string>
     <string name="notification_err_bark_key_empty">Bark SendKey 未填写</string>
     <string name="notification_err_dingtalk_token_empty">钉钉 access_token 未填写</string>
+    <string name="notification_err_kook_token_empty">KOOK Bot Token 未填写</string>
+    <string name="notification_err_kook_target_empty">KOOK 频道 ID 或用户 ID 未填写</string>
     <string name="notification_err_discord_token_empty">Discord Bot Token 未填写</string>
     <string name="notification_err_discord_user_empty">Discord 用户 ID 未填写</string>
     <string name="notification_err_discord_dm_failed">创建 Discord 私信频道失败</string>

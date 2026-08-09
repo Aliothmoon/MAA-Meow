@@ -1301,6 +1301,7 @@
     <string name="notification_provider_telegram">Telegram</string>
     <string name="notification_provider_discord">Discord</string>
     <string name="notification_provider_ding_talk">DingTalk</string>
+    <string name="notification_provider_kook">KOOK Bot</string>
     <string name="notification_provider_discord_webhook">Discord Webhook</string>
     <string name="notification_provider_smtp">SMTP</string>
     <string name="notification_provider_bark">Bark</string>
@@ -1316,6 +1317,9 @@
     <string name="notification_placeholder_optional">Optional</string>
     <string name="notification_label_user_id">User ID</string>
     <string name="notification_label_access_token">Access Token</string>
+    <string name="notification_label_kook_target_id">Channel ID / User ID</string>
+    <string name="notification_placeholder_kook_target_id">User ID for direct messages, channel ID otherwise</string>
+    <string name="notification_kook_direct_message">Send as direct message</string>
     <string name="notification_label_secret">Secret</string>
     <string name="notification_placeholder_optional_signing_secret">Optional, signing secret</string>
     <string name="notification_label_webhook_url">Webhook URL</string>
@@ -1360,6 +1364,8 @@
     <string name="notification_err_bark_server_empty">Bark server address is not set</string>
     <string name="notification_err_bark_key_empty">Bark SendKey is not set</string>
     <string name="notification_err_dingtalk_token_empty">DingTalk access_token is not set</string>
+    <string name="notification_err_kook_token_empty">KOOK Bot Token is not set</string>
+    <string name="notification_err_kook_target_empty">KOOK channel ID or user ID is not set</string>
     <string name="notification_err_discord_token_empty">Discord Bot Token is not set</string>
     <string name="notification_err_discord_user_empty">Discord user ID is not set</string>
     <string name="notification_err_discord_dm_failed">Failed to create Discord DM channel</string>

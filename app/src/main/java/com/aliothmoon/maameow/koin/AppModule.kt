@@ -19,6 +19,7 @@ import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
 import com.aliothmoon.maameow.data.notification.provider.BarkProvider
 import com.aliothmoon.maameow.data.notification.provider.CustomWebhookProvider
 import com.aliothmoon.maameow.data.notification.provider.DingTalkProvider
+import com.aliothmoon.maameow.data.notification.provider.KookProvider
 import com.aliothmoon.maameow.data.notification.provider.DiscordProvider
 import com.aliothmoon.maameow.data.notification.provider.DiscordWebhookProvider
 import com.aliothmoon.maameow.data.notification.provider.GotifyProvider
@@ -200,6 +201,7 @@ val appModule = module {
     single { TelegramProvider(get(), get()) } bind NotificationProvider::class
     single { DiscordProvider(get(), get()) } bind NotificationProvider::class
     single { DingTalkProvider(get(), get()) } bind NotificationProvider::class
+    single { KookProvider(get(), get()) } bind NotificationProvider::class
     single { DiscordWebhookProvider(get(), get()) } bind NotificationProvider::class
     single { SmtpProvider(get()) } bind NotificationProvider::class
     single { BarkProvider(get(), get()) } bind NotificationProvider::class

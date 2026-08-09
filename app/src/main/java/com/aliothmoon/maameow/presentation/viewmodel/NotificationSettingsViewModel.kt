@@ -24,6 +24,7 @@ class NotificationSettingsViewModel(
             "Telegram",
             "Discord",
             "DingTalk",
+            "KOOK",
             "Discord Webhook",
             "SMTP",
             "Bark",

@@ -46,6 +46,7 @@ private val PROVIDERS: List<Pair<String, Int>> = listOf(
     "Telegram" to R.string.notification_provider_telegram,
     "Discord" to R.string.notification_provider_discord,
     "DingTalk" to R.string.notification_provider_ding_talk,
+    "KOOK" to R.string.notification_provider_kook,
     "Discord Webhook" to R.string.notification_provider_discord_webhook,
     "SMTP" to R.string.notification_provider_smtp,
     "Bark" to R.string.notification_provider_bark,
@@ -314,6 +315,27 @@ private fun ProviderConfig(
                 label = stringResource(R.string.notification_label_secret),
                 placeholder = stringResource(R.string.notification_placeholder_optional_signing_secret)
             )
+        }
+
+        "KOOK" -> {
+            ITextField(
+                value = settings.kookBotToken,
+                onValueChange = { viewModel.updateSettings { copy(kookBotToken = it) } },
+                label = stringResource(R.string.notification_label_bot_token)
+            )
+            Spacer(Modifier.height(MaaDesignTokens.Spacing.sm))
+            ITextField(
+                value = settings.kookTargetId,
+                onValueChange = { viewModel.updateSettings { copy(kookTargetId = it) } },
+                label = stringResource(R.string.notification_label_kook_target_id),
+                placeholder = stringResource(R.string.notification_placeholder_kook_target_id)
+            )
+            Spacer(Modifier.height(MaaDesignTokens.Spacing.sm))
+            SwitchItem(
+                title = stringResource(R.string.notification_kook_direct_message),
+                checked = settings.kookDirectMessage.toBooleanStrictOrNull() ?: false,
+                contentColor = contentColor,
+                onCheckedChange = { viewModel.updateSettings { copy(kookDirectMessage = it.toString()) } })
         }
 
         "Discord Webhook" -> {
