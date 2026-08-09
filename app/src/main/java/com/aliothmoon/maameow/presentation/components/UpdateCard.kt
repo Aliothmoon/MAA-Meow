@@ -27,6 +27,8 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -44,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -486,50 +489,107 @@ private fun CdkInputField(
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        OutlinedTextField(
-            value = localCdk,
-            onValueChange = { newValue ->
-                localCdk = newValue
-                onCdkChange(newValue)
-            },
-            label = { Text(stringResource(R.string.update_cdk_label)) },
-            placeholder = { Text(stringResource(R.string.update_cdk_placeholder)) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            visualTransformation = if (passwordVisible) {
-                VisualTransformation.None
-            } else {
-                PasswordVisualTransformation()
-            },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            trailingIcon = {
-                Row {
-                    if (localCdk.isNotEmpty()) {
-                        IconButton(onClick = {
-                            localCdk = ""
-                            onCdkChange("")
-                        }) {
+    // 填过之后默认收起，输入框尾部的清除键太容易误触；用户手动展开后以其选择为准
+    var userExpanded by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    val expanded = userExpanded ?: cdk.isEmpty()
+    val expandLabel = stringResource(R.string.common_expand)
+    val collapseLabel = stringResource(R.string.common_collapse)
+
+    Column {
+        // 常驻标题行兼折叠开关，对齐 CollapsibleSection
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(
+                    role = Role.Button,
+                    onClickLabel = if (expanded) collapseLabel else expandLabel,
+                ) {
+                    // 收起时把明文一并藏回去
+                    if (expanded) passwordVisible = false
+                    userExpanded = !expanded
+                }
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.update_cdk_label),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                modifier = Modifier.weight(1f),
+            )
+            // 收起时才提示填没填，展开后输入框自己会说
+            if (!expanded) {
+                Text(
+                    text = stringResource(
+                        if (cdk.isEmpty()) R.string.update_cdk_unset else R.string.update_cdk_saved
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                imageVector = if (expanded) {
+                    Icons.Rounded.KeyboardArrowUp
+                } else {
+                    Icons.Rounded.KeyboardArrowDown
+                },
+                contentDescription = if (expanded) collapseLabel else expandLabel,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+        ) {
+            OutlinedTextField(
+                value = localCdk,
+                onValueChange = { newValue ->
+                    localCdk = newValue
+                    onCdkChange(newValue)
+                },
+                // 标题在上面那行，这里再挂 label 就重了
+                placeholder = { Text(stringResource(R.string.update_cdk_placeholder)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 4.dp),
+                singleLine = true,
+                visualTransformation = if (passwordVisible) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                trailingIcon = {
+                    Row {
+                        if (localCdk.isNotEmpty()) {
+                            IconButton(onClick = {
+                                localCdk = ""
+                                onCdkChange("")
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = stringResource(R.string.update_cdk_clear_cd)
+                                )
+                            }
+                        }
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = stringResource(R.string.update_cdk_clear_cd)
+                                imageVector = if (passwordVisible) Icons.Outlined.Lock else Icons.Filled.Lock,
+                                contentDescription = if (passwordVisible)
+                                    stringResource(R.string.update_cdk_hide_cd)
+                                else
+                                    stringResource(R.string.update_cdk_show_cd)
                             )
                         }
                     }
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(
-                            imageVector = if (passwordVisible) Icons.Outlined.Lock else Icons.Filled.Lock,
-                            contentDescription = if (passwordVisible)
-                                stringResource(R.string.update_cdk_hide_cd)
-                            else
-                                stringResource(R.string.update_cdk_show_cd)
-                        )
-                    }
                 }
-            }
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
+            )
+        }
 
         TextButton(
             onClick = { Misc.openUriSafely(context, "https://mirrorchyan.com/") }

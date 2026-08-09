@@ -413,6 +413,8 @@
 
     <!-- update cdk input -->
     <string name="update_cdk_label">Mirrorchyan CDK</string>
+    <string name="update_cdk_saved">Saved</string>
+    <string name="update_cdk_unset">Not set</string>
     <string name="update_cdk_placeholder">Enter CDK</string>
     <string name="update_cdk_clear_cd">Clear</string>
     <string name="update_cdk_show_cd">Show</string>

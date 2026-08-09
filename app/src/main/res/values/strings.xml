@@ -616,6 +616,8 @@
 
     <!-- update cdk input -->
     <string name="update_cdk_label">Mirror酱 CDK</string>
+    <string name="update_cdk_saved">已填写</string>
+    <string name="update_cdk_unset">未填写</string>
     <string name="update_cdk_placeholder">请输入 CDK</string>
     <string name="update_cdk_clear_cd">清空</string>
     <string name="update_cdk_show_cd">显示</string>
