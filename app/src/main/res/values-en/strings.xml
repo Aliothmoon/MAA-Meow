@@ -1993,11 +1993,13 @@
     <string name="runlog_task_start">Starting tasks (%1$d total)</string>
     <string name="runlog_task_started">Tasks started</string>
     <!-- TODO: remove after MaaCore adapts proxy multipliers 7~10 -->
-    <string name="runlog_depot_plan_invalid_drop">Plan %1$d: no drop item specified.</string>
-    <string name="runlog_depot_plan_zero_count">Plan %1$d: target inventory is 0.</string>
-    <string name="runlog_depot_plan_no_stage">Plan %1$d: stage not specified or is \"Current/Last\".</string>
-    <string name="runlog_depot_plan_stage_not_open">Plan %1$d: stage \'%2$s\' is not open.</string>
-    <string name="runlog_depot_plan_inventory_enough">Plan %1$s: %2$s inventory sufficient (current %3$d / target %4$d).</string>
+    <string name="runlog_log_section">-----%1$s-----</string>
+    <string name="runlog_depot_plan_invalid_drop">#%1$d: no drop item specified</string>
+    <string name="runlog_depot_plan_zero_count">#%1$d: target inventory is 0</string>
+    <string name="runlog_depot_plan_no_stage">#%1$d: stage not specified or is \"Current/Last\"</string>
+    <string name="runlog_depot_plan_stage_not_open">#%1$d: stage \'%2$s\' is not open</string>
+    <string name="runlog_depot_plan_inventory_enough">#%1$s: %2$s sufficient %3$d/%4$d</string>
+    <string name="runlog_depot_plan_inventory_insufficient">#%1$s: %2$s insufficient %3$d/%4$d, need %5$d more</string>
     <string name="runlog_fight_inventory_unavailable">Task \"%1$s\" uses target inventory, but no inventory data is currently available, so it was skipped. Update it via \"Toolbox - Depot Recognition\".</string>
     <string name="runlog_depot_set_params_failed">Plan %1$s: failed to update task params; original params will be used.</string>
     <string name="runlog_depot_skipped_activity">An event is in progress; Depot Maintain skipped.</string>

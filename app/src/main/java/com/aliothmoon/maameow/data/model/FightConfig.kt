@@ -368,6 +368,20 @@ data class FightConfig(
             )
             return emptyList()
         }
+        if (need != null) {
+            val dropName = ctx.itemHelper.getItemInfo(dropsItemId)?.name ?: dropsItemId
+            ctx.appendLog(
+                uiTextOf(
+                    R.string.runlog_depot_plan_inventory_insufficient,
+                    ctx.node.name,
+                    dropName,
+                    dropsQuantity - need,
+                    dropsQuantity,
+                    need,
+                ),
+                LogLevel.TRACE,
+            )
+        }
 
         val paramsJson = buildJsonObject {
             put("stage", stage)

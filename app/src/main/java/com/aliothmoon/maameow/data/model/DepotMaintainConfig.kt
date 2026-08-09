@@ -90,6 +90,9 @@ data class DepotMaintainConfig(
 
         val series = if (useAutoSeries) 0 else 1
 
+        // 每份库存保持的计划日志前插一条分段，跟上游 AddLogSection 对齐
+        ctx.appendLog(uiTextOf(R.string.runlog_log_section, ctx.node.name), LogLevel.TRACE)
+
         plans.forEachIndexed { index, plan ->
             val no = index + 1
             val current = ctx.depotRepository.countOf(plan.dropId)
@@ -134,6 +137,15 @@ data class DepotMaintainConfig(
             }
 
             val need = plan.dropCount - current
+            val dropName = ctx.itemHelper.getItemInfo(plan.dropId)?.name ?: plan.dropId
+            ctx.appendLog(
+                uiTextOf(
+                    R.string.runlog_depot_plan_inventory_insufficient,
+                    no.toString(), dropName, current, plan.dropCount, need,
+                ),
+                LogLevel.TRACE,
+            )
+
             val listIndex = params.size
             val target = DropTarget(
                 dropId = plan.dropId,

@@ -96,8 +96,12 @@ class DepotMaintainExpansionTest {
         plans = plans.toList(),
     )
 
+    /** 分段行只是排版，逐条计划的断言一律先把它滤掉 */
+    private fun List<Pair<UiText, LogLevel>>.planLogs(): List<Pair<UiText, LogLevel>> =
+        filterNot { (it.first as? UiText.Resource)?.resId == R.string.runlog_log_section }
+
     private fun List<Pair<UiText, LogLevel>>.resIds(): List<Int> =
-        map { (it.first as UiText.Resource).resId }
+        planLogs().map { (it.first as UiText.Resource).resId }
 
     private fun logArgsOf(
         logs: List<Pair<UiText, LogLevel>>,
@@ -125,7 +129,7 @@ class DepotMaintainExpansionTest {
             .expand(activityOpen = false)
         assertEquals(1, result.params.size)
         assertEquals(MaaTaskType.FIGHT, result.params[0].type)
-        assertTrue(result.logs.isEmpty())
+        assertEquals(listOf(R.string.runlog_depot_plan_inventory_insufficient), result.logs.resIds())
     }
 
     /** 开关关闭时，活动开放也不得跳过（锁住条件的另一端） */
@@ -134,7 +138,7 @@ class DepotMaintainExpansionTest {
         val result = config(plan(), skipDuringActivity = false, skipDuringResourceCollection = false)
             .expand(activityOpen = true, resourceCollectionOpen = true)
         assertEquals(1, result.params.size)
-        assertTrue(result.logs.isEmpty())
+        assertEquals(listOf(R.string.runlog_depot_plan_inventory_insufficient), result.logs.resIds())
     }
 
     /** 两个条件同时成立时，活动跳过优先（对齐上游的判断顺序） */
@@ -160,7 +164,7 @@ class DepotMaintainExpansionTest {
         val result = config(plan(), skipDuringActivity = true)
             .expand(activityOpen = false, resourceCollectionOpen = true)
         assertEquals(1, result.params.size)
-        assertTrue(result.logs.isEmpty())
+        assertEquals(listOf(R.string.runlog_depot_plan_inventory_insufficient), result.logs.resIds())
     }
 
     // --- Depot 前置任务 ---
@@ -203,7 +207,7 @@ class DepotMaintainExpansionTest {
         assertTrue(result.params.isEmpty())
         assertEquals(listOf(R.string.runlog_depot_plan_invalid_drop), result.logs.resIds())
         assertEquals(listOf<Any?>(1), logArgsOf(result.logs, R.string.runlog_depot_plan_invalid_drop))
-        assertEquals(LogLevel.ERROR, result.logs[0].second)
+        assertEquals(LogLevel.ERROR, result.logs.planLogs()[0].second)
     }
 
     @Test
@@ -226,7 +230,7 @@ class DepotMaintainExpansionTest {
         val result = config(plan(stage = "CE-6")).expand(openStages = emptySet())
         assertTrue(result.params.isEmpty())
         assertEquals(listOf(R.string.runlog_depot_plan_stage_not_open), result.logs.resIds())
-        assertEquals(LogLevel.TRACE, result.logs[0].second)
+        assertEquals(LogLevel.TRACE, result.logs.planLogs()[0].second)
         assertEquals(
             listOf<Any?>(1, "CE-6"),
             logArgsOf(result.logs, R.string.runlog_depot_plan_stage_not_open),
@@ -295,7 +299,7 @@ class DepotMaintainExpansionTest {
         assertEquals(Int.MAX_VALUE, json["times"]!!.jsonPrimitive.content.toInt())
         assertEquals(5, json["medicine"]!!.jsonPrimitive.content.toInt())
         assertEquals(2, json["stone"]!!.jsonPrimitive.content.toInt())
-        assertTrue(result.logs.isEmpty())
+        assertEquals(listOf(R.string.runlog_depot_plan_inventory_insufficient), result.logs.resIds())
     }
 
     /** 对齐 WPF：默认 series=1；UseAutoSeries 勾选时 series=0（AUTO） */
@@ -327,7 +331,7 @@ class DepotMaintainExpansionTest {
             .expand(inventory = mapOf(ITEM to 100))
         assertTrue(result.params.isEmpty())
         assertEquals(listOf(R.string.runlog_depot_plan_inventory_enough), result.logs.resIds())
-        assertEquals(LogLevel.TRACE, result.logs[0].second)
+        assertEquals(LogLevel.TRACE, result.logs.planLogs()[0].second)
     }
 
     /** 配置不完整的两项仍排在库存检查之前：没选材料时连缺口都算不了 */
@@ -418,14 +422,14 @@ class DepotMaintainExpansionTest {
     fun noPlans_withUpdateDepot_producesOnlyDepot() {
         val result = config(updateDepot = true).expand()
         assertEquals(listOf(MaaTaskType.DEPOT), result.params.map { it.type })
-        assertTrue(result.logs.isEmpty())
+        assertTrue(result.logs.planLogs().isEmpty())
     }
 
     @Test
     fun noPlans_withoutUpdateDepot_producesNothing() {
         val result = config(updateDepot = false).expand()
         assertTrue(result.params.isEmpty())
-        assertTrue(result.logs.isEmpty())
+        assertTrue(result.logs.planLogs().isEmpty())
     }
 
     // --- 顺序 ---

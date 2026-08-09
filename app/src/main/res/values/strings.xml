@@ -2049,11 +2049,13 @@
     <string name="runlog_task_start">开始执行任务，共 %1$d 项</string>
     <string name="runlog_task_started">任务开始运行</string>
     <!-- TODO: MaaCore 适配代理倍率 7~10 后删除 -->
-    <string name="runlog_depot_plan_invalid_drop">计划 %1$d：未指定掉落物。</string>
-    <string name="runlog_depot_plan_zero_count">计划 %1$d：目标库存为 0。</string>
-    <string name="runlog_depot_plan_no_stage">计划 %1$d：关卡未指定或为「当前/上次」。</string>
-    <string name="runlog_depot_plan_stage_not_open">计划 %1$d：关卡「%2$s」未开放。</string>
-    <string name="runlog_depot_plan_inventory_enough">计划 %1$s：%2$s 库存已充足（当前 %3$d / 目标 %4$d）。</string>
+    <string name="runlog_log_section">-----%1$s-----</string>
+    <string name="runlog_depot_plan_invalid_drop">#%1$d：未指定掉落物</string>
+    <string name="runlog_depot_plan_zero_count">#%1$d：目标库存为 0</string>
+    <string name="runlog_depot_plan_no_stage">#%1$d：关卡未指定或为「当前/上次」</string>
+    <string name="runlog_depot_plan_stage_not_open">#%1$d：关卡「%2$s」未开放</string>
+    <string name="runlog_depot_plan_inventory_enough">#%1$s：%2$s 已充足 %3$d/%4$d</string>
+    <string name="runlog_depot_plan_inventory_insufficient">#%1$s：%2$s 不足 %3$d/%4$d，需刷取 %5$d</string>
     <string name="runlog_fight_inventory_unavailable">任务「%1$s」启用了目标库存，但当前没有可用的库存数据，已跳过。可通过「工具箱 - 仓库识别」更新库存。</string>
     <string name="runlog_depot_set_params_failed">计划 %1$s：更新任务参数失败，将按原参数执行。</string>
     <string name="runlog_depot_skipped_activity">当前有活动进行中，已跳过库存保持。</string>

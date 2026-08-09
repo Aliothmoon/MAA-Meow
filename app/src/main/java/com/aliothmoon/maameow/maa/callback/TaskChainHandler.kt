@@ -78,7 +78,20 @@ class TaskChainHandler(
                 outcome.logLabel to outcome.applied
             }
 
-            is FightDropsRefresher.RefreshOutcome.Updated -> outcome.logLabel to outcome.applied
+            is FightDropsRefresher.RefreshOutcome.Updated -> {
+                sessionLogger.append(
+                    appContext.getString(
+                        R.string.runlog_depot_plan_inventory_insufficient,
+                        outcome.logLabel,
+                        outcome.dropName,
+                        outcome.current,
+                        outcome.target,
+                        outcome.need,
+                    ),
+                    LogLevel.INFO,
+                )
+                outcome.logLabel to outcome.applied
+            }
         }
         if (!applied) {
             sessionLogger.append(
