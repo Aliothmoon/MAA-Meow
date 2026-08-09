@@ -404,7 +404,7 @@ fun AutoBattlePanel(
                 val hasDetail =
                     doc.title.isNotBlank() || doc.details.isNotBlank() || state.operatorSummary?.isEmpty == false
                 val hasVideo = state.videoUrl.isNotBlank()
-                if (hasDetail || hasVideo) {
+                if (hasDetail || hasVideo || state.requirementWarnings.isNotEmpty()) {
                     item {
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
@@ -436,6 +436,22 @@ fun AutoBattlePanel(
                                         }
                                     }
                                 }
+                                // 干员需求自动校正提示，跟着作业详情一起展示
+                                if (state.requirementWarnings.isNotEmpty()) {
+                                    HorizontalDivider(
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f)
+                                    )
+                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        state.requirementWarnings.forEach { warning ->
+                                            Text(
+                                                text = warning.asString(),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        }
+                                    }
+                                }
+
                                 val summary = state.operatorSummary
                                 if (summary != null && !summary.isEmpty) {
                                     if (doc.title.isNotBlank() || doc.details.isNotBlank()) {

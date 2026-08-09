@@ -21,6 +21,7 @@ import com.aliothmoon.maameow.domain.service.CopilotManager
 import com.aliothmoon.maameow.domain.service.CopilotRequestException
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.OperatorSummaryData
+import com.aliothmoon.maameow.domain.service.copilot.CopilotRequirementCorrector
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
 import com.aliothmoon.maameow.domain.usecase.GameReadiness
@@ -106,6 +107,8 @@ data class CopilotUiState(
     val statusMessage: UiText = UiText.Empty,
     val videoUrl: String = "",
     val operatorSummary: OperatorSummaryData? = null,
+    /** 干员需求自动校正的提示，随作业加载刷新 */
+    val requirementWarnings: List<UiText> = emptyList(),
     val builtinPickerExpanded: Boolean = false,
     val builtinLoaded: Boolean = false,
     val builtinTree: List<CopilotResourceProvider.Node> = emptyList(),
@@ -251,15 +254,16 @@ class CopilotViewModel(
                     Timber.w(e, "$TAG: 解析本地文件失败: $fileName")
                     continue
                 }
-                val filePath = repository.saveCopilotJsonByName(fileName, json)
+                val fixed = correctRequirements(data, json, copilotId = 0)
+                val filePath = repository.saveCopilotJsonByName(fileName, fixed.json)
                 successCount++
-                lastData = data
+                lastData = fixed.data
                 lastFilePath = filePath
-                lastJson = json
+                lastJson = fixed.json
 
                 if (files.size > 1 || _state.value.useCopilotList) {
                     autoAddLoadedCopilotToListIfNeeded(
-                        data = data,
+                        data = fixed.data,
                         filePath = filePath,
                         copilotId = 0,
                         source = "local"
@@ -325,16 +329,23 @@ class CopilotViewModel(
             _state.update { it.startingParse() }
             copilotManager.parseFromFile(path).fold(
                 onSuccess = { (data, json) ->
+                    val fixed = correctRequirements(data, json, copilotId = 0)
+                    // 内置资源目录只读，改过的作业另存一份到 copilot 目录
+                    val filePath = if (fixed.json != json) {
+                        repository.saveCopilotJsonByName(node.name, fixed.json)
+                    } else {
+                        path
+                    }
                     applyLoadedCopilot(
-                        data = data,
-                        json = json,
-                        filePath = path,
+                        data = fixed.data,
+                        json = fixed.json,
+                        filePath = filePath,
                         copilotId = 0,
                         fromWeb = false
                     )
                     autoAddLoadedCopilotToListIfNeeded(
-                        data = data,
-                        filePath = path,
+                        data = fixed.data,
+                        filePath = filePath,
                         copilotId = 0,
                         source = "resource"
                     )
@@ -357,6 +368,7 @@ class CopilotViewModel(
         currentCopilot = null,
         operatorSummary = null,
         videoUrl = "",
+        requirementWarnings = emptyList(),
     )
 
     /** 文件读取失败时的状态消息：有明细则附带明细，否则用通用文案。 */
@@ -391,18 +403,19 @@ class CopilotViewModel(
         val result = copilotManager.parseFromId(input)
         result.fold(
             onSuccess = { (id, data, json) ->
-                val filePath = repository.saveCopilotJson(id, json)
+                val fixed = correctRequirements(data, json, id)
+                val filePath = repository.saveCopilotJson(id, fixed.json)
                 applyLoadedCopilot(
-                    data = data,
-                    json = json,
+                    data = fixed.data,
+                    json = fixed.json,
                     filePath = filePath,
-                    copilotId = id,
+                    copilotId = fixed.copilotId,
                     fromWeb = true
                 )
                 autoAddLoadedCopilotToListIfNeeded(
-                    data = data,
+                    data = fixed.data,
                     filePath = filePath,
-                    copilotId = id,
+                    copilotId = fixed.copilotId,
                     source = "web"
                 )
             },
@@ -457,13 +470,14 @@ class CopilotViewModel(
                     val copilotResult = copilotManager.parseFromId(id.toString())
                     copilotResult.fold(
                         onSuccess = { (copilotId, data, json) ->
-                            val filePath = repository.saveCopilotJson(copilotId, json)
-                            val resolvedTabIndex = resolveLoadedTabIndex(data, workingTabIndex)
+                            val fixed = correctRequirements(data, json, copilotId)
+                            val filePath = repository.saveCopilotJson(copilotId, fixed.json)
+                            val resolvedTabIndex = resolveLoadedTabIndex(fixed.data, workingTabIndex)
                             newItems.addAll(
                                 createListItemsForLoadedCopilot(
-                                    data = data,
+                                    data = fixed.data,
                                     filePath = filePath,
-                                    copilotId = copilotId,
+                                    copilotId = fixed.copilotId,
                                     source = "web"
                                 )
                             )
@@ -559,6 +573,53 @@ class CopilotViewModel(
         setDescription: String,
         summary: UiText
     ): UiText = uiTextLines(uiTextDynamic(setName), uiTextDynamic(setDescription), summary)
+
+    /** 校正结果，[copilotId] 在作业被改动后清零 */
+    private data class CorrectedCopilot(
+        val data: CopilotTaskData,
+        val json: String,
+        val copilotId: Int,
+        val altered: Boolean,
+    )
+
+    /**
+     * 落盘前统一做一次干员需求校正
+     * 改动过的作业不再带原作业 id，免得把改后的跑法算到原作者头上
+     */
+    private fun correctRequirements(
+        data: CopilotTaskData,
+        json: String,
+        copilotId: Int,
+    ): CorrectedCopilot {
+        val result = CopilotRequirementCorrector.correct(json) { name ->
+            resourceDataManager.getCharacterByNameOrAlias(name)?.rarity ?: -1
+        }
+        if (result.corrections.isEmpty()) {
+            return CorrectedCopilot(data, json, copilotId, false)
+        }
+        // 作业集会连着导入多份，逐条累加而不是覆盖；每次解析开始时由 startingParse 清空
+        val messages = result.corrections.map(::describeCorrection)
+        _state.update { it.copy(requirementWarnings = it.requirementWarnings + messages) }
+        val reparsed = copilotManager.parseJson(result.json).getOrNull() ?: data
+        return CorrectedCopilot(
+            data = reparsed,
+            json = result.json,
+            copilotId = if (result.altered) 0 else copilotId,
+            altered = result.altered,
+        )
+    }
+
+    private fun describeCorrection(correction: CopilotRequirementCorrector.Correction): UiText =
+        when (correction.kind) {
+            CopilotRequirementCorrector.Kind.UNSUPPORTED_SKILL ->
+                text(R.string.copilot_unsupported_skill, correction.operatorName, correction.from)
+
+            CopilotRequirementCorrector.Kind.ELITE_FILLED ->
+                text(R.string.copilot_elite_filled, correction.operatorName, correction.to)
+
+            CopilotRequirementCorrector.Kind.ELITE_RAISED ->
+                text(R.string.copilot_elite_raised, correction.operatorName, correction.from, correction.to)
+        }
 
     private fun applyLoadedCopilot(
         data: CopilotTaskData,

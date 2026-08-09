@@ -338,6 +338,9 @@
     <string name="copilot_task_name_empty">Copilot jobs with empty names exist</string>
     <string name="copilot_single_list_warning">You\'re using \";Battle list\"; to execute a single task, which is not recommended. For single tasks, run them directly instead.</string>
     <string name="copilot_unsupported_stage">Unsupported stage %1$s. If this is a stage from a new event, please wait for the map resource update before using auto-combat</string>
+    <string name="copilot_unsupported_skill">%1$s does not support skill %2$d, skill selection disabled</string>
+    <string name="copilot_elite_filled">%1$s has no elite requirement, but other requirements need E%2$d; filled in automatically</string>
+    <string name="copilot_elite_raised">%1$s requires E%2$d, but other requirements need E%3$d; adjusted automatically</string>
     <string name="copilot_invalid_operator">Invalid operator: %1$s</string>
     <string name="copilot_status_completed">Completed: %1$s</string>
     <string name="copilot_rate_failed">An error occurred, the like failed: &lt;</string>
