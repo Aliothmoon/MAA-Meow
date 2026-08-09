@@ -1678,7 +1678,7 @@
     <string name="notification_schedule_title">定时任务</string>
     <string name="notification_schedule_preparing">正在准备拉起界面…</string>
     <string name="notification_schedule_device_locked">设备处于锁屏状态</string>
-    <string name="notification_schedule_pin_required">系统已设置锁屏密码，请在设置中配置 PIN，或关闭系统锁屏密码</string>
+    <string name="notification_schedule_pin_required">已跳过：设备有锁屏密码。请在设置中配置 PIN，或用后台任务页停止按钮右侧的更多选项按钮中的「熄屏挂机」代替系统锁屏</string>
     <string name="notification_schedule_detail">「%1$s」: %2$s</string>
 
     <!-- i18n: schedule trigger journal (pipeline) -->
@@ -2127,7 +2127,7 @@
     <string name="wake_result_ok">唤醒并解锁成功</string>
     <string name="wake_result_wake_failed">屏幕无法点亮</string>
     <string name="wake_result_credential_required">当前为密码锁屏，请先填写 PIN</string>
-    <string name="wake_result_credential_rejected">解锁失败，PIN 可能不正确，已停止重试以免触发系统锁定</string>
+    <string name="wake_result_credential_rejected">解锁失败，已停止重试以免锁定。检查 PIN 是否正确；启用指纹解锁时 PIN 输入可能被系统拦截，无法完成自动解锁</string>
     <string name="wake_result_no_keyguard">未设置锁屏，无需解锁</string>
     <string name="wake_result_unsupported">当前系统不支持该操作</string>
     <string name="wake_result_lock_failed">无法进入锁屏</string>

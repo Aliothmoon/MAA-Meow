@@ -1622,7 +1622,7 @@
     <string name="notification_schedule_title">Scheduled Task</string>
     <string name="notification_schedule_preparing">Preparing to launch…</string>
     <string name="notification_schedule_device_locked">Device is locked</string>
-    <string name="notification_schedule_pin_required">A lock password is set. Configure a PIN in settings, or disable the system lock screen</string>
+    <string name="notification_schedule_pin_required">Skipped: a device lock password is set. Configure a PIN in settings, or use Screen Off from the more options button beside the Stop button on the background task page, instead of the system lock screen</string>
     <string name="notification_schedule_detail">\"%1$s\": %2$s</string>
 
     <!-- i18n: schedule trigger journal (pipeline) -->
@@ -2071,7 +2071,7 @@
     <string name="wake_result_ok">Wake + unlock succeeded</string>
     <string name="wake_result_wake_failed">Screen would not turn on</string>
     <string name="wake_result_credential_required">A PIN is required for this lock screen</string>
-    <string name="wake_result_credential_rejected">Unlock failed, the PIN may be wrong. Stopped retrying to avoid triggering a system lockout</string>
+    <string name="wake_result_credential_rejected">Unlock failed; stopped retrying to avoid a lockout. Check that the PIN is correct; when fingerprint unlock is enabled the system may intercept PIN entry and prevent automatic unlocking</string>
     <string name="wake_result_no_keyguard">No lock screen set; unlocking is not needed</string>
     <string name="wake_result_unsupported">Not supported on this system</string>
     <string name="wake_result_lock_failed">Could not enter lock screen</string>
