@@ -7,7 +7,9 @@ import com.aliothmoon.maameow.data.achievement.AchievementRepository
 
 import com.aliothmoon.maameow.data.model.activity.MiniGame
 import com.aliothmoon.maameow.data.resource.ActivityManager
+import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.utils.i18n.UiText
@@ -21,10 +23,21 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.addJsonArray
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import timber.log.Timber
 
 private const val SECRET_FRONT_VALUE = "MiniGame@SecretFront"
+
+/** 热更的 StageActivityV2 下发的是带 @Begin 的写法，两种都认，对齐上游 IsPixelPaint */
+private val PIXEL_PAINT_VALUES = setOf("MiniGame@PixelPaint", "MiniGame@PixelPaint@Begin")
+
+/** 实际下发的任务名固定，与选中项的 Value 无关，对齐上游 AsstPixelPaint */
+private const val PIXEL_PAINT_TASK = "MiniGame@PixelPaint@Begin"
 private const val DEFAULT_TASK_NAME = "SS@Store@Begin"
 
 data class MiniGameUiState(
@@ -40,6 +53,8 @@ class MiniGameDelegate(
     private val compositionService: MaaCompositionService,
     private val scope: CoroutineScope,
     private val achievementRepository: AchievementRepository,
+    private val pixelArt: PixelArtDelegate,
+    private val sessionLogger: MaaSessionLogger,
 ) {
 
     private val _state = MutableStateFlow(MiniGameUiState())
@@ -49,6 +64,9 @@ class MiniGameDelegate(
 
     fun isSecretFront(selectedTaskName: String): Boolean =
         selectedTaskName == SECRET_FRONT_VALUE
+
+    fun isPixelPaint(selectedTaskName: String): Boolean =
+        selectedTaskName in PIXEL_PAINT_VALUES
 
     fun onTaskSelected(value: String) {
         _state.update { it.copy(selectedTaskName = value) }
@@ -68,6 +86,9 @@ class MiniGameDelegate(
 
     private fun buildTaskName(): String {
         val snapshot = _state.value
+        if (isPixelPaint(snapshot.selectedTaskName)) {
+            return PIXEL_PAINT_TASK
+        }
         if (snapshot.selectedTaskName == SECRET_FRONT_VALUE) {
             val base = "${snapshot.selectedTaskName}@Begin@Ending${snapshot.selectedEnding}"
             return if (snapshot.selectedEvent.isNotBlank()) "$base@${snapshot.selectedEvent}" else base
@@ -79,11 +100,47 @@ class MiniGameDelegate(
         val taskName = buildTaskName()
         val params = buildJsonObject {
             putJsonArray("task_names") { add(JsonPrimitive(taskName)) }
+            // 像素画额外带 params.pixel_paint.groups，由 Core 的 PixelPaintTaskPlugin 消费
+            if (isPixelPaint(_state.value.selectedTaskName)) {
+                pixelArt.state.value.plan?.let { plan ->
+                    putJsonObject("params") {
+                        putJsonObject("pixel_paint") {
+                            put("swipe", pixelArt.state.value.swipeEnabled)
+                            putJsonArray("groups") {
+                                plan.groups.forEach { group ->
+                                    addJsonObject {
+                                        put("color", group.color)
+                                        putJsonArray("points") {
+                                            group.points.forEach { point ->
+                                                addJsonArray {
+                                                    add(point[0])
+                                                    add(point[1])
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }.toString()
         return MaaTaskParams(MaaTaskType.CUSTOM, params)
     }
 
     fun onStart() {
+        if (isPixelPaint(_state.value.selectedTaskName)) {
+            val plan = pixelArt.state.value.plan
+            if (plan == null) {
+                _state.update { it.copy(statusMessage = uiTextOf(R.string.pixel_art_need_image)) }
+                return
+            }
+            if (plan.groups.isEmpty()) {
+                _state.update { it.copy(statusMessage = uiTextOf(R.string.pixel_art_nothing_to_paint)) }
+                return
+            }
+        }
         if (findGame(_state.value.selectedTaskName)?.isUnsupported == true) {
             _state.update {
                 it.copy(statusMessage = uiTextOf(R.string.panel_mini_game_not_supported))
@@ -100,6 +157,19 @@ class MiniGameDelegate(
                     event = AchievementEvents.MINI_GAME_STARTED
                     "task" to _state.value.selectedTaskName
                 }
+                // 面板可能被收起，格数/色数只有客户端知道，写进运行日志留痕
+                pixelArt.state.value.plan
+                    ?.takeIf { isPixelPaint(_state.value.selectedTaskName) }
+                    ?.let { plan ->
+                        sessionLogger.append(
+                            appContext.getString(
+                                R.string.pixel_art_status_started,
+                                plan.paintedCellCount,
+                                plan.groups.size,
+                            ),
+                            LogLevel.INFO,
+                        )
+                    }
             }
             _state.update {
                 it.copy(

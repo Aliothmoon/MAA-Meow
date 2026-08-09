@@ -39,6 +39,7 @@ object MiniGameTextRegistry {
         "MiniGameNameYellowTicketStoreTip" -> R.string.mini_game_tip_yellow_ticket_store
         "MiniGameNameRAStoreTip" -> R.string.mini_game_tip_ra_store
         "MiniGame@SecretFrontTip" -> R.string.mini_game_tip_secret_front
+        "MiniGame@PixelPaintTip" -> R.string.mini_game_tip_pixel_paint
         "MiniGame@PVTip" -> R.string.mini_game_tip_pv
         "MiniGame@SPATip" -> R.string.mini_game_tip_spa
         "MiniGame@OSTip" -> R.string.mini_game_tip_os

@@ -16,6 +16,7 @@ import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
 import com.aliothmoon.maameow.domain.usecase.GameReadiness
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
@@ -88,9 +89,15 @@ class ToolboxViewModel(
     val operBoxRepository: OperBoxRepository,
     private val itemHelper: ItemHelper,
     private val appSettingsManager: AppSettingsManager,
+    private val sessionLogger: MaaSessionLogger,
 ) : ViewModel() {
 
-    val miniGame = MiniGameDelegate(appContext, activityManager, compositionService, viewModelScope, achievementRepository)
+    val pixelArt = PixelArtDelegate(appContext, collector, compositionService.state, viewModelScope)
+
+    val miniGame = MiniGameDelegate(
+        appContext, activityManager, compositionService, viewModelScope, achievementRepository, pixelArt,
+        sessionLogger,
+    )
 
     private val _currentTab = MutableStateFlow(ToolboxTab.MINI_GAME)
     val currentTab: StateFlow<ToolboxTab> = _currentTab.asStateFlow()

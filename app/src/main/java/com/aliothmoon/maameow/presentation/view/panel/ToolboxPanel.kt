@@ -94,7 +94,11 @@ fun ToolboxPanel(
 
         // 内容区（前台不会落到 GACHA）
         when (currentTab) {
-            ToolboxTab.MINI_GAME -> MiniGamePanel(delegate = viewModel.miniGame, modifier = Modifier.fillMaxSize())
+            ToolboxTab.MINI_GAME -> MiniGamePanel(
+                modifier = Modifier.fillMaxSize(),
+                delegate = viewModel.miniGame,
+                pixelArt = viewModel.pixelArt,
+            )
             ToolboxTab.GACHA -> GachaPanel(viewModel = viewModel, modifier = Modifier.fillMaxSize())
             ToolboxTab.RECRUIT_CALC -> RecruitCalcPanel(modifier = Modifier.fillMaxSize())
             ToolboxTab.DEPOT -> DepotRecognitionPanel(modifier = Modifier.fillMaxSize())
