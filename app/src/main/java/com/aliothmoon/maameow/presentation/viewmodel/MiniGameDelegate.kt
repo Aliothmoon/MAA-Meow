@@ -106,6 +106,7 @@ class MiniGameDelegate(
                     putJsonObject("params") {
                         putJsonObject("pixel_paint") {
                             put("swipe", pixelArtState.swipeEnabled)
+                            put("grid_click_delay", pixelArtState.gridClickDelayMs)
                             putJsonArray("groups") {
                                 plan.groups.forEach { group ->
                                     addJsonObject {

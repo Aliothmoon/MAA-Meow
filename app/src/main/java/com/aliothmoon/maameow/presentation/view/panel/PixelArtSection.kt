@@ -40,6 +40,7 @@ import com.aliothmoon.maameow.domain.models.pixelart.PixelFitMode
 import com.aliothmoon.maameow.domain.service.pixelart.PixelPaintHelper
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import com.aliothmoon.maameow.presentation.components.SelectableCardButton
+import com.aliothmoon.maameow.presentation.viewmodel.GRID_CLICK_DELAY_MAX_MS
 import com.aliothmoon.maameow.presentation.viewmodel.PixelArtDelegate
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.asString
@@ -223,6 +224,19 @@ fun PixelArtSection(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        PercentSlider(
+            label = stringResource(R.string.pixel_art_grid_click_delay),
+            value = state.gridClickDelayMs.toFloat(),
+            enabled = !locked,
+            range = 0f..GRID_CLICK_DELAY_MAX_MS.toFloat(),
+            onChange = { delegate.onGridClickDelayChange(it.roundToInt()) },
+            valueText = stringResource(R.string.pixel_art_grid_click_delay_value, state.gridClickDelayMs),
+        )
+        Text(
+            text = stringResource(R.string.pixel_art_grid_click_delay_tip),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
 
         state.plan?.let {
             Text(
@@ -301,6 +315,7 @@ private fun <T> ChipRow(
     }
 }
 
+/** 右侧读数默认带 %，非百分比量用 valueText 覆盖 */
 @Composable
 private fun PercentSlider(
     label: String,
@@ -308,6 +323,7 @@ private fun PercentSlider(
     enabled: Boolean,
     range: ClosedFloatingPointRange<Float>,
     onChange: (Float) -> Unit,
+    valueText: String = "${value.roundToInt()}%",
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -320,7 +336,7 @@ private fun PercentSlider(
                 modifier = Modifier.weight(1f),
             )
             Text(
-                text = "${value.roundToInt()}%",
+                text = valueText,
                 style = MaterialTheme.typography.bodyMedium,
             )
         }

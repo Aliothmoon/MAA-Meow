@@ -36,6 +36,9 @@ private const val MAX_SOURCE_SIDE = 1024
 /** 取景框最小边长，对齐 WpfGui 的 0.05 下限 */
 private const val MIN_VIEW_SIDE = 0.05
 
+/** 逐格点击额外等待上限（ms），对齐 WpfGui 的 NumericUpDown 上限 */
+const val GRID_CLICK_DELAY_MAX_MS = 500
+
 data class PixelArtUiState(
     val plan: PixelArtPlan? = null,
     val sourceName: String = "",
@@ -48,6 +51,8 @@ data class PixelArtUiState(
     val skipWhite: Boolean = true,
     /** 拖动绘制，下发 params.pixel_paint.swipe */
     val swipeEnabled: Boolean = true,
+    /** 逐格点击的额外等待，下发 params.pixel_paint.grid_click_delay */
+    val gridClickDelayMs: Int = 0,
     /** 取景框，相对去边后的内容图 */
     val view: NormalizedRect = NormalizedRect(),
     val statusMessage: UiText = UiText.Empty,
@@ -124,6 +129,12 @@ class PixelArtDelegate(
         _state.update { it.copy(swipeEnabled = enabled) }
     }
 
+    /** 同上，只影响下发参数 */
+    fun onGridClickDelayChange(delayMs: Int) {
+        if (parametersLocked.value) return
+        _state.update { it.copy(gridClickDelayMs = delayMs.coerceIn(0, GRID_CLICK_DELAY_MAX_MS)) }
+    }
+
     fun onTrimChange(enabled: Boolean) = updateOptions { it.copy(trimEmptyBorder = enabled) }
 
     /**
@@ -162,6 +173,7 @@ class PixelArtDelegate(
                 trimEmptyBorder = defaults.trimEmptyBorder,
                 skipWhite = defaults.skipWhite,
                 swipeEnabled = defaults.swipeEnabled,
+                gridClickDelayMs = defaults.gridClickDelayMs,
                 view = defaults.view,
             )
         }

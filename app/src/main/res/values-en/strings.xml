@@ -903,6 +903,9 @@
     <string name="pixel_art_skip_white">Skip white cells</string>
     <string name="pixel_art_swipe">Swipe painting</string>
     <string name="pixel_art_swipe_tip">Paints a run of same-colored cells in one swipe, noticeably faster. Turn it off if cells get skipped</string>
+    <string name="pixel_art_grid_click_delay">Click delay</string>
+    <string name="pixel_art_grid_click_delay_value">%1$d ms</string>
+    <string name="pixel_art_grid_click_delay_tip">Extra wait between cell clicks. 0 works by default; raise it if a low-end device skips cells. With swipe drawing on, each run waits twice</string>
     <string name="pixel_art_reset_view">Reset view</string>
     <string name="pixel_art_reset_params">Reset params</string>
     <string name="pixel_art_view_hint">Drag to pan, pinch to zoom the preview</string>
