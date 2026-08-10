@@ -59,6 +59,10 @@ JNILIBS_DIR = "app/src/main/jniLibs"
 CACHE_DIR = ".maa-cache"
 VERSION_FILE = ".maaversion"
 
+# Echo extraction progress every N files; ~9000 files per tarball takes tens of
+# seconds and a silent run is indistinguishable from a hang
+EXTRACT_PROGRESS_STEP = 500
+
 # Extract version from tarball name, e.g. MAAComponent-v6.12.0-beta.2-android-arm64.tar.gz
 TARBALL_VERSION_RE = re.compile(r"-(v\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)?)-android-")
 
@@ -181,10 +185,17 @@ def extract_and_deploy(tarball: Path, abi: str, project_root: Path):
     stats = {"resource": 0, "so": 0, "skipped": 0}
 
     print(f"  [EXTRACT] {tarball.name} -> {abi}")
+    seen = 0
+    # Iterate lazily instead of getmembers(): that pre-scans the whole archive
+    # before writing a single file, which looks like a hang on a 180MB tarball
     with tarfile.open(tarball, "r:gz") as tar:
-        for member in tar.getmembers():
+        for member in tar:
             if not member.isfile():
                 continue
+
+            seen += 1
+            if seen % EXTRACT_PROGRESS_STEP == 0:
+                print(f"\r    extracting... {seen} files", end="", flush=True)
 
             name = Path(member.name).name
             parts = Path(member.name).parts
@@ -220,6 +231,8 @@ def extract_and_deploy(tarball: Path, abi: str, project_root: Path):
 
             stats["skipped"] += 1
 
+    if seen >= EXTRACT_PROGRESS_STEP:
+        print()
     print(f"    resource: {stats['resource']} files, so: {stats['so']} files, skipped: {stats['skipped']}")
     return stats
 

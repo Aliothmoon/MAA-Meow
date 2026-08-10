@@ -149,10 +149,14 @@ def convert_tree(resource_dir: Path, cache_dir: Path | None, keep_onnx: bool, re
             print(f"  [SKIP] not det/rec: {onnx_path}")
             continue
         rel = onnx_path.relative_to(resource_dir)
+        # A cold-cache convert takes minutes; announce the target first so the
+        # wait is attributable, then overwrite the line with the outcome.
+        # The placeholder is shorter than both tags, so nothing is left behind.
+        print(f"  [....] {kind}: {rel.parent}", end="", flush=True)
         reconverted = convert_one(onnx_path, kind, cache_dir, rec_fp16)
         stats["converted" if reconverted else "cached"] += 1
         tag = "CONVERT" if reconverted else "CACHE"
-        print(f"  [{tag}] {kind}: {rel.parent}")
+        print(f"\r  [{tag}] {kind}: {rel.parent}")
         if not keep_onnx:
             onnx_path.unlink()
             stats["onnx_removed"] += 1
