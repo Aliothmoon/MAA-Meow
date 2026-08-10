@@ -16,7 +16,6 @@ jobs:
   build:
     runs-on: macos-latest
     strategy:
-      # 一行挂了不连坐其他行
       fail-fast: false
       matrix:
         include:
@@ -133,7 +132,6 @@ jobs:
             mv "$f" "MaaMeow-${TAG}-${{ matrix.label }}.apk"
           done
 
-      # 确认 patch 过的 so 真的进了 APK，而不是打包阶段复用了旧产物
       - name: Verify compat APK
         if: matrix.nosve
         run: |
