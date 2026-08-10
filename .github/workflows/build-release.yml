@@ -26,8 +26,10 @@ jobs:
           - abi: x86_64
             label: x64
           # 给谎报 HWCAP2_SVE2 的 arm64 模拟器出包，见 issue #202
+          # Release 的 Assets 按文件名 ASCII 升序排，z 前缀是为了把兼容包压到最后
+          # 不加的话 arm64-v8a-emu-compat 会排在 arm64-v8a 之前（'-' 小于 '.'）
           - abi: arm64-v8a
-            label: arm64-v8a-emu-compat
+            label: z-arm64-v8a-emu-compat
             nosve: true
 
     steps:
@@ -180,7 +182,7 @@ jobs:
           | `universal` | 通用，不确定选这个 |
           | `arm64-v8a` | ARM 64 位真机 |
           | `x64` | x86_64 模拟器（Windows 上的蓝叠 / MuMu / 雷电等） |
-          | `arm64-v8a-emu-compat` | 兼容包，arm64 模拟器（Mac 上的蓝叠 Air、MuMu Pro Mac 等）启动任务即闪退时改用 |
+          | `z-arm64-v8a-emu-compat` | 兼容包，arm64 模拟器（Mac 上的蓝叠 Air、MuMu Pro Mac 等）启动任务即闪退时改用 |
 
           兼容包功能与 `arm64-v8a` 一致，只是关掉了 OpenCV 的 SVE2 指令分派。装了 `universal` 闪退的模拟器用户请直接换这个包，不要再试 `universal`
 
