@@ -5,6 +5,7 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.service.ScreenSaverController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -51,6 +52,7 @@ class LaunchPipeline(
     private val scheduleRepository: ScheduleStrategyRepository,
     private val startTaskChain: StartTaskChainUseCase,
     private val countdownUI: CountdownUI,
+    private val screenSaver: ScreenSaverController,
     private val taskEndRegistry: TaskEndRegistry,
     private val keyguardLocked: () -> Boolean,
     private val deviceSecure: () -> Boolean,
@@ -210,6 +212,18 @@ class LaunchPipeline(
             outcome.backgroundRun = !isForeground
             val needsActivityLaunch = request.source == LaunchSource.Schedule && presentUi
 
+            // 后台 + 待机才盖；前台会采进物理屏识别
+            if (request.autoScreenSaver && outcome.backgroundRun && outcome.tookOverIdleDevice) {
+                outcome.screenSaverEngaged = screenSaver.show()
+                log.append(
+                    if (outcome.screenSaverEngaged) {
+                        uiTextOf(R.string.schedule_log_screen_saver_on)
+                    } else {
+                        uiTextOf(R.string.schedule_log_screen_saver_failed)
+                    },
+                )
+            }
+
             if (needsActivityLaunch) {
                 log.append(uiTextOf(R.string.schedule_log_launch_ui))
                 val launched = activityLauncher(request)
@@ -338,9 +352,12 @@ class LaunchPipeline(
             val closeGame = outcome.backgroundRun
                     && request.closeGameAfterTask
                     && !appSettingsManager.closeAppOnTaskEnd.value
-            if (result == ExecutionResult.STARTED && (closeGame || autoSleep)) {
+            val screenSaverEngaged = outcome.screenSaverEngaged
+            if (result != ExecutionResult.STARTED) {
+                if (screenSaverEngaged) screenSaver.hide()
+            } else if (closeGame || autoSleep || screenSaverEngaged) {
                 taskEndRegistry.armOnce { reason ->
-                    onTaskEnd(reason, closeGame, autoSleep)
+                    onTaskEnd(reason, closeGame, autoSleep, screenSaverEngaged)
                 }
             }
         }
@@ -365,9 +382,10 @@ class LaunchPipeline(
         Timber.i("LaunchPipeline: force preempt for %s", incoming.requestId)
     }
 
-    /** 抢占前撤掉上一轮收尾，避免 stop 边沿触发旧 autoSleep */
-    private fun takeOverFromPreviousRun() {
+    /** 抢占前撤掉上一轮收尾与屏保，避免 stop 边沿触发旧 autoSleep */
+    private suspend fun takeOverFromPreviousRun() {
         taskEndRegistry.disarmOnce()
+        screenSaver.hide()
     }
 
     /** mutex 未拿到时的旁路结果，独立 writeClosed */
@@ -424,14 +442,19 @@ class LaunchPipeline(
         reason: TaskEndRegistry.Reason,
         closeGame: Boolean,
         autoSleep: Boolean,
+        releaseScreenSaver: Boolean,
     ) {
         Timber.i(
-            "LaunchPipeline: task end reason=%s closeGame=%s autoSleep=%s",
-            reason, closeGame, autoSleep,
+            "LaunchPipeline: task end reason=%s closeGame=%s autoSleep=%s saver=%s",
+            reason, closeGame, autoSleep, releaseScreenSaver,
         )
         // 关游戏只认自然结束
         if (closeGame && reason == TaskEndRegistry.Reason.NATURAL) {
             compositionService.stopVirtualDisplay()
+        }
+        // 屏保有 KEEP_SCREEN_ON，须先关再熄屏
+        if (releaseScreenSaver) {
+            screenSaver.hide()
         }
         if (autoSleep) {
             wakeUnlockEngine.lockAndSleep()
@@ -442,6 +465,7 @@ class LaunchPipeline(
         var backgroundRun = false
         /** 启动采样：熄屏或锁屏 */
         var tookOverIdleDevice = false
+        var screenSaverEngaged = false
     }
 
     companion object {

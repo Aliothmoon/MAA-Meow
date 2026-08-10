@@ -26,6 +26,7 @@ object LaunchIntentMapper {
         displayName = strategy.name,
         scheduledTimeMs = scheduledTimeMs,
         forceStart = strategy.forceStart,
+        autoScreenSaver = strategy.autoScreenSaver,
         autoSleepAfterTask = strategy.autoSleepAfterTask,
         skipAutoSleepIfAwake = strategy.skipAutoSleepIfAwake,
         closeGameAfterTask = strategy.closeGameAfterTask,

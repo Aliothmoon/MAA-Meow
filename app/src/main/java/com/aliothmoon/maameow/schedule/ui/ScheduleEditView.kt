@@ -509,6 +509,38 @@ fun ScheduleEditView(
             }
 
             item {
+                val (saverExpanded, setSaverExpanded) = remember { mutableStateOf(false) }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            stringResource(R.string.schedule_auto_screen_saver),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        ExpandableTipIcon(
+                            modifier = Modifier.padding(start = 8.dp),
+                            expanded = saverExpanded,
+                            onExpandedChange = { setSaverExpanded(it) })
+                    }
+                    Switch(
+                        checked = state.autoScreenSaver,
+                        onCheckedChange = { viewModel.onAutoScreenSaverChanged(it) }
+                    )
+                }
+                ExpandableTipContent(
+                    visible = saverExpanded,
+                    tipText = stringResource(R.string.schedule_auto_screen_saver_tip),
+                )
+            }
+
+            item {
                 val (sleepExpanded, setSleepExpanded) = remember { mutableStateOf(false) }
                 Row(
                     modifier = Modifier

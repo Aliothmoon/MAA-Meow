@@ -669,7 +669,7 @@ fun BackgroundTaskView(
                 isGameMuted = isGameMuted,
                 onToggleGameSound = viewModel::onToggleGameSound,
                 onScreenOff = viewModel::onScreenOff,
-                onShowScreenSaver = { screenSaverManager.show(context as? Activity) },
+                onShowScreenSaver = { coroutineScope.launch { screenSaverManager.show() } },
                 onCaptureScreenshot = viewModel::onCaptureDebugScreenshot,
                 onCloseApp = {
                     if (maaState == MaaExecutionState.RUNNING) {

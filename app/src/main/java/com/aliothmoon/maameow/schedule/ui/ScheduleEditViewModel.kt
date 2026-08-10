@@ -47,6 +47,7 @@ data class ScheduleEditUiState(
     val profiles: List<TaskProfile> = emptyList(),
     val selectedProfileId: String? = null,
     val forceStart: Boolean = false,
+    val autoScreenSaver: Boolean = false,
     val autoSleepAfterTask: Boolean = false,
     val skipAutoSleepIfAwake: Boolean = false,
     val closeGameAfterTask: Boolean = false,
@@ -120,6 +121,7 @@ class ScheduleEditViewModel(
                         profiles = profiles,
                         selectedProfileId = strategy.profileId,
                         forceStart = strategy.forceStart,
+                        autoScreenSaver = strategy.autoScreenSaver,
                         autoSleepAfterTask = strategy.autoSleepAfterTask,
                         skipAutoSleepIfAwake = strategy.skipAutoSleepIfAwake,
                         closeGameAfterTask = strategy.closeGameAfterTask,
@@ -203,6 +205,10 @@ class ScheduleEditViewModel(
         _state.update { it.copy(forceStart = value) }
     }
 
+    fun onAutoScreenSaverChanged(value: Boolean) {
+        _state.update { it.copy(autoScreenSaver = value) }
+    }
+
     fun onAutoSleepAfterTaskChanged(value: Boolean) {
         _state.update { it.copy(autoSleepAfterTask = value) }
     }
@@ -275,6 +281,7 @@ class ScheduleEditViewModel(
                     intervalMinutes = intervalMinutes,
                     profileId = current.selectedProfileId,
                     forceStart = current.forceStart,
+                    autoScreenSaver = current.autoScreenSaver,
                     autoSleepAfterTask = current.autoSleepAfterTask,
                     skipAutoSleepIfAwake = current.skipAutoSleepIfAwake,
                     closeGameAfterTask = current.closeGameAfterTask,
@@ -289,6 +296,7 @@ class ScheduleEditViewModel(
                     intervalMinutes = intervalMinutes,
                     profileId = current.selectedProfileId,
                     forceStart = current.forceStart,
+                    autoScreenSaver = current.autoScreenSaver,
                     autoSleepAfterTask = current.autoSleepAfterTask,
                     skipAutoSleepIfAwake = current.skipAutoSleepIfAwake,
                     closeGameAfterTask = current.closeGameAfterTask,

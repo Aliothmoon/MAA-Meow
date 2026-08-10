@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.overlay.screensaver
 
-import android.app.Activity
 import android.content.Context
 import android.graphics.PixelFormat
 import android.graphics.Rect
@@ -11,9 +10,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -24,20 +20,22 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
+import com.aliothmoon.maameow.domain.service.ScreenSaverController
 import com.aliothmoon.maameow.theme.MaaMeowTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 class ScreenSaverOverlayManager(
     private val context: Context,
     private val sessionLogger: MaaSessionLogger
-) : LifecycleOwner, SavedStateRegistryOwner {
+) : LifecycleOwner, SavedStateRegistryOwner, ScreenSaverController {
 
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var composeView: ComposeView? = null
-    private var insetsController: WindowInsetsControllerCompat? = null
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
@@ -45,23 +43,27 @@ class ScreenSaverOverlayManager(
     private val _showing = MutableStateFlow(false)
     val showing: StateFlow<Boolean> = _showing.asStateFlow()
 
-    init {
+    private var lifecycleReady = false
+
+    /** Lifecycle 须主线程；Koin 可能在 IO 构造，推迟到 show */
+    private fun ensureLifecycleReady() {
+        if (lifecycleReady) return
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
+        lifecycleReady = true
     }
 
     override val lifecycle: Lifecycle get() = lifecycleRegistry
     override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
 
-    fun show(activity: Activity? = null) {
-        if (_showing.value) return
-        activity?.window?.let { window ->
-            val controller = WindowCompat.getInsetsController(window, window.decorView)
-            controller.hide(WindowInsetsCompat.Type.systemBars())
-            controller.systemBarsBehavior =
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            insetsController = controller
-        }
+    override suspend fun show(): Boolean =
+        withContext(Dispatchers.Main.immediate) { showInternal() }
+
+    override suspend fun hide() = withContext(Dispatchers.Main.immediate) { hideInternal() }
+
+    private fun showInternal(): Boolean {
+        if (_showing.value) return true
+        ensureLifecycleReady()
 
         composeView = ComposeView(context).apply {
             setViewTreeLifecycleOwner(this@ScreenSaverOverlayManager)
@@ -78,7 +80,7 @@ class ScreenSaverOverlayManager(
                     ) {
                         ScreenSaverView(
                             sessionLogger = sessionLogger,
-                            onUnlock = { hide() }
+                            onUnlock = { hideInternal() }
                         )
                     }
                 }
@@ -101,14 +103,12 @@ class ScreenSaverOverlayManager(
             _showing.value = true
         } catch (e: Exception) {
             Timber.e(e, "Failed to show screen saver overlay")
-            hide()
+            hideInternal()
         }
+        return _showing.value
     }
 
-    fun hide() {
-        insetsController?.show(WindowInsetsCompat.Type.systemBars())
-        insetsController = null
-
+    private fun hideInternal() {
         val view = composeView ?: return
         composeView = null
         _showing.value = false

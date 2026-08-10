@@ -1545,6 +1545,8 @@
     <string name="schedule_section_advanced">Advanced options</string>
     <string name="schedule_force_start">Force scheduled start</string>
     <string name="schedule_force_start_tip">Stop the current task, restart the game, and start the new tasks</string>
+    <string name="schedule_auto_screen_saver">Enable screen saver while running</string>
+    <string name="schedule_auto_screen_saver_tip">Background mode only. Enables a dark screen saver at minimum brightness before the countdown starts, and turns it off when the task ends. It is skipped if you are already using the device (screen on and unlocked) at trigger time</string>
     <string name="schedule_auto_sleep_after_task">Auto sleep after task</string>
     <string name="schedule_auto_sleep_tip">Automatically turn off the screen after the scheduled task completes to save battery</string>
     <string name="schedule_skip_auto_sleep_if_awake">Skip if screen was already on</string>
@@ -1639,6 +1641,8 @@
     <string name="schedule_log_wake_start">Waking and unlocking…</string>
     <string name="schedule_log_wake_ok">Wake and unlock succeeded</string>
     <string name="schedule_log_auto_sleep_skipped_awake">Device was already unlocked at start, skipping sleep after task</string>
+    <string name="schedule_log_screen_saver_on">Screen saver enabled</string>
+    <string name="schedule_log_screen_saver_failed">Screen saver failed to start, the overlay permission may be missing</string>
     <string name="schedule_log_wake_failed">Wake and unlock failed: %1$s</string>
     <string name="schedule_log_wake_pin_required">Lock password set but PIN not configured; skipped</string>
     <string name="schedule_log_keyguard_skipped">Keyguard check skipped</string>

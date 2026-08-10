@@ -1601,6 +1601,8 @@
     <string name="schedule_section_advanced">高级选项</string>
     <string name="schedule_force_start">强制启动</string>
     <string name="schedule_force_start_tip">强制启动任务，会中断正在运行的游戏和任务</string>
+    <string name="schedule_auto_screen_saver">运行期间启用屏保</string>
+    <string name="schedule_auto_screen_saver_tip">仅后台模式生效。倒计时开始前就启用屏保遮住画面并把亮度压到最低，任务结束后自动关闭。触发时你正在用手机（已亮屏且已解锁）则不启用</string>
     <string name="schedule_auto_sleep_after_task">任务结束后自动熄屏</string>
     <string name="schedule_auto_sleep_tip">定时任务执行完成后自动熄屏，节省电量</string>
     <string name="schedule_skip_auto_sleep_if_awake">启动时已亮屏则不熄屏</string>
@@ -1695,6 +1697,8 @@
     <string name="schedule_log_wake_start">执行唤醒解锁…</string>
     <string name="schedule_log_wake_ok">唤醒解锁成功</string>
     <string name="schedule_log_auto_sleep_skipped_awake">启动时设备已解锁，跳过结束熄屏</string>
+    <string name="schedule_log_screen_saver_on">已启用屏保</string>
+    <string name="schedule_log_screen_saver_failed">屏保启用失败，可能缺少悬浮窗权限</string>
     <string name="schedule_log_wake_failed">唤醒解锁失败: %1$s</string>
     <string name="schedule_log_wake_pin_required">系统有锁屏密码但未配置 PIN，已跳过</string>
     <string name="schedule_log_keyguard_skipped">已跳过锁屏检查</string>

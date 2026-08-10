@@ -5,6 +5,7 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.service.ScreenSaverController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -14,6 +15,7 @@ import com.aliothmoon.maameow.schedule.service.ScheduleTriggerLogger
 import com.aliothmoon.maameow.utils.i18n.UiText
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -52,6 +54,7 @@ class LaunchPipelineTest {
     private lateinit var logger: ScheduleTriggerLogger
     private lateinit var repository: ScheduleStrategyRepository
     private lateinit var startTaskChain: StartTaskChainUseCase
+    private lateinit var screenSaver: ScreenSaverController
     private lateinit var taskEndRegistry: TaskEndRegistry
 
     private val keyguardLocked = java.util.concurrent.atomic.AtomicBoolean(false)
@@ -123,6 +126,10 @@ class LaunchPipelineTest {
         wake = mockk(relaxed = true)
         coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.OK
         coEvery { wake.lockAndSleep() } returns WakeUnlockEngine.WakeResult.OK
+
+        screenSaver = mockk(relaxed = true)
+        // relaxed 的 Boolean 默认为 false
+        coEvery { screenSaver.show() } returns true
 
         chainState = mockk(relaxed = true) {
             every { isLoaded } returns this@LaunchPipelineTest.isLoaded
@@ -201,6 +208,7 @@ class LaunchPipelineTest {
         scheduleRepository = repository,
         startTaskChain = startTaskChain,
         countdownUI = countdown,
+        screenSaver = screenSaver,
         taskEndRegistry = taskEndRegistry,
         keyguardLocked = { keyguardLocked.get() },
         deviceSecure = { deviceSecure.get() },
@@ -213,6 +221,7 @@ class LaunchPipelineTest {
         force: Boolean = false,
         autoSleep: Boolean = false,
         skipIfAwake: Boolean = false,
+        autoScreenSaver: Boolean = false,
     ) = LaunchRequest(
         requestId = id,
         source = LaunchSource.Schedule,
@@ -220,6 +229,7 @@ class LaunchPipelineTest {
         displayName = "Test",
         scheduledTimeMs = 1_000L,
         forceStart = force,
+        autoScreenSaver = autoScreenSaver,
         autoSleepAfterTask = autoSleep,
         skipAutoSleepIfAwake = skipIfAwake,
         strategyId = "strat-1",
@@ -281,12 +291,85 @@ class LaunchPipelineTest {
         coVerify(timeout = 5_000) { wake.lockAndSleep() }
     }
 
+    @Test
+    fun autoScreenSaver_idleDevice_showsThenHides() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        pipeline().execute(scheduleRequest(autoScreenSaver = true)).join()
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        coVerify(exactly = 1) { screenSaver.show() }
+        driveTaskToEnd()
+        coVerify(timeout = 5_000, exactly = 1) { screenSaver.hide() }
+    }
+
+    @Test
+    fun autoScreenSaver_foreground_neverShows() = runBlocking<Unit> {
+        runMode.value = RunMode.FOREGROUND
+        screenInteractive.set(false)
+        pipeline().execute(scheduleRequest(autoScreenSaver = true)).join()
+        assertEquals(1, startCalls.get())
+        coVerify(exactly = 0) { screenSaver.show() }
+    }
+
+    @Test
+    fun autoScreenSaver_awakeAndUnlocked_neverShows() = runBlocking<Unit> {
+        screenInteractive.set(true)
+        keyguardLocked.set(false)
+        pipeline().execute(scheduleRequest(autoScreenSaver = true)).join()
+        assertEquals(1, startCalls.get())
+        coVerify(exactly = 0) { screenSaver.show() }
+    }
+
+    @Test
+    fun autoScreenSaver_startFails_hidesImmediately() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        coEvery {
+            startTaskChain.invoke(chain = any(), context = any(), scheduleLabel = any())
+        } returns StartTaskChainUseCase.Result.Failed(
+            executionResult = ExecutionResult.FAILED_START,
+            message = mockk(relaxed = true),
+        )
+        pipeline().execute(scheduleRequest(autoScreenSaver = true)).join()
+        assertEquals(listOf(ExecutionResult.FAILED_START), recorded.toList())
+        coVerify(exactly = 1) { screenSaver.show() }
+        coVerify(exactly = 1) { screenSaver.hide() }
+    }
+
+    @Test
+    fun autoScreenSaver_withAutoSleep_hidesBeforeSleeping() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        pipeline().execute(scheduleRequest(autoScreenSaver = true, autoSleep = true)).join()
+        driveTaskToEnd()
+        coVerify(timeout = 5_000) { wake.lockAndSleep() }
+        coVerifyOrder {
+            screenSaver.hide()
+            wake.lockAndSleep()
+        }
+    }
+
+    @Test
+    fun autoScreenSaverDisabled_neverShows() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        pipeline().execute(scheduleRequest()).join()
+        assertEquals(1, startCalls.get())
+        coVerify(exactly = 0) { screenSaver.show() }
+    }
+
+    @Test
+    fun autoScreenSaver_showFails_doesNotArmRelease() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        coEvery { screenSaver.show() } returns false
+        pipeline().execute(scheduleRequest(autoScreenSaver = true)).join()
+        driveTaskToEnd()
+        delay(500)
+        coVerify(exactly = 0) { screenSaver.hide() }
+    }
+
     /** force 须先 disarm，否则旧 autoSleep 会落在新一轮 */
     @Test
     fun forceStart_dropsPreviousRunPostActions() = runBlocking<Unit> {
         screenInteractive.set(false)
         val p = pipeline()
-        p.execute(scheduleRequest("a", autoSleep = true)).join()
+        p.execute(scheduleRequest("a", autoSleep = true, autoScreenSaver = true)).join()
         assertEquals(1, startCalls.get())
         delay(200)
 
@@ -310,8 +393,8 @@ class LaunchPipelineTest {
             delay(100)
             StartTaskChainUseCase.Result.Success
         }
-        pipeline().execute(scheduleRequest(autoSleep = true)).join()
-        coVerify(timeout = 5_000, exactly = 1) { wake.lockAndSleep() }
+        pipeline().execute(scheduleRequest(autoScreenSaver = true)).join()
+        coVerify(timeout = 5_000, exactly = 1) { screenSaver.hide() }
     }
 
     private fun externalRequest(id: String = "ext-1") = LaunchRequest(

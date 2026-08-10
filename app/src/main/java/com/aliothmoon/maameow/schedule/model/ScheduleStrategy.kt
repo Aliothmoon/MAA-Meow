@@ -66,13 +66,15 @@ data class ScheduleStrategy(
     val intervalMinutes: Int? = null,
     /** 关联的任务配置 Profile ID */
     val profileId: String,
-    /** 触发时若有任务运行，强制停止后再启动 */
+    /** 有任务在跑时强制停再启 */
     val forceStart: Boolean = false,
+    /** 运行期间屏保；仅后台，在用时不盖 */
+    val autoScreenSaver: Boolean = false,
     /** 任务结束后自动熄屏 */
     val autoSleepAfterTask: Boolean = false,
-    /** 仅在启动时处于熄屏或锁屏才熄屏；启动时已解锁视为用户在用，跳过 */
+    /** 启动时已亮屏未锁屏则不熄屏 */
     val skipAutoSleepIfAwake: Boolean = false,
-    /** 任务自然结束后关闭游戏，仅后台模式；全局同名开关已开时以全局为准 */
+    /** 自然结束后关游戏；仅后台，全局开关优先 */
     val closeGameAfterTask: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val lastExecutedAt: Long? = null,

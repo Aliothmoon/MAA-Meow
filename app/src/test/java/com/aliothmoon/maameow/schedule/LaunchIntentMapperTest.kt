@@ -39,4 +39,20 @@ class LaunchIntentMapperTest {
         assertNotEquals(a.requestId, b.requestId)
     }
 
+    @Test
+    fun strategyFlags_areCarriedIntoRequest() {
+        val s = strategy().copy(
+            forceStart = true,
+            autoScreenSaver = true,
+            autoSleepAfterTask = true,
+            skipAutoSleepIfAwake = true,
+            closeGameAfterTask = true,
+        )
+        val request = LaunchIntentMapper.fromStrategy(s, scheduledTimeMs = 1L)
+        assertEquals(true, request.forceStart)
+        assertEquals(true, request.autoScreenSaver)
+        assertEquals(true, request.autoSleepAfterTask)
+        assertEquals(true, request.skipAutoSleepIfAwake)
+        assertEquals(true, request.closeGameAfterTask)
+    }
 }

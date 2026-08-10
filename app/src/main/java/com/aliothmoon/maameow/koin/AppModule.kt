@@ -56,6 +56,7 @@ import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.RemoteAppAliveChecker
 import com.aliothmoon.maameow.domain.service.ResourceInitService
+import com.aliothmoon.maameow.domain.service.ScreenSaverController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.ToolboxExportService
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
@@ -98,6 +99,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
+import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.qualifier.named
 import org.koin.dsl.bind
@@ -156,6 +158,7 @@ val appModule = module {
             scheduleRepository = get(),
             startTaskChain = get(),
             countdownUI = get(),
+            screenSaver = get(),
             taskEndRegistry = get(),
             keyguardLocked = {
                 val km = appContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
@@ -251,7 +254,7 @@ val appModule = module {
 
 
     singleOf(::BorderOverlayManager)
-    singleOf(::ScreenSaverOverlayManager)
+    singleOf(::ScreenSaverOverlayManager) { bind<ScreenSaverController>() }
     singleOf(::OverlayViewModelOwner)
     singleOf(::OverlayController)
 

@@ -16,8 +16,10 @@ data class LaunchRequest(
     val displayName: String,
     val scheduledTimeMs: Long,
     val forceStart: Boolean = false,
+    /** 运行期间屏保；仅后台且待机接管时生效 */
+    val autoScreenSaver: Boolean = false,
     val autoSleepAfterTask: Boolean = false,
-    /** 启动时已亮屏且未锁屏则不熄屏，见 [LaunchPipeline] 的开头采样 */
+    /** 启动时已亮屏未锁屏则不熄屏 */
     val skipAutoSleepIfAwake: Boolean = false,
     val closeGameAfterTask: Boolean = false,
     val strategyId: String = "",
