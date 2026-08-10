@@ -365,7 +365,7 @@
     <!-- task action buttons -->
     <string name="task_btn_start">Start Task</string>
     <string name="task_btn_stop">Stop Task</string>
-    <string name="task_more_actions_cd">More actions</string>
+    <string name="task_btn_quick_options">Options</string>
     <string name="task_close_preview_cd">Close preview</string>
 
     <!-- dialog: close app confirm -->
@@ -1552,7 +1552,7 @@
     <string name="schedule_skip_auto_sleep_if_awake">Skip if screen was already on</string>
     <string name="schedule_skip_auto_sleep_if_awake_tip">If the screen is already on and not showing the lock screen when the task triggers, assume you are using the phone and leave it on</string>
     <string name="schedule_close_game_after_task">Close game after task</string>
-    <string name="schedule_close_game_tip">Background mode only. If "Close game when task ends" is already enabled in the "More" menu at the right of the bottom action bar on the Tasks page, that switch takes precedence; this strategy setting applies only when it is off. Manually stopping a task will not close the game</string>
+    <string name="schedule_close_game_tip">Background mode only. If "Tasks → Options → Close game when task ends" is already enabled, that switch takes precedence; this strategy setting applies only when it is off. Manually stopping a task will not close the game</string>
     <string name="schedule_close_game_effect_foreground">Current effect: run mode is foreground, so this option does nothing</string>
     <string name="schedule_close_game_effect_global">Current effect: the global switch is on, so the game closes when the task ends</string>
     <string name="schedule_close_game_effect_strategy">Current effect: this strategy closes the game after the task ends normally</string>
@@ -1630,7 +1630,7 @@
     <string name="notification_schedule_title">Scheduled Task</string>
     <string name="notification_schedule_preparing">Preparing to launch…</string>
     <string name="notification_schedule_device_locked">Device is locked</string>
-    <string name="notification_schedule_pin_required">Skipped: a device lock password is set. Configure a PIN in settings, or use Screen Off from the more options button beside the Stop button on the background task page, instead of the system lock screen</string>
+    <string name="notification_schedule_pin_required">Skipped: a device lock password is set. Configure a PIN in settings, or use "Tasks → Options → Screen Off" instead of the system lock screen</string>
     <string name="notification_schedule_detail">\"%1$s\": %2$s</string>
 
     <!-- i18n: schedule trigger journal (pipeline) -->

@@ -568,7 +568,7 @@
     <!-- task action buttons -->
     <string name="task_btn_start">开始任务</string>
     <string name="task_btn_stop">停止任务</string>
-    <string name="task_more_actions_cd">更多操作</string>
+    <string name="task_btn_quick_options">快捷选项</string>
     <string name="task_close_preview_cd">关闭预览</string>
 
     <!-- dialog: close app confirm -->
@@ -1608,7 +1608,7 @@
     <string name="schedule_skip_auto_sleep_if_awake">启动时已亮屏则不熄屏</string>
     <string name="schedule_skip_auto_sleep_if_awake_tip">触发时屏幕已亮且不在锁屏界面，视为你正在用手机，任务结束后不熄屏</string>
     <string name="schedule_close_game_after_task">任务结束后关闭游戏</string>
-    <string name="schedule_close_game_tip">仅后台模式生效。若后台任务页底部操作栏右侧的「更多」菜单中已开启「任务自动结束时关闭游戏」，以该开关为准；未开启时才按本策略执行。手动停止任务不会关闭游戏</string>
+    <string name="schedule_close_game_tip">仅后台模式生效。若「后台任务 → 快捷选项 → 任务自动结束时关闭游戏」已开启，以该开关为准；未开启时才按本策略执行。手动停止任务不会关闭游戏</string>
     <string name="schedule_close_game_effect_foreground">当前效果：运行模式为前台，本项不生效</string>
     <string name="schedule_close_game_effect_global">当前效果：全局开关已开启，任务结束后会关闭游戏</string>
     <string name="schedule_close_game_effect_strategy">当前效果：任务自然结束后会按本策略关闭游戏</string>
@@ -1686,7 +1686,7 @@
     <string name="notification_schedule_title">定时任务</string>
     <string name="notification_schedule_preparing">正在准备拉起界面…</string>
     <string name="notification_schedule_device_locked">设备处于锁屏状态</string>
-    <string name="notification_schedule_pin_required">已跳过：设备有锁屏密码。请在设置中配置 PIN，或用后台任务页停止按钮右侧的更多选项按钮中的「熄屏挂机」代替系统锁屏</string>
+    <string name="notification_schedule_pin_required">已跳过：设备有锁屏密码。请在设置中配置 PIN，或用「后台任务 → 快捷选项 → 熄屏挂机」代替系统锁屏</string>
     <string name="notification_schedule_detail">「%1$s」: %2$s</string>
 
     <!-- i18n: schedule trigger journal (pipeline) -->
