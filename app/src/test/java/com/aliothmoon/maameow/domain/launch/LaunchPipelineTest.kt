@@ -22,6 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -53,6 +54,7 @@ class LaunchPipelineTest {
 
     private val keyguardLocked = java.util.concurrent.atomic.AtomicBoolean(false)
     private val deviceSecure = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val screenInteractive = java.util.concurrent.atomic.AtomicBoolean(true)
     private val startCalls = AtomicInteger(0)
     private val recorded = CopyOnWriteArrayList<ExecutionResult>()
     private val stopCalls = AtomicInteger(0)
@@ -106,6 +108,7 @@ class LaunchPipelineTest {
         recorded.clear()
         keyguardLocked.set(false)
         deviceSecure.set(false)
+        screenInteractive.set(true)
         unlockType.value = "swipe"
         runMode.value = RunMode.BACKGROUND
         compositionState.value = MaaExecutionState.IDLE
@@ -192,12 +195,15 @@ class LaunchPipelineTest {
         countdownUI = countdown,
         keyguardLocked = { keyguardLocked.get() },
         deviceSecure = { deviceSecure.get() },
+        screenInteractive = { screenInteractive.get() },
         activityLauncher = { true },
     )
 
     private fun scheduleRequest(
         id: String = "req-1",
         force: Boolean = false,
+        autoSleep: Boolean = false,
+        skipIfAwake: Boolean = false,
     ) = LaunchRequest(
         requestId = id,
         source = LaunchSource.Schedule,
@@ -205,9 +211,63 @@ class LaunchPipelineTest {
         displayName = "Test",
         scheduledTimeMs = 1_000L,
         forceStart = force,
+        autoSleepAfterTask = autoSleep,
+        skipAutoSleepIfAwake = skipIfAwake,
         strategyId = "strat-1",
         countdownSeconds = 1,
     )
+
+    /**
+     * awaitTaskEnd 要看到 IDLE → RUNNING → IDLE 才收尾。
+     * StateFlow 会合并连续赋值，两次之间必须留出投递窗口。
+     */
+    private suspend fun driveTaskToEnd() {
+        delay(200)
+        compositionState.value = MaaExecutionState.RUNNING
+        delay(200)
+        compositionState.value = MaaExecutionState.IDLE
+    }
+
+    /** 没勾「已亮屏则不熄屏」时维持旧行为：亮着也照样熄 */
+    @Test
+    fun autoSleepWithoutSkipOption_sleepsEvenWhenAwake() = runBlocking<Unit> {
+        screenInteractive.set(true)
+        keyguardLocked.set(false)
+        pipeline().execute(scheduleRequest(autoSleep = true)).join()
+        driveTaskToEnd()
+        coVerify(timeout = 5_000) { wake.lockAndSleep() }
+    }
+
+    /** 勾上后：启动时亮屏且已解锁 —— 当作用户在用，不熄屏 */
+    @Test
+    fun autoSleepSkipIfAwake_awakeAndUnlocked_skipsSleep() = runBlocking<Unit> {
+        screenInteractive.set(true)
+        keyguardLocked.set(false)
+        pipeline().execute(scheduleRequest(autoSleep = true, skipIfAwake = true)).join()
+        driveTaskToEnd()
+        delay(500)
+        coVerify(exactly = 0) { wake.lockAndSleep() }
+    }
+
+    /** 勾上后：熄屏启动仍要熄屏（锁屏方式为「无」时 keyguard 也是 false，只能靠亮屏信号） */
+    @Test
+    fun autoSleepSkipIfAwake_screenOff_stillSleeps() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        keyguardLocked.set(false)
+        pipeline().execute(scheduleRequest(autoSleep = true, skipIfAwake = true)).join()
+        driveTaskToEnd()
+        coVerify(timeout = 5_000) { wake.lockAndSleep() }
+    }
+
+    /** 勾上后：亮屏但停在锁屏界面，仍要熄屏 */
+    @Test
+    fun autoSleepSkipIfAwake_awakeButLocked_stillSleeps() = runBlocking<Unit> {
+        screenInteractive.set(true)
+        keyguardLocked.set(true)
+        pipeline().execute(scheduleRequest(autoSleep = true, skipIfAwake = true)).join()
+        driveTaskToEnd()
+        coVerify(timeout = 5_000) { wake.lockAndSleep() }
+    }
 
     private fun externalRequest(id: String = "ext-1") = LaunchRequest(
         requestId = id,

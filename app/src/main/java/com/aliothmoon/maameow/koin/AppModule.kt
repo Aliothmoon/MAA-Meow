@@ -78,6 +78,7 @@ import com.aliothmoon.maameow.overlay.border.BorderOverlayManager
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import android.app.KeyguardManager
 import android.content.Context
+import android.os.PowerManager
 import com.aliothmoon.maameow.domain.launch.CountdownUI
 import com.aliothmoon.maameow.domain.launch.LaunchMutex
 import com.aliothmoon.maameow.domain.launch.LaunchPipeline
@@ -161,6 +162,10 @@ val appModule = module {
             deviceSecure = {
                 val km = appContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
                 km.isDeviceSecure
+            },
+            screenInteractive = {
+                val pm = appContext.getSystemService(Context.POWER_SERVICE) as PowerManager
+                pm.isInteractive
             },
             activityLauncher = { request: LaunchRequest ->
                 withTimeoutOrNull(10.seconds) {

@@ -17,6 +17,8 @@ data class LaunchRequest(
     val scheduledTimeMs: Long,
     val forceStart: Boolean = false,
     val autoSleepAfterTask: Boolean = false,
+    /** 启动时已亮屏且未锁屏则不熄屏，见 [LaunchPipeline] 的开头采样 */
+    val skipAutoSleepIfAwake: Boolean = false,
     val closeGameAfterTask: Boolean = false,
     val strategyId: String = "",
     val countdownSeconds: Int = DEFAULT_COUNTDOWN_SECONDS,

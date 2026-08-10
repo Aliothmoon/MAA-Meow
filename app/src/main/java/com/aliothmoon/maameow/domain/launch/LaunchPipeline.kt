@@ -52,6 +52,7 @@ class LaunchPipeline(
     private val countdownUI: CountdownUI,
     private val keyguardLocked: () -> Boolean,
     private val deviceSecure: () -> Boolean,
+    private val screenInteractive: () -> Boolean,
     private val activityLauncher: suspend (LaunchRequest) -> Boolean,
 ) {
     private val _session = MutableStateFlow<LaunchSession>(LaunchSession.Idle)
@@ -125,6 +126,8 @@ class LaunchPipeline(
         var terminalMessage: UiText? = null
         var presentUi = true
         var backgroundRun = false
+        // 结束熄屏要用，finally 里读，必须活在 try 外
+        var tookOverIdleDevice = false
         // 每次触发独占一个日志 Session（独立文件），无全局 writer 竞态
         val log = triggerLogger.open(
             strategyId = request.strategyId,
@@ -153,6 +156,10 @@ class LaunchPipeline(
                     return
                 }
             }
+
+            // 必须赶在唤醒之前采样，否则读到的永远是「已亮屏已解锁」
+            // 锁屏方式为「无」时熄屏也不上锁，所以亮屏与 keyguard 两个信号都要看
+            tookOverIdleDevice = !screenInteractive() || keyguardLocked()
 
             // wake + keyguard：仅 Schedule；默认滑动解锁，有密码且未配 PIN 则跳过
             if (request.source == LaunchSource.Schedule) {
@@ -284,7 +291,10 @@ class LaunchPipeline(
         } finally {
             // 协程已 cancel 时仍须落库 / 关本 Session
             withContext(NonCancellable) {
-                finalizePipeline(request, log, terminalResult, terminalMessage, backgroundRun)
+                finalizePipeline(
+                    request, log, terminalResult, terminalMessage,
+                    backgroundRun, tookOverIdleDevice,
+                )
             }
         }
     }
@@ -295,9 +305,16 @@ class LaunchPipeline(
         terminalResult: ExecutionResult?,
         terminalMessage: UiText?,
         backgroundRun: Boolean,
+        tookOverIdleDevice: Boolean,
     ) {
         val result = terminalResult ?: ExecutionResult.CANCELLED
+        // 开了「已亮屏则不熄屏」时，启动那一刻设备是醒着的就当用户在用，别摁黑
+        val skipSleep = request.skipAutoSleepIfAwake && !tookOverIdleDevice
+        val autoSleep = request.autoSleepAfterTask && !skipSleep
         try {
+            if (result == ExecutionResult.STARTED && request.autoSleepAfterTask && skipSleep) {
+                log.append(uiTextOf(R.string.schedule_log_auto_sleep_skipped_awake))
+            }
             log.end(result, terminalMessage)
             if (request.strategyId.isNotEmpty()) {
                 scheduleRepository.recordExecutionResult(
@@ -334,10 +351,8 @@ class LaunchPipeline(
             val closeGame = backgroundRun
                     && request.closeGameAfterTask
                     && !appSettingsManager.closeAppOnTaskEnd.value
-            if (result == ExecutionResult.STARTED
-                && (closeGame || request.autoSleepAfterTask)
-            ) {
-                scope.launch { awaitTaskEnd(closeGame, request.autoSleepAfterTask) }
+            if (result == ExecutionResult.STARTED && (closeGame || autoSleep)) {
+                scope.launch { awaitTaskEnd(closeGame, autoSleep) }
             }
         }
     }

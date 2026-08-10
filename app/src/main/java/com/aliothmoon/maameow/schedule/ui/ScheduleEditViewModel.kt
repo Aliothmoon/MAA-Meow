@@ -48,6 +48,7 @@ data class ScheduleEditUiState(
     val selectedProfileId: String? = null,
     val forceStart: Boolean = false,
     val autoSleepAfterTask: Boolean = false,
+    val skipAutoSleepIfAwake: Boolean = false,
     val closeGameAfterTask: Boolean = false,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
@@ -120,6 +121,7 @@ class ScheduleEditViewModel(
                         selectedProfileId = strategy.profileId,
                         forceStart = strategy.forceStart,
                         autoSleepAfterTask = strategy.autoSleepAfterTask,
+                        skipAutoSleepIfAwake = strategy.skipAutoSleepIfAwake,
                         closeGameAfterTask = strategy.closeGameAfterTask,
                     )
                     return@launch
@@ -205,6 +207,10 @@ class ScheduleEditViewModel(
         _state.update { it.copy(autoSleepAfterTask = value) }
     }
 
+    fun onSkipAutoSleepIfAwakeChanged(value: Boolean) {
+        _state.update { it.copy(skipAutoSleepIfAwake = value) }
+    }
+
     fun onCloseGameAfterTaskChanged(value: Boolean) {
         _state.update { it.copy(closeGameAfterTask = value) }
     }
@@ -270,6 +276,7 @@ class ScheduleEditViewModel(
                     profileId = current.selectedProfileId,
                     forceStart = current.forceStart,
                     autoSleepAfterTask = current.autoSleepAfterTask,
+                    skipAutoSleepIfAwake = current.skipAutoSleepIfAwake,
                     closeGameAfterTask = current.closeGameAfterTask,
                 ) ?: ScheduleStrategy(
                     id = strategyId ?: UUID.randomUUID().toString(),
@@ -283,6 +290,7 @@ class ScheduleEditViewModel(
                     profileId = current.selectedProfileId,
                     forceStart = current.forceStart,
                     autoSleepAfterTask = current.autoSleepAfterTask,
+                    skipAutoSleepIfAwake = current.skipAutoSleepIfAwake,
                     closeGameAfterTask = current.closeGameAfterTask,
                 )
 

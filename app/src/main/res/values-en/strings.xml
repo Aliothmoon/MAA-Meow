@@ -1547,6 +1547,8 @@
     <string name="schedule_force_start_tip">Stop the current task, restart the game, and start the new tasks</string>
     <string name="schedule_auto_sleep_after_task">Auto sleep after task</string>
     <string name="schedule_auto_sleep_tip">Automatically turn off the screen after the scheduled task completes to save battery</string>
+    <string name="schedule_skip_auto_sleep_if_awake">Skip if screen was already on</string>
+    <string name="schedule_skip_auto_sleep_if_awake_tip">If the screen is already on and not showing the lock screen when the task triggers, assume you are using the phone and leave it on</string>
     <string name="schedule_close_game_after_task">Close game after task</string>
     <string name="schedule_close_game_tip">Background mode only. If "Close game when task ends" is already enabled in the "More" menu at the right of the bottom action bar on the Tasks page, that switch takes precedence; this strategy setting applies only when it is off. Manually stopping a task will not close the game</string>
     <string name="schedule_close_game_effect_foreground">Current effect: run mode is foreground, so this option does nothing</string>
@@ -1636,6 +1638,7 @@
     <string name="schedule_log_force_stop_running">Force start: stopping the running task</string>
     <string name="schedule_log_wake_start">Waking and unlocking…</string>
     <string name="schedule_log_wake_ok">Wake and unlock succeeded</string>
+    <string name="schedule_log_auto_sleep_skipped_awake">Device was already unlocked at start, skipping sleep after task</string>
     <string name="schedule_log_wake_failed">Wake and unlock failed: %1$s</string>
     <string name="schedule_log_wake_pin_required">Lock password set but PIN not configured; skipped</string>
     <string name="schedule_log_keyguard_skipped">Keyguard check skipped</string>

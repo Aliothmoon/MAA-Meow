@@ -538,6 +538,32 @@ fun ScheduleEditView(
                     visible = sleepExpanded,
                     tipText = stringResource(R.string.schedule_auto_sleep_tip),
                 )
+                // 从属于上面的开关，关掉就没有意义，直接隐藏
+                if (state.autoSleepAfterTask) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 24.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                stringResource(R.string.schedule_skip_auto_sleep_if_awake),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                stringResource(R.string.schedule_skip_auto_sleep_if_awake_tip),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = state.skipAutoSleepIfAwake,
+                            onCheckedChange = { viewModel.onSkipAutoSleepIfAwakeChanged(it) }
+                        )
+                    }
+                }
             }
 
             item {
