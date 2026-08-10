@@ -13,6 +13,8 @@ import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.launch.LaunchPipeline
+import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
+import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
 import com.aliothmoon.maameow.domain.launch.LaunchRequest
 import com.aliothmoon.maameow.domain.launch.LaunchSession
 import com.aliothmoon.maameow.domain.launch.LaunchUserEvent
@@ -36,7 +38,9 @@ import com.aliothmoon.maameow.presentation.view.panel.PanelTab
 import com.aliothmoon.maameow.schedule.model.CountdownState
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.resolve
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -49,7 +53,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -68,6 +74,8 @@ class BackgroundTaskViewModel(
     private val achievementReporter: AchievementReporter,
     private val gameMuteCoordinator: GameMuteCoordinator,
     private val launchPipeline: LaunchPipeline,
+    private val scheduleRepository: ScheduleStrategyRepository,
+    private val scheduleAlarmManager: ScheduleAlarmManager,
     private val application: Context,
 ) : ViewModel() {
 
@@ -116,6 +124,10 @@ class BackgroundTaskViewModel(
     private val touchPreviewController = TouchPreviewController(viewModelScope)
     val markers: StateFlow<List<PreviewTouchMarker>> = touchPreviewController.markers
     private var pendingStart: PendingStart? = null
+    /** 任务链：当前段启动成功后，剩余待执行的用户配置 ID。 */
+    private var pendingSequenceProfileIds: List<String> = emptyList()
+    private var sequenceTotal: Int = 0
+    private var sequenceUserStop: Boolean = false
 
     private data class PendingStart(
         val context: TaskStartContext,
@@ -193,12 +205,46 @@ class BackgroundTaskViewModel(
         viewModelScope.launch {
             var prev = compositionService.state.value
             compositionService.state.collect { current ->
+                // 用户/外部停止：清空任务链队列，避免 STOPPING→IDLE 误开下一段
+                if (current == MaaExecutionState.STOPPING || sequenceUserStop) {
+                    if (pendingSequenceProfileIds.isNotEmpty()) {
+                        Timber.i("Clearing pending sequence profiles on stop")
+                        pendingSequenceProfileIds = emptyList()
+                        sequenceTotal = 0
+                    }
+                }
+                // 任务链：自然结束（RUNNING → IDLE）后切换下一个用户配置
+                if (prev == MaaExecutionState.RUNNING
+                    && current == MaaExecutionState.IDLE
+                    && !sequenceUserStop
+                    && pendingSequenceProfileIds.isNotEmpty()
+                ) {
+                    val remaining = pendingSequenceProfileIds
+                    pendingSequenceProfileIds = emptyList()
+                    viewModelScope.launch {
+                        startNextSequenceProfile(remaining)
+                    }
+                    prev = current
+                    return@collect
+                }
+                if (prev == MaaExecutionState.RUNNING && current == MaaExecutionState.ERROR) {
+                    if (pendingSequenceProfileIds.isNotEmpty()) {
+                        Timber.w(
+                            "Sequence segment ERROR; drop %d remaining profile(s)",
+                            pendingSequenceProfileIds.size,
+                        )
+                        pendingSequenceProfileIds = emptyList()
+                        sequenceTotal = 0
+                    }
+                }
                 // 仅在任务自然结束（RUNNING → IDLE/ERROR）时关闭游戏；
-                // 手动停止走 RUNNING → STOPPING → IDLE，prev 为 STOPPING 不会匹配，
-                // 这是预期行为：手动停止说明用户可能还要继续操作，不应自动关闭游戏。
+                // 手动停止走 RUNNING → STOPPING → IDLE，prev 为 STOPPING 不会匹配。
+                // 任务链还有下一段时不关游戏。
                 if (prev == MaaExecutionState.RUNNING
                     && (current == MaaExecutionState.IDLE || current == MaaExecutionState.ERROR)
                     && appSettingsManager.closeAppOnTaskEnd.value
+                    && pendingSequenceProfileIds.isEmpty()
+                    && sequenceTotal == 0
                 ) {
                     Timber.i("Task ended (%s), auto closing app", current)
                     _effects.send(UiEffect.toast(R.string.bg_toast_auto_closed_on_end))
@@ -364,6 +410,15 @@ class BackgroundTaskViewModel(
     fun onDeleteProfile(profileId: String) {
         viewModelScope.launch {
             chainState.removeProfile(profileId)
+            // PROFILE 定时解绑 + 可能因此变空的 SEQUENCE 定时一并消毒
+            val detached = scheduleRepository.detachProfileConfig(profileId)
+            val emptied = scheduleRepository.sanitizeInvalidTargets(
+                profiles = chainState.profiles.value,
+                sequenceConfigs = chainState.sequenceConfigs.value,
+            )
+            (detached + emptied).distinct().forEach { strategyId ->
+                scheduleAlarmManager.cancel(strategyId)
+            }
             _state.update { it.copy(selectedNodeId = null) }
         }
     }
@@ -441,6 +496,54 @@ class BackgroundTaskViewModel(
 
     // ==================== Task Execution ====================
 
+    // ==================== Profile Sequence ====================
+    fun onAddProfilesToSequence(profileIds: List<String>) {
+        viewModelScope.launch {
+            chainState.addProfilesToSequence(profileIds)
+        }
+    }
+    fun onRemoveSequenceEntry(entryId: String) {
+        viewModelScope.launch {
+            chainState.removeSequenceEntry(entryId)
+        }
+    }
+    fun onReorderSequence(fromIndex: Int, toIndex: Int) {
+        viewModelScope.launch {
+            runCatching { chainState.reorderSequence(fromIndex, toIndex) }
+                .onFailure { e -> Timber.e(e, "Failed to reorder sequence: ${e.message}") }
+        }
+    }
+    fun onSetProfileSequenceEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            chainState.setProfileSequenceEnabled(enabled)
+        }
+    }
+    fun onSwitchSequenceConfig(configId: String) {
+        viewModelScope.launch {
+            chainState.switchSequenceConfig(configId)
+        }
+    }
+    fun onCreateSequenceConfig() {
+        viewModelScope.launch {
+            chainState.createSequenceConfig()
+        }
+    }
+    fun onRenameSequenceConfig(configId: String, name: String) {
+        viewModelScope.launch {
+            chainState.renameSequenceConfig(configId, name)
+        }
+    }
+    fun onDeleteSequenceConfig(configId: String) {
+        viewModelScope.launch {
+            chainState.deleteSequenceConfig(configId)
+            // 删除任务链后：禁用并解绑引用它的定时策略，同时取消已注册闹钟
+            val detached = scheduleRepository.detachSequenceConfig(configId)
+            detached.forEach { strategyId ->
+                scheduleAlarmManager.cancel(strategyId)
+            }
+        }
+    }
+
     fun onStartTasks() {
         launchManualStart(TaskStartContext(mode = TaskStartMode.MANUAL))
     }
@@ -454,9 +557,71 @@ class BackgroundTaskViewModel(
         }
     }
 
-    /** 手动启动（定时走 [LaunchPipeline] + [StartTaskChainUseCase]）。 */
+    /**
+     * 手动启动。
+     * 启用任务链时：按序 switch 用户配置，跑完一个再接下一个（不是 flatMap 拼节点）。
+     * 定时仍走 [LaunchPipeline] + [StartTaskChainUseCase]。
+     */
     private suspend fun startTasksInternal(
         context: TaskStartContext,
+        continueProfileIds: List<String>? = null,
+    ): UiText? {
+        sequenceUserStop = false
+        val profileIds = continueProfileIds ?: chainState.resolveSequentialProfileIds()
+        if (profileIds.isEmpty()) {
+            pendingSequenceProfileIds = emptyList()
+            sequenceTotal = 0
+            return startSingleProfile(context = context)
+        }
+
+        if (continueProfileIds == null) {
+            sequenceTotal = profileIds.size
+        }
+        val head = profileIds.first()
+        val rest = profileIds.drop(1)
+        if (chainState.profileId.value != head) {
+            chainState.switchProfile(head)
+        }
+        if (chainState.profileId.value != head) {
+            pendingSequenceProfileIds = emptyList()
+            sequenceTotal = 0
+            val message = uiTextOf(R.string.schedule_log_profile_missing)
+            showStartFailedDialog(message)
+            return message
+        }
+        val total = sequenceTotal.coerceAtLeast(profileIds.size)
+        val index = (total - profileIds.size + 1).coerceAtLeast(1)
+        val profileName = chainState.profiles.value.find { it.id == head }?.name ?: head
+        if (total > 1 && continueProfileIds == null) {
+            _effects.send(
+                UiEffect.toast(
+                    application.getString(
+                        R.string.task_start_toast_sequence_profiles,
+                        total,
+                    ),
+                ),
+            )
+        }
+        val err = startSingleProfile(
+            context = context,
+            sequenceIndex = index,
+            sequenceTotalCount = total,
+            profileName = profileName,
+        )
+        if (err != null) {
+            pendingSequenceProfileIds = emptyList()
+            sequenceTotal = 0
+            return err
+        }
+        pendingSequenceProfileIds = rest
+        return null
+    }
+
+    private suspend fun startSingleProfile(
+        context: TaskStartContext,
+        sequenceIndex: Int = 1,
+        sequenceTotalCount: Int = 1,
+        profileName: String? = null,
     ): UiText? {
         val plan = when (
             val decision = prepareTaskStart(
@@ -468,7 +633,6 @@ class BackgroundTaskViewModel(
                 pendingStart = null
                 decision.plan
             }
-
             is TaskStartDecision.Blocked -> {
                 pendingStart = null
                 val message = application.resolveTaskStartDecisionMessage(decision)
@@ -476,7 +640,6 @@ class BackgroundTaskViewModel(
                 showDialog(application.createStartBlockedDialog(message))
                 return message
             }
-
             is TaskStartDecision.RequiresConfirmation -> {
                 pendingStart = PendingStart(context.acknowledged(decision.acknowledgement))
                 val message = application.resolveTaskStartDecisionMessage(decision)
@@ -484,18 +647,35 @@ class BackgroundTaskViewModel(
                 return message
             }
         }
-
-        // 先静音后拉起游戏：appops 状态持久，提前设置零成本，消除游戏启动初期的漏音空窗
         val muteRequested = appSettingsManager.muteOnGameLaunch.value
         if (muteRequested && !gameMuteCoordinator.mute(plan.clientType)) {
             _effects.send(UiEffect.toast(R.string.bg_toast_mute_failed))
         }
-
+        val resolvedName = profileName
+            ?: chainState.profiles.value.find { it.id == chainState.profileId.value }?.name
+            ?: chainState.profileId.value
+        val enabledNames = chainState.chain.value
+            .filter { it.enabled }
+            .map { it.name }
+            .joinToString("、")
+            .ifEmpty { "-" }
         val result = compositionService.start(
             tasks = plan.params,
             clientType = plan.clientType,
             preflightLogs = plan.logs,
-        )
+        ) {
+            // 会话首条：配置名 + 进度 + 本段任务名
+            sessionLogger.appendAndWait(
+                application.getString(
+                    R.string.runlog_sequence_profile_start,
+                    sequenceIndex,
+                    sequenceTotalCount.coerceAtLeast(sequenceIndex),
+                    resolvedName,
+                    plan.params.size,
+                    enabledNames,
+                ),
+            )
+        }
         if (result is MaaCompositionService.StartResult.Success) {
             achievementReporter.reportTaskStarted(
                 taskCount = plan.params.size,
@@ -503,7 +683,6 @@ class BackgroundTaskViewModel(
                 gameAliveBeforeStart = plan.gameAliveBeforeStart,
             )
         }
-
         val message = application.resolveTaskStartFailureMessage(result)
         if (message != null) {
             Timber.w("Start failed: %s", message.resolve(application))
@@ -512,7 +691,66 @@ class BackgroundTaskViewModel(
         return null
     }
 
+    private suspend fun startNextSequenceProfile(remaining: List<String>) {
+        if (remaining.isEmpty() || sequenceUserStop) {
+            pendingSequenceProfileIds = emptyList()
+            sequenceTotal = 0
+            return
+        }
+        val total = sequenceTotal.coerceAtLeast(remaining.size)
+        val index = (total - remaining.size + 1).coerceAtLeast(1)
+        val nextId = remaining.first()
+        val nextName = chainState.profiles.value.find { it.id == nextId }?.name ?: nextId
+        Timber.i(
+            "Sequence: starting profile %d/%d id=%s name=%s; %d after this",
+            index,
+            total,
+            nextId,
+            nextName,
+            remaining.size - 1,
+        )
+        _effects.send(
+            UiEffect.toast(
+                application.getString(
+                    R.string.task_start_toast_next_sequence_profile,
+                    index,
+                    total,
+                    nextName,
+                ),
+            ),
+        )
+        // 上一段自然结束后 Core 已 IDLE；关虚拟显示再续跑，给 force_stop/重连留空档
+        runCatching { compositionService.stopVirtualDisplay() }
+            .onFailure { Timber.w(it, "stopVirtualDisplay before next sequence profile failed") }
+        withTimeoutOrNull(15_000L) {
+            compositionService.state.first {
+                it == MaaExecutionState.IDLE || it == MaaExecutionState.ERROR
+            }
+        }
+        delay(800)
+        if (sequenceUserStop) {
+            pendingSequenceProfileIds = emptyList()
+            sequenceTotal = 0
+            return
+        }
+        val message = startTasksInternal(
+            context = TaskStartContext(mode = TaskStartMode.MANUAL),
+            continueProfileIds = remaining,
+        )
+        if (message != null) {
+            Timber.w("Next sequence profile failed: %s", message.resolve(application))
+            if (state.value.dialog == null) {
+                showStartFailedDialog(message)
+            }
+            pendingSequenceProfileIds = emptyList()
+            sequenceTotal = 0
+        }
+    }
+
     fun onStopTasks() {
+        sequenceUserStop = true
+        pendingSequenceProfileIds = emptyList()
+        sequenceTotal = 0
         achievementReporter.reportTaskStopped()
         viewModelScope.launch {
             compositionService.stop()

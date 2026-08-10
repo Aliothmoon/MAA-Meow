@@ -20,6 +20,15 @@ enum class ScheduleType {
     INTERVAL,
 }
 
+/** 定时触发时跑用户配置还是任务链配置 */
+@Serializable
+enum class ScheduleTargetKind {
+    /** 单个用户 Profile 的任务链 */
+    PROFILE,
+    /** 一套任务链配置：按序逐个执行多个用户 Profile */
+    SEQUENCE,
+}
+
 /** 将 DayOfWeek 序列化为 ISO 数值（1=周一 … 7=周日） */
 object DayOfWeekSerializer : KSerializer<DayOfWeek> {
     override val descriptor: SerialDescriptor =
@@ -64,8 +73,17 @@ data class ScheduleStrategy(
     val startTimeMs: Long? = null,
     /** [INTERVAL] 执行间隔（分钟） */
     val intervalMinutes: Int? = null,
-    /** 关联的任务配置 Profile ID */
-    val profileId: String,
+    /**
+     * 关联的用户配置 Profile ID。
+     * [targetKind] 为 [ScheduleTargetKind.PROFILE] 时必填；任务链模式下可为空字符串。
+     */
+    val profileId: String = "",
+    /**
+     * 关联的任务链配置 ID。
+     * [targetKind] 为 [ScheduleTargetKind.SEQUENCE] 时使用。
+     */
+    val sequenceConfigId: String = "",
+    val targetKind: ScheduleTargetKind = ScheduleTargetKind.PROFILE,
     /** 触发时若有任务运行，强制停止后再启动 */
     val forceStart: Boolean = false,
     /** 任务结束后自动熄屏 */

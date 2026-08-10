@@ -159,6 +159,10 @@ fun BackgroundTaskView(
     val nodes by viewModel.chainState.chain.collectAsStateWithLifecycle()
     val profiles by viewModel.chainState.profiles.collectAsStateWithLifecycle()
     val profileId by viewModel.chainState.profileId.collectAsStateWithLifecycle()
+    val sequenceConfigs by viewModel.chainState.sequenceConfigs.collectAsStateWithLifecycle()
+    val activeSequenceConfigId by viewModel.chainState.activeSequenceConfigId.collectAsStateWithLifecycle()
+    val profileSequence by viewModel.chainState.profileSequence.collectAsStateWithLifecycle()
+    val profileSequenceEnabled by viewModel.chainState.profileSequenceEnabled.collectAsStateWithLifecycle()
     val selectedNode = nodes.find { it.id == state.selectedNodeId }
     val clientType = remember(nodes) { viewModel.chainState.clientType }
     val canShowTaskActions = PanelTab.canShowTaskActions(state.current)
@@ -358,6 +362,10 @@ fun BackgroundTaskView(
                                         isProfileMode = state.isProfileMode,
                                         profiles = profiles,
                                         activeProfileId = profileId,
+                                        sequenceConfigs = sequenceConfigs,
+                                        activeSequenceConfigId = activeSequenceConfigId,
+                                        sequence = profileSequence,
+                                        sequenceEnabled = profileSequenceEnabled,
                                         clientType = clientType,
                                         onNodeEnabledChange = viewModel::onNodeEnabledChange,
                                         onNodeSelected = viewModel::onNodeSelected,
@@ -380,6 +388,14 @@ fun BackgroundTaskView(
                                         onDeleteProfile = viewModel::onDeleteProfile,
                                         onCreateProfile = viewModel::onCreateProfile,
                                         onReorderProfile = viewModel::onReorderProfile,
+                                        onAddProfilesToSequence = viewModel::onAddProfilesToSequence,
+                                        onRemoveSequenceEntry = viewModel::onRemoveSequenceEntry,
+                                        onReorderSequence = viewModel::onReorderSequence,
+                                        onSwitchSequenceConfig = viewModel::onSwitchSequenceConfig,
+                                        onCreateSequenceConfig = viewModel::onCreateSequenceConfig,
+                                        onRenameSequenceConfig = viewModel::onRenameSequenceConfig,
+                                        onDeleteSequenceConfig = viewModel::onDeleteSequenceConfig,
+                                        onSequenceEnabledChange = viewModel::onSetProfileSequenceEnabled,
                                         modifier = Modifier.fillMaxSize(),
                                         wrapDetailInCard = true,
                                     )
@@ -432,6 +448,11 @@ fun BackgroundTaskView(
                             val canStart = maaState != MaaExecutionState.RUNNING &&
                                 maaState != MaaExecutionState.STARTING &&
                                 maaState != MaaExecutionState.STOPPING
+                            val startLabelRes =
+                                if (profileSequenceEnabled && profileSequence.isNotEmpty())
+                                    R.string.task_btn_start_sequence
+                                else
+                                    R.string.task_btn_start
                             if (!hideStartBarForGachaDisclaimer) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -597,7 +618,7 @@ fun BackgroundTaskView(
                                                     strokeWidth = 2.dp
                                                 )
                                             } else {
-                                                Text(stringResource(R.string.task_btn_start))
+                                                Text(stringResource(startLabelRes))
                                             }
                                         }
 

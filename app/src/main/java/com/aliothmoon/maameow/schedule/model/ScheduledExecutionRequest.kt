@@ -13,6 +13,8 @@ object ScheduledExecutionRequest {
     const val EXTRA_STRATEGY_ID = "extra_strategy_id"
     const val EXTRA_STRATEGY_NAME = "extra_strategy_name"
     const val EXTRA_PROFILE_ID = "extra_profile_id"
+    const val EXTRA_SEQUENCE_CONFIG_ID = "extra_sequence_config_id"
+    const val EXTRA_USE_SEQUENCE = "extra_use_sequence"
     const val EXTRA_SCHEDULED_TIME = "extra_scheduled_time"
     const val EXTRA_FORCE_START = "extra_force_start"
     const val EXTRA_AUTO_SLEEP_AFTER_TASK = "extra_auto_sleep_after_task"

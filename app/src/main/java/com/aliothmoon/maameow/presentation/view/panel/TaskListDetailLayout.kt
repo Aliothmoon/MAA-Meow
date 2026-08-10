@@ -20,7 +20,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskParamProvider
+import com.aliothmoon.maameow.data.model.ProfileSequenceEntry
 import com.aliothmoon.maameow.data.model.TaskProfile
+import com.aliothmoon.maameow.data.model.TaskSequenceConfig
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
 
 
@@ -34,6 +36,10 @@ fun TaskListDetailLayout(
     isProfileMode: Boolean,
     profiles: List<TaskProfile>,
     activeProfileId: String,
+    sequenceConfigs: List<TaskSequenceConfig>,
+    activeSequenceConfigId: String,
+    sequence: List<ProfileSequenceEntry>,
+    sequenceEnabled: Boolean,
     clientType: String,
     onNodeEnabledChange: (String, Boolean) -> Unit,
     onNodeSelected: (String) -> Unit,
@@ -52,6 +58,14 @@ fun TaskListDetailLayout(
     onDeleteProfile: (String) -> Unit,
     onCreateProfile: () -> Unit,
     onReorderProfile: (Int, Int) -> Unit,
+    onAddProfilesToSequence: (List<String>) -> Unit,
+    onRemoveSequenceEntry: (String) -> Unit,
+    onReorderSequence: (Int, Int) -> Unit,
+    onSwitchSequenceConfig: (String) -> Unit,
+    onCreateSequenceConfig: () -> Unit,
+    onRenameSequenceConfig: (String, String) -> Unit,
+    onDeleteSequenceConfig: (String) -> Unit,
+    onSequenceEnabledChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     /** 后台任务页右侧配置区包一层 Card；悬浮窗已有外层 Card 时关闭 */
     wrapDetailInCard: Boolean = false,
@@ -101,6 +115,10 @@ fun TaskListDetailLayout(
                     isProfileMode = isProfileMode,
                     profiles = profiles,
                     activeProfileId = activeProfileId,
+                    sequenceConfigs = sequenceConfigs,
+                    activeSequenceConfigId = activeSequenceConfigId,
+                    sequence = sequence,
+                    sequenceEnabled = sequenceEnabled,
                     clientType = clientType,
                     onConfigChange = onConfigChange,
                     onAddNode = onAddNode,
@@ -113,6 +131,14 @@ fun TaskListDetailLayout(
                     onDeleteProfile = onDeleteProfile,
                     onCreateProfile = onCreateProfile,
                     onReorderProfile = onReorderProfile,
+                    onAddProfilesToSequence = onAddProfilesToSequence,
+                    onRemoveSequenceEntry = onRemoveSequenceEntry,
+                    onReorderSequence = onReorderSequence,
+                    onSwitchSequenceConfig = onSwitchSequenceConfig,
+                    onCreateSequenceConfig = onCreateSequenceConfig,
+                    onRenameSequenceConfig = onRenameSequenceConfig,
+                    onDeleteSequenceConfig = onDeleteSequenceConfig,
+                    onSequenceEnabledChange = onSequenceEnabledChange,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

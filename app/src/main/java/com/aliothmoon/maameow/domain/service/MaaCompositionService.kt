@@ -103,6 +103,8 @@ class MaaCompositionService(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    private val maaConnectTimeoutMs = 30_000L
+
     private val connectDeferred = AtomicReference<CompletableDeferred<Boolean>?>()
 
     sealed class StartResult {
@@ -326,7 +328,8 @@ class MaaCompositionService(
         val deferred = CompletableDeferred<Boolean>()
         connectDeferred.set(deferred)
         maa.AsyncConnect("", "Android", config, false)
-        val ret = withTimeoutOrNull(2000) { deferred.await() }
+        // force_stop 会杀进程重开游戏；任务链切配置续跑时 2s 经常不够，拉到 30s
+        val ret = withTimeoutOrNull(maaConnectTimeoutMs) { deferred.await() }
         connectDeferred.set(null)
         if (ret != true) {
             return failStart(

@@ -12,7 +12,11 @@ enum class LaunchSource {
 data class LaunchRequest(
     val requestId: String = UUID.randomUUID().toString(),
     val source: LaunchSource,
-    val profileId: String,
+    /** 用户 Profile；[useSequence]=false 时使用 */
+    val profileId: String = "",
+    /** 任务链配置；[useSequence]=true 时使用 */
+    val sequenceConfigId: String = "",
+    val useSequence: Boolean = false,
     val displayName: String,
     val scheduledTimeMs: Long,
     val forceStart: Boolean = false,
