@@ -63,8 +63,8 @@ object PixelPaintHelper {
         val sample = sampleToGrid(prepared, options)
         applyCssLikeFilters(
             sample,
-            options.contrastPercent / 100.0,
             options.brightnessPercent / 100.0,
+            options.contrastPercent / 100.0,
             options.saturationPercent / 100.0,
         )
         val matrix = quantize(sample, options.dither)
@@ -209,16 +209,31 @@ object PixelPaintHelper {
             }
         }
 
+        // 补白按取景矩形判：缩放取景后 CONTAIN 的留白区落在图内，按整张图判会采到框外内容
+        val viewX1 = srcX0 + srcW
+        val viewY1 = srcY0 + srcH
+
         val grid = DoubleArray(GRID_SIZE * GRID_SIZE * 3)
         for (gy in 0 until GRID_SIZE) {
             for (gx in 0 until GRID_SIZE) {
                 // 格心采样
                 val sx = mapX0 + ((gx + 0.5) / GRID_SIZE) * mapW
                 val sy = mapY0 + ((gy + 0.5) / GRID_SIZE) * mapH
-                sampleBilinear(src, sx, sy, grid, index(gx, gy))
+                val at = index(gx, gy)
+                if (sx < srcX0 || sy < srcY0 || sx >= viewX1 || sy >= viewY1) {
+                    fillWhite(grid, at)
+                } else {
+                    sampleBilinear(src, sx, sy, grid, at)
+                }
             }
         }
         return grid
+    }
+
+    private fun fillWhite(out: DoubleArray, at: Int) {
+        out[at] = 255.0
+        out[at + 1] = 255.0
+        out[at + 2] = 255.0
     }
 
     private fun normalizeViewRect(view: NormalizedRect): NormalizedRect {
@@ -233,11 +248,9 @@ object PixelPaintHelper {
     }
 
     private fun sampleBilinear(src: PreparedImage, sx: Double, sy: Double, out: DoubleArray, at: Int) {
-        // 取景区外填白
+        // 越界兜底，补白由调用方按取景矩形判定
         if (sx < 0 || sy < 0 || sx >= src.width || sy >= src.height) {
-            out[at] = 255.0
-            out[at + 1] = 255.0
-            out[at + 2] = 255.0
+            fillWhite(out, at)
             return
         }
 
@@ -274,8 +287,8 @@ object PixelPaintHelper {
 
     // ==================== 滤镜 ====================
 
-    /** 在 sRGB 0~255 上近似 CSS filter，固定顺序：亮度 → 对比度 → 饱和度 */
-    private fun applyCssLikeFilters(grid: DoubleArray, contrast: Double, brightness: Double, saturation: Double) {
+    /** 在 sRGB 0~255 上近似 CSS filter，形参顺序即应用顺序：亮度 → 对比度 → 饱和度 */
+    private fun applyCssLikeFilters(grid: DoubleArray, brightness: Double, contrast: Double, saturation: Double) {
         if (kotlin.math.abs(contrast - 1) < 1e-6 &&
             kotlin.math.abs(brightness - 1) < 1e-6 &&
             kotlin.math.abs(saturation - 1) < 1e-6

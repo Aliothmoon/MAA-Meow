@@ -579,7 +579,6 @@ class CopilotViewModel(
         val data: CopilotTaskData,
         val json: String,
         val copilotId: Int,
-        val altered: Boolean,
     )
 
     /**
@@ -595,17 +594,23 @@ class CopilotViewModel(
             resourceDataManager.getCharacterByNameOrAlias(name)?.rarity ?: -1
         }
         if (result.corrections.isEmpty()) {
-            return CorrectedCopilot(data, json, copilotId, false)
+            return CorrectedCopilot(data, json, copilotId)
         }
         // 作业集会连着导入多份，逐条累加而不是覆盖；每次解析开始时由 startingParse 清空
         val messages = result.corrections.map(::describeCorrection)
         _state.update { it.copy(requirementWarnings = it.requirementWarnings + messages) }
-        val reparsed = copilotManager.parseJson(result.json).getOrNull() ?: data
+        // 失败了内存和落盘会不一致，得留痕
+        val reparsed = copilotManager.parseJson(result.json).fold(
+            onSuccess = { it },
+            onFailure = {
+                Timber.w(it, "$TAG: 校正后重解析失败，沿用校正前的解析结果")
+                data
+            },
+        )
         return CorrectedCopilot(
             data = reparsed,
             json = result.json,
             copilotId = if (result.altered) 0 else copilotId,
-            altered = result.altered,
         )
     }
 

@@ -4,10 +4,9 @@ import android.content.Context
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
-
+import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.model.activity.MiniGame
 import com.aliothmoon.maameow.data.resource.ActivityManager
-import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
@@ -22,10 +21,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonArray
 import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
@@ -98,14 +97,15 @@ class MiniGameDelegate(
 
     private fun buildTaskParams(): MaaTaskParams {
         val taskName = buildTaskName()
+        val pixelArtState = pixelArt.state.value
         val params = buildJsonObject {
             putJsonArray("task_names") { add(JsonPrimitive(taskName)) }
             // 像素画额外带 params.pixel_paint.groups，由 Core 的 PixelPaintTaskPlugin 消费
             if (isPixelPaint(_state.value.selectedTaskName)) {
-                pixelArt.state.value.plan?.let { plan ->
+                pixelArtState.plan?.let { plan ->
                     putJsonObject("params") {
                         putJsonObject("pixel_paint") {
-                            put("swipe", pixelArt.state.value.swipeEnabled)
+                            put("swipe", pixelArtState.swipeEnabled)
                             putJsonArray("groups") {
                                 plan.groups.forEach { group ->
                                     addJsonObject {
@@ -130,7 +130,9 @@ class MiniGameDelegate(
     }
 
     fun onStart() {
-        if (isPixelPaint(_state.value.selectedTaskName)) {
+        val selectedTaskName = _state.value.selectedTaskName
+        val pixelPaint = isPixelPaint(selectedTaskName)
+        if (pixelPaint) {
             val plan = pixelArt.state.value.plan
             if (plan == null) {
                 _state.update { it.copy(statusMessage = uiTextOf(R.string.pixel_art_need_image)) }
@@ -141,7 +143,7 @@ class MiniGameDelegate(
                 return
             }
         }
-        if (findGame(_state.value.selectedTaskName)?.isUnsupported == true) {
+        if (findGame(selectedTaskName)?.isUnsupported == true) {
             _state.update {
                 it.copy(statusMessage = uiTextOf(R.string.panel_mini_game_not_supported))
             }
@@ -155,12 +157,11 @@ class MiniGameDelegate(
             if (result is MaaCompositionService.StartResult.Success) {
                 achievementRepository.report {
                     event = AchievementEvents.MINI_GAME_STARTED
-                    "task" to _state.value.selectedTaskName
+                    "task" to selectedTaskName
                 }
                 // 面板可能被收起，格数/色数只有客户端知道，写进运行日志留痕
-                pixelArt.state.value.plan
-                    ?.takeIf { isPixelPaint(_state.value.selectedTaskName) }
-                    ?.let { plan ->
+                if (pixelPaint) {
+                    pixelArt.state.value.plan?.let { plan ->
                         sessionLogger.append(
                             appContext.getString(
                                 R.string.pixel_art_status_started,
@@ -170,6 +171,7 @@ class MiniGameDelegate(
                             LogLevel.INFO,
                         )
                     }
+                }
             }
             _state.update {
                 it.copy(

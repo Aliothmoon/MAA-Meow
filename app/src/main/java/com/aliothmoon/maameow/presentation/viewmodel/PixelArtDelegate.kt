@@ -1,7 +1,7 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
 import android.content.Context
-import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
 import android.net.Uri
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.models.pixelart.NormalizedRect
@@ -80,8 +80,12 @@ class PixelArtDelegate(
     /** 原始解码结果，去边前 */
     private var rawSource: PreparedImage? = null
 
-    /** 去边后的源图，切换参数时复用，不必重新解码 */
-    private var prepared: PreparedImage? = null
+    /**
+     * 去边后的源图，切换参数时复用，不必重新解码
+     * trim 值当键：被取消的旧协程仍会回写，键不匹配就自动作废
+     */
+    @Volatile
+    private var preparedCache: Pair<Boolean, PreparedImage>? = null
 
     fun onImagePicked(uri: Uri, displayName: String) {
         if (parametersLocked.value) return
@@ -92,7 +96,7 @@ class PixelArtDelegate(
                 _state.update { it.copy(statusMessage = uiTextOf(R.string.pixel_art_status_decode_failed)) }
                 return@launch
             }
-            prepared = null
+            preparedCache = null
             rawSource = decoded
             // 换图后旧取景没有意义
             _state.update {
@@ -120,12 +124,7 @@ class PixelArtDelegate(
         _state.update { it.copy(swipeEnabled = enabled) }
     }
 
-    /** 去边会改变源图，必须丢掉缓存重新预处理 */
-    fun onTrimChange(enabled: Boolean) {
-        if (parametersLocked.value) return
-        prepared = null
-        updateOptions { it.copy(trimEmptyBorder = enabled) }
-    }
+    fun onTrimChange(enabled: Boolean) = updateOptions { it.copy(trimEmptyBorder = enabled) }
 
     /**
      * 预览区手势：pan 用容器占比表达，zoom 为放大倍数（>1 放大）
@@ -153,7 +152,6 @@ class PixelArtDelegate(
     fun onResetParameters() {
         if (parametersLocked.value) return
         val defaults = PixelArtUiState()
-        prepared = null
         updateOptions {
             it.copy(
                 fit = defaults.fit,
@@ -182,10 +180,12 @@ class PixelArtDelegate(
     private suspend fun reconvert() {
         val raw = rawSource ?: return
         val snapshot = _state.value
+        val trim = snapshot.trimEmptyBorder
         val plan = withContext(Dispatchers.Default) {
-            val source = prepared ?: PixelPaintHelper
-                .prepare(raw.pixels, raw.width, raw.height, snapshot.trimEmptyBorder)
-                .also { prepared = it }
+            val source = preparedCache?.takeIf { it.first == trim }?.second
+                ?: PixelPaintHelper
+                    .prepare(raw.pixels, raw.width, raw.height, trim)
+                    .also { preparedCache = trim to it }
             PixelPaintHelper.convert(source, snapshot.toOptions(), snapshot.skipWhite)
         }
         _state.update { it.copy(plan = plan) }
@@ -203,21 +203,18 @@ class PixelArtDelegate(
 
     // ==================== 解码 ====================
 
+    /** ImageDecoder 会按 EXIF 摆正，BitmapFactory 不会，横拍的照片得靠它 */
     private fun decodeScaled(uri: Uri): PreparedImage? = runCatching {
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        appContext.contentResolver.openInputStream(uri)?.use {
-            BitmapFactory.decodeStream(it, null, bounds)
+        val source = ImageDecoder.createSource(appContext.contentResolver, uri)
+        val bitmap = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+            var sample = 1
+            while (info.size.width / sample > MAX_SOURCE_SIDE || info.size.height / sample > MAX_SOURCE_SIDE) {
+                sample *= 2
+            }
+            decoder.setTargetSampleSize(sample)
+            // getPixels 读不了硬件位图
+            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
         }
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
-
-        var sample = 1
-        while (bounds.outWidth / sample > MAX_SOURCE_SIDE || bounds.outHeight / sample > MAX_SOURCE_SIDE) {
-            sample *= 2
-        }
-        val options = BitmapFactory.Options().apply { inSampleSize = sample }
-        val bitmap = appContext.contentResolver.openInputStream(uri)?.use {
-            BitmapFactory.decodeStream(it, null, options)
-        } ?: return null
 
         try {
             val pixels = IntArray(bitmap.width * bitmap.height)

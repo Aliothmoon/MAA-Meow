@@ -1404,6 +1404,7 @@
     <string name="notification_err_dingtalk_token_empty">DingTalk access_token is not set</string>
     <string name="notification_err_kook_token_empty">KOOK Bot Token is not set</string>
     <string name="notification_err_kook_target_empty">KOOK channel ID or user ID is not set</string>
+    <string name="notification_err_kook_api">KOOK API error %1$d: %2$s</string>
     <string name="notification_err_discord_token_empty">Discord Bot Token is not set</string>
     <string name="notification_err_discord_user_empty">Discord user ID is not set</string>
     <string name="notification_err_discord_dm_failed">Failed to create Discord DM channel</string>
@@ -2033,12 +2034,12 @@
     <string name="runlog_depot_plan_zero_count">#%1$d: target inventory is 0</string>
     <string name="runlog_depot_plan_no_stage">#%1$d: stage not specified or is \"Current/Last\"</string>
     <string name="runlog_depot_plan_stage_not_open">#%1$d: stage \'%2$s\' is not open</string>
-    <string name="runlog_depot_plan_inventory_enough">#%1$s: %2$s sufficient %3$d/%4$d</string>
-    <string name="runlog_depot_plan_inventory_insufficient">#%1$s: %2$s insufficient %3$d/%4$d, need %5$d more</string>
-    <string name="runlog_fight_inventory_unavailable">Task \"%1$s\" uses target inventory, but no inventory data is currently available, so it was skipped. Update it via \"Toolbox - Depot Recognition\".</string>
-    <string name="runlog_depot_set_params_failed">Plan %1$s: failed to update task params; original params will be used.</string>
-    <string name="runlog_depot_skipped_activity">An event is in progress; Depot Maintain skipped.</string>
-    <string name="runlog_depot_skipped_resource">The resource collection event is active; Depot Maintain skipped.</string>
+    <string name="runlog_depot_plan_inventory_enough">%1$s: %2$s sufficient %3$d/%4$d</string>
+    <string name="runlog_depot_plan_inventory_insufficient">%1$s: %2$s insufficient %3$d/%4$d, need %5$d more</string>
+    <string name="runlog_fight_inventory_unavailable">Task \"%1$s\" uses target inventory, but no inventory data is currently available, so it was skipped. Update it via \"Toolbox - Depot Recognition\"</string>
+    <string name="runlog_depot_set_params_failed">%1$s: failed to update task params; original params will be used</string>
+    <string name="runlog_depot_skipped_activity">An event is in progress; Depot Maintain skipped</string>
+    <string name="runlog_depot_skipped_resource">The resource collection event is active; Depot Maintain skipped</string>
     <string name="runlog_copilot_start">Starting auto-battle</string>
     <string name="runlog_copilot_started">Auto-battle started</string>
     <string name="runlog_service_connecting">Service is starting, please try again later</string>

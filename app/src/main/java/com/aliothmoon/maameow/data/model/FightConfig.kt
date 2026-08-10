@@ -353,29 +353,28 @@ data class FightConfig(
         } else {
             null
         }
-        if (need != null && need <= 0) {
-            val dropName = ctx.itemHelper.getItemInfo(dropsItemId)?.name ?: dropsItemId
-            val current = dropsQuantity - need
-            ctx.appendLog(
-                uiTextOf(
-                    R.string.runlog_depot_plan_inventory_enough,
-                    ctx.node.name,
-                    dropName,
-                    current,
-                    dropsQuantity,
-                ),
-                LogLevel.TRACE,
-            )
-            return emptyList()
-        }
         if (need != null) {
             val dropName = ctx.itemHelper.getItemInfo(dropsItemId)?.name ?: dropsItemId
+            val current = dropsQuantity - need
+            if (need <= 0) {
+                ctx.appendLog(
+                    uiTextOf(
+                        R.string.runlog_depot_plan_inventory_enough,
+                        ctx.node.name,
+                        dropName,
+                        current,
+                        dropsQuantity,
+                    ),
+                    LogLevel.TRACE,
+                )
+                return emptyList()
+            }
             ctx.appendLog(
                 uiTextOf(
                     R.string.runlog_depot_plan_inventory_insufficient,
                     ctx.node.name,
                     dropName,
-                    dropsQuantity - need,
+                    current,
                     dropsQuantity,
                     need,
                 ),

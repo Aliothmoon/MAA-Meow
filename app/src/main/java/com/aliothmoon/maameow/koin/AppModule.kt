@@ -19,10 +19,10 @@ import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
 import com.aliothmoon.maameow.data.notification.provider.BarkProvider
 import com.aliothmoon.maameow.data.notification.provider.CustomWebhookProvider
 import com.aliothmoon.maameow.data.notification.provider.DingTalkProvider
-import com.aliothmoon.maameow.data.notification.provider.KookProvider
 import com.aliothmoon.maameow.data.notification.provider.DiscordProvider
 import com.aliothmoon.maameow.data.notification.provider.DiscordWebhookProvider
 import com.aliothmoon.maameow.data.notification.provider.GotifyProvider
+import com.aliothmoon.maameow.data.notification.provider.KookProvider
 import com.aliothmoon.maameow.data.notification.provider.NotificationProvider
 import com.aliothmoon.maameow.data.notification.provider.QmsgProvider
 import com.aliothmoon.maameow.data.notification.provider.ServerChanProvider

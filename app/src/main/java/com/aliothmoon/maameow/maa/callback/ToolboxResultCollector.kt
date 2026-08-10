@@ -40,10 +40,12 @@ class ToolboxResultCollector(
     private val _pixelPaintProgress = MutableStateFlow<PixelPaintProgress?>(null)
     val pixelPaintProgress: StateFlow<PixelPaintProgress?> = _pixelPaintProgress.asStateFlow()
 
-    fun onPixelPaintProgress(details: JSONObject?) {
-        val done = details?.getIntValue("done") ?: return
-        val total = details.getIntValue("total")
-        _pixelPaintProgress.value = PixelPaintProgress(done, total, details.getIntValue("color"))
+    /** 返回解析结果，免得调用方再解一遍 */
+    fun onPixelPaintProgress(details: JSONObject?): PixelPaintProgress? {
+        val done = details?.getIntValue("done") ?: return null
+        val progress = PixelPaintProgress(done, details.getIntValue("total"), details.getIntValue("color"))
+        _pixelPaintProgress.value = progress
+        return progress
     }
 
     private val _recruitTags = MutableStateFlow<List<String>>(emptyList())

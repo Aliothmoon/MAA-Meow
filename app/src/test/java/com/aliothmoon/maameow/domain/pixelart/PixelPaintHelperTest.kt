@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.domain.pixelart
 
+import com.aliothmoon.maameow.domain.models.pixelart.NormalizedRect
 import com.aliothmoon.maameow.domain.models.pixelart.PixelConvertOptions
 import com.aliothmoon.maameow.domain.models.pixelart.PixelDitherMode
 import com.aliothmoon.maameow.domain.models.pixelart.PixelFitMode
@@ -173,6 +174,25 @@ class PixelPaintHelperTest {
     fun `contain 模式在长条图上下补白`() {
         val plan = PixelPaintHelper.convert(
             solid(48, 24, 0xD32F36), 48, 24, options(fit = PixelFitMode.CONTAIN), skipWhite = false,
+        )
+        assertEquals(PixelPaintHelper.WHITE_COLOR_INDEX, plan.indexAt(12, 0))
+        assertEquals(PixelPaintHelper.WHITE_COLOR_INDEX, plan.indexAt(12, 23))
+        assertEquals(4, plan.indexAt(12, 12))
+    }
+
+    /** 补白若按整张图判越界，这里会采到取景框外的红而不是白 */
+    @Test
+    fun `contain 模式缩放取景后仍然补白`() {
+        val plan = PixelPaintHelper.convert(
+            solid(96, 48, 0xD32F36), 96, 48,
+            PixelConvertOptions(
+                fit = PixelFitMode.CONTAIN,
+                dither = PixelDitherMode.NONE,
+                trimEmptyBorder = false,
+                // 取中心一半，取景区 48×24 仍非正方形，上下必须留白
+                contentView = NormalizedRect(0.25, 0.25, 0.5, 0.5),
+            ),
+            skipWhite = false,
         )
         assertEquals(PixelPaintHelper.WHITE_COLOR_INDEX, plan.indexAt(12, 0))
         assertEquals(PixelPaintHelper.WHITE_COLOR_INDEX, plan.indexAt(12, 23))

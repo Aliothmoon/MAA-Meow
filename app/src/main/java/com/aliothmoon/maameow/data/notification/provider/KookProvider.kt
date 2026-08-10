@@ -6,6 +6,7 @@ import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
 import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.first
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import timber.log.Timber
 
@@ -53,16 +54,37 @@ class KookProvider(
                 headers = mapOf("Authorization" to "Bot $botToken"),
             ).use { response ->
                 val responseBody = response.body.string()
-                val code = runCatching {
-                    JsonUtils.common.decodeFromString<KookResponse>(responseBody).code
-                }.getOrDefault(-1)
-                if (response.isSuccessful && code == 0) {
-                    NotificationSendResult.Success
-                } else {
-                    Timber.w("KOOK rejected: HTTP %d, body=%s", response.code, responseBody)
-                    NotificationSendResult.Failed(
-                        uiTextOf(R.string.notification_err_http_status, response.code),
-                    )
+                val parsed = runCatching {
+                    JsonUtils.common.decodeFromString<KookResponse>(responseBody)
+                }.getOrNull()
+                when {
+                    response.isSuccessful && parsed?.code == 0 -> NotificationSendResult.Success
+
+                    response.code == 429 || response.code >= 500 -> {
+                        Timber.w("KOOK transient: HTTP %d, body=%s", response.code, responseBody)
+                        NotificationSendResult.Transient(
+                            uiTextOf(R.string.notification_err_http_status, response.code),
+                        )
+                    }
+
+                    // 鉴权失败、target 不存在都是 HTTP 200 + 业务码，只报 HTTP 码等于没报
+                    parsed != null -> {
+                        Timber.w("KOOK rejected: HTTP %d, body=%s", response.code, responseBody)
+                        NotificationSendResult.Failed(
+                            uiTextOf(
+                                R.string.notification_err_kook_api,
+                                parsed.code,
+                                parsed.message.ifBlank { "-" },
+                            ),
+                        )
+                    }
+
+                    else -> {
+                        Timber.w("KOOK rejected: HTTP %d, body=%s", response.code, responseBody)
+                        NotificationSendResult.Failed(
+                            uiTextOf(R.string.notification_err_http_status, response.code),
+                        )
+                    }
                 }
             }
         }.getOrElse {
@@ -74,7 +96,7 @@ class KookProvider(
     @Serializable
     private data class KookRequest(
         val type: Int,
-        @kotlinx.serialization.SerialName("target_id")
+        @SerialName("target_id")
         val targetId: String,
         val content: String,
     )
@@ -82,5 +104,6 @@ class KookProvider(
     @Serializable
     private data class KookResponse(
         val code: Int = -1,
+        val message: String = "",
     )
 }

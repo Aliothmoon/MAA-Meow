@@ -91,10 +91,14 @@ data class DepotMaintainConfig(
         val series = if (useAutoSeries) 0 else 1
 
         // 每份库存保持的计划日志前插一条分段，跟上游 AddLogSection 对齐
-        ctx.appendLog(uiTextOf(R.string.runlog_log_section, ctx.node.name), LogLevel.TRACE)
+        if (plans.isNotEmpty()) {
+            ctx.appendLog(uiTextOf(R.string.runlog_log_section, ctx.node.name), LogLevel.TRACE)
+        }
 
         plans.forEachIndexed { index, plan ->
             val no = index + 1
+            // 共用文案的首参在别处是任务名，编号前缀由调用方给
+            val label = "#$no"
             val current = ctx.depotRepository.countOf(plan.dropId)
             val outcome = depotPlanOutcome(plan, current) { ctx.activityManager.isStageOpen(it) }
             when (outcome) {
@@ -113,7 +117,7 @@ data class DepotMaintainConfig(
                     ctx.appendLog(
                         uiTextOf(
                             R.string.runlog_depot_plan_inventory_enough,
-                            no.toString(), dropName, current, plan.dropCount,
+                            label, dropName, current, plan.dropCount,
                         ),
                         LogLevel.TRACE,
                     )
@@ -141,7 +145,7 @@ data class DepotMaintainConfig(
             ctx.appendLog(
                 uiTextOf(
                     R.string.runlog_depot_plan_inventory_insufficient,
-                    no.toString(), dropName, current, plan.dropCount, need,
+                    label, dropName, current, plan.dropCount, need,
                 ),
                 LogLevel.TRACE,
             )

@@ -1,7 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -21,12 +20,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -84,56 +80,17 @@ fun MiniGamePanel(
                         horizontalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         rowGames.forEach { game ->
-                            val selected = state.selectedTaskName == game.value
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = if (game.isUnsupported) {
-                                    MaterialTheme.colorScheme.errorContainer
-                                } else if (selected) {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.surface
-                                },
-                                border = BorderStroke(
-                                    width = 1.dp,
-                                    color = if (game.isUnsupported && selected) {
-                                        MaterialTheme.colorScheme.error
-                                    } else if (selected) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.outlineVariant
-                                    }
-                                ),
+                            SelectableCardButton(
+                                text = game.display.asString(),
+                                selected = state.selectedTaskName == game.value,
+                                isError = game.isUnsupported,
+                                onClick = { delegate.onTaskSelected(game.value) },
+                                textStyle = tabTitleTextStyle,
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .heightIn(min = 36.dp)
-                                    .clickable { delegate.onTaskSelected(game.value) }
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(horizontal = 6.dp, vertical = 4.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Text(
-                                        text = game.display.asString(),
-                                        style = tabTitleTextStyle,
-                                        color = if (game.isUnsupported) {
-                                            MaterialTheme.colorScheme.onErrorContainer
-                                        } else if (selected) {
-                                            MaterialTheme.colorScheme.onPrimaryContainer
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        },
-                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.fillMaxWidth(),
-                                    )
-                                }
-                            }
+                                    .heightIn(min = 36.dp),
+                            )
                         }
                         repeat(3 - rowGames.size) {
                             Spacer(modifier = Modifier.weight(1f))

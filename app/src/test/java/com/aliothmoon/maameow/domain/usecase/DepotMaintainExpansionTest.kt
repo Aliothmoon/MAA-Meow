@@ -264,9 +264,9 @@ class DepotMaintainExpansionTest {
         val result = config(plan(dropCount = 100)).expand(inventory = mapOf(ITEM to 100))
         assertTrue(result.params.isEmpty())
         assertEquals(listOf(R.string.runlog_depot_plan_inventory_enough), result.logs.resIds())
-        // 第 1 个占位符是 %1$s，必须传字符串（PR5 会传任务名复用同一条）
+        // 第 1 个占位符是 %1$s，刷理智/任务链复用同一条时传的是任务名
         assertEquals(
-            listOf<Any?>("1", "源岩", 100, 100),
+            listOf<Any?>("#1", "源岩", 100, 100),
             logArgsOf(result.logs, R.string.runlog_depot_plan_inventory_enough),
         )
     }
@@ -284,7 +284,7 @@ class DepotMaintainExpansionTest {
         val result = config(plan(dropId = "99999", dropCount = 1))
             .expand(inventory = mapOf("99999" to 5))
         assertEquals(
-            listOf<Any?>("1", "99999", 5, 1),
+            listOf<Any?>("#1", "99999", 5, 1),
             logArgsOf(result.logs, R.string.runlog_depot_plan_inventory_enough),
         )
     }
@@ -418,18 +418,25 @@ class DepotMaintainExpansionTest {
 
     // --- 空计划 ---
 
+    /** 没有计划就不该留一条光杆分割线 */
     @Test
     fun noPlans_withUpdateDepot_producesOnlyDepot() {
         val result = config(updateDepot = true).expand()
         assertEquals(listOf(MaaTaskType.DEPOT), result.params.map { it.type })
-        assertTrue(result.logs.planLogs().isEmpty())
+        assertTrue(result.logs.isEmpty())
     }
 
     @Test
     fun noPlans_withoutUpdateDepot_producesNothing() {
         val result = config(updateDepot = false).expand()
         assertTrue(result.params.isEmpty())
-        assertTrue(result.logs.planLogs().isEmpty())
+        assertTrue(result.logs.isEmpty())
+    }
+
+    @Test
+    fun withPlans_prependsLogSection() {
+        val result = config(plan()).expand()
+        assertEquals(R.string.runlog_log_section, (result.logs[0].first as UiText.Resource).resId)
     }
 
     // --- 顺序 ---

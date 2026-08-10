@@ -443,10 +443,9 @@ class SubTaskHandler(
         val what = details.getString("what") ?: return
 
         when (what) {
-            "PixelPaintProgress" -> {
+            "PixelPaintProgress" -> logPixelPaintProgress(
                 toolboxResultCollector.onPixelPaintProgress(subDetails)
-                logPixelPaintProgress(subDetails)
-            }
+            )
 
             "FightTimes" -> {
                 pendingFight = pendingFight.copy(
@@ -892,14 +891,15 @@ class SubTaskHandler(
      * 像素画进度写运行日志
      * Core 每满 10 格报一次、每色收尾再报一次，最后一色画满即为完成
      */
-    private fun logPixelPaintProgress(details: JSONObject?) {
-        details ?: return
-        val done = details.getIntValue("done")
-        val total = details.getIntValue("total")
-        if (total > 0 && done >= total) {
+    private fun logPixelPaintProgress(progress: PixelPaintProgress?) {
+        progress ?: return
+        if (progress.total > 0 && progress.done >= progress.total) {
             append(resources.getString(R.string.pixel_art_log_done), LogLevel.SUCCESS)
         } else {
-            append(resources.getString(R.string.pixel_art_progress, done, total), LogLevel.TRACE)
+            append(
+                resources.getString(R.string.pixel_art_progress, progress.done, progress.total),
+                LogLevel.TRACE,
+            )
         }
     }
 

@@ -124,6 +124,7 @@ class UiI18nHardcodedStringsTest {
                 "src/main/java/com/aliothmoon/maameow/presentation/viewmodel/CopilotViewModel.kt",
                 allowedLiterals = setOf(
                     "${'$'}TAG: 解析本地文件失败: ${'$'}fileName",
+                    "${'$'}TAG: 校正后重解析失败，沿用校正前的解析结果",
                 ),
             ),
             TargetFile("src/main/java/com/aliothmoon/maameow/presentation/state/HomeUiState.kt"),
