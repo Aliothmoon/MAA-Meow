@@ -16,6 +16,8 @@ jobs:
   build:
     runs-on: macos-latest
     strategy:
+      # 一行挂了不连坐其他行
+      fail-fast: false
       matrix:
         include:
           - abi: all
@@ -24,6 +26,10 @@ jobs:
             label: arm64-v8a
           - abi: x86_64
             label: x64
+          # 给谎报 HWCAP2_SVE2 的 arm64 模拟器出包，见 issue #202
+          - abi: arm64-v8a
+            label: arm64-v8a-emu-compat
+            nosve: true
 
     steps:
       - name: Checkout
@@ -84,6 +90,16 @@ jobs:
       - name: Print MAA Resource version
         run: cat app/src/main/assets/MaaSync/MaaResource/version.json
 
+      - name: Disable KleidiCV SVE2 dispatch
+        if: matrix.nosve
+        run: |
+          SO=app/src/main/jniLibs/arm64-v8a/libopencv_world4.so
+          echo "before: $(shasum -a 256 "$SO" | cut -d' ' -f1)"
+          # 显式写死 neon：sve 模式会产出必崩的库，不能靠默认值兜底
+          python scripts/patch_kleidicv_sve.py "$SO" --mode neon
+          python scripts/patch_kleidicv_sve.py "$SO" --mode neon --verify
+          echo "after:  $(shasum -a 256 "$SO" | cut -d' ' -f1)"
+
       - name: Override ABI filter
         if: matrix.abi != 'all'
         run: |
@@ -117,6 +133,14 @@ jobs:
             mv "$f" "MaaMeow-${TAG}-${{ matrix.label }}.apk"
           done
 
+      # 确认 patch 过的 so 真的进了 APK，而不是打包阶段复用了旧产物
+      - name: Verify compat APK
+        if: matrix.nosve
+        run: |
+          cd app/build/outputs/apk/release
+          unzip -p *.apk lib/arm64-v8a/libopencv_world4.so > "$RUNNER_TEMP/check.so"
+          python "$GITHUB_WORKSPACE/scripts/patch_kleidicv_sve.py" "$RUNNER_TEMP/check.so" --mode neon --verify
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
@@ -146,8 +170,21 @@ jobs:
         run: |
           # 生成当前版本的 changelog（用于 Release body）
           git-cliff --current --strip header --github-repo Aliothmoon/MAA-Meow -o RELEASE_NOTES.md
-          # 追加 Mirror酱 下载链接
+          # 追加下载说明与 Mirror酱 下载链接
           cat >> RELEASE_NOTES.md << 'EOF'
+
+          ---
+
+          ### 下载哪个包
+
+          | 包 | 适用 |
+          |---|---|
+          | `universal` | 通用，不确定选这个 |
+          | `arm64-v8a` | ARM 64 位真机 |
+          | `x64` | x86_64 模拟器（Windows 上的蓝叠 / MuMu / 雷电等） |
+          | `arm64-v8a-emu-compat` | 兼容包，arm64 模拟器（Mac 上的蓝叠 Air、MuMu Pro Mac 等）启动任务即闪退时改用 |
+
+          兼容包功能与 `arm64-v8a` 一致，只是关掉了 OpenCV 的 SVE2 指令分派。装了 `universal` 闪退的模拟器用户请直接换这个包，不要再试 `universal`
 
           ---
 
