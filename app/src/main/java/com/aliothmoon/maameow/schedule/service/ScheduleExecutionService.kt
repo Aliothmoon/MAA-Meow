@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.android.ext.android.inject
 import timber.log.Timber
+import java.util.concurrent.atomic.AtomicInteger
 
 /** 定时触发 FGS：构造 [LaunchRequest] → [LaunchPipeline.execute] join → scheduleNext */
 class ScheduleExecutionService : Service() {
@@ -46,36 +47,51 @@ class ScheduleExecutionService : Service() {
     private val appSettings: AppSettingsManager by inject()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    /** Service 生命周期跟在途触发数绑定，不跟最后一个 startId */
+    private val inFlight = AtomicInteger(0)
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            ScheduleAlarmManager.ACTION_SCHEDULE_TRIGGER -> {
-                val strategyId = intent.getStringExtra(ScheduleAlarmManager.EXTRA_STRATEGY_ID)
-                val scheduledTime =
-                    intent.getLongExtra(ScheduleAlarmManager.EXTRA_SCHEDULED_TIME, 0L)
-                if (strategyId.isNullOrEmpty()) {
-                    Timber.w("$TAG: missing strategyId")
-                    shutdownService()
-                } else {
-                    serviceScope.launch {
-                        handleTrigger(strategyId, scheduledTime)
-                    }
-                }
-            }
+        val strategyId = intent?.getStringExtra(ScheduleAlarmManager.EXTRA_STRATEGY_ID)
+        if (intent?.action != ScheduleAlarmManager.ACTION_SCHEDULE_TRIGGER
+            || strategyId.isNullOrEmpty()
+        ) {
+            Timber.w("$TAG: bad start intent: action=%s", intent?.action)
+            stopIfIdle()
+            return START_NOT_STICKY
+        }
 
-            else -> {
-                Timber.w("$TAG: unknown action: %s", intent?.action)
-                shutdownService()
+        // 5 秒内必须 startForeground，不能等协程调度
+        ensureNotificationChannel()
+        startAsForeground(buildPreparingNotification())
+
+        val scheduledTime = intent.getLongExtra(ScheduleAlarmManager.EXTRA_SCHEDULED_TIME, 0L)
+        // 须先于 launch：协程调度前计数仍是 0，会被并发触发的收尾停掉
+        inFlight.incrementAndGet()
+        serviceScope.launch {
+            try {
+                handleTrigger(strategyId, scheduledTime)
+            } finally {
+                inFlight.decrementAndGet()
+                stopIfIdle()
             }
         }
         return START_NOT_STICKY
     }
 
-    private suspend fun handleTrigger(strategyId: String, scheduledTimeMs: Long) {
-        ensureNotificationChannel()
-        startAsForeground(buildPreparingNotification())
+    /** 有在途触发就不摘 FGS、不停服务，否则会连带取消其他触发 */
+    private fun stopIfIdle() {
+        val remaining = inFlight.get()
+        if (remaining > 0) {
+            Timber.i("$TAG: keep alive, %d trigger(s) in flight", remaining)
+            return
+        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
 
+    private suspend fun handleTrigger(strategyId: String, scheduledTimeMs: Long) {
         val strategy = awaitStrategy(strategyId)
         if (strategy == null) {
             Timber.w("$TAG: strategy missing: %s", strategyId)
@@ -94,7 +110,6 @@ class ScheduleExecutionService : Service() {
                 result = ExecutionResult.FAILED_VALIDATION,
                 message = triggerLogger.resolveMessage(msg),
             )
-            shutdownService()
             return
         }
 
@@ -104,7 +119,6 @@ class ScheduleExecutionService : Service() {
         } finally {
             alarmManager.scheduleNext(strategy, scheduledTimeMs)
             Timber.i("$TAG: pipeline finished for %s", request.requestId)
-            shutdownService()
         }
     }
 
@@ -161,11 +175,6 @@ class ScheduleExecutionService : Service() {
             .setRequestPromotedOngoing(true)
             .setSilent(true)
             .build()
-    }
-
-    private fun shutdownService() {
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
     }
 
     override fun onDestroy() {
