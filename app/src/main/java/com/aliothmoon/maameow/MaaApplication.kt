@@ -6,6 +6,7 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
+import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.koin.appModule
 import com.aliothmoon.maameow.koin.floatingWindowModule
@@ -37,6 +38,7 @@ class MaaApplication : Application() {
     private val appSettingsManager: AppSettingsManager by inject()
     private val crashHandler: CrashHandler by inject()
     private val unifiedStateDispatcher: UnifiedStateDispatcher by inject()
+    private val taskEndRegistry: TaskEndRegistry by inject()
     private val gameMuteCoordinator: GameMuteCoordinator by inject()
     private val overlayController: OverlayController by inject()
     private val appDownloader: AppDownloader by inject()
@@ -65,6 +67,7 @@ class MaaApplication : Application() {
         crashHandler.init(this)
         overlayController.setup()
         unifiedStateDispatcher.start()
+        taskEndRegistry.start()
         gameMuteCoordinator.startAutoRestore()
         depotRepository.start()
         operBoxRepository.start()

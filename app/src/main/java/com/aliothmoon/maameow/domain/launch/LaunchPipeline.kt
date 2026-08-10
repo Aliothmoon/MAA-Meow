@@ -5,6 +5,7 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
@@ -50,6 +51,7 @@ class LaunchPipeline(
     private val scheduleRepository: ScheduleStrategyRepository,
     private val startTaskChain: StartTaskChainUseCase,
     private val countdownUI: CountdownUI,
+    private val taskEndRegistry: TaskEndRegistry,
     private val keyguardLocked: () -> Boolean,
     private val deviceSecure: () -> Boolean,
     private val screenInteractive: () -> Boolean,
@@ -125,10 +127,8 @@ class LaunchPipeline(
         var terminalResult: ExecutionResult? = null
         var terminalMessage: UiText? = null
         var presentUi = true
-        var backgroundRun = false
-        // 结束熄屏要用，finally 里读，必须活在 try 外
-        var tookOverIdleDevice = false
-        // 每次触发独占一个日志 Session（独立文件），无全局 writer 竞态
+        // finally 要用，声明在 try 外
+        val outcome = RunOutcome()
         val log = triggerLogger.open(
             strategyId = request.strategyId,
             strategyName = request.displayName,
@@ -140,7 +140,6 @@ class LaunchPipeline(
             setPhase(request, LaunchSession.Phase.DevicePrep, presentUi = true)
             log.append(uiTextOf(R.string.schedule_log_received, request.displayName))
 
-            // 任务忙
             val state = compositionService.state.value
             if (state == MaaExecutionState.RUNNING
                 || state == MaaExecutionState.STARTING
@@ -148,6 +147,7 @@ class LaunchPipeline(
             ) {
                 if (request.forceStart) {
                     log.append(uiTextOf(R.string.schedule_log_force_stop_running))
+                    takeOverFromPreviousRun()
                     compositionService.stop()
                     compositionService.stopVirtualDisplay()
                 } else {
@@ -157,11 +157,9 @@ class LaunchPipeline(
                 }
             }
 
-            // 必须赶在唤醒之前采样，否则读到的永远是「已亮屏已解锁」
-            // 锁屏方式为「无」时熄屏也不上锁，所以亮屏与 keyguard 两个信号都要看
-            tookOverIdleDevice = !screenInteractive() || keyguardLocked()
+            // 须在唤醒前采样；无锁屏时熄屏也不上锁，亮屏与 keyguard 都看
+            outcome.tookOverIdleDevice = !screenInteractive() || keyguardLocked()
 
-            // wake + keyguard：仅 Schedule；默认滑动解锁，有密码且未配 PIN 则跳过
             if (request.source == LaunchSource.Schedule) {
                 val unlockType = appSettingsManager.wakeUnlockType.value
                 val pin = appSettingsManager.wakeCredential.value
@@ -188,7 +186,6 @@ class LaunchPipeline(
                 }
             }
 
-            // profile
             log.append(uiTextOf(R.string.schedule_log_wait_profile))
             chainState.isLoaded.filter { it }.first()
             if (chainState.profileId.value != request.profileId) {
@@ -207,13 +204,10 @@ class LaunchPipeline(
                 return
             }
 
-            // 前台：无倒计时、不拉主界面；后台：Dialog 倒计时 + 可拉 UI
-            // 前台定时/LAUNCH_PROFILE 不会调用 OverlayController.show
-            // 悬浮球与音量快捷键依赖用户曾在首页手动启动控制层（_isActive）
-            // 未启动时任务仍可跑，但无悬浮球/边框/快捷键，需先开控制层再挂机
+            // 前台无倒计时；后台 Dialog 倒计时，控制层需用户曾手动启动
             val isForeground = appSettingsManager.runMode.value == RunMode.FOREGROUND
             presentUi = !isForeground
-            backgroundRun = !isForeground
+            outcome.backgroundRun = !isForeground
             val needsActivityLaunch = request.source == LaunchSource.Schedule && presentUi
 
             if (needsActivityLaunch) {
@@ -253,7 +247,6 @@ class LaunchPipeline(
                 }
             }
 
-            // start
             setPhase(request, LaunchSession.Phase.Preparing, presentUi)
             setPhase(request, LaunchSession.Phase.Starting, presentUi)
             log.append(uiTextOf(R.string.schedule_log_starting_tasks, enabled.size))
@@ -289,12 +282,8 @@ class LaunchPipeline(
                 e.message ?: e.javaClass.simpleName,
             )
         } finally {
-            // 协程已 cancel 时仍须落库 / 关本 Session
             withContext(NonCancellable) {
-                finalizePipeline(
-                    request, log, terminalResult, terminalMessage,
-                    backgroundRun, tookOverIdleDevice,
-                )
+                finalizePipeline(request, log, terminalResult, terminalMessage, outcome)
             }
         }
     }
@@ -304,12 +293,10 @@ class LaunchPipeline(
         log: ScheduleTriggerLogger.Session,
         terminalResult: ExecutionResult?,
         terminalMessage: UiText?,
-        backgroundRun: Boolean,
-        tookOverIdleDevice: Boolean,
+        outcome: RunOutcome,
     ) {
         val result = terminalResult ?: ExecutionResult.CANCELLED
-        // 开了「已亮屏则不熄屏」时，启动那一刻设备是醒着的就当用户在用，别摁黑
-        val skipSleep = request.skipAutoSleepIfAwake && !tookOverIdleDevice
+        val skipSleep = request.skipAutoSleepIfAwake && !outcome.tookOverIdleDevice
         val autoSleep = request.autoSleepAfterTask && !skipSleep
         try {
             if (result == ExecutionResult.STARTED && request.autoSleepAfterTask && skipSleep) {
@@ -347,12 +334,14 @@ class LaunchPipeline(
                     cur
                 }
             }
-            // 全局「任务自动结束时关闭游戏」已开时由后台任务页统一处理，这里不重复关
-            val closeGame = backgroundRun
+            // 全局关游戏由后台任务页处理，这里不重复
+            val closeGame = outcome.backgroundRun
                     && request.closeGameAfterTask
                     && !appSettingsManager.closeAppOnTaskEnd.value
             if (result == ExecutionResult.STARTED && (closeGame || autoSleep)) {
-                scope.launch { awaitTaskEnd(closeGame, autoSleep) }
+                taskEndRegistry.armOnce { reason ->
+                    onTaskEnd(reason, closeGame, autoSleep)
+                }
             }
         }
     }
@@ -362,7 +351,6 @@ class LaunchPipeline(
         if (held != null) {
             val oldJob = jobs[held.requestId]
             oldJob?.cancel(CancellationException("preempted by ${incoming.requestId}"))
-            // 等旧 finally 关自己的 log Session / release mutex
             withTimeoutOrNull(PREEMPT_JOIN_TIMEOUT_MS) {
                 oldJob?.join()
             } ?: Timber.w(
@@ -370,13 +358,19 @@ class LaunchPipeline(
                 held.requestId,
             )
         }
+        takeOverFromPreviousRun()
         compositionService.stop()
         compositionService.stopVirtualDisplay()
         mutex.releaseAny()
         Timber.i("LaunchPipeline: force preempt for %s", incoming.requestId)
     }
 
-    /** mutex 未拿到时的旁路结果：独立 [writeClosed] 文件，不碰他人 Session */
+    /** 抢占前撤掉上一轮收尾，避免 stop 边沿触发旧 autoSleep */
+    private fun takeOverFromPreviousRun() {
+        taskEndRegistry.disarmOnce()
+    }
+
+    /** mutex 未拿到时的旁路结果，独立 writeClosed */
     private suspend fun finishWithoutHold(
         request: LaunchRequest,
         result: ExecutionResult,
@@ -421,32 +415,22 @@ class LaunchPipeline(
                         && cur.request.requestId == request.requestId ->
                     LaunchSession.InFlight(request, phase, presentUi)
 
-                else -> cur // 已被其他 request 占用，不覆盖
+                else -> cur
             }
         }
     }
 
-    /** 关游戏只认自然结束（RUNNING → IDLE/ERROR），手动停止不关；熄屏不区分结束方式 */
-    private suspend fun awaitTaskEnd(closeGame: Boolean, autoSleep: Boolean) {
-        var prev = MaaExecutionState.IDLE
-        var started = false
-        val endedNaturally = withTimeoutOrNull(POST_TASK_TIMEOUT_MS) {
-            compositionService.state.first { cur ->
-                val ended = started
-                        && (cur == MaaExecutionState.IDLE || cur == MaaExecutionState.ERROR)
-                if (!ended) {
-                    started = started || cur != MaaExecutionState.IDLE
-                    prev = cur
-                }
-                ended
-            }
-            prev == MaaExecutionState.RUNNING
-        }
+    private suspend fun onTaskEnd(
+        reason: TaskEndRegistry.Reason,
+        closeGame: Boolean,
+        autoSleep: Boolean,
+    ) {
         Timber.i(
-            "LaunchPipeline: task end natural=%s closeGame=%s autoSleep=%s",
-            endedNaturally, closeGame, autoSleep,
+            "LaunchPipeline: task end reason=%s closeGame=%s autoSleep=%s",
+            reason, closeGame, autoSleep,
         )
-        if (closeGame && endedNaturally == true) {
+        // 关游戏只认自然结束
+        if (closeGame && reason == TaskEndRegistry.Reason.NATURAL) {
             compositionService.stopVirtualDisplay()
         }
         if (autoSleep) {
@@ -454,8 +438,13 @@ class LaunchPipeline(
         }
     }
 
+    private class RunOutcome {
+        var backgroundRun = false
+        /** 启动采样：熄屏或锁屏 */
+        var tookOverIdleDevice = false
+    }
+
     companion object {
-        private const val POST_TASK_TIMEOUT_MS = 30L * 60 * 1000
         private const val PREEMPT_JOIN_TIMEOUT_MS = 15_000L
     }
 }

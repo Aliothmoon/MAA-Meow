@@ -5,6 +5,7 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
@@ -51,6 +52,7 @@ class LaunchPipelineTest {
     private lateinit var logger: ScheduleTriggerLogger
     private lateinit var repository: ScheduleStrategyRepository
     private lateinit var startTaskChain: StartTaskChainUseCase
+    private lateinit var taskEndRegistry: TaskEndRegistry
 
     private val keyguardLocked = java.util.concurrent.atomic.AtomicBoolean(false)
     private val deviceSecure = java.util.concurrent.atomic.AtomicBoolean(false)
@@ -132,11 +134,16 @@ class LaunchPipelineTest {
             every { state } returns compositionState
             coEvery { stop() } coAnswers {
                 stopCalls.incrementAndGet()
+                // STOPPING → IDLE 须留窗口，否则 StateFlow 合并
+                compositionState.value = MaaExecutionState.STOPPING
+                delay(100)
                 compositionState.value = MaaExecutionState.IDLE
+                delay(100)
                 mockk(relaxed = true)
             }
             coEvery { stopVirtualDisplay() } just runs
         }
+        taskEndRegistry = TaskEndRegistry(composition, scope).apply { start() }
         val logSession = mockk<ScheduleTriggerLogger.Session>(relaxed = true) {
             every { append(any()) } just runs
             every { end(any(), any()) } just runs
@@ -173,6 +180,7 @@ class LaunchPipelineTest {
             )
         } coAnswers {
             startCalls.incrementAndGet()
+            compositionState.value = MaaExecutionState.RUNNING
             StartTaskChainUseCase.Result.Success
         }
     }
@@ -193,6 +201,7 @@ class LaunchPipelineTest {
         scheduleRepository = repository,
         startTaskChain = startTaskChain,
         countdownUI = countdown,
+        taskEndRegistry = taskEndRegistry,
         keyguardLocked = { keyguardLocked.get() },
         deviceSecure = { deviceSecure.get() },
         screenInteractive = { screenInteractive.get() },
@@ -217,10 +226,7 @@ class LaunchPipelineTest {
         countdownSeconds = 1,
     )
 
-    /**
-     * awaitTaskEnd 要看到 IDLE → RUNNING → IDLE 才收尾。
-     * StateFlow 会合并连续赋值，两次之间必须留出投递窗口。
-     */
+    /** StateFlow 合并，赋值间须留窗口 */
     private suspend fun driveTaskToEnd() {
         delay(200)
         compositionState.value = MaaExecutionState.RUNNING
@@ -228,7 +234,6 @@ class LaunchPipelineTest {
         compositionState.value = MaaExecutionState.IDLE
     }
 
-    /** 没勾「已亮屏则不熄屏」时维持旧行为：亮着也照样熄 */
     @Test
     fun autoSleepWithoutSkipOption_sleepsEvenWhenAwake() = runBlocking<Unit> {
         screenInteractive.set(true)
@@ -238,7 +243,6 @@ class LaunchPipelineTest {
         coVerify(timeout = 5_000) { wake.lockAndSleep() }
     }
 
-    /** 勾上后：启动时亮屏且已解锁 —— 当作用户在用，不熄屏 */
     @Test
     fun autoSleepSkipIfAwake_awakeAndUnlocked_skipsSleep() = runBlocking<Unit> {
         screenInteractive.set(true)
@@ -246,10 +250,10 @@ class LaunchPipelineTest {
         pipeline().execute(scheduleRequest(autoSleep = true, skipIfAwake = true)).join()
         driveTaskToEnd()
         delay(500)
+        assertEquals(1, startCalls.get())
         coVerify(exactly = 0) { wake.lockAndSleep() }
     }
 
-    /** 勾上后：熄屏启动仍要熄屏（锁屏方式为「无」时 keyguard 也是 false，只能靠亮屏信号） */
     @Test
     fun autoSleepSkipIfAwake_screenOff_stillSleeps() = runBlocking<Unit> {
         screenInteractive.set(false)
@@ -259,7 +263,6 @@ class LaunchPipelineTest {
         coVerify(timeout = 5_000) { wake.lockAndSleep() }
     }
 
-    /** 勾上后：亮屏但停在锁屏界面，仍要熄屏 */
     @Test
     fun autoSleepSkipIfAwake_awakeButLocked_stillSleeps() = runBlocking<Unit> {
         screenInteractive.set(true)
@@ -267,6 +270,48 @@ class LaunchPipelineTest {
         pipeline().execute(scheduleRequest(autoSleep = true, skipIfAwake = true)).join()
         driveTaskToEnd()
         coVerify(timeout = 5_000) { wake.lockAndSleep() }
+    }
+
+    @Test
+    fun autoSleepSkipIfAwake_screenOffAndLocked_stillSleeps() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        keyguardLocked.set(true)
+        pipeline().execute(scheduleRequest(autoSleep = true, skipIfAwake = true)).join()
+        driveTaskToEnd()
+        coVerify(timeout = 5_000) { wake.lockAndSleep() }
+    }
+
+    /** force 须先 disarm，否则旧 autoSleep 会落在新一轮 */
+    @Test
+    fun forceStart_dropsPreviousRunPostActions() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        val p = pipeline()
+        p.execute(scheduleRequest("a", autoSleep = true)).join()
+        assertEquals(1, startCalls.get())
+        delay(200)
+
+        p.execute(scheduleRequest("b", force = true)).join()
+        delay(500)
+        assertEquals(2, startCalls.get())
+        coVerify(exactly = 0) { wake.lockAndSleep() }
+    }
+
+    /** arm 前任务已结束须补跑收尾 */
+    @Test
+    fun taskEndsBeforeArming_stillRunsPostActions() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        coEvery {
+            startTaskChain.invoke(chain = any(), context = any(), scheduleLabel = any())
+        } coAnswers {
+            startCalls.incrementAndGet()
+            compositionState.value = MaaExecutionState.RUNNING
+            delay(100)
+            compositionState.value = MaaExecutionState.IDLE
+            delay(100)
+            StartTaskChainUseCase.Result.Success
+        }
+        pipeline().execute(scheduleRequest(autoSleep = true)).join()
+        coVerify(timeout = 5_000, exactly = 1) { wake.lockAndSleep() }
     }
 
     private fun externalRequest(id: String = "ext-1") = LaunchRequest(
@@ -457,6 +502,8 @@ class LaunchPipelineTest {
         val p = pipeline()
         p.execute(scheduleRequest()).join()
         assertNull(mutex.current)
+        // 第一轮任务得先跑完，否则第二轮会被 busy 挡掉，测不到 mutex
+        compositionState.value = MaaExecutionState.IDLE
         p.execute(scheduleRequest("req-2")).join()
         assertEquals(2, startCalls.get())
         assertEquals(

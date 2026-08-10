@@ -21,7 +21,7 @@ import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
-import com.aliothmoon.maameow.domain.state.MaaExecutionState
+import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
 import com.aliothmoon.maameow.domain.usecase.TaskStartDecision
@@ -68,6 +68,7 @@ class BackgroundTaskViewModel(
     private val achievementReporter: AchievementReporter,
     private val gameMuteCoordinator: GameMuteCoordinator,
     private val launchPipeline: LaunchPipeline,
+    private val taskEndRegistry: TaskEndRegistry,
     private val application: Context,
 ) : ViewModel() {
 
@@ -191,20 +192,15 @@ class BackgroundTaskViewModel(
 
     private fun observeTaskEnd() {
         viewModelScope.launch {
-            var prev = compositionService.state.value
-            compositionService.state.collect { current ->
-                // 仅在任务自然结束（RUNNING → IDLE/ERROR）时关闭游戏；
-                // 手动停止走 RUNNING → STOPPING → IDLE，prev 为 STOPPING 不会匹配，
-                // 这是预期行为：手动停止说明用户可能还要继续操作，不应自动关闭游戏。
-                if (prev == MaaExecutionState.RUNNING
-                    && (current == MaaExecutionState.IDLE || current == MaaExecutionState.ERROR)
+            taskEndRegistry.taskEnded.collect { reason ->
+                // 仅自然结束关游戏
+                if (reason == TaskEndRegistry.Reason.NATURAL
                     && appSettingsManager.closeAppOnTaskEnd.value
                 ) {
-                    Timber.i("Task ended (%s), auto closing app", current)
+                    Timber.i("Task ended naturally, auto closing app")
                     _effects.send(UiEffect.toast(R.string.bg_toast_auto_closed_on_end))
                     compositionService.stopVirtualDisplay()
                 }
-                prev = current
             }
         }
     }

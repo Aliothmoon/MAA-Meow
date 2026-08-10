@@ -56,6 +56,7 @@ import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.RemoteAppAliveChecker
 import com.aliothmoon.maameow.domain.service.ResourceInitService
+import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.ToolboxExportService
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.domain.service.update.UpdateService
@@ -155,6 +156,7 @@ val appModule = module {
             scheduleRepository = get(),
             startTaskChain = get(),
             countdownUI = get(),
+            taskEndRegistry = get(),
             keyguardLocked = {
                 val km = appContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
                 km.isKeyguardLocked
@@ -242,6 +244,8 @@ val appModule = module {
     singleOf(::WakeUnlockEngine)
 
     singleOf(::UnifiedStateDispatcher)
+    // scope 走构造默认值，singleOf 会试图解析它
+    single { TaskEndRegistry(compositionService = get()) }
     singleOf(::LogExportService)
     singleOf(::ToolboxExportService)
 
