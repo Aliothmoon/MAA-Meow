@@ -11,10 +11,14 @@ import java.util.UUID
 
 object LaunchIntentMapper {
 
+    /** 同一计划时刻恒定同 id，重复投递由管线幂等挡掉 */
+    fun scheduleRequestId(strategyId: String, scheduledTimeMs: Long): String =
+        "$strategyId@$scheduledTimeMs"
+
     fun fromStrategy(
         strategy: ScheduleStrategy,
         scheduledTimeMs: Long,
-        requestId: String = UUID.randomUUID().toString(),
+        requestId: String = scheduleRequestId(strategy.id, scheduledTimeMs),
     ): LaunchRequest = LaunchRequest(
         requestId = requestId,
         source = LaunchSource.Schedule,
