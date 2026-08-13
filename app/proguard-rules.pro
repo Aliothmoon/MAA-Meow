@@ -1,4 +1,4 @@
-# 只锁按名查找的入口；对照包：-Pmaa.minify=false
+# 只锁按名查找的入口
 
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile

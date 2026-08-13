@@ -8,13 +8,10 @@ import org.junit.Test
 class R8KeepRulesContractTest {
 
     @Test
-    fun minifyDefaultsOnAndKeepRulesCoverNamedEntryPoints() {
+    fun minifyEnabledAndKeepRulesCoverNamedEntryPoints() {
         val gradle = resolve("build.gradle.kts").readText()
-        assertTrue(gradle.contains("maa.minify"))
-        assertTrue(gradle.contains(".orElse(true)"))
-        assertTrue(
-            Regex("""isMinifyEnabled\s*=\s*enableMinify""").containsMatchIn(gradle),
-        )
+        assertTrue(Regex("""isMinifyEnabled\s*=\s*true""").containsMatchIn(gradle))
+        assertTrue(Regex("""isShrinkResources\s*=\s*true""").containsMatchIn(gradle))
 
         val rules = resolve("proguard-rules.pro").readText()
         val activeRules = rules.lineSequence()
