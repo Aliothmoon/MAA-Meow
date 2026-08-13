@@ -95,8 +95,16 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // 默认开 R8 Full Mode + 资源压缩；对照包：-Pmaa.minify=false
+            val enableMinify = providers.gradleProperty("maa.minify")
+                .map { it.toBoolean() }
+                .orElse(true)
+                .get()
+            isMinifyEnabled = enableMinify
+            isShrinkResources = enableMinify
+            if (enableMinify) {
+                println("[R8] release minify+shrink enabled")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
