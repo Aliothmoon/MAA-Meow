@@ -1511,7 +1511,11 @@
     <string name="schedule_trigger_log_title">Trigger log</string>
     <string name="schedule_create_strategy">New schedule</string>
     <string name="schedule_empty_state">No schedules yet</string>
-    <string name="schedule_empty_hint_add">Tap the button in the lower-right corner to add one</string>
+    <string name="schedule_empty_hint_add">Tap the button in the upper-right corner to add one</string>
+    <string name="schedule_exact_alarm_blocked">Exact alarms are not allowed</string>
+    <string name="schedule_exact_alarm_hint">Schedules still fire on time, but the status bar shows an alarm icon</string>
+    <string name="schedule_exact_alarm_grant">Allow</string>
+    <string name="schedule_exact_alarm_settings">Exact alarm settings</string>
     <string name="schedule_delete_strategy_title">Delete schedule</string>
     <string name="schedule_delete_strategy_message">Delete this schedule?</string>
     <string name="schedule_auto_start_permission_title">Auto-start permission</string>

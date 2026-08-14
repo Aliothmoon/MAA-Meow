@@ -1,7 +1,6 @@
 package com.aliothmoon.maameow.schedule.ui
 
 import android.content.Intent
-import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -71,6 +70,7 @@ import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.schedule.model.ScheduleType
+import com.aliothmoon.maameow.schedule.service.ExactAlarmSettings
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.i18n.asString
 import com.dokar.sonner.ToastType
@@ -697,12 +697,8 @@ fun ScheduleEditView(
                                 )
                             )
                         }
-                    } else if (state.needExactAlarm && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        runCatching {
-                            context.startActivity(
-                                Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                            )
-                        }
+                    } else if (state.needExactAlarm) {
+                        ExactAlarmSettings.open(context)
                     }
                     showPermissionDialog = false
                     navController.popBackStack()

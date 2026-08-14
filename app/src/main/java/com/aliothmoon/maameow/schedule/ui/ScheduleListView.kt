@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.schedule.ui
 import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -18,13 +17,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Alarm
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,14 +44,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Routes
+import com.aliothmoon.maameow.presentation.components.InfoCard
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import com.aliothmoon.maameow.schedule.service.AutoStartHelper
+import com.aliothmoon.maameow.schedule.service.ExactAlarmSettings
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import org.koin.androidx.compose.koinViewModel
 
@@ -65,6 +68,11 @@ fun ScheduleListView(
     val context = LocalContext.current
     var deleteConfirmId by remember { mutableStateOf<String?>(null) }
     var showAutoStartGuide by remember { mutableStateOf(false) }
+
+    // 设置页没有结果回调，回来时重读精确闹钟开关
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshExactAlarmPermission()
+    }
 
     // 首次有策略时检查是否需要自启动引导
     LaunchedEffect(state.strategies.isNotEmpty()) {
@@ -80,66 +88,64 @@ fun ScheduleListView(
         }
     }
 
+    fun openExactAlarmSettings() {
+        ExactAlarmSettings.open(context)
+        viewModel.refreshExactAlarmPermission()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = stringResource(R.string.schedule_title),
                 actions = {
+                    // 与阻断卡片同一条路；允许之后卡片消失，靠这个入口回到系统开关页
+                    if (state.exactAlarmConfigurable) {
+                        IconButton(onClick = { openExactAlarmSettings() }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Alarm,
+                                contentDescription = stringResource(R.string.schedule_exact_alarm_settings),
+                            )
+                        }
+                    }
                     IconButton(onClick = { navController.navigate(Routes.SCHEDULE_TRIGGER_LOG) }) {
                         Icon(
-                            Icons.AutoMirrored.Filled.List,
-                            contentDescription = stringResource(R.string.schedule_trigger_log_title)
+                            imageVector = Icons.Outlined.History,
+                            contentDescription = stringResource(R.string.schedule_trigger_log_title),
+                        )
+                    }
+                    IconButton(onClick = { navController.navigate("schedule_edit/new") }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Add,
+                            contentDescription = stringResource(R.string.schedule_create_strategy),
                         )
                     }
                 }
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { navController.navigate("schedule_edit/new") }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.schedule_create_strategy))
-            }
-        },
         // 外层 MainScreen 的 bottomBar 已消费导航栏 inset；此处不再重复预留，
         // 否则底部会多出一条等高于导航栏的空白条
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { padding ->
-        if (state.strategies.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.DateRange,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        stringResource(R.string.schedule_empty_state),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        stringResource(R.string.schedule_empty_hint_add),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentPadding = PaddingValues(
+                horizontal = MaaDesignTokens.Spacing.listHorizontal,
+                vertical = MaaDesignTokens.Spacing.sm,
+            ),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (!state.exactAlarmAllowed) {
+                item(key = "exact-alarm") {
+                    ExactAlarmCard(onGrant = { openExactAlarmSettings() })
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(horizontal = MaaDesignTokens.Spacing.listHorizontal, vertical = MaaDesignTokens.Spacing.sm),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            if (state.strategies.isEmpty()) {
+                item(key = "empty") {
+                    ScheduleEmptyState(modifier = Modifier.fillParentMaxSize())
+                }
+            } else {
                 items(state.strategies, key = { it.id }) { strategy ->
                     val profileName = state.profiles.find { it.id == strategy.profileId }?.name
                     StrategyCard(
@@ -189,6 +195,47 @@ fun ScheduleListView(
                 }
             )
         }
+    }
+}
+
+@Composable
+private fun ExactAlarmCard(onGrant: () -> Unit) {
+    InfoCard(title = stringResource(R.string.schedule_exact_alarm_blocked)) {
+        Text(
+            text = stringResource(R.string.schedule_exact_alarm_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        TextButton(onClick = onGrant) {
+            Text(stringResource(R.string.schedule_exact_alarm_grant))
+        }
+    }
+}
+
+@Composable
+private fun ScheduleEmptyState(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.DateRange,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            stringResource(R.string.schedule_empty_state),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            stringResource(R.string.schedule_empty_hint_add),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+        )
     }
 }
 

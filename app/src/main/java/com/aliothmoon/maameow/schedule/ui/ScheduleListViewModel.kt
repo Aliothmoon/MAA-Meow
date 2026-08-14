@@ -17,7 +17,11 @@ import java.time.format.DateTimeFormatter
 data class ScheduleListUiState(
     val strategies: List<ScheduleStrategy> = emptyList(),
     val profiles: List<TaskProfile> = emptyList(),
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    /** 系统是否允许精确闹钟；否则退到 setAlarmClock，状态栏会多个闹钟图标 */
+    val exactAlarmAllowed: Boolean = true,
+    /** 系统有没有精确闹钟开关页（API 31+）；没有就别摆那个入口 */
+    val exactAlarmConfigurable: Boolean = false,
 )
 
 class ScheduleListViewModel(
@@ -26,7 +30,12 @@ class ScheduleListViewModel(
     private val alarmManager: ScheduleAlarmManager,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(ScheduleListUiState())
+    private val _state = MutableStateFlow(
+        ScheduleListUiState(
+            exactAlarmAllowed = alarmManager.canScheduleExact(),
+            exactAlarmConfigurable = alarmManager.hasExactAlarmToggle(),
+        )
+    )
     val state: StateFlow<ScheduleListUiState> = _state.asStateFlow()
 
     init {
@@ -39,6 +48,21 @@ class ScheduleListViewModel(
             taskChainState.profiles.collect { profiles ->
                 _state.update { it.copy(profiles = profiles) }
             }
+        }
+    }
+
+    /** 设置页没有结果回调，从系统开关回来后重读；刚授权时把 setAlarmClock 换回 exact */
+    fun refreshExactAlarmPermission() {
+        val allowed = alarmManager.canScheduleExact()
+        val wasAllowed = _state.value.exactAlarmAllowed
+        _state.update {
+            it.copy(
+                exactAlarmAllowed = allowed,
+                exactAlarmConfigurable = alarmManager.hasExactAlarmToggle(),
+            )
+        }
+        if (allowed != wasAllowed) {
+            alarmManager.rescheduleAll(_state.value.strategies)
         }
     }
 

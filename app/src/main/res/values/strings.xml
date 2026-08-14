@@ -1567,7 +1567,11 @@
     <string name="schedule_trigger_log_title">触发日志</string>
     <string name="schedule_create_strategy">新建策略</string>
     <string name="schedule_empty_state">暂无定时策略</string>
-    <string name="schedule_empty_hint_add">点击右下角添加</string>
+    <string name="schedule_empty_hint_add">点击右上角添加</string>
+    <string name="schedule_exact_alarm_blocked">系统未允许精确闹钟</string>
+    <string name="schedule_exact_alarm_hint">仍会按时触发，但状态栏会多一个闹钟图标</string>
+    <string name="schedule_exact_alarm_grant">去允许</string>
+    <string name="schedule_exact_alarm_settings">精确闹钟设置</string>
     <string name="schedule_delete_strategy_title">删除策略</string>
     <string name="schedule_delete_strategy_message">确定要删除该定时策略吗？</string>
     <string name="schedule_auto_start_permission_title">自启动权限</string>

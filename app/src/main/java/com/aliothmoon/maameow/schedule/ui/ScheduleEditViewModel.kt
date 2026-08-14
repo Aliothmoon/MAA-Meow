@@ -1,8 +1,6 @@
 package com.aliothmoon.maameow.schedule.ui
 
-import android.app.AlarmManager
 import android.content.Context
-import android.os.Build
 import android.os.PowerManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -314,9 +312,7 @@ class ScheduleEditViewModel(
                 // 检查关键权限
                 val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
                 val batteryOk = pm.isIgnoringBatteryOptimizations(context.packageName)
-                val alarmOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
-                } else true
+                val alarmOk = scheduleAlarmManager.canScheduleExact()
 
                 _state.update {
                     it.copy(

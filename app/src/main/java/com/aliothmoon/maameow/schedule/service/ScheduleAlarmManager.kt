@@ -56,22 +56,16 @@ class ScheduleAlarmManager(
 
         val pendingIntent = buildPendingIntent(strategy.id, scheduledTimeMs)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (alarmManager.canScheduleExactAlarms()) {
-                // 有精确闹钟权限：维持原行为，无副作用
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMs, pendingIntent)
-            } else {
-                // 无精确闹钟权限时，旧实现降级到 setAndAllowWhileIdle（inexact）。但 inexact 闹钟触发的广播
-                // 在 Android 12+ 无法启动前台服务（不在 FGS 后台启动豁免清单内），会导致定时任务永久空转。
-                // 改用 setAlarmClock：不需要 SCHEDULE_EXACT_ALARM、强制脱离 Doze 投递、且同属 exact 闹钟
-                // 而豁免前台服务后台启动限制。代价仅为状态栏多一个闹钟图标。
-                alarmManager.setAlarmClock(
-                    AlarmManager.AlarmClockInfo(triggerMs, buildShowIntent()),
-                    pendingIntent,
-                )
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+            // 没有精确闹钟权限时不能退化成 setAndAllowWhileIdle：inexact 闹钟发出的广播在 12+
+            // 不在前台服务后台启动的豁免清单里，服务起不来，定时会永久空转
+            // setAlarmClock 不要 SCHEDULE_EXACT_ALARM、强制脱 Doze 投递，且同属 exact 而享有豁免
+            // 代价只是状态栏多一个闹钟图标
+            alarmManager.setAlarmClock(
+                AlarmManager.AlarmClockInfo(triggerMs, buildShowIntent()),
+                pendingIntent,
+            )
         } else {
-            // API 28-30 没有前台服务后台启动限制，exact 闹钟即可可靠触发
             alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMs, pendingIntent)
         }
 
@@ -91,9 +85,22 @@ class ScheduleAlarmManager(
         Timber.i("已取消策略 [%s] 的闹钟", strategyId)
     }
 
-    /** 重新调度所有启用的策略 */
+    /** API 31 起用户可单独关掉精确闹钟；关了仍能定时（走 setAlarmClock），只是状态栏多个图标 */
+    fun canScheduleExact(): Boolean {
+        val granted = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            alarmManager.canScheduleExactAlarms()
+        return ExactAlarmSettings.isAllowed(Build.VERSION.SDK_INT, granted)
+    }
+
+    /** 31 以下没有那个系统开关页，入口要藏掉，否则点了什么也不会发生 */
+    fun hasExactAlarmToggle(): Boolean = ExactAlarmSettings.hasToggle(Build.VERSION.SDK_INT)
+
+    /** 先撤后立：禁用与删除都会留下孤儿闹钟，重排时必须把已启用的整批过一遍 */
     fun rescheduleAll(strategies: List<ScheduleStrategy>) {
-        strategies.filter { it.enabled }.forEach { scheduleNext(it) }
+        strategies.forEach { strategy ->
+            cancel(strategy.id)
+            if (strategy.enabled) scheduleNext(strategy)
+        }
     }
 
     fun computeNextTrigger(strategy: ScheduleStrategy, afterEpochMs: Long = 0L): ZonedDateTime? {
