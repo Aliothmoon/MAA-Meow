@@ -1,6 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.notification
 
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -105,7 +105,7 @@ fun NotificationSettingsView(
                             )
                         }
                     }
-                    AnimatedVisibility(visible = isEnabled) {
+                    MaaAnimatedVisibility(visible = isEnabled) {
                         Column {
                             ListItemDivider()
                             SwitchItem(
@@ -198,7 +198,7 @@ fun NotificationSettingsView(
                                 )
                             },
                         )
-                        AnimatedVisibility(visible = enabled) {
+                        MaaAnimatedVisibility(visible = enabled) {
                             Column(modifier = Modifier.padding(top = MaaDesignTokens.Spacing.sm)) {
                                 ListItemDivider()
                                 Spacer(Modifier.height(MaaDesignTokens.Spacing.sm))

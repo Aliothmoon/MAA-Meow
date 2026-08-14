@@ -1,12 +1,9 @@
 package com.aliothmoon.maameow.presentation.components
 
 import android.content.res.Configuration
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
+import com.aliothmoon.maameow.theme.LocalReduceMotion
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaMotion
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -169,11 +166,12 @@ private fun FloatingTaskPromptDialog(
 ) {
     val overlayInteractionSource = remember { MutableInteractionSource() }
     val cardInteractionSource = remember { MutableInteractionSource() }
+    val reduceMotion = LocalReduceMotion.current
 
-    AnimatedVisibility(
+    MaaAnimatedVisibility(
         visible = true,
-        enter = fadeIn(animationSpec = tween(200)),
-        exit = fadeOut(animationSpec = tween(150)),
+        enter = MaaMotion.fadeIn(reduceMotion),
+        exit = MaaMotion.fadeOut(reduceMotion),
     ) {
         Box(
             modifier = Modifier
@@ -190,10 +188,10 @@ private fun FloatingTaskPromptDialog(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            AnimatedVisibility(
+            MaaAnimatedVisibility(
                 visible = true,
-                enter = scaleIn(initialScale = 0.85f, animationSpec = tween(200)),
-                exit = scaleOut(targetScale = 0.85f, animationSpec = tween(150)),
+                enter = MaaMotion.dialogIn(reduceMotion),
+                exit = MaaMotion.dialogOut(reduceMotion),
             ) {
                 TaskPromptCard(
                     title = title,

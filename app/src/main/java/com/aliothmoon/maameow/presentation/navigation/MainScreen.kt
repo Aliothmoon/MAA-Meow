@@ -27,7 +27,8 @@ import com.aliothmoon.maameow.presentation.view.home.HomeView
 import com.aliothmoon.maameow.presentation.view.settings.SettingsView
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.ui.ScheduleListView
-import com.aliothmoon.maameow.theme.MaaAnimations
+import com.aliothmoon.maameow.theme.LocalReduceMotion
+import com.aliothmoon.maameow.theme.MaaMotion
 import com.aliothmoon.maameow.theme.MaaBackgroundHost
 import com.aliothmoon.maameow.theme.MaxBackgroundBlur
 import com.aliothmoon.maameow.theme.ProvideColorScheme
@@ -48,6 +49,7 @@ fun MainScreen(
 ) {
     val pagerState = rememberPagerState(pageCount = { BottomNavTab.all.size })
     val scope = rememberCoroutineScope()
+    val reduceMotion = LocalReduceMotion.current
 
     // targetPage：点击/滑动一旦确定目标即生效，停稳后等于 currentPage。
     // animateScrollToPage 内部走 MutatorMutex，连续调用时后者自动接管，无需手动取消。
@@ -58,8 +60,8 @@ fun MainScreen(
             pagerState.animateScrollToPage(
                 page = index,
                 animationSpec = tween(
-                    durationMillis = 100 * distance + 100,
-                    easing = MaaAnimations.springEasing,
+                    durationMillis = MaaMotion.pagerDuration(distance, reduceMotion),
+                    easing = MaaMotion.Emphasized,
                 ),
             )
         }

@@ -1,6 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.panel.roguelike
 
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -53,7 +53,7 @@ fun AdvancedRoguelikeSettings(
             enabled = config.mode != RoguelikeMode.Investment
         )
 
-        AnimatedVisibility(visible = config.investmentEnabled) {
+        MaaAnimatedVisibility(visible = config.investmentEnabled) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -132,7 +132,7 @@ fun AdvancedRoguelikeSettings(
         }
 
         // WPF: Visibility="RoguelikeUseSupportUnit AND RoguelikeCoreChar != ''" (line 321)
-        AnimatedVisibility(visible = config.useSupport && supportEnabled) {
+        MaaAnimatedVisibility(visible = config.useSupport && supportEnabled) {
             CheckBoxWithLabel(
                 checked = config.enableNonfriendSupport,
                 onCheckedChange = { onConfigChange(config.copy(enableNonfriendSupport = it)) },

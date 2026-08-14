@@ -1,6 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.panel.roguelike
 
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -95,7 +95,7 @@ fun ModeSpecificSettings(
                 )
 
                 // WPF: Visibility="StartWithEliteTwo AND mode==Collectible AND (Mizuki OR Sami)" (line 216)
-                AnimatedVisibility(visible = config.startWithEliteTwo) {
+                MaaAnimatedVisibility(visible = config.startWithEliteTwo) {
                     CheckBoxWithLabel(
                         checked = config.onlyStartWithEliteTwo,
                         onCheckedChange = { onConfigChange(config.copy(onlyStartWithEliteTwo = it)) },

@@ -1,7 +1,7 @@
 package com.aliothmoon.maameow.presentation.view.home
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -710,7 +710,7 @@ private fun PermissionCard(
                 )
             }
 
-            AnimatedVisibility(visible = expandedPermissions) {
+            MaaAnimatedVisibility(visible = expandedPermissions) {
                 Column {
                     PermissionRow(
                         title = stringResource(R.string.home_permission_overlay),

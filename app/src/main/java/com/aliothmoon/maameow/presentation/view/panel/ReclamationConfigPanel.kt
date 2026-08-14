@@ -1,6 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -127,7 +127,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                             )
                         }
                         item {
-                            AnimatedVisibility(visible = !isRelaunchAnchor) {
+                            MaaAnimatedVisibility(visible = !isRelaunchAnchor) {
                                 ReclamationButtonGroup(
                                     label = stringResource(R.string.panel_reclamation_strategy),
                                     options = localizedReclamationModeOptions(),
@@ -137,7 +137,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                             }
                         }
                         item {
-                            AnimatedVisibility(visible = isRelaunchAnchor) {
+                            MaaAnimatedVisibility(visible = isRelaunchAnchor) {
                                 ReclamationButtonGroup(
                                     label = stringResource(R.string.panel_reclamation_relaunch_anchor_stage),
                                     options = localizedRelaunchAnchorModeOptions(),
@@ -147,7 +147,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                             }
                         }
                         item {
-                            AnimatedVisibility(
+                            MaaAnimatedVisibility(
                                 visible = !isRelaunchAnchor
                                         && config.mode == ReclamationConfig.MODE_PROSPERITY_NO_SAVE
                             ) {

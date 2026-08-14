@@ -1,6 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.panel.common
 
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
@@ -140,7 +140,7 @@ internal fun GroupedStageButtonGroup(
         }
 
         // 分组内容（折叠时隐藏）
-        AnimatedVisibility(
+        MaaAnimatedVisibility(
             visible = expanded,
             enter = expandVertically(),
             exit = shrinkVertically()

@@ -1,6 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.panel.roguelike
 
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -73,7 +73,7 @@ fun ThemeSpecificSettings(
                     label = stringResource(R.string.panel_roguelike_first_floor_foldartal)
                 )
 
-                AnimatedVisibility(visible = config.firstFloorFoldartal) {
+                MaaAnimatedVisibility(visible = config.firstFloorFoldartal) {
                     ITextField(
                         value = config.firstFloorFoldartals,
                         onValueChange = { onConfigChange(config.copy(firstFloorFoldartals = it)) },
@@ -91,7 +91,7 @@ fun ThemeSpecificSettings(
                     label = stringResource(R.string.panel_roguelike_new_squad_foldartal)
                 )
 
-                AnimatedVisibility(visible = config.newSquad2StartingFoldartal) {
+                MaaAnimatedVisibility(visible = config.newSquad2StartingFoldartal) {
                     Column {
                         ITextField(
                             value = config.newSquad2StartingFoldartals,
@@ -117,7 +117,7 @@ fun ThemeSpecificSettings(
                 label = stringResource(R.string.panel_roguelike_start_with_seed)
             )
 
-            AnimatedVisibility(visible = config.startWithSeed) {
+            MaaAnimatedVisibility(visible = config.startWithSeed) {
                 ITextField(
                     value = config.seed,
                     onValueChange = { onConfigChange(config.copy(seed = it)) },

@@ -1,6 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.panel.mall
 
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
@@ -422,7 +422,7 @@ private fun PriorityItemsSection(
         )
 
         // 添加按钮
-        AnimatedVisibility(visible = !isReorderMode) {
+        MaaAnimatedVisibility(visible = !isReorderMode) {
             Button(
                 onClick = { showAddPanel = !showAddPanel },
                 enabled = config.shopping,
@@ -443,7 +443,7 @@ private fun PriorityItemsSection(
         }
 
         // 内联添加面板（输入框形式）
-        AnimatedVisibility(
+        MaaAnimatedVisibility(
             visible = showAddPanel,
             enter = expandVertically(),
             exit = shrinkVertically()
@@ -593,7 +593,7 @@ private fun BlacklistSection(config: MallConfig, onConfigChange: (MallConfig) ->
             )
         }
 
-        AnimatedVisibility(
+        MaaAnimatedVisibility(
             visible = showAddPanel,
             enter = expandVertically(),
             exit = shrinkVertically()

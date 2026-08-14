@@ -1,6 +1,6 @@
 package com.aliothmoon.maameow.presentation.components
 
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
@@ -48,11 +48,7 @@ fun InlineConfirmPanel(
     confirmText: String = stringResource(R.string.common_confirm),
     dismissText: String = stringResource(R.string.common_cancel),
 ) {
-    AnimatedVisibility(
-        visible = visible,
-        enter = expandVertically(),
-        exit = shrinkVertically(),
-    ) {
+    MaaAnimatedVisibility(visible = visible) {
         Surface(
             modifier = modifier.fillMaxWidth(),
             color = MaterialTheme.colorScheme.errorContainer,

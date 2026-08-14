@@ -1,6 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.panel.fight
 
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
@@ -261,7 +261,7 @@ fun FightConfigPanel(
                                     label = stringResource(R.string.panel_fight_use_expiring_medicine),
                                     tipText = stringResource(R.string.panel_fight_use_expiring_medicine_tip)
                                 )
-                                AnimatedVisibility(
+                                MaaAnimatedVisibility(
                                     visible = config.useExpiringMedicine,
                                     enter = expandVertically(),
                                     exit = shrinkVertically()
@@ -730,7 +730,7 @@ private fun CustomAnnihilationSection(
         )
 
         // 剿灭关卡选择（启用时显示）
-        AnimatedVisibility(
+        MaaAnimatedVisibility(
             visible = config.useCustomAnnihilation,
             enter = expandVertically(),
             exit = shrinkVertically()
@@ -802,7 +802,7 @@ private fun WeeklyScheduleSection(
             label = stringResource(R.string.panel_fight_weekly_schedule),
             tipText = stringResource(R.string.panel_fight_weekly_schedule_tip)
         )
-        AnimatedVisibility(
+        MaaAnimatedVisibility(
             visible = config.useWeeklySchedule,
             enter = expandVertically(),
             exit = shrinkVertically()

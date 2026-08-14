@@ -1,6 +1,6 @@
 package com.aliothmoon.maameow.presentation.components
 
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -90,11 +90,7 @@ fun CollapsibleSection(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        AnimatedVisibility(
-            visible = expanded,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically(),
-        ) {
+        MaaAnimatedVisibility(visible = expanded) {
             Column(content = content)
         }
     }

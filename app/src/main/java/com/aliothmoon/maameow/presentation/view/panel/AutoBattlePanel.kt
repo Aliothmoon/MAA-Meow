@@ -4,7 +4,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -982,7 +982,7 @@ private fun BuiltinCopilotTree(
     onSelectFile: (CopilotResourceProvider.Node) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AnimatedVisibility(
+    MaaAnimatedVisibility(
         visible = expanded,
         enter = expandVertically() + fadeIn(),
         exit = shrinkVertically() + fadeOut(),

@@ -7,7 +7,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
@@ -638,7 +638,7 @@ fun SettingsView(
                             onCheckedChange = { viewModel.setShizukuShortcutEnabled(it) }
                         )
                         ListItemDivider()
-                        AnimatedVisibility(
+                        MaaAnimatedVisibility(
                             visible = shizukuShortcutEnabled,
                             enter = expandVertically(),
                             exit = shrinkVertically()
@@ -713,7 +713,7 @@ fun SettingsView(
                         selectedType = wakeUnlockType,
                         onTypeSelected = { viewModel.setWakeUnlockType(it) },
                     )
-                    AnimatedVisibility(
+                    MaaAnimatedVisibility(
                         visible = wakeUnlockType == "pin",
                         enter = expandVertically(),
                         exit = shrinkVertically(),
@@ -754,7 +754,7 @@ fun SettingsView(
                             checked = tasksOverrideEnabled,
                             onCheckedChange = { viewModel.setTasksOverrideEnabled(it) }
                         )
-                        AnimatedVisibility(
+                        MaaAnimatedVisibility(
                             visible = tasksOverrideEnabled,
                             enter = expandVertically(),
                             exit = shrinkVertically()
@@ -837,7 +837,7 @@ fun SettingsView(
                                     achievementViewModel.onEvent(AchievementEvent.PallasAvatarClicked)
                                 },
                             )
-                            AnimatedVisibility(
+                            MaaAnimatedVisibility(
                                 visible = achievementUiState.pallasDebugActive,
                                 enter = fadeIn() + expandVertically(),
                                 exit = fadeOut() + shrinkVertically(),
@@ -1200,7 +1200,7 @@ private fun SettingCustomBackgroundSection(
             onCheckedChange = onEnabledChange,
         )
 
-        AnimatedVisibility(
+        MaaAnimatedVisibility(
             visible = enabled,
             enter = expandVertically(),
             exit = shrinkVertically()

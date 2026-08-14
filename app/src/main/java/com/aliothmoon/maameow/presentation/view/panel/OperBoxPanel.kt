@@ -2,7 +2,7 @@ package com.aliothmoon.maameow.presentation.view.panel
 
 import android.content.ClipData
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -195,7 +195,7 @@ fun OperBoxPanel(
                     }
                 }
                 if (fileExporter != null) {
-                    AnimatedVisibility(visible = exportExpanded) {
+                    MaaAnimatedVisibility(visible = exportExpanded) {
                         val exportFormats = listOf(
                             Triple("JSON", ToolboxExportFileType.JSON, viewModel::exportOperBox),
                             Triple("Markdown", ToolboxExportFileType.MARKDOWN) {

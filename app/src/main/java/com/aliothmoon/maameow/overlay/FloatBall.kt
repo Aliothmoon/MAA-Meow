@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import com.aliothmoon.maameow.theme.MaaMotion
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,7 +59,7 @@ fun FloatBall(
 
     val baseColor by animateColorAsState(
         targetValue = targetColor.copy(alpha = 0.85f),
-        animationSpec = tween(300),
+        animationSpec = tween(MaaMotion.Medium),
     )
 
     val textColor = Color.White

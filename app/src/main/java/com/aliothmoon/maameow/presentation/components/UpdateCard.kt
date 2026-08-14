@@ -1,7 +1,7 @@
 package com.aliothmoon.maameow.presentation.components
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -320,7 +320,7 @@ fun UpdateCard(
                 }
 
                 // 应用下载进度（动画展开/收起）
-                AnimatedVisibility(
+                MaaAnimatedVisibility(
                     visible = appIsUpdating,
                     enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
                     exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
@@ -366,7 +366,7 @@ fun UpdateCard(
                 }
 
                 // 资源下载/解压进度（动画展开/收起）
-                AnimatedVisibility(
+                MaaAnimatedVisibility(
                     visible = resIsUpdating,
                     enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
                     exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
@@ -460,7 +460,7 @@ fun UpdateCard(
                 }
 
                 // CDK 输入框（仅 Mirror酱 时显示）
-                AnimatedVisibility(visible = updateSource == UpdateSource.MIRROR_CHYAN) {
+                MaaAnimatedVisibility(visible = updateSource == UpdateSource.MIRROR_CHYAN) {
                     CdkInputField(
                         cdk = mirrorChyanCdk,
                         onCdkChange = { viewModel.setMirrorChyanCdk(it) }
@@ -541,7 +541,7 @@ private fun CdkInputField(
             )
         }
 
-        AnimatedVisibility(
+        MaaAnimatedVisibility(
             visible = expanded,
             enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
             exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),

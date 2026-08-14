@@ -117,7 +117,8 @@ import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxTab
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
-import com.aliothmoon.maameow.theme.MaaAnimations
+import com.aliothmoon.maameow.theme.LocalReduceMotion
+import com.aliothmoon.maameow.theme.MaaMotion
 import com.aliothmoon.maameow.theme.MaaThemeAlphas
 import com.aliothmoon.maameow.utils.i18n.asString
 import kotlinx.coroutines.delay
@@ -176,12 +177,15 @@ fun BackgroundTaskView(
         }
     }
 
-    LaunchedEffect(state.current) {
+    val reduceMotion = LocalReduceMotion.current
+    LaunchedEffect(state.current, reduceMotion) {
         if (pagerState.currentPage != state.current.ordinal) {
             pagerState.animateScrollToPage(
-                state.current.ordinal, animationSpec = tween(
-                    easing = MaaAnimations.springEasing, durationMillis = 250
-                )
+                state.current.ordinal,
+                animationSpec = tween(
+                    durationMillis = MaaMotion.pagerDuration(1, reduceMotion),
+                    easing = MaaMotion.Emphasized,
+                ),
             )
         }
     }

@@ -258,9 +258,11 @@ fun MaaMeowTheme(
         }
     }
 
+    val reduceMotion = remember(context) { MaaMotion.reduceMotion(context) }
     CompositionLocalProvider(
         LocalIndication provides NoIndication,
         LocalOpaqueColorScheme provides colorScheme,
+        LocalReduceMotion provides reduceMotion,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

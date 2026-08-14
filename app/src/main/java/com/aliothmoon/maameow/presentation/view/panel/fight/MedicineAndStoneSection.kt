@@ -1,6 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.panel.fight
 
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,7 +41,7 @@ fun MedicineAndStoneSection(
             label = stringResource(R.string.panel_fight_use_medicine),
             enabled = !config.useStone,
         )
-        AnimatedVisibility(visible = config.useMedicine) {
+        MaaAnimatedVisibility(visible = config.useMedicine) {
             INumericField(
                 value = config.medicineNumber,
                 onValueChange = { onConfigChange(config.copy(medicineNumber = it)) },
@@ -64,7 +64,7 @@ fun MedicineAndStoneSection(
             onCheckedChange = { onConfigChange(config.copy(hasTimesLimited = it)) },
             label = stringResource(R.string.panel_fight_limit_times),
         )
-        AnimatedVisibility(visible = config.hasTimesLimited) {
+        MaaAnimatedVisibility(visible = config.hasTimesLimited) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 INumericField(
                     value = config.maxTimes,

@@ -1,7 +1,7 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
@@ -286,7 +286,7 @@ private fun ProfileCard(
             }
 
             // 编辑区: 向下展开，包含重命名输入框和 Profile ID 复制
-            AnimatedVisibility(
+            MaaAnimatedVisibility(
                 visible = isEditing,
                 enter = expandVertically(),
                 exit = shrinkVertically()

@@ -1,6 +1,8 @@
 package com.aliothmoon.maameow.presentation.view.panel.depot
 
-import androidx.compose.animation.AnimatedVisibility
+import com.aliothmoon.maameow.theme.LocalReduceMotion
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaMotion
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -360,8 +362,10 @@ private fun ColumnScope.GeneralTab(
     showClearConfirm: Boolean,
     onShowClearConfirmChange: (Boolean) -> Unit,
 ) {
+    val reduceMotion = LocalReduceMotion.current
     val presetArrowRotation by animateFloatAsState(
         targetValue = if (presetPanelExpanded) 180f else 0f,
+        animationSpec = MaaMotion.spec(reduceMotion, MaaMotion.Fast),
         label = "presetArrow",
     )
 
@@ -503,6 +507,7 @@ private fun ColumnScope.PresetPicker(
 ) {
     val arrowRotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
+        animationSpec = MaaMotion.spec(LocalReduceMotion.current, MaaMotion.Fast),
         label = "presetArrow",
     )
 
@@ -524,7 +529,7 @@ private fun ColumnScope.PresetPicker(
                     .rotate(arrowRotation),
             )
         }
-        AnimatedVisibility(
+        MaaAnimatedVisibility(
             visible = expanded,
             enter = expandVertically(),
             exit = shrinkVertically(),
@@ -705,7 +710,7 @@ private fun PlanCard(
                 )
             }
 
-            AnimatedVisibility(visible = expanded) {
+            MaaAnimatedVisibility(visible = expanded) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (customStageCode) {
                         StageRow(onRemove = null) {
@@ -750,7 +755,7 @@ private fun PlanCard(
                             onCheckedChange = { onPlanChange(plan.copy(useMedicine = it)) },
                             label = stringResource(R.string.panel_fight_use_medicine),
                         )
-                        AnimatedVisibility(visible = plan.useMedicine) {
+                        MaaAnimatedVisibility(visible = plan.useMedicine) {
                             INumericField(
                                 value = plan.medicineCount,
                                 onValueChange = { onPlanChange(plan.copy(medicineCount = it)) },
@@ -768,7 +773,7 @@ private fun PlanCard(
                             onCheckedChange = { onPlanChange(plan.copy(useStone = it)) },
                             label = stringResource(R.string.panel_stone_use),
                         )
-                        AnimatedVisibility(visible = plan.useStone) {
+                        MaaAnimatedVisibility(visible = plan.useStone) {
                             INumericField(
                                 value = plan.stoneCount,
                                 onValueChange = { onPlanChange(plan.copy(stoneCount = it)) },

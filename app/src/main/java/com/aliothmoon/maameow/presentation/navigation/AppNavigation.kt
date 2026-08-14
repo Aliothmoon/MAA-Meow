@@ -51,7 +51,8 @@ import com.aliothmoon.maameow.schedule.model.CountdownState
 import com.aliothmoon.maameow.schedule.ui.CountdownDialog
 import com.aliothmoon.maameow.schedule.ui.ScheduleEditView
 import com.aliothmoon.maameow.schedule.ui.ScheduleTriggerLogView
-import com.aliothmoon.maameow.theme.MaaAnimations
+import com.aliothmoon.maameow.theme.LocalReduceMotion
+import com.aliothmoon.maameow.theme.MaaMotion
 import com.aliothmoon.maameow.utils.i18n.resolve
 import com.dokar.sonner.ToastType
 import com.dokar.sonner.Toaster
@@ -159,14 +160,15 @@ fun AppNavigation(
 
         // NavHost 只承载子页面；主 Tab 切换完全由 MainScreen 的 HorizontalPager 处理。
         // 在此统一下发 LocalToaster，使所有子页面都能弹出顶部提示。
+        val reduceMotion = LocalReduceMotion.current
         CompositionLocalProvider(LocalToaster provides toaster) {
             NavHost(
                 navController = navController,
                 startDestination = Routes.HOME,
-                enterTransition = { MaaAnimations.sharedAxisForwardEnter },
-                exitTransition = { MaaAnimations.sharedAxisForwardExit },
-                popEnterTransition = { MaaAnimations.sharedAxisPopEnter },
-                popExitTransition = { MaaAnimations.sharedAxisPopExit },
+                enterTransition = { MaaMotion.pageEnter(forward = true, reduceMotion) },
+                exitTransition = { MaaMotion.pageExit(forward = true, reduceMotion) },
+                popEnterTransition = { MaaMotion.pageEnter(forward = false, reduceMotion) },
+                popExitTransition = { MaaMotion.pageExit(forward = false, reduceMotion) },
             ) {
                 // 主 Tab 路由仅作占位，真实内容由 MainScreen 的 HorizontalPager 渲染
                 BottomNavTab.all.forEach { tab -> composable(tab.route) {} }

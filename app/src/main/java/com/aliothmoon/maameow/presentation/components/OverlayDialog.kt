@@ -1,11 +1,8 @@
 package com.aliothmoon.maameow.presentation.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
+import com.aliothmoon.maameow.theme.LocalReduceMotion
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaMotion
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -63,11 +60,12 @@ fun OverlayDialog(
 ) {
     val resolvedConfirmText = confirmText ?: stringResource(R.string.common_confirm)
     val resolvedDismissText = dismissText ?: stringResource(R.string.common_cancel)
+    val reduceMotion = LocalReduceMotion.current
 
-    AnimatedVisibility(
+    MaaAnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(200)),
-        exit = fadeOut(animationSpec = tween(150))
+        enter = MaaMotion.fadeIn(reduceMotion),
+        exit = MaaMotion.fadeOut(reduceMotion),
     ) {
         // 遮罩层：半透明黑色背景，点击可关闭
         Box(
@@ -81,10 +79,10 @@ fun OverlayDialog(
             contentAlignment = Alignment.Center
         ) {
             // 对话框卡片：带缩放动画
-            AnimatedVisibility(
+            MaaAnimatedVisibility(
                 visible = visible,
-                enter = scaleIn(initialScale = 0.85f, animationSpec = tween(200)),
-                exit = scaleOut(targetScale = 0.85f, animationSpec = tween(150))
+                enter = MaaMotion.dialogIn(reduceMotion),
+                exit = MaaMotion.dialogOut(reduceMotion),
             ) {
                 Card(
                     modifier = Modifier
