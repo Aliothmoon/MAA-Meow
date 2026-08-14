@@ -164,9 +164,9 @@ val appModule = module {
                 val km = appContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
                 km.isKeyguardLocked
             },
-            deviceSecure = {
+            deviceLocked = {
                 val km = appContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-                km.isDeviceSecure
+                km.isDeviceLocked
             },
             screenInteractive = {
                 val pm = appContext.getSystemService(Context.POWER_SERVICE) as PowerManager

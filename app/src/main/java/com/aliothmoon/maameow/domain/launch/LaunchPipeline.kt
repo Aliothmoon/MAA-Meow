@@ -55,7 +55,8 @@ class LaunchPipeline(
     private val screenSaver: ScreenSaverController,
     private val taskEndRegistry: TaskEndRegistry,
     private val keyguardLocked: () -> Boolean,
-    private val deviceSecure: () -> Boolean,
+    /** 此刻要密码才能进桌面；不是 isDeviceSecure（只说明设过密码） */
+    private val deviceLocked: () -> Boolean,
     private val screenInteractive: () -> Boolean,
     private val activityLauncher: suspend (LaunchRequest) -> Boolean,
 ) {
@@ -166,30 +167,35 @@ class LaunchPipeline(
                 val unlockType = appSettingsManager.wakeUnlockType.value
                 val pin = appSettingsManager.wakeCredential.value
                 val pinReady = unlockType == "pin" && pin.isNotBlank()
-                if (deviceSecure() && !pinReady) {
-                    log.append(uiTextOf(R.string.schedule_log_wake_pin_required))
-                    terminalResult = ExecutionResult.SKIPPED_LOCKED
-                    terminalMessage = uiTextOf(R.string.notification_schedule_pin_required)
-                    return
-                }
-                val credential = if (unlockType == "pin") pin else ""
-                log.append(uiTextOf(R.string.schedule_log_wake_start))
-                val wake = wakeUnlockEngine.unlock(credential)
-                if (wake.isSuccess) {
-                    log.append(uiTextOf(R.string.schedule_log_wake_ok))
-                    log.append(uiTextOf(R.string.schedule_log_keyguard_skipped))
+                // 1. 快捷选项熄屏挂机已盖上：KEEP_SCREEN_ON，多轮定时不解、不收
+                // 2. 只有滑动：先试 unlock("")，别拿 isDeviceLocked 预跳过
+                // 3. 配了 PIN：锁屏下注入
+                val saverKeepScreenOn = screenSaver.isShowing()
+                if (saverKeepScreenOn) {
+                    log.append(uiTextOf(R.string.schedule_log_wake_skipped_screensaver))
                 } else {
-                    log.append(uiTextOf(R.string.schedule_log_wake_failed, wake.message))
-                    if (keyguardLocked()) {
-                        terminalResult = ExecutionResult.SKIPPED_LOCKED
-                        terminalMessage = uiTextOf(R.string.notification_schedule_device_locked)
-                        return
+                    val credential = if (unlockType == "pin") pin else ""
+                    log.append(uiTextOf(R.string.schedule_log_wake_start))
+                    val wake = wakeUnlockEngine.unlock(credential)
+                    if (wake.isSuccess) {
+                        log.append(uiTextOf(R.string.schedule_log_wake_ok))
+                    } else {
+                        log.append(uiTextOf(R.string.schedule_log_wake_failed, wake.message))
+                        if (keyguardLocked()) {
+                            terminalResult = ExecutionResult.SKIPPED_LOCKED
+                            terminalMessage = if (deviceLocked() && !pinReady) {
+                                uiTextOf(R.string.notification_schedule_pin_required)
+                            } else {
+                                uiTextOf(R.string.notification_schedule_device_locked)
+                            }
+                            return
+                        }
                     }
                 }
             }
 
             log.append(uiTextOf(R.string.schedule_log_wait_profile))
-            chainState.isLoaded.filter { it }.first()
+            chainState.isLoaded.first { it }
             if (chainState.profileId.value != request.profileId) {
                 log.append(uiTextOf(R.string.schedule_log_switch_profile, request.profileId))
                 chainState.switchProfile(request.profileId)
@@ -212,16 +218,20 @@ class LaunchPipeline(
             outcome.backgroundRun = !isForeground
             val needsActivityLaunch = request.source == LaunchSource.Schedule && presentUi
 
-            // 后台 + 待机才盖；前台会采进物理屏识别
+            // 后台 + 待机才盖；用户已开的熄屏挂机不收走，好连跑多轮
             if (request.autoScreenSaver && outcome.backgroundRun && outcome.tookOverIdleDevice) {
-                outcome.screenSaverEngaged = screenSaver.show()
-                log.append(
-                    if (outcome.screenSaverEngaged) {
-                        uiTextOf(R.string.schedule_log_screen_saver_on)
-                    } else {
-                        uiTextOf(R.string.schedule_log_screen_saver_failed)
-                    },
-                )
+                if (screenSaver.isShowing()) {
+                    log.append(uiTextOf(R.string.schedule_log_screen_saver_kept))
+                } else {
+                    outcome.screenSaverEngaged = screenSaver.show()
+                    log.append(
+                        if (outcome.screenSaverEngaged) {
+                            uiTextOf(R.string.schedule_log_screen_saver_on)
+                        } else {
+                            uiTextOf(R.string.schedule_log_screen_saver_failed)
+                        },
+                    )
+                }
             }
 
             if (needsActivityLaunch) {
@@ -311,10 +321,14 @@ class LaunchPipeline(
     ) {
         val result = terminalResult ?: ExecutionResult.CANCELLED
         val skipSleep = request.skipAutoSleepIfAwake && !outcome.tookOverIdleDevice
-        val autoSleep = request.autoSleepAfterTask && !skipSleep
+        // 用户熄屏挂机还在就别 lockAndSleep，否则拆掉后面几轮
+        val userSaverHang = screenSaver.isShowing() && !outcome.screenSaverEngaged
+        val autoSleep = request.autoSleepAfterTask && !skipSleep && !userSaverHang
         try {
             if (result == ExecutionResult.STARTED && request.autoSleepAfterTask && skipSleep) {
                 log.append(uiTextOf(R.string.schedule_log_auto_sleep_skipped_awake))
+            } else if (result == ExecutionResult.STARTED && request.autoSleepAfterTask && userSaverHang) {
+                log.append(uiTextOf(R.string.schedule_log_auto_sleep_skipped_screensaver))
             }
             log.end(result, terminalMessage)
             if (request.strategyId.isNotEmpty()) {

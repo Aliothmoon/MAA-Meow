@@ -58,7 +58,7 @@ class LaunchPipelineTest {
     private lateinit var taskEndRegistry: TaskEndRegistry
 
     private val keyguardLocked = java.util.concurrent.atomic.AtomicBoolean(false)
-    private val deviceSecure = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val deviceLocked = java.util.concurrent.atomic.AtomicBoolean(false)
     private val screenInteractive = java.util.concurrent.atomic.AtomicBoolean(true)
     private val startCalls = AtomicInteger(0)
     private val recorded = CopyOnWriteArrayList<ExecutionResult>()
@@ -112,7 +112,7 @@ class LaunchPipelineTest {
         stopCalls.set(0)
         recorded.clear()
         keyguardLocked.set(false)
-        deviceSecure.set(false)
+        deviceLocked.set(false)
         screenInteractive.set(true)
         unlockType.value = "swipe"
         runMode.value = RunMode.BACKGROUND
@@ -129,6 +129,7 @@ class LaunchPipelineTest {
 
         screenSaver = mockk(relaxed = true)
         // relaxed 的 Boolean 默认为 false
+        every { screenSaver.isShowing() } returns false
         coEvery { screenSaver.show() } returns true
 
         chainState = mockk(relaxed = true) {
@@ -211,10 +212,26 @@ class LaunchPipelineTest {
         screenSaver = screenSaver,
         taskEndRegistry = taskEndRegistry,
         keyguardLocked = { keyguardLocked.get() },
-        deviceSecure = { deviceSecure.get() },
+        deviceLocked = { deviceLocked.get() },
         screenInteractive = { screenInteractive.get() },
         activityLauncher = { true },
     )
+
+    private fun givenWakeGate(
+        interactive: Boolean = true,
+        keyguard: Boolean = false,
+        locked: Boolean = false,
+        saverShowing: Boolean = false,
+        type: String = "swipe",
+        pin: String = "",
+    ) {
+        screenInteractive.set(interactive)
+        keyguardLocked.set(keyguard)
+        deviceLocked.set(locked)
+        every { screenSaver.isShowing() } returns saverShowing
+        unlockType.value = type
+        wakeCred.value = pin
+    }
 
     private fun scheduleRequest(
         id: String = "req-1",
@@ -433,14 +450,139 @@ class LaunchPipelineTest {
         io.mockk.verify(exactly = 1) { logger.open(any(), any(), any(), any()) }
     }
 
+    // --- 三种常见用法 ---
+
     @Test
-    fun scheduleKeyguardLocked_skipsWhenSecureWithoutPin() = runBlocking<Unit> {
-        keyguardLocked.set(true)
-        deviceSecure.set(true)
-        unlockType.value = "swipe"
+    fun usageHangSaver_multiRound_doesNotHideOrUnlock() = runBlocking<Unit> {
+        // 手动开熄屏挂机后连跑：不解系统锁、不收屏保
+        givenWakeGate(keyguard = true, locked = true, saverShowing = true, type = "swipe")
+        val p = pipeline()
+        p.execute(scheduleRequest("r1")).join()
+        compositionState.value = MaaExecutionState.IDLE
+        p.execute(scheduleRequest("r2")).join()
+        assertEquals(
+            listOf(ExecutionResult.STARTED, ExecutionResult.STARTED),
+            recorded.toList(),
+        )
+        io.mockk.coVerify(exactly = 0) { wake.unlock(any()) }
+        io.mockk.coVerify(exactly = 0) { screenSaver.hide() }
+    }
+
+    @Test
+    fun usageHangSaver_strategyAutoSaver_keepsUserSaver() = runBlocking<Unit> {
+        givenWakeGate(interactive = false, keyguard = true, locked = true, saverShowing = true)
+        pipeline().execute(scheduleRequest(autoScreenSaver = true)).join()
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        io.mockk.coVerify(exactly = 0) { screenSaver.show() }
+        driveTaskToEnd()
+        delay(500)
+        io.mockk.coVerify(exactly = 0) { screenSaver.hide() }
+    }
+
+    @Test
+    fun usageHangSaver_skipsAutoSleepSoLaterRoundsKeepHang() = runBlocking<Unit> {
+        givenWakeGate(keyguard = true, locked = true, saverShowing = true)
+        pipeline().execute(scheduleRequest(autoSleep = true)).join()
+        driveTaskToEnd()
+        delay(500)
+        io.mockk.coVerify(exactly = 0) { wake.lockAndSleep() }
+        io.mockk.coVerify(exactly = 0) { screenSaver.hide() }
+    }
+
+    @Test
+    fun usageSwipeLock_unlocksEmptyAndStarts() = runBlocking<Unit> {
+        givenWakeGate(keyguard = true, locked = false, type = "swipe")
+        pipeline().execute(scheduleRequest()).join()
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        io.mockk.coVerify { wake.unlock("") }
+    }
+
+    @Test
+    fun usageSwipeLock_screenOff_unlocksAndStarts() = runBlocking<Unit> {
+        givenWakeGate(interactive = false, locked = false, type = "swipe")
+        pipeline().execute(scheduleRequest()).join()
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        io.mockk.coVerify { wake.unlock("") }
+    }
+
+    @Test
+    fun usagePinLock_injectsPinAndStarts() = runBlocking<Unit> {
+        givenWakeGate(keyguard = true, locked = true, type = "pin", pin = "2580")
+        pipeline().execute(scheduleRequest()).join()
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        io.mockk.coVerify { wake.unlock("2580") }
+    }
+
+    @Test
+    fun schedulePasswordLock_swipeSetting_triesUnlockThenSkips() = runBlocking<Unit> {
+        givenWakeGate(keyguard = true, locked = true, type = "swipe")
+        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED
+        pipeline().execute(scheduleRequest()).join()
+        assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
+        io.mockk.coVerify { wake.unlock("") }
+    }
+
+    @Test
+    fun scheduleDeviceLocked_pinTypeButBlank_triesUnlockThenSkips() = runBlocking<Unit> {
+        givenWakeGate(keyguard = true, locked = true, type = "pin", pin = "")
+        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED
+        pipeline().execute(scheduleRequest()).join()
+        assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
+        io.mockk.coVerify { wake.unlock("") }
+    }
+
+    @Test
+    fun scheduleScreenOff_passwordLockWithoutPin_triesUnlockThenSkips() = runBlocking<Unit> {
+        givenWakeGate(interactive = false, keyguard = true, locked = true, type = "swipe")
+        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED
+        pipeline().execute(scheduleRequest()).join()
+        assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
+        io.mockk.coVerify { wake.unlock("") }
+    }
+
+    @Test
+    fun scheduleForeground_passwordLockWithoutPin_triesUnlockThenSkips() = runBlocking<Unit> {
+        runMode.value = RunMode.FOREGROUND
+        givenWakeGate(keyguard = true, locked = true, type = "swipe")
+        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
         assertEquals(0, startCalls.get())
+    }
+
+    @Test
+    fun scheduleWakeFailed_stillLocked_skips() = runBlocking<Unit> {
+        givenWakeGate(keyguard = true, locked = false, type = "swipe")
+        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED
+        pipeline().execute(scheduleRequest()).join()
+        assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
+        assertEquals(0, startCalls.get())
+    }
+
+    @Test
+    fun scheduleWakeFailed_keyguardGone_starts() = runBlocking<Unit> {
+        givenWakeGate(keyguard = false, locked = false, type = "swipe")
+        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.WAKE_FAILED
+        pipeline().execute(scheduleRequest()).join()
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        assertEquals(1, startCalls.get())
+    }
+
+    @Test
+    fun scheduleAutoScreenSaverNotShowing_passwordLock_skipsBeforeShow() = runBlocking<Unit> {
+        givenWakeGate(keyguard = true, locked = true, type = "swipe", saverShowing = false)
+        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED
+        pipeline().execute(scheduleRequest(autoScreenSaver = true)).join()
+        assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
+        io.mockk.coVerify(exactly = 0) { screenSaver.show() }
+    }
+
+    @Test
+    fun scheduleUnlocked_swipe_startsAndUnlocks() = runBlocking<Unit> {
+        givenWakeGate(type = "swipe")
+        pipeline().execute(scheduleRequest()).join()
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        io.mockk.coVerify { wake.unlock("") }
     }
 
     @Test

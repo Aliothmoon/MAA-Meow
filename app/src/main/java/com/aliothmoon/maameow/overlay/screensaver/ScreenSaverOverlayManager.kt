@@ -56,6 +56,8 @@ class ScreenSaverOverlayManager(
     override val lifecycle: Lifecycle get() = lifecycleRegistry
     override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
 
+    override fun isShowing(): Boolean = _showing.value
+
     override suspend fun show(): Boolean =
         withContext(Dispatchers.Main.immediate) { showInternal() }
 

@@ -1645,10 +1645,13 @@
     <string name="schedule_log_wake_start">Waking and unlocking…</string>
     <string name="schedule_log_wake_ok">Wake and unlock succeeded</string>
     <string name="schedule_log_auto_sleep_skipped_awake">Device was already unlocked at start, skipping sleep after task</string>
+    <string name="schedule_log_auto_sleep_skipped_screensaver">Screen saver still on; skipped sleep after task</string>
     <string name="schedule_log_screen_saver_on">Screen saver enabled</string>
+    <string name="schedule_log_screen_saver_kept">Keeping the screen saver already on</string>
     <string name="schedule_log_screen_saver_failed">Screen saver failed to start, the overlay permission may be missing</string>
     <string name="schedule_log_wake_failed">Wake and unlock failed: %1$s</string>
     <string name="schedule_log_wake_pin_required">Lock password set but PIN not configured; skipped</string>
+    <string name="schedule_log_wake_skipped_screensaver">Screen saver is keeping the screen on; skipped system lock</string>
     <string name="schedule_log_keyguard_skipped">Keyguard check skipped</string>
 
     <string name="schedule_log_wait_profile">Waiting for task profile…</string>

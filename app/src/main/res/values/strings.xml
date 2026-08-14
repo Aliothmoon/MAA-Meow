@@ -1701,10 +1701,13 @@
     <string name="schedule_log_wake_start">执行唤醒解锁…</string>
     <string name="schedule_log_wake_ok">唤醒解锁成功</string>
     <string name="schedule_log_auto_sleep_skipped_awake">启动时设备已解锁，跳过结束熄屏</string>
+    <string name="schedule_log_auto_sleep_skipped_screensaver">熄屏挂机仍开启，跳过结束熄屏</string>
     <string name="schedule_log_screen_saver_on">已启用屏保</string>
+    <string name="schedule_log_screen_saver_kept">沿用已开启的熄屏挂机</string>
     <string name="schedule_log_screen_saver_failed">屏保启用失败，可能缺少悬浮窗权限</string>
     <string name="schedule_log_wake_failed">唤醒解锁失败: %1$s</string>
     <string name="schedule_log_wake_pin_required">系统有锁屏密码但未配置 PIN，已跳过</string>
+    <string name="schedule_log_wake_skipped_screensaver">屏保常亮中，跳过系统锁屏</string>
     <string name="schedule_log_keyguard_skipped">已跳过锁屏检查</string>
 
     <string name="schedule_log_wait_profile">等待任务配置加载…</string>
