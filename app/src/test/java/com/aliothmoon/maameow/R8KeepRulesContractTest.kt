@@ -47,6 +47,8 @@ class R8KeepRulesContractTest {
             "org.jcodings.**",
             "-keepclassmembers enum com.aliothmoon.maameow.**",
             "valueOf(java.lang.String)",
+            "com.aliothmoon.maameow.third.FakeContext",
+            "com.aliothmoon.maameow.third.FakeContext$*",
         ).forEach { token ->
             assertTrue("missing keep token: $token", rules.contains(token))
         }
