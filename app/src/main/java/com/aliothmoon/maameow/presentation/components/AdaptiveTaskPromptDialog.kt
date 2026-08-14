@@ -10,7 +10,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -48,6 +47,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
@@ -255,6 +255,10 @@ private fun MaterialTaskPromptDialog(
             safeInsets.calculateLeftPadding(layoutDirection),
             safeInsets.calculateRightPadding(layoutDirection)
         )
+        val maxVerticalInset = max(
+            safeInsets.calculateTopPadding(),
+            safeInsets.calculateBottomPadding()
+        )
 
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -276,7 +280,10 @@ private fun MaterialTaskPromptDialog(
                 landscapeAdaptive = landscapeAdaptive,
                 modifier = Modifier
                     .dialogWidth(max = DialogMaxWidth)
-                    .padding(horizontal = maxHorizontalInset + 16.dp),
+                    .padding(
+                        horizontal = maxHorizontalInset + 16.dp,
+                        vertical = maxVerticalInset,
+                    ),
                 content = content
             )
         }
@@ -317,7 +324,10 @@ private fun TaskPromptCard(
         shadowElevation = 8.dp
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(
+                horizontal = 20.dp,
+                vertical = if (inLandscape && landscapeAdaptive) 12.dp else 20.dp,
+            ),
             horizontalAlignment = Alignment.Start,
         ) {
             Row(
@@ -349,39 +359,10 @@ private fun TaskPromptCard(
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Start,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-
-                if (inLandscape && landscapeAdaptive) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        neutralText?.let {
-                            TextButton(
-                                onClick = onNeutralClick,
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Text(it, maxLines = 1, style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                        TextButton(
-                            onClick = onConfirm,
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                confirmText,
-                                maxLines = 1,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                        dismissText?.takeIf { it.isNotBlank() }?.let {
-                            TextButton(
-                                onClick = onDismissRequest,
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Text(it, maxLines = 1, style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                    }
-                }
             }
 
             if (message != null || content != null) {
@@ -418,7 +399,18 @@ private fun TaskPromptCard(
                 }
             }
 
-            if (!inLandscape || !landscapeAdaptive) {
+            if (inLandscape && landscapeAdaptive) {
+                Spacer(modifier = Modifier.height(12.dp))
+                TaskPromptLandscapeActions(
+                    onDismissRequest = onDismissRequest,
+                    onConfirm = onConfirm,
+                    confirmText = confirmText,
+                    dismissText = dismissText,
+                    neutralText = neutralText,
+                    onNeutralClick = onNeutralClick,
+                    confirmColor = confirmColor,
+                )
+            } else {
                 Spacer(modifier = Modifier.height(24.dp))
                 TaskPromptButtons(
                     onDismissRequest = onDismissRequest,
@@ -431,6 +423,58 @@ private fun TaskPromptCard(
                     buttonLayout = buttonLayout,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun TaskPromptLandscapeActions(
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+    confirmText: String,
+    dismissText: String?,
+    neutralText: String?,
+    onNeutralClick: () -> Unit,
+    confirmColor: Color,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        dismissText?.takeIf { it.isNotBlank() }?.let {
+            TextButton(
+                onClick = onDismissRequest,
+                modifier = Modifier.weight(1f),
+                shape = MaterialTheme.shapes.large,
+            ) {
+                Text(
+                    text = it,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        neutralText?.let {
+            OutlinedButton(
+                onClick = onNeutralClick,
+                modifier = Modifier.weight(1f),
+                shape = MaterialTheme.shapes.large,
+            ) {
+                Text(text = it, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        Button(
+            onClick = onConfirm,
+            modifier = Modifier.weight(1f),
+            shape = MaterialTheme.shapes.large,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = confirmColor,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
+        ) {
+            Text(text = confirmText, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
