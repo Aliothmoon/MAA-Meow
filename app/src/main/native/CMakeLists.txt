@@ -5,8 +5,14 @@ project("bridge")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_compile_options(-Os -flto -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden)
-add_link_options(-flto -Wl,--exclude-libs,ALL -Wl,--gc-sections -Wl,--strip-all)
+option(MAA_NATIVE_LTO "Enable link-time optimization" OFF)
+
+add_compile_options(-Os -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden)
+add_link_options(-Wl,--exclude-libs,ALL -Wl,--gc-sections -Wl,--strip-all)
+if (MAA_NATIVE_LTO)
+    add_compile_options(-flto)
+    add_link_options(-flto)
+endif ()
 
 add_library(bridge SHARED
         bridge.cpp

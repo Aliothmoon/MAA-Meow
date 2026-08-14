@@ -101,15 +101,6 @@ jobs:
           python scripts/patch_kleidicv_sve.py "$SO" --mode neon --verify
           echo "after:  $(shasum -a 256 "$SO" | cut -d' ' -f1)"
 
-      - name: Override ABI filter
-        if: matrix.abi != 'all'
-        run: |
-          cat >> app/build.gradle.kts << 'EOF'
-
-          android.defaultConfig.ndk.abiFilters.clear()
-          android.defaultConfig.ndk.abiFilters += "${{ matrix.abi }}"
-          EOF
-
       - name: Decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -124,7 +115,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           chmod +x ./gradlew
-          ./gradlew clean assembleRelease
+          ./gradlew clean assembleRelease -Pmaa.abi=${{ matrix.abi }}
 
       - name: Rename APK
         run: |
