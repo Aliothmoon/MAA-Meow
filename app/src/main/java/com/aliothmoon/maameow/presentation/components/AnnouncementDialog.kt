@@ -4,14 +4,14 @@ import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
@@ -28,18 +30,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Campaign
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -61,6 +62,8 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.window.Dialog
@@ -202,257 +205,257 @@ fun AnnouncementDialog(
                 tonalElevation = 6.dp,
                 shadowElevation = 8.dp,
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    val inLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+                val inLandscape =
+                    LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+                val stayHint = when {
+                    canCheck -> null
+                    !scrolledToBottom -> stringResource(R.string.announcement_scroll_to_bottom_hint)
+                    else -> stringResource(
+                        R.string.announcement_dont_show_again_hint,
+                        maxOf(0, STAY_SECONDS_REQUIRED - elapsedSeconds),
+                    )
+                }
 
-                // 标题栏
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth(),
+                Column(
+                    modifier = Modifier.padding(
+                        horizontal = 20.dp,
+                        vertical = if (inLandscape) 12.dp else 20.dp,
+                    ),
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                shape = CircleShape,
-                            ),
-                        contentAlignment = Alignment.Center,
+                    // 标题栏：横屏不再塞勾选和确认，避免挤爆
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Campaign,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp),
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                    shape = CircleShape,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Campaign,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                        Text(
+                            text = stringResource(R.string.announcement_title),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f),
                         )
                     }
-                    Text(
-                        text = stringResource(R.string.announcement_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f),
-                    )
+
+                    // 分节导航：≥2 节才显示，NEW 节带红点
+                    if (sections.size >= 2) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            SectionChip(
+                                label = stringResource(R.string.announcement_section_all),
+                                selected = selectedSection == 0,
+                                isNew = false,
+                                onClick = { selectedSection = 0 },
+                            )
+                            sections.forEachIndexed { index, section ->
+                                SectionChip(
+                                    label = section.title,
+                                    selected = selectedSection == index + 1,
+                                    isNew = section.isNew,
+                                    onClick = { selectedSection = index + 1 },
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 公告内容（可滚动）——用 weight 占据中间剩余空间（而非固定 0.55×屏高），
+                    // 保证底部勾选框与确认按钮在任何屏幕高度/字体缩放下都不会被挤出弹窗裁掉
+                    val atBottomNow by remember {
+                        derivedStateOf { scrollState.value >= scrollState.maxValue }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f, fill = false),
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(scrollState),
+                        ) {
+                            MarkdownText(
+                                markdown = shownMarkdown,
+                                modifier = Modifier.fillMaxWidth(),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+
+                            // 图片作为内容收尾：首屏留给正文，读完滚到底自然看到
+                            if (imageBitmap != null) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Image(
+                                    bitmap = imageBitmap,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = 120.dp)
+                                        .clip(RoundedCornerShape(8.dp)),
+                                )
+                            }
+                        }
+                        // 未滚到底时底部渐隐，提示下方还有内容
+                        if (!atBottomNow) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .height(28.dp)
+                                    .background(
+                                        Brush.verticalGradient(
+                                            0f to Color.Transparent,
+                                            1f to MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp),
+                                        )
+                                    ),
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(if (inLandscape) 12.dp else 16.dp))
+
                     if (inLandscape) {
                         Row(
                             modifier = Modifier
-                                .toggleable(
-                                    value = dontShowAgain,
-                                    enabled = canCheck,
-                                    role = Role.Checkbox,
-                                    onValueChange = { dontShowAgain = it },
-                                ),
-                            verticalAlignment = Alignment.CenterVertically,
+                                .fillMaxWidth()
+                                .height(IntrinsicSize.Min),
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Checkbox(
+                            DontShowAgainToggle(
                                 checked = dontShowAgain,
-                                onCheckedChange = null,
+                                enabled = canCheck,
+                                hint = stayHint,
+                                compact = true,
+                                modifier = Modifier.weight(1f),
+                                onCheckedChange = { dontShowAgain = it },
                             )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            Button(
+                                onClick = onConfirmClick,
+                                modifier = Modifier
+                                    .widthIn(min = 88.dp, max = 200.dp)
+                                    .fillMaxHeight(),
+                                shape = MaterialTheme.shapes.large,
                             ) {
                                 Text(
-                                    text = stringResource(R.string.announcement_dont_show_again),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = if (canCheck) {
-                                        MaterialTheme.colorScheme.onSurface
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                    },
+                                    text = confirmLabel,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
-                                if (!canCheck) {
-                                    var showHint by remember { mutableStateOf(false) }
-                                    val hintText = if (!scrolledToBottom) {
-                                        stringResource(R.string.announcement_scroll_to_bottom_hint)
-                                    } else {
-                                        val remaining = maxOf(0, STAY_SECONDS_REQUIRED - elapsedSeconds)
-                                        stringResource(R.string.announcement_dont_show_again_hint, remaining)
-                                    }
-                                    Box {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Info,
-                                            contentDescription = hintText,
-                                            modifier = Modifier
-                                                .size(16.dp)
-                                                .clickable { showHint = true },
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                        DropdownMenu(
-                                            expanded = showHint,
-                                            onDismissRequest = { showHint = false },
-                                        ) {
-                                            Text(
-                                                text = hintText,
-                                                modifier = Modifier.padding(12.dp),
-                                                style = MaterialTheme.typography.bodySmall,
-                                            )
-                                        }
-                                    }
-                                }
                             }
                         }
-                        TextButton(
-                            onClick = onConfirmClick,
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = confirmLabel,
-                                maxLines = 1,
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    }
-                }
-
-                // 分节导航：≥2 节才显示，NEW 节带红点
-                if (sections.size >= 2) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        SectionChip(
-                            label = stringResource(R.string.announcement_section_all),
-                            selected = selectedSection == 0,
-                            isNew = false,
-                            onClick = { selectedSection = 0 },
-                        )
-                        sections.forEachIndexed { index, section ->
-                            SectionChip(
-                                label = section.title,
-                                selected = selectedSection == index + 1,
-                                isNew = section.isNew,
-                                onClick = { selectedSection = index + 1 },
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 公告内容（可滚动）——用 weight 占据中间剩余空间（而非固定 0.55×屏高），
-                // 保证底部勾选框与确认按钮在任何屏幕高度/字体缩放下都不会被挤出弹窗裁掉
-                val atBottomNow by remember {
-                    derivedStateOf { scrollState.value >= scrollState.maxValue }
-                }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f, fill = false),
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(scrollState),
-                    ) {
-                        MarkdownText(
-                            markdown = shownMarkdown,
-                            modifier = Modifier.fillMaxWidth(),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-
-                        // 图片作为内容收尾：首屏留给正文，读完滚到底自然看到
-                        if (imageBitmap != null) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Image(
-                                bitmap = imageBitmap,
-                                contentDescription = null,
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(max = 120.dp)
-                                    .clip(RoundedCornerShape(8.dp)),
-                            )
-                        }
-                    }
-                    // 未滚到底时底部渐隐，提示下方还有内容
-                    if (!atBottomNow) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .fillMaxWidth()
-                                .height(28.dp)
-                                .background(
-                                    Brush.verticalGradient(
-                                        0f to Color.Transparent,
-                                        1f to MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp),
-                                    )
-                                ),
-                        )
-                    }
-                }
-
-                if (!inLandscape) {
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // "不再显示"勾选框
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .toggleable(
-                                value = dontShowAgain,
-                                enabled = canCheck,
-                                role = Role.Checkbox,
-                                onValueChange = { dontShowAgain = it },
-                            ),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Checkbox(
+                    } else {
+                        DontShowAgainToggle(
                             checked = dontShowAgain,
-                            onCheckedChange = null,
+                            enabled = canCheck,
+                            hint = stayHint,
+                            compact = false,
+                            modifier = Modifier.fillMaxWidth(),
+                            onCheckedChange = { dontShowAgain = it },
                         )
-                        Text(
-                            text = stringResource(R.string.announcement_dont_show_again),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (canCheck) {
-                                MaterialTheme.colorScheme.onSurface
-                            } else {
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            },
-                        )
-                    }
-
-                    // 未满足条件时显示提示
-                    if (!canCheck) {
-                        if (!scrolledToBottom) {
-                            // 尚未滚动到底部（无论 elapsedSeconds 是多少）
-                            Text(
-                                text = stringResource(R.string.announcement_scroll_to_bottom_hint),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(start = 48.dp),
-                            )
-                        } else {
-                            // 已滚动到底部，但时间未到
-                            val remaining = maxOf(0, STAY_SECONDS_REQUIRED - elapsedSeconds)
-                            Text(
-                                text = stringResource(
-                                    R.string.announcement_dont_show_again_hint,
-                                    remaining,
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(start = 48.dp),
-                            )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = onConfirmClick,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.large,
+                        ) {
+                            Text(confirmLabel)
                         }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Button(
-                        onClick = onConfirmClick,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.large,
-                    ) {
-                        Text(confirmLabel)
-                    }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun DontShowAgainToggle(
+    checked: Boolean,
+    enabled: Boolean,
+    hint: String?,
+    compact: Boolean,
+    modifier: Modifier = Modifier,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .toggleable(
+                    value = checked,
+                    enabled = enabled,
+                    role = Role.Checkbox,
+                    onValueChange = onCheckedChange,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            CompositionLocalProvider(
+                LocalMinimumInteractiveComponentSize provides Dp.Unspecified,
+            ) {
+                Checkbox(
+                    checked = checked,
+                    onCheckedChange = null,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Text(
+                text = stringResource(R.string.announcement_dont_show_again),
+                style = if (compact) {
+                    MaterialTheme.typography.bodySmall
+                } else {
+                    MaterialTheme.typography.bodyMedium
+                },
+                color = if (enabled) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                },
+                maxLines = if (compact) 1 else Int.MAX_VALUE,
+                overflow = TextOverflow.Ellipsis,
+                modifier = if (compact) {
+                    Modifier
+                        .height(20.dp)
+                        .wrapContentHeight(Alignment.CenterVertically)
+                } else {
+                    Modifier.heightIn(min = 20.dp)
+                },
+            )
+        }
+        if (compact || hint != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = hint ?: "\u00A0",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (hint != null) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    Color.Transparent
+                },
+                maxLines = if (compact) 1 else Int.MAX_VALUE,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
