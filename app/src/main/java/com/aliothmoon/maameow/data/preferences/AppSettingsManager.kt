@@ -70,8 +70,8 @@ class AppSettingsManager(
         fun isFontSizeScaleAuto(scale: Int): Boolean = scale == FONT_SIZE_SCALE_AUTO
 
         /**
-         * 得到实际生效的页面缩放百分比。
-         * 自动模式使用 [com.aliothmoon.maameow.utils.UiScale.recommendedFontSizeScale]。
+         * 得到实际生效的页面缩放百分比
+         * 自动模式见 [com.aliothmoon.maameow.utils.UiScale.recommendedFontSizeScale]
          */
         fun resolveFontSizeScale(
             stored: Int,

@@ -65,6 +65,15 @@
 -dontwarn jakarta.**
 -dontwarn javax.**
 
+# 任务覆盖编辑器：Gson 解 language-configuration；OnigRegExp 依赖 joni 静态初始化
+-keep class org.eclipse.tm4e.** { *; }
+-keep class io.github.rosemoe.sora.langs.textmate.** { *; }
+-keep class org.joni.** { *; }
+-keep class org.jcodings.** { *; }
+-dontwarn org.eclipse.jdt.annotation.**
+-dontwarn org.joni.**
+-dontwarn org.jcodings.**
+
 # 落盘 Enum.name / valueOf
 -keepclassmembers enum com.aliothmoon.maameow.** {
     <fields>;

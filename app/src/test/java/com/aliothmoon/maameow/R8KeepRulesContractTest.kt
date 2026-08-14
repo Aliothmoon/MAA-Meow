@@ -41,6 +41,10 @@ class R8KeepRulesContractTest {
             "org.eclipse.angus.mail.handlers.**",
             "org.eclipse.angus.mail.util.MailStreamProvider",
             "org.eclipse.angus.activation.*RegistryProviderImpl",
+            "org.eclipse.tm4e.**",
+            "io.github.rosemoe.sora.langs.textmate.**",
+            "org.joni.**",
+            "org.jcodings.**",
             "-keepclassmembers enum com.aliothmoon.maameow.**",
             "valueOf(java.lang.String)",
         ).forEach { token ->

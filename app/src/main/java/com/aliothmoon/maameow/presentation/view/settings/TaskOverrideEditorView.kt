@@ -74,7 +74,7 @@ private fun ensureTextMateInitialized(context: android.content.Context, isDark: 
         FileProviderRegistry.getInstance().addFileProvider(AssetsFileResolver(context.assets))
 
         FileProviderRegistry.getInstance()
-            .tryGetInputStream("textmate/quietlight.json")?.let { stream ->
+            .tryGetInputStream("textmate/quietlight.json")?.let { stream: java.io.InputStream ->
                 themeRegistry.loadTheme(
                     ThemeModel(
                         IThemeSource.fromInputStream(stream, "textmate/quietlight.json", null),
@@ -84,7 +84,7 @@ private fun ensureTextMateInitialized(context: android.content.Context, isDark: 
             }
 
         FileProviderRegistry.getInstance()
-            .tryGetInputStream("textmate/darcula.json")?.let { stream ->
+            .tryGetInputStream("textmate/darcula.json")?.let { stream: java.io.InputStream ->
                 themeRegistry.loadTheme(
                     ThemeModel(
                         IThemeSource.fromInputStream(stream, "textmate/darcula.json", null),
