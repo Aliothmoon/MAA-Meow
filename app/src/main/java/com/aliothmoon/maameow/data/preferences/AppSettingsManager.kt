@@ -718,4 +718,43 @@ class AppSettingsManager(
         }
     }
 
+    val reportToPenguin: StateFlow<Boolean> = settings
+        .map { it.reportToPenguin.toBooleanStrictOrNull() ?: true }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            initialSettings.reportToPenguin.toBooleanStrictOrNull() ?: true,
+        )
+
+    suspend fun setReportToPenguin(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[reportToPenguin] = enabled.toString() }
+        }
+    }
+
+    val reportToYituliu: StateFlow<Boolean> = settings
+        .map { it.reportToYituliu.toBooleanStrictOrNull() ?: true }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            initialSettings.reportToYituliu.toBooleanStrictOrNull() ?: true,
+        )
+
+    suspend fun setReportToYituliu(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[reportToYituliu] = enabled.toString() }
+        }
+    }
+
+    val penguinId: StateFlow<String> = settings
+        .map { it.penguinId }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.penguinId)
+
+    suspend fun setPenguinId(id: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[penguinId] = id.trim() }
+        }
+    }
+
 }

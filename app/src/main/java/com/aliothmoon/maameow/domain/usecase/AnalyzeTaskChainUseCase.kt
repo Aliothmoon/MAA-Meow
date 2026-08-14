@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskParamContext
 import com.aliothmoon.maameow.data.model.WakeUpConfig
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.OperBoxRepository
@@ -15,6 +16,7 @@ import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.data.resource.ServerTimezone
 import com.aliothmoon.maameow.domain.models.MallCreditFightAvailability
+import com.aliothmoon.maameow.domain.models.ReportOptions
 import com.aliothmoon.maameow.domain.service.FightDropsRefresher
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
@@ -32,6 +34,7 @@ class AnalyzeTaskChainUseCase(
     private val operBoxRepository: OperBoxRepository,
     private val itemHelper: ItemHelper,
     private val dropsRefresher: FightDropsRefresher,
+    private val appSettingsManager: AppSettingsManager,
 ) {
     /** 先等 depot/operBox 分片装载；config 的 toTaskParams 仍是非 suspend。 */
     suspend operator fun invoke(chain: List<TaskChainNode>): AnalyzeTaskChainResult {
@@ -58,6 +61,12 @@ class AnalyzeTaskChainUseCase(
         dropsRefresher.clear()
 
         val clientType = taskChainState.clientType
+        val report = ReportOptions.of(
+            clientType = clientType,
+            reportToPenguin = appSettingsManager.reportToPenguin.value,
+            reportToYituliu = appSettingsManager.reportToYituliu.value,
+            penguinId = appSettingsManager.penguinId.value,
+        )
         val log = CollectingPreflightLogSink()
 
         val serverDayOfWeek = ServerTimezone.getYjDayOfWeek(clientType)
@@ -76,6 +85,7 @@ class AnalyzeTaskChainUseCase(
                 resourceDataManager = resourceDataManager,
                 dropsRefresher = dropsRefresher,
                 logSink = log,
+                report = report,
             )
             node.config.toTaskParams(ctx).mapIndexed { index, task ->
                 task.copy(slot = TaskSlot(node.id, index))

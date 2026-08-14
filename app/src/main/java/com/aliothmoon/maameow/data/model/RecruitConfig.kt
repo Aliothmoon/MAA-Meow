@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.data.model
 
+import com.aliothmoon.maameow.domain.models.putReportFields
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.data.model.TaskParamProvider
@@ -274,6 +275,7 @@ data class RecruitConfig(
                 // 对齐上游 v6.13.0-beta.1：5 星时间锁死 9:00，不再读 chooseLevel5Hour/Min
                 put("5", 540)
             })
+            putReportFields(ctx.report)
         }
 
         return listOf(MaaTaskParams(MaaTaskType.RECRUIT, paramsJson.toString()))

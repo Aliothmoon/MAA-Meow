@@ -310,6 +310,13 @@
     <string name="settings_wake_unlock_type">定时任务解锁方式</string>
     <string name="settings_wake_unlock_type_swipe">滑动解锁</string>
     <string name="settings_wake_unlock_type_pin">PIN</string>
+    <string name="settings_report_penguin">上报企鹅物流</string>
+    <string name="settings_report_penguin_desc">战斗掉落与公招标签上传至 penguin-stats</string>
+    <string name="settings_report_yituliu">上报一图流</string>
+    <string name="settings_report_yituliu_desc">掉落与公招结果上传至一图流</string>
+    <string name="settings_penguin_id">企鹅物流汇报 ID</string>
+    <string name="settings_penguin_id_hint">仅数字部分，可留空由服务器分配</string>
+    <string name="report_http_failed">上报失败，放弃上传企鹅物流</string>
     <string name="settings_tasks_override_title">MAA 任务覆盖</string>
     <string name="settings_tasks_override_desc">如果你不知道这是什么请不要修改，会导致 MAA 无法正常工作</string>
     <string name="settings_tasks_override_edit_title">编辑配置 JSON</string>

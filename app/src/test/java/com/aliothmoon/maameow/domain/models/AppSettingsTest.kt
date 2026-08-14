@@ -12,4 +12,12 @@ class AppSettingsTest {
 
         assertEquals(OFFICIAL_SHIZUKU_PACKAGE, settings.shizukuLaunchPackage)
     }
+
+    @Test
+    fun reportFlagsDefaultOnAndPenguinIdEmpty() {
+        val settings = AppSettings()
+        assertEquals("true", settings.reportToPenguin)
+        assertEquals("true", settings.reportToYituliu)
+        assertEquals("", settings.penguinId)
+    }
 }

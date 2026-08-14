@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.data.model
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.models.DropTarget
+import com.aliothmoon.maameow.domain.models.putReportFields
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.maa.task.TaskSlot
@@ -398,6 +399,7 @@ data class FightConfig(
                     put(dropsItemId, dropQty)
                 })
             }
+            putReportFields(ctx.report)
         }
 
         if (isSpecifiedDrops && isInventoryTarget && dropsItemId.isNotBlank()) {
@@ -413,6 +415,7 @@ data class FightConfig(
                     logLabel = ctx.node.name,
                     medicineExpireDays = expireDays,
                     drGrandet = isDrGrandet,
+                    report = ctx.report,
                 ),
             )
         }

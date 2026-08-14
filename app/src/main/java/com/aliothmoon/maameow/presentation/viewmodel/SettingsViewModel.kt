@@ -186,6 +186,27 @@ class SettingsViewModel(
         }
     }
 
+    val reportToPenguin: StateFlow<Boolean> = appSettingsManager.reportToPenguin
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun setReportToPenguin(enabled: Boolean) {
+        viewModelScope.launch { appSettingsManager.setReportToPenguin(enabled) }
+    }
+
+    val reportToYituliu: StateFlow<Boolean> = appSettingsManager.reportToYituliu
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun setReportToYituliu(enabled: Boolean) {
+        viewModelScope.launch { appSettingsManager.setReportToYituliu(enabled) }
+    }
+
+    val penguinId: StateFlow<String> = appSettingsManager.penguinId
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    fun setPenguinId(id: String) {
+        viewModelScope.launch { appSettingsManager.setPenguinId(id) }
+    }
+
     val forceFullscreenOnVirtualDisplay: StateFlow<Boolean> =
         appSettingsManager.forceFullscreenOnVirtualDisplay
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)

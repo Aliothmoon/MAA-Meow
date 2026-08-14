@@ -65,6 +65,8 @@ import com.aliothmoon.maameow.domain.service.update.checker.AppVersionChecker
 import com.aliothmoon.maameow.domain.service.update.checker.ResourceVersionChecker
 import com.aliothmoon.maameow.maa.callback.ConnectionInfoHandler
 import com.aliothmoon.maameow.maa.callback.CopilotRuntimeStateStore
+import com.aliothmoon.maameow.data.api.GameDataReportService
+import com.aliothmoon.maameow.domain.service.GameDataReporter
 import com.aliothmoon.maameow.maa.callback.MaaCallbackDispatcher
 import com.aliothmoon.maameow.maa.callback.MaaExecutionStateHolder
 import com.aliothmoon.maameow.maa.callback.SubTaskHandler
@@ -103,6 +105,7 @@ import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.qualifier.named
 import org.koin.dsl.bind
+import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
@@ -120,6 +123,15 @@ val appModule = module {
     }
 
     singleOf(::HttpClientHelper)
+    single<GameDataReporter> {
+        GameDataReportService(
+            appContext = androidContext(),
+            httpClient = get(),
+            appSettings = get(),
+            taskChainState = get(),
+            sessionLogger = get(),
+        )
+    }
     singleOf(::ETagCacheManager)
     singleOf(::MaaApiService)
     singleOf(::AnnouncementManager)

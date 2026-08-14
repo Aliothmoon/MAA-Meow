@@ -160,6 +160,7 @@ data class DepotMaintainConfig(
                 series = series,
                 logLabel = no.toString(),
                 medicineExpireDays = if (useExpiringMedicine) EXPIRING_MEDICINE_DAYS else null,
+                report = ctx.report,
             )
             ctx.dropsRefresher.stage(TaskSlot(ctx.node.id, listIndex), target)
             params += MaaTaskParams(

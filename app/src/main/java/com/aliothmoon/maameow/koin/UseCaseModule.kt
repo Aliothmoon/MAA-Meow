@@ -20,6 +20,7 @@ val useCaseModule = module {
             operBoxRepository = get(),
             itemHelper = get(),
             dropsRefresher = get(),
+            appSettingsManager = get(),
         )
     }
     factory {

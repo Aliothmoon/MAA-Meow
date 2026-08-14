@@ -113,6 +113,13 @@
     <string name="settings_wake_unlock_type">Schedule unlock method</string>
     <string name="settings_wake_unlock_type_swipe">Swipe unlock</string>
     <string name="settings_wake_unlock_type_pin">PIN</string>
+    <string name="settings_report_penguin">Report to Penguin Statistics</string>
+    <string name="settings_report_penguin_desc">Upload battle drops and recruit tags to penguin-stats</string>
+    <string name="settings_report_yituliu">Report to Yituliu</string>
+    <string name="settings_report_yituliu_desc">Upload drops and recruit results to Yituliu</string>
+    <string name="settings_penguin_id">Penguin Statistics ID</string>
+    <string name="settings_penguin_id_hint">Digits only; leave empty to let the server assign one</string>
+    <string name="report_http_failed">Failed to report, abort upload to Penguin Statistics</string>
     <string name="settings_tasks_override_title">MAA Task Override</string>
     <string name="settings_tasks_override_desc">Do not modify unless you know what you are doing — incorrect values will break MAA</string>
     <string name="settings_tasks_override_edit_title">Edit Config JSON</string>

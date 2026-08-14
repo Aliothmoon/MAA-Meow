@@ -155,4 +155,14 @@ data class AppSettings(
     @PrefKey(default = "")
     val wakeCredential: String = "",
 
+    @PrefKey(default = "true")
+    val reportToPenguin: String = "true",
+
+    @PrefKey(default = "true")
+    val reportToYituliu: String = "true",
+
+    /** 企鹅物流 ID；一图流 uuid 共用 */
+    @PrefKey(default = "")
+    val penguinId: String = "",
+
     )

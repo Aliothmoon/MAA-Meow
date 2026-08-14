@@ -5,6 +5,7 @@ import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.domain.models.ReportOptions
 import com.aliothmoon.maameow.domain.service.FightDropsRefresher
 import com.aliothmoon.maameow.utils.i18n.UiText
 
@@ -23,6 +24,7 @@ class TaskParamContext(
     val resourceDataManager: ResourceDataManager,
     val dropsRefresher: FightDropsRefresher,
     val logSink: PreflightLogSink,
+    val report: ReportOptions = ReportOptions.DEFAULT,
 ) {
     fun appendLog(text: UiText, level: LogLevel = LogLevel.INFO) {
         logSink.append(text, level)

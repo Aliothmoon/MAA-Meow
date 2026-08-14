@@ -143,6 +143,9 @@ fun SettingsView(
     val shizukuShortcutEnabled by viewModel.shizukuShortcutEnabled.collectAsStateWithLifecycle()
     val shizukuLaunchPackage by viewModel.shizukuLaunchPackage.collectAsStateWithLifecycle()
     val deploymentWithPause by viewModel.deploymentWithPause.collectAsStateWithLifecycle()
+    val reportToPenguin by viewModel.reportToPenguin.collectAsStateWithLifecycle()
+    val reportToYituliu by viewModel.reportToYituliu.collectAsStateWithLifecycle()
+    val penguinId by viewModel.penguinId.collectAsStateWithLifecycle()
     val forceFullscreenOnVirtualDisplay by viewModel.forceFullscreenOnVirtualDisplay.collectAsStateWithLifecycle()
     val wakeUnlockType by viewModel.wakeUnlockType.collectAsStateWithLifecycle()
     val wakeCredential by viewModel.wakeCredential.collectAsStateWithLifecycle()
@@ -748,6 +751,35 @@ fun SettingsView(
                         )
                         ListItemDivider()
                         SettingSwitchItem(
+                            title = stringResource(R.string.settings_report_penguin),
+                            description = stringResource(R.string.settings_report_penguin_desc),
+                            contentColor = contentColor,
+                            checked = reportToPenguin,
+                            onCheckedChange = { viewModel.setReportToPenguin(it) }
+                        )
+                        MaaAnimatedVisibility(
+                            visible = reportToPenguin || reportToYituliu,
+                            enter = expandVertically(),
+                            exit = shrinkVertically(),
+                        ) {
+                            Column {
+                                ListItemDivider()
+                                SettingPenguinIdField(
+                                    penguinId = penguinId,
+                                    onIdChange = { viewModel.setPenguinId(it) },
+                                )
+                            }
+                        }
+                        ListItemDivider()
+                        SettingSwitchItem(
+                            title = stringResource(R.string.settings_report_yituliu),
+                            description = stringResource(R.string.settings_report_yituliu_desc),
+                            contentColor = contentColor,
+                            checked = reportToYituliu,
+                            onCheckedChange = { viewModel.setReportToYituliu(it) }
+                        )
+                        ListItemDivider()
+                        SettingSwitchItem(
                             title = stringResource(R.string.settings_tasks_override_title),
                             description = stringResource(R.string.settings_tasks_override_desc),
                             contentColor = contentColor,
@@ -1107,6 +1139,31 @@ private fun SettingWakeUnlockTypeItem(
             }
         }
     }
+}
+
+@Composable
+private fun SettingPenguinIdField(
+    penguinId: String,
+    onIdChange: (String) -> Unit,
+) {
+    var localId by rememberSaveable { mutableStateOf(penguinId) }
+    LaunchedEffect(penguinId) {
+        if (penguinId != localId) localId = penguinId
+    }
+    OutlinedTextField(
+        value = localId,
+        onValueChange = { raw ->
+            localId = raw
+            onIdChange(raw)
+        },
+        label = { Text(stringResource(R.string.settings_penguin_id)) },
+        placeholder = { Text(stringResource(R.string.settings_penguin_id_hint)) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = MaaDesignTokens.Spacing.lg, vertical = 8.dp),
+    )
 }
 
 @Composable

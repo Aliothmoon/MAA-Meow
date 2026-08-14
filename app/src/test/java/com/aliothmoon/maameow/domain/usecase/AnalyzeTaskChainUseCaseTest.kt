@@ -8,6 +8,7 @@ import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.UserDataUpdateConfig
 import com.aliothmoon.maameow.data.model.WakeUpConfig
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.DepotSnapshot
@@ -44,6 +45,11 @@ class AnalyzeTaskChainUseCaseTest {
         // 分析阶段开头的 `isLoaded.first { it }` 会挂死
         every { isLoaded } returns MutableStateFlow(true)
     }
+    private val appSettingsManager = mockk<AppSettingsManager> {
+        every { reportToPenguin } returns MutableStateFlow(true)
+        every { reportToYituliu } returns MutableStateFlow(true)
+        every { penguinId } returns MutableStateFlow("")
+    }
     private val useCase = AnalyzeTaskChainUseCase(
         taskChainState = taskChainState,
         resourceDataManager = resourceDataManager,
@@ -52,6 +58,7 @@ class AnalyzeTaskChainUseCaseTest {
         operBoxRepository = operBoxRepository,
         itemHelper = mockk(relaxed = true),
         dropsRefresher = mockk(relaxed = true),
+        appSettingsManager = appSettingsManager,
     )
 
     @Test

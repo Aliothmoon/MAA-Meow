@@ -41,6 +41,11 @@ class PrepareTaskStartUseCaseTest {
         },
         itemHelper = mockk(relaxed = true),
         dropsRefresher = mockk(relaxed = true),
+        appSettingsManager = mockk {
+            every { reportToPenguin } returns MutableStateFlow(true)
+            every { reportToYituliu } returns MutableStateFlow(true)
+            every { penguinId } returns MutableStateFlow("")
+        },
     )
 
     private fun useCase(aliveStatus: Int) = PrepareTaskStartUseCase(

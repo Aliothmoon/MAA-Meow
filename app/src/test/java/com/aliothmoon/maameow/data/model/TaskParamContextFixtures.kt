@@ -5,6 +5,7 @@ import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.domain.models.ReportOptions
 import com.aliothmoon.maameow.domain.service.FightDropsRefresher
 import io.mockk.every
 import io.mockk.mockk
@@ -29,6 +30,7 @@ fun testTaskParamContext(
     resourceDataManager: ResourceDataManager = mockk(relaxed = true),
     dropsRefresher: FightDropsRefresher = mockk(relaxed = true),
     logSink: PreflightLogSink = CollectingPreflightLogSink(),
+    report: ReportOptions = ReportOptions.DEFAULT,
 ): TaskParamContext = TaskParamContext(
     clientType = clientType,
     chainAllowsCreditFight = chainAllowsCreditFight,
@@ -40,6 +42,7 @@ fun testTaskParamContext(
     resourceDataManager = resourceDataManager,
     dropsRefresher = dropsRefresher,
     logSink = logSink,
+    report = report,
 )
 
 /** 最小节点；config 仅占位，展开逻辑以 toTaskParams 的 receiver 为准。 */

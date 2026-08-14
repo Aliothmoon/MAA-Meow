@@ -19,6 +19,7 @@ data class DropTarget(
     val logLabel: String,
     val medicineExpireDays: Int? = null,
     val drGrandet: Boolean = false,
+    val report: ReportOptions = ReportOptions.DEFAULT,
 ) {
     /**
      * 按缺口生成 Fight 参数 JSON。need≤0 时 `times=0` + `drops=1` 止损
@@ -36,5 +37,6 @@ data class DropTarget(
         medicineExpireDays?.let { put("medicine_expire_days", it) }
         if (drGrandet) put("DrGrandet", true)
         put("drops", buildJsonObject { put(dropId, if (need <= 0) 1 else need) })
+        putReportFields(report)
     }.toString()
 }

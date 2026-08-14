@@ -3,6 +3,8 @@ package com.aliothmoon.maameow.maa.callback
 import com.alibaba.fastjson2.JSON
 import com.alibaba.fastjson2.JSONObject
 import com.aliothmoon.maameow.data.model.LogLevel
+import com.aliothmoon.maameow.domain.service.CoreReportRequest
+import com.aliothmoon.maameow.domain.service.GameDataReporter
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -17,6 +19,7 @@ class MaaCallbackDispatcher(
     private val taskChainHandler: TaskChainHandler,
     private val subTaskHandler: SubTaskHandler,
     private val notificationCenter: MaaNotificationCenter,
+    private val gameDataReporter: GameDataReporter,
 ) {
 
     fun onEvent(msg: Int, json: String?) {
@@ -145,8 +148,30 @@ class MaaCallbackDispatcher(
     }
 
     private fun handleReportRequest(details: JSONObject?) {
-        // TODO
-        Timber.d("收到 ReportRequest（暂未实现上报功能）: $details")
+        if (details == null) {
+            Timber.e("ReportRequest 缺少 details")
+            return
+        }
+        val url = details.getString("url").orEmpty()
+        val body = details.getString("body").orEmpty()
+        if (url.isBlank() || body.isBlank()) {
+            Timber.e("ReportRequest 缺少 url/body")
+            return
+        }
+        val headers = linkedMapOf<String, String>()
+        details.getJSONObject("headers")?.let { obj ->
+            obj.keys.forEach { key ->
+                headers[key] = obj.getString(key).orEmpty()
+            }
+        }
+        gameDataReporter.submit(
+            CoreReportRequest(
+                url = url,
+                headers = headers,
+                body = body,
+                subtask = details.getString("subtask").orEmpty(),
+            )
+        )
     }
 
 }
