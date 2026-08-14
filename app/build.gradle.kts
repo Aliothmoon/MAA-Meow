@@ -94,13 +94,24 @@ android {
     }
 
     buildTypes {
+        val minifyProguardFiles = listOf(
+            getDefaultProguardFile("proguard-android-optimize.txt"),
+            "proguard-rules.pro",
+        )
+        // local.properties: maa.debugR8=true 时 debug 也走 R8
+        val debugR8 = localProperties.getProperty("maa.debugR8", "false").toBoolean()
+        getByName("debug") {
+            isMinifyEnabled = debugR8
+            isShrinkResources = debugR8
+            if (debugR8) {
+                proguardFiles(*minifyProguardFiles.toTypedArray())
+                println("[R8] debug minify+shrink enabled (maa.debugR8=true)")
+            }
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            proguardFiles(*minifyProguardFiles.toTypedArray())
             val keystorePath = System.getenv("KEYSTORE_PATH")
                 ?: localProperties.getProperty("KEYSTORE_PATH", "")
             if (keystorePath.isNotEmpty()) {
