@@ -569,6 +569,16 @@ class LaunchPipelineTest {
     }
 
     @Test
+    fun scheduleWakeFailed_stillLocked_skipsAsLocked() = runBlocking<Unit> {
+        givenWakeGate(interactive = false, keyguard = true, locked = true, type = "pin", pin = "1234")
+        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.WAKE_FAILED
+        pipeline().execute(scheduleRequest()).join()
+        assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
+        assertEquals(0, startCalls.get())
+        io.mockk.coVerify { wake.unlock("1234") }
+    }
+
+    @Test
     fun scheduleAutoScreenSaverNotShowing_passwordLock_skipsBeforeShow() = runBlocking<Unit> {
         givenWakeGate(keyguard = true, locked = true, type = "swipe", saverShowing = false)
         coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED

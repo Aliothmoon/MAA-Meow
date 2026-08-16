@@ -49,6 +49,8 @@ class R8KeepRulesContractTest {
             "valueOf(java.lang.String)",
             "com.aliothmoon.maameow.third.FakeContext",
             "com.aliothmoon.maameow.third.FakeContext$*",
+            "android.content.ContentResolver",
+            "acquireProvider(",
         ).forEach { token ->
             assertTrue("missing keep token: $token", rules.contains(token))
         }

@@ -33,8 +33,16 @@ public final class FakeContext extends ContextWrapper {
         return PackageManager.PERMISSION_GRANTED;
     }
 
-    private final ContentResolver contentResolver = new ContentResolver(this) {
-        @SuppressWarnings({"unused", "ProtectedMemberInFinalClass"})
+    // 具名子类：hidden acquireProvider 编译期不可见，匿名类更容易被 R8 当死代码删掉
+    private final ContentResolver contentResolver = new ShellContentResolver(this);
+
+    @SuppressWarnings("ProtectedMemberInFinalClass")
+    private static final class ShellContentResolver extends ContentResolver {
+        ShellContentResolver(Context context) {
+            super(context);
+        }
+
+        @SuppressWarnings("unused")
         // @Override (but super-class method not visible)
         protected IContentProvider acquireProvider(Context c, String name) {
             return ServiceManager.getActivityManager().getContentProviderExternal(name, new Binder());
@@ -46,7 +54,7 @@ public final class FakeContext extends ContextWrapper {
             return false;
         }
 
-        @SuppressWarnings({"unused", "ProtectedMemberInFinalClass"})
+        @SuppressWarnings("unused")
         // @Override (but super-class method not visible)
         protected IContentProvider acquireUnstableProvider(Context c, String name) {
             return null;
@@ -63,7 +71,7 @@ public final class FakeContext extends ContextWrapper {
         public void unstableProviderDied(IContentProvider icp) {
             // ignore
         }
-    };
+    }
 
     private FakeContext() {
         super(Workarounds.getSystemContext());

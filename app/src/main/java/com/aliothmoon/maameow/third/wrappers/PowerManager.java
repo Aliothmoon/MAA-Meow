@@ -8,6 +8,7 @@ import com.aliothmoon.maameow.constant.AndroidVersions;
 import com.aliothmoon.maameow.third.FakeContext;
 import com.aliothmoon.maameow.third.Ln;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 public final class PowerManager {
@@ -118,7 +119,7 @@ public final class PowerManager {
         return wakeUpMethodVersion;
     }
 
-    /** @return 反射调用是否成功；不代表屏幕已亮，需另行轮询 isScreenOn */
+    /** @return 反射调用是否发出；客户端 AppOps/Settings 读失败仍视为已发出，需轮询 isScreenOn */
     public boolean wakeUp() {
         try {
             Method method = getWakeUpMethod();
@@ -134,6 +135,8 @@ public final class PowerManager {
                     method.invoke(manager, time);
                     return true;
             }
+        } catch (InvocationTargetException e) {
+            return handlePowerInvokeError("wakeUp", e);
         } catch (ReflectiveOperationException e) {
             Ln.e("Could not invoke wakeUp", e);
             return false;
@@ -163,7 +166,7 @@ public final class PowerManager {
         return goToSleepMethod;
     }
 
-    /** @return 反射调用是否成功；不代表已息屏/上锁 */
+    /** @return 反射调用是否发出；客户端 AppOps/Settings 读失败仍视为已发出，需轮询 isScreenOn */
     public boolean goToSleep() {
         try {
             Method method = getGoToSleepMethod();
@@ -174,10 +177,34 @@ public final class PowerManager {
                 method.invoke(manager, time);
             }
             return true;
+        } catch (InvocationTargetException e) {
+            return handlePowerInvokeError("goToSleep", e);
         } catch (ReflectiveOperationException e) {
             Ln.e("Could not invoke goToSleep", e);
             return false;
         }
+    }
+
+    /**
+     * Binder 已发出后读回包时 AppOps 会走 DeviceConfig → Settings → ContentResolver
+     * FakeContext 的 acquireProvider 若被 R8 删掉会 AbstractMethodError，不代表系统没执行
+     */
+    static boolean isClientSideProviderError(Throwable cause) {
+        for (Throwable t = cause; t != null; t = t.getCause()) {
+            if (t instanceof AbstractMethodError) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean handlePowerInvokeError(String name, InvocationTargetException e) {
+        if (isClientSideProviderError(e.getCause())) {
+            Ln.w(name + "() likely applied; client ContentResolver/AppOps failed: " + e.getCause());
+            return true;
+        }
+        Ln.e("Could not invoke " + name, e);
+        return false;
     }
 
 }

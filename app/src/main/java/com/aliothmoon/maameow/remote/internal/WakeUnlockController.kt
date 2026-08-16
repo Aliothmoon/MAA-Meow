@@ -4,7 +4,10 @@ import android.os.SystemClock
 import android.view.KeyEvent
 import com.aliothmoon.maameow.constant.WakeUnlockResult
 import com.aliothmoon.maameow.maa.InputControlUtils
+import com.aliothmoon.maameow.remote.internal.ScreenPowerAttempts.SleepAction
+import com.aliothmoon.maameow.remote.internal.ScreenPowerAttempts.WakeAction
 import com.aliothmoon.maameow.third.Ln
+import com.aliothmoon.maameow.third.wrappers.PowerManager
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
 
 /** 唤醒/解锁/锁屏；提权进程内完成，仅支持纯数字 PIN */
@@ -13,6 +16,7 @@ object WakeUnlockController {
     private const val TAG = "WakeUnlock"
 
     private const val SCREEN_ON_TIMEOUT_MS = 5_000L
+    private const val KEY_WAKE_TIMEOUT_MS = 2_000L
     private const val KEYGUARD_GONE_TIMEOUT_MS = 5_000L
     private const val BOUNCER_SETTLE_MS = 1_200L
     private const val POLL_INTERVAL_MS = 100L
@@ -54,12 +58,11 @@ object WakeUnlockController {
             return WakeUnlockResult.LOCK_FAILED
         }
 
-        if (!pm.goToSleep()) {
-            Ln.w("$TAG: goToSleep unavailable (keyguard already locked)")
-            return WakeUnlockResult.OK
+        if (!ensureScreenOff(pm)) {
+            Ln.w("$TAG: screen still on after sleep attempts (keyguard already locked)")
+        } else {
+            Ln.i("$TAG: screen locked and off")
         }
-        pollUntil(SCREEN_OFF_TIMEOUT_MS) { !pm.isScreenOn(0) }
-        Ln.i("$TAG: screen locked and off")
         return WakeUnlockResult.OK
     }
 
@@ -68,15 +71,9 @@ object WakeUnlockController {
         val pm = ServiceManager.getPowerManager()
         val wm = ServiceManager.getWindowManager()
 
-        if (!pm.isScreenOn(0)) {
-            if (!pm.wakeUp()) {
-                Ln.w("$TAG: wakeUp() unavailable on this ROM")
-                return WakeUnlockResult.UNSUPPORTED
-            }
-            if (!pollUntil(SCREEN_ON_TIMEOUT_MS) { pm.isScreenOn(0) }) {
-                Ln.w("$TAG: screen did not turn on within ${SCREEN_ON_TIMEOUT_MS}ms")
-                return WakeUnlockResult.WAKE_FAILED
-            }
+        if (!ensureScreenOn(pm)) {
+            Ln.w("$TAG: screen did not turn on after wakeUp and key fallback")
+            return WakeUnlockResult.WAKE_FAILED
         }
         Ln.i("$TAG: screen on")
 
@@ -139,6 +136,77 @@ object WakeUnlockController {
             Ln.w("$TAG: still locked after PIN injection — wrong PIN, or keyguard ignores injected keys")
             WakeUnlockResult.CREDENTIAL_REJECTED
         }
+    }
+
+    private fun ensureScreenOn(pm: PowerManager): Boolean =
+        ScreenPowerAttempts.run(
+            actions = ScreenPowerAttempts.wakeActions,
+            alreadyDone = { pm.isScreenOn(0) },
+            perform = { action ->
+                when (action) {
+                    WakeAction.BINDER -> {
+                        if (!pm.wakeUp()) {
+                            Ln.w("$TAG: wakeUp() invoke failed, polling then falling back to keys")
+                        }
+                    }
+                    WakeAction.KEY_WAKEUP -> {
+                        Ln.w("$TAG: injecting KEYCODE_WAKEUP")
+                        injectKey(KeyEvent.KEYCODE_WAKEUP)
+                    }
+                    WakeAction.KEY_POWER -> if (!pm.isScreenOn(0)) {
+                        Ln.w("$TAG: injecting KEYCODE_POWER")
+                        injectKey(KeyEvent.KEYCODE_POWER)
+                    }
+                }
+            },
+            pollAfter = { action ->
+                val timeout = if (action == WakeAction.BINDER) {
+                    SCREEN_ON_TIMEOUT_MS
+                } else {
+                    KEY_WAKE_TIMEOUT_MS
+                }
+                val on = pollUntil(timeout) { pm.isScreenOn(0) }
+                if (!on) Ln.w("$TAG: screen still off after $action")
+                on
+            },
+        )
+
+    private fun ensureScreenOff(pm: PowerManager): Boolean =
+        ScreenPowerAttempts.run(
+            actions = ScreenPowerAttempts.sleepActions,
+            alreadyDone = { !pm.isScreenOn(0) },
+            perform = { action ->
+                when (action) {
+                    SleepAction.BINDER -> {
+                        if (!pm.goToSleep()) {
+                            Ln.w("$TAG: goToSleep() invoke failed, polling then falling back to keys")
+                        }
+                    }
+                    SleepAction.KEY_SLEEP -> {
+                        Ln.w("$TAG: injecting KEYCODE_SLEEP")
+                        injectKey(KeyEvent.KEYCODE_SLEEP)
+                    }
+                    SleepAction.KEY_POWER -> if (pm.isScreenOn(0)) {
+                        Ln.w("$TAG: injecting KEYCODE_POWER")
+                        injectKey(KeyEvent.KEYCODE_POWER)
+                    }
+                }
+            },
+            pollAfter = { action ->
+                val timeout = if (action == SleepAction.BINDER) {
+                    SCREEN_OFF_TIMEOUT_MS
+                } else {
+                    KEY_WAKE_TIMEOUT_MS
+                }
+                val off = pollUntil(timeout) { !pm.isScreenOn(0) }
+                if (!off) Ln.w("$TAG: screen still on after $action")
+                off
+            },
+        )
+
+    private fun injectKey(keyCode: Int) {
+        InputControlUtils.keyDown(keyCode, 0)
+        InputControlUtils.keyUp(keyCode, 0)
     }
 
     private inline fun pollUntil(timeoutMs: Long, cond: () -> Boolean): Boolean {

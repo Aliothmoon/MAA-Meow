@@ -74,9 +74,16 @@
 -dontwarn org.joni.**
 -dontwarn org.jcodings.**
 
-# FakeContext 匿名 ContentResolver：acquireProvider 等对编译期不可见，R8 当死代码删掉
+# FakeContext / ShellContentResolver：acquireProvider 等对编译期不可见，R8 当死代码删掉
 -keep class com.aliothmoon.maameow.third.FakeContext { *; }
 -keep class com.aliothmoon.maameow.third.FakeContext$* { *; }
+-keepclassmembers class * extends android.content.ContentResolver {
+    *** acquireProvider(...);
+    *** acquireUnstableProvider(...);
+    *** releaseProvider(...);
+    *** releaseUnstableProvider(...);
+    *** unstableProviderDied(...);
+}
 
 # 落盘 Enum.name / valueOf
 -keepclassmembers enum com.aliothmoon.maameow.** {
