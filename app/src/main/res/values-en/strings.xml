@@ -113,6 +113,7 @@
     <string name="settings_wake_unlock_type">Schedule unlock method</string>
     <string name="settings_wake_unlock_type_swipe">Swipe unlock</string>
     <string name="settings_wake_unlock_type_pin">PIN</string>
+    <string name="settings_wake_unlock_type_gesture">Gesture</string>
     <string name="settings_report_penguin">Report to Penguin Statistics</string>
     <string name="settings_report_penguin_desc">Upload battle drops and recruit tags to penguin-stats</string>
     <string name="settings_report_yituliu">Report to Yituliu</string>
@@ -1641,7 +1642,7 @@
     <string name="notification_schedule_title">Scheduled Task</string>
     <string name="notification_schedule_preparing">Preparing to launch…</string>
     <string name="notification_schedule_device_locked">Device is locked</string>
-    <string name="notification_schedule_pin_required">Skipped: a device lock password is set. Configure a PIN in settings, or use "Tasks → Options → Screen Off" instead of the system lock screen</string>
+    <string name="notification_schedule_pin_required">Skipped: a device lock password is set. Configure a PIN or record an unlock gesture in settings, or use "Tasks → Options → Screen Off" instead of the system lock screen</string>
     <string name="notification_schedule_detail">\"%1$s\": %2$s</string>
 
     <!-- i18n: schedule trigger journal (pipeline) -->
@@ -2101,4 +2102,27 @@
     <string name="wake_result_unsupported">Not supported on this system</string>
     <string name="wake_result_lock_failed">Could not enter lock screen</string>
     <string name="wake_result_ipc_failed">Elevated service not connected</string>
+    <string name="wake_result_gesture_empty">No unlock gesture recorded yet</string>
+    <string name="wake_result_gesture_screen_mismatch">Screen orientation or resolution differs from the recording; please record again</string>
+    <string name="wake_result_record_no_device">Cannot read the touchscreen input device on this system; use the Root backend or a PIN instead</string>
+    <string name="wake_result_record_timeout">Timed out waiting for the unlock; recording ended</string>
+    <string name="wake_result_record_cancelled">Recording cancelled</string>
+    <string name="wake_result_record_no_touch">No touch input was captured. Fingerprint and face unlock bypass the touchscreen and cannot be recorded — use your pattern or password while recording</string>
+    <string name="settings_wake_gesture_none">Not recorded yet</string>
+    <string name="settings_wake_gesture_summary">%1$d steps · %2$d×%3$d</string>
+    <string name="settings_wake_gesture_record">Start recording</string>
+    <string name="settings_wake_gesture_rerecord">Record again</string>
+    <string name="settings_wake_gesture_clear">Clear</string>
+    <string name="settings_wake_gesture_cancel">Cancel recording</string>
+    <string name="settings_wake_gesture_hint">The screen locks and then wakes automatically; just unlock once as you normally would. Recording ends automatically when the device unlocks</string>
+    <string name="settings_wake_gesture_preparing">Locking and waking the screen…</string>
+    <string name="settings_wake_gesture_waiting">Screen is on — please unlock once</string>
+    <string name="settings_wake_gesture_done">Recorded %1$d steps; run Test once to verify</string>
+    <string name="settings_wake_gesture_warning">Single-finger gestures only; fingerprint and face unlock are not supported. The trace is equivalent to your lock credential — it stays in the app private directory and is excluded from config export</string>
+    <string name="settings_wake_gesture_step_tap">Tap (%1$d, %2$d)</string>
+    <string name="settings_wake_gesture_step_long_press">Long press (%1$d, %2$d) %3$d ms</string>
+    <string name="settings_wake_gesture_step_swipe">Swipe (%1$d, %2$d) → (%3$d, %4$d) %5$d ms</string>
+    <string name="settings_wake_gesture_step_delay">Wait %1$d ms</string>
+    <string name="settings_wake_gesture_step_delete">Delete this step</string>
+    <string name="settings_wake_gesture_test_hint">Locks first, then replays the recorded gesture after ~1s</string>
 </resources>

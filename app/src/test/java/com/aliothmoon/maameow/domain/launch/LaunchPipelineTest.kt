@@ -4,9 +4,11 @@ import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.models.UnlockCredential
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.ScreenSaverController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
+import com.aliothmoon.maameow.domain.service.UnlockGestureReader
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
@@ -49,6 +51,7 @@ class LaunchPipelineTest {
     private lateinit var mutex: LaunchMutex
     private lateinit var settings: AppSettingsManager
     private lateinit var wake: WakeUnlockEngine
+    private lateinit var gestures: UnlockGestureReader
     private lateinit var chainState: TaskChainState
     private lateinit var composition: MaaCompositionService
     private lateinit var logger: ScheduleTriggerLogger
@@ -127,6 +130,9 @@ class LaunchPipelineTest {
         coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.OK
         coEvery { wake.lockAndSleep() } returns WakeUnlockEngine.WakeResult.OK
 
+        gestures = mockk(relaxed = true)
+        coEvery { gestures.readJson() } returns ""
+
         screenSaver = mockk(relaxed = true)
         // relaxed 的 Boolean 默认为 false
         every { screenSaver.isShowing() } returns false
@@ -203,6 +209,7 @@ class LaunchPipelineTest {
         mutex = mutex,
         appSettingsManager = settings,
         wakeUnlockEngine = wake,
+        unlockGestures = gestures,
         chainState = chainState,
         compositionService = composition,
         triggerLogger = logger,
@@ -224,6 +231,7 @@ class LaunchPipelineTest {
         saverShowing: Boolean = false,
         type: String = "swipe",
         pin: String = "",
+        gestureJson: String = "",
     ) {
         screenInteractive.set(interactive)
         keyguardLocked.set(keyguard)
@@ -231,6 +239,7 @@ class LaunchPipelineTest {
         every { screenSaver.isShowing() } returns saverShowing
         unlockType.value = type
         wakeCred.value = pin
+        coEvery { gestures.readJson() } returns gestureJson
     }
 
     private fun scheduleRequest(
@@ -494,7 +503,7 @@ class LaunchPipelineTest {
         givenWakeGate(keyguard = true, locked = false, type = "swipe")
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
-        io.mockk.coVerify { wake.unlock("") }
+        io.mockk.coVerify { wake.unlock(UnlockCredential.Swipe) }
     }
 
     @Test
@@ -502,7 +511,7 @@ class LaunchPipelineTest {
         givenWakeGate(interactive = false, locked = false, type = "swipe")
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
-        io.mockk.coVerify { wake.unlock("") }
+        io.mockk.coVerify { wake.unlock(UnlockCredential.Swipe) }
     }
 
     @Test
@@ -510,7 +519,33 @@ class LaunchPipelineTest {
         givenWakeGate(keyguard = true, locked = true, type = "pin", pin = "2580")
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
-        io.mockk.coVerify { wake.unlock("2580") }
+        io.mockk.coVerify { wake.unlock(UnlockCredential.Pin("2580")) }
+    }
+
+    @Test
+    fun usageGestureLock_replaysRecordedGestureAndStarts() = runBlocking<Unit> {
+        givenWakeGate(keyguard = true, locked = true, type = "gesture", gestureJson = GESTURE_JSON)
+        pipeline().execute(scheduleRequest()).join()
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        io.mockk.coVerify { wake.unlock(UnlockCredential.Gesture(GESTURE_JSON)) }
+    }
+
+    @Test
+    fun usageGestureLock_withoutRecording_fallsBackToPlainUnlock() = runBlocking<Unit> {
+        // 没录成也得把屏点亮，否则无锁屏的机器反而跑不起来
+        givenWakeGate(keyguard = true, locked = false, type = "gesture", gestureJson = "")
+        pipeline().execute(scheduleRequest()).join()
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        io.mockk.coVerify { wake.unlock(UnlockCredential.Swipe) }
+    }
+
+    @Test
+    fun usageGestureLock_replayRejected_skipsAsLocked() = runBlocking<Unit> {
+        givenWakeGate(keyguard = true, locked = true, type = "gesture", gestureJson = GESTURE_JSON)
+        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REJECTED
+        pipeline().execute(scheduleRequest()).join()
+        assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
+        assertEquals(0, startCalls.get())
     }
 
     @Test
@@ -519,7 +554,7 @@ class LaunchPipelineTest {
         coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
-        io.mockk.coVerify { wake.unlock("") }
+        io.mockk.coVerify { wake.unlock(UnlockCredential.Swipe) }
     }
 
     @Test
@@ -528,7 +563,8 @@ class LaunchPipelineTest {
         coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
-        io.mockk.coVerify { wake.unlock("") }
+        // 空 PIN 照样试一把（注入空串），但不算备好凭证
+        io.mockk.coVerify { wake.unlock(UnlockCredential.Pin("")) }
     }
 
     @Test
@@ -537,7 +573,7 @@ class LaunchPipelineTest {
         coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
-        io.mockk.coVerify { wake.unlock("") }
+        io.mockk.coVerify { wake.unlock(UnlockCredential.Swipe) }
     }
 
     @Test
@@ -575,7 +611,7 @@ class LaunchPipelineTest {
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
         assertEquals(0, startCalls.get())
-        io.mockk.coVerify { wake.unlock("1234") }
+        io.mockk.coVerify { wake.unlock(UnlockCredential.Pin("1234")) }
     }
 
     @Test
@@ -592,7 +628,7 @@ class LaunchPipelineTest {
         givenWakeGate(type = "swipe")
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
-        io.mockk.coVerify { wake.unlock("") }
+        io.mockk.coVerify { wake.unlock(UnlockCredential.Swipe) }
     }
 
     @Test
@@ -823,5 +859,9 @@ class LaunchPipelineTest {
         assertEquals(ExecutionResult.STARTED, recorded.last())
         assertNull(mutex.current)
         assertTrue(p.session.value is LaunchSession.Idle)
+    }
+
+    private companion object {
+        const val GESTURE_JSON = """{"screenWidth":1080,"screenHeight":2220,"rotation":0,"steps":[]}"""
     }
 }

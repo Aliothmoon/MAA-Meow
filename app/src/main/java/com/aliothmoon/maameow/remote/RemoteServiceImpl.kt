@@ -13,6 +13,7 @@ import com.aliothmoon.maameow.maa.InputControlUtils
 import android.content.Intent
 import com.aliothmoon.maameow.remote.internal.ActivityUtils
 import com.aliothmoon.maameow.remote.internal.GameAudioMuteController
+import com.aliothmoon.maameow.remote.internal.GestureRecorder
 import com.aliothmoon.maameow.remote.internal.PermissionGrantHelper
 import com.aliothmoon.maameow.remote.internal.PowerController
 import com.aliothmoon.maameow.remote.internal.PrimaryDisplayManager
@@ -327,6 +328,21 @@ class RemoteServiceImpl : RemoteService.Stub() {
     /** @return [com.aliothmoon.maameow.constant.WakeUnlockResult] */
     override fun testUnlock(credential: String?): Int =
         WakeUnlockController.testUnlock(credential.orEmpty())
+
+    /** @return [com.aliothmoon.maameow.constant.WakeUnlockResult] */
+    override fun unlockWithGesture(gestureJson: String?): Int =
+        WakeUnlockController.unlockWithGesture(gestureJson.orEmpty())
+
+    /** @return [com.aliothmoon.maameow.constant.WakeUnlockResult] */
+    override fun testUnlockGesture(gestureJson: String?): Int =
+        WakeUnlockController.testUnlockGesture(gestureJson.orEmpty())
+
+    override fun startGestureRecord(timeoutMs: Int) = GestureRecorder.start(timeoutMs)
+
+    /** @return [com.aliothmoon.maameow.domain.models.GestureRecordResult] 的 JSON */
+    override fun pollGestureRecord(): String = GestureRecorder.poll()
+
+    override fun cancelGestureRecord() = GestureRecorder.cancel()
 
     override fun isPackageInstalled(packageName: String): Boolean {
         return try {

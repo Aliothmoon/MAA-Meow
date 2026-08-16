@@ -29,6 +29,7 @@ import com.aliothmoon.maameow.data.notification.provider.ServerChanProvider
 import com.aliothmoon.maameow.data.notification.provider.SmtpProvider
 import com.aliothmoon.maameow.data.notification.provider.TelegramProvider
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.data.preferences.UnlockGestureStore
 import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.repository.CopilotRepository
@@ -43,6 +44,7 @@ import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.AppAliveChecker
 import com.aliothmoon.maameow.domain.service.AppWatchdog
+import com.aliothmoon.maameow.domain.service.UnlockGestureReader
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.service.CopilotManager
 import com.aliothmoon.maameow.domain.service.ExternalNotificationService
@@ -140,6 +142,7 @@ val appModule = module {
 
 
     singleOf(::AppSettingsManager)
+    single { UnlockGestureStore(get()) } bind UnlockGestureReader::class
     singleOf(::BackgroundImageStore)
     singleOf(::AchievementRepository)
     singleOf(::AchievementReporter)
@@ -164,6 +167,7 @@ val appModule = module {
             mutex = get(),
             appSettingsManager = get(),
             wakeUnlockEngine = get(),
+            unlockGestures = get(),
             chainState = get(),
             compositionService = get(),
             triggerLogger = get(),

@@ -77,4 +77,14 @@ interface RemoteService {
     int lockAndSleep() = 34;
 
     int testUnlock(String credential) = 35;
+
+    oneway void startGestureRecord(int timeoutMs) = 36;
+
+    String pollGestureRecord() = 37;
+
+    oneway void cancelGestureRecord() = 38;
+
+    int unlockWithGesture(String gestureJson) = 39;
+
+    int testUnlockGesture(String gestureJson) = 40;
 }

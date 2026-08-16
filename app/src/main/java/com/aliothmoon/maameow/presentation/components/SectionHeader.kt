@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -56,6 +57,32 @@ fun CollapsibleSection(
     initiallyExpanded: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    CollapsibleSection(
+        sectionKey = sectionKey,
+        modifier = modifier,
+        initiallyExpanded = initiallyExpanded,
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
+            )
+        },
+        content = content,
+    )
+}
+
+/** 标题自定义版：折叠交互与无障碍语义共用，样式交给调用方 */
+@Composable
+fun CollapsibleSection(
+    sectionKey: String,
+    modifier: Modifier = Modifier,
+    initiallyExpanded: Boolean = true,
+    title: @Composable RowScope.() -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     var expanded by rememberSaveable(sectionKey) { mutableStateOf(initiallyExpanded) }
     val expandLabel = stringResource(R.string.common_expand)
     val collapseLabel = stringResource(R.string.common_collapse)
@@ -72,13 +99,7 @@ fun CollapsibleSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-            )
+            title()
             Icon(
                 imageVector = if (expanded) {
                     Icons.Rounded.KeyboardArrowUp

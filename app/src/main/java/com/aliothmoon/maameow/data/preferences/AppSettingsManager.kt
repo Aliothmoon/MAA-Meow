@@ -16,6 +16,7 @@ import com.aliothmoon.maameow.domain.models.AppSettings
 import com.aliothmoon.maameow.domain.models.AppSettingsSchema
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RemoteBackend
+import com.aliothmoon.maameow.domain.models.UnlockCredential
 import com.aliothmoon.maameow.domain.models.RunMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,8 +41,11 @@ class AppSettingsManager(
     companion object {
         val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
 
-        /** 解锁方式：滑动 / PIN */
-        val WAKE_UNLOCK_TYPES = setOf("swipe", "pin")
+        /** 解锁方式：滑动 / PIN / 录制手势 */
+        const val WAKE_TYPE_SWIPE = UnlockCredential.TYPE_SWIPE
+        const val WAKE_TYPE_PIN = UnlockCredential.TYPE_PIN
+        const val WAKE_TYPE_GESTURE = UnlockCredential.TYPE_GESTURE
+        val WAKE_UNLOCK_TYPES = UnlockCredential.TYPES
         /** 纯数字 PIN 最大位数 */
         const val MAX_PIN_LENGTH = 16
 

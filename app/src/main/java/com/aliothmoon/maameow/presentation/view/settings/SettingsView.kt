@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
@@ -37,6 +38,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.rounded.Build
@@ -48,6 +50,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -93,6 +98,8 @@ import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
+import com.aliothmoon.maameow.domain.models.UnlockGesture
+import com.aliothmoon.maameow.domain.models.UnlockStep
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.state.ResourceInitState
@@ -150,6 +157,8 @@ fun SettingsView(
     val wakeUnlockType by viewModel.wakeUnlockType.collectAsStateWithLifecycle()
     val wakeCredential by viewModel.wakeCredential.collectAsStateWithLifecycle()
     val wakeTestState by viewModel.wakeTestState.collectAsStateWithLifecycle()
+    val unlockGesture by viewModel.unlockGesture.collectAsStateWithLifecycle()
+    val gestureRecordState by viewModel.gestureRecordState.collectAsStateWithLifecycle()
     val tasksOverrideEnabled by viewModel.tasksOverrideEnabled.collectAsStateWithLifecycle()
     val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
@@ -202,6 +211,24 @@ fun SettingsView(
                 Toast.LENGTH_LONG,
             ).show()
             viewModel.clearWakeTestResult()
+        }
+    }
+
+    LaunchedEffect(Unit) { viewModel.refreshGestureRecord() }
+
+    gestureRecordState?.let { state ->
+        LaunchedEffect(state) {
+            val message = when (state) {
+                is SettingsViewModel.GestureRecordState.Done ->
+                    context.getString(R.string.settings_wake_gesture_done, state.steps)
+
+                is SettingsViewModel.GestureRecordState.Failed ->
+                    state.result.message.resolve(context)
+
+                else -> return@LaunchedEffect
+            }
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            viewModel.clearGestureRecordState()
         }
     }
 
@@ -717,7 +744,7 @@ fun SettingsView(
                         onTypeSelected = { viewModel.setWakeUnlockType(it) },
                     )
                     MaaAnimatedVisibility(
-                        visible = wakeUnlockType == "pin",
+                        visible = wakeUnlockType == AppSettingsManager.WAKE_TYPE_PIN,
                         enter = expandVertically(),
                         exit = shrinkVertically(),
                     ) {
@@ -727,6 +754,25 @@ fun SettingsView(
                                 contentColor = contentColor,
                                 wakeCredential = wakeCredential,
                                 onCredentialChange = { viewModel.setWakeCredential(it) },
+                                onTest = { viewModel.runWakeTest() },
+                            )
+                        }
+                    }
+                    MaaAnimatedVisibility(
+                        visible = wakeUnlockType == AppSettingsManager.WAKE_TYPE_GESTURE,
+                        enter = expandVertically(),
+                        exit = shrinkVertically(),
+                    ) {
+                        Column {
+                            ListItemDivider()
+                            SettingWakeGestureSection(
+                                contentColor = contentColor,
+                                gesture = unlockGesture,
+                                recordState = gestureRecordState,
+                                onRecord = { viewModel.startGestureRecord() },
+                                onCancelRecord = { viewModel.cancelGestureRecord() },
+                                onClear = { viewModel.clearGesture() },
+                                onDeleteStep = { viewModel.deleteGestureStep(it) },
                                 onTest = { viewModel.runWakeTest() },
                             )
                         }
@@ -1093,51 +1139,252 @@ private fun SettingWakeUnlockTypeItem(
     selectedType: String,
     onTypeSelected: (String) -> Unit,
 ) {
-    Row(
+    // 三个选项字宽差得多，单选圆点排一行会左右不齐
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
             text = stringResource(R.string.settings_wake_unlock_type),
             style = MaterialTheme.typography.bodyLarge,
             color = contentColor,
-            modifier = Modifier.weight(1f),
         )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val options = listOf(
-                "swipe" to stringResource(R.string.settings_wake_unlock_type_swipe),
-                "pin" to stringResource(R.string.settings_wake_unlock_type_pin),
-            )
-            options.forEach { (type, label) ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .selectable(
-                            selected = type == selectedType,
-                            onClick = { onTypeSelected(type) },
-                            role = Role.RadioButton,
-                        ),
+        val options = listOf(
+            AppSettingsManager.WAKE_TYPE_SWIPE to
+                stringResource(R.string.settings_wake_unlock_type_swipe),
+            AppSettingsManager.WAKE_TYPE_PIN to
+                stringResource(R.string.settings_wake_unlock_type_pin),
+            AppSettingsManager.WAKE_TYPE_GESTURE to
+                stringResource(R.string.settings_wake_unlock_type_gesture),
+        )
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            options.forEachIndexed { index, (type, label) ->
+                SegmentedButton(
+                    selected = type == selectedType,
+                    onClick = { onTypeSelected(type) },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = options.size,
+                        baseShape = RoundedCornerShape(4.dp),
+                    ),
                 ) {
-                    RadioButton(
-                        selected = type == selectedType,
-                        onClick = null,
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
                     Text(
                         text = label,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = contentColor,
+                        maxLines = 1,
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SettingWakeGestureSection(
+    contentColor: Color,
+    gesture: UnlockGesture?,
+    recordState: SettingsViewModel.GestureRecordState?,
+    onRecord: () -> Unit,
+    onCancelRecord: () -> Unit,
+    onClear: () -> Unit,
+    onDeleteStep: (Int) -> Unit,
+    onTest: () -> Unit,
+) {
+    val recording = recordState is SettingsViewModel.GestureRecordState.Preparing ||
+        recordState is SettingsViewModel.GestureRecordState.Recording
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (gesture == null) {
+            Text(
+                text = stringResource(R.string.settings_wake_gesture_none),
+                style = MaterialTheme.typography.bodyLarge,
+                color = contentColor,
+            )
+        } else {
+            // 步骤只在需要核对时才看，默认收起
+            CollapsibleSection(
+                sectionKey = "settings_wake_gesture_steps",
+                initiallyExpanded = false,
+                title = {
+                    Text(
+                        text = stringResource(
+                            R.string.settings_wake_gesture_summary,
+                            gesture.steps.size,
+                            gesture.screenWidth,
+                            gesture.screenHeight,
+                        ),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = contentColor,
+                        modifier = Modifier.weight(1f),
+                    )
+                },
+            ) {
+                gesture.steps.forEachIndexed { index, step ->
+                    GestureStepRow(
+                        index = index,
+                        step = step,
+                        contentColor = contentColor,
+                        enabled = !recording,
+                        onDelete = { onDeleteStep(index) },
+                    )
+                }
+            }
+        }
+
+        Text(
+            text = stringResource(R.string.settings_wake_gesture_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = contentColor.copy(alpha = 0.7f),
+        )
+
+        if (recording) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                Text(
+                    text = stringResource(
+                        if (recordState is SettingsViewModel.GestureRecordState.Preparing) {
+                            R.string.settings_wake_gesture_preparing
+                        } else {
+                            R.string.settings_wake_gesture_waiting
+                        },
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = contentColor,
+                )
+            }
+            OutlinedButton(
+                onClick = onCancelRecord,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = stringResource(R.string.settings_wake_gesture_cancel))
+            }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onRecord,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(
+                        text = stringResource(
+                            if (gesture == null) {
+                                R.string.settings_wake_gesture_record
+                            } else {
+                                R.string.settings_wake_gesture_rerecord
+                            },
+                        ),
+                    )
+                }
+                if (gesture != null) {
+                    OutlinedButton(
+                        onClick = onClear,
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(text = stringResource(R.string.settings_wake_gesture_clear))
+                    }
+                }
+            }
+        }
+
+        Text(
+            text = stringResource(R.string.settings_wake_gesture_warning),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+
+        if (gesture != null) {
+            SettingRow(
+                title = stringResource(R.string.settings_wake_test_button),
+                description = stringResource(R.string.settings_wake_gesture_test_hint),
+                titleColor = contentColor,
+                descriptionColor = contentColor.copy(alpha = 0.7f),
+                onClick = onTest,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GestureStepRow(
+    index: Int,
+    step: UnlockStep,
+    contentColor: Color,
+    enabled: Boolean,
+    onDelete: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "${index + 1}",
+            style = MaterialTheme.typography.labelMedium,
+            color = contentColor.copy(alpha = 0.6f),
+            modifier = Modifier.width(24.dp),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = gestureStepText(step),
+                style = MaterialTheme.typography.bodyMedium,
+                color = contentColor,
+            )
+            if (step.delayBeforeMs > 0) {
+                Text(
+                    text = stringResource(
+                        R.string.settings_wake_gesture_step_delay,
+                        step.delayBeforeMs,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor.copy(alpha = 0.6f),
+                )
+            }
+        }
+        IconButton(onClick = onDelete, enabled = enabled) {
+            Icon(
+                imageVector = Icons.Filled.Delete,
+                contentDescription = stringResource(R.string.settings_wake_gesture_step_delete),
+                tint = contentColor.copy(alpha = 0.7f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun gestureStepText(step: UnlockStep): String = when (step) {
+    is UnlockStep.Tap ->
+        stringResource(R.string.settings_wake_gesture_step_tap, step.x, step.y)
+
+    is UnlockStep.LongPress ->
+        stringResource(
+            R.string.settings_wake_gesture_step_long_press,
+            step.x,
+            step.y,
+            step.holdMs,
+        )
+
+    is UnlockStep.Swipe -> {
+        val first = step.points.firstOrNull()
+        val last = step.points.lastOrNull()
+        stringResource(
+            R.string.settings_wake_gesture_step_swipe,
+            first?.x ?: 0,
+            first?.y ?: 0,
+            last?.x ?: 0,
+            last?.y ?: 0,
+            last?.tMs ?: 0,
+        )
     }
 }
 

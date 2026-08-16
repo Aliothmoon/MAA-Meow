@@ -310,6 +310,7 @@
     <string name="settings_wake_unlock_type">定时任务解锁方式</string>
     <string name="settings_wake_unlock_type_swipe">滑动解锁</string>
     <string name="settings_wake_unlock_type_pin">PIN</string>
+    <string name="settings_wake_unlock_type_gesture">录制手势</string>
     <string name="settings_report_penguin">上报企鹅物流</string>
     <string name="settings_report_penguin_desc">战斗掉落与公招标签上传至 penguin-stats</string>
     <string name="settings_report_yituliu">上报一图流</string>
@@ -1697,7 +1698,7 @@
     <string name="notification_schedule_title">定时任务</string>
     <string name="notification_schedule_preparing">正在准备拉起界面…</string>
     <string name="notification_schedule_device_locked">设备处于锁屏状态</string>
-    <string name="notification_schedule_pin_required">已跳过：设备有锁屏密码。请在设置中配置 PIN，或用「后台任务 → 快捷选项 → 熄屏挂机」代替系统锁屏</string>
+    <string name="notification_schedule_pin_required">已跳过：设备有锁屏密码。请在设置中配置 PIN 或录制解锁手势，或用「后台任务 → 快捷选项 → 熄屏挂机」代替系统锁屏</string>
     <string name="notification_schedule_detail">「%1$s」: %2$s</string>
 
     <!-- i18n: schedule trigger journal (pipeline) -->
@@ -2158,4 +2159,27 @@
     <string name="wake_result_unsupported">当前系统不支持该操作</string>
     <string name="wake_result_lock_failed">无法进入锁屏</string>
     <string name="wake_result_ipc_failed">提权服务未连接</string>
+    <string name="wake_result_gesture_empty">尚未录制解锁手势</string>
+    <string name="wake_result_gesture_screen_mismatch">屏幕方向或分辨率与录制时不一致，请重新录制</string>
+    <string name="wake_result_record_no_device">读不到触摸屏输入设备，当前系统不允许；可改用 Root 启动方式或 PIN</string>
+    <string name="wake_result_record_timeout">等待解锁超时，录制已结束</string>
+    <string name="wake_result_record_cancelled">已取消录制</string>
+    <string name="wake_result_record_no_touch">没有采集到任何触摸操作。指纹和人脸解锁不经过触摸屏，无法录制；请在录制时改用图案或密码解锁</string>
+    <string name="settings_wake_gesture_none">尚未录制</string>
+    <string name="settings_wake_gesture_summary">共 %1$d 步 · %2$d×%3$d</string>
+    <string name="settings_wake_gesture_record">开始录制</string>
+    <string name="settings_wake_gesture_rerecord">重新录制</string>
+    <string name="settings_wake_gesture_clear">清除</string>
+    <string name="settings_wake_gesture_cancel">取消录制</string>
+    <string name="settings_wake_gesture_hint">点击后会先锁屏再自动亮屏，你只需像平时一样解锁一次；解锁完成即自动结束录制</string>
+    <string name="settings_wake_gesture_preparing">正在锁屏并亮屏…</string>
+    <string name="settings_wake_gesture_waiting">已亮屏，请解锁一次</string>
+    <string name="settings_wake_gesture_done">录制完成，共 %1$d 步，建议点「测试」验证一次</string>
+    <string name="settings_wake_gesture_warning">只录单指操作，不支持指纹和人脸；轨迹等价于锁屏凭证，仅保存在本机应用私有目录，不会随配置导出</string>
+    <string name="settings_wake_gesture_step_tap">点击 (%1$d, %2$d)</string>
+    <string name="settings_wake_gesture_step_long_press">长按 (%1$d, %2$d) %3$d ms</string>
+    <string name="settings_wake_gesture_step_swipe">滑动 (%1$d, %2$d) → (%3$d, %4$d) %5$d ms</string>
+    <string name="settings_wake_gesture_step_delay">等待 %1$d ms</string>
+    <string name="settings_wake_gesture_step_delete">删除该步骤</string>
+    <string name="settings_wake_gesture_test_hint">先锁屏，约 1 秒后回放录制的手势</string>
 </resources>

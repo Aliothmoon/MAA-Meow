@@ -1,16 +1,17 @@
 package com.aliothmoon.maameow.remote.internal
 
-import android.os.SystemClock
 import android.view.KeyEvent
 import com.aliothmoon.maameow.constant.WakeUnlockResult
+import com.aliothmoon.maameow.domain.models.UnlockGesture
 import com.aliothmoon.maameow.maa.InputControlUtils
 import com.aliothmoon.maameow.remote.internal.ScreenPowerAttempts.SleepAction
 import com.aliothmoon.maameow.remote.internal.ScreenPowerAttempts.WakeAction
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.wrappers.PowerManager
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
+import com.aliothmoon.maameow.third.wrappers.WindowManager
 
-/** 唤醒/解锁/锁屏；提权进程内完成，仅支持纯数字 PIN */
+/** 唤醒/解锁/锁屏；提权进程内完成，凭证支持纯数字 PIN 与录制手势 */
 object WakeUnlockController {
 
     private const val TAG = "WakeUnlock"
@@ -19,8 +20,10 @@ object WakeUnlockController {
     private const val KEY_WAKE_TIMEOUT_MS = 2_000L
     private const val KEYGUARD_GONE_TIMEOUT_MS = 5_000L
     private const val BOUNCER_SETTLE_MS = 1_200L
-    private const val POLL_INTERVAL_MS = 100L
     private const val DIGIT_GAP_MS = 50L
+
+    /** 手势回放前等锁屏首屏稳定；不弹 bouncer，比 PIN 那条路要短 */
+    private const val GESTURE_SETTLE_MS = 800L
 
     /** 测试：上锁/息屏后等待系统稳定再解锁 */
     private const val LOCK_SETTLE_MS = 500L
@@ -36,6 +39,15 @@ object WakeUnlockController {
         Ln.i("$TAG: locked for test, settle ${LOCK_SETTLE_MS}ms")
         Thread.sleep(LOCK_SETTLE_MS)
         return unlock(credential)
+    }
+
+    /** 设置页自测：手势版 */
+    fun testUnlockGesture(gestureJson: String): Int {
+        val lockCode = lockAndSleep()
+        if (lockCode != WakeUnlockResult.OK) return lockCode
+        Ln.i("$TAG: locked for gesture test, settle ${LOCK_SETTLE_MS}ms")
+        Thread.sleep(LOCK_SETTLE_MS)
+        return unlockWithGesture(gestureJson)
     }
 
     /** lockNow 上锁并 goToSleep 息屏 */
@@ -66,11 +78,11 @@ object WakeUnlockController {
         return WakeUnlockResult.OK
     }
 
-    /** 亮屏并解除锁屏；@param credential 纯数字 PIN，无凭证锁屏传空串 */
-    fun unlock(credential: String): Int {
-        val pm = ServiceManager.getPowerManager()
-        val wm = ServiceManager.getWindowManager()
-
+    /**
+     * 亮屏并确认 keyguard 还在
+     * @return 非 null 即调用方应当直接返回的结果码
+     */
+    private fun wakeAndRequireKeyguard(pm: PowerManager, wm: WindowManager): Int? {
         if (!ensureScreenOn(pm)) {
             Ln.w("$TAG: screen did not turn on after wakeUp and key fallback")
             return WakeUnlockResult.WAKE_FAILED
@@ -83,9 +95,18 @@ object WakeUnlockController {
             return WakeUnlockResult.UNSUPPORTED
         }
         if (!locked) {
-            Ln.i("$TAG: keyguard not showing, nothing to dismiss")
+            Ln.i("$TAG: keyguard not showing, nothing to do")
             return WakeUnlockResult.OK
         }
+        return null
+    }
+
+    /** 亮屏并解除锁屏；@param credential 纯数字 PIN，无凭证锁屏传空串 */
+    fun unlock(credential: String): Int {
+        val pm = ServiceManager.getPowerManager()
+        val wm = ServiceManager.getWindowManager()
+
+        wakeAndRequireKeyguard(pm, wm)?.let { return it }
 
         val secure = wm.isKeyguardSecure(0) ?: false
         Ln.i("$TAG: keyguard locked, secure=$secure")
@@ -137,6 +158,54 @@ object WakeUnlockController {
             WakeUnlockResult.CREDENTIAL_REJECTED
         }
     }
+
+    /**
+     * 亮屏并回放录制的解锁手势
+     * @param gestureJson 空串表示未录制
+     */
+    fun unlockWithGesture(gestureJson: String): Int {
+        val gesture = UnlockGesture.parseOrNull(gestureJson) { Ln.w("$TAG: $it") }
+        if (gesture == null || gesture.steps.isEmpty()) {
+            Ln.w("$TAG: no usable gesture recorded")
+            return WakeUnlockResult.GESTURE_EMPTY
+        }
+
+        val pm = ServiceManager.getPowerManager()
+        val wm = ServiceManager.getWindowManager()
+
+        wakeAndRequireKeyguard(pm, wm)?.let { return it }
+
+        // 与录制一致，在 keyguard 还在时采样
+        val screen = ScreenGeometry.current()
+        if (screen.rotation != gesture.rotation) {
+            Ln.w("$TAG: rotation ${screen.rotation} != recorded ${gesture.rotation}")
+            return WakeUnlockResult.GESTURE_SCREEN_MISMATCH
+        }
+        if (screen.width != gesture.screenWidth || screen.height != gesture.screenHeight) {
+            Ln.w(
+                "$TAG: screen ${screen.width}x${screen.height} != recorded" +
+                    " ${gesture.screenWidth}x${gesture.screenHeight}, scaling"
+            )
+        }
+
+        // 录制起点就是亮屏后的锁屏首屏，这里不能再 dismissKeyguard 打乱状态
+        Thread.sleep(GESTURE_SETTLE_MS)
+        val actions = UnlockGestureReplay.timeline(gesture, screen.width, screen.height)
+        Ln.i("$TAG: replaying ${gesture.steps.size} steps / ${actions.size} actions")
+        UnlockGestureReplay.execute(actions)
+
+        return if (pollUntil(KEYGUARD_GONE_TIMEOUT_MS) { wm.isKeyguardLocked() == false }) {
+            Ln.i("$TAG: unlocked (gesture accepted)")
+            WakeUnlockResult.OK
+        } else {
+            // 与 PIN 一致：不重试，避免连错触发系统锁定
+            Ln.w("$TAG: still locked after gesture replay — 轨迹失效，或 keyguard 忽略注入事件")
+            WakeUnlockResult.CREDENTIAL_REJECTED
+        }
+    }
+
+    /** 只亮屏，不碰 keyguard；录制手势时用，和回放走同一条唤醒路径 */
+    fun wakeScreen(): Boolean = ensureScreenOn(ServiceManager.getPowerManager())
 
     private fun ensureScreenOn(pm: PowerManager): Boolean =
         ScreenPowerAttempts.run(
@@ -209,12 +278,4 @@ object WakeUnlockController {
         InputControlUtils.keyUp(keyCode, 0)
     }
 
-    private inline fun pollUntil(timeoutMs: Long, cond: () -> Boolean): Boolean {
-        val deadline = SystemClock.elapsedRealtime() + timeoutMs
-        while (SystemClock.elapsedRealtime() < deadline) {
-            if (cond()) return true
-            Thread.sleep(POLL_INTERVAL_MS)
-        }
-        return cond()
-    }
 }

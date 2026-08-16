@@ -4,9 +4,11 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.models.UnlockCredential
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.ScreenSaverController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
+import com.aliothmoon.maameow.domain.service.UnlockGestureReader
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
@@ -46,6 +48,7 @@ class LaunchPipeline(
     private val mutex: LaunchMutex,
     private val appSettingsManager: AppSettingsManager,
     private val wakeUnlockEngine: WakeUnlockEngine,
+    private val unlockGestures: UnlockGestureReader,
     private val chainState: TaskChainState,
     private val compositionService: MaaCompositionService,
     private val triggerLogger: ScheduleTriggerLogger,
@@ -165,16 +168,22 @@ class LaunchPipeline(
 
             if (request.source == LaunchSource.Schedule) {
                 val unlockType = appSettingsManager.wakeUnlockType.value
-                val pin = appSettingsManager.wakeCredential.value
-                val pinReady = unlockType == "pin" && pin.isNotBlank()
+                val credential = UnlockCredential.of(
+                    type = unlockType,
+                    pin = appSettingsManager.wakeCredential.value,
+                    gestureJson = if (unlockType == UnlockCredential.TYPE_GESTURE) {
+                        unlockGestures.readJson()
+                    } else {
+                        ""
+                    },
+                )
                 // 1. 快捷选项熄屏挂机已盖上：KEEP_SCREEN_ON，多轮定时不解、不收
-                // 2. 只有滑动：先试 unlock("")，别拿 isDeviceLocked 预跳过
-                // 3. 配了 PIN：锁屏下注入
+                // 2. 其余交给凭证自己决定注入 PIN、回放手势还是只试 dismissKeyguard，
+                //    别拿 isDeviceLocked 预跳过
                 val saverKeepScreenOn = screenSaver.isShowing()
                 if (saverKeepScreenOn) {
                     log.append(uiTextOf(R.string.schedule_log_wake_skipped_screensaver))
                 } else {
-                    val credential = if (unlockType == "pin") pin else ""
                     log.append(uiTextOf(R.string.schedule_log_wake_start))
                     val wake = wakeUnlockEngine.unlock(credential)
                     if (wake.isSuccess) {
@@ -183,7 +192,7 @@ class LaunchPipeline(
                         log.append(uiTextOf(R.string.schedule_log_wake_failed, wake.message))
                         if (keyguardLocked()) {
                             terminalResult = ExecutionResult.SKIPPED_LOCKED
-                            terminalMessage = if (deviceLocked() && !pinReady) {
+                            terminalMessage = if (deviceLocked() && !credential.isReady) {
                                 uiTextOf(R.string.notification_schedule_pin_required)
                             } else {
                                 uiTextOf(R.string.notification_schedule_device_locked)
