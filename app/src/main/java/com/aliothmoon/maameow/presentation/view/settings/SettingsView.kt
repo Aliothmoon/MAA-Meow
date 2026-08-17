@@ -38,7 +38,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.rounded.Build
@@ -772,7 +771,6 @@ fun SettingsView(
                                 onRecord = { viewModel.startGestureRecord() },
                                 onCancelRecord = { viewModel.cancelGestureRecord() },
                                 onClear = { viewModel.clearGesture() },
-                                onDeleteStep = { viewModel.deleteGestureStep(it) },
                                 onTest = { viewModel.runWakeTest() },
                             )
                         }
@@ -1189,7 +1187,6 @@ private fun SettingWakeGestureSection(
     onRecord: () -> Unit,
     onCancelRecord: () -> Unit,
     onClear: () -> Unit,
-    onDeleteStep: (Int) -> Unit,
     onTest: () -> Unit,
 ) {
     val recording = recordState is SettingsViewModel.GestureRecordState.Preparing ||
@@ -1227,13 +1224,7 @@ private fun SettingWakeGestureSection(
                 },
             ) {
                 gesture.steps.forEachIndexed { index, step ->
-                    GestureStepRow(
-                        index = index,
-                        step = step,
-                        contentColor = contentColor,
-                        enabled = !recording,
-                        onDelete = { onDeleteStep(index) },
-                    )
+                    GestureStepRow(index = index, step = step, contentColor = contentColor)
                 }
             }
         }
@@ -1321,8 +1312,6 @@ private fun GestureStepRow(
     index: Int,
     step: UnlockStep,
     contentColor: Color,
-    enabled: Boolean,
-    onDelete: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -1350,13 +1339,6 @@ private fun GestureStepRow(
                     color = contentColor.copy(alpha = 0.6f),
                 )
             }
-        }
-        IconButton(onClick = onDelete, enabled = enabled) {
-            Icon(
-                imageVector = Icons.Filled.Delete,
-                contentDescription = stringResource(R.string.settings_wake_gesture_step_delete),
-                tint = contentColor.copy(alpha = 0.7f),
-            )
         }
     }
 }

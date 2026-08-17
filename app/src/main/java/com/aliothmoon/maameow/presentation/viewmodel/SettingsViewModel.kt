@@ -24,7 +24,6 @@ import com.aliothmoon.maameow.domain.models.GestureRecordStatus
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.UnlockGesture
 import com.aliothmoon.maameow.domain.models.UnlockCredential
-import com.aliothmoon.maameow.domain.models.withoutDelay
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
@@ -338,21 +337,6 @@ class SettingsViewModel(
 
     fun clearGesture() {
         viewModelScope.launch { unlockGestureStore.clear() }
-    }
-
-    fun deleteGestureStep(index: Int) {
-        val gesture = unlockGestureStore.gesture.value ?: return
-        if (index !in gesture.steps.indices) return
-        viewModelScope.launch {
-            val steps = gesture.steps.toMutableList().apply { removeAt(index) }
-            if (steps.isEmpty()) {
-                unlockGestureStore.clear()
-                return@launch
-            }
-            // 首步不该带间隔，否则回放一开始就白等
-            steps[0] = steps[0].withoutDelay()
-            unlockGestureStore.save(gesture.copy(steps = steps))
-        }
     }
 
     private suspend fun awaitRecordResult() {

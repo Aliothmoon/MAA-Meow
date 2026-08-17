@@ -2146,6 +2146,5 @@
     <string name="settings_wake_gesture_step_long_press">Long press (%1$d, %2$d) %3$d ms</string>
     <string name="settings_wake_gesture_step_swipe">Swipe (%1$d, %2$d) → (%3$d, %4$d) %5$d ms</string>
     <string name="settings_wake_gesture_step_delay">Wait %1$d ms</string>
-    <string name="settings_wake_gesture_step_delete">Delete this step</string>
     <string name="settings_wake_gesture_test_hint">Locks first, then replays the recorded gesture after ~1s</string>
 </resources>

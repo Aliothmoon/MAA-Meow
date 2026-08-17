@@ -78,10 +78,3 @@ sealed interface UnlockStep {
         override val delayBeforeMs: Int = 0,
     ) : UnlockStep
 }
-
-/** 删掉某一步之后，新首步不该再带间隔 */
-fun UnlockStep.withoutDelay(): UnlockStep = when (this) {
-    is UnlockStep.Tap -> copy(delayBeforeMs = 0)
-    is UnlockStep.LongPress -> copy(delayBeforeMs = 0)
-    is UnlockStep.Swipe -> copy(delayBeforeMs = 0)
-}
