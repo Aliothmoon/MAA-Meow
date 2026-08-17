@@ -230,13 +230,6 @@ data class FightConfig(
      */
     val customInfrastPlanShowInFightSettings: Boolean = false,
 
-    /**
-     * 游戏掉线时自动重连
-     *
-     * 默认值: true（WPF 第806行）
-     */
-    val autoRestartOnDrop: Boolean = true,
-
     // ============ 高级设置 - 周计划 ============
 
     /**

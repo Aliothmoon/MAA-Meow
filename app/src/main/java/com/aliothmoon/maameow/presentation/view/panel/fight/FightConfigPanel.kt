@@ -334,15 +334,6 @@ fun FightConfigPanel(
                             )
                         }
                         item {
-                            // 游戏掉线时自动重连
-                            CheckBoxWithExpandableTip(
-                                checked = config.autoRestartOnDrop,
-                                onCheckedChange = { onConfigChange(config.copy(autoRestartOnDrop = it)) },
-                                label = stringResource(R.string.panel_fight_auto_restart_on_drop),
-                                tipText = stringResource(R.string.panel_fight_auto_restart_on_drop_tip)
-                            )
-                        }
-                        item {
                             WeeklyScheduleSection(config, onConfigChange)
                         }
                     }

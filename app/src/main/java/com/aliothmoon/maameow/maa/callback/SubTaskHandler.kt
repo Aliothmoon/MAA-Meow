@@ -22,6 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import org.koin.java.KoinJavaComponent.inject
 import timber.log.Timber
 import java.util.Locale
 
@@ -44,6 +45,10 @@ class SubTaskHandler(
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val resources = applicationContext.resources
     private val packageName = applicationContext.packageName
+
+    // 懒取：实现方 MaaCompositionService 反过来依赖本类，构造注入会成环
+    private val executionStateHolder: MaaExecutionStateHolder
+            by inject(MaaExecutionStateHolder::class.java)
 
     // 战斗进度临时暂存（FightTimes/SanityBeforeStage 先于 StartButton2/AnnihilationConfirm 到达）
     private data class PendingFightState(
@@ -302,8 +307,13 @@ class SubTaskHandler(
                 }
             }
 
-            "OfflineConfirm" -> {
-                append(str("GameDrop"), LogLevel.WARNING)
+            // 上游移除掉线重连后 core 检测到掉线弹窗即 Stop 当前任务链，
+            // 队列剩余任务要在这里一起中止
+            "OfflineConfirm", "OfflineConfirmAfterBattle" -> {
+                val message = str("GameDrop")
+                append(message, LogLevel.WARNING)
+                notificationCenter.notifySubTaskFailure(message)
+                executionStateHolder.requestStopFromCallback()
             }
 
             "GamePass" -> {

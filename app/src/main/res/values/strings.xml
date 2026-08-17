@@ -69,8 +69,7 @@
     <string name="maa_emergency_ops">关卡: 紧急作战</string>
     <string name="maa_dreadful_foe">关卡: 险路恶敌</string>
     <string name="maa_upper_limit">投资达到上限</string>
-    <string name="maa_game_drop">游戏掉线，重新连接</string>
-    <string name="maa_game_drop_no_restart">游戏掉线，不重新连接，停止任务</string>
+    <string name="maa_game_drop">游戏掉线，停止任务</string>
     <string name="maa_roguelike_game_pass">肉鸽通关啦！</string>
     <string name="maa_roguelike_special_item_bought">购买了特殊商品！</string>
     <string name="maa_deep_exploration_not_unlocked_complain">深入调查未解锁</string>
@@ -827,8 +826,6 @@
     <string name="panel_fight_hide_unavailable_stage">隐藏不可用关卡</string>
     <string name="panel_fight_hide_unavailable_stage_tip">在关卡列表中隐藏当前不可用的关卡</string>
     <string name="panel_fight_hide_series">隐藏代理倍率</string>
-    <string name="panel_fight_auto_restart_on_drop">游戏掉线时自动重连</string>
-    <string name="panel_fight_auto_restart_on_drop_tip">检测到游戏掉线时会自动尝试重连并继续作战</string>
     <string name="panel_fight_series_title">代理倍率</string>
     <string name="panel_fight_series_tip">• AUTO:\n自动识别关卡最大代理倍率, 保持最大代理倍率且使用理智药后理智不溢出\n\n• 数值 (1~10):\n按设定倍率执行代理\n若当前理智不足完成设定倍率 (如仅够 5 次但设为 6 倍), 则无法进入战斗\n或者\n战斗次数不足完成设定倍率 (如仅够 5 次但设为 6 倍), 也将无法进入战斗\n\n• 不切换:\n不调整游戏内代理倍率设定</string>
     <string name="panel_fight_series_no_switch">不切换</string>

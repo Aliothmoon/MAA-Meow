@@ -51,6 +51,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.koin.java.KoinJavaComponent.inject
 import timber.log.Timber
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 class MaaCompositionService(
@@ -88,6 +89,26 @@ class MaaCompositionService(
         setRunState(state)
     }
 
+    override fun requestStopFromCallback() {
+        val current = _state.value
+        if (current != MaaExecutionState.RUNNING && current != MaaExecutionState.STARTING) {
+            Timber.d("忽略回调侧停止请求：当前状态 $current")
+            return
+        }
+        // 掉线弹窗会连着触发 OfflineConfirm 与 OfflineConfirmAfterBattle，去重后只停一次
+        if (!callbackStopRequested.compareAndSet(false, true)) {
+            Timber.d("回调侧停止请求已在处理中")
+            return
+        }
+        scope.launch {
+            try {
+                stop()
+            } finally {
+                callbackStopRequested.set(false)
+            }
+        }
+    }
+
     private fun setRunState(state: MaaExecutionState) {
         _state.value = state
         // 仅在 STARTING 拉起前台服务；终态不做外部 stopService —
@@ -104,6 +125,9 @@ class MaaCompositionService(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val connectDeferred = AtomicReference<CompletableDeferred<Boolean>?>()
+
+    /** 回调侧停止请求的去重闸门 */
+    private val callbackStopRequested = AtomicBoolean(false)
 
     sealed class StartResult {
         data class Success(val version: String) : StartResult()

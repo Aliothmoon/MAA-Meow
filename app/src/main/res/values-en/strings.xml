@@ -539,8 +539,7 @@
     <string name="maa_emergency_ops">Stage: Emergency Operation</string>
     <string name="maa_dreadful_foe">Stage: Dreadful Foe</string>
     <string name="maa_upper_limit">Investment limit reached</string>
-    <string name="maa_game_drop">Game disconnected, pending reconnect</string>
-    <string name="maa_game_drop_no_restart">Game disconnected, not restarting, stopping</string>
+    <string name="maa_game_drop">Game disconnected, stopping tasks</string>
     <string name="maa_roguelike_game_pass">Exploration completed! Congratulations!</string>
     <string name="maa_roguelike_special_item_bought">Special Item Purchased!</string>
     <string name="maa_deep_exploration_not_unlocked_complain">Deep Investigation not unlocked yet</string>
@@ -773,8 +772,6 @@
     <string name="panel_fight_hide_unavailable_stage">Hide today not-open stages</string>
     <string name="panel_fight_hide_unavailable_stage_tip">Hide stages that are currently unavailable from the stage list.</string>
     <string name="panel_fight_hide_series">Hide series</string>
-    <string name="panel_fight_auto_restart_on_drop">Restart when game disconnects</string>
-    <string name="panel_fight_auto_restart_on_drop_tip">When the game disconnects, MAA will try to reconnect automatically and continue the battle.</string>
     <string name="panel_fight_series_title">Series</string>
     <string name="panel_fight_series_tip">• AUTO:\nAutomatically identify the maximum proxy multiplier of the level, maintain the maximum proxy multiplier and do not overflow sanity after using sanity potion\n\n• Value (1~10):\nExecute proxy according to the set multiplier\nIf the current sanity is not enough to complete the set multiplier (such as only enough for 5 times but set to 6 times), you cannot enter the battle\nOr\nIf the number of battles is not enough to complete the set multiplier (such as only enough for 5 times but set to 6 times), you will not be able to enter the battle\n\n• Do not switch:\nDo not adjust the proxy multiplier setting in the game</string>
     <string name="panel_fight_series_no_switch">Don\'t Switch</string>
