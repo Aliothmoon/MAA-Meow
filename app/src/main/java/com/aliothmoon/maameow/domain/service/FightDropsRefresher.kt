@@ -2,7 +2,7 @@ package com.aliothmoon.maameow.domain.service
 
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.resource.ItemHelper
-import com.aliothmoon.maameow.data.resource.StageApCostRepository
+import com.aliothmoon.maameow.data.resource.StageApCostHelper
 import com.aliothmoon.maameow.domain.models.DropTarget
 import com.aliothmoon.maameow.maa.callback.SubTaskHandler
 import com.aliothmoon.maameow.maa.task.TaskSlot
@@ -18,7 +18,7 @@ import kotlin.math.ceil
 class FightDropsRefresher(
     private val depotRepository: DepotRepository,
     private val itemHelper: ItemHelper,
-    private val stageApCostRepository: StageApCostRepository,
+    private val stageApCostHelper: StageApCostHelper,
     private val subTaskHandler: SubTaskHandler,
 ) {
     private val targets = ConcurrentHashMap<TaskSlot, DropTarget>()
@@ -50,7 +50,7 @@ class FightDropsRefresher(
         provenExhaustedMedicineDays = 0
     }
 
-    /** 目标库存任务正常结束却没达标 → 记下它的临期药窗口已耗尽。 */
+    /** 目标库存任务正常结束却没达标 → 记下它的临期药窗口已耗尽 */
     fun onTaskCompleted(taskId: Int) {
         val slot = registry[taskId] ?: return
         val t = targets[slot] ?: return
@@ -65,15 +65,15 @@ class FightDropsRefresher(
     }
 
     /**
-     * 理智不足且没有药剂/源石预算、临期药窗口也已证明耗尽时，本任务不必再进图。
+     * 理智不足且没有药剂/源石预算、临期药窗口也已证明耗尽时，本任务不必再进图
      *
-     * 自然回复按 6 分钟 1 点向上取整估算并封顶，估高不估低，长队列后也不会误跳。
+     * 自然回复按 6 分钟 1 点向上取整估算并封顶，估高不估低，长队列后也不会误跳
      */
     private fun estimateSkipForSanity(t: DropTarget): SanityShortfall? {
         if (t.medicine > 0 || t.stone > 0) return null
         if ((t.medicineExpireDays ?: 0) > provenExhaustedMedicineDays) return null
         val snapshot = subTaskHandler.lastSanitySnapshot ?: return null
-        val apCost = stageApCostRepository.getApCost(t.stage) ?: run {
+        val apCost = stageApCostHelper.getApCost(t.stage) ?: run {
             Timber.i("关卡 %s 无理智消耗数据，跳过理智判定", t.stage)
             return null
         }

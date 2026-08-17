@@ -187,8 +187,11 @@ object UiUsageConstants {
             "远程战术分队", "破坏战术分队"
         )
 
-        // 高规格分队黑流树海没有，其余主题追加在通用分队之后
+        // 高规格分队只有这些主题有，追加在通用分队之后
+        // 用白名单而非「排除黑流树海」，新主题默认不给，与上游一致
         private const val SQUAD_FIRST_CLASS = "高规格分队"
+        private val FIRST_CLASS_SQUAD_THEMES =
+            setOf("Phantom", "Mizuki", "Sami", "Sarkaz", "JieGarden")
 
         // 各主题专属分队
         // WPF: _squadDictionary (lines 168-230)
@@ -261,10 +264,10 @@ object UiUsageConstants {
             theme: String,
             mode: RoguelikeMode = RoguelikeMode.Exp
         ): List<String> {
-            val commonSquads = if (theme == THEME_BLACK_FLOW) {
-                COMMON_SQUADS
-            } else {
+            val commonSquads = if (theme in FIRST_CLASS_SQUAD_THEMES) {
                 COMMON_SQUADS + SQUAD_FIRST_CLASS
+            } else {
+                COMMON_SQUADS
             }
             if (theme == "Sarkaz" && mode == RoguelikeMode.Investment) {
                 return SARKAZ_INVESTMENT_SQUADS + commonSquads

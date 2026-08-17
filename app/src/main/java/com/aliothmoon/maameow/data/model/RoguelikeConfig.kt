@@ -184,9 +184,12 @@ data class RoguelikeConfig(
                 }
 
                 RoguelikeMode.BlackFlowBabyAnimal -> {
-                    // 其余模式不发 blackflow_strategy，core 按 mode + investment_enabled 自行推导
-                    put("blackflow_strategy", "baby_animal")
-                    put("blackflow_cultivation_target", blackFlowCultivationTarget.value)
+                    // 对齐 WPF AsstRoguelikeTask:218，主题与模式都对上才发；
+                    // 其余情况 core 按 mode + investment_enabled 自行推导 strategy
+                    if (theme == UiUsageConstants.Roguelike.THEME_BLACK_FLOW) {
+                        put("blackflow_strategy", "baby_animal")
+                        put("blackflow_cultivation_target", blackFlowCultivationTarget.value)
+                    }
                 }
             }
 

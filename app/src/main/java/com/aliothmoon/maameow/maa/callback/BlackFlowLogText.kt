@@ -103,7 +103,6 @@ object BlackFlowLogText {
         "burn_completed" -> R.string.blackflow_outcome_floor3_route_completed
         "baby_cultivation_completed" -> R.string.blackflow_outcome_baby_cultivation_completed
         "baby_cultivation_target_missed" -> R.string.blackflow_outcome_baby_cultivation_target_missed
-        "baby_no_seed" -> R.string.blackflow_outcome_baby_no_seed
         "ending_prerequisite_failed" -> R.string.blackflow_outcome_ending_prerequisite_failed
         "strategy_completed" -> R.string.blackflow_outcome_strategy_completed
         "page_recovery_failed" -> R.string.blackflow_outcome_page_recovery_failed

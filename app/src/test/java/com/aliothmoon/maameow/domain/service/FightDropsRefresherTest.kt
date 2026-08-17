@@ -5,7 +5,7 @@ import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemInfo
-import com.aliothmoon.maameow.data.resource.StageApCostRepository
+import com.aliothmoon.maameow.data.resource.StageApCostHelper
 import com.aliothmoon.maameow.domain.models.DropTarget
 import com.aliothmoon.maameow.maa.callback.SubTaskHandler
 import com.aliothmoon.maameow.maa.task.TaskSlot
@@ -36,7 +36,7 @@ class FightDropsRefresherTest {
 
     private val depotRepository: DepotRepository = mockk()
     private val itemHelper: ItemHelper = mockk()
-    private val stageApCostRepository: StageApCostRepository = mockk()
+    private val stageApCostHelper: StageApCostHelper = mockk()
     private val subTaskHandler: SubTaskHandler = mockk()
     private val remoteService: RemoteService = mockk()
     private val maaCore: MaaCoreService = mockk()
@@ -60,12 +60,12 @@ class FightDropsRefresherTest {
 
         // 默认无理智快照 → 理智判定整体关闭，老用例行为不变
         every { subTaskHandler.lastSanitySnapshot } returns null
-        every { stageApCostRepository.getApCost(any()) } returns null
+        every { stageApCostHelper.getApCost(any()) } returns null
 
         refresher = FightDropsRefresher(
             depotRepository,
             itemHelper,
-            stageApCostRepository,
+            stageApCostHelper,
             subTaskHandler,
         )
         lastParamsJson = null
@@ -295,7 +295,7 @@ class FightDropsRefresherTest {
 
     @Test
     fun sanityBelowApCost_skipsWholeTask() {
-        every { stageApCostRepository.getApCost(STAGE) } returns 21
+        every { stageApCostHelper.getApCost(STAGE) } returns 21
         sanity(current = 10)
         stageAndBind(1, budgetlessTarget())
         withInventory(mapOf(ITEM to 0))
@@ -313,7 +313,7 @@ class FightDropsRefresherTest {
 
     @Test
     fun sanityAboveApCost_runsNormally() {
-        every { stageApCostRepository.getApCost(STAGE) } returns 21
+        every { stageApCostHelper.getApCost(STAGE) } returns 21
         sanity(current = 30)
         stageAndBind(1, budgetlessTarget())
         withInventory(mapOf(ITEM to 0))
@@ -323,7 +323,7 @@ class FightDropsRefresherTest {
 
     @Test
     fun naturalRegenIsEstimated_sixMinutesPerPoint() {
-        every { stageApCostRepository.getApCost(STAGE) } returns 21
+        every { stageApCostHelper.getApCost(STAGE) } returns 21
         // 10 点 + 120 分钟 ≈ 30 点，够打
         sanity(current = 10, reportedMinutesAgo = 120)
         stageAndBind(1, budgetlessTarget())
@@ -334,7 +334,7 @@ class FightDropsRefresherTest {
 
     @Test
     fun regenIsCappedAtMax() {
-        every { stageApCostRepository.getApCost(STAGE) } returns 200
+        every { stageApCostHelper.getApCost(STAGE) } returns 200
         sanity(current = 10, max = 135, reportedMinutesAgo = 100_000)
         stageAndBind(1, budgetlessTarget())
         withInventory(mapOf(ITEM to 0))
@@ -349,7 +349,7 @@ class FightDropsRefresherTest {
 
     @Test
     fun medicineBudget_disablesSanitySkip() {
-        every { stageApCostRepository.getApCost(STAGE) } returns 21
+        every { stageApCostHelper.getApCost(STAGE) } returns 21
         sanity(current = 0)
         stageAndBind(1, target(dropCount = 100, medicine = 3, stone = 0))
         withInventory(mapOf(ITEM to 0))
@@ -359,7 +359,7 @@ class FightDropsRefresherTest {
 
     @Test
     fun unknownApCost_disablesSanitySkip() {
-        every { stageApCostRepository.getApCost(STAGE) } returns null
+        every { stageApCostHelper.getApCost(STAGE) } returns null
         sanity(current = 0)
         stageAndBind(1, budgetlessTarget())
         withInventory(mapOf(ITEM to 0))
@@ -369,7 +369,7 @@ class FightDropsRefresherTest {
 
     @Test
     fun noSanitySnapshot_disablesSanitySkip() {
-        every { stageApCostRepository.getApCost(STAGE) } returns 21
+        every { stageApCostHelper.getApCost(STAGE) } returns 21
         stageAndBind(1, budgetlessTarget())
         withInventory(mapOf(ITEM to 0))
 
@@ -378,7 +378,7 @@ class FightDropsRefresherTest {
 
     @Test
     fun expiringMedicineWindow_blocksSkipUntilProvenExhausted() {
-        every { stageApCostRepository.getApCost(STAGE) } returns 21
+        every { stageApCostHelper.getApCost(STAGE) } returns 21
         sanity(current = 0)
         withInventory(mapOf(ITEM to 0))
 
@@ -397,7 +397,7 @@ class FightDropsRefresherTest {
 
     @Test
     fun completedTaskReachingTarget_doesNotProveExhaustion() {
-        every { stageApCostRepository.getApCost(STAGE) } returns 21
+        every { stageApCostHelper.getApCost(STAGE) } returns 21
         sanity(current = 0)
         stageAndBind(1, budgetlessTarget(expireDays = 2))
 
@@ -411,7 +411,7 @@ class FightDropsRefresherTest {
 
     @Test
     fun clear_resetsProvenExhaustedWindow() {
-        every { stageApCostRepository.getApCost(STAGE) } returns 21
+        every { stageApCostHelper.getApCost(STAGE) } returns 21
         sanity(current = 0)
         withInventory(mapOf(ITEM to 0))
         stageAndBind(1, budgetlessTarget(expireDays = 2))

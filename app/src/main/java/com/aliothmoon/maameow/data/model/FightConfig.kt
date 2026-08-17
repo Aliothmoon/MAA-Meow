@@ -333,7 +333,7 @@ data class FightConfig(
             null
         }
 
-        // 目标库存：未识别 skip；need≤0 直接不 append，省掉一次空任务往返。
+        // 目标库存：未识别 skip；need≤0 直接不 append，省掉一次空任务往返
         // times 双轨（预期）：append 用 actualTimes 兜底；Start 刷新改 MAX + drops 收束。
         val need = if (isSpecifiedDrops && isInventoryTarget && dropsItemId.isNotBlank()) {
             if (ctx.depotRepository.snapshot.value.syncTimeMillis <= 0L) {

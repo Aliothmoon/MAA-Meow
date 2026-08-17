@@ -73,7 +73,12 @@ class HttpClientHelper(
     ): Response {
         val contentTypeEntry = headers.entries
             .firstOrNull { it.key.equals(CONTENT_TYPE, ignoreCase = true) }
-        val mediaType = contentTypeEntry?.value?.toMediaTypeOrNull() ?: JSON_MEDIA_TYPE
+        val mediaType = contentTypeEntry?.value?.toMediaTypeOrNull()
+            ?: JSON_MEDIA_TYPE.also {
+                if (contentTypeEntry != null) {
+                    Timber.w("Content-Type 无法解析，按 JSON 发送: %s", contentTypeEntry.value)
+                }
+            }
         val request = Request.Builder().apply {
             val requestUrl = url.toHttpUrl().run {
                 if (query.isEmpty()) {

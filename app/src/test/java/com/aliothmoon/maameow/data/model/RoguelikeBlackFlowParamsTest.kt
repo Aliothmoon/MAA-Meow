@@ -13,9 +13,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 黑流树海（BlackFlow）主题的参数与选项契约，对齐上游 v6.17.0-beta.2。
+ * 黑流树海（BlackFlow）主题的参数与选项契约，对齐上游 v6.17.0-beta.2
  *
- * 其余模式不下发 blackflow_strategy —— core 会按 mode + investment_enabled 自行推导。
+ * 其余模式不下发 blackflow_strategy —— core 会按 mode + investment_enabled 自行推导
  */
 class RoguelikeBlackFlowParamsTest {
 
@@ -44,6 +44,16 @@ class RoguelikeBlackFlowParamsTest {
     @Test
     fun otherModes_omitStrategy() {
         val json = params(RoguelikeConfig(theme = THEME, mode = RoguelikeMode.Exp))
+        assertNull(json["blackflow_strategy"])
+        assertNull(json["blackflow_cultivation_target"])
+    }
+
+    @Test
+    fun babyAnimalMode_onOtherTheme_omitsStrategy() {
+        // 主题与模式都对上才发，对齐 WPF AsstRoguelikeTask
+        val json = params(
+            RoguelikeConfig(theme = "JieGarden", mode = RoguelikeMode.BlackFlowBabyAnimal)
+        )
         assertNull(json["blackflow_strategy"])
         assertNull(json["blackflow_cultivation_target"])
     }
@@ -96,6 +106,12 @@ class RoguelikeBlackFlowParamsTest {
         assertTrue(squads.containsAll(listOf("本源研修分队", "地质调查分队", "特勤分队")))
         // 其他主题不受影响
         assertTrue("高规格分队" in RoguelikeUi.getSquadOptionsForTheme("JieGarden"))
+    }
+
+    @Test
+    fun firstClassSquad_isWhitelisted_notBlacklisted() {
+        // 白名单：将来新主题默认拿不到高规格分队，与上游一致
+        assertFalse("高规格分队" in RoguelikeUi.getSquadOptionsForTheme("SomeFutureTheme"))
     }
 
     @Test

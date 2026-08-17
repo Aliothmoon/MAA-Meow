@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.resource
 
 import com.alibaba.fastjson2.JSON
+import com.alibaba.fastjson2.JSONObject
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import timber.log.Timber
 import java.io.File
@@ -11,7 +12,7 @@ import java.io.File
  * 变更检测依据 version.json 的 last_updated：资源合并成功才写它，
  * 文件 mtime 会随解压保留原始时间戳，不能当变更信号
  */
-class StageApCostRepository(
+class StageApCostHelper(
     private val pathConfig: MaaPathConfig,
 ) {
     private val lock = Any()
@@ -39,7 +40,7 @@ class StageApCostRepository(
         return runCatching {
             val result = HashMap<String, Int>()
             JSON.parseArray(file.readText()).forEach { item ->
-                val obj = item as? com.alibaba.fastjson2.JSONObject ?: return@forEach
+                val obj = item as? JSONObject ?: return@forEach
                 val code = obj.getString("code")
                 val apCost = obj.getIntValue("apCost", 0)
                 if (!code.isNullOrBlank() && apCost > 0) {
