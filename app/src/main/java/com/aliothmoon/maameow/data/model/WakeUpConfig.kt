@@ -42,7 +42,7 @@ data class WakeUpConfig(
      * 对应 WPF: AccountName
      * MaaCore JSON: account_name
      *
-     * Official / Bilibili / txwy 生效，其他服将忽略该字段
+     * 仅 [ACCOUNT_SWITCH_CLIENT_TYPES] 内的客户端生效，其他服将忽略该字段
      */
     val accountName: String = ""
 ) : TaskParamProvider {
@@ -58,6 +58,12 @@ data class WakeUpConfig(
             "YoStarKR",
             "txwy"
         )
+
+        /**
+         * 支持账号切换的客户端，对齐 Core AccountSwitchTask::SupportedClientType
+         * YoStarEN / YoStarJP 仍未支持
+         */
+        val ACCOUNT_SWITCH_CLIENT_TYPES = setOf("Official", "Bilibili", "txwy", "YoStarKR")
 
         /**
          * 客户端类型到服务器类型的映射
@@ -79,8 +85,7 @@ data class WakeUpConfig(
     fun getServerType(): String = getServerType(clientType)
     override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
         val normalizedAccountName = accountName.trim()
-        val canSwitchAccount =
-            clientType == "Official" || clientType == "Bilibili" || clientType == "txwy"
+        val canSwitchAccount = clientType in ACCOUNT_SWITCH_CLIENT_TYPES
         val paramsJson = buildJsonObject {
             put("client_type", clientType)
             put("start_game_enabled", startGameEnabled)

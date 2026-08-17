@@ -1059,7 +1059,7 @@
     <string name="panel_wakeup_client_yostar_kr">YoStarKR</string>
     <string name="panel_wakeup_client_txwy">txwy</string>
     <string name="panel_wakeup_account_switch">Account Switch</string>
-    <string name="panel_wakeup_account_hint">Target account to switch to. Leave blank to disable. Enter the text shown on the login screen, for example 123****4567 or 1234; partial match is supported. Only Official and Bilibili servers are supported. Login-account switching is not supported.</string>
+    <string name="panel_wakeup_account_hint">Target account to switch to. Leave blank to disable. Enter the text shown on the login screen, for example 123****4567 or 1234; partial match is supported. Traditional Chinese and YostarKR accounts are emails — enter a plain-text fragment without asterisks, such as 01@gmail. Only Official, Bilibili, Traditional Chinese and YostarKR servers are supported. Third-party login methods are not supported.</string>
     <string name="panel_wakeup_launch_game">Launch Game</string>
 
     <!-- panel: fight -->
