@@ -1,7 +1,9 @@
 package com.aliothmoon.maameow.data.model
 
+import com.aliothmoon.maameow.domain.enums.RoguelikeBlackFlowCultivationTarget
 import com.aliothmoon.maameow.domain.enums.RoguelikeBoskySubNodeType
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
+import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.data.model.TaskParamProvider
@@ -18,7 +20,7 @@ import kotlinx.serialization.json.put
 @Serializable
 data class RoguelikeConfig(
     // 基础设置
-    val theme: String = "JieGarden",  // 主题：Phantom/Mizuki/Sami/Sarkaz/JieGarden
+    val theme: String = "JieGarden",  // 主题：Phantom/Mizuki/Sami/Sarkaz/JieGarden/BlackFlow
     val difficulty: Int = Int.MAX_VALUE,  // 难度：-1=当前, MAX_VALUE=最高, 0=最低
     val mode: RoguelikeMode = RoguelikeMode.Exp,  // 策略模式
     val squad: String = "",  // 起始分队
@@ -53,6 +55,10 @@ data class RoguelikeConfig(
     val monthlySquadAutoIterate: Boolean = true,  // 月度小队自动切换
     val monthlySquadCheckComms: Boolean = true,  // 月度小队通讯
     val deepExplorationAutoIterate: Boolean = true,  // 深入调查自动切换
+
+    // 黑流树海专用
+    val blackFlowCultivationTarget: RoguelikeBlackFlowCultivationTarget =
+        RoguelikeBlackFlowCultivationTarget.Cat,  // 刷襁褓动物的目标品种
 
     // 界园专用
     val findPlaytimeTarget: RoguelikeBoskySubNodeType = RoguelikeBoskySubNodeType.Ling,  // 目标常乐节点
@@ -108,9 +114,11 @@ data class RoguelikeConfig(
                     "stop_when_investment_full",
                     stopWhenInvestmentFull && mode == RoguelikeMode.Investment
                 )
+                // WPF RoguelikeSettings:1378 黑流树海无此玩法
                 put(
                     "investment_with_more_score",
-                    investmentWithMoreScore && mode == RoguelikeMode.Investment
+                    investmentWithMoreScore && mode == RoguelikeMode.Investment &&
+                            theme != UiUsageConstants.Roguelike.THEME_BLACK_FLOW
                 )
             }
 
@@ -173,6 +181,12 @@ data class RoguelikeConfig(
 
                 RoguelikeMode.FindPlaytime -> {
                     put("find_playTime_target", findPlaytimeTarget.value)  // MaaCore 期望整数值
+                }
+
+                RoguelikeMode.BlackFlowBabyAnimal -> {
+                    // 其余模式不发 blackflow_strategy，core 按 mode + investment_enabled 自行推导
+                    put("blackflow_strategy", "baby_animal")
+                    put("blackflow_cultivation_target", blackFlowCultivationTarget.value)
                 }
             }
 

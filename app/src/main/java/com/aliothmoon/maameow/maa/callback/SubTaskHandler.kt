@@ -474,6 +474,29 @@ class SubTaskHandler(
                 }
             }
 
+            "BlackFlowStrategyStarted" -> {
+                val profile = resources.getString(
+                    BlackFlowLogText.profile(subDetails?.getString("profile"))
+                )
+                append(
+                    resources.getString(R.string.blackflow_strategy_started, profile),
+                    LogLevel.INFO,
+                )
+            }
+
+            "BlackFlowStrategyResult" -> handleBlackFlowStrategyResult(subDetails)
+            "BlackFlowRoutingDecision" -> handleBlackFlowRoutingDecision(subDetails)
+            "BlackFlowRoutingWarning" -> {
+                append(
+                    resources.getString(
+                        BlackFlowLogText.warning(subDetails?.getString("code"))
+                    ),
+                    LogLevel.WARNING,
+                )
+            }
+
+            "BlackFlowMilestoneChanged" -> handleBlackFlowMilestoneChanged(subDetails)
+
             "StageDrops" -> handleStageDrops(subDetails)
             "AccountSwitch" -> {
                 val accountName = subDetails?.getString("account_name") ?: ""
@@ -911,6 +934,72 @@ class SubTaskHandler(
                 LogLevel.TRACE,
             )
         }
+    }
+
+    // ==================== 黑流树海回调 ====================
+
+    private fun handleBlackFlowStrategyResult(subDetails: JSONObject?) {
+        val outcome = resources.getString(
+            BlackFlowLogText.outcome(subDetails?.getString("outcome"))
+        )
+        val reason = resources.getString(
+            BlackFlowLogText.terminationReason(subDetails?.getString("termination_reason"))
+        )
+        append(
+            resources.getString(R.string.blackflow_strategy_result, outcome, reason),
+            if (subDetails?.getBooleanValue("succeeded") == true) LogLevel.INFO else LogLevel.WARNING,
+        )
+    }
+
+    private fun handleBlackFlowRoutingDecision(subDetails: JSONObject?) {
+        val movement = resources.getString(
+            BlackFlowLogText.movement(subDetails?.getString("movement"))
+        )
+        // 节点有具名就用具名，没有才退回类型
+        val nodeName = subDetails?.getString("node_name")?.takeIf { it.isNotBlank() }
+            ?: resources.getString(BlackFlowLogText.nodeType(subDetails?.getString("node_type")))
+        val route = resources.getString(
+            R.string.blackflow_routing_decision,
+            subDetails?.getIntValue("floor") ?: 0,
+            subDetails?.getIntValue("action_points_before") ?: 0,
+            subDetails?.getIntValue("action_points_after") ?: 0,
+            movement,
+            nodeName,
+            subDetails?.getIntValue("safety_margin") ?: 0,
+        )
+        val category = resources.getString(
+            BlackFlowLogText.reasonCategory(subDetails?.getString("reason_category"))
+        )
+        val detail = blackFlowDecisionDetail(subDetails)
+        val reason = resources.getString(R.string.blackflow_routing_reason, category, detail)
+        append("$route\n$reason", LogLevel.INFO)
+    }
+
+    private fun blackFlowDecisionDetail(subDetails: JSONObject?): String {
+        subDetails?.getString("decisive_rule_id")?.takeIf { it.isNotBlank() }?.let { id ->
+            return BlackFlowLogText.rule(id)?.let { resources.getString(it) } ?: id
+        }
+        subDetails?.getString("decisive_milestone_id")?.takeIf { it.isNotBlank() }?.let { id ->
+            return BlackFlowLogText.milestone(id)?.let { resources.getString(it) } ?: id
+        }
+        return resources.getString(
+            BlackFlowLogText.reasonDetail(subDetails?.getString("reason_detail"))
+        )
+    }
+
+    private fun handleBlackFlowMilestoneChanged(subDetails: JSONObject?) {
+        val statusCode = subDetails?.getString("status")
+        // inactive 是纯状态位翻转，上游也不打日志
+        if (statusCode == "inactive") return
+        val id = subDetails?.getString("milestone_id").orEmpty()
+        val milestone = BlackFlowLogText.milestone(id)?.let { resources.getString(it) }
+            ?: id.takeIf { it.isNotBlank() }
+            ?: resources.getString(R.string.blackflow_milestone_unknown)
+        val status = resources.getString(BlackFlowLogText.milestoneStatus(statusCode))
+        append(
+            resources.getString(R.string.blackflow_milestone_changed, milestone, status),
+            LogLevel.INFO,
+        )
     }
 
     // ==================== 字符串资源辅助方法 ====================

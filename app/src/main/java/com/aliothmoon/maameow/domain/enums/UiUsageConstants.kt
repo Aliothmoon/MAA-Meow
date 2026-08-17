@@ -60,7 +60,9 @@ object UiUsageConstants {
      * 迁移自 RoguelikeConfig.companion / WPF RoguelikeSettingsUserControlModel
      */
     object Roguelike {
-        val THEMES = listOf("Phantom", "Mizuki", "Sami", "Sarkaz", "JieGarden")
+        val THEMES = listOf("Phantom", "Mizuki", "Sami", "Sarkaz", "JieGarden", "BlackFlow")
+
+        const val THEME_BLACK_FLOW = "BlackFlow"
 
         const val DEFAULT_SQUAD = "指挥分队"
         const val DEFAULT_ROLE = "稳扎稳打"
@@ -80,7 +82,7 @@ object UiUsageConstants {
                 DEFAULT_ROLE,
                 ROLE_OVERCOMING_WEAKNESSES,
             )
-            if (theme == "JieGarden") {
+            if (theme == "JieGarden" || theme == THEME_BLACK_FLOW) {
                 list.add(ROLE_FLEXIBLE_DEPLOYMENT)
                 list.add(ROLE_UNBREAKABLE)
             }
@@ -95,6 +97,7 @@ object UiUsageConstants {
             "Sami" -> 15
             "Sarkaz" -> 18
             "JieGarden" -> 18
+            THEME_BLACK_FLOW -> 15
             else -> 20
         }
 
@@ -143,6 +146,8 @@ object UiUsageConstants {
         fun getModeKeysForTheme(theme: String): List<String> = when (theme) {
             "Sami" -> BASE_MODES + "CLP_PDS"
             "JieGarden" -> BASE_MODES + "FindPlaytime"
+            // 黑流树海只支持这三种，不走 BASE_MODES
+            THEME_BLACK_FLOW -> listOf("Exp", "Investment", "BlackFlowBabyAnimal")
             else -> BASE_MODES
         }
 
@@ -179,9 +184,11 @@ object UiUsageConstants {
         private val COMMON_SQUADS = listOf(
             "指挥分队", "后勤分队",
             "突击战术分队", "堡垒战术分队",
-            "远程战术分队", "破坏战术分队",
-            "高规格分队"
+            "远程战术分队", "破坏战术分队"
         )
+
+        // 高规格分队黑流树海没有，其余主题追加在通用分队之后
+        private const val SQUAD_FIRST_CLASS = "高规格分队"
 
         // 各主题专属分队
         // WPF: _squadDictionary (lines 168-230)
@@ -228,6 +235,17 @@ object UiUsageConstants {
                 "代理人分队",
                 "知学分队",
                 "商贾分队"
+            ),
+            THEME_BLACK_FLOW to listOf(
+                "特勤分队",
+                "矛头分队",
+                "高台突破分队",
+                "地面突破分队",
+                "本源研修分队",
+                "文明开化分队",
+                "开拓者分队",
+                "多边贸易分队",
+                "地质调查分队"
             )
         )
 
@@ -243,11 +261,20 @@ object UiUsageConstants {
             theme: String,
             mode: RoguelikeMode = RoguelikeMode.Exp
         ): List<String> {
+            val commonSquads = if (theme == THEME_BLACK_FLOW) {
+                COMMON_SQUADS
+            } else {
+                COMMON_SQUADS + SQUAD_FIRST_CLASS
+            }
             if (theme == "Sarkaz" && mode == RoguelikeMode.Investment) {
-                return SARKAZ_INVESTMENT_SQUADS + COMMON_SQUADS
+                return SARKAZ_INVESTMENT_SQUADS + commonSquads
             }
             val themeSquads = THEME_SQUADS[theme] ?: emptyList()
-            return themeSquads + COMMON_SQUADS
+            return themeSquads + commonSquads
         }
+
+        /** 刷襁褓动物模式的可选目标品种 */
+        val BLACK_FLOW_CULTIVATION_TARGETS: List<RoguelikeBlackFlowCultivationTarget> =
+            RoguelikeBlackFlowCultivationTarget.entries
     }
 }

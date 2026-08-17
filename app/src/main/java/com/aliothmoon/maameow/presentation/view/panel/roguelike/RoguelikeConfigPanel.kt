@@ -208,7 +208,7 @@ private fun BasicRoguelikeSettings(
             )
 
             // 模式说明 - 紧跟在策略按钮组下方
-            val modeDescription = localizedRoguelikeModeDescription(config.mode)
+            val modeDescription = localizedRoguelikeModeDescription(config.mode, config.theme)
             if (modeDescription.isNotEmpty()) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),

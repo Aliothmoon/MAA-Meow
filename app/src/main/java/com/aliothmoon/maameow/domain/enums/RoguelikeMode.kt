@@ -23,5 +23,8 @@ enum class RoguelikeMode(val value: Int) {
     Exploration(7),
 
     /** 刷常乐节点 */
-    FindPlaytime(20001);
+    FindPlaytime(20001),
+
+    /** 黑流树海：刷襁褓动物 */
+    BlackFlowBabyAnimal(30001);
 }

@@ -12,6 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
+import com.aliothmoon.maameow.domain.enums.RoguelikeBlackFlowCultivationTarget
 import com.aliothmoon.maameow.domain.enums.RoguelikeBoskySubNodeType
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
@@ -178,6 +179,22 @@ fun ModeSpecificSettings(
                 label = stringResource(R.string.panel_roguelike_collapse_list),
                 placeholder = stringResource(R.string.panel_roguelike_collapse_list_placeholder),
                 modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        RoguelikeMode.BlackFlowBabyAnimal -> {
+            RoguelikeButtonGroup(
+                label = stringResource(R.string.panel_roguelike_blackflow_cultivation_target),
+                selectedValue = config.blackFlowCultivationTarget.name,
+                options = localizedRoguelikeCultivationTargetOptions(),
+                onValueChange = {
+                    onConfigChange(
+                        config.copy(
+                            blackFlowCultivationTarget =
+                                RoguelikeBlackFlowCultivationTarget.valueOf(it)
+                        )
+                    )
+                }
             )
         }
 

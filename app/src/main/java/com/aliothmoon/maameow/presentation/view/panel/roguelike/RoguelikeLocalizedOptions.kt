@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.presentation.view.panel.roguelike
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.domain.enums.RoguelikeBlackFlowCultivationTarget
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants.Roguelike as RoguelikeUi
 
@@ -17,16 +18,48 @@ fun localizedRoguelikeModeOptionsForTheme(theme: String): List<Pair<String, Stri
 }
 
 @Composable
-fun localizedRoguelikeModeDescription(mode: RoguelikeMode): String {
+fun localizedRoguelikeModeDescription(mode: RoguelikeMode, theme: String): String {
+    val isBlackFlow = theme == RoguelikeUi.THEME_BLACK_FLOW
     return when (mode) {
-        RoguelikeMode.Exp -> stringResource(R.string.panel_roguelike_mode_desc_exp)
+        // 黑流树海刷等级是飞三层，跟其他主题的稳扎稳打不是一回事
+        RoguelikeMode.Exp -> if (isBlackFlow) {
+            stringResource(R.string.panel_roguelike_mode_desc_exp_blackflow)
+        } else {
+            stringResource(R.string.panel_roguelike_mode_desc_exp)
+        }
+
         RoguelikeMode.Investment -> stringResource(R.string.panel_roguelike_mode_desc_investment)
         RoguelikeMode.Collectible -> stringResource(R.string.panel_roguelike_mode_desc_collectible)
         RoguelikeMode.Squad -> stringResource(R.string.panel_roguelike_mode_desc_squad)
         RoguelikeMode.Exploration -> stringResource(R.string.panel_roguelike_mode_desc_exploration)
         RoguelikeMode.CLP_PDS -> stringResource(R.string.panel_roguelike_mode_desc_clp_pds)
         RoguelikeMode.FindPlaytime -> stringResource(R.string.panel_roguelike_mode_desc_find_playtime)
+        RoguelikeMode.BlackFlowBabyAnimal ->
+            stringResource(R.string.panel_roguelike_mode_desc_blackflow_baby_animal)
     }
+}
+
+@Composable
+fun localizedRoguelikeCultivationTargetOptions(): List<Pair<String, String>> =
+    RoguelikeUi.BLACK_FLOW_CULTIVATION_TARGETS.map {
+        it.name to localizedRoguelikeCultivationTargetLabel(it)
+    }
+
+@Composable
+private fun localizedRoguelikeCultivationTargetLabel(
+    target: RoguelikeBlackFlowCultivationTarget
+): String = when (target) {
+    RoguelikeBlackFlowCultivationTarget.Cat ->
+        stringResource(R.string.panel_roguelike_blackflow_target_cat)
+
+    RoguelikeBlackFlowCultivationTarget.FeatheredSerpent ->
+        stringResource(R.string.panel_roguelike_blackflow_target_feathered_serpent)
+
+    RoguelikeBlackFlowCultivationTarget.Dog ->
+        stringResource(R.string.panel_roguelike_blackflow_target_dog)
+
+    RoguelikeBlackFlowCultivationTarget.Cerberus ->
+        stringResource(R.string.panel_roguelike_blackflow_target_cerberus)
 }
 
 @Composable
@@ -70,6 +103,7 @@ private fun localizedRoguelikeThemeLabel(theme: String): String {
         "Sami" -> stringResource(R.string.panel_roguelike_theme_sami)
         "Sarkaz" -> stringResource(R.string.panel_roguelike_theme_sarkaz)
         "JieGarden" -> stringResource(R.string.panel_roguelike_theme_jiegarden)
+        RoguelikeUi.THEME_BLACK_FLOW -> stringResource(R.string.panel_roguelike_theme_blackflow)
         else -> theme
     }
 }
@@ -84,6 +118,8 @@ private fun localizedRoguelikeModeLabel(modeKey: String): String {
         "Exploration" -> stringResource(R.string.panel_roguelike_mode_exploration)
         "CLP_PDS" -> stringResource(R.string.panel_roguelike_mode_clp_pds)
         "FindPlaytime" -> stringResource(R.string.panel_roguelike_mode_find_playtime)
+        "BlackFlowBabyAnimal" ->
+            stringResource(R.string.panel_roguelike_mode_blackflow_baby_animal)
         else -> modeKey
     }
 }
@@ -167,6 +203,11 @@ private fun localizedRoguelikeSquadLabel(squad: String): String {
         "代理人分队" -> stringResource(R.string.panel_roguelike_squad_agent)
         "知学分队" -> stringResource(R.string.panel_roguelike_squad_scholarly)
         "商贾分队" -> stringResource(R.string.panel_roguelike_squad_merchant)
+        "本源研修分队" -> stringResource(R.string.panel_roguelike_squad_origin_study)
+        "文明开化分队" -> stringResource(R.string.panel_roguelike_squad_civilization)
+        "开拓者分队" -> stringResource(R.string.panel_roguelike_squad_pioneer)
+        "多边贸易分队" -> stringResource(R.string.panel_roguelike_squad_multilateral_trade)
+        "地质调查分队" -> stringResource(R.string.panel_roguelike_squad_geological_survey)
         else -> squad
     }
 }
