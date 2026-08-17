@@ -49,6 +49,9 @@ data class CopilotOperatorRequirements(
  */
 @Serializable
 data class CopilotOperator(
+    /** 职业名，可选，用于区分同名干员 */
+    @SerialName("role")
+    val role: String = "",
     @SerialName("name")
     val name: String = "",
     @SerialName("skill")
@@ -79,6 +82,9 @@ data class CopilotGroup(
 data class CopilotAction(
     @SerialName("type")
     val type: String = "",
+    /** 目标职业，可选，用于区分同名干员 */
+    @SerialName("role")
+    val role: String = "",
     @SerialName("name")
     val name: String = "",
     @SerialName("location")
@@ -95,8 +101,9 @@ data class CopilotAction(
     val preDelay: Int = 0,
     @SerialName("rear_delay")
     val rearDelay: Int = 0,
+    /** 动作超时，仅「技能」有效。-1 不限制，0 只检查一次（原 skip_if_not_ready） */
     @SerialName("timeout")
-    val timeout: Int = 0,
+    val timeout: Int = -1,
     @SerialName("doc")
     val doc: String = "",
     @SerialName("doc_color")
