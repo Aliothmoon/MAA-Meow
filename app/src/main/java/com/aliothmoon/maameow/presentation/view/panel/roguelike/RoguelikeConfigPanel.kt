@@ -248,7 +248,8 @@ private fun BasicRoguelikeSettings(
             onValueChange = { onConfigChange(config.copy(coreChar = it)) },
             theme = config.theme,
             resourceDataManager = resourceDataManager,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            themeTip = localizedRoguelikeThemeTip(config.theme)
         )
     }
 }

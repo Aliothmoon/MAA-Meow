@@ -1310,6 +1310,8 @@
     <string name="panel_roguelike_theme_sarkaz">萨卡兹</string>
     <string name="panel_roguelike_theme_jiegarden">界园</string>
     <string name="panel_roguelike_theme_blackflow">黑流树海</string>
+    <string name="panel_roguelike_theme_tip_recommended">←强烈推荐看</string>
+    <string name="panel_roguelike_theme_tip_blackflow">黑流树海推荐配置：\n\n开局干员：机械师（要精二）\n开局分队：｢特勤分队｣ / ｢堡垒战术分队｣\n开局职业组：｢稳扎稳打｣ / ｢坚不可摧｣\n\n1. 目前没有专用战斗策略，作战由招募评分自动决策；刷源石锭、刷等级、刷襁褓动物目前全部围绕精二机械师的飞展开。本次肉鸽机制繁多，不按上述配置开局就只能使用默认寻路与战斗，大概率失败，强烈推荐精二机械师开局（精二机械师只需通关一次 N1，相对简单）\n2. 机械师精二后，完成 ｢招募精通 II｣ ｢效果提升 II｣ 科技，开局即可携带 ｢结构性原理｣（全图任意飞 3 次）；解锁很简单，精二后累计卖出 10 个零件即可，强烈推荐。未解锁时只能向周围 8 格飞 3 次，虽然也能刷，但效率会低不少\n3. 刷等级时，机械师（要精二）+ 上述分队与职业组 + 重装券，可以快速飞完三层\n4. 没有精二机械师就不要选机械师，可以正常刷钱，但战斗大概率暴毙，其他策略待后续优化\n5. 刷等级 + 不勾选 ｢投资源石锭｣，即可跳过商店</string>
     <string name="panel_roguelike_mode_exp">刷等级</string>
     <string name="panel_roguelike_mode_investment">刷源石锭</string>
     <string name="panel_roguelike_mode_collectible">刷开局</string>

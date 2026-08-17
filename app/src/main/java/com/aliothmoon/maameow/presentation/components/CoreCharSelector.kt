@@ -30,6 +30,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
+import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -39,9 +41,13 @@ fun CoreCharSelector(
     onValueChange: (String) -> Unit,
     theme: String,
     resourceDataManager: ResourceDataManager,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** 该主题的开局配置建议，为 null 时不显示提示入口 */
+    themeTip: String? = null,
 ) {
     val coroutineScope = rememberCoroutineScope()
+
+    var tipExpanded by remember { mutableStateOf(false) }
 
     // 内部输入状态（与配置值分离，用于显示用户正在输入的内容）
     var inputText by remember(value) { mutableStateOf(value) }
@@ -138,11 +144,29 @@ fun CoreCharSelector(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = stringResource(R.string.core_char_selector_title),
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Medium
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.core_char_selector_title),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium
+                )
+                // 只有带专属开局建议的主题才显示入口
+                if (themeTip != null) {
+                    ExpandableTipIcon(
+                        expanded = tipExpanded,
+                        onExpandedChange = { tipExpanded = it }
+                    )
+                    Text(
+                        text = stringResource(R.string.panel_roguelike_theme_tip_recommended),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable { tipExpanded = !tipExpanded }
+                    )
+                }
+            }
             if (recommendedChars.isNotEmpty()) {
                 Text(
                     text = if (showSuggestions) {
@@ -160,6 +184,10 @@ fun CoreCharSelector(
                     }
                 )
             }
+        }
+
+        if (themeTip != null) {
+            ExpandableTipContent(visible = tipExpanded, tipText = themeTip)
         }
 
         // 输入框

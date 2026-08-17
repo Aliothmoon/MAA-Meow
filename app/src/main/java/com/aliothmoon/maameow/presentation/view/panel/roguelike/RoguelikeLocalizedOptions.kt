@@ -39,6 +39,15 @@ fun localizedRoguelikeModeDescription(mode: RoguelikeMode, theme: String): Strin
     }
 }
 
+/** 主题专属的开局配置建议；上游其余主题的建议尚未搬运，故只有黑流树海返回非 null */
+@Composable
+fun localizedRoguelikeThemeTip(theme: String): String? = when (theme) {
+    RoguelikeUi.THEME_BLACK_FLOW ->
+        stringResource(R.string.panel_roguelike_theme_tip_blackflow)
+
+    else -> null
+}
+
 @Composable
 fun localizedRoguelikeCultivationTargetOptions(): List<Pair<String, String>> =
     RoguelikeUi.BLACK_FLOW_CULTIVATION_TARGETS.map {
