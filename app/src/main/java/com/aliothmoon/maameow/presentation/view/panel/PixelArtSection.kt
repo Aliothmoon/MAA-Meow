@@ -40,7 +40,7 @@ import com.aliothmoon.maameow.domain.models.pixelart.PixelFitMode
 import com.aliothmoon.maameow.domain.service.pixelart.PixelPaintHelper
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import com.aliothmoon.maameow.presentation.components.SelectableCardButton
-import com.aliothmoon.maameow.presentation.viewmodel.GRID_CLICK_DELAY_MAX_MS
+import com.aliothmoon.maameow.presentation.viewmodel.GRID_DELAY_MAX_MS
 import com.aliothmoon.maameow.presentation.viewmodel.PixelArtDelegate
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.asString
@@ -182,6 +182,11 @@ fun PixelArtSection(
                     onClick = { picker.launch(IMAGE_MIME_TYPES) },
                 )
                 SelectableCardButton(
+                    text = stringResource(R.string.pixel_art_paste),
+                    enabled = !locked,
+                    onClick = delegate::onPasteText,
+                )
+                SelectableCardButton(
                     text = stringResource(R.string.pixel_art_reset_view),
                     enabled = !locked && state.plan != null,
                     onClick = delegate::onResetView,
@@ -225,15 +230,15 @@ fun PixelArtSection(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         PercentSlider(
-            label = stringResource(R.string.pixel_art_grid_click_delay),
-            value = state.gridClickDelayMs.toFloat(),
+            label = stringResource(R.string.pixel_art_grid_delay),
+            value = state.gridDelayMs.toFloat(),
             enabled = !locked,
-            range = 0f..GRID_CLICK_DELAY_MAX_MS.toFloat(),
-            onChange = { delegate.onGridClickDelayChange(it.roundToInt()) },
-            valueText = stringResource(R.string.pixel_art_grid_click_delay_value, state.gridClickDelayMs),
+            range = 0f..GRID_DELAY_MAX_MS.toFloat(),
+            onChange = { delegate.onGridDelayChange(it.roundToInt()) },
+            valueText = stringResource(R.string.pixel_art_grid_delay_value, state.gridDelayMs),
         )
         Text(
-            text = stringResource(R.string.pixel_art_grid_click_delay_tip),
+            text = stringResource(R.string.pixel_art_grid_delay_tip),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -404,6 +409,7 @@ private fun fitLabel(mode: PixelFitMode): Int = when (mode) {
 }
 
 private fun ditherLabel(mode: PixelDitherMode): Int = when (mode) {
+    PixelDitherMode.ILLUSTRATION -> R.string.pixel_art_dither_illustration
     PixelDitherMode.NONE -> R.string.pixel_art_dither_none
     PixelDitherMode.FLOYD_STEINBERG -> R.string.pixel_art_dither_fs
     PixelDitherMode.ATKINSON -> R.string.pixel_art_dither_atkinson

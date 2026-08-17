@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
+import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.ImageDecoder
 import android.net.Uri
@@ -36,14 +37,14 @@ private const val MAX_SOURCE_SIDE = 1024
 /** 取景框最小边长，对齐 WpfGui 的 0.05 下限 */
 private const val MIN_VIEW_SIDE = 0.05
 
-/** 逐格点击额外等待上限（ms），对齐 WpfGui 的 NumericUpDown 上限 */
-const val GRID_CLICK_DELAY_MAX_MS = 500
+/** 每格额外等待上限（ms），对齐 WpfGui 的 NumericUpDown 上限 */
+const val GRID_DELAY_MAX_MS = 500
 
 data class PixelArtUiState(
     val plan: PixelArtPlan? = null,
     val sourceName: String = "",
     val fit: PixelFitMode = PixelFitMode.CROP,
-    val dither: PixelDitherMode = PixelDitherMode.FLOYD_STEINBERG,
+    val dither: PixelDitherMode = PixelDitherMode.ILLUSTRATION,
     val contrastPercent: Float = 100f,
     val brightnessPercent: Float = 100f,
     val saturationPercent: Float = 100f,
@@ -51,8 +52,8 @@ data class PixelArtUiState(
     val skipWhite: Boolean = true,
     /** 拖动绘制，下发 params.pixel_paint.swipe */
     val swipeEnabled: Boolean = true,
-    /** 逐格点击的额外等待，下发 params.pixel_paint.grid_click_delay */
-    val gridClickDelayMs: Int = 0,
+    /** 每格额外等待，下发 params.pixel_paint.grid_delay；点击后 sleep，拖动时长按格累加 */
+    val gridDelayMs: Int = 0,
     /** 取景框，相对去边后的内容图 */
     val view: NormalizedRect = NormalizedRect(),
     val statusMessage: UiText = UiText.Empty,
@@ -101,14 +102,48 @@ class PixelArtDelegate(
                 _state.update { it.copy(statusMessage = uiTextOf(R.string.pixel_art_status_decode_failed)) }
                 return@launch
             }
-            preparedCache = null
-            rawSource = decoded
-            // 换图后旧取景没有意义
-            _state.update {
-                it.copy(sourceName = displayName, view = NormalizedRect(), statusMessage = UiText.Empty)
-            }
-            reconvert()
+            applySource(decoded, displayName)
         }
+    }
+
+    /**
+     * 粘贴剪贴板文字，栅格化成 24×24 点阵当原图
+     * 只收纯文本：图片走选图，不去猜剪贴板 URI 的 MIME
+     */
+    fun onPasteText() {
+        if (parametersLocked.value) return
+        scope.launch {
+            val text = runCatching {
+                appContext.getSystemService(ClipboardManager::class.java)
+                    ?.primaryClip
+                    ?.takeIf { it.itemCount > 0 }
+                    ?.getItemAt(0)
+                    ?.text
+                    ?.toString()
+            }.onFailure { Timber.w(it, "read clipboard failed") }.getOrNull()?.trim().orEmpty()
+
+            if (text.isEmpty()) {
+                _state.update { it.copy(statusMessage = uiTextOf(R.string.pixel_art_paste_empty)) }
+                return@launch
+            }
+
+            val rendered = withContext(Dispatchers.Default) { PixelTextRasterizer.render(text) }
+            if (rendered == null) {
+                _state.update { it.copy(statusMessage = uiTextOf(R.string.pixel_art_paste_failed)) }
+                return@launch
+            }
+            applySource(rendered, text)
+        }
+    }
+
+    private suspend fun applySource(image: PreparedImage, displayName: String) {
+        preparedCache = null
+        rawSource = image
+        // 换图后旧取景没有意义
+        _state.update {
+            it.copy(sourceName = displayName, view = NormalizedRect(), statusMessage = UiText.Empty)
+        }
+        reconvert()
     }
 
     fun onFitChange(fit: PixelFitMode) = updateOptions { it.copy(fit = fit) }
@@ -130,9 +165,9 @@ class PixelArtDelegate(
     }
 
     /** 同上，只影响下发参数 */
-    fun onGridClickDelayChange(delayMs: Int) {
+    fun onGridDelayChange(delayMs: Int) {
         if (parametersLocked.value) return
-        _state.update { it.copy(gridClickDelayMs = delayMs.coerceIn(0, GRID_CLICK_DELAY_MAX_MS)) }
+        _state.update { it.copy(gridDelayMs = delayMs.coerceIn(0, GRID_DELAY_MAX_MS)) }
     }
 
     fun onTrimChange(enabled: Boolean) = updateOptions { it.copy(trimEmptyBorder = enabled) }
@@ -173,7 +208,7 @@ class PixelArtDelegate(
                 trimEmptyBorder = defaults.trimEmptyBorder,
                 skipWhite = defaults.skipWhite,
                 swipeEnabled = defaults.swipeEnabled,
-                gridClickDelayMs = defaults.gridClickDelayMs,
+                gridDelayMs = defaults.gridDelayMs,
                 view = defaults.view,
             )
         }

@@ -51,13 +51,28 @@ class PixelPaintHelperTest {
     }
 
     @Test
-    fun `CompuPhase 距离对称且同色为零`() {
+    fun `OKLab 距离对称且同色为零`() {
         assertEquals(0.0, PixelPaintHelper.colorDistance(10, 20, 30, 10, 20, 30), 1e-9)
         assertEquals(
             PixelPaintHelper.colorDistance(10, 20, 30, 200, 100, 50),
             PixelPaintHelper.colorDistance(200, 100, 50, 10, 20, 30),
             1e-9,
         )
+    }
+
+    /**
+     * OKLab 矩阵一旦抄错，最近色会整体偏，但单看出图不容易发现
+     * 白 L=1、黑 L=0、灰阶 L 单调，这三条足以锁住 Björn 2020 的系数
+     */
+    @Test
+    fun `OKLab 明度对齐参考实现`() {
+        // 白到黑的距离即 L 轴长度，白 L=1 黑 L=0 → 距离平方为 1
+        assertEquals(1.0, PixelPaintHelper.colorDistance(255, 255, 255, 0, 0, 0), 1e-6)
+        // 灰阶 a/b 恒为 0，到黑的距离即 L²，随亮度单调递增
+        val toBlack = intArrayOf(0, 64, 128, 192, 255).map {
+            PixelPaintHelper.colorDistance(it, it, it, 0, 0, 0)
+        }
+        assertEquals(toBlack.sorted(), toBlack)
     }
 
     @Test
@@ -241,5 +256,81 @@ class PixelPaintHelperTest {
         val src = IntArray(48 * 48) { 0x00000000 }
         val plan = PixelPaintHelper.convert(src, 48, 48, options(trim = false), skipWhite = false)
         assertTrue(plan.indices.all { it == PixelPaintHelper.WHITE_COLOR_INDEX })
+    }
+
+    /**
+     * 源图恰好 24×24 视为用户已经画好的像素画：既不去边也不插值，逐像素直取
+     * 否则整幅图会被白边裁掉一圈再重采样，格子全错位
+     */
+    @Test
+    fun `24 乘 24 源图逐像素直通`() {
+        // 左上角单格红，其余纯白；若走去边流程，红格会被放大铺满整幅
+        val src = IntArray(24 * 24) { 0xFFFFFFFF.toInt() }
+        src[0] = 0xFFD32F36.toInt()
+
+        val plan = PixelPaintHelper.convert(src, 24, 24, options(trim = true), skipWhite = false)
+        assertEquals(4, plan.indexAt(0, 0))
+        assertEquals(PixelPaintHelper.WHITE_COLOR_INDEX, plan.indexAt(1, 0))
+        assertEquals(PixelPaintHelper.WHITE_COLOR_INDEX, plan.indexAt(23, 23))
+        assertEquals(1, plan.indices.count { it == 4 })
+    }
+
+    /**
+     * 插画优先靠 MRF 平滑压交界噪点，大色块必须保持整块干净，
+     * 不能像误差扩散那样在块内撒点
+     */
+    @Test
+    fun `插画优先保持色块干净`() {
+        val src = IntArray(96 * 96) { i ->
+            val x = i % 96
+            0xFF000000.toInt() or if (x < 48) 0xD32F36 else 0x273864
+        }
+        val plan = PixelPaintHelper.convert(
+            src, 96, 96,
+            options(dither = PixelDitherMode.ILLUSTRATION),
+            skipWhite = false,
+        )
+        assertEquals(2, plan.groups.size)
+        // 左半整块一色、右半整块一色，边界落在第 12 列
+        for (y in 0 until 24) {
+            for (x in 0 until 24) {
+                val expected = if (x < 12) 4 else 39
+                assertEquals("($x,$y)", expected, plan.indexAt(x, y))
+            }
+        }
+    }
+
+    /**
+     * 量化链路（OKLab 最近色 / 面积采样 / 蛇形 FS / MRF）任一处漂了，出图就和 WpfGui 对不上，
+     * 而肉眼比对两端截图很难发现小范围偏移。用固定输入的色号指纹钉住
+     */
+    @Test
+    fun `色号矩阵指纹不漂移`() {
+        // 对角渐变 + 色相扫描，覆盖色板大部分区域
+        val src = IntArray(120 * 120) { i ->
+            val x = i % 120
+            val y = i / 120
+            val r = (x * 255 / 119)
+            val g = (y * 255 / 119)
+            val b = ((x + y) * 255 / 238)
+            0xFF000000.toInt() or (r shl 16) or (g shl 8) or b
+        }
+        val fingerprints = PixelDitherMode.entries.associate { mode ->
+            val plan = PixelPaintHelper.convert(
+                src, 120, 120,
+                options(dither = mode),
+                skipWhite = false,
+            )
+            mode to plan.indices.joinToString(",").hashCode()
+        }
+        assertEquals(
+            mapOf(
+                PixelDitherMode.ILLUSTRATION to 1918502467,
+                PixelDitherMode.NONE to 1787657458,
+                PixelDitherMode.FLOYD_STEINBERG to 1787458225,
+                PixelDitherMode.ATKINSON to -1800462158,
+            ),
+            fingerprints,
+        )
     }
 }

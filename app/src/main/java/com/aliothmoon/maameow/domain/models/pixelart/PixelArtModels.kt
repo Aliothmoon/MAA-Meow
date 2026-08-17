@@ -7,10 +7,21 @@ enum class PixelFitMode {
     STRETCH,
 }
 
-/** 抖动方式，对齐 MaaWpfGui PixelPaintHelper.DitherMode */
+/**
+ * 抖动方式，对齐 MaaWpfGui PixelPaintHelper.DitherMode
+ * 顺序即下拉框展示顺序，与 WpfGui 的 PixelPaintDitherModeList 一致
+ */
 enum class PixelDitherMode {
+    /** 插画优先：medoid 代表色 + 边缘感知 MRF，保留干净色块、压交界噪点 */
+    ILLUSTRATION,
+
+    /** 不抖动：纯最近邻量化 */
     NONE,
+
+    /** Floyd-Steinberg，蛇形扫描 + 部分误差扩散，适合照片渐变 */
     FLOYD_STEINBERG,
+
+    /** Atkinson：仅扩散 6/8 误差，噪点比 FS 柔和 */
     ATKINSON,
 }
 
@@ -25,7 +36,7 @@ data class NormalizedRect(
 /** 转换参数，对齐 MaaWpfGui PixelPaintHelper.ConvertOptions */
 data class PixelConvertOptions(
     val fit: PixelFitMode = PixelFitMode.CROP,
-    val dither: PixelDitherMode = PixelDitherMode.FLOYD_STEINBERG,
+    val dither: PixelDitherMode = PixelDitherMode.ILLUSTRATION,
     /** 对比度百分比，100 为原图 */
     val contrastPercent: Double = 100.0,
     /** 亮度百分比，100 为原图 */
