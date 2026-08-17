@@ -54,7 +54,8 @@ fun CoreCharSelector(
 
     // 校验状态
     var isValid by remember { mutableStateOf(true) }
-    var showSuggestions by remember { mutableStateOf(false) }
+    // 未选过干员时默认展开推荐列表，列表按 priority 排序，首位即该主题最推荐的开局
+    var showSuggestions by remember { mutableStateOf(value.isBlank()) }
 
     // 是否正在校验（用于显示加载状态）
     var isValidating by remember { mutableStateOf(false) }
@@ -77,8 +78,8 @@ fun CoreCharSelector(
     // 处理输入变化的函数
     fun handleInputChange(newValue: String) {
         inputText = newValue
-        // 输入时不显示建议列表
-        showSuggestions = false
+        // 输入即是搜索，保持列表展开并实时过滤
+        showSuggestions = true
         Timber.d("[CoreCharSelector] handleInputChange: newValue='$newValue', currentValue='$value'")
 
         if (newValue.isBlank()) {
@@ -101,12 +102,11 @@ fun CoreCharSelector(
                 val validationResult = resourceDataManager.isValidCharacterName(newValue)
                 Timber.d("[CoreCharSelector] 校验结果: validationResult=$validationResult, newValue='$newValue'")
 
-                // 计算建议列表
-                val newSuggestions = if (validationResult) {
-                    recommendedChars.filter { it.contains(newValue, ignoreCase = true) }
-                } else {
-                    resourceDataManager.search(newValue, 15)
-                }
+                // 先在推荐列表里找，没命中再全量搜索
+                // 否则输入「有效但非该主题推荐」的干员时列表会空掉
+                val newSuggestions = recommendedChars
+                    .filter { it.contains(newValue, ignoreCase = true) }
+                    .ifEmpty { resourceDataManager.search(newValue, 15) }
                 Timber.d("[CoreCharSelector] 建议列表计算完成: ${newSuggestions.size} 个结果")
 
                 // 检查输入值是否仍然 match（防止竞态条件）
