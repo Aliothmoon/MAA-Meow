@@ -19,7 +19,9 @@ class MaaPathConfig(private val context: Context) {
 
     /** Maa 根目录 */
     val rootDir: String by lazy {
-        File(context.getExternalFilesDir(null), MAA).absolutePath
+        val ext = context.getExternalFilesDir(null)
+        Timber.i("context.getExternalFilesDir $ext")
+        File(ext, MAA).absolutePath
     }
 
     /** 资源目录 */
