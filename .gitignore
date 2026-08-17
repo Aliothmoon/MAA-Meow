@@ -45,3 +45,7 @@ __pycache__/
 /app/release
 /app/debug
 /gradle/gradle-daemon-jvm.properties
+
+# 本地工具目录
+.pi/
+tmp.txt
