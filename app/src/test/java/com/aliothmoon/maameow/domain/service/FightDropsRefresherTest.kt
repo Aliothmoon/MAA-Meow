@@ -5,7 +5,9 @@ import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemInfo
+import com.aliothmoon.maameow.data.resource.StageApCostRepository
 import com.aliothmoon.maameow.domain.models.DropTarget
+import com.aliothmoon.maameow.maa.callback.SubTaskHandler
 import com.aliothmoon.maameow.maa.task.TaskSlot
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import io.mockk.every
@@ -34,6 +36,8 @@ class FightDropsRefresherTest {
 
     private val depotRepository: DepotRepository = mockk()
     private val itemHelper: ItemHelper = mockk()
+    private val stageApCostRepository: StageApCostRepository = mockk()
+    private val subTaskHandler: SubTaskHandler = mockk()
     private val remoteService: RemoteService = mockk()
     private val maaCore: MaaCoreService = mockk()
     private lateinit var refresher: FightDropsRefresher
@@ -54,8 +58,30 @@ class FightDropsRefresherTest {
             true
         }
 
-        refresher = FightDropsRefresher(depotRepository, itemHelper)
+        // 默认无理智快照 → 理智判定整体关闭，老用例行为不变
+        every { subTaskHandler.lastSanitySnapshot } returns null
+        every { stageApCostRepository.getApCost(any()) } returns null
+
+        refresher = FightDropsRefresher(
+            depotRepository,
+            itemHelper,
+            stageApCostRepository,
+            subTaskHandler,
+        )
         lastParamsJson = null
+    }
+
+    /** 无药剂/源石预算的目标，理智判定才会介入 */
+    private fun budgetlessTarget(dropCount: Int = 100, expireDays: Int? = null) =
+        target(dropCount = dropCount, medicine = 0, stone = 0)
+            .copy(medicineExpireDays = expireDays)
+
+    private fun sanity(current: Int, max: Int = 135, reportedMinutesAgo: Long = 0) {
+        every { subTaskHandler.lastSanitySnapshot } returns SubTaskHandler.SanitySnapshot(
+            current = current,
+            max = max,
+            reportTimeMillis = System.currentTimeMillis() - reportedMinutesAgo * 60_000,
+        )
     }
 
     @After
@@ -263,6 +289,138 @@ class FightDropsRefresherTest {
         val outcome = refresher.onTaskStarted(1)
         assertTrue(outcome is FightDropsRefresher.RefreshOutcome.Sufficient)
         assertEquals("99999", (outcome as FightDropsRefresher.RefreshOutcome.Sufficient).dropName)
+    }
+
+    // ==================== 理智不足跳过 ====================
+
+    @Test
+    fun sanityBelowApCost_skipsWholeTask() {
+        every { stageApCostRepository.getApCost(STAGE) } returns 21
+        sanity(current = 10)
+        stageAndBind(1, budgetlessTarget())
+        withInventory(mapOf(ITEM to 0))
+
+        val outcome = refresher.onTaskStarted(1)
+        val json = Json.parseToJsonElement(lastParamsJson!!).jsonObject
+
+        assertTrue(outcome is FightDropsRefresher.RefreshOutcome.SanityInsufficient)
+        val skipped = outcome as FightDropsRefresher.RefreshOutcome.SanityInsufficient
+        // 回复量向上取整，过了 1ms 也记 +1 点，故不钉死具体值
+        assertTrue("${skipped.estimatedSanity}", skipped.estimatedSanity in 10..11)
+        assertEquals(21, skipped.apCost)
+        assertEquals(0, json["times"]!!.jsonPrimitive.content.toInt())
+    }
+
+    @Test
+    fun sanityAboveApCost_runsNormally() {
+        every { stageApCostRepository.getApCost(STAGE) } returns 21
+        sanity(current = 30)
+        stageAndBind(1, budgetlessTarget())
+        withInventory(mapOf(ITEM to 0))
+
+        assertTrue(refresher.onTaskStarted(1) is FightDropsRefresher.RefreshOutcome.Updated)
+    }
+
+    @Test
+    fun naturalRegenIsEstimated_sixMinutesPerPoint() {
+        every { stageApCostRepository.getApCost(STAGE) } returns 21
+        // 10 点 + 120 分钟 ≈ 30 点，够打
+        sanity(current = 10, reportedMinutesAgo = 120)
+        stageAndBind(1, budgetlessTarget())
+        withInventory(mapOf(ITEM to 0))
+
+        assertTrue(refresher.onTaskStarted(1) is FightDropsRefresher.RefreshOutcome.Updated)
+    }
+
+    @Test
+    fun regenIsCappedAtMax() {
+        every { stageApCostRepository.getApCost(STAGE) } returns 200
+        sanity(current = 10, max = 135, reportedMinutesAgo = 100_000)
+        stageAndBind(1, budgetlessTarget())
+        withInventory(mapOf(ITEM to 0))
+
+        val outcome = refresher.onTaskStarted(1)
+        assertTrue(outcome is FightDropsRefresher.RefreshOutcome.SanityInsufficient)
+        assertEquals(
+            135,
+            (outcome as FightDropsRefresher.RefreshOutcome.SanityInsufficient).estimatedSanity,
+        )
+    }
+
+    @Test
+    fun medicineBudget_disablesSanitySkip() {
+        every { stageApCostRepository.getApCost(STAGE) } returns 21
+        sanity(current = 0)
+        stageAndBind(1, target(dropCount = 100, medicine = 3, stone = 0))
+        withInventory(mapOf(ITEM to 0))
+
+        assertTrue(refresher.onTaskStarted(1) is FightDropsRefresher.RefreshOutcome.Updated)
+    }
+
+    @Test
+    fun unknownApCost_disablesSanitySkip() {
+        every { stageApCostRepository.getApCost(STAGE) } returns null
+        sanity(current = 0)
+        stageAndBind(1, budgetlessTarget())
+        withInventory(mapOf(ITEM to 0))
+
+        assertTrue(refresher.onTaskStarted(1) is FightDropsRefresher.RefreshOutcome.Updated)
+    }
+
+    @Test
+    fun noSanitySnapshot_disablesSanitySkip() {
+        every { stageApCostRepository.getApCost(STAGE) } returns 21
+        stageAndBind(1, budgetlessTarget())
+        withInventory(mapOf(ITEM to 0))
+
+        assertTrue(refresher.onTaskStarted(1) is FightDropsRefresher.RefreshOutcome.Updated)
+    }
+
+    @Test
+    fun expiringMedicineWindow_blocksSkipUntilProvenExhausted() {
+        every { stageApCostRepository.getApCost(STAGE) } returns 21
+        sanity(current = 0)
+        withInventory(mapOf(ITEM to 0))
+
+        // 还没有任何任务证明 2 天窗口内的临期药已用完 → 照常进图
+        stageAndBind(1, budgetlessTarget(expireDays = 2))
+        assertTrue(refresher.onTaskStarted(1) is FightDropsRefresher.RefreshOutcome.Updated)
+
+        // 该任务未达标就正常结束 → 窗口被证明耗尽
+        refresher.onTaskCompleted(1)
+
+        stageAndBind(2, budgetlessTarget(expireDays = 2), index = 1)
+        assertTrue(
+            refresher.onTaskStarted(2) is FightDropsRefresher.RefreshOutcome.SanityInsufficient
+        )
+    }
+
+    @Test
+    fun completedTaskReachingTarget_doesNotProveExhaustion() {
+        every { stageApCostRepository.getApCost(STAGE) } returns 21
+        sanity(current = 0)
+        stageAndBind(1, budgetlessTarget(expireDays = 2))
+
+        withInventory(mapOf(ITEM to 100))
+        refresher.onTaskCompleted(1)
+
+        withInventory(mapOf(ITEM to 0))
+        stageAndBind(2, budgetlessTarget(expireDays = 2), index = 1)
+        assertTrue(refresher.onTaskStarted(2) is FightDropsRefresher.RefreshOutcome.Updated)
+    }
+
+    @Test
+    fun clear_resetsProvenExhaustedWindow() {
+        every { stageApCostRepository.getApCost(STAGE) } returns 21
+        sanity(current = 0)
+        withInventory(mapOf(ITEM to 0))
+        stageAndBind(1, budgetlessTarget(expireDays = 2))
+        refresher.onTaskCompleted(1)
+
+        refresher.clear()
+
+        stageAndBind(2, budgetlessTarget(expireDays = 2), index = 1)
+        assertTrue(refresher.onTaskStarted(2) is FightDropsRefresher.RefreshOutcome.Updated)
     }
 
     private companion object {

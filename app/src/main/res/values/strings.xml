@@ -2164,6 +2164,7 @@
     <string name="runlog_depot_plan_inventory_insufficient">%1$s：%2$s 不足 %3$d/%4$d，需刷取 %5$d</string>
     <string name="runlog_fight_inventory_unavailable">任务「%1$s」启用了目标库存，但当前没有可用的库存数据，已跳过。可通过「工具箱 - 仓库识别」更新库存</string>
     <string name="runlog_depot_set_params_failed">%1$s：更新任务参数失败，将按原参数执行</string>
+    <string name="runlog_depot_plan_sanity_insufficient">%1$s：理智不足（预估 %2$d，低于关卡消耗 %3$d），已跳过</string>
     <string name="runlog_depot_skipped_activity">当前有活动进行中，已跳过库存保持</string>
     <string name="runlog_depot_skipped_resource">当前处于资源收集限时全天开放期间，已跳过库存保持</string>
     <string name="runlog_copilot_start">开始执行自动战斗</string>

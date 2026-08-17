@@ -39,6 +39,7 @@ import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.data.resource.CopilotResourceProvider
 import com.aliothmoon.maameow.data.resource.ItemHelper
+import com.aliothmoon.maameow.data.resource.StageApCostRepository
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.AchievementReporter
@@ -278,6 +279,7 @@ val appModule = module {
 
 
     singleOf(::ItemHelper)
+    singleOf(::StageApCostRepository)
     singleOf(::ItemIconLoader)
     singleOf(::ActivityManager)
     singleOf(::ResourceDataManager)

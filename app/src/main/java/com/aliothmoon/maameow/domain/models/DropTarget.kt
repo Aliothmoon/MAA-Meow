@@ -22,15 +22,19 @@ data class DropTarget(
     val report: ReportOptions = ReportOptions.DEFAULT,
 ) {
     /**
-     * 按缺口生成 Fight 参数 JSON。need≤0 时 `times=0` + `drops=1` 止损
-     * （任务已在队列只能改参；drops 不能空）。
+     * 按缺口生成 Fight 参数 JSON。need≤0 或 [forceSkip] 时下发 `times=0`：
+     * core（v6.17.0-beta.2 起）会禁用整条 Fight 子任务链，不进终端也不导航。
+     * drops 仍给 1 占位，任务已在队列里只能改参，字段不能空。
      *
      * DepotMaintain append 与两侧刷新走本方法；Fight 目标库存 append 自行组 JSON
      *（`times=actualTimes`），刷新再经此抬到 MAX。
+     *
+     * @param forceSkip 缺口尚在但已判定跑不动（理智不足），直接跳过整个任务
      */
-    fun toFightParamsJson(need: Int): String = buildJsonObject {
+    fun toFightParamsJson(need: Int, forceSkip: Boolean = false): String = buildJsonObject {
+        val skip = need <= 0 || forceSkip
         put("stage", stage)
-        put("times", if (need <= 0) 0 else Int.MAX_VALUE)
+        put("times", if (skip) 0 else Int.MAX_VALUE)
         put("series", series)
         put("medicine", medicine)
         put("stone", stone)

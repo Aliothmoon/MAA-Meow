@@ -92,6 +92,19 @@ class TaskChainHandler(
                 )
                 outcome.logLabel to outcome.applied
             }
+
+            is FightDropsRefresher.RefreshOutcome.SanityInsufficient -> {
+                sessionLogger.append(
+                    appContext.getString(
+                        R.string.runlog_depot_plan_sanity_insufficient,
+                        outcome.logLabel,
+                        outcome.estimatedSanity,
+                        outcome.apCost,
+                    ),
+                    LogLevel.INFO,
+                )
+                outcome.logLabel to outcome.applied
+            }
         }
         if (!applied) {
             sessionLogger.append(
@@ -125,6 +138,7 @@ class TaskChainHandler(
     fun onTaskChainCompleted(details: JSONObject) {
         val taskId = details.getIntValue("taskid", 0)
         statusTracker.updateStatus(taskId, TaskRunStatus.COMPLETED)
+        dropsRefresher.onTaskCompleted(taskId)
 
         val taskchain = details.getString("taskchain") ?: "Unknown"
         val taskName = str(taskchain)

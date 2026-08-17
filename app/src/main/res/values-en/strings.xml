@@ -2107,6 +2107,7 @@
     <string name="runlog_depot_plan_inventory_insufficient">%1$s: %2$s insufficient %3$d/%4$d, need %5$d more</string>
     <string name="runlog_fight_inventory_unavailable">Task \"%1$s\" uses target inventory, but no inventory data is currently available, so it was skipped. Update it via \"Toolbox - Depot Recognition\"</string>
     <string name="runlog_depot_set_params_failed">%1$s: failed to update task params; original params will be used</string>
+    <string name="runlog_depot_plan_sanity_insufficient">%1$s: not enough sanity (estimated %2$d, stage costs %3$d), skipped</string>
     <string name="runlog_depot_skipped_activity">An event is in progress; Depot Maintain skipped</string>
     <string name="runlog_depot_skipped_resource">The resource collection event is active; Depot Maintain skipped</string>
     <string name="runlog_copilot_start">Starting auto-battle</string>

@@ -108,7 +108,8 @@ class MaaPathConfig(private val context: Context) {
         return ResourceVersionHelper.compareVersions(bundled, disk) > 0
     }
 
-    private fun readDiskResourceVersion(): String? {
+    /** 磁盘资源版本戳（version.json 的 last_updated），缺失或解析失败为 null */
+    fun readDiskResourceVersion(): String? {
         return try {
             val file = versionFile
             if (!file.exists()) return null
