@@ -301,7 +301,7 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
                                     return@mapNotNull null
                                 }
                                 getLocalizedCharacterName(info, language) ?: name
-                            }.sorted()
+                            }
                         } catch (e: Exception) {
                             Timber.w(e, "Failed to load roguelike theme: ${theme.name}")
                         }
@@ -481,7 +481,8 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
             Timber.e(e, "parseRecruitmentJson error")
         }
 
-        return characters.toList().sorted()
+        // 保持 priority 顺序，越靠前越推荐；对齐上游 RoguelikeSettingsUserControlModel:312-351
+        return characters.toList()
     }
 
     private fun doParseRecruitTags(file: File): Map<String, String> {
