@@ -34,7 +34,6 @@ import org.koin.core.logger.Level
 class MaaApplication : Application() {
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
     private val appSettingsManager: AppSettingsManager by inject()
     private val crashHandler: CrashHandler by inject()
     private val unifiedStateDispatcher: UnifiedStateDispatcher by inject()
@@ -47,6 +46,8 @@ class MaaApplication : Application() {
     private val scheduleAlarmManager: ScheduleAlarmManager by inject()
     private val depotRepository: DepotRepository by inject()
     private val operBoxRepository: OperBoxRepository by inject()
+
+
     override fun onCreate() {
         super.onCreate()
         val app = this
@@ -62,8 +63,8 @@ class MaaApplication : Application() {
     }
 
     private fun postCreateApplication() {
-        RemoteServiceManager.initialize(this, appSettingsManager)
         treeHolder.setup()
+        RemoteServiceManager.initialize(this, appSettingsManager)
         crashHandler.init(this)
         overlayController.setup()
         unifiedStateDispatcher.start()
