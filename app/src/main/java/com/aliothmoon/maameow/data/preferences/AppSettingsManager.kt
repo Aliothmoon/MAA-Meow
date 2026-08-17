@@ -370,6 +370,21 @@ class AppSettingsManager(
         }
     }
 
+    // 画中画
+    val pipOnHome: StateFlow<Boolean> = settings
+        .map { it.pipOnHome.toBooleanStrictOrNull() ?: true }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            initialSettings.pipOnHome.toBooleanStrictOrNull() ?: true
+        )
+
+    suspend fun setPipOnHome(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[pipOnHome] = enabled.toString() }
+        }
+    }
+
     // 更新渠道
     val updateChannel: StateFlow<UpdateChannel> = settings
         .map {

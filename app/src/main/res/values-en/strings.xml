@@ -109,6 +109,8 @@
     <string name="settings_deployment_with_pause_tip">Hold ESC to pause the game while deploying operators for higher precision. Disable if ESC injection misbehaves or some operators are not placed correctly; deployment will fall back to plain swipe</string>
     <string name="settings_force_fullscreen_on_virtual_display">Force fullscreen in background mode</string>
     <string name="settings_force_fullscreen_on_virtual_display_desc">Applies to the background virtual display only. May not take effect on all devices and can cause extra issues</string>
+    <string name="settings_pip_on_home">Auto picture-in-picture on Home</string>
+    <string name="settings_pip_on_home_desc">While a background-mode task is running, pressing Home or swiping to the launcher shrinks the preview into a picture-in-picture window. The game cannot be controlled from that window</string>
     <string name="dialog_enable_force_fullscreen_title">Enable background force fullscreen?</string>
     <string name="dialog_enable_force_fullscreen_message">This may not work on every device and can cause compatibility issues. Continue?</string>
     <string name="settings_wake_unlock_type">Schedule unlock method</string>

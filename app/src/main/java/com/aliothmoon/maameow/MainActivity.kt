@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.ViewTreeObserver
 import android.view.WindowManager
@@ -29,22 +30,35 @@ import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.presentation.ProvideInputFocusManager
 import com.aliothmoon.maameow.presentation.navigation.AppNavigation
+import com.aliothmoon.maameow.presentation.pip.LocalIsInPip
+import com.aliothmoon.maameow.presentation.pip.PipController
+import com.aliothmoon.maameow.presentation.pip.PipHost
+import com.aliothmoon.maameow.presentation.pip.PipRequest
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.LaunchIntentMapper
 import com.aliothmoon.maameow.theme.MaaMeowTheme
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), PipHost {
 
     @Volatile
     private var isUiReady: Boolean = false
 
     /** 系统栏是否由屏保收起 */
     private var systemBarsHiddenBySaver: Boolean = false
+
+    @Volatile
+    override var pipRequest: PipRequest? = null
+
+    private val _isInPictureInPicture = MutableStateFlow(false)
+    override val isInPictureInPicture: StateFlow<Boolean> = _isInPictureInPicture.asStateFlow()
 
     private val appSettingsManager: AppSettingsManager by inject()
     private val achievementRepository: AchievementRepository by inject()
@@ -80,6 +94,8 @@ class MainActivity : AppCompatActivity() {
             val useSystemMonetColor by appSettingsManager.useSystemMonetColor.collectAsStateWithLifecycle()
             val fontSizeScale by appSettingsManager.fontSizeScale.collectAsStateWithLifecycle()
 
+            val isInPip by _isInPictureInPicture.collectAsStateWithLifecycle()
+
             MaaMeowTheme(themeMode = themeMode, useSystemMonetColor = useSystemMonetColor) {
                 val baseDensity = LocalDensity.current
                 val configuration = LocalConfiguration.current
@@ -89,6 +105,7 @@ class MainActivity : AppCompatActivity() {
                     fontScale = baseDensity.fontScale,
                 )
                 CompositionLocalProvider(
+                    LocalIsInPip provides isInPip,
                     LocalDensity provides Density(
                         density = baseDensity.density * effectiveScale / 100f,
                         // 主界面保持系统 fontScale（与历史行为一致）
@@ -107,6 +124,21 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         dispatchScheduledLaunchIntent(intent)
+    }
+
+    /** API 28~30 没有 auto-enter，只能在这里手动进画中画 */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        val request = pipRequest ?: return
+        PipController.enterNow(this, request)
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration,
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        _isInPictureInPicture.value = isInPictureInPictureMode
     }
 
     private fun dispatchScheduledLaunchIntent(intent: Intent?) {

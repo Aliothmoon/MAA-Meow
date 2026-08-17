@@ -153,6 +153,7 @@ fun SettingsView(
     val reportToYituliu by viewModel.reportToYituliu.collectAsStateWithLifecycle()
     val penguinId by viewModel.penguinId.collectAsStateWithLifecycle()
     val forceFullscreenOnVirtualDisplay by viewModel.forceFullscreenOnVirtualDisplay.collectAsStateWithLifecycle()
+    val pipOnHome by viewModel.pipOnHome.collectAsStateWithLifecycle()
     val wakeUnlockType by viewModel.wakeUnlockType.collectAsStateWithLifecycle()
     val wakeCredential by viewModel.wakeCredential.collectAsStateWithLifecycle()
     val wakeTestState by viewModel.wakeTestState.collectAsStateWithLifecycle()
@@ -735,6 +736,14 @@ fun SettingsView(
                                 viewModel.setForceFullscreenOnVirtualDisplay(false)
                             }
                         }
+                    )
+                    ListItemDivider()
+                    SettingSwitchItem(
+                        title = stringResource(R.string.settings_pip_on_home),
+                        description = stringResource(R.string.settings_pip_on_home_desc),
+                        contentColor = contentColor,
+                        checked = pipOnHome,
+                        onCheckedChange = { viewModel.setPipOnHome(it) }
                     )
                     ListItemDivider()
                     SettingWakeUnlockTypeItem(

@@ -97,6 +97,13 @@ data class AppSettings(
     val forceFullscreenOnVirtualDisplay: String = "false",
 
     /**
+     * 后台模式任务运行中，回桌面时是否自动进入系统画中画
+     * 会改变按 Home 的默认行为，故可关
+     */
+    @PrefKey(default = "true")
+    val pipOnHome: String = "true",
+
+    /**
      * 是否启用 Android 特化任务覆盖（overrides/resource/tasks/tasks.json）
      * 启用后该目录作为最高优先级覆盖层，在加载链末位加载
      */

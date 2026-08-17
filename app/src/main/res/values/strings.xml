@@ -306,6 +306,8 @@
     <string name="settings_deployment_with_pause_tip">部署干员前模拟按住 ESC 暂停游戏，提高部署精确度。如遇 ESC 注入异常或部分干员部署不到位，可关闭改用普通滑动</string>
     <string name="settings_force_fullscreen_on_virtual_display">后台模式强制全屏模式</string>
     <string name="settings_force_fullscreen_on_virtual_display_desc">仅后台虚拟屏生效。效果因机型而异，不一定生效，也可能带来额外问题</string>
+    <string name="settings_pip_on_home">后台运行时自动画中画</string>
+    <string name="settings_pip_on_home_desc">后台模式任务运行中，按 Home 或手势回桌面时自动缩为画中画小窗继续显示画面。小窗内无法操作游戏</string>
     <string name="dialog_enable_force_fullscreen_title">启用后台强制全屏？</string>
     <string name="dialog_enable_force_fullscreen_message">此选项不一定在所有设备上生效，开启后可能出现兼容性问题。确认继续？</string>
     <string name="settings_wake_unlock_type">定时任务解锁方式</string>

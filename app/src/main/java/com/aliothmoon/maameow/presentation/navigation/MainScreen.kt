@@ -22,6 +22,7 @@ import androidx.navigation.NavController
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
+import com.aliothmoon.maameow.presentation.pip.LocalIsInPip
 import com.aliothmoon.maameow.presentation.view.background.BackgroundTaskView
 import com.aliothmoon.maameow.presentation.view.home.HomeView
 import com.aliothmoon.maameow.presentation.view.settings.SettingsView
@@ -50,6 +51,7 @@ fun MainScreen(
     val pagerState = rememberPagerState(pageCount = { BottomNavTab.all.size })
     val scope = rememberCoroutineScope()
     val reduceMotion = LocalReduceMotion.current
+    val chromeHidden = fullscreen || LocalIsInPip.current
 
     // targetPage：点击/滑动一旦确定目标即生效，停稳后等于 currentPage。
     // animateScrollToPage 内部走 MutatorMutex，连续调用时后者自动接管，无需手动取消。
@@ -68,7 +70,7 @@ fun MainScreen(
     }
 
     // 非首页 Tab 按返回键先回到首页；全屏由 BackgroundTaskView 自行处理。
-    BackHandler(enabled = visible && !fullscreen && pagerState.targetPage != 0) {
+    BackHandler(enabled = visible && !chromeHidden && pagerState.targetPage != 0) {
         goToPage(0)
     }
 
@@ -110,7 +112,7 @@ fun MainScreen(
         Scaffold(
             modifier = modifier,
             bottomBar = {
-                if (visible && !fullscreen) {
+                if (visible && !chromeHidden) {
                     AppBottomNavigation(
                         currentRoute = BottomNavTab.all[pagerState.targetPage].route,
                         onTabSelected = { tab -> goToPage(BottomNavTab.all.indexOf(tab)) },
@@ -131,12 +133,13 @@ fun MainScreen(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
                     key = { BottomNavTab.all[it].route },
-                    userScrollEnabled = visible && !fullscreen,
+                    userScrollEnabled = visible && !chromeHidden,
                 ) { page ->
                     when (BottomNavTab.all[page]) {
                         BottomNavTab.HOME -> HomeView(navController = navController)
                         BottomNavTab.BACKGROUND -> BackgroundTaskView(
                             viewModel = backgroundTaskViewModel,
+                            isActivePage = visible && pagerState.targetPage == page,
                         )
 
                         BottomNavTab.SCHEDULE -> ScheduleListView(navController = navController)

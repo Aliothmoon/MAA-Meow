@@ -226,6 +226,13 @@ class SettingsViewModel(
         }
     }
 
+    val pipOnHome: StateFlow<Boolean> = appSettingsManager.pipOnHome
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun setPipOnHome(enabled: Boolean) {
+        viewModelScope.launch { appSettingsManager.setPipOnHome(enabled) }
+    }
+
     // ───────────────── 定时唤醒解锁 ─────────────────
 
     val wakeUnlockType: StateFlow<String> =

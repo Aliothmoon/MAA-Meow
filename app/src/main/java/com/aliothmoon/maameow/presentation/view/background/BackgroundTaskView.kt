@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.PixelFormat
+import android.graphics.Rect
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -80,6 +81,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -104,6 +107,10 @@ import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
+import com.aliothmoon.maameow.presentation.pip.LocalIsInPip
+import com.aliothmoon.maameow.presentation.pip.PipController
+import com.aliothmoon.maameow.presentation.pip.PipHost
+import com.aliothmoon.maameow.presentation.pip.PipRequest
 import com.aliothmoon.maameow.presentation.view.panel.AutoBattlePanel
 import com.aliothmoon.maameow.presentation.view.panel.LocalToolboxFileExporter
 import com.aliothmoon.maameow.presentation.view.panel.LogPanel
@@ -129,6 +136,8 @@ import timber.log.Timber
 @Composable
 fun BackgroundTaskView(
     viewModel: BackgroundTaskViewModel,
+    /** 子页面盖上来时 MainScreen 用 alpha 0 保活组合树，本页仍在组合但看不见，此时不能开画中画 */
+    isActivePage: Boolean = true,
     copilotViewModel: CopilotViewModel = koinInject(),
     toolboxViewModel: ToolboxViewModel = koinInject(),
     compositionService: MaaCompositionService = koinInject(),
@@ -146,6 +155,7 @@ fun BackgroundTaskView(
     val permissionState by permissionManager.state.collectAsStateWithLifecycle()
     val markers by viewModel.markers.collectAsStateWithLifecycle()
     val displayResolution by compositionService.displayResolution.collectAsStateWithLifecycle()
+    val pipOnHome by appSettingsManager.pipOnHome.collectAsStateWithLifecycle()
     val isChainLoaded by viewModel.chainState.isLoaded.collectAsStateWithLifecycle()
     var hasInitialized by rememberSaveable { mutableStateOf(false) }
     if (isChainLoaded) {
@@ -194,9 +204,6 @@ fun BackgroundTaskView(
     val appDiedMessage = stringResource(R.string.bg_toast_app_died)
     val displayDriftMessage = stringResource(R.string.bg_toast_display_drift)
 
-    ShizukuReadinessGate()
-
-
     // pageReady 栅栏已移除：启动由 LaunchPipeline 驱动，无需等本页 Surface
 
     LaunchedEffect(Unit) {
@@ -243,6 +250,17 @@ fun BackgroundTaskView(
     var lastSentSurface by remember { mutableStateOf<Surface?>(null) }
     val currentResolution by rememberUpdatedState(displayResolution)
 
+    val pipHost = context as? PipHost
+    val isInPip = LocalIsInPip.current
+
+    // 竞态兜底：pipEligible 已排除全屏态，但 setPictureInPictureParams 要跨进程生效，
+    // 点开全屏后立刻按 Home 仍可能带着全屏态进小窗，进去就退掉
+    LaunchedEffect(isInPip) {
+        if (isInPip) viewModel.onExitFullscreenMonitor()
+    }
+
+    var previewBounds by remember { mutableStateOf<Rect?>(null) }
+
     val previewContent = remember {
         movableContentOf {
             val innerScope = rememberCoroutineScope()
@@ -286,7 +304,8 @@ fun BackgroundTaskView(
                             }
                         }, modifier = Modifier.fillMaxSize()
                     )
-                    if (markers.isNotEmpty()) TouchPreviewOverlay(
+                    // 必须重新读，movableContent 是 remember 出来的，捕获外层 val 会拿到陈旧值
+                    if (!LocalIsInPip.current && markers.isNotEmpty()) TouchPreviewOverlay(
                         markers = markers,
                         displayResolution = displayResolution,
                         modifier = Modifier.fillMaxSize()
@@ -296,6 +315,41 @@ fun BackgroundTaskView(
         }
     }
 
+    // 全屏预览态排除在外：auto-enter 没有前置钩子，带着强制横屏和收起的系统栏进小窗会互相打架
+    val pipEligible = pipOnHome &&
+        isActivePage &&
+        !state.isFullscreenMonitor &&
+        runMode == RunMode.BACKGROUND &&
+        (maaState == MaaExecutionState.STARTING || maaState == MaaExecutionState.RUNNING) &&
+        isSurfaceAvailable &&
+        PipController.isSupported(context)
+    val pipActivity = pipHost as? Activity
+    DisposableEffect(pipHost, pipActivity, pipEligible, displayResolution, previewBounds) {
+        fun arm(enabled: Boolean, sourceRect: Rect?) {
+            val host = pipHost ?: return
+            val activity = pipActivity ?: return
+            val request = PipRequest(displayResolution, sourceRect)
+            host.pipRequest = if (enabled) request else null
+            PipController.updateParams(activity, enabled, request)
+        }
+        arm(pipEligible, previewBounds)
+        onDispose { arm(enabled = false, sourceRect = null) }
+    }
+
+    if (isInPip) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
+            previewContent()
+        }
+        return
+    }
+
+    // 放在画中画分支之后，小窗里不该弹准备度引导
+    ShizukuReadinessGate()
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -313,7 +367,20 @@ fun BackgroundTaskView(
             ) {
                 if (!state.isFullscreenMonitor) {
                     VirtualDisplayPreview(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .onGloballyPositioned { coords ->
+                                val bounds = coords.boundsInWindow()
+                                val next = Rect(
+                                    bounds.left.toInt(),
+                                    bounds.top.toInt(),
+                                    bounds.right.toInt(),
+                                    bounds.bottom.toInt(),
+                                )
+                                if (!next.isEmpty && next != previewBounds) {
+                                    previewBounds = next
+                                }
+                            },
                         isRunning = maaState == MaaExecutionState.RUNNING,
                         isSurfaceAvailable = isSurfaceAvailable,
                         onClick = { viewModel.onToggleFullscreenMonitor() }) {

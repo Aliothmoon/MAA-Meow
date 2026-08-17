@@ -65,12 +65,14 @@
             android:name="ScopedStorage"
             android:value="true" />
 
+        <!-- smallestScreenSize 必须声明：缺了它进出画中画会重建 Activity，预览 Surface 全部重来 -->
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|screenLayout"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"
             android:exported="true"
             android:label="@string/app_name"
             android:launchMode="singleTop"
+            android:supportsPictureInPicture="true"
             android:theme="@style/Theme.MaaMeow.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

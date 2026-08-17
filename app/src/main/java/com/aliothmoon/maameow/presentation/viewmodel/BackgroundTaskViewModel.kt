@@ -431,6 +431,12 @@ class BackgroundTaskViewModel(
         _state.update { it.copy(isFullscreenMonitor = !it.isFullscreenMonitor) }
     }
 
+    /** 进入画中画时调用：全屏预览锁了横屏并收了系统栏，留着会干扰小窗 */
+    fun onExitFullscreenMonitor() {
+        if (!_state.value.isFullscreenMonitor) return
+        _state.update { it.copy(isFullscreenMonitor = false) }
+    }
+
     fun onTabChange(tab: PanelTab) {
         _state.update { it.copy(current = tab) }
     }
