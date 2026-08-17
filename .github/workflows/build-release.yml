@@ -196,10 +196,35 @@ jobs:
           merge-multiple: true
           path: apks
 
+      # 不能 merge-multiple：四份 artifact 里的文件都叫 mapping.txt，合并会互相覆盖
+      - name: Download all mapping artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-mapping-*
+          path: mappings
+
+      - name: Pack mappings
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          mkdir -p mapping-zips
+          for d in mappings/release-mapping-*; do
+            [ -d "$d" ] || continue
+            LABEL="${d#mappings/release-mapping-}"
+            NAME="mapping-${TAG}-${LABEL}"
+            # 包内文件名也带 label，用户下多份解压时不会互相覆盖
+            cp "$d/mapping.txt" "${NAME}.txt"
+            zip -q -9 "mapping-zips/${NAME}.zip" "${NAME}.txt"
+            rm "${NAME}.txt"
+          done
+          ls -lh mapping-zips
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           draft: false
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
-          files: apks/*.apk
+          # 小写 mapping- 前缀，ASCII 升序下排在 MaaMeow-*.apk 之后，不打乱下载列表
+          files: |
+            apks/*.apk
+            mapping-zips/*.zip
           body_path: RELEASE_NOTES.md
