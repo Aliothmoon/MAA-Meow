@@ -4,6 +4,7 @@
     <string name="accessibility_helper_service_description">Accessibility helper: double-tap volume down to toggle the control panel</string>
     <string name="common_confirm">Confirm</string>
     <string name="common_cancel">Cancel</string>
+    <string name="common_later">Later</string>
     <string name="common_restart_now">Restart Now</string>
     <string name="common_restart_later">Later</string>
     <string name="common_confirm_restart">Confirm Restart</string>
@@ -1522,12 +1523,13 @@
     <string name="schedule_empty_hint_add">Tap the button in the upper-right corner to add one</string>
     <string name="schedule_exact_alarm_blocked">Exact alarms are not allowed</string>
     <string name="schedule_exact_alarm_hint">Schedules still fire on time, but the status bar shows an alarm icon</string>
-    <string name="schedule_exact_alarm_grant">Allow</string>
     <string name="schedule_exact_alarm_settings">Exact alarm settings</string>
     <string name="schedule_delete_strategy_title">Delete schedule</string>
     <string name="schedule_delete_strategy_message">Delete this schedule?</string>
     <string name="schedule_auto_start_permission_title">Auto-start permission</string>
     <string name="schedule_auto_start_permission_message">To ensure scheduled tasks can wake up normally from the background, allow this app to auto-start in system settings.</string>
+    <string name="schedule_auto_start_permission_message_fallback">No vendor auto-start page was found, so the app details page will open instead. Check the auto-start/background settings there and allow this app to auto-start.</string>
+    <string name="schedule_auto_start_dont_remind">Don\'t remind again</string>
     <string name="schedule_next_trigger">Next: %1$s</string>
     <string name="schedule_last_result">Last: %1$s</string>
     <string name="schedule_edit_title_new">New schedule</string>
@@ -1571,10 +1573,31 @@
     <string name="schedule_close_game_effect_inactive">Current effect: the game is not closed when the task ends</string>
     <string name="schedule_permission_tip_battery_optimization">Disable battery optimization</string>
     <string name="schedule_permission_tip_exact_alarm">Allow exact alarms</string>
+    <string name="schedule_permission_tip_notification">Enable notifications</string>
+    <string name="schedule_permission_tip_overlay">Grant overlay permission</string>
+    <string name="schedule_permission_battery_desc">If the request page fails to open, the system battery optimization list will open instead — allow this app to run in the background there</string>
     <string name="schedule_permission_title">Permission reminder</string>
-    <string name="schedule_permission_message">To ensure scheduled tasks trigger correctly, handle the following items in system settings: %1$s</string>
     <string name="schedule_go_to_settings">Go to settings</string>
-    <string name="schedule_later">Later</string>
+    <!-- Save wizard: OEM-specific power saving hints -->
+    <string name="schedule_oem_hint_miui">MIUI/HyperOS: also set the app\'s battery saver policy to "No restrictions"</string>
+    <string name="schedule_oem_hint_huawei">EMUI/HarmonyOS: also switch "App launch management" to manual and allow auto-launch, secondary launch and background activity</string>
+    <string name="schedule_oem_hint_oppo">ColorOS: also allow background running and disable "App freezing" for this app</string>
+    <string name="schedule_oem_hint_vivo">OriginOS/FuntouchOS: also allow high background power consumption for this app</string>
+    <string name="schedule_oem_hint_samsung">One UI: also remove this app from the "Deep sleeping apps" list</string>
+    <string name="schedule_oem_hint_meizu">Flyme: also allow background running and background pop-ups for this app</string>
+    <!-- Schedule health card -->
+    <string name="schedule_health_title">Scheduling environment check</string>
+    <string name="schedule_health_fix">Fix</string>
+    <string name="schedule_health_backend">%1$s not authorized</string>
+    <string name="schedule_health_backend_desc">Wake-up, UI launch and task execution of scheduled triggers all depend on it — start the service and grant access first</string>
+    <string name="schedule_health_battery">Battery optimization not ignored</string>
+    <string name="schedule_health_battery_desc">Background triggers may be delayed or blocked by the system</string>
+    <string name="schedule_health_notification">Notifications disabled</string>
+    <string name="schedule_health_notification_desc">Notifications for scheduled runs and failures will be invisible</string>
+    <string name="schedule_health_overlay">Overlay permission missing</string>
+    <string name="schedule_health_overlay_desc">An enabled screen-saver strategy requires the overlay permission</string>
+    <!-- Trigger log: fix entry for failed results -->
+    <string name="schedule_backend_fix_still_not_ready">%1$s is still not authorized: make sure the service is running, or change the startup mode in settings</string>
     <string name="schedule_time_picker_title">Choose time</string>
     <string name="schedule_time_picker_keyboard_input">Keyboard Input Method</string>
     <string name="schedule_time_picker_dial_selection">Dial selection</string>

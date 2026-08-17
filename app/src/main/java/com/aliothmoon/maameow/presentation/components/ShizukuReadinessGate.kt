@@ -17,8 +17,14 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 
+/**
+ * @param onDismiss   默认写 skipShizukuCheck 全局不再提醒；一次性引导传只收弹窗的实现
+ * @param dismissText 覆盖否定按钮文案，配合一次性语义使用
+ */
 @Composable
 fun ShizukuReadinessGate(
+    onDismiss: (() -> Unit)? = null,
+    dismissText: String? = null,
     permissionManager: PermissionManager = koinInject(),
     appSettingsManager: AppSettingsManager = koinInject(),
     readinessProvider: ShizukuReadinessProvider = koinInject(),
@@ -40,12 +46,14 @@ fun ShizukuReadinessGate(
                 isRequesting = false
             }
         },
-        onDismiss = {
+        onDismiss = onDismiss ?: {
             scope.launch { appSettingsManager.setSkipShizukuCheck(true) }
+            Unit
         },
         onSwitchToRoot = {
             scope.launch { permissionManager.setStartupBackend(RemoteBackend.ROOT) }
         },
         isRequesting = isRequesting,
+        dismissText = dismissText,
     )
 }

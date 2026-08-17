@@ -72,14 +72,29 @@ fun MainScreen(
         goToPage(0)
     }
 
-    // 定时任务触发时：若正处于子页面，先弹回主 Tab 浮出主界面，再滑到后台任务页
+    // 主 Tab 路由是空占位不能 navigate，只能先 pop 回主界面再滑 pager
+    fun surfaceToTab(tab: BottomNavTab) {
+        navController.popBackStack(Routes.HOME, false)
+        goToPage(BottomNavTab.all.indexOf(tab))
+    }
+
+    // 定时任务触发时自动浮出后台任务页
     // （恢复旧导航 navigate(BACKGROUND){popUpTo(HOME)} 的“自动浮出后台页”语义）。
     val pendingNavigateRequestId by backgroundTaskViewModel.pendingNavigateRequestId.collectAsStateWithLifecycle()
     LaunchedEffect(pendingNavigateRequestId) {
         if (pendingNavigateRequestId != null) {
-            navController.popBackStack(Routes.HOME, false)
-            goToPage(BottomNavTab.all.indexOf(BottomNavTab.BACKGROUND))
+            surfaceToTab(BottomNavTab.BACKGROUND)
             backgroundTaskViewModel.onNavigateForScheduledLaunch()
+        }
+    }
+
+    // 子页面的「回到主界面并切 Tab」请求
+    val mainTabNavigator: MainTabNavigator = koinInject()
+    val mainTabRequest by mainTabNavigator.request.collectAsStateWithLifecycle()
+    LaunchedEffect(mainTabRequest) {
+        mainTabRequest?.let { tab ->
+            surfaceToTab(tab)
+            mainTabNavigator.consume()
         }
     }
 

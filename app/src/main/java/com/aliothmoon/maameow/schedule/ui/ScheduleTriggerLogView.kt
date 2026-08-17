@@ -45,12 +45,22 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.manager.PermissionManager
+import com.aliothmoon.maameow.presentation.components.BackendReadyFixHost
 import com.aliothmoon.maameow.presentation.components.TopAppBar
+import com.aliothmoon.maameow.presentation.components.rememberBackendReadyFixState
+import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
+import com.aliothmoon.maameow.presentation.navigation.MainTabNavigator
+import com.aliothmoon.maameow.schedule.model.ExecutionFixMapping
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
+import com.aliothmoon.maameow.schedule.model.ScheduleFixAction
 import com.aliothmoon.maameow.schedule.model.TriggerLogEntry
 import com.aliothmoon.maameow.schedule.service.ScheduleTriggerLogger.TriggerLogSummary
 import com.aliothmoon.maameow.theme.MaaDesignTokens
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -66,12 +76,37 @@ fun ScheduleTriggerLogView(
     var showClearConfirm by remember { mutableStateOf(false) }
     var deleteConfirmFileName by remember { mutableStateOf<String?>(null) }
 
+    val permissionManager: PermissionManager = koinInject()
+    // 只订阅这一位，免得无关权限变化把整页连同日志列表重组一遍
+    val backendGrantedFlow = remember(permissionManager) {
+        permissionManager.state.map { it.remoteAccessGranted }.distinctUntilChanged()
+    }
+    val backendGranted by backendGrantedFlow.collectAsStateWithLifecycle(
+        permissionManager.permissions.remoteAccessGranted
+    )
+
+    // 解锁凭证在设置 Tab 的 pager 页里，只能让 MainScreen 代切
+    val mainTabNavigator: MainTabNavigator = koinInject()
+    // 详情模式会提前 return，弹窗要放在那之前
+    val backendFix = rememberBackendReadyFixState()
+    BackendReadyFixHost(backendFix)
+
+    fun onFixAction(action: ScheduleFixAction) {
+        when (action) {
+            ScheduleFixAction.UNLOCK_CREDENTIAL ->
+                mainTabNavigator.navigateTo(BottomNavTab.SETTINGS)
+            ScheduleFixAction.BACKEND_READY -> backendFix.request()
+        }
+    }
+
     // 详情模式
     if (detail.isNotEmpty()) {
         BackHandler { viewModel.onClearDetail() }
         DetailView(
             entries = detail,
-            onBack = { viewModel.onClearDetail() }
+            onBack = { viewModel.onClearDetail() },
+            onFix = ::onFixAction,
+            backendGranted = backendGranted,
         )
         return
     }
@@ -277,6 +312,8 @@ private fun SummaryCard(
 private fun DetailView(
     entries: List<TriggerLogEntry>,
     onBack: () -> Unit,
+    onFix: (ScheduleFixAction) -> Unit,
+    backendGranted: Boolean,
 ) {
     val header = entries.firstOrNull() as? TriggerLogEntry.Header
 
@@ -342,7 +379,9 @@ private fun DetailView(
 
                     is TriggerLogEntry.Footer -> {
                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                        Row {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             Text(
                                 text = formatTimeShort(entry.time),
                                 style = MaterialTheme.typography.bodySmall,
@@ -365,6 +404,21 @@ private fun DetailView(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
+                            // 后端已授权时 BACKEND_READY 无事可做，不摆空操作按钮
+                            ExecutionFixMapping.fixActionFor(entry.result)
+                                ?.takeIf { it != ScheduleFixAction.BACKEND_READY || !backendGranted }
+                                ?.let { fixAction ->
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    TextButton(
+                                        onClick = { onFix(fixAction) },
+                                        contentPadding = PaddingValues(0.dp),
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.schedule_health_fix),
+                                            style = MaterialTheme.typography.labelMedium,
+                                        )
+                                    }
+                                }
                         }
                     }
                 }

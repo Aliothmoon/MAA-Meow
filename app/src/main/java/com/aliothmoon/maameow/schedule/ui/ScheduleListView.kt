@@ -36,6 +36,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,21 +44,31 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.content.edit
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Routes
+import com.aliothmoon.maameow.domain.models.RemoteBackend
+import com.aliothmoon.maameow.manager.PermissionManager
+import com.aliothmoon.maameow.presentation.components.BackendReadyFixHost
 import com.aliothmoon.maameow.presentation.components.InfoCard
+import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.TopAppBar
+import com.aliothmoon.maameow.presentation.components.rememberBackendReadyFixState
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
+import com.aliothmoon.maameow.schedule.model.ScheduleHealthIssue
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import com.aliothmoon.maameow.schedule.service.AutoStartHelper
+import com.aliothmoon.maameow.schedule.service.AutoStartTarget
 import com.aliothmoon.maameow.schedule.service.ExactAlarmSettings
 import com.aliothmoon.maameow.theme.MaaDesignTokens
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 
 @Composable
 fun ScheduleListView(
@@ -67,30 +78,54 @@ fun ScheduleListView(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var deleteConfirmId by remember { mutableStateOf<String?>(null) }
-    var showAutoStartGuide by remember { mutableStateOf(false) }
+    var autoStartTarget by remember { mutableStateOf<AutoStartTarget?>(null) }
+
+    val permissionManager: PermissionManager = koinInject()
+    val scope = rememberCoroutineScope()
+
+    val schedulePrefs = remember(context) {
+        context.getSharedPreferences("schedule_prefs", Context.MODE_PRIVATE)
+    }
 
     // 设置页没有结果回调，回来时重读精确闹钟开关
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refreshExactAlarmPermission()
     }
 
-    // 首次有策略时检查是否需要自启动引导
-    LaunchedEffect(state.strategies.isNotEmpty()) {
-        if (state.strategies.isNotEmpty() && AutoStartHelper.isKnownRestrictiveManufacturer()) {
-            val prefs = context.getSharedPreferences("schedule_prefs", Context.MODE_PRIVATE)
-            if (!prefs.getBoolean("autostart_guided", false)) {
-                val intent = AutoStartHelper.getAutoStartIntent(context)
-                if (intent != null) {
-                    showAutoStartGuide = true
-                    prefs.edit { putBoolean("autostart_guided", true) }
-                }
-            }
+    // 键取布尔而非计数，否则每次启停策略都会重跑整套跨进程探测
+    val hasEnabledStrategy = state.strategies.any { it.enabled }
+    LaunchedEffect(hasEnabledStrategy) {
+        if (!hasEnabledStrategy) return@LaunchedEffect
+        // prefs 与 resolveActivity 都是跨进程，整段留在 IO 上
+        val target = withContext(Dispatchers.IO) {
+            if (!AutoStartHelper.shouldRemindThisBoot(context, schedulePrefs)) return@withContext null
+            AutoStartHelper.resolveTarget(context)
+                ?.also { AutoStartHelper.markRemindedThisBoot(context, schedulePrefs) }
         }
+        autoStartTarget = target
     }
+
+    val backendFix = rememberBackendReadyFixState()
+    BackendReadyFixHost(backendFix)
 
     fun openExactAlarmSettings() {
         ExactAlarmSettings.open(context)
         viewModel.refreshExactAlarmPermission()
+    }
+
+    fun fixHealthIssue(issue: ScheduleHealthIssue) {
+        when (issue) {
+            ScheduleHealthIssue.BACKEND -> backendFix.request()
+            ScheduleHealthIssue.EXACT_ALARM -> openExactAlarmSettings()
+            ScheduleHealthIssue.BATTERY ->
+                scope.launch { permissionManager.requestBatteryWhitelist(context) }
+
+            ScheduleHealthIssue.NOTIFICATION ->
+                scope.launch { permissionManager.requestNotification(context) }
+
+            ScheduleHealthIssue.OVERLAY ->
+                scope.launch { permissionManager.requestOverlay(context) }
+        }
     }
 
     Scaffold(
@@ -98,7 +133,7 @@ fun ScheduleListView(
             TopAppBar(
                 title = stringResource(R.string.schedule_title),
                 actions = {
-                    // 与阻断卡片同一条路；允许之后卡片消失，靠这个入口回到系统开关页
+                    // 与健康卡的精确闹钟项同一条路；允许之后该项消失，靠这个入口回到系统开关页
                     if (state.exactAlarmConfigurable) {
                         IconButton(onClick = { openExactAlarmSettings() }) {
                             Icon(
@@ -136,14 +171,29 @@ fun ScheduleListView(
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (!state.exactAlarmAllowed) {
-                item(key = "exact-alarm") {
-                    ExactAlarmCard(onGrant = { openExactAlarmSettings() })
+            if (state.healthIssues.isNotEmpty()) {
+                item(key = "schedule-health") {
+                    ScheduleHealthCard(
+                        issues = state.healthIssues,
+                        backend = state.startupBackend,
+                        onFix = ::fixHealthIssue,
+                    )
                 }
             }
             if (state.strategies.isEmpty()) {
                 item(key = "empty") {
-                    ScheduleEmptyState(modifier = Modifier.fillParentMaxSize())
+                    // fillParentMaxSize 撑的是整个 LazyColumn 视口，上面有别的项时
+                    // 会把空状态顶到折叠线以下
+                    val isOnlyItem = state.healthIssues.isEmpty()
+                    ScheduleEmptyState(
+                        modifier = if (isOnlyItem) {
+                            Modifier.fillParentMaxSize()
+                        } else {
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 48.dp)
+                        }
+                    )
                 }
             } else {
                 items(state.strategies, key = { it.id }) { strategy ->
@@ -177,37 +227,65 @@ fun ScheduleListView(
             )
         }
 
-        if (showAutoStartGuide) {
+        autoStartTarget?.let { target ->
             AlertDialog(
-                onDismissRequest = { showAutoStartGuide = false },
+                onDismissRequest = { autoStartTarget = null },
                 title = { Text(stringResource(R.string.schedule_auto_start_permission_title)) },
-                text = { Text(stringResource(R.string.schedule_auto_start_permission_message)) },
+                text = {
+                    Text(
+                        stringResource(
+                            if (target is AutoStartTarget.AppDetails) {
+                                R.string.schedule_auto_start_permission_message_fallback
+                            } else {
+                                R.string.schedule_auto_start_permission_message
+                            }
+                        )
+                    )
+                },
                 confirmButton = {
                     TextButton(onClick = {
-                        AutoStartHelper.getAutoStartIntent(context)?.let {
+                        AutoStartHelper.intentFor(context, target)?.let {
                             runCatching { context.startActivity(it) }
                         }
-                        showAutoStartGuide = false
+                        autoStartTarget = null
                     }) { Text(stringResource(R.string.schedule_go_to_settings)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showAutoStartGuide = false }) { Text(stringResource(R.string.schedule_later)) }
+                    // 已配好的用户不该每次重启都挨一遍，给个永久出口
+                    Row {
+                        TextButton(onClick = {
+                            AutoStartHelper.markNeverRemind(schedulePrefs)
+                            autoStartTarget = null
+                        }) { Text(stringResource(R.string.schedule_auto_start_dont_remind)) }
+                        TextButton(onClick = { autoStartTarget = null }) {
+                            Text(stringResource(R.string.common_later))
+                        }
+                    }
                 }
             )
         }
     }
 }
 
+/** 调用方保证仅在 issues 非空时展示 */
 @Composable
-private fun ExactAlarmCard(onGrant: () -> Unit) {
-    InfoCard(title = stringResource(R.string.schedule_exact_alarm_blocked)) {
-        Text(
-            text = stringResource(R.string.schedule_exact_alarm_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        TextButton(onClick = onGrant) {
-            Text(stringResource(R.string.schedule_exact_alarm_grant))
+private fun ScheduleHealthCard(
+    issues: List<ScheduleHealthIssue>,
+    backend: RemoteBackend,
+    onFix: (ScheduleHealthIssue) -> Unit,
+) {
+    InfoCard(title = stringResource(R.string.schedule_health_title)) {
+        issues.forEach { issue ->
+            val (title, description) = scheduleHealthIssueText(issue, backend)
+            SettingRow(
+                title = title,
+                description = description,
+                trailing = {
+                    TextButton(onClick = { onFix(issue) }) {
+                        Text(stringResource(R.string.schedule_health_fix))
+                    }
+                },
+            )
         }
     }
 }
@@ -215,7 +293,7 @@ private fun ExactAlarmCard(onGrant: () -> Unit) {
 @Composable
 private fun ScheduleEmptyState(modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {

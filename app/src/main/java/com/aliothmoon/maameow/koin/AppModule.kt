@@ -82,6 +82,7 @@ import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.overlay.OverlayViewModelOwner
 import com.aliothmoon.maameow.overlay.border.BorderOverlayManager
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
+import com.aliothmoon.maameow.presentation.navigation.MainTabNavigator
 import android.app.KeyguardManager
 import android.content.Context
 import android.os.PowerManager
@@ -139,6 +140,7 @@ val appModule = module {
     singleOf(::AnnouncementManager)
     singleOf(::PermissionManager)
     singleOf(::ShizukuReadinessProvider)
+    singleOf(::MainTabNavigator)
 
 
     singleOf(::AppSettingsManager)

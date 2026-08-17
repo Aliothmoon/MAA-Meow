@@ -149,19 +149,19 @@ fun AppNavigation(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().clearFocusOnBlankTap()) {
-        MainScreen(
-            navController = navController,
-            backgroundTaskViewModel = backgroundTaskViewModel,
-            onViewAnnouncement = { forceShowAnnouncement = true },
-            visible = isOnMainTab,
-            fullscreen = isFullscreen,
-        )
+    // LocalToaster 未提供即抛错，须同时覆盖 pager 与 NavHost 子页
+    val reduceMotion = LocalReduceMotion.current
+    CompositionLocalProvider(LocalToaster provides toaster) {
+        Box(modifier = Modifier.fillMaxSize().clearFocusOnBlankTap()) {
+            MainScreen(
+                navController = navController,
+                backgroundTaskViewModel = backgroundTaskViewModel,
+                onViewAnnouncement = { forceShowAnnouncement = true },
+                visible = isOnMainTab,
+                fullscreen = isFullscreen,
+            )
 
-        // NavHost 只承载子页面；主 Tab 切换完全由 MainScreen 的 HorizontalPager 处理。
-        // 在此统一下发 LocalToaster，使所有子页面都能弹出顶部提示。
-        val reduceMotion = LocalReduceMotion.current
-        CompositionLocalProvider(LocalToaster provides toaster) {
+            // NavHost 只承载子页面；主 Tab 切换完全由 MainScreen 的 HorizontalPager 处理
             NavHost(
                 navController = navController,
                 startDestination = Routes.HOME,
@@ -200,58 +200,58 @@ fun AppNavigation(
                     TaskOverrideEditorView(navController = navController)
                 }
             }
-        }
-        ResourceLoadingOverlay()
-        // 顶部轻提示（sonner）：替代旧的 Material3 Snackbar，按类型上色（成功=绿、错误=红）
-        Toaster(
-            state = toaster,
-            alignment = Alignment.TopCenter,
-            richColors = true,
-            showCloseButton = true,
-            darkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f,
-            containerPadding = PaddingValues(top = 8.dp),
-            modifier = Modifier.statusBarsPadding(),
-        )
-        // 全局定时任务倒计时弹窗（前台所有控制模式均不弹出对话框，静默处理）
-        val countdown = scheduledCountdownState
-        val hideCountdownDialog = runMode == RunMode.FOREGROUND
-        if (countdown is CountdownState.Counting && !hideCountdownDialog) {
-            CountdownDialog(
-                state = countdown,
-                onCancel = { backgroundTaskViewModel.onScheduledCountdownCancel() },
-                onStartNow = { backgroundTaskViewModel.onScheduledStartNow() },
+            ResourceLoadingOverlay()
+            // 顶部轻提示（sonner）：替代旧的 Material3 Snackbar，按类型上色（成功=绿、错误=红）
+            Toaster(
+                state = toaster,
+                alignment = Alignment.TopCenter,
+                richColors = true,
+                showCloseButton = true,
+                darkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f,
+                containerPadding = PaddingValues(top = 8.dp),
+                modifier = Modifier.statusBarsPadding(),
             )
-        }
-        // 长期公告弹窗：远端内容变化（哈希与已读标记不符）后首次启动自动弹出，或从设置中手动打开
-        val current = announcementContent
-        val needsToShow = current != null && current.hash != announcementReadHash
-        val showAnnouncement = forceShowAnnouncement || (needsToShow && !announcementDismissedOnce)
-        val shownAnnouncement = remember(showAnnouncement, language, current) {
-            if (!showAnnouncement) {
-                null
-            } else {
-                // 手动打开时拉取可能尚未完成，回退内置 assets
-                current ?: AnnouncementConfig.loadContent(context, language)
-                    .takeIf { it.isNotBlank() }
-                    ?.let { AnnouncementContent.of(it) }
+            // 全局定时任务倒计时弹窗（前台所有控制模式均不弹出对话框，静默处理）
+            val countdown = scheduledCountdownState
+            val hideCountdownDialog = runMode == RunMode.FOREGROUND
+            if (countdown is CountdownState.Counting && !hideCountdownDialog) {
+                CountdownDialog(
+                    state = countdown,
+                    onCancel = { backgroundTaskViewModel.onScheduledCountdownCancel() },
+                    onStartNow = { backgroundTaskViewModel.onScheduledStartNow() },
+                )
             }
-        }
-        if (shownAnnouncement != null) {
-            AnnouncementDialog(
-                imageAssetPath = remember(language) { AnnouncementConfig.imageAssetPath(language) },
-                markdown = shownAnnouncement.markdown,
-                onDismiss = { dontShowAgain ->
-                    forceShowAnnouncement = false
-                    if (dontShowAgain) {
-                        coroutineScope.launch {
-                            appSettings.setAnnouncementReadHash(shownAnnouncement.hash)
+            // 长期公告弹窗：远端内容变化（哈希与已读标记不符）后首次启动自动弹出，或从设置中手动打开
+            val current = announcementContent
+            val needsToShow = current != null && current.hash != announcementReadHash
+            val showAnnouncement = forceShowAnnouncement || (needsToShow && !announcementDismissedOnce)
+            val shownAnnouncement = remember(showAnnouncement, language, current) {
+                if (!showAnnouncement) {
+                    null
+                } else {
+                    // 手动打开时拉取可能尚未完成，回退内置 assets
+                    current ?: AnnouncementConfig.loadContent(context, language)
+                        .takeIf { it.isNotBlank() }
+                        ?.let { AnnouncementContent.of(it) }
+                }
+            }
+            if (shownAnnouncement != null) {
+                AnnouncementDialog(
+                    imageAssetPath = remember(language) { AnnouncementConfig.imageAssetPath(language) },
+                    markdown = shownAnnouncement.markdown,
+                    onDismiss = { dontShowAgain ->
+                        forceShowAnnouncement = false
+                        if (dontShowAgain) {
+                            coroutineScope.launch {
+                                appSettings.setAnnouncementReadHash(shownAnnouncement.hash)
+                            }
+                        } else {
+                            announcementDismissedOnce = true
                         }
-                    } else {
-                        announcementDismissedOnce = true
-                    }
-                },
-                onStubbornUnlock = { achievementReporter.reportAnnouncementStubbornClick() },
-            )
+                    },
+                    onStubbornUnlock = { achievementReporter.reportAnnouncementStubbornClick() },
+                )
+            }
         }
     }
 }

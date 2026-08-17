@@ -188,6 +188,7 @@
     <!-- common: reusable terms -->
     <string name="common_confirm">确定</string>
     <string name="common_cancel">取消</string>
+    <string name="common_later">稍后</string>
     <string name="common_restart_now">立即重启</string>
     <string name="common_restart_later">稍后重启</string>
     <string name="common_confirm_restart">确认重启</string>
@@ -1578,12 +1579,13 @@
     <string name="schedule_empty_hint_add">点击右上角添加</string>
     <string name="schedule_exact_alarm_blocked">系统未允许精确闹钟</string>
     <string name="schedule_exact_alarm_hint">仍会按时触发，但状态栏会多一个闹钟图标</string>
-    <string name="schedule_exact_alarm_grant">去允许</string>
     <string name="schedule_exact_alarm_settings">精确闹钟设置</string>
     <string name="schedule_delete_strategy_title">删除策略</string>
     <string name="schedule_delete_strategy_message">确定要删除该定时策略吗？</string>
     <string name="schedule_auto_start_permission_title">自启动权限</string>
     <string name="schedule_auto_start_permission_message">为确保定时任务从后台正常唤起，请在系统设置中允许本应用自启动。</string>
+    <string name="schedule_auto_start_permission_message_fallback">未找到厂商自启动页面，已改为跳转应用详情页。请在其中检查自启动/后台相关设置并允许本应用自启动。</string>
+    <string name="schedule_auto_start_dont_remind">不再提醒</string>
     <string name="schedule_next_trigger">下次: %1$s</string>
     <string name="schedule_last_result">上次: %1$s</string>
     <string name="schedule_edit_title_new">新建策略</string>
@@ -1627,10 +1629,31 @@
     <string name="schedule_close_game_effect_inactive">当前效果：任务结束后不会关闭游戏</string>
     <string name="schedule_permission_tip_battery_optimization">关闭电池优化</string>
     <string name="schedule_permission_tip_exact_alarm">允许精确闹钟</string>
+    <string name="schedule_permission_tip_notification">开启通知权限</string>
+    <string name="schedule_permission_tip_overlay">授予悬浮窗权限</string>
+    <string name="schedule_permission_battery_desc">若请求页未能打开，将跳转系统电池优化列表，请在列表中允许本应用后台运行</string>
     <string name="schedule_permission_title">权限提示</string>
-    <string name="schedule_permission_message">为确保定时任务正常触发，请前往系统设置中处理以下项目：%1$s</string>
     <string name="schedule_go_to_settings">前往设置</string>
-    <string name="schedule_later">稍后</string>
+    <!-- 保存向导：已知厂商的私有省电设置追加指引 -->
+    <string name="schedule_oem_hint_miui">MIUI/HyperOS：请在应用的「省电策略」中选择「无限制」</string>
+    <string name="schedule_oem_hint_huawei">EMUI/HarmonyOS：请在「应用启动管理」中改为手动管理，并允许自启动、关联启动、后台活动</string>
+    <string name="schedule_oem_hint_oppo">ColorOS：请允许本应用后台运行，并关闭「应用速冻」</string>
+    <string name="schedule_oem_hint_vivo">OriginOS/FuntouchOS：请在「后台耗电策略」中允许本应用后台高耗电</string>
+    <string name="schedule_oem_hint_samsung">One UI：请将本应用从「深度休眠」应用列表中移除</string>
+    <string name="schedule_oem_hint_meizu">Flyme：请在「后台管理」中允许本应用后台运行与后台弹出</string>
+    <!-- 调度环境健康卡 -->
+    <string name="schedule_health_title">调度环境检查</string>
+    <string name="schedule_health_fix">去修复</string>
+    <string name="schedule_health_backend">%1$s未授权</string>
+    <string name="schedule_health_backend_desc">定时触发的唤醒、拉起界面与执行都依赖它，请先启动对应服务并完成授权</string>
+    <string name="schedule_health_battery">未忽略电池优化</string>
+    <string name="schedule_health_battery_desc">后台触发可能被系统延迟或拦截</string>
+    <string name="schedule_health_notification">通知权限未开启</string>
+    <string name="schedule_health_notification_desc">定时执行与失败提醒的通知将不可见</string>
+    <string name="schedule_health_overlay">悬浮窗权限未授予</string>
+    <string name="schedule_health_overlay_desc">已启用的屏保策略需要悬浮窗权限</string>
+    <!-- 触发日志：失败结果修复入口 -->
+    <string name="schedule_backend_fix_still_not_ready">%1$s仍未授权：请确认对应服务正在运行，或在设置中更换启动模式</string>
     <string name="schedule_time_picker_title">选择时间</string>
     <string name="schedule_time_picker_keyboard_input">键盘输入</string>
     <string name="schedule_time_picker_dial_selection">表盘选择</string>

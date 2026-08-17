@@ -166,6 +166,16 @@
 
     <queries>
         <package android:name="moe.shizuku.privileged.api" />
+        <!-- 自启动引导的厂商设置页（AutoStartHelper），targetSdk 30+ 需逐包声明才可 resolveActivity -->
+        <package android:name="com.miui.securitycenter" />
+        <package android:name="com.coloros.safecenter" />
+        <package android:name="com.oppo.safe" />
+        <package android:name="com.vivo.permissionmanager" />
+        <package android:name="com.huawei.systemmanager" />
+        <package android:name="com.hihonor.systemmanager" />
+        <package android:name="com.samsung.android.lool" />
+        <package android:name="com.meizu.safe" />
+        <package android:name="com.zte.heartyservice" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />

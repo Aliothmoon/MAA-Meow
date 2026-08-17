@@ -1,7 +1,6 @@
 package com.aliothmoon.maameow.schedule.ui
 
-import android.content.Intent
-import android.provider.Settings
+import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -52,6 +51,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,21 +60,27 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.presentation.LocalToaster
 import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
+import com.aliothmoon.maameow.schedule.model.ScheduleHealthIssue
 import com.aliothmoon.maameow.schedule.model.ScheduleType
 import com.aliothmoon.maameow.schedule.service.ExactAlarmSettings
+import com.aliothmoon.maameow.schedule.service.OemPowerHints
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.i18n.asString
 import com.dokar.sonner.ToastType
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalTime
@@ -99,15 +105,37 @@ fun ScheduleEditView(
         viewModel.loadStrategy(context, strategyId)
     }
 
-    var showPermissionDialog by remember { mutableStateOf(false) }
+    val permissionManager: PermissionManager = koinInject()
+    val wizardScope = rememberCoroutineScope()
 
-    LaunchedEffect(state.saveSuccess) {
-        if (state.saveSuccess) {
-            if (state.needBatteryOptimization || state.needExactAlarm) {
-                showPermissionDialog = true
-            } else {
-                navController.popBackStack()
+    // 可见性由三个条件推导，不另存一份可变标志
+    var wizardDismissed by remember { mutableStateOf(false) }
+    val showWizard = state.saveSuccess && !wizardDismissed && state.wizardPending.isNotEmpty()
+
+    // 全部处理完自动返回，含保存时本就全通过的情况
+    LaunchedEffect(state.saveSuccess, state.wizardPending.isEmpty()) {
+        if (state.saveSuccess && state.wizardPending.isEmpty()) {
+            navController.popBackStack()
+        }
+    }
+
+    // 从系统设置返回时重检，推进到下一项
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (showWizard) viewModel.refreshPermissionChecks()
+    }
+
+    // 与健康卡走同一条路，别再手写一套裸 Intent
+    fun openWizardTarget(item: ScheduleHealthIssue) {
+        wizardScope.launch {
+            when (item) {
+                ScheduleHealthIssue.BATTERY -> permissionManager.requestBatteryWhitelist(context)
+                ScheduleHealthIssue.EXACT_ALARM -> ExactAlarmSettings.open(context)
+                ScheduleHealthIssue.NOTIFICATION -> permissionManager.requestNotification(context)
+                ScheduleHealthIssue.OVERLAY -> permissionManager.requestOverlay(context)
+                // 进不了向导，由健康卡负责
+                ScheduleHealthIssue.BACKEND -> Unit
             }
+            viewModel.refreshPermissionChecks()
         }
     }
 
@@ -666,52 +694,55 @@ fun ScheduleEditView(
         )
     }
 
-    if (showPermissionDialog) {
-        val context = LocalContext.current
-        val tips = buildList {
-            if (state.needBatteryOptimization) add(stringResource(R.string.schedule_permission_tip_battery_optimization))
-            if (state.needExactAlarm) add(stringResource(R.string.schedule_permission_tip_exact_alarm))
-        }
-        AlertDialog(
-            onDismissRequest = {
-                showPermissionDialog = false
+    if (showWizard) {
+        val current = state.wizardPending.first()
+        PermissionWizardDialog(
+            current = current,
+            oemHint = scheduleOemPowerHintText(OemPowerHints.hintFor(Build.MANUFACTURER))
+                .takeIf { current == ScheduleHealthIssue.BATTERY },
+            onGo = { openWizardTarget(current) },
+            onLater = {
+                wizardDismissed = true
                 navController.popBackStack()
             },
-            title = { Text(stringResource(R.string.schedule_permission_title)) },
-            text = {
-                Text(
-                    stringResource(
-                        R.string.schedule_permission_message,
-                        tips.joinToString(stringResource(R.string.common_enumeration_separator))
-                    )
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (state.needBatteryOptimization) {
-                        runCatching {
-                            context.startActivity(
-                                Intent(
-                                    Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                                    "package:${context.packageName}".toUri()
-                                )
-                            )
-                        }
-                    } else if (state.needExactAlarm) {
-                        ExactAlarmSettings.open(context)
-                    }
-                    showPermissionDialog = false
-                    navController.popBackStack()
-                }) { Text(stringResource(R.string.schedule_go_to_settings)) }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showPermissionDialog = false
-                    navController.popBackStack()
-                }) { Text(stringResource(R.string.schedule_later)) }
-            }
         )
     }
+}
+
+/** 每次只展示当前待处理项，全部通过后自动关闭 */
+@Composable
+private fun PermissionWizardDialog(
+    current: ScheduleHealthIssue,
+    oemHint: String?,
+    onGo: () -> Unit,
+    onLater: () -> Unit,
+) {
+    val (tip, desc) = schedulePermissionActionText(current)
+    AlertDialog(
+        onDismissRequest = onLater,
+        title = { Text(stringResource(R.string.schedule_permission_title)) },
+        text = {
+            Column {
+                Text(tip, style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(4.dp))
+                Text(desc, style = MaterialTheme.typography.bodySmall)
+                if (oemHint != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        oemHint,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onGo) { Text(stringResource(R.string.schedule_go_to_settings)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onLater) { Text(stringResource(R.string.common_later)) }
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

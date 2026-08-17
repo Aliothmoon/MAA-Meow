@@ -3,9 +3,12 @@ package com.aliothmoon.maameow.schedule.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
+import com.aliothmoon.maameow.schedule.model.ScheduleHealthIssue
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import com.aliothmoon.maameow.schedule.model.ScheduleType
+import com.aliothmoon.maameow.schedule.service.OemPowerHint
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.ZoneId
@@ -45,6 +48,71 @@ internal fun scheduleExecutionResultLabel(result: ExecutionResult): String = whe
     ExecutionResult.SKIPPED_BUSY -> stringResource(R.string.schedule_result_skipped_busy)
     ExecutionResult.SKIPPED_LOCKED -> stringResource(R.string.schedule_result_skipped_locked)
     ExecutionResult.CANCELLED -> stringResource(R.string.schedule_result_cancelled)
+}
+
+/**
+ * 健康卡文案：陈述现状（「未忽略电池优化」），与 [schedulePermissionActionText] 的动作式对应
+ *
+ * [backend] 让后端项跟随启动模式显示 Shizuku / Root，与 home_toast_backend_* 写法一致
+ */
+@Composable
+internal fun scheduleHealthIssueText(
+    issue: ScheduleHealthIssue,
+    backend: RemoteBackend = RemoteBackend.SHIZUKU,
+): Pair<String, String> = when (issue) {
+    ScheduleHealthIssue.BACKEND ->
+        stringResource(R.string.schedule_health_backend, backend.display) to
+            stringResource(R.string.schedule_health_backend_desc)
+
+    ScheduleHealthIssue.BATTERY ->
+        stringResource(R.string.schedule_health_battery) to
+            stringResource(R.string.schedule_health_battery_desc)
+
+    ScheduleHealthIssue.EXACT_ALARM ->
+        stringResource(R.string.schedule_exact_alarm_blocked) to
+            stringResource(R.string.schedule_exact_alarm_hint)
+
+    ScheduleHealthIssue.NOTIFICATION ->
+        stringResource(R.string.schedule_health_notification) to
+            stringResource(R.string.schedule_health_notification_desc)
+
+    ScheduleHealthIssue.OVERLAY ->
+        stringResource(R.string.schedule_health_overlay) to
+            stringResource(R.string.schedule_health_overlay_desc)
+}
+
+/** 向导文案：陈述动作（「关闭电池优化」） */
+@Composable
+internal fun schedulePermissionActionText(issue: ScheduleHealthIssue): Pair<String, String> = when (issue) {
+    ScheduleHealthIssue.BATTERY ->
+        stringResource(R.string.schedule_permission_tip_battery_optimization) to
+            stringResource(R.string.schedule_permission_battery_desc)
+
+    ScheduleHealthIssue.EXACT_ALARM ->
+        stringResource(R.string.schedule_permission_tip_exact_alarm) to
+            stringResource(R.string.schedule_exact_alarm_hint)
+
+    ScheduleHealthIssue.NOTIFICATION ->
+        stringResource(R.string.schedule_permission_tip_notification) to
+            stringResource(R.string.schedule_health_notification_desc)
+
+    ScheduleHealthIssue.OVERLAY ->
+        stringResource(R.string.schedule_permission_tip_overlay) to
+            stringResource(R.string.schedule_health_overlay_desc)
+
+    // 不进向导，回落到卡片文案只为 when 穷尽
+    ScheduleHealthIssue.BACKEND -> scheduleHealthIssueText(issue)
+}
+
+@Composable
+internal fun scheduleOemPowerHintText(hint: OemPowerHint?): String? = when (hint) {
+    OemPowerHint.MIUI -> stringResource(R.string.schedule_oem_hint_miui)
+    OemPowerHint.HUAWEI -> stringResource(R.string.schedule_oem_hint_huawei)
+    OemPowerHint.OPPO -> stringResource(R.string.schedule_oem_hint_oppo)
+    OemPowerHint.VIVO -> stringResource(R.string.schedule_oem_hint_vivo)
+    OemPowerHint.SAMSUNG -> stringResource(R.string.schedule_oem_hint_samsung)
+    OemPowerHint.MEIZU -> stringResource(R.string.schedule_oem_hint_meizu)
+    null -> null
 }
 
 @Composable

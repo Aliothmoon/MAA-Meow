@@ -34,12 +34,13 @@ fun ShizukuReadinessDialog(
     onDismiss: () -> Unit,
     onSwitchToRoot: () -> Unit,
     isRequesting: Boolean = false,
+    dismissText: String? = null,
 ) {
     if (!readiness.needsGuidance) return
 
     val switchToRootText = if (readiness.canSwitchToRoot)
         stringResource(R.string.dialog_shizuku_switch_to_root) else null
-    val skipText = stringResource(R.string.dialog_shizuku_skip_check)
+    val skipText = dismissText ?: stringResource(R.string.dialog_shizuku_skip_check)
 
     when (readiness.stage) {
         ShizukuReadinessStage.NotInstalled -> {

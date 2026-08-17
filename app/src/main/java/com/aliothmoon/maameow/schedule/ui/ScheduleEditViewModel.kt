@@ -1,7 +1,6 @@
 package com.aliothmoon.maameow.schedule.ui
 
 import android.content.Context
-import android.os.PowerManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.R
@@ -9,7 +8,11 @@ import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
+import com.aliothmoon.maameow.schedule.model.ScheduleHealthIssue
+import com.aliothmoon.maameow.schedule.model.ScheduleHealthLogic
+import com.aliothmoon.maameow.schedule.model.ScheduleHealthSnapshot
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import com.aliothmoon.maameow.schedule.model.ScheduleType
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
@@ -51,8 +54,8 @@ data class ScheduleEditUiState(
     val closeGameAfterTask: Boolean = false,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
-    val needBatteryOptimization: Boolean = false,
-    val needExactAlarm: Boolean = false,
+    /** 空列表 = 无需向导 */
+    val wizardPending: List<ScheduleHealthIssue> = emptyList(),
     val errorMessage: UiText? = null
 )
 
@@ -68,6 +71,7 @@ class ScheduleEditViewModel(
     private val repository: ScheduleStrategyRepository,
     private val taskChainState: TaskChainState,
     private val scheduleAlarmManager: ScheduleAlarmManager,
+    private val permissionManager: PermissionManager,
     appSettings: AppSettingsManager,
 ) : ViewModel() {
 
@@ -310,16 +314,12 @@ class ScheduleEditViewModel(
                 scheduleAlarmManager.scheduleNext(strategy)
 
                 // 检查关键权限
-                val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-                val batteryOk = pm.isIgnoringBatteryOptimizations(context.packageName)
-                val alarmOk = scheduleAlarmManager.canScheduleExact()
+                refreshPermissionChecks()
 
                 _state.update {
                     it.copy(
                         isSaving = false,
                         saveSuccess = true,
-                        needBatteryOptimization = !batteryOk,
-                        needExactAlarm = !alarmOk
                     )
                 }
             }.onFailure { e ->
@@ -333,6 +333,27 @@ class ScheduleEditViewModel(
                     )
                 }
             }
+        }
+    }
+
+    /** 悬浮窗仅在策略勾选屏保时纳入，免得向导走完又被健康卡 nag 一遍 */
+    fun refreshPermissionChecks() {
+        // 先刷新，避免依赖 onResume 回调顺序
+        permissionManager.refresh()
+        val permissions = permissionManager.permissions
+        _state.update {
+            it.copy(
+                wizardPending = ScheduleHealthLogic.wizardItems(
+                    ScheduleHealthSnapshot(
+                        backendGranted = permissions.remoteAccessGranted,
+                        batteryWhitelist = permissions.batteryWhitelist,
+                        notification = permissions.notification,
+                        exactAlarmAllowed = scheduleAlarmManager.canScheduleExact(),
+                        overlayGranted = permissions.overlay,
+                        overlayNeeded = it.autoScreenSaver,
+                    )
+                )
+            )
         }
     }
 
