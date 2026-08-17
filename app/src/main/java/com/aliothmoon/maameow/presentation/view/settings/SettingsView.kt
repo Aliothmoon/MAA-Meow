@@ -801,8 +801,17 @@ fun SettingsView(
                             checked = reportToPenguin,
                             onCheckedChange = { viewModel.setReportToPenguin(it) }
                         )
+                        ListItemDivider()
+                        SettingSwitchItem(
+                            title = stringResource(R.string.settings_report_yituliu),
+                            description = stringResource(R.string.settings_report_yituliu_desc),
+                            contentColor = contentColor,
+                            checked = reportToYituliu,
+                            onCheckedChange = { viewModel.setReportToYituliu(it) }
+                        )
+                        // ID 只归企鹅物流，一图流的掉落上报不带 ID
                         MaaAnimatedVisibility(
-                            visible = reportToPenguin || reportToYituliu,
+                            visible = reportToPenguin,
                             enter = expandVertically(),
                             exit = shrinkVertically(),
                         ) {
@@ -814,14 +823,6 @@ fun SettingsView(
                                 )
                             }
                         }
-                        ListItemDivider()
-                        SettingSwitchItem(
-                            title = stringResource(R.string.settings_report_yituliu),
-                            description = stringResource(R.string.settings_report_yituliu_desc),
-                            contentColor = contentColor,
-                            checked = reportToYituliu,
-                            onCheckedChange = { viewModel.setReportToYituliu(it) }
-                        )
                         ListItemDivider()
                         SettingSwitchItem(
                             title = stringResource(R.string.settings_tasks_override_title),
