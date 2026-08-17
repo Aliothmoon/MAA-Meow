@@ -231,6 +231,14 @@ class SubTaskHandler(
                 notificationCenter.notifySubTaskFailure(message)
             }
 
+            // 奇象巡展遇到暂未收录的奇象，core 已停任务，交给玩家手动战斗
+            "CheckEncounter-Uncollected" -> {
+                val title = resources.getString(R.string.runlog_exhibition_uncollected_title)
+                val content = resources.getString(R.string.runlog_exhibition_uncollected_content)
+                append("$title：$content", LogLevel.WARNING)
+                notificationCenter.notifyHandoverRequired(title, content)
+            }
+
             "RecruitRefreshConfirm" -> {
                 append(str("LabelsRefreshed"), LogLevel.INFO)
                 ioScope.launch {

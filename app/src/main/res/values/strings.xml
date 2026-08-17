@@ -1082,6 +1082,10 @@
     <string name="mini_game_tip_all_duel_channel">手动跳过教程对话，然后可以直接退出。\n在活动主界面（右下角有 ｢加入赛事｣ 处）开始任务。\n\n跟着鸭总喝口汤。</string>
     <string name="mini_game_name_pf">阵地足球锦标赛</string>
     <string name="mini_game_tip_pf">手动通过教程关卡后，进入 PF-1 进行手动编队，要求仅编入 ｢克洛丝｣ 单个干员，并回到在活动关卡界面点击 PF-1 后开始任务。</string>
+    <string name="mini_game_name_interactive_exhibition">奇象巡展-找未收录生物</string>
+    <string name="mini_game_tip_interactive_exhibition">在所选地图的高级区草地右下角开始任务。\n在草地来回走动寻找未收录生物，找到后自动停止。\n只有草地能遇到生物。</string>
+    <string name="runlog_exhibition_uncollected_title">奇象巡展：发现暂未收录奇象</string>
+    <string name="runlog_exhibition_uncollected_content">已停止自动探索，请返回游戏完成战斗。</string>
 
     <!-- panel: task list -->
     <string name="panel_task_list_edit_config">编辑配置</string>

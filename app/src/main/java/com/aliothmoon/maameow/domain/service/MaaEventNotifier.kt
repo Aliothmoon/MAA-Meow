@@ -101,8 +101,20 @@ class MaaEventNotifier(
         )
     }
 
+    /** 标题由调用方给定的通用事件通知 */
+    fun notifyEvent(title: String, text: String) {
+        send(title, text, eventIdGenerator.getAndIncrement())
+    }
+
     private fun send(
         @StringRes titleRes: Int,
+        text: String,
+        notifyId: Int,
+        isError: Boolean = false,
+    ) = send(string(titleRes), text, notifyId, isError)
+
+    private fun send(
+        title: String,
         text: String,
         notifyId: Int,
         isError: Boolean = false,
@@ -132,7 +144,6 @@ class MaaEventNotifier(
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val title = string(titleRes)
         val notification = NotificationCompat.Builder(appContext, channelId)
             .setSmallIcon(R.drawable.ic_maa_logo)
             .setContentTitle(title)

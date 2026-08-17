@@ -33,6 +33,14 @@ class MaaNotificationCenter(
         eventNotifier.notifySubTaskFailure(message)
     }
 
+    /** 需要玩家接手的任务事件（如奇象巡展发现未收录奇象），外推走「完成」开关 */
+    fun notifyHandoverRequired(title: String, content: String) {
+        eventNotifier.notifyEvent(title, content)
+        if (settings.sendOnComplete.value) {
+            externalService.send(title, content)
+        }
+    }
+
     /** 公招稀有 Tag */
     fun notifyRecruitSpecialTag(tag: String) {
         eventNotifier.notifyRecruitSpecialTag(tag)

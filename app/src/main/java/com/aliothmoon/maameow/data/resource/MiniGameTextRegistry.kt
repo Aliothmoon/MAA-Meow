@@ -29,6 +29,7 @@ object MiniGameTextRegistry {
         "MiniGame@ALL@HoneyFruit" -> R.string.mini_game_name_all_honey_fruit
         "MiniGame@ALL@IvyVine" -> R.string.mini_game_name_all_ivy_vine
         "MiniGame@PF" -> R.string.mini_game_name_pf
+        "MiniGame@InteractiveExhibition" -> R.string.mini_game_name_interactive_exhibition
         else -> null
     }
 
@@ -50,6 +51,7 @@ object MiniGameTextRegistry {
         "MiniGame@ALL@HoneyFruitTip" -> R.string.mini_game_tip_all_duel_channel
         "MiniGame@ALL@IvyVineTip" -> R.string.mini_game_tip_all_duel_channel
         "MiniGame@PFTip" -> R.string.mini_game_tip_pf
+        "MiniGame@InteractiveExhibitionTip" -> R.string.mini_game_tip_interactive_exhibition
         else -> null
     }
 
@@ -70,6 +72,8 @@ object MiniGameTextRegistry {
         "MiniGame@ALL@HoneyFruit" -> R.string.mini_game_name_all_honey_fruit
         "MiniGame@ALL@IvyVine" -> R.string.mini_game_name_all_ivy_vine
         "MiniGame@PF", "MiniGame@PF@Begin" -> R.string.mini_game_name_pf
+        "MiniGame@InteractiveExhibition", "MiniGame@InteractiveExhibition@Begin" ->
+            R.string.mini_game_name_interactive_exhibition
         else -> null
     }
 
@@ -90,6 +94,8 @@ object MiniGameTextRegistry {
         "MiniGame@ALL@HoneyFruit" -> R.string.mini_game_tip_all_duel_channel
         "MiniGame@ALL@IvyVine" -> R.string.mini_game_tip_all_duel_channel
         "MiniGame@PF", "MiniGame@PF@Begin" -> R.string.mini_game_tip_pf
+        "MiniGame@InteractiveExhibition", "MiniGame@InteractiveExhibition@Begin" ->
+            R.string.mini_game_tip_interactive_exhibition
         else -> null
     }
 

@@ -76,6 +76,33 @@ class MiniGameTextRegistryTest {
     }
 
     @Test
+    fun resolveDisplay_interactiveExhibition_usesLocalizedName() {
+        // 上游 v6.17.0-beta.2 新增的奇象巡展，没登记会直接把 Key 显示到界面上
+        assertEquals(
+            UiText.Resource(R.string.mini_game_name_interactive_exhibition),
+            MiniGameTextRegistry.resolveDisplay(
+                display = "奇象巡展-找未收录生物",
+                displayKey = "MiniGame@InteractiveExhibition",
+                value = "MiniGame@InteractiveExhibition@Begin"
+            )
+        )
+    }
+
+    @Test
+    fun resolveTip_interactiveExhibition_usesLocalizedTip() {
+        assertEquals(
+            UiText.Resource(R.string.mini_game_tip_interactive_exhibition),
+            MiniGameTextRegistry.resolveTip(
+                tip = "API 内联中文提示",
+                tipKey = "MiniGame@InteractiveExhibitionTip",
+                display = UiText.Dynamic("奇象巡展-找未收录生物"),
+                displayKey = "MiniGame@InteractiveExhibition",
+                value = "MiniGame@InteractiveExhibition@Begin"
+            )
+        )
+    }
+
+    @Test
     fun resolveTip_allEmpty_returnsEmptyTip() {
         val result = MiniGameTextRegistry.resolveTip(
             tip = null,
