@@ -76,6 +76,12 @@ data class RoguelikeConfig(
     val expectedCollapsalParadigms: String = "",  // 坍缩范式列表
 
     // 通用高级设置
+    // TODO: 尚未接线，本次迭代不做
+    //  上游是纯 GUI 行为，没有对应 core 参数：战斗中（StageInfo 回调）把「停止」换成
+    //  「等待 & 停止」，点了先等 RoguelikeCombatEnd 再真停，上限 10 分钟；
+    //  用途是避免肉鸽战斗中途硬停——那样游戏卡在战斗里，本次探索基本就废了
+    //  实现前要先搬家：上游放在全局 RuntimeSettings，这里却在每节点的 RoguelikeConfig 上，
+    //  两个肉鸽节点各有一份时回调侧无从取值，应挪到 AppSettingsManager
     val delayAbortUntilCombatComplete: Boolean = false  // 战斗结束前延迟停止
 ) : TaskParamProvider {
     override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
