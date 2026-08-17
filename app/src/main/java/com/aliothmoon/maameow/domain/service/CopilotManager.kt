@@ -298,7 +298,7 @@ class CopilotManager(
                             add(buildJsonObject {
                                 put("id", i)
                                 put("filename", item.filePath)
-                                put("stage_name", item.name)
+                                // 不发 nav_name_override，由 core 6.17 起自己从作业文件推导导航 code
                                 put("is_raid", item.isRaid)
                             })
                         }
