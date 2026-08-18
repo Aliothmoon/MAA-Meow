@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -47,6 +48,12 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.io.InputStream
 import java.io.OutputStream
+
+/** markdown 是 Mirror 酱下发的远端正文，没有资源可以支撑，不套 UiText */
+data class ChangelogArchive(
+    val version: String,
+    val markdown: String,
+)
 
 class SettingsViewModel(
     private val app: Application,
@@ -518,6 +525,31 @@ class SettingsViewModel(
         viewModelScope.launch {
             appSettingsManager.setCustomBackgroundBlur(value)
         }
+    }
+
+    // ========== 更新日志 ==========
+
+    private val _showChangelog = MutableStateFlow(false)
+    val showChangelog: StateFlow<Boolean> = _showChangelog.asStateFlow()
+
+    /** 当前版本留档的更新日志；版本号对不上（如旁路装了新版）一律视为没有 */
+    val currentChangelog: StateFlow<ChangelogArchive?> = combine(
+        appSettingsManager.currentChangelogVersion,
+        appSettingsManager.currentChangelogContent,
+    ) { version, content ->
+        if (version == BuildConfig.VERSION_NAME && content.isNotBlank()) {
+            ChangelogArchive(version = version, markdown = content)
+        } else {
+            null
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    fun onShowChangelog() {
+        _showChangelog.value = true
+    }
+
+    fun onDismissChangelog() {
+        _showChangelog.value = false
     }
 
     private companion object {

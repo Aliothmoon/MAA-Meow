@@ -474,6 +474,8 @@
     <string name="settings_about_developer">Developer</string>
     <string name="settings_about_qq_group_title">Feedback QQ Group</string>
     <string name="settings_about_qq_group_desc">Got issues or suggestions? Join the QQ group to discuss</string>
+    <string name="settings_about_changelog">Changelog</string>
+    <string name="settings_about_changelog_empty">No changelog yet. After you update to a new version from within the app, the release notes for that version are kept here.</string>
     <string name="settings_about_announcement">View Announcement</string>
     <string name="settings_about_star">⭐ Star us if you like it</string>
 

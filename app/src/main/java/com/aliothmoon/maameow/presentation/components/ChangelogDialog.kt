@@ -17,11 +17,12 @@ import dev.jeziellago.compose.markdowntext.MarkdownText
 @Composable
 fun ChangelogDialog(
     content: String,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    title: String? = null,
 ) {
     AdaptiveTaskPromptDialog(
         visible = true,
-        title = stringResource(R.string.dialog_changelog_title),
+        title = title ?: stringResource(R.string.dialog_changelog_title),
         onConfirm = onDismiss,
         onDismissRequest = onDismiss,
         confirmText = stringResource(R.string.common_i_got_it),

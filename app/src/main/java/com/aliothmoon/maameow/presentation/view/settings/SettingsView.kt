@@ -106,6 +106,7 @@ import com.aliothmoon.maameow.manager.ShizukuInstallHelper
 import com.aliothmoon.maameow.utils.UiScale
 import kotlin.math.roundToInt
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.components.ChangelogDialog
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.components.ListItemDivider
 import com.aliothmoon.maameow.presentation.components.LogExportController
@@ -141,6 +142,8 @@ fun SettingsView(
     achievementReporter: AchievementReporter = koinInject(),
 ) {
     val resourceInitState by resourceInitService.state.collectAsStateWithLifecycle()
+    val showChangelog by viewModel.showChangelog.collectAsStateWithLifecycle()
+    val currentChangelog by viewModel.currentChangelog.collectAsStateWithLifecycle()
     val debugMode by viewModel.debugMode.collectAsStateWithLifecycle()
     val autoCheckUpdate by viewModel.autoCheckUpdate.collectAsStateWithLifecycle()
     val autoDownloadUpdate by viewModel.autoDownloadUpdate.collectAsStateWithLifecycle()
@@ -331,6 +334,15 @@ fun SettingsView(
             cropState = backgroundCrop.cropState,
             onCancel = backgroundCrop::cancel,
             onConfirm = backgroundCrop::confirm,
+        )
+    }
+
+    if (showChangelog) {
+        ChangelogDialog(
+            content = currentChangelog?.markdown
+                ?: stringResource(R.string.settings_about_changelog_empty),
+            title = stringResource(R.string.settings_about_changelog),
+            onDismiss = { viewModel.onDismissChangelog() }
         )
     }
 
@@ -1008,6 +1020,13 @@ fun SettingsView(
                         ) {
                             achievementReporter.reportFeedbackGroupOpened()
                             Misc.openUriSafely(context, "https://join.maameow.com/")
+                        }
+                        ListItemDivider()
+                        SettingClickItem(
+                            title = stringResource(R.string.settings_about_changelog),
+                            contentColor = contentColor
+                        ) {
+                            viewModel.onShowChangelog()
                         }
                         ListItemDivider()
                         SettingClickItem(
