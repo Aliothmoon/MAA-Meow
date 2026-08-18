@@ -296,7 +296,7 @@ class UpdateViewModel(
     val changelogDialog: StateFlow<String?> = _changelogDialog.asStateFlow()
 
     fun checkPendingChangelog() {
-        val version = appSettingsManager.pendingChangelogVersion.value
+        val version = appSettingsManager.pendingChangelogVersion.value.removePrefix("v")
         val content = appSettingsManager.pendingChangelogContent.value
         val isNewVersion = version == BuildConfig.VERSION_NAME
         if (version.isNotEmpty() && content.isNotEmpty() && isNewVersion) {

@@ -516,7 +516,7 @@ class AppSettingsManager(
     suspend fun savePendingChangelog(version: String, content: String) {
         with(AppSettingsSchema) {
             context.dataStore.edit {
-                it[pendingChangelogVersion] = version
+                it[pendingChangelogVersion] = version.removePrefix("v")
                 it[pendingChangelogContent] = content
             }
         }
@@ -539,7 +539,7 @@ class AppSettingsManager(
                 val version = it[pendingChangelogVersion].orEmpty()
                 val content = it[pendingChangelogContent].orEmpty()
                 if (version.isNotEmpty() && content.isNotEmpty()) {
-                    it[currentChangelogVersion] = version
+                    it[currentChangelogVersion] = version.removePrefix("v")
                     it[currentChangelogContent] = content
                 }
                 it[pendingChangelogVersion] = ""
