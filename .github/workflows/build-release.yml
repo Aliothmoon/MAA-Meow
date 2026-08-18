@@ -138,7 +138,9 @@ jobs:
           name: release-apk-${{ matrix.label }}
           path: app/build/outputs/apk/release/*.apk
 
+      # 四个变体的 Java/Kotlin 输入一致，R8 产物相同，只留 universal 一份
       - name: Upload R8 mapping
+        if: matrix.label == 'universal'
         uses: actions/upload-artifact@v4
         with:
           name: release-mapping-${{ matrix.label }}
@@ -196,27 +198,17 @@ jobs:
           merge-multiple: true
           path: apks
 
-      # 不能 merge-multiple：四份 artifact 里的文件都叫 mapping.txt，合并会互相覆盖
-      - name: Download all mapping artifacts
+      - name: Download mapping artifact
         uses: actions/download-artifact@v4
         with:
-          pattern: release-mapping-*
+          name: release-mapping-universal
           path: mappings
 
-      - name: Pack mappings
+      - name: Pack mapping
         run: |
           TAG="${GITHUB_REF_NAME}"
-          mkdir -p mapping-zips
-          for d in mappings/release-mapping-*; do
-            [ -d "$d" ] || continue
-            LABEL="${d#mappings/release-mapping-}"
-            NAME="mapping-${TAG}-${LABEL}"
-            # 包内文件名也带 label，用户下多份解压时不会互相覆盖
-            cp "$d/mapping.txt" "${NAME}.txt"
-            zip -q -9 "mapping-zips/${NAME}.zip" "${NAME}.txt"
-            rm "${NAME}.txt"
-          done
-          ls -lh mapping-zips
+          zip -q -9 -j "mapping-${TAG}.zip" mappings/mapping.txt
+          ls -lh mapping-*.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -226,5 +218,5 @@ jobs:
           # 小写 mapping- 前缀，ASCII 升序下排在 MaaMeow-*.apk 之后，不打乱下载列表
           files: |
             apks/*.apk
-            mapping-zips/*.zip
+            mapping-*.zip
           body_path: RELEASE_NOTES.md
