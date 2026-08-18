@@ -301,14 +301,15 @@ class UpdateViewModel(
         val isNewVersion = version == BuildConfig.VERSION_NAME
         if (version.isNotEmpty() && content.isNotEmpty() && isNewVersion) {
             _changelogDialog.value = content
+            // 确认已装上就立刻留档，用户直接划走弹窗也能在「关于」里回看
+            viewModelScope.launch {
+                appSettingsManager.promotePendingChangelog()
+            }
         }
     }
 
     fun dismissChangelog() {
         _changelogDialog.value = null
-        viewModelScope.launch {
-            appSettingsManager.clearPendingChangelog()
-        }
     }
 
     private fun saveAppChangelog(appInfo: UpdateInfo?) {

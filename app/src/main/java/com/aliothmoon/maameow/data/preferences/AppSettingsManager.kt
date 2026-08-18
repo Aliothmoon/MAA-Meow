@@ -522,9 +522,26 @@ class AppSettingsManager(
         }
     }
 
-    suspend fun clearPendingChangelog() {
+    val currentChangelogVersion: StateFlow<String> = settings
+        .map { it.currentChangelogVersion }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.currentChangelogVersion)
+
+    val currentChangelogContent: StateFlow<String> = settings
+        .map { it.currentChangelogContent }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.currentChangelogContent)
+
+    /** 单次 edit 内完成，避免中途崩溃导致两份都丢 */
+    suspend fun promotePendingChangelog() {
         with(AppSettingsSchema) {
             context.dataStore.edit {
+                val version = it[pendingChangelogVersion].orEmpty()
+                val content = it[pendingChangelogContent].orEmpty()
+                if (version.isNotEmpty() && content.isNotEmpty()) {
+                    it[currentChangelogVersion] = version
+                    it[currentChangelogContent] = content
+                }
                 it[pendingChangelogVersion] = ""
                 it[pendingChangelogContent] = ""
             }

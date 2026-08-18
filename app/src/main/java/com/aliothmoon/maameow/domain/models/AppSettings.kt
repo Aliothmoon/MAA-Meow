@@ -82,6 +82,13 @@ data class AppSettings(
     @PrefKey(default = "")
     val pendingChangelogContent: String = "",
 
+    // 与 pending 分开存：pending 会被下一次检查覆盖成尚未安装版本的日志
+    @PrefKey(default = "")
+    val currentChangelogVersion: String = "",
+
+    @PrefKey(default = "")
+    val currentChangelogContent: String = "",
+
     /**
      * 自动战斗 干员部署"按住-暂停"模式 (对应 Core ControlFeat::SWIPE_WITH_PAUSE)
      * 启用后部署干员前会模拟按住 ESC 暂停游戏, 提高干员部署精确度;
