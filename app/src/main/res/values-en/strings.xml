@@ -1416,6 +1416,14 @@
     <string name="notification_label_application_token">Application Token</string>
     <string name="notification_label_request_body_template">Message body template</string>
     <string name="notification_supported_placeholders">Placeholders: {title}, {content}, {time}</string>
+    <string name="notification_webhook_preset_label">Preset template</string>
+    <string name="notification_webhook_preset_custom">Custom</string>
+    <string name="notification_webhook_preset_discord">Discord Webhook</string>
+    <string name="notification_webhook_preset_kook_channel">KOOK Channel</string>
+    <string name="notification_webhook_preset_kook_direct">KOOK Direct</string>
+    <string name="notification_webhook_preset_meow">MeoW</string>
+    <string name="notification_webhook_preset_ntfy">ntfy</string>
+    <string name="notification_webhook_preset_wecom">WeCom</string>
     <string name="notification_event_channel_silent_name">Task Events (Silent)</string>
     <string name="notification_event_channel_silent_desc">Silent notifications for task completion, errors, and high-rarity recruitment events</string>
     <string name="notification_event_channel_popup_name">Task Events (Popup)</string>

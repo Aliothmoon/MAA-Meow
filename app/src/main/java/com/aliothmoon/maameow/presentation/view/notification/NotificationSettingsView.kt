@@ -26,12 +26,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.notification.WEBHOOK_PRESET_TEMPLATES
+import com.aliothmoon.maameow.data.notification.withWebhookPreset
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager.EventNotificationLevel
 import com.aliothmoon.maameow.domain.service.MaaEventNotifier
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.components.ListItemDivider
 import com.aliothmoon.maameow.presentation.components.SectionHeader
+import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
 import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.SettingsGroupCard
 import com.aliothmoon.maameow.presentation.components.TopAppBar
@@ -447,6 +450,11 @@ private fun ProviderConfig(
         }
 
         "CustomWebhook" -> {
+            WebhookPresetSelector(
+                selectedId = settings.customWebhookPresetId,
+                onSelected = { id -> viewModel.updateSettings { withWebhookPreset(id) } },
+            )
+            Spacer(Modifier.height(MaaDesignTokens.Spacing.sm))
             ITextField(
                 value = settings.customWebhookUrl,
                 onValueChange = { viewModel.updateSettings { copy(customWebhookUrl = it) } },
@@ -489,6 +497,24 @@ private fun SwitchItem(
         trailing = {
             Switch(checked = checked, onCheckedChange = onCheckedChange)
         },
+    )
+}
+
+// 已选中项不重放，避免覆盖用户已改的字段
+@Composable
+private fun WebhookPresetSelector(
+    selectedId: String,
+    onSelected: (String) -> Unit,
+) {
+    val options = ArrayList<Pair<String, String>>(WEBHOOK_PRESET_TEMPLATES.size)
+    for (template in WEBHOOK_PRESET_TEMPLATES) {
+        options.add(template.id to stringResource(template.labelRes))
+    }
+    SelectableChipGroup(
+        label = stringResource(R.string.notification_webhook_preset_label),
+        selectedValue = selectedId,
+        options = options,
+        onSelected = { id -> if (id != selectedId) onSelected(id) },
     )
 }
 

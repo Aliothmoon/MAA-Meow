@@ -1472,6 +1472,14 @@
     <string name="notification_label_application_token">应用 Token</string>
     <string name="notification_label_request_body_template">请求体模板</string>
     <string name="notification_supported_placeholders">支持占位符: {title} {content} {time}</string>
+    <string name="notification_webhook_preset_label">预置模板</string>
+    <string name="notification_webhook_preset_custom">自定义</string>
+    <string name="notification_webhook_preset_discord">Discord Webhook</string>
+    <string name="notification_webhook_preset_kook_channel">KOOK 频道</string>
+    <string name="notification_webhook_preset_kook_direct">KOOK 私信</string>
+    <string name="notification_webhook_preset_meow">MeoW</string>
+    <string name="notification_webhook_preset_ntfy">ntfy</string>
+    <string name="notification_webhook_preset_wecom">WeCom</string>
     <string name="notification_event_channel_silent_name">任务事件（静默）</string>
     <string name="notification_event_channel_silent_desc">任务完成、出错、公招高星等事件通知（静默，不弹出）</string>
     <string name="notification_event_channel_popup_name">任务事件（弹出）</string>

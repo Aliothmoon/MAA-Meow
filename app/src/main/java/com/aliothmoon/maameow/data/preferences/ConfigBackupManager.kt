@@ -5,6 +5,7 @@ import com.aliothmoon.maameow.data.model.InfrastConfig
 import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.data.notification.NotificationSettings
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
+import com.aliothmoon.maameow.data.notification.reapplyWebhookPresetIfBlank
 import com.aliothmoon.maameow.domain.enums.InfrastMode
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.domain.models.AppSettings
@@ -40,7 +41,7 @@ class ConfigBackupManager(
             version = CURRENT_VERSION,
             exportedAt = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
             appSettings = appSettingsManager.settings.first().sanitized(),
-            notificationSettings = notificationSettingsManager.settings.first().sanitized(),
+            notificationSettings = notificationSettingsManager.settings.first().sanitizedForExport(),
             taskProfiles = taskChainState.profiles.value.map { it.sanitized() },
             activeProfileId = taskChainState.profileId.value,
             scheduleStrategies = scheduleStrategyRepository.strategies.value,
@@ -69,7 +70,7 @@ class ConfigBackupManager(
                 customBackgroundToken = localSettings.customBackgroundToken,
             )
         )
-        notificationSettingsManager.updateSettings(backup.notificationSettings)
+        notificationSettingsManager.updateSettings(backup.notificationSettings.reapplyWebhookPresetIfBlank())
         taskChainState.importProfiles(backup.taskProfiles, backup.activeProfileId)
 
         // 先取消旧闹钟，再导入并重新注册
@@ -117,19 +118,22 @@ class ConfigBackupManager(
                 }
             }
         )
-
-        private fun NotificationSettings.sanitized() = copy(
-            serverChanSendKey = "",
-            discordBotToken = "",
-            discordWebhookUrl = "",
-            smtpPassword = "",
-            barkSendKey = "",
-            telegramBotToken = "",
-            dingTalkAccessToken = "",
-            dingTalkSecret = "",
-            qmsgKey = "",
-            gotifyToken = "",
-            customWebhookUrl = "",
-        )
     }
 }
+
+// 导出脱敏：凭证清空，识别类字段（userId/chatId 等）保留
+internal fun NotificationSettings.sanitizedForExport() = copy(
+    serverChanSendKey = "",
+    discordBotToken = "",
+    discordWebhookUrl = "",
+    smtpPassword = "",
+    barkSendKey = "",
+    telegramBotToken = "",
+    dingTalkAccessToken = "",
+    dingTalkSecret = "",
+    kookBotToken = "",
+    qmsgKey = "",
+    gotifyToken = "",
+    customWebhookUrl = "",
+    customWebhookHeaders = "",
+)
