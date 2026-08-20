@@ -131,11 +131,10 @@ fun FloatWindowEditText(
                         textSize = 16f
                         setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
                         // imeOptions 须在 inputType 之后设置, 否则会被冲掉
-                        this.inputType = inputType
-                        this.isSingleLine = singleLine
+                        applyInputType(inputType)
+                        applySingleLine(singleLine)
                         this.isEnabled = enabled
                         this.hint = hint
-                        applyDoneImeOptions(singleLine)
                         setText(value)
                         doAfterTextChanged { editable ->
                             val newText = editable?.toString() ?: ""
@@ -182,14 +181,13 @@ fun FloatWindowEditText(
                     if (et.hint != hint) {
                         et.hint = hint
                     }
-                    if (et.inputType != inputType) {
-                        et.inputType = inputType
-                        // setInputType 会重置 imeOptions, 需重设
-                        et.applyDoneImeOptions(singleLine)
+                    // setInputType 会按 inputType 重算单行状态, 故它一变就要重设
+                    val inputTypeChanged = et.inputTypeApplied != inputType
+                    if (inputTypeChanged) {
+                        et.applyInputType(inputType)
                     }
-                    if (et.isSingleLine != singleLine) {
-                        et.isSingleLine = singleLine
-                        et.applyDoneImeOptions(singleLine)
+                    if (inputTypeChanged || et.singleLineApplied != singleLine) {
+                        et.applySingleLine(singleLine)
                     }
                     et.setTextColor(textColorInt)
                     et.setHintTextColor(hintColorInt)
@@ -208,10 +206,6 @@ fun FloatWindowEditText(
     }
 }
 
-private fun AppCompatEditText.applyDoneImeOptions(singleLine: Boolean) {
-    imeOptions = if (singleLine) EditorInfo.IME_ACTION_DONE else EditorInfo.IME_ACTION_NONE
-}
-
 private fun isImeDoneAction(actionId: Int): Boolean = when (actionId) {
     EditorInfo.IME_ACTION_DONE,
     EditorInfo.IME_ACTION_GO,
@@ -224,6 +218,26 @@ private fun isImeDoneAction(actionId: Int): Boolean = when (actionId) {
 
 
 private class ExtractModeEditText(context: Context) : AppCompatEditText(context) {
+
+    // TextView.isSingleLine() 直到 API 29 才公开, minSdk 28 下读取会抛 IllegalAccessError, 故自行记录
+    var singleLineApplied: Boolean = false
+        private set
+
+    // setSingleLine 会增删 MULTI_LINE 标志, 回读的 inputType 未必等于传入值, 同样自行记录
+    var inputTypeApplied: Int = InputType.TYPE_NULL
+        private set
+
+    fun applyInputType(inputType: Int) {
+        inputTypeApplied = inputType
+        setInputType(inputType)
+    }
+
+    // imeOptions 与单行状态须同进同退, 合并避免漏调
+    fun applySingleLine(singleLine: Boolean) {
+        singleLineApplied = singleLine
+        setSingleLine(singleLine)
+        imeOptions = if (singleLine) EditorInfo.IME_ACTION_DONE else EditorInfo.IME_ACTION_NONE
+    }
 
     override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection? {
         val connection = super.onCreateInputConnection(outAttrs)
