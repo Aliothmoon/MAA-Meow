@@ -11,6 +11,7 @@ import com.aliothmoon.maameow.maa.MaaCoreLibrary
 import com.aliothmoon.maameow.third.Ln
 import com.sun.jna.Memory
 import com.sun.jna.Pointer
+import java.io.File
 import java.io.FileDescriptor
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.system.exitProcess
@@ -84,6 +85,10 @@ class MaaCoreServiceImpl(private val ctx: MaaCoreLibrary?) : MaaCoreService.Stub
 
         val success = instance.get() != null
         Ln.i("$TAG: CreateInstance() = $success")
+        if (success) {
+            // 此时 MaaCore 已初始化日志（asst.log 已落盘），放开权限避免 App 导出时 EACCES
+            MaaCoreManager.userDir?.let { DebugLogPermissionFixer.makeReadableForApp(File(it, "debug")) }
+        }
         return success
     }
 
