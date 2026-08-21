@@ -106,8 +106,8 @@ class ConfigBackupManager(
         private fun AppSettings.normalizedForImport() = copy(
             shizukuLaunchPackage = shizukuLaunchPackage.ifBlank { OFFICIAL_SHIZUKU_PACKAGE },
             liveUpdateCustomTrackerPath = "",
-            liveUpdateTrackerIcon = if (this.liveUpdateTrackerIcon == "custom" && this.liveUpdateCustomTrackerPath.isBlank())
-                "default" else this.liveUpdateTrackerIcon,
+            // 路径已无条件清空，CUSTOM 必定无文件，直接回退内置方案
+            liveUpdateTrackerIcon = if (this.liveUpdateTrackerIcon == "custom") "default" else this.liveUpdateTrackerIcon,
         )
 
         /**

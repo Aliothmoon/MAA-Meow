@@ -33,6 +33,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import android.graphics.Bitmap
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.notification.TrackerIconDecoder
@@ -57,7 +59,9 @@ import com.aliothmoon.maameow.presentation.components.SettingsGroupCard
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import timber.log.Timber
 
@@ -456,14 +460,19 @@ fun LiveUpdateSettingsView(navController: NavController) {
                                     bottom = MaaDesignTokens.Spacing.md,
                                 )
                         ) {
-                            val iconBitmap = remember(customTrackerPath) {
-                                if (customTrackerPath.isNotEmpty())
-                                    TrackerIconDecoder.decode(customTrackerPath, targetSize = 72)
-                                else null
+                            val iconBitmap by produceState<Bitmap?>(initialValue = null, key1 = customTrackerPath) {
+                                value = if (customTrackerPath.isNotEmpty()) {
+                                    withContext(Dispatchers.IO) {
+                                        TrackerIconDecoder.decode(customTrackerPath, targetSize = 72)
+                                    }
+                                } else {
+                                    null
+                                }
                             }
-                            if (iconBitmap != null) {
+                            val bitmap = iconBitmap
+                            if (bitmap != null) {
                                 Image(
-                                    bitmap = iconBitmap.asImageBitmap(),
+                                    bitmap = bitmap.asImageBitmap(),
                                     contentDescription = null,
                                     modifier = Modifier
                                         .size(36.dp)

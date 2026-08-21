@@ -24,6 +24,7 @@ import com.aliothmoon.maameow.maa.callback.TaskRunInfo
 import com.aliothmoon.maameow.maa.callback.TaskRunStatus
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.notification.TrackerIconDecoder
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -91,7 +92,8 @@ class TaskExecutionService : Service() {
     private var progressJob: Job? = null
 
     // 自定义图标缓存：key = "custom|$path"，value = 解码后的 Bitmap（null 表示解码失败/无效）
-    private val trackerIconCache = mutableMapOf<String, Bitmap?>()
+    // 主线程读 + IO 线程写，用 ConcurrentHashMap 保证线程安全
+    private val trackerIconCache = ConcurrentHashMap<String, Bitmap?>()
     private var trackerIconDecodeJob: Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -317,9 +319,10 @@ class TaskExecutionService : Service() {
             if (path.isEmpty()) return IconCompat.createWithResource(this, R.drawable.ic_progress_tracker)
             val key = "custom|$path"
             // 缓存命中：直接返回缓存的 Bitmap，避免主线程 IO
+            val cached = trackerIconCache[key]
+            if (cached != null) return IconCompat.createWithBitmap(cached)
+            // null 可能是 key 不存在（未缓存）或解码失败，用 containsKey 区分
             if (trackerIconCache.containsKey(key)) {
-                val bm = trackerIconCache[key]  // Bitmap?, null = 曾解码失败
-                if (bm != null) return IconCompat.createWithBitmap(bm)
                 return IconCompat.createWithResource(this, R.drawable.ic_progress_tracker)
             }
             // 缓存未命中：先用 fallback，后台解码
