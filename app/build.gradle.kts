@@ -238,6 +238,7 @@ dependencies {
     implementation(libs.sonner)
     implementation(libs.timber)
     implementation(libs.okhttp)
+    implementation(libs.androidsvg)
     implementation(libs.angus.mail)
     implementation(libs.angus.activation)
     implementation(libs.jakarta.activation.api)

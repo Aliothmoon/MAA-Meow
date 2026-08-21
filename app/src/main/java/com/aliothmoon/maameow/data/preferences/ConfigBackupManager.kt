@@ -85,20 +85,29 @@ class ConfigBackupManager(
 
         /**
          * 导出时剥离设备本地字段：CDK 与解锁 PIN 属敏感信息；
-         * 自定义背景的开关与令牌对应本机 filesDir 下的图片文件，在其他设备上不存在。
+         * 自定义背景的开关与令牌对应本机 filesDir 下的图片文件，在其他设备上不存在；
+         * 自定义图标路径同样指向本机 filesDir，跨设备无效，一并清除。
          */
         private fun AppSettings.sanitized() = copy(
             mirrorChyanCdk = "",
             wakeCredential = "",
             customBackgroundEnabled = "false",
             customBackgroundToken = "",
+            liveUpdateCustomTrackerPath = "",
+            // 自定义图标路径已清空，回退到内置方案
+            liveUpdateTrackerIcon = if (this.liveUpdateTrackerIcon == "custom") "default" else this.liveUpdateTrackerIcon,
         )
 
         /**
          * 导入时对已废弃或非法的旧值做归一化，避免后续读取时违反非空约束。
+         * 自定义图标路径指向本机 filesDir，来自其他设备的备份必须丢弃，
+         * 若此时图标类型为 CUSTOM 则回退到内置方案。
          */
         private fun AppSettings.normalizedForImport() = copy(
-            shizukuLaunchPackage = shizukuLaunchPackage.ifBlank { OFFICIAL_SHIZUKU_PACKAGE }
+            shizukuLaunchPackage = shizukuLaunchPackage.ifBlank { OFFICIAL_SHIZUKU_PACKAGE },
+            liveUpdateCustomTrackerPath = "",
+            // 路径已无条件清空，CUSTOM 必定无文件，直接回退内置方案
+            liveUpdateTrackerIcon = if (this.liveUpdateTrackerIcon == "custom") "default" else this.liveUpdateTrackerIcon,
         )
 
         /**

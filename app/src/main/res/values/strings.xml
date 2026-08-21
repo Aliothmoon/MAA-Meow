@@ -331,6 +331,8 @@
     <string name="settings_section_notification">通知</string>
     <string name="settings_notification_title">通知设置</string>
     <string name="settings_notification_desc">管理内部和外部通知渠道</string>
+    <string name="settings_live_update_title">Live Updates 自定义</string>
+    <string name="settings_live_update_desc">自定义任务进度实时通知的显示样式</string>
 
     <!-- settings: data section -->
     <string name="settings_section_data">数据管理</string>
@@ -1421,6 +1423,38 @@
     <string name="notification_popup">弹出提示</string>
     <string name="notification_test_message">这是一条测试通知</string>
     <string name="notification_send_test">发送测试通知</string>
+
+    <!-- i18n: live updates settings -->
+    <string name="live_update_settings_title">Live Updates 自定义</string>
+    <string name="live_update_section_general">通用</string>
+    <string name="live_update_section_display">显示</string>
+    <string name="live_update_enable_title">启用 Live Updates</string>
+    <string name="live_update_enable_desc">在支持的设备上以实时动态样式展示任务进度</string>
+    <string name="live_update_chip_label">状态栏显示内容</string>
+    <string name="live_update_chip_both">进度 + 任务名</string>
+    <string name="live_update_chip_progress">仅进度</string>
+    <string name="live_update_chip_task">仅任务名</string>
+    <string name="live_update_chip_log">最新日志</string>
+    <string name="live_update_chip_none">不显示</string>
+    <string name="live_update_color_label">进度条颜色</string>
+    <string name="live_update_color_default">默认（状态语义色）</string>
+    <string name="live_update_color_blue">蓝色</string>
+    <string name="live_update_color_green">绿色</string>
+    <string name="live_update_color_orange">橙色</string>
+    <string name="live_update_color_purple">紫色</string>
+    <string name="live_update_color_pink">粉色</string>
+    <string name="live_update_color_teal">青色</string>
+    <string name="live_update_color_custom">自定义</string>
+    <string name="live_update_color_custom_hint">选择颜色</string>
+    <string name="live_update_icon_label">进度条图标</string>
+    <string name="live_update_icon_default">合成玉</string>
+    <string name="live_update_icon_logo">MAA 图标</string>
+    <string name="live_update_icon_dot">圆点</string>
+    <string name="live_update_icon_custom">自定义图片</string>
+    <string name="live_update_icon_custom_hint">选择图片或矢量文件作为进度条图标：支持 PNG / JPG / WebP / GIF / SVG / XML 等</string>
+    <string name="live_update_icon_pick">选择图片</string>
+    <string name="live_update_icon_clear">清除</string>
+    <string name="live_update_hint">提示：Live Updates 需要 Android 16+ 且系统支持；关闭后通知将退化为普通样式。状态栏内容过长时系统会按空间截断。\"最新日志\"将显示当前执行的最新日志行。</string>
     <string name="notification_section_external">外部通知</string>
     <string name="notification_send_on_complete">任务完成时通知</string>
     <string name="notification_send_on_error">任务出错时通知</string>

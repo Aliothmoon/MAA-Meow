@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
+import android.graphics.Bitmap
 import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
@@ -21,6 +22,9 @@ import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.maa.callback.TaskChainStatusTracker
 import com.aliothmoon.maameow.maa.callback.TaskRunInfo
 import com.aliothmoon.maameow.maa.callback.TaskRunStatus
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.notification.TrackerIconDecoder
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -31,6 +35,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.android.ext.android.inject
 import timber.log.Timber
 
@@ -48,6 +53,12 @@ class TaskExecutionService : Service() {
         private const val PROGRESS_COLOR_ACTIVE = 0xFF2196F3.toInt()
         private const val PROGRESS_COLOR_PENDING = 0xFF9E9E9E.toInt()
         private const val PROGRESS_COLOR_ERROR = 0xFFD32F2F.toInt()
+        private const val PROGRESS_COLOR_BLUE = 0xFF2196F3.toInt()
+        private const val PROGRESS_COLOR_GREEN = 0xFF4CAF50.toInt()
+        private const val PROGRESS_COLOR_ORANGE = 0xFFFF9800.toInt()
+        private const val PROGRESS_COLOR_PURPLE = 0xFF9C27B0.toInt()
+        private const val PROGRESS_COLOR_PINK = 0xFFE91E63.toInt()
+        private const val PROGRESS_COLOR_TEAL = 0xFF009688.toInt()
 
         private val VISIBLE_TASK_TITLE_RES = mapOf(
             "Fight" to R.string.maa_fight,
@@ -75,9 +86,15 @@ class TaskExecutionService : Service() {
     private val compositionService: MaaCompositionService by inject()
     private val sessionLogger: MaaSessionLogger by inject()
     private val taskChainStatusTracker: TaskChainStatusTracker by inject()
+    private val appSettingsManager: AppSettingsManager by inject()
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var progressJob: Job? = null
+
+    // 自定义图标缓存：key = "custom|$path"，value = 解码后的 Bitmap（null 表示解码失败/无效）
+    // 主线程读 + IO 线程写，用 ConcurrentHashMap 保证线程安全
+    private val trackerIconCache = ConcurrentHashMap<String, Bitmap?>()
+    private var trackerIconDecodeJob: Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -257,13 +274,32 @@ class TaskExecutionService : Service() {
         val contentText = buildContentText(statusText, progressInfo)
         val activeName = activeTaskName(snapshot)
         val title = activeName ?: getString(R.string.notification_task_running_title)
+        val shortCritical = buildShortCriticalText(statusText, progressInfo, activeName)
 
         return buildCompatProgressNotification(
             title = title,
             contentText = contentText,
             progressInfo = progressInfo,
-            activeTaskName = activeName,
+            shortCritical = shortCritical,
         )
+    }
+
+    private fun buildShortCriticalText(
+        statusText: String,
+        progressInfo: TaskProgressInfo,
+        activeTaskName: String?,
+    ): String? = when (appSettingsManager.liveUpdateChipContent.value) {
+        AppSettingsManager.LiveUpdateChipContent.BOTH -> when {
+            progressInfo.progressLabel != null && activeTaskName != null ->
+                "${progressInfo.progressLabel} $activeTaskName"
+            progressInfo.progressLabel != null -> progressInfo.progressLabel
+            activeTaskName != null -> activeTaskName
+            else -> null
+        }
+        AppSettingsManager.LiveUpdateChipContent.PROGRESS -> progressInfo.progressLabel
+        AppSettingsManager.LiveUpdateChipContent.TASK -> activeTaskName
+        AppSettingsManager.LiveUpdateChipContent.LOG -> statusText
+        AppSettingsManager.LiveUpdateChipContent.NONE -> ""
     }
 
     private fun defaultStatusText(state: MaaExecutionState): String = when (state) {
@@ -274,17 +310,68 @@ class TaskExecutionService : Service() {
         MaaExecutionState.ERROR -> getString(R.string.notification_task_error)
     }
 
+    private fun trackerIcon(): IconCompat = when (appSettingsManager.liveUpdateTrackerIcon.value) {
+        AppSettingsManager.LiveUpdateTrackerIcon.LOGO -> IconCompat.createWithResource(this, R.drawable.ic_maa_logo)
+        AppSettingsManager.LiveUpdateTrackerIcon.DOT -> IconCompat.createWithResource(this, R.drawable.ic_tracker_dot)
+        AppSettingsManager.LiveUpdateTrackerIcon.DEFAULT -> IconCompat.createWithResource(this, R.drawable.ic_progress_tracker)
+        AppSettingsManager.LiveUpdateTrackerIcon.CUSTOM -> {
+            val path = appSettingsManager.liveUpdateCustomTrackerPath.value
+            if (path.isEmpty()) return IconCompat.createWithResource(this, R.drawable.ic_progress_tracker)
+            val key = "custom|$path"
+            // 缓存命中：直接返回缓存的 Bitmap，避免主线程 IO
+            val cached = trackerIconCache[key]
+            if (cached != null) return IconCompat.createWithBitmap(cached)
+            // null 可能是 key 不存在（未缓存）或解码失败，用 containsKey 区分
+            if (trackerIconCache.containsKey(key)) {
+                return IconCompat.createWithResource(this, R.drawable.ic_progress_tracker)
+            }
+            // 缓存未命中：先用 fallback，后台解码
+            scheduleTrackerIconDecode(key, path)
+            IconCompat.createWithResource(this, R.drawable.ic_progress_tracker)
+        }
+    }
+
+    /**
+     * 在 Dispatchers.IO 解码自定义图标，解码成功后刷新当前活动通知。
+     * 避免并发重复解码：同一 key 正在解码时跳过；解码结果过期（key 已变）时丢弃。
+     */
+    private fun scheduleTrackerIconDecode(key: String, path: String) {
+        if (trackerIconDecodeJob?.isActive == true) return
+        trackerIconDecodeJob = serviceScope.launch(Dispatchers.IO) {
+            val decoded = TrackerIconDecoder.decode(path)
+            // 校验解码期间配置未变化（用户切换图标类型/路径），丢弃过期结果
+            val currentKey = "custom|${appSettingsManager.liveUpdateCustomTrackerPath.value}"
+            if (currentKey != key) {
+                decoded?.recycle()
+                return@launch
+            }
+            trackerIconCache[key] = decoded
+            // 解码成功且服务仍处于活跃状态时刷新当前通知
+            if (decoded != null) {
+                withContext(Dispatchers.Main) {
+                    val state = compositionService.state.value
+                    if (state == MaaExecutionState.RUNNING ||
+                        state == MaaExecutionState.STARTING ||
+                        state == MaaExecutionState.STOPPING
+                    ) {
+                        updateNotification(currentSnapshot())
+                    }
+                }
+            }
+        }
+    }
+
     private fun buildCompatProgressNotification(
         title: String,
         contentText: String,
         progressInfo: TaskProgressInfo,
-        activeTaskName: String?,
+        shortCritical: String?,
     ): Notification {
         val style = NotificationCompat.ProgressStyle()
             .setStyledByProgress(true)
             .setProgressIndeterminate(progressInfo.totalCount == 0)
             .setProgressTrackerIcon(
-                IconCompat.createWithResource(this, R.drawable.ic_progress_tracker)
+                trackerIcon()
             )
 
         if (progressInfo.totalCount > 0) {
@@ -296,15 +383,6 @@ class TaskExecutionService : Service() {
                 NotificationCompat.ProgressStyle.Segment(segment.length)
                     .setColor(segment.color)
             )
-        }
-
-        val shortCritical = when {
-            progressInfo.progressLabel != null && activeTaskName != null ->
-                "${progressInfo.progressLabel} $activeTaskName"
-
-            progressInfo.progressLabel != null -> progressInfo.progressLabel
-            activeTaskName != null -> activeTaskName
-            else -> null
         }
 
         return NotificationCompat.Builder(this, TASK_CHANNEL_ID)
@@ -372,12 +450,27 @@ class TaskExecutionService : Service() {
             else -> 0
         }.coerceIn(0, PROGRESS_STYLE_MAX)
 
-        val barColor = when {
-            taskErrorIndex != null || snapshot.state == MaaExecutionState.ERROR ->
-                PROGRESS_COLOR_ERROR
-
-            snapshot.state == MaaExecutionState.IDLE -> PROGRESS_COLOR_COMPLETED
-            else -> PROGRESS_COLOR_ACTIVE
+        val barColor = when (appSettingsManager.liveUpdateColorScheme.value) {
+            AppSettingsManager.LiveUpdateColorScheme.DEFAULT -> when {
+                taskErrorIndex != null || snapshot.state == MaaExecutionState.ERROR ->
+                    PROGRESS_COLOR_ERROR
+                snapshot.state == MaaExecutionState.IDLE -> PROGRESS_COLOR_COMPLETED
+                else -> PROGRESS_COLOR_ACTIVE
+            }
+            AppSettingsManager.LiveUpdateColorScheme.BLUE -> PROGRESS_COLOR_BLUE
+            AppSettingsManager.LiveUpdateColorScheme.GREEN -> PROGRESS_COLOR_GREEN
+            AppSettingsManager.LiveUpdateColorScheme.ORANGE -> PROGRESS_COLOR_ORANGE
+            AppSettingsManager.LiveUpdateColorScheme.PURPLE -> PROGRESS_COLOR_PURPLE
+            AppSettingsManager.LiveUpdateColorScheme.PINK -> PROGRESS_COLOR_PINK
+            AppSettingsManager.LiveUpdateColorScheme.TEAL -> PROGRESS_COLOR_TEAL
+            AppSettingsManager.LiveUpdateColorScheme.CUSTOM -> {
+                val hex = appSettingsManager.liveUpdateCustomColor.value
+                if (hex.isNotEmpty()) {
+                    try {
+                        android.graphics.Color.parseColor(hex)
+                    } catch (_: Exception) { PROGRESS_COLOR_BLUE }
+                } else PROGRESS_COLOR_BLUE
+            }
         }
 
         return TaskProgressInfo(
@@ -406,6 +499,7 @@ class TaskExecutionService : Service() {
             }
 
     private fun canRequestPromotedOngoing(): Boolean {
+        if (!appSettingsManager.liveUpdateEnabled.value) return false
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
             ContextCompat.checkSelfPermission(
                 this,
