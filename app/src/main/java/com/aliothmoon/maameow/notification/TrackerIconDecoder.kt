@@ -23,13 +23,15 @@ object TrackerIconDecoder {
 
         // 矢量格式：AndroidSVG 解析 SVG/XML 内容
         return runCatching {
-            val svg = SVG.getFromInputStream(FileInputStream(path))
-            val bitmap = Bitmap.createBitmap(targetSize, targetSize, Bitmap.Config.ARGB_8888)
-            svg.renderToCanvas(
-                Canvas(bitmap),
-                android.graphics.RectF(0f, 0f, targetSize.toFloat(), targetSize.toFloat())
-            )
-            bitmap
+            FileInputStream(path).use { stream ->
+                val svg = SVG.getFromInputStream(stream)
+                val bitmap = Bitmap.createBitmap(targetSize, targetSize, Bitmap.Config.ARGB_8888)
+                svg.renderToCanvas(
+                    Canvas(bitmap),
+                    android.graphics.RectF(0f, 0f, targetSize.toFloat(), targetSize.toFloat())
+                )
+                bitmap
+            }
         }.getOrNull()
     }
 
