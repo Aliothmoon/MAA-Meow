@@ -1447,7 +1447,7 @@
     <string name="live_update_color_custom">自定义</string>
     <string name="live_update_color_custom_hint">选择颜色</string>
     <string name="live_update_icon_label">进度条图标</string>
-    <string name="live_update_icon_default">菱形</string>
+    <string name="live_update_icon_default">合成玉</string>
     <string name="live_update_icon_logo">MAA 图标</string>
     <string name="live_update_icon_dot">圆点</string>
     <string name="live_update_icon_custom">自定义图片</string>

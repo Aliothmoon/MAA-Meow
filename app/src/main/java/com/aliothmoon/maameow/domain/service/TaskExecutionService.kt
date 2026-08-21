@@ -302,21 +302,15 @@ class TaskExecutionService : Service() {
         MaaExecutionState.ERROR -> getString(R.string.notification_task_error)
     }
 
-    private fun trackerIcon(): IconCompat {
-        val iconRes = when (appSettingsManager.liveUpdateTrackerIcon.value) {
-            AppSettingsManager.LiveUpdateTrackerIcon.LOGO -> R.drawable.ic_maa_logo
-            AppSettingsManager.LiveUpdateTrackerIcon.DOT -> R.drawable.ic_tracker_dot
-            AppSettingsManager.LiveUpdateTrackerIcon.CUSTOM -> {
-                val path = appSettingsManager.liveUpdateCustomTrackerPath.value
-                TrackerIconDecoder.decode(path)?.let { bitmap ->
-                    return IconCompat.createWithBitmap(bitmap)
-                }
-                // fallback
-                R.drawable.ic_progress_tracker
-            }
-            AppSettingsManager.LiveUpdateTrackerIcon.DEFAULT -> R.drawable.ic_progress_tracker
+    private fun trackerIcon(): IconCompat = when (appSettingsManager.liveUpdateTrackerIcon.value) {
+        AppSettingsManager.LiveUpdateTrackerIcon.LOGO -> IconCompat.createWithResource(this, R.drawable.ic_maa_logo)
+        AppSettingsManager.LiveUpdateTrackerIcon.DOT -> IconCompat.createWithResource(this, R.drawable.ic_tracker_dot)
+        AppSettingsManager.LiveUpdateTrackerIcon.DEFAULT -> IconCompat.createWithResource(this, R.drawable.ic_progress_tracker)
+        AppSettingsManager.LiveUpdateTrackerIcon.CUSTOM -> {
+            val path = appSettingsManager.liveUpdateCustomTrackerPath.value
+            TrackerIconDecoder.decode(path)?.let { IconCompat.createWithBitmap(it) }
+                ?: IconCompat.createWithResource(this, R.drawable.ic_progress_tracker)
         }
-        return IconCompat.createWithResource(this, iconRes)
     }
 
     private fun buildCompatProgressNotification(
@@ -351,7 +345,8 @@ class TaskExecutionService : Service() {
             .setStyle(style)
             .setContentIntent(buildContentIntent())
             .setOngoing(true)
-            .setRequestPromotedOngoing(canRequestPromotedOngoing())            .setSilent(true)
+            .setRequestPromotedOngoing(canRequestPromotedOngoing())
+            .setSilent(true)
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .apply {
