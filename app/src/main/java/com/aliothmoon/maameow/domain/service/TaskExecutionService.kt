@@ -21,6 +21,8 @@ import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.maa.callback.TaskChainStatusTracker
 import com.aliothmoon.maameow.maa.callback.TaskRunInfo
 import com.aliothmoon.maameow.maa.callback.TaskRunStatus
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.notification.TrackerIconDecoder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -48,6 +50,12 @@ class TaskExecutionService : Service() {
         private const val PROGRESS_COLOR_ACTIVE = 0xFF2196F3.toInt()
         private const val PROGRESS_COLOR_PENDING = 0xFF9E9E9E.toInt()
         private const val PROGRESS_COLOR_ERROR = 0xFFD32F2F.toInt()
+        private const val PROGRESS_COLOR_BLUE = 0xFF2196F3.toInt()
+        private const val PROGRESS_COLOR_GREEN = 0xFF4CAF50.toInt()
+        private const val PROGRESS_COLOR_ORANGE = 0xFFFF9800.toInt()
+        private const val PROGRESS_COLOR_PURPLE = 0xFF9C27B0.toInt()
+        private const val PROGRESS_COLOR_PINK = 0xFFE91E63.toInt()
+        private const val PROGRESS_COLOR_TEAL = 0xFF009688.toInt()
 
         private val VISIBLE_TASK_TITLE_RES = mapOf(
             "Fight" to R.string.maa_fight,
@@ -75,6 +83,7 @@ class TaskExecutionService : Service() {
     private val compositionService: MaaCompositionService by inject()
     private val sessionLogger: MaaSessionLogger by inject()
     private val taskChainStatusTracker: TaskChainStatusTracker by inject()
+    private val appSettingsManager: AppSettingsManager by inject()
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var progressJob: Job? = null
@@ -257,13 +266,32 @@ class TaskExecutionService : Service() {
         val contentText = buildContentText(statusText, progressInfo)
         val activeName = activeTaskName(snapshot)
         val title = activeName ?: getString(R.string.notification_task_running_title)
+        val shortCritical = buildShortCriticalText(statusText, progressInfo, activeName)
 
         return buildCompatProgressNotification(
             title = title,
             contentText = contentText,
             progressInfo = progressInfo,
-            activeTaskName = activeName,
+            shortCritical = shortCritical,
         )
+    }
+
+    private fun buildShortCriticalText(
+        statusText: String,
+        progressInfo: TaskProgressInfo,
+        activeTaskName: String?,
+    ): String? = when (appSettingsManager.liveUpdateChipContent.value) {
+        AppSettingsManager.LiveUpdateChipContent.BOTH -> when {
+            progressInfo.progressLabel != null && activeTaskName != null ->
+                "${progressInfo.progressLabel} $activeTaskName"
+            progressInfo.progressLabel != null -> progressInfo.progressLabel
+            activeTaskName != null -> activeTaskName
+            else -> null
+        }
+        AppSettingsManager.LiveUpdateChipContent.PROGRESS -> progressInfo.progressLabel
+        AppSettingsManager.LiveUpdateChipContent.TASK -> activeTaskName
+        AppSettingsManager.LiveUpdateChipContent.LOG -> statusText
+        AppSettingsManager.LiveUpdateChipContent.NONE -> null
     }
 
     private fun defaultStatusText(state: MaaExecutionState): String = when (state) {
@@ -274,17 +302,34 @@ class TaskExecutionService : Service() {
         MaaExecutionState.ERROR -> getString(R.string.notification_task_error)
     }
 
+    private fun trackerIcon(): IconCompat {
+        val iconRes = when (appSettingsManager.liveUpdateTrackerIcon.value) {
+            AppSettingsManager.LiveUpdateTrackerIcon.LOGO -> R.drawable.ic_maa_logo
+            AppSettingsManager.LiveUpdateTrackerIcon.DOT -> R.drawable.ic_tracker_dot
+            AppSettingsManager.LiveUpdateTrackerIcon.CUSTOM -> {
+                val path = appSettingsManager.liveUpdateCustomTrackerPath.value
+                TrackerIconDecoder.decode(path)?.let { bitmap ->
+                    return IconCompat.createWithBitmap(bitmap)
+                }
+                // fallback
+                R.drawable.ic_progress_tracker
+            }
+            AppSettingsManager.LiveUpdateTrackerIcon.DEFAULT -> R.drawable.ic_progress_tracker
+        }
+        return IconCompat.createWithResource(this, iconRes)
+    }
+
     private fun buildCompatProgressNotification(
         title: String,
         contentText: String,
         progressInfo: TaskProgressInfo,
-        activeTaskName: String?,
+        shortCritical: String?,
     ): Notification {
         val style = NotificationCompat.ProgressStyle()
             .setStyledByProgress(true)
             .setProgressIndeterminate(progressInfo.totalCount == 0)
             .setProgressTrackerIcon(
-                IconCompat.createWithResource(this, R.drawable.ic_progress_tracker)
+                trackerIcon()
             )
 
         if (progressInfo.totalCount > 0) {
@@ -298,15 +343,6 @@ class TaskExecutionService : Service() {
             )
         }
 
-        val shortCritical = when {
-            progressInfo.progressLabel != null && activeTaskName != null ->
-                "${progressInfo.progressLabel} $activeTaskName"
-
-            progressInfo.progressLabel != null -> progressInfo.progressLabel
-            activeTaskName != null -> activeTaskName
-            else -> null
-        }
-
         return NotificationCompat.Builder(this, TASK_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_maa_logo)
             .setColor(progressInfo.barColor)
@@ -315,8 +351,7 @@ class TaskExecutionService : Service() {
             .setStyle(style)
             .setContentIntent(buildContentIntent())
             .setOngoing(true)
-            .setRequestPromotedOngoing(canRequestPromotedOngoing())
-            .setSilent(true)
+            .setRequestPromotedOngoing(canRequestPromotedOngoing())            .setSilent(true)
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .apply {
@@ -372,12 +407,27 @@ class TaskExecutionService : Service() {
             else -> 0
         }.coerceIn(0, PROGRESS_STYLE_MAX)
 
-        val barColor = when {
-            taskErrorIndex != null || snapshot.state == MaaExecutionState.ERROR ->
-                PROGRESS_COLOR_ERROR
-
-            snapshot.state == MaaExecutionState.IDLE -> PROGRESS_COLOR_COMPLETED
-            else -> PROGRESS_COLOR_ACTIVE
+        val barColor = when (appSettingsManager.liveUpdateColorScheme.value) {
+            AppSettingsManager.LiveUpdateColorScheme.DEFAULT -> when {
+                taskErrorIndex != null || snapshot.state == MaaExecutionState.ERROR ->
+                    PROGRESS_COLOR_ERROR
+                snapshot.state == MaaExecutionState.IDLE -> PROGRESS_COLOR_COMPLETED
+                else -> PROGRESS_COLOR_ACTIVE
+            }
+            AppSettingsManager.LiveUpdateColorScheme.BLUE -> PROGRESS_COLOR_BLUE
+            AppSettingsManager.LiveUpdateColorScheme.GREEN -> PROGRESS_COLOR_GREEN
+            AppSettingsManager.LiveUpdateColorScheme.ORANGE -> PROGRESS_COLOR_ORANGE
+            AppSettingsManager.LiveUpdateColorScheme.PURPLE -> PROGRESS_COLOR_PURPLE
+            AppSettingsManager.LiveUpdateColorScheme.PINK -> PROGRESS_COLOR_PINK
+            AppSettingsManager.LiveUpdateColorScheme.TEAL -> PROGRESS_COLOR_TEAL
+            AppSettingsManager.LiveUpdateColorScheme.CUSTOM -> {
+                val hex = appSettingsManager.liveUpdateCustomColor.value
+                if (hex.isNotEmpty()) {
+                    try {
+                        android.graphics.Color.parseColor(hex)
+                    } catch (_: Exception) { PROGRESS_COLOR_BLUE }
+                } else PROGRESS_COLOR_BLUE
+            }
         }
 
         return TaskProgressInfo(
@@ -406,6 +456,7 @@ class TaskExecutionService : Service() {
             }
 
     private fun canRequestPromotedOngoing(): Boolean {
+        if (!appSettingsManager.liveUpdateEnabled.value) return false
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
             ContextCompat.checkSelfPermission(
                 this,

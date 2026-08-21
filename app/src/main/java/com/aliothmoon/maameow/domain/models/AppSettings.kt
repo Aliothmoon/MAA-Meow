@@ -70,6 +70,30 @@ data class AppSettings(
     @PrefKey(default = "DEFAULT")
     val eventNotificationLevel: String = "DEFAULT",
 
+    /** Live Updates 通知是否启用（Android 16+ promoted ongoing / ProgressStyle 展示）。 */
+    @PrefKey(default = "true")
+    val liveUpdateEnabled: String = "true",
+
+    /** Live Updates 状态栏 chip 短关键文本内容：both=进度+任务名 / progress=仅进度 / task=仅任务名 / none=不显示。 */
+    @PrefKey(default = "both")
+    val liveUpdateChipContent: String = "both",
+
+    /** Live Updates 进度条颜色方案：default/blue/green/orange/purple/pink/teal/custom。 */
+    @PrefKey(default = "default")
+    val liveUpdateColorScheme: String = "default",
+
+    /** Live Updates 自定义主色 HEX（如 "#2196F3"），仅 liveUpdateColorScheme=custom 时使用。 */
+    @PrefKey(default = "")
+    val liveUpdateCustomColor: String = "",
+
+    /** Live Updates 进度条追踪图标：default=菱形 / logo=MAA 图标 / dot=圆点 / custom=自定义图片。 */
+    @PrefKey(default = "default")
+    val liveUpdateTrackerIcon: String = "default",
+
+    /** Live Updates 自定义追踪图标文件路径，仅 liveUpdateTrackerIcon=custom 时使用。 */
+    @PrefKey(default = "")
+    val liveUpdateCustomTrackerPath: String = "",
+
     @PrefKey(default = "P720")
     val backgroundResolution: String = "P720",
 

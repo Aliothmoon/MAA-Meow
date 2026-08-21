@@ -44,6 +44,7 @@ import com.aliothmoon.maameow.presentation.view.notification.NotificationSetting
 import com.aliothmoon.maameow.presentation.view.settings.AchievementDebugView
 import com.aliothmoon.maameow.presentation.view.settings.AchievementView
 import com.aliothmoon.maameow.presentation.view.settings.ErrorLogView
+import com.aliothmoon.maameow.presentation.view.settings.LiveUpdateSettingsView
 import com.aliothmoon.maameow.presentation.view.settings.LogHistoryView
 import com.aliothmoon.maameow.presentation.view.settings.TaskOverrideEditorView
 import com.aliothmoon.maameow.presentation.viewmodel.AppEventsViewModel
@@ -176,6 +177,9 @@ fun AppNavigation(
 
                 composable(Routes.NOTIFICATION) {
                     NotificationSettingsView(navController = navController)
+                }
+                composable(Routes.LIVE_UPDATE) {
+                    LiveUpdateSettingsView(navController = navController)
                 }
                 composable(Routes.ACHIEVEMENT) {
                     AchievementView(navController = navController)

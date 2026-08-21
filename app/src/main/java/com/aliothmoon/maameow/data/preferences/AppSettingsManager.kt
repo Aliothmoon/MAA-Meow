@@ -454,6 +454,130 @@ class AppSettingsManager(
         }
     }
 
+    // Live Updates 通知自定义
+    enum class LiveUpdateChipContent(@param:androidx.annotation.StringRes val labelRes: Int) {
+        BOTH(R.string.live_update_chip_both),
+        PROGRESS(R.string.live_update_chip_progress),
+        TASK(R.string.live_update_chip_task),
+        LOG(R.string.live_update_chip_log),
+        NONE(R.string.live_update_chip_none),
+    }
+
+    enum class LiveUpdateColorScheme(@param:androidx.annotation.StringRes val labelRes: Int) {
+        DEFAULT(R.string.live_update_color_default),
+        BLUE(R.string.live_update_color_blue),
+        GREEN(R.string.live_update_color_green),
+        ORANGE(R.string.live_update_color_orange),
+        PURPLE(R.string.live_update_color_purple),
+        PINK(R.string.live_update_color_pink),
+        TEAL(R.string.live_update_color_teal),
+        CUSTOM(R.string.live_update_color_custom),
+    }
+
+    val liveUpdateCustomColor: StateFlow<String> = settings
+        .map { it.liveUpdateCustomColor }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            initialSettings.liveUpdateCustomColor
+        )
+
+    val liveUpdateEnabled: StateFlow<Boolean> = settings
+        .map { it.liveUpdateEnabled.toBooleanStrictOrNull() ?: true }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            initialSettings.liveUpdateEnabled.toBooleanStrictOrNull() ?: true
+        )
+
+    val liveUpdateChipContent: StateFlow<LiveUpdateChipContent> = settings
+        .map {
+            runCatching { LiveUpdateChipContent.valueOf(it.liveUpdateChipContent) }
+                .getOrDefault(LiveUpdateChipContent.BOTH)
+        }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            runCatching { LiveUpdateChipContent.valueOf(initialSettings.liveUpdateChipContent) }
+                .getOrDefault(LiveUpdateChipContent.BOTH)
+        )
+
+    val liveUpdateColorScheme: StateFlow<LiveUpdateColorScheme> = settings
+        .map {
+            runCatching { LiveUpdateColorScheme.valueOf(it.liveUpdateColorScheme) }
+                .getOrDefault(LiveUpdateColorScheme.DEFAULT)
+        }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            runCatching { LiveUpdateColorScheme.valueOf(initialSettings.liveUpdateColorScheme) }
+                .getOrDefault(LiveUpdateColorScheme.DEFAULT)
+        )
+
+    suspend fun setLiveUpdateEnabled(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateEnabled] = enabled.toString() }
+        }
+    }
+
+    suspend fun setLiveUpdateChipContent(content: LiveUpdateChipContent) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateChipContent] = content.name }
+        }
+    }
+
+    suspend fun setLiveUpdateColorScheme(scheme: LiveUpdateColorScheme) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateColorScheme] = scheme.name }
+        }
+    }
+
+    suspend fun setLiveUpdateCustomColor(color: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateCustomColor] = color }
+        }
+    }
+
+    // Live Updates 进度条追踪图标
+    enum class LiveUpdateTrackerIcon(@param:androidx.annotation.StringRes val labelRes: Int) {
+        DEFAULT(R.string.live_update_icon_default),
+        LOGO(R.string.live_update_icon_logo),
+        DOT(R.string.live_update_icon_dot),
+        CUSTOM(R.string.live_update_icon_custom),
+    }
+
+    val liveUpdateTrackerIcon: StateFlow<LiveUpdateTrackerIcon> = settings
+        .map {
+            runCatching { LiveUpdateTrackerIcon.valueOf(it.liveUpdateTrackerIcon) }
+                .getOrDefault(LiveUpdateTrackerIcon.DEFAULT)
+        }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            runCatching { LiveUpdateTrackerIcon.valueOf(initialSettings.liveUpdateTrackerIcon) }
+                .getOrDefault(LiveUpdateTrackerIcon.DEFAULT)
+        )
+
+    suspend fun setLiveUpdateTrackerIcon(icon: LiveUpdateTrackerIcon) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateTrackerIcon] = icon.name }
+        }
+    }
+
+    val liveUpdateCustomTrackerPath: StateFlow<String> = settings
+        .map { it.liveUpdateCustomTrackerPath }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            initialSettings.liveUpdateCustomTrackerPath
+        )
+
+    suspend fun setLiveUpdateCustomTrackerPath(path: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateCustomTrackerPath] = path }
+        }
+    }
+
     // 后台虚拟屏分辨率
     val backgroundResolution: StateFlow<DefaultDisplayConfig.ResolutionPreference> = settings
         .map {
