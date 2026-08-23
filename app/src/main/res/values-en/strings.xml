@@ -515,6 +515,7 @@
     <string name="maa_start_up">Login</string>
     <string name="maa_depot">Depot</string>
     <string name="maa_oper_box">Operator</string>
+    <string name="maa_paradox_copilot">Paradox Copilot</string>
     <string name="maa_failed_to_open_client">Failed to open the client. Please check the configuration file</string>
     <string name="maa_close_arknights_failed">Shutdown Arknights failed</string>
     <string name="maa_has_returned">Has returned</string>
@@ -1360,6 +1361,21 @@
 
     <!-- i18n: notifications -->
     <string name="notification_settings_title">Notifications</string>
+    <string name="notification_section_live">Live updates</string>
+    <string name="notification_live_style">Presentation</string>
+    <string name="notification_live_style_hyperos">Dynamic Island</string>
+    <string name="notification_live_style_aosp">Live Updates</string>
+    <string name="notification_live_style_plain">Notification shade</string>
+    <string name="notification_live_xmsf_bypass">Dynamic Island compatibility</string>
+    <string name="notification_live_step_post">Post notifications</string>
+    <string name="notification_live_step_post_missing">Not granted. Tap to request</string>
+    <string name="notification_live_step_focus">Focus notifications</string>
+    <string name="notification_live_step_focus_missing">Off. Turn on Focus notifications in the app notification settings</string>
+    <string name="notification_live_step_promoted">Status bar live progress</string>
+    <string name="notification_live_step_promoted_missing">Off. Turn on Live Updates in the app notification settings</string>
+    <string name="notification_live_send_test">Send live test</string>
+    <string name="notification_live_test_title">Live test</string>
+    <string name="notification_live_test_text">This is a live update test notification</string>
     <string name="notification_section_internal">Internal notifications</string>
     <string name="notification_enable">Enable notifications</string>
     <string name="notification_popup">Pop-up alerts</string>
@@ -1430,6 +1446,10 @@
     <string name="notification_event_channel_popup_desc">Popup notifications for task completion, errors, and high-rarity recruitment events</string>
     <string name="notification_event_all_tasks_completed">All Tasks Completed</string>
     <string name="notification_event_task_error">Task Error</string>
+    <string name="notification_event_task_stopped">Task stopped</string>
+    <string name="notification_event_task_stopped_text">The task was stopped</string>
+    <string name="notification_event_service_died">Service error</string>
+    <string name="notification_event_service_died_text">The MAA service terminated unexpectedly</string>
     <string name="notification_event_recruit_tip">Recruitment Tip</string>
     <string name="notification_event_recruit_special_tag">Rare tag found: %1$s</string>
     <string name="notification_event_recruit_robot_tag">Robot tag found: %1$s</string>
@@ -1514,6 +1534,7 @@
     <string name="task_start_error_game_not_on_background_display">In background mode, the game must be launched by the Wake Up task. Please close the game and enable \"Start Game\" in Wake Up</string>
     <string name="task_start_error_resource_load_failed">Resource loading failed. Try reinitializing resources</string>
     <string name="task_start_error_service_connecting">Service is starting up, please try again in a moment</string>
+    <string name="task_start_error_already_running">A task is already starting, running, or stopping</string>
     <string name="task_start_error_backend_unavailable">%1$s is unavailable. Start the service and grant permission before starting tasks</string>
     <string name="task_start_error_maa_create_instance">MaaCore initialization failed. Restart the app</string>
     <string name="task_start_error_set_touch_mode">Failed to set touch mode. Restart the app</string>
@@ -1686,6 +1707,10 @@
     <string name="notification_channel_task_execution">Task Execution</string>
     <string name="notification_channel_task_execution_live">Task Execution Progress</string>
     <string name="notification_channel_task_execution_result">Task Execution Results</string>
+    <string name="notification_channel_task_execution_result_desc">Notifications for task completion, stop, or failure</string>
+    <string name="notification_channel_task_execution_result_alert">Task Execution Results (Pop-up)</string>
+    <string name="notification_channel_task_execution_island">Task Execution Progress (Dynamic Island)</string>
+    <string name="notification_channel_task_execution_island_desc">Task progress shown as a Dynamic Island / focus notification</string>
     <string name="notification_channel_task_execution_desc">Background task execution progress notifications</string>
     <string name="notification_task_running_title">Task Running</string>
     <string name="notification_task_starting">Starting…</string>

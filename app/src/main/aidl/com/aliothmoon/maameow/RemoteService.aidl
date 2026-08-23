@@ -87,4 +87,7 @@ interface RemoteService {
     int unlockWithGesture(String gestureJson) = 39;
 
     int testUnlockGesture(String gestureJson) = 40;
+
+    // HyperOS 发岛时短断 com.xiaomi.xmsf 网络
+    boolean setPackageNetworkingEnabled(String packageName, boolean enabled) = 41;
 }

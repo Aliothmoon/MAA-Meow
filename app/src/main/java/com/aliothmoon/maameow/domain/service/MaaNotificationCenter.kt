@@ -1,26 +1,37 @@
 package com.aliothmoon.maameow.domain.service
 
+import android.content.Context
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
+import com.aliothmoon.maameow.domain.notification.LiveCategory
+import com.aliothmoon.maameow.domain.notification.LiveNotifyIds
+import com.aliothmoon.maameow.domain.notification.LiveSession
+import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
 
-/**
- * 聚合系统通知 (MaaEventNotifier) 和外部推送 (ExternalNotificationService)，
- * 为回调 Handler 提供统一的通知 API，避免通知逻辑分散到多个类中。
- */
+/** 聚合实况结果、队列卡片和外推 */
 class MaaNotificationCenter(
+    context: Context,
     private val eventNotifier: MaaEventNotifier,
     private val externalService: ExternalNotificationService,
     private val settings: NotificationSettingsManager,
+    private val liveCoordinator: LiveSessionCoordinator,
 ) {
+    private val appContext = context.applicationContext
 
-    /** 全部任务完成 */
     fun notifyAllTasksCompleted(summary: String) {
-        eventNotifier.notifyAllTasksCompleted(summary)
+        val title = appContext.getString(R.string.notification_event_all_tasks_completed)
+        publishResult(title, summary, timeoutSec = 120)
         if (settings.sendOnComplete.value) {
             externalService.sendWithLogs("所有任务已完成", summary)
         }
     }
 
-    /** 任务链出错 */
+    fun notifyTaskStopped() {
+        val title = appContext.getString(R.string.notification_event_task_stopped)
+        val text = appContext.getString(R.string.notification_event_task_stopped_text)
+        publishResult(title, text, timeoutSec = 15)
+    }
+
     fun notifyTaskError(taskName: String) {
         eventNotifier.notifyTaskError(taskName)
         if (settings.sendOnError.value) {
@@ -28,12 +39,15 @@ class MaaNotificationCenter(
         }
     }
 
-    /** 子任务失败 */
+    fun notifyStartFailed(message: String) {
+        val title = appContext.getString(R.string.notification_event_task_error)
+        publishResult(title, message, timeoutSec = 30, isError = true)
+    }
+
     fun notifySubTaskFailure(message: String) {
         eventNotifier.notifySubTaskFailure(message)
     }
 
-    /** 需要玩家接手的任务事件（如奇象巡展发现未收录奇象），外推走「完成」开关 */
     fun notifyHandoverRequired(title: String, content: String) {
         eventNotifier.notifyEvent(title, content)
         if (settings.sendOnComplete.value) {
@@ -41,25 +55,55 @@ class MaaNotificationCenter(
         }
     }
 
-    /** 公招稀有 Tag */
     fun notifyRecruitSpecialTag(tag: String) {
         eventNotifier.notifyRecruitSpecialTag(tag)
     }
 
-    /** 公招小车 Tag */
     fun notifyRecruitRobotTag(tag: String) {
         eventNotifier.notifyRecruitRobotTag(tag)
     }
 
-    /** 公招高星 */
     fun notifyRecruitHighRarity(level: Int) {
         eventNotifier.notifyRecruitHighRarity(level)
     }
 
-    /** MAA 服务意外终止 */
     fun notifyServiceDied() {
+        val title = appContext.getString(R.string.notification_event_service_died)
+        val text = appContext.getString(R.string.notification_event_service_died_text)
+        // 服务可能在空闲期挂掉，不能占用本轮运行的一次性结果闸门
+        liveCoordinator.publishEvent(resultSession(title, text, timeoutSec = 180, isError = true))
         if (settings.sendOnServiceDied.value) {
             externalService.send("服务异常", "MAA 服务意外终止")
         }
     }
+
+    private fun publishResult(
+        title: String,
+        text: String,
+        timeoutSec: Int,
+        isError: Boolean = false,
+    ) {
+        liveCoordinator.publishResult(
+            liveCoordinator.currentToken(),
+            resultSession(title, text, timeoutSec, isError),
+        )
+    }
+
+    private fun resultSession(
+        title: String,
+        text: String,
+        timeoutSec: Int,
+        isError: Boolean,
+    ) = LiveSession(
+        sessionId = LiveNotifyIds.RESULT_SESSION,
+        category = LiveCategory.RESULT,
+        title = title,
+        text = text,
+        capsuleText = title,
+        // 不设 ongoing：Android 13 及以下划不掉，进程被杀后会一直挂着
+        ongoing = false,
+        firstFloat = true,
+        timeoutSec = timeoutSec,
+        isError = isError,
+    )
 }

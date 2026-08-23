@@ -1,22 +1,19 @@
 package com.aliothmoon.maameow.domain.service
 
 import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
-import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.IconCompat
-import com.aliothmoon.maameow.MainActivity
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.domain.notification.LiveCategory
+import com.aliothmoon.maameow.domain.notification.LiveNotifyIds
+import com.aliothmoon.maameow.domain.notification.LiveSession
+import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.maa.callback.TaskChainStatusTracker
 import com.aliothmoon.maameow.maa.callback.TaskRunInfo
@@ -37,17 +34,7 @@ import timber.log.Timber
 class TaskExecutionService : Service() {
 
     companion object {
-        private const val TASK_CHANNEL_ID = "task_execution_live"
-        private const val NOTIFICATION_ID = 9003
         private const val MIN_UPDATE_INTERVAL_MS = 1000L
-        private const val PROGRESS_STYLE_MAX = 1000
-        private const val PERMISSION_POST_PROMOTED_NOTIFICATIONS =
-            "android.permission.POST_PROMOTED_NOTIFICATIONS"
-
-        private const val PROGRESS_COLOR_COMPLETED = 0xFF4CAF50.toInt()
-        private const val PROGRESS_COLOR_ACTIVE = 0xFF2196F3.toInt()
-        private const val PROGRESS_COLOR_PENDING = 0xFF9E9E9E.toInt()
-        private const val PROGRESS_COLOR_ERROR = 0xFFD32F2F.toInt()
 
         private val VISIBLE_TASK_TITLE_RES = mapOf(
             "Fight" to R.string.maa_fight,
@@ -58,9 +45,13 @@ class TaskExecutionService : Service() {
             "Roguelike" to R.string.maa_roguelike,
             "Copilot" to R.string.maa_copilot,
             "SSSCopilot" to R.string.maa_sss_copilot,
+            "ParadoxCopilot" to R.string.maa_paradox_copilot,
             "Reclamation" to R.string.maa_reclamation,
             "Custom" to R.string.maa_custom,
             "CloseDown" to R.string.maa_close_down,
+            "StartUp" to R.string.maa_start_up,
+            "Depot" to R.string.maa_depot,
+            "OperBox" to R.string.maa_oper_box,
         )
 
         // 只提供 start 不提供外部 stop：startForegroundService 后若 stopService
@@ -75,49 +66,56 @@ class TaskExecutionService : Service() {
     private val compositionService: MaaCompositionService by inject()
     private val sessionLogger: MaaSessionLogger by inject()
     private val taskChainStatusTracker: TaskChainStatusTracker by inject()
+    private val liveCoordinator: LiveSessionCoordinator by inject()
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var progressJob: Job? = null
+    private var boundToken: Long = 0L
+    private var observeToken: Long = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
-        ensureNotificationChannel()
+        bindToken()
         // 必须先 startForeground，再做任何可能读到 IDLE/ERROR 并 stop 的逻辑，
         // 避免与 Composition 快速失败/stopService 竞态触发
         // ForegroundServiceDidNotStartInTimeException。
+        // postForegroundNotification 只负责构建+notify，耗时的断网闸门已在 STARTING 时拿过
         val initial = currentSnapshot()
-        startAsForeground(buildNotification(initial))
-        if (initial.state == MaaExecutionState.IDLE || initial.state == MaaExecutionState.ERROR) {
-            handleTerminalState(initial)
+        startAsForeground(postForegroundNotification(initial, firstFloat = true))
+        if (isTerminal(initial.state)) {
+            handleTerminalState(boundToken, initial)
             return
         }
         ensureObserveProgress()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        bindToken()
         // 系统可能只走 onStartCommand；再保证一次 FGS 提升
         // onCreate 若因终态提前 return 未启动观察，随后竞态进入 STARTING 时须在此补上
         val snapshot = currentSnapshot()
-        startAsForeground(buildNotification(snapshot))
-        when (snapshot.state) {
-            MaaExecutionState.IDLE,
-            MaaExecutionState.ERROR -> handleTerminalState(snapshot)
-            MaaExecutionState.STARTING,
-            MaaExecutionState.RUNNING,
-            MaaExecutionState.STOPPING -> ensureObserveProgress()
+        startAsForeground(postForegroundNotification(snapshot, firstFloat = false))
+        if (isTerminal(snapshot.state)) {
+            handleTerminalState(boundToken, snapshot)
+        } else {
+            ensureObserveProgress()
         }
         return START_NOT_STICKY
     }
 
     override fun onDestroy() {
         // 系统侧终止与 StateFlow 收集存在竞态；此处兜底确保 Live Update 通知被清除。
-        // observeProgress 的 collector 由 serviceScope.cancel() 结构化取消。
+        // observeProgress 的 collector 由 serviceScope.cancel() 结构化取消
         progressJob = null
-        removeActiveNotification()
+        removeActiveNotification(boundToken)
         serviceScope.cancel()
         super.onDestroy()
+    }
+
+    private fun bindToken() {
+        boundToken = liveCoordinator.currentToken()
     }
 
     private fun currentSnapshot(): TaskNotificationSnapshot = TaskNotificationSnapshot(
@@ -127,7 +125,10 @@ class TaskExecutionService : Service() {
     )
 
     private fun ensureObserveProgress() {
-        if (progressJob?.isActive == true) return
+        if (progressJob?.isActive == true && observeToken == boundToken) return
+        progressJob?.cancel()
+        observeToken = boundToken
+        val token = observeToken
         progressJob = serviceScope.launch {
             var lastUpdateTime = 0L
             var pending: TaskNotificationSnapshot? = null
@@ -142,7 +143,7 @@ class TaskExecutionService : Service() {
             fun forceUpdate(snapshot: TaskNotificationSnapshot) {
                 resetSchedule()
                 lastUpdateTime = SystemClock.elapsedRealtime()
-                updateNotification(snapshot)
+                updateNotification(token, snapshot)
             }
 
             fun throttledUpdate(snapshot: TaskNotificationSnapshot) {
@@ -150,7 +151,7 @@ class TaskExecutionService : Service() {
                 val elapsed = now - lastUpdateTime
                 if (elapsed >= MIN_UPDATE_INTERVAL_MS) {
                     lastUpdateTime = now
-                    updateNotification(snapshot)
+                    updateNotification(token, snapshot)
                     return
                 }
                 pending = snapshot
@@ -159,14 +160,14 @@ class TaskExecutionService : Service() {
                     delay((MIN_UPDATE_INTERVAL_MS - elapsed).coerceAtLeast(0L))
                     pending?.let {
                         lastUpdateTime = SystemClock.elapsedRealtime()
-                        updateNotification(it)
+                        updateNotification(token, it)
                     }
                     pending = null
                     scheduledJob = null
                 }
             }
 
-            // 三个数据源合并为单一 Snapshot 流，distinctUntilChanged 避免无意义刷新。
+            // 三个数据源合并为单一 Snapshot 流，distinctUntilChanged 避免无意义刷新
             combine(
                 compositionService.state,
                 taskChainStatusTracker.tasks,
@@ -182,7 +183,7 @@ class TaskExecutionService : Service() {
                         MaaExecutionState.IDLE,
                         MaaExecutionState.ERROR -> {
                             resetSchedule()
-                            handleTerminalState(snapshot)
+                            handleTerminalState(token, snapshot)
                         }
 
                         MaaExecutionState.STARTING -> forceUpdate(
@@ -208,61 +209,62 @@ class TaskExecutionService : Service() {
         }
     }
 
-    private fun handleTerminalState(snapshot: TaskNotificationSnapshot) {
-        Timber.i("TaskExecutionService: state=%s, stopping", snapshot.state)
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        try {
-            manager.cancel(NOTIFICATION_ID)
-        } catch (e: SecurityException) {
-            Timber.w(e, "cancel blocked by POST_NOTIFICATIONS denial")
-        }
+    private fun handleTerminalState(token: Long, snapshot: TaskNotificationSnapshot) {
+        if (!liveCoordinator.isCurrent(token)) return
+        if (!isTerminal(compositionService.state.value)) return
+        Timber.i("TaskExecutionService: state=%s token=%s, stopping", snapshot.state, token)
+        liveCoordinator.cancelProgress(token)
+        clearProgressNotification()
         stopSelf()
-    }
-
-    private fun ensureNotificationChannel() {
-        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        val taskChannelName = getString(R.string.notification_channel_task_execution_live)
-        val channelDescription = getString(R.string.notification_channel_task_execution_desc)
-
-        // Live updates must use DEFAULT+ importance to remain eligible for promoted ongoing
-        // notifications / Live Updates on supported devices.
-        val taskChannel = NotificationChannel(
-            TASK_CHANNEL_ID,
-            taskChannelName,
-            NotificationManager.IMPORTANCE_DEFAULT,
-        ).apply {
-            description = channelDescription
-            setShowBadge(false)
-        }
-
-        manager.createNotificationChannel(taskChannel)
     }
 
     private fun startAsForeground(notification: Notification) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
-                NOTIFICATION_ID,
+                LiveNotifyIds.PROGRESS,
                 notification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
             )
         } else {
-            startForeground(NOTIFICATION_ID, notification)
+            startForeground(LiveNotifyIds.PROGRESS, notification)
         }
     }
 
-    private fun buildNotification(snapshot: TaskNotificationSnapshot): Notification {
+    private fun postForegroundNotification(
+        snapshot: TaskNotificationSnapshot,
+        firstFloat: Boolean,
+    ): Notification {
+        val session = toSession(snapshot, firstFloat)
+        return liveCoordinator.postProgressForeground(boundToken, session)
+            ?: liveCoordinator.fallbackBuild(session)
+    }
+
+    private fun toSession(
+        snapshot: TaskNotificationSnapshot,
+        firstFloat: Boolean,
+    ): LiveSession {
         val statusText = snapshot.statusText ?: defaultStatusText(snapshot.state)
-        val progressInfo = buildProgressInfo(snapshot)
-        val contentText = buildContentText(statusText, progressInfo)
+        val progress = progressOf(snapshot)
         val activeName = activeTaskName(snapshot)
         val title = activeName ?: getString(R.string.notification_task_running_title)
-
-        return buildCompatProgressNotification(
+        val label = progress.label
+        val contentText = if (label != null) "$label · $statusText" else statusText
+        // AOSP 胶囊只有一个字符串：任务名在前，系统从尾部截断时先保住它
+        // 不预截断（8 字上限只是超级岛摘要态的要求）；任务链未登记时留空，由下游决定不设胶囊
+        val capsule = listOfNotNull(activeName, label).joinToString(" ")
+        return LiveSession(
+            sessionId = LiveNotifyIds.PROGRESS_SESSION,
+            category = LiveCategory.PROGRESS,
             title = title,
-            contentText = contentText,
-            progressInfo = progressInfo,
-            activeTaskName = activeName,
+            text = contentText,
+            capsuleText = capsule,
+            progressCurrent = progress.current,
+            progressMax = progress.max,
+            progressLabel = progress.label,
+            ongoing = true,
+            firstFloat = firstFloat,
+            timeoutSec = 86_400,
+            isError = snapshot.state == MaaExecutionState.ERROR || progress.hasTaskError,
         )
     }
 
@@ -274,77 +276,13 @@ class TaskExecutionService : Service() {
         MaaExecutionState.ERROR -> getString(R.string.notification_task_error)
     }
 
-    private fun buildCompatProgressNotification(
-        title: String,
-        contentText: String,
-        progressInfo: TaskProgressInfo,
-        activeTaskName: String?,
-    ): Notification {
-        val style = NotificationCompat.ProgressStyle()
-            .setStyledByProgress(true)
-            .setProgressIndeterminate(progressInfo.totalCount == 0)
-            .setProgressTrackerIcon(
-                IconCompat.createWithResource(this, R.drawable.ic_progress_tracker)
-            )
-
-        if (progressInfo.totalCount > 0) {
-            style.setProgress(progressInfo.progress)
-        }
-
-        progressInfo.segments.forEach { segment ->
-            style.addProgressSegment(
-                NotificationCompat.ProgressStyle.Segment(segment.length)
-                    .setColor(segment.color)
-            )
-        }
-
-        val shortCritical = when {
-            progressInfo.progressLabel != null && activeTaskName != null ->
-                "${progressInfo.progressLabel} $activeTaskName"
-
-            progressInfo.progressLabel != null -> progressInfo.progressLabel
-            activeTaskName != null -> activeTaskName
-            else -> null
-        }
-
-        return NotificationCompat.Builder(this, TASK_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_maa_logo)
-            .setColor(progressInfo.barColor)
-            .setContentTitle(title)
-            .setContentText(contentText)
-            .setStyle(style)
-            .setContentIntent(buildContentIntent())
-            .setOngoing(true)
-            .setRequestPromotedOngoing(canRequestPromotedOngoing())
-            .setSilent(true)
-            .setOnlyAlertOnce(true)
-            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
-            .apply {
-                if (shortCritical != null) {
-                    setShortCriticalText(shortCritical)
-                }
-            }
-            .build()
-    }
-
-    private fun buildProgressInfo(snapshot: TaskNotificationSnapshot): TaskProgressInfo {
-        // IDLE/ERROR 分支仅用于 onCreate fast-fail 时构建初始通知的兜底。
+    private fun progressOf(snapshot: TaskNotificationSnapshot): ProgressNumbers {
         val tasks = snapshot.tasks
         val total = tasks.size
+        // 任务链还没登记时 max=0，交给下游渲染成不确定态而不是停在 0%
         if (total == 0) {
-            return TaskProgressInfo(
-                max = PROGRESS_STYLE_MAX,
-                progress = 0,
-                completedCount = 0,
-                totalCount = 0,
-                barColor = PROGRESS_COLOR_ACTIVE,
-                progressLabel = null,
-                segments = listOf(
-                    ProgressSegmentInfo(PROGRESS_STYLE_MAX, PROGRESS_COLOR_PENDING)
-                ),
-            )
+            return ProgressNumbers(0, 0, null, hasTaskError = false)
         }
-
         val completedCount = tasks.count { it.status == TaskRunStatus.COMPLETED }
         val activeIndex = tasks.indexOfFirst { it.status == TaskRunStatus.IN_PROGRESS }
             .takeIf { it >= 0 }
@@ -352,12 +290,12 @@ class TaskExecutionService : Service() {
             .takeIf { it >= 0 }
 
         fun progressFor(finishedCount: Int): Int =
-            (finishedCount.toLong() * PROGRESS_STYLE_MAX / total).toInt()
+            (finishedCount.toLong() * LiveNotifyIds.PROGRESS_STYLE_MAX / total).toInt()
 
-        val progress = when {
+        val current = when {
             taskErrorIndex != null -> progressFor(taskErrorIndex + 1)
             snapshot.state == MaaExecutionState.ERROR -> progressFor(completedCount)
-            snapshot.state == MaaExecutionState.IDLE -> PROGRESS_STYLE_MAX
+            snapshot.state == MaaExecutionState.IDLE -> LiveNotifyIds.PROGRESS_STYLE_MAX
             snapshot.state == MaaExecutionState.STOPPING -> {
                 val idx = completedCount.coerceAtLeast(activeIndex ?: completedCount)
                     .coerceIn(0, total)
@@ -365,35 +303,19 @@ class TaskExecutionService : Service() {
             }
 
             activeIndex != null -> {
-                progressFor(activeIndex) + (PROGRESS_STYLE_MAX / total) / 2
+                progressFor(activeIndex) + (LiveNotifyIds.PROGRESS_STYLE_MAX / total) / 2
             }
 
             completedCount > 0 -> progressFor(completedCount)
             else -> 0
-        }.coerceIn(0, PROGRESS_STYLE_MAX)
+        }.coerceIn(0, LiveNotifyIds.PROGRESS_STYLE_MAX)
 
-        val barColor = when {
-            taskErrorIndex != null || snapshot.state == MaaExecutionState.ERROR ->
-                PROGRESS_COLOR_ERROR
-
-            snapshot.state == MaaExecutionState.IDLE -> PROGRESS_COLOR_COMPLETED
-            else -> PROGRESS_COLOR_ACTIVE
-        }
-
-        return TaskProgressInfo(
-            max = PROGRESS_STYLE_MAX,
-            progress = progress,
-            completedCount = completedCount,
-            totalCount = total,
-            barColor = barColor,
-            progressLabel = "$completedCount/$total",
-            segments = listOf(ProgressSegmentInfo(PROGRESS_STYLE_MAX, barColor)),
+        return ProgressNumbers(
+            current = current,
+            max = LiveNotifyIds.PROGRESS_STYLE_MAX,
+            label = "$completedCount/$total",
+            hasTaskError = taskErrorIndex != null,
         )
-    }
-
-    private fun buildContentText(statusText: String, progressInfo: TaskProgressInfo): String {
-        val label = progressInfo.progressLabel ?: return statusText
-        return "$label · $statusText"
     }
 
     private fun activeTaskName(snapshot: TaskNotificationSnapshot): String? =
@@ -402,52 +324,34 @@ class TaskExecutionService : Service() {
             ?.taskChain
             ?.trim()
             ?.let { taskChain ->
-                VISIBLE_TASK_TITLE_RES[taskChain]?.let(::getString)
+                // 未映射的任务类型回退原始名，避免进度数字失去任务名参照
+                VISIBLE_TASK_TITLE_RES[taskChain]?.let(::getString) ?: taskChain
             }
 
-    private fun canRequestPromotedOngoing(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
-            ContextCompat.checkSelfPermission(
-                this,
-                PERMISSION_POST_PROMOTED_NOTIFICATIONS,
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            true
-        }
+    private fun updateNotification(token: Long, snapshot: TaskNotificationSnapshot) {
+        if (!liveCoordinator.isCurrent(token)) return
+        liveCoordinator.publishProgress(token, toSession(snapshot, firstFloat = false))
     }
 
-    private fun updateNotification(snapshot: TaskNotificationSnapshot) {
-        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        try {
-            manager.notify(NOTIFICATION_ID, buildNotification(snapshot))
-        } catch (e: SecurityException) {
-            // API 33+ 用户拒绝 POST_NOTIFICATIONS 时 notify 会抛 SecurityException；
-            // FGS 主线程不应被通知权限异常拖垮，对齐 MaaEventNotifier 的处理。
-            Timber.w(e, "notify blocked by POST_NOTIFICATIONS denial")
+    private fun removeActiveNotification(token: Long) {
+        if (liveCoordinator.isCurrent(token)) {
+            liveCoordinator.cancelProgress(token)
         }
+        clearProgressNotification()
     }
 
-    private fun removeActiveNotification() {
+    private fun clearProgressNotification() {
         stopForeground(STOP_FOREGROUND_REMOVE)
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         try {
-            manager.cancel(NOTIFICATION_ID)
+            manager.cancel(LiveNotifyIds.PROGRESS)
         } catch (e: SecurityException) {
             Timber.w(e, "cancel blocked by POST_NOTIFICATIONS denial")
         }
     }
 
-    private fun buildContentIntent(): PendingIntent {
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        return PendingIntent.getActivity(
-            this,
-            0,
-            intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-    }
+    private fun isTerminal(state: MaaExecutionState): Boolean =
+        state == MaaExecutionState.IDLE || state == MaaExecutionState.ERROR
 
     private data class TaskNotificationSnapshot(
         val state: MaaExecutionState,
@@ -455,18 +359,11 @@ class TaskExecutionService : Service() {
         val tasks: List<TaskRunInfo>,
     )
 
-    private data class TaskProgressInfo(
+    private data class ProgressNumbers(
+        val current: Int,
         val max: Int,
-        val progress: Int,
-        val completedCount: Int,
-        val totalCount: Int,
-        val barColor: Int,
-        val progressLabel: String?,
-        val segments: List<ProgressSegmentInfo>,
-    )
-
-    private data class ProgressSegmentInfo(
-        val length: Int,
-        val color: Int,
+        val label: String?,
+        /** 任务链里有子任务失败，进度条与强调色转红，即使整条链还在继续 */
+        val hasTaskError: Boolean,
     )
 }

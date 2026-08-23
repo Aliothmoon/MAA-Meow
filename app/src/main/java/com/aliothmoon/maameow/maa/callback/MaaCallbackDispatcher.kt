@@ -73,11 +73,10 @@ class MaaCallbackDispatcher(
         val why = details?.getString("why") ?: ""
         Timber.e("MaaCore 初始化失败: what=$what, why=$why")
         stateHolder.reportRunState(MaaExecutionState.ERROR)
-        sessionLogger.append(
-            "初始化失败: $what${if (why.isNotEmpty()) " ($why)" else ""}",
-            LogLevel.ERROR
-        )
+        val message = "初始化失败: $what${if (why.isNotEmpty()) " ($why)" else ""}"
+        sessionLogger.append(message, LogLevel.ERROR)
         sessionLogger.endSession("INIT_FAILED")
+        notificationCenter.notifyStartFailed(message)
     }
 
     private fun handleConnectionInfo(details: JSONObject?) {
@@ -89,11 +88,14 @@ class MaaCallbackDispatcher(
     }
 
     private fun handleAllTasksCompleted() {
-        stateHolder.reportRunState(MaaExecutionState.IDLE)
+        val stopping = stateHolder.currentRunState() == MaaExecutionState.STOPPING
+        if (!stopping) {
+            stateHolder.reportRunState(MaaExecutionState.IDLE)
+        }
         // 不依赖 details：全部完成的收尾（清运行时登记、写总结、发通知）
         // 不该因为这一条回调的 JSON 解析失败而被整个跳过
-        taskChainHandler.onAllTasksCompleted()
-        sessionLogger.endSession("COMPLETED")
+        taskChainHandler.onAllTasksCompleted(asStopped = stopping)
+        sessionLogger.endSession(if (stopping) "STOPPED" else "COMPLETED")
     }
 
     private fun handleTaskChainError(details: JSONObject?) {

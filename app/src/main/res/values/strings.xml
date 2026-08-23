@@ -39,6 +39,7 @@
     <string name="maa_start_up">开始唤醒</string>
     <string name="maa_depot">仓库识别</string>
     <string name="maa_oper_box">干员识别</string>
+    <string name="maa_paradox_copilot">悖论模拟</string>
 
     <!-- subtask_error -->
     <string name="maa_failed_to_open_client">打开客户端失败，请检查配置文件</string>
@@ -1416,6 +1417,21 @@
 
     <!-- i18n: notifications -->
     <string name="notification_settings_title">通知设置</string>
+    <string name="notification_section_live">实况通知</string>
+    <string name="notification_live_style">展示方式</string>
+    <string name="notification_live_style_hyperos">超级岛</string>
+    <string name="notification_live_style_aosp">实时更新</string>
+    <string name="notification_live_style_plain">标准通知栏</string>
+    <string name="notification_live_xmsf_bypass">超级岛兼容模式</string>
+    <string name="notification_live_step_post">通知发送权限</string>
+    <string name="notification_live_step_post_missing">未授权，点此申请</string>
+    <string name="notification_live_step_focus">焦点通知</string>
+    <string name="notification_live_step_focus_missing">未开启，请到应用通知设置中打开「焦点通知」</string>
+    <string name="notification_live_step_promoted">状态栏实时进度</string>
+    <string name="notification_live_step_promoted_missing">未开启，请到应用通知设置中打开「实时更新」</string>
+    <string name="notification_live_send_test">发送实况测试</string>
+    <string name="notification_live_test_title">实况测试</string>
+    <string name="notification_live_test_text">这是一条实况测试通知</string>
     <string name="notification_section_internal">内部通知</string>
     <string name="notification_enable">通知提醒</string>
     <string name="notification_popup">弹出提示</string>
@@ -1486,6 +1502,10 @@
     <string name="notification_event_channel_popup_desc">任务完成、出错、公招高星等事件通知（弹出横幅）</string>
     <string name="notification_event_all_tasks_completed">全部任务完成</string>
     <string name="notification_event_task_error">任务出错</string>
+    <string name="notification_event_task_stopped">任务已停止</string>
+    <string name="notification_event_task_stopped_text">任务已手动停止</string>
+    <string name="notification_event_service_died">服务异常</string>
+    <string name="notification_event_service_died_text">MAA 服务意外终止</string>
     <string name="notification_event_recruit_tip">招募提示</string>
     <string name="notification_event_recruit_special_tag">发现稀有 Tag: %1$s</string>
     <string name="notification_event_recruit_robot_tag">发现小车 Tag: %1$s</string>
@@ -1570,6 +1590,7 @@
     <string name="task_start_error_game_not_on_background_display">后台模式下游戏应由开始唤醒任务启动，请清理游戏后台并勾选开始唤醒任务</string>
     <string name="task_start_error_resource_load_failed">资源加载失败，请尝试重新初始化资源</string>
     <string name="task_start_error_service_connecting">服务正在启动中，请稍后再试</string>
+    <string name="task_start_error_already_running">已有任务正在运行或停止中</string>
     <string name="task_start_error_backend_unavailable">%1$s不可用，请先启动对应服务并完成授权后再启动任务</string>
     <string name="task_start_error_maa_create_instance">MaaCore 初始化失败，请重启应用</string>
     <string name="task_start_error_set_touch_mode">触控模式设置失败，请重启应用</string>
@@ -1742,6 +1763,10 @@
     <string name="notification_channel_task_execution">任务执行</string>
     <string name="notification_channel_task_execution_live">任务执行进度</string>
     <string name="notification_channel_task_execution_result">任务执行结果</string>
+    <string name="notification_channel_task_execution_result_desc">任务完成、停止或异常的结果通知</string>
+    <string name="notification_channel_task_execution_result_alert">任务执行结果（弹出）</string>
+    <string name="notification_channel_task_execution_island">任务执行进度（超级岛）</string>
+    <string name="notification_channel_task_execution_island_desc">以超级岛/焦点通知形式展示的任务进度</string>
     <string name="notification_channel_task_execution_desc">后台任务执行进度通知</string>
     <string name="notification_task_running_title">任务执行中</string>
     <string name="notification_task_starting">正在启动…</string>

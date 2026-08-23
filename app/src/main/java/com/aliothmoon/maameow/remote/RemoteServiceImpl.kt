@@ -21,6 +21,7 @@ import com.aliothmoon.maameow.remote.internal.RemoteUtils
 import com.aliothmoon.maameow.remote.internal.ScreenManager
 import com.aliothmoon.maameow.remote.internal.VirtualDisplayManager
 import com.aliothmoon.maameow.remote.internal.WakeUnlockController
+import com.aliothmoon.maameow.remote.internal.XmsfFirewall
 import com.aliothmoon.maameow.third.FakeContext
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.Workarounds
@@ -44,6 +45,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
             Ln.i("$TAG: performEmergencyCleanup triggered")
             runCatching {
                 GameAudioMuteController.restoreAll()
+                XmsfFirewall.restoreIfNeeded()
                 PowerController.destroy()
                 ScreenManager.destroy()
                 MaaCoreManager.destroy()
@@ -68,6 +70,9 @@ class RemoteServiceImpl : RemoteService.Stub() {
     init {
         Workarounds.apply()
         startHeartbeatWatchdog()
+        // 清上一实例可能残留的 xmsf 断网规则；同步执行保证先于任何 AIDL 调用
+        runCatching { XmsfFirewall.ensureRestored() }
+            .onFailure { Ln.w("XmsFw boot restore failed: ${it.message}") }
         RemoteBootTrace.mark("CTOR_BEFORE_MAA_SERVICE")
         Ln.i("$TAG: RemoteServiceImpl init, version: ${MaaCoreManager.maaService.GetVersion()}")
         RemoteBootTrace.mark("CTOR_AFTER_MAA_SERVICE")
@@ -361,6 +366,11 @@ class RemoteServiceImpl : RemoteService.Stub() {
     override fun setForceFullscreenOnVirtualDisplay(enabled: Boolean) {
         Ln.i("$TAG: setForceFullscreenOnVirtualDisplay($enabled)")
         ActivityUtils.forceFullscreenOnVirtualDisplay = enabled
+    }
+
+    override fun setPackageNetworkingEnabled(packageName: String?, enabled: Boolean): Boolean {
+        if (packageName.isNullOrBlank()) return false
+        return XmsfFirewall.setNetworkingEnabled(packageName, enabled)
     }
 
     override fun setVirtualDisplayResolution(width: Int, height: Int, dpi: Int) {

@@ -85,6 +85,9 @@
     *** unstableProviderDied(...);
 }
 
+# xzakota 焦点/超级岛模板靠 kotlinx.serialization 反射字段
+-keep class com.xzakota.hyper.notification.** { *; }
+
 # 落盘 Enum.name / valueOf
 -keepclassmembers enum com.aliothmoon.maameow.** {
     <fields>;

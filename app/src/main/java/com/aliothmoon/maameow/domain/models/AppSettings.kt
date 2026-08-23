@@ -70,6 +70,9 @@ data class AppSettings(
     @PrefKey(default = "DEFAULT")
     val eventNotificationLevel: String = "DEFAULT",
 
+    @PrefKey(default = "true")
+    val liveIslandXmsfBypass: String = "true",
+
     @PrefKey(default = "P720")
     val backgroundResolution: String = "P720",
 

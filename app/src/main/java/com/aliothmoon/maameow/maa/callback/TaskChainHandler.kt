@@ -206,7 +206,7 @@ class TaskChainHandler(
      * AllTasksCompleted (3): 所有任务完成
      * 附带任务总耗时和理智恢复时间信息
      */
-    fun onAllTasksCompleted() {
+    fun onAllTasksCompleted(asStopped: Boolean = false) {
         clearSessionScopedState()
 
         val sb = StringBuilder(str("AllTasksComplete", ""))
@@ -263,8 +263,10 @@ class TaskChainHandler(
         }
 
         val message = sb.toString()
-        sessionLogger.append(message, LogLevel.SUCCESS)
-        notificationCenter.notifyAllTasksCompleted(message)
+        sessionLogger.append(message, if (asStopped) LogLevel.INFO else LogLevel.SUCCESS)
+        if (!asStopped) {
+            notificationCenter.notifyAllTasksCompleted(message)
+        }
 
         callbackScope.launch {
             taskChainState.clearRecruitUseExpeditedFlags()

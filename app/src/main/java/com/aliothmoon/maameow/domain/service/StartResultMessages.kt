@@ -48,4 +48,7 @@ fun resolveStartResultMessage(result: MaaCompositionService.StartResult): UiText
 
         is MaaCompositionService.StartResult.RemoteAccessUnavailable ->
             uiTextOf(R.string.task_start_error_backend_unavailable, result.backend.display)
+
+        is MaaCompositionService.StartResult.AlreadyRunning ->
+            uiTextOf(R.string.task_start_error_already_running)
     }

@@ -49,6 +49,7 @@ reorderable = "3.1.0"
 
 # Kotlin libraries
 kotlinxSerializationJson = "1.11.0"
+hyperNotification = "1.4"
 
 # Testing
 mockk = "1.14.11"
@@ -109,6 +110,7 @@ jakarta-activation-api = { group = "jakarta.activation", name = "jakarta.activat
 compose-markdown = { group = "com.github.jeziellago", name = "compose-markdown", version.ref = "composeMarkdown" }
 reorderable = { group = "sh.calvin.reorderable", name = "reorderable", version.ref = "reorderable" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+xzakota-focus-api = { group = "com.xzakota.hyper.notification", name = "focus-api", version.ref = "hyperNotification" }
 
 
 

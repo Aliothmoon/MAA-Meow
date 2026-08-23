@@ -16,6 +16,14 @@ import com.aliothmoon.maameow.data.datasource.update.MirrorChyanAppVersionChecke
 import com.aliothmoon.maameow.data.datasource.update.MirrorChyanResourceVersionChecker
 import com.aliothmoon.maameow.data.log.ApplicationLogWriter
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
+import com.aliothmoon.maameow.data.notification.live.AospPromotedDetector
+import com.aliothmoon.maameow.data.notification.live.FocusSequenceStore
+import com.aliothmoon.maameow.data.notification.live.HyperOsFocusDetector
+import com.aliothmoon.maameow.data.notification.live.LiveNotificationFactory
+import com.aliothmoon.maameow.data.notification.live.LivePublisherRouter
+import com.aliothmoon.maameow.data.notification.live.XmsfNetworkGate
+import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
+import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
 import com.aliothmoon.maameow.data.notification.provider.BarkProvider
 import com.aliothmoon.maameow.data.notification.provider.CustomWebhookProvider
 import com.aliothmoon.maameow.data.notification.provider.DingTalkProvider
@@ -239,7 +247,15 @@ val appModule = module {
     single { CustomWebhookProvider(get(), get()) } bind NotificationProvider::class
     single { ExternalNotificationService(get(), get(), getAll()) }
 
-    // 通知
+    // 通知 / 实况
+    singleOf(::LiveNotificationFactory)
+    singleOf(::AospPromotedDetector)
+    singleOf(::HyperOsFocusDetector)
+    singleOf(::FocusSequenceStore)
+    singleOf(::XmsfNetworkGate)
+    singleOf(::LivePublisherRouter)
+    single<LiveUpdatePublisher> { get<LivePublisherRouter>() }
+    singleOf(::LiveSessionCoordinator)
     singleOf(::MaaEventNotifier)
     singleOf(::MaaNotificationCenter)
 

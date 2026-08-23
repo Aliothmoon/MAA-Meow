@@ -27,7 +27,7 @@ class MaaEventNotifier(
         private const val CHANNEL_DEFAULT = "maa_events_low"
         private const val CHANNEL_HIGH = "maa_events_high"
 
-        private const val ID_TASK_STATUS = 9001
+        private const val ID_TASK_STATUS = 9004
         private val eventIdGenerator = AtomicInteger(9100)
     }
 
@@ -65,7 +65,12 @@ class MaaEventNotifier(
     }
 
     fun notifyTaskError(taskName: String) {
-        send(R.string.notification_event_task_error, taskName, ID_TASK_STATUS, isError = true)
+        send(
+            R.string.notification_event_task_error,
+            taskName,
+            eventIdGenerator.getAndIncrement(),
+            isError = true,
+        )
     }
 
     fun notifyRecruitSpecialTag(tag: String) {

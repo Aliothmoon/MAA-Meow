@@ -251,6 +251,7 @@ dependencies {
 
     // Kotlin Serialization
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.xzakota.focus.api)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

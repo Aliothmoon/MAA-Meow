@@ -454,6 +454,21 @@ class AppSettingsManager(
         }
     }
 
+    // 超级岛断网旁路
+    val liveIslandXmsfBypass: StateFlow<Boolean> = settings
+        .map { it.liveIslandXmsfBypass.toBooleanStrictOrNull() ?: true }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            initialSettings.liveIslandXmsfBypass.toBooleanStrictOrNull() ?: true
+        )
+
+    suspend fun setLiveIslandXmsfBypass(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveIslandXmsfBypass] = enabled.toString() }
+        }
+    }
+
     // 后台虚拟屏分辨率
     val backgroundResolution: StateFlow<DefaultDisplayConfig.ResolutionPreference> = settings
         .map {

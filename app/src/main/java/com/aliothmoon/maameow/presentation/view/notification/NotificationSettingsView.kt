@@ -18,12 +18,18 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aliothmoon.maameow.domain.notification.LiveBackend
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.notification.WEBHOOK_PRESET_TEMPLATES
@@ -68,11 +74,27 @@ fun NotificationSettingsView(
     val sendOnError by viewModel.sendOnError.collectAsStateWithLifecycle()
     val sendOnServiceDied by viewModel.sendOnServiceDied.collectAsStateWithLifecycle()
     val includeLogDetails by viewModel.includeLogDetails.collectAsStateWithLifecycle()
+    val liveCapability by viewModel.liveCapability.collectAsStateWithLifecycle()
+    val liveIslandXmsfBypass by viewModel.liveIslandXmsfBypass.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshLiveCapability()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     val appSettingsManager: AppSettingsManager = koinInject()
     val eventNotificationLevel by appSettingsManager.eventNotificationLevel.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val testMessage = stringResource(R.string.notification_test_message)
+    val liveTestTitle = stringResource(R.string.notification_live_test_title)
+    val liveTestText = stringResource(R.string.notification_live_test_text)
 
     Scaffold(
         topBar = {
@@ -92,6 +114,87 @@ fun NotificationSettingsView(
                 vertical = MaaDesignTokens.Spacing.sm
             )
         ) {
+            item {
+                SectionHeader(stringResource(R.string.notification_section_live))
+                SettingsGroupCard {
+                    val styleLabel = when (liveCapability.backend) {
+                        LiveBackend.HYPER_OS_FOCUS ->
+                            stringResource(R.string.notification_live_style_hyperos)
+                        LiveBackend.AOSP_PROMOTED ->
+                            stringResource(R.string.notification_live_style_aosp)
+                        LiveBackend.PLAIN ->
+                            stringResource(R.string.notification_live_style_plain)
+                    }
+                    SettingRow(
+                        title = stringResource(R.string.notification_live_style),
+                        description = styleLabel,
+                        titleColor = contentColor,
+                    )
+                    // 授权行只在缺权限时出现，已授权时没有可操作性
+                    if (!liveCapability.postNotifications) {
+                        ListItemDivider()
+                        PermissionFixRow(
+                            title = stringResource(R.string.notification_live_step_post),
+                            hint = stringResource(R.string.notification_live_step_post_missing),
+                            titleColor = contentColor,
+                        ) {
+                            viewModel.requestPostNotifications(context)
+                        }
+                    }
+                    if (liveCapability.focusLikely) {
+                        ListItemDivider()
+                        // 断网旁路会波及全机小米推送，给用户留个开关
+                        SettingRow(
+                            title = stringResource(R.string.notification_live_xmsf_bypass),
+                            titleColor = contentColor,
+                            trailing = {
+                                Switch(
+                                    checked = liveIslandXmsfBypass,
+                                    onCheckedChange = viewModel::setLiveIslandXmsfBypass,
+                                )
+                            },
+                        )
+                        if (!liveCapability.focusGranted) {
+                            ListItemDivider()
+                            PermissionFixRow(
+                                title = stringResource(R.string.notification_live_step_focus),
+                                hint = stringResource(R.string.notification_live_step_focus_missing),
+                                titleColor = contentColor,
+                            ) {
+                                viewModel.openAppNotificationSettings(context)
+                            }
+                        }
+                    }
+                    if (liveCapability.promotedAvailable && !liveCapability.promotedGranted) {
+                        ListItemDivider()
+                        PermissionFixRow(
+                            title = stringResource(R.string.notification_live_step_promoted),
+                            hint = stringResource(R.string.notification_live_step_promoted_missing),
+                            titleColor = contentColor,
+                        ) {
+                            viewModel.openPromotedSettings(context)
+                        }
+                    }
+                    ListItemDivider()
+                    Button(
+                        onClick = {
+                            viewModel.sendLiveTest(liveTestTitle, liveTestText)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
+                        shape = MaterialTheme.shapes.small,
+                        contentPadding = ButtonDefaults.ContentPadding,
+                    ) {
+                        Text(stringResource(R.string.notification_live_send_test))
+                    }
+                }
+            }
+
+            item {
+                Spacer(Modifier.height(MaaDesignTokens.Spacing.sectionGap))
+            }
+
             // 内部通知
             item {
                 val isEnabled = eventNotificationLevel != EventNotificationLevel.OFF
@@ -497,6 +600,22 @@ private fun SwitchItem(
         trailing = {
             Switch(checked = checked, onCheckedChange = onCheckedChange)
         },
+    )
+}
+
+/** 缺权限时才渲染，点按跳到对应设置页 */
+@Composable
+private fun PermissionFixRow(
+    title: String,
+    hint: String,
+    titleColor: Color,
+    onFix: () -> Unit,
+) {
+    SettingRow(
+        title = title,
+        description = hint,
+        titleColor = titleColor,
+        onClick = onFix,
     )
 }
 

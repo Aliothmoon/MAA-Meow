@@ -15,6 +15,7 @@ import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.maa.AsstMsg
 import com.aliothmoon.maameow.maa.MaaInstanceOptions.ANDROID
@@ -42,6 +43,8 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -67,6 +70,7 @@ class MaaCompositionService(
     private val subTaskHandler: SubTaskHandler,
     private val taskChainStatusTracker: TaskChainStatusTracker,
     private val notificationCenter: MaaNotificationCenter,
+    private val liveCoordinator: LiveSessionCoordinator,
     private val dropsRefresher: FightDropsRefresher,
     private val toolboxResultCollector: ToolboxResultCollector,
 ) : MaaExecutionStateHolder {
@@ -80,6 +84,8 @@ class MaaCompositionService(
     private val _displayResolution = MutableStateFlow(defaultResolution)
     val displayResolution: StateFlow<DefaultDisplayConfig.Resolution> =
         _displayResolution.asStateFlow()
+
+    override fun currentRunState(): MaaExecutionState = _state.value
 
     override fun reportRunState(state: MaaExecutionState) {
         // STOPPING 期间，回调不主动设 IDLE — 由 finishStop() 统一处理
@@ -110,6 +116,10 @@ class MaaCompositionService(
     }
 
     private fun setRunState(state: MaaExecutionState) {
+        if (state == MaaExecutionState.STARTING) {
+            // 顺带提前拿断网闸门：这里在 IO 线程，留给 FGS 的 startForeground 拿会占主线程
+            liveCoordinator.prepareProgress(liveCoordinator.beginRun())
+        }
         _state.value = state
         // 仅在 STARTING 拉起前台服务；终态不做外部 stopService —
         // 快速失败时 stopService 可能抢在服务创建之前到达，系统会因
@@ -173,6 +183,9 @@ class MaaCompositionService(
 
         /** 远程后端（Shizuku/Root）不可用或无法获取，任务拒绝启动 */
         data class RemoteAccessUnavailable(val backend: RemoteBackend) : StartResult()
+
+        /** 已有任务在启动/运行/停止，拒绝重入 */
+        data object AlreadyRunning : StartResult()
     }
 
     sealed class StopResult {
@@ -267,6 +280,7 @@ class MaaCompositionService(
         setRunState(MaaExecutionState.ERROR)
         sessionLogger.appendAndWait(message, LogLevel.ERROR)
         sessionLogger.endSessionAndWait(sessionStatus)
+        notificationCenter.notifyStartFailed(message)
         return result
     }
 
@@ -277,6 +291,9 @@ class MaaCompositionService(
         setRunState(MaaExecutionState.IDLE)
         sessionLogger.appendAndWait(message, LogLevel.WARNING)
         sessionLogger.endSessionAndWait(sessionStatus)
+        // 前置失败未进 STARTING；先 beginRun 刷新 token，否则 notifyStartFailed 会因旧 run 已 claim 结果而被吞
+        liveCoordinator.beginRun()
+        notificationCenter.notifyStartFailed(message)
         return result
     }
 
@@ -304,7 +321,7 @@ class MaaCompositionService(
         activityManager.runIfDirty { resourceLoader.load() }
         val loaded = resourceLoader.ensureLoaded()
         if (loaded.isFailure) {
-            return failStart(
+            return rejectStart(
                 context.getString(R.string.runlog_resource_load_failed), "RESOURCE_ERROR",
                 StartResult.ResourceError(loaded.exceptionOrNull())
             )
@@ -313,13 +330,13 @@ class MaaCompositionService(
         if (mode == RunMode.FOREGROUND) {
             val (width, height) = Misc.getScreenSize(context)
             if (height > width) {
-                return failStart(
+                return rejectStart(
                     context.getString(R.string.runlog_portrait_orientation), "PORTRAIT",
                     StartResult.PortraitOrientationError
                 )
             }
             if (!Misc.isAspectRatio16x9(width, height)) {
-                return failStart(
+                return rejectStart(
                     context.getString(R.string.runlog_invalid_aspect_ratio, width, height),
                     "INVALID_ASPECT_RATIO",
                     StartResult.InvalidAspectRatioError
@@ -460,7 +477,23 @@ class MaaCompositionService(
         return StartResult.Success(maa.GetVersion())
     }
 
+    /** 启动互斥：前置检查耗时，双入口/双击可能同时穿过 AlreadyRunning 窗口 */
+    private val startMutex = Mutex()
+
     private suspend fun executeStart(
+        tasks: List<MaaTaskParams>,
+        clientType: String,
+        startMessage: String,
+        successMessage: String,
+        preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
+        onSessionStarted: (suspend () -> Unit)? = null,
+    ): StartResult = startMutex.withLock {
+        executeStartLocked(
+            tasks, clientType, startMessage, successMessage, preflightLogs, onSessionStarted,
+        )
+    }
+
+    private suspend fun executeStartLocked(
         tasks: List<MaaTaskParams>,
         clientType: String,
         startMessage: String,
@@ -471,6 +504,13 @@ class MaaCompositionService(
         // 会话与日志先开；STARTING/FGS 必须在前置检查通过后再进入。
         // 否则竖屏等快速失败会 stop 尚未 startForeground 的 FGS，触发
         // ForegroundServiceDidNotStartInTimeException。
+        when (_state.value) {
+            MaaExecutionState.STARTING,
+            MaaExecutionState.RUNNING,
+            MaaExecutionState.STOPPING -> return StartResult.AlreadyRunning
+            MaaExecutionState.IDLE,
+            MaaExecutionState.ERROR -> Unit
+        }
         val mode = appSettings.runMode.value
         sessionLogger.startSession(tasks.map { it.type.value })
         subTaskHandler.resetSessionState()
@@ -609,6 +649,7 @@ class MaaCompositionService(
             if (result is StopResult.Success) LogLevel.INFO else LogLevel.ERROR
         )
         sessionLogger.endSession(status)
+        notificationCenter.notifyTaskStopped()
         return result
     }
 
