@@ -4,7 +4,7 @@ package com.aliothmoon.maameow.utils
  * 页面缩放推荐与悬浮窗 fontScale 策略
  *
  * 页面缩放改写 [androidx.compose.ui.unit.Density.density]
- * 自动档以 360dp 为 100%，只在更窄时略缩，系统字号交给 fontScale
+ * 自动档以 360dp 为 95%，只在更窄时略缩，系统字号交给 fontScale
  */
 object UiScale {
 
@@ -14,8 +14,8 @@ object UiScale {
 
     private const val REF_WIDTH_DP = 360
     private const val NARROW_WIDTH_DP = 320
-    private const val REF_SCALE = 100
-    private const val NARROW_SCALE = 95
+    private const val REF_SCALE = 95
+    private const val NARROW_SCALE = 90
 
     /**
      * 按最小宽度推荐页面缩放百分比（80–110）
