@@ -494,7 +494,8 @@ private fun GroupedStageSelectionSection(
 
     // 当前执行关卡：直接复用 config.getActiveStage(activityManager)，与实际下发 core 的选关完全一致
     // （对齐 WPF：tip 与 SerializeTask 共用 GetFightStage，避免「显示」与「执行」分叉）
-    val executingStage = remember(
+    // null = 候选全部未开放，任务将跳过
+    val executingStage: String? = remember(
         config.stage1, config.alternateStages, config.useAlternateStage,
         config.customStageCode, config.stageResetMode, stageGroups, activityManager
     ) {
@@ -504,7 +505,7 @@ private fun GroupedStageSelectionSection(
 
     // 备选关卡是否会被常驻/当前关卡静默阻断（对齐 WPF PermanentStageBlocksStages）。
     // getActiveStage 选关为「从上往下取第一个今日开放」，常驻关卡每天都开放、stage1 为空（当前/上次）
-    // 时更会直接 return ""，两种情况下其后配置的备选关卡都永远不会被执行，需提示用户。
+    // 时更会直接返回 ""，两种情况下其后配置的备选关卡都永远不会被执行，需提示用户。
     val alternatesBlocked = remember(
         config.stage1, config.alternateStages,
         config.useAlternateStage, executingStage
@@ -513,11 +514,12 @@ private fun GroupedStageSelectionSection(
         val alternates = config.alternateStages
         // 当前/上次：getActiveStage 在 stage1 为空时直接返回 ""，备选整体失效
         if (config.stage1.isEmpty()) return@remember alternates.any { it.isNotEmpty() }
+        val executing = executingStage ?: return@remember false
         // 执行关卡为常驻关卡时，其后配置的备选关卡永远不会被选中
-        if (!activityManager.isPermanentStage(executingStage)) return@remember false
+        if (!activityManager.isPermanentStage(executing)) return@remember false
         val candidates = (listOf(config.stage1) + config.alternateStages)
             .filter { it.isNotEmpty() }
-        candidates.indexOf(executingStage) in 0 until candidates.lastIndex
+        candidates.indexOf(executing) in 0 until candidates.lastIndex
     }
 
     val stagePlanTipText = buildString {
@@ -528,15 +530,15 @@ private fun GroupedStageSelectionSection(
         }
     }
 
-    // 选关告警，互斥优先级：备选被阻断 > 首选不开放(有备选) > 首选不开放。
-    // 优先级保证「将使用备选」与「备选不会执行」不会同时出现，消除文案矛盾。
+    // 选关告警，互斥优先级：备选被阻断 > 无可用关卡 > 首选不开放(有备选)，
+    // 保证「将使用备选」与「备选不会执行」「无可用关卡」不会同时出现
     val stageWarning = when {
         alternatesBlocked ->
             stringResource(R.string.panel_fight_permanent_stage_blocks_alternate)
+        config.stage1.isNotBlank() && executingStage == null ->
+            stringResource(R.string.panel_fight_stage_all_closed, config.stage1)
         !stage1Open && config.stage1.isNotBlank() && config.useAlternateStage ->
             stringResource(R.string.panel_fight_primary_stage_closed_with_alternate, config.stage1)
-        !stage1Open && config.stage1.isNotBlank() ->
-            stringResource(R.string.panel_fight_primary_stage_closed, config.stage1)
         else -> null
     }
 
@@ -581,7 +583,10 @@ private fun GroupedStageSelectionSection(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
-                    StageBadge(text = executingStage.ifEmpty { defaultStageLabel })
+                    StageBadge(
+                        text = executingStage?.ifEmpty { defaultStageLabel }
+                            ?: stringResource(R.string.panel_fight_no_executable_stage)
+                    )
                 }
                 if (stageWarning != null) {
                     Text(

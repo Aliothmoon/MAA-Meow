@@ -5,6 +5,7 @@ import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.data.resource.StageItem
 import com.aliothmoon.maameow.domain.models.ReportOptions
 import com.aliothmoon.maameow.domain.service.FightDropsRefresher
 import io.mockk.every
@@ -61,4 +62,17 @@ fun alwaysOpenActivityManager(): ActivityManager = mockk {
     every { getActivityAwareExpireDays() } returns 0
     every { isActivityOpen() } returns false
     every { isResourceCollectionOpen() } returns false
+}
+
+/** 仅 openStages 内关卡视为开放；mergedStages 供 CURRENT 模式成员过滤分支 */
+fun stagedActivityManager(
+    openStages: Set<String>,
+    mergedStages: List<String> = emptyList(),
+): ActivityManager = mockk {
+    every { getYjDayOfWeek() } returns java.time.DayOfWeek.MONDAY
+    every { isStageOpen(any(), any()) } answers { firstArg<String>() in openStages }
+    every { isStageOpen(any()) } answers { firstArg<String>() in openStages }
+    every { getMergedStageList(any()) } returns mergedStages.map {
+        StageItem(code = it, displayName = it)
+    }
 }

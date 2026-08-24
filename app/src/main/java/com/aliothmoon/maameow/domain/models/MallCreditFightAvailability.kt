@@ -15,6 +15,12 @@ class MallCreditFightAvailability private constructor(
     val message: UiText? = null,
 ) {
     companion object {
+        /** 信用作战被禁用的原因：关卡列表含「当前/上次」，或无今日开放关卡 */
+        private sealed interface BlockingReason {
+            data class BlankStage(val stageIndex: Int) : BlockingReason
+            data object NoOpenStage : BlockingReason
+        }
+
         fun resolve(
             nodes: List<TaskChainNode>,
             manager: ActivityManager,
@@ -22,17 +28,23 @@ class MallCreditFightAvailability private constructor(
             val enabled = nodes.filter { it.enabled }.sortedBy { it.order }
             val result = enabled.firstNotNullOfOrNull {
                 val config = it.config as? FightConfig ?: return@firstNotNullOfOrNull null
-                val stageIndex =
-                    findBlockingStageIndex(config, manager) ?: return@firstNotNullOfOrNull null
+                val reason = findBlockingReason(config, manager) ?: return@firstNotNullOfOrNull null
                 val order = it.order + 1
                 MallCreditFightAvailability(
                     isAvailable = false,
-                    message = uiTextOf(
-                        R.string.mall_credit_fight_blocked_by_stage,
-                        it.name,
-                        order,
-                        stageIndex,
-                    ),
+                    message = when (reason) {
+                        is BlockingReason.BlankStage -> uiTextOf(
+                            R.string.mall_credit_fight_blocked_by_stage,
+                            it.name,
+                            order,
+                            reason.stageIndex,
+                        )
+                        BlockingReason.NoOpenStage -> uiTextOf(
+                            R.string.mall_credit_fight_blocked_by_closed_stage,
+                            it.name,
+                            order,
+                        )
+                    },
                 )
             } ?: MallCreditFightAvailability(isAvailable = true)
 
@@ -48,13 +60,15 @@ class MallCreditFightAvailability private constructor(
             return result
         }
 
-        private fun findBlockingStageIndex(
+        private fun findBlockingReason(
             config: FightConfig,
             activityManager: ActivityManager,
-        ): Int? {
-            if (config.getActiveStage(activityManager).isNotBlank()) {
-                return null
-            }
+        ): BlockingReason? {
+            val activeStage = config.getActiveStage(activityManager)
+            // null 先于空槽扫描，备选空槽已被 getActiveStage 过滤，避免归因成「当前/上次」
+            if (activeStage == null) return BlockingReason.NoOpenStage
+            if (activeStage.isNotBlank()) return null
+            // 空串 = 当前/上次
             val stageValues = if (config.useAlternateStage) {
                 listOf(config.stage1) + config.alternateStages
             } else {
@@ -62,9 +76,9 @@ class MallCreditFightAvailability private constructor(
             }
             val firstBlankStageIndex = stageValues.indexOfFirst { it.isBlank() }
             return if (firstBlankStageIndex >= 0) {
-                firstBlankStageIndex + 1
+                BlockingReason.BlankStage(firstBlankStageIndex + 1)
             } else {
-                1
+                BlockingReason.NoOpenStage
             }
         }
     }

@@ -259,16 +259,22 @@ data class FightConfig(
     /**
      * 获取实际使用的关卡
      *
-     * 根据备选关卡和关卡开放状态自动选择
+     * 根据备选关卡和关卡开放状态自动选择；候选全部未开放时返回 null，
+     * 由调用方跳过任务，对齐 WPF GetFightStage：未开放关卡一律不下发 Core
+     *
      * 需要 [ActivityManager] 判定关卡开放，故由调用方显式传入 ——
      * 早前这里用 GlobalContext 反向抓依赖，拿不到时会静默跳过全部开放判定、
      * 返回一个可能未开放的关卡，且单测因 Koin 未启动而只覆盖了那条降级分支
      */
-    fun getActiveStage(activityManager: ActivityManager): String {
+    fun getActiveStage(activityManager: ActivityManager): String? {
+        // 空串 = 当前/上次，视为可用
         if (stage1.isEmpty()) return ""
 
-        // 如果不使用备选关卡，直接返回首选关卡
-        if (!useAlternateStage) return stage1
+        val day = activityManager.getYjDayOfWeek()
+
+        if (!useAlternateStage) {
+            return stage1.takeIf { activityManager.isStageOpen(it, day) }
+        }
 
         var candidates = (listOf(stage1) + alternateStages).filter { it.isNotEmpty() }
 
@@ -284,12 +290,7 @@ data class FightConfig(
         // 参考 WPF GetFightStage: 从上往下取第一个今日开放的关卡
         // 用 isStageOpen（经 getStageInfo 兜底，对齐 WPF StageManager.IsStageOpen）判定，
         // 而非「候选列表成员 + isOpenToday」；否则主线关卡（如 16-14，不在候选列表）会被误判未开放而跳过
-        val day = activityManager.getYjDayOfWeek()
-        candidates.firstOrNull { code -> activityManager.isStageOpen(code, day) }
-            ?.let { return it }
-
-        // 全不开放则回退第一条候选，无候选则返回 ""
-        return candidates.firstOrNull() ?: ""
+        return candidates.firstOrNull { code -> activityManager.isStageOpen(code, day) }
     }
 
     /**
@@ -307,6 +308,13 @@ data class FightConfig(
 
     override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
         var stage = getActiveStage(ctx.activityManager)
+            ?: run {
+                ctx.appendLog(
+                    uiTextOf(R.string.runlog_fight_stage_unavailable, ctx.node.name, stage1),
+                    LogLevel.WARNING,
+                )
+                return emptyList()
+            }
 
         // 自定义剿灭替换
         if (stage == "Annihilation" && useCustomAnnihilation) {

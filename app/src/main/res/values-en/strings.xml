@@ -743,6 +743,7 @@
     <string name="panel_mall_credit_fight_unavailable">No valid combat stage could be resolved from the current combat task. Support OF-1 will be skipped this time.</string>
     <!-- %1$s task name, %2$d task order (1-based), %3$d stage list index (1-based) -->
     <string name="mall_credit_fight_blocked_by_stage">A Fight task has \"Cur/Last\" in its stage list, so Credit shopping will not run Support OF-1. Task: %1$s (order %2$d), stage index %3$d</string>
+    <string name="mall_credit_fight_blocked_by_closed_stage">A Fight task has no stage open today, so Credit shopping will not run Support OF-1. Task: %1$s (order %2$d)</string>
     <string name="panel_mall_credit_fight_notice">Support combat requires an available support unit in your friend list.</string>
     <string name="panel_mall_priority_title">Priority Items</string>
     <string name="panel_mall_priority_reorder_tip">Drag to adjust purchase priority. Items closer to the top are bought first.</string>
@@ -794,8 +795,9 @@
     <string name="panel_fight_stage_selection_tip">Manual stage code entry supports common aliases.\nFor example: Lungmen Dollars → CE-6, EXP → LS-6.</string>
     <string name="panel_fight_primary_stage_label">Primary Stage</string>
     <string name="panel_fight_primary_stage_placeholder">For example: CE-6 or Lungmen Dollars</string>
-    <string name="panel_fight_primary_stage_closed">%1$s is not open today</string>
     <string name="panel_fight_primary_stage_closed_with_alternate">%1$s is not open today. An alternative stage will be used.</string>
+    <string name="panel_fight_stage_all_closed">%1$s is not open today and no stage is available; the task will be skipped</string>
+    <string name="panel_fight_no_executable_stage">No stage available</string>
     <string name="panel_fight_permanent_stage_blocks_alternate">Later alternative stages won\'t run (execution stage is permanent or current/last)</string>
     <string name="panel_fight_alternate_stage_label">Alternative Stage %1$d</string>
     <string name="panel_fight_alternate_stage_placeholder">For example: CE-5</string>
@@ -2149,6 +2151,7 @@
     <string name="runlog_depot_plan_inventory_enough">%1$s: %2$s sufficient %3$d/%4$d</string>
     <string name="runlog_depot_plan_inventory_insufficient">%1$s: %2$s insufficient %3$d/%4$d, need %5$d more</string>
     <string name="runlog_fight_inventory_unavailable">Task \"%1$s\" uses target inventory, but no inventory data is currently available, so it was skipped. Update it via \"Toolbox - Depot Recognition\"</string>
+    <string name="runlog_fight_stage_unavailable">%1$s: no stage open today (primary %2$s), fight task skipped</string>
     <string name="runlog_depot_set_params_failed">%1$s: failed to update task params; original params will be used</string>
     <string name="runlog_depot_plan_sanity_insufficient">%1$s: not enough sanity (estimated %2$d, stage costs %3$d), skipped</string>
     <string name="runlog_depot_skipped_activity">An event is in progress; Depot Maintain skipped</string>

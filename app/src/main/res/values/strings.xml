@@ -797,6 +797,7 @@
     <string name="panel_mall_credit_fight_unavailable">当前存在无法解析有效关卡的理智作战任务，本次不会借助战打一把 OF-1。</string>
     <!-- %1$s 任务名, %2$d 任务序号(1-based), %3$d 关卡列表中的序号(1-based) -->
     <string name="mall_credit_fight_blocked_by_stage">存在 ｢理智作战｣ 任务关卡列表中有 ｢当前/上次｣, ｢信用收支｣ 任务不再借助战打一把 OF-1. 任务名: %1$s (序号%2$d), 关卡序号 %3$d</string>
+    <string name="mall_credit_fight_blocked_by_closed_stage">存在 ｢理智作战｣ 任务无今日开放关卡, ｢信用收支｣ 任务不再借助战打一把 OF-1. 任务名: %1$s (序号%2$d)</string>
     <string name="panel_mall_credit_fight_notice">借助战需要好友支援，确保好友列表有可用支援干员</string>
     <string name="panel_mall_priority_title">优先购买物品</string>
     <string name="panel_mall_priority_reorder_tip">拖动调整购买优先级，越靠上优先级越高</string>
@@ -848,8 +849,9 @@
     <string name="panel_fight_stage_selection_tip">可手动输入关卡代码，支持简写\n例如：龙门币→CE-6，经验→LS-6</string>
     <string name="panel_fight_primary_stage_label">首选关卡</string>
     <string name="panel_fight_primary_stage_placeholder">例如: CE-6 或 龙门币</string>
-    <string name="panel_fight_primary_stage_closed">「%1$s」今日不开放</string>
     <string name="panel_fight_primary_stage_closed_with_alternate">「%1$s」今日不开放，将使用备选关卡</string>
+    <string name="panel_fight_stage_all_closed">「%1$s」今日不开放，无可用关卡，任务将跳过</string>
+    <string name="panel_fight_no_executable_stage">无可用关卡</string>
     <string name="panel_fight_permanent_stage_blocks_alternate">其后备选关卡不会执行（执行关卡为常驻或「当前/上次」）</string>
     <string name="panel_fight_alternate_stage_label">备选关卡%1$d</string>
     <string name="panel_fight_alternate_stage_placeholder">例如: CE-5</string>
@@ -2206,6 +2208,7 @@
     <string name="runlog_depot_plan_inventory_enough">%1$s：%2$s 已充足 %3$d/%4$d</string>
     <string name="runlog_depot_plan_inventory_insufficient">%1$s：%2$s 不足 %3$d/%4$d，需刷取 %5$d</string>
     <string name="runlog_fight_inventory_unavailable">任务「%1$s」启用了目标库存，但当前没有可用的库存数据，已跳过。可通过「工具箱 - 仓库识别」更新库存</string>
+    <string name="runlog_fight_stage_unavailable">%1$s：无今日开放的关卡（首选 %2$s），已跳过理智作战</string>
     <string name="runlog_depot_set_params_failed">%1$s：更新任务参数失败，将按原参数执行</string>
     <string name="runlog_depot_plan_sanity_insufficient">%1$s：理智不足（预估 %2$d，低于关卡消耗 %3$d），已跳过</string>
     <string name="runlog_depot_skipped_activity">当前有活动进行中，已跳过库存保持</string>
