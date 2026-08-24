@@ -142,10 +142,10 @@ object VirtualDisplayManager {
         val d = vd.display
         Ln.i(
             "VD created: id=$vdId" +
-            ", configured=${cfg.width}x${cfg.height}" +
-            ", actual=${d.width}x${d.height}" +
-            ", rotation=${d.rotation}" +
-            ", flags=0x${flags.toString(16)}"
+                    ", configured=${cfg.width}x${cfg.height}" +
+                    ", actual=${d.width}x${d.height}" +
+                    ", rotation=${d.rotation}" +
+                    ", flags=0x${flags.toString(16)}"
         )
 
         if (d.rotation != Surface.ROTATION_0) {
@@ -162,7 +162,7 @@ object VirtualDisplayManager {
                 // 额外调 setForcedDisplaySize 强制 VD 向内部 app 上报横屏尺寸。
                 Ln.w(
                     "Landscape-native device detected (physRot=0, vdRot=${d.rotation}), " +
-                    "applying setForcedDisplaySize"
+                            "applying setForcedDisplaySize"
                 )
                 runCatching {
                     wm.setForcedDisplaySize(vdId, cfg.width, cfg.height)
@@ -173,9 +173,7 @@ object VirtualDisplayManager {
     }
 
     private fun buildDisplayFlags(): Int {
-        var flags = (VIRTUAL_DISPLAY_FLAG_PUBLIC
-                or VIRTUAL_DISPLAY_FLAG_PRESENTATION
-                or VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY
+        var flags = (VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY
                 or VIRTUAL_DISPLAY_FLAG_SUPPORTS_TOUCH)
 
         if (VD_DESTROY_CONTENT) {
