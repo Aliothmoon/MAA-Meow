@@ -437,8 +437,14 @@
     <string name="update_progress_app_installing">Launching installer…</string>
     <string name="update_progress_resource_downloading">Downloading resources %1$s%%</string>
     <string name="update_progress_resource_extracting">Extracting %1$s%%</string>
+    <string name="update_cancel_download_cd">Cancel download</string>
+
+    <!-- switch source while downloading -->
+    <string name="update_switch_source_title">Switch download source</string>
+    <string name="update_switch_source_message">The current download will be canceled and restarted from %1$s</string>
 
     <!-- update toasts -->
+    <string name="update_toast_download_canceled">Download canceled</string>
     <string name="update_toast_resource_up_to_date">Resources are already up to date</string>
     <string name="update_toast_app_up_to_date">App is already up to date</string>
     <string name="update_toast_resource_update_complete">Resource update complete</string>

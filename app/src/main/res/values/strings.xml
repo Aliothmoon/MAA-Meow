@@ -640,8 +640,14 @@
     <string name="update_progress_app_installing">正在启动安装…</string>
     <string name="update_progress_resource_downloading">资源下载中 %1$s%%</string>
     <string name="update_progress_resource_extracting">解压中 %1$s%%</string>
+    <string name="update_cancel_download_cd">取消下载</string>
+
+    <!-- 下载中换源 -->
+    <string name="update_switch_source_title">切换下载源</string>
+    <string name="update_switch_source_message">将取消当前下载，改用%1$s重新下载</string>
 
     <!-- update toasts -->
+    <string name="update_toast_download_canceled">已取消下载</string>
     <string name="update_toast_resource_up_to_date">资源已是最新版本</string>
     <string name="update_toast_app_up_to_date">应用已是最新版本</string>
     <string name="update_toast_resource_update_complete">资源更新完成</string>

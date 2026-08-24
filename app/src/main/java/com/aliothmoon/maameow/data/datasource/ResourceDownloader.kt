@@ -3,11 +3,14 @@ package com.aliothmoon.maameow.data.datasource
 import android.content.Context
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.HttpClientHelper
-import com.aliothmoon.maameow.data.api.await
+import com.aliothmoon.maameow.data.api.useCancellable
 import com.aliothmoon.maameow.data.config.ResourceVersionHelper
 import com.aliothmoon.maameow.utils.i18n.LocalizedException
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import timber.log.Timber
@@ -38,60 +41,39 @@ class ResourceDownloader(
             val request = Request.Builder().url(url)
                 .header("Accept-Encoding", "identity")
                 .build()
-            val response = httpClient.rawClient().newCall(request).await()
 
-            if (!response.isSuccessful) {
-                response.close()
-                return Result.failure(
-                    LocalizedException(uiTextOf(R.string.update_error_http_status, response.code))
-                )
-            }
+            httpClient.rawClient().newCall(request).useCancellable { response ->
+                if (!response.isSuccessful) {
+                    response.close()
+                    return@useCancellable Result.failure(
+                        LocalizedException(
+                            uiTextOf(R.string.update_error_http_status, response.code)
+                        )
+                    )
+                }
 
-            val body = response.body
-            val total = body.contentLength().takeIf { it > 0 } ?: 0L
-            tempFile = File(context.cacheDir, "MaaResources-${UUID.randomUUID()}.zip")
+                val body = response.body
+                val total = body.contentLength().takeIf { it > 0 } ?: 0L
+                val file = File(context.cacheDir, "MaaResources-${UUID.randomUUID()}.zip")
+                tempFile = file
 
-            withContext(Dispatchers.IO) {
-                BufferedOutputStream(FileOutputStream(tempFile)).use { output ->
-                    val buffer = ByteArray(256 * 1024)
-                    var downloaded = 0L
-                    var lastUpdateTime = System.currentTimeMillis()
-                    var lastDownloaded = 0L
-
-                    body.byteStream().use { input ->
-                        var read: Int
-                        while (input.read(buffer).also { read = it } != -1) {
-                            output.write(buffer, 0, read)
-                            downloaded += read
-
-                            val now = System.currentTimeMillis()
-                            if (now - lastUpdateTime >= 300) {
-                                val speed = if (now > lastUpdateTime) {
-                                    (downloaded - lastDownloaded) * 1000 / (now - lastUpdateTime)
-                                } else 0L
-
-                                val progress =
-                                    if (total > 0) (downloaded * 100 / total).toInt() else 0
-
-                                onProgress(
-                                    DownloadProgress(
-                                        progress = progress,
-                                        speed = formatSpeed(speed),
-                                        downloaded = downloaded,
-                                        total = total
-                                    )
-                                )
-
-                                lastUpdateTime = now
-                                lastDownloaded = downloaded
-                            }
+                withContext(Dispatchers.IO) {
+                    val bfz = 256 * 1024
+                    BufferedOutputStream(FileOutputStream(file)).use { output ->
+                        body.byteStream().use { input ->
+                            input.copyWithProgress(output, total, bfz, onProgress)
                         }
                     }
                 }
-            }
 
-            Result.success(tempFile)
+                Result.success(file)
+            }
+        } catch (e: CancellationException) {
+            tempFile?.delete()
+            throw e
         } catch (e: Exception) {
+            // 断连抛的 IOException 不是网络错误
+            currentCoroutineContext().ensureActive()
             Timber.e(e, "下载文件失败")
             tempFile?.delete()
             Result.failure(LocalizedException(formatDownloadError(e), e))

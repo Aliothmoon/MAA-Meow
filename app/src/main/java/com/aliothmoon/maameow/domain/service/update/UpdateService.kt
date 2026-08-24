@@ -35,9 +35,16 @@ import com.aliothmoon.maameow.domain.service.update.resolver.ResourceDownloadUrl
 import com.aliothmoon.maameow.utils.i18n.LocalizedException
 import com.aliothmoon.maameow.utils.i18n.resolve
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.job
 import timber.log.Timber
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
@@ -76,6 +83,10 @@ class UpdateService(
     // ==================== App 更新 ====================
 
     private val appDownloading = AtomicBoolean(false)
+
+    @Volatile
+    private var appDownloadJob: Job? = null
+
     private val _appProcessState = MutableStateFlow<UpdateProcessState>(UpdateProcessState.Idle)
     val appProcessState: StateFlow<UpdateProcessState> = _appProcessState.asStateFlow()
 
@@ -91,6 +102,7 @@ class UpdateService(
         if (!appDownloading.compareAndSet(false, true)) {
             return Result.success(Unit)   // 已在进行中，幂等跳过
         }
+        appDownloadJob = currentCoroutineContext().job
         try {
             Timber.i(
                 "downloadApp start: source=%s, version=%s, channel=%s",
@@ -104,6 +116,8 @@ class UpdateService(
                 ?: return failApp(UpdateError.UnknownError(uiTextOf(R.string.update_error_unsupported_source, source)))
 
             val url = resolver.resolve(version, channel).getOrElse { e ->
+                // 解析器内部是 runCatching，取消也会落进 failure
+                currentCoroutineContext().ensureActive()
                 val error = mapToUpdateError(e)
                 _appProcessState.value = UpdateProcessState.Failed(error)
                 achievementRepository.report {
@@ -124,9 +138,20 @@ class UpdateService(
                 "version" to version
             }
             return result
+        } catch (e: CancellationException) {
+            // 取消不算失败，不弹错误弹窗也不上报成就
+            Timber.i("downloadApp canceled")
+            _appProcessState.value = UpdateProcessState.Idle
+            throw e
         } finally {
+            appDownloadJob = null
             appDownloading.set(false)
         }
+    }
+
+    /** 必须 join：不然紧接着换源重下会撞上 [appDownloading] 幂等门被静默跳过 */
+    suspend fun cancelAppDownload() {
+        appDownloadJob?.cancelAndJoin()
     }
 
     fun resetAppProcess() {
@@ -156,6 +181,9 @@ class UpdateService(
                 UpdateProcessState.Failed(mapToUpdateError(e))
             return Result.failure(e)
         }
+
+        // 卡在「下完了还没装」的缝里被取消，别再弹安装界面
+        currentCoroutineContext().ensureActive()
 
         return doInstallApp(apkFile)
     }
@@ -204,6 +232,10 @@ class UpdateService(
     // ==================== 资源更新 ====================
 
     private val resourceDownloading = AtomicBoolean(false)
+
+    @Volatile
+    private var resourceDownloadJob: Job? = null
+
     private val _resourceProcessState =
         MutableStateFlow<UpdateProcessState>(UpdateProcessState.Idle)
     val resourceProcessState: StateFlow<UpdateProcessState> = _resourceProcessState.asStateFlow()
@@ -220,6 +252,7 @@ class UpdateService(
         if (!resourceDownloading.compareAndSet(false, true)) {
             return Result.success(Unit)   // 已在进行中，幂等跳过
         }
+        resourceDownloadJob = currentCoroutineContext().job
         try {
             Timber.i("downloadResource start: source=%s", source)
             _resourceProcessState.value = UpdateProcessState.Downloading(0, context.getString(R.string.update_preparing_download), 0L, 0L)
@@ -228,6 +261,7 @@ class UpdateService(
                 ?: return failResource(UpdateError.UnknownError(uiTextOf(R.string.update_error_unsupported_source, source)))
 
             val url = resolver.resolve(currentVersion).getOrElse { e ->
+                currentCoroutineContext().ensureActive()
                 val error = mapToUpdateError(e)
                 _resourceProcessState.value = UpdateProcessState.Failed(error)
                 achievementRepository.report {
@@ -251,9 +285,19 @@ class UpdateService(
                 "source" to source.name
             }
             return result
+        } catch (e: CancellationException) {
+            Timber.i("downloadResource canceled")
+            _resourceProcessState.value = UpdateProcessState.Idle
+            throw e
         } finally {
+            resourceDownloadJob = null
             resourceDownloading.set(false)
         }
+    }
+
+    /** 同 [cancelAppDownload] */
+    suspend fun cancelResourceDownload() {
+        resourceDownloadJob?.cancelAndJoin()
     }
 
     fun resetResourceProcess() {
@@ -274,6 +318,12 @@ class UpdateService(
             _resourceProcessState.value =
                 UpdateProcessState.Failed(mapToUpdateError(e))
             return Result.failure(e)
+        }
+
+        // 同理，取消卡在解压前就别再动资源目录
+        if (!currentCoroutineContext().isActive) {
+            tempFile.delete()
+            throw CancellationException("resource download canceled")
         }
 
         _resourceProcessState.value = UpdateProcessState.Extracting(0, 0, 0)

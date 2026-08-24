@@ -142,13 +142,13 @@ class UpdateViewModel(
         _resourceCheckResult.value = null
     }
 
-    fun confirmResourceDownload() {
+    fun confirmResourceDownload(source: UpdateSource = updateSource.value) {
         viewModelScope.launch {
             val file = File(pathConfig.resourceDir)
 
             val currentVersion = loadResourceVersion()
             val result = updateService.downloadResource(
-                source = updateSource.value,
+                source = source,
                 currentVersion = currentVersion,
                 target = file
             )
@@ -213,6 +213,7 @@ class UpdateViewModel(
             when {
                 // 两者同时存在 → 仅下载 App,资源等下次启动
                 appAvailable != null -> {
+                    lastAppDownloadVersion = appAvailable.version
                     val result = updateService.downloadApp(
                         source = updateSource.value,
                         version = appAvailable.version,
@@ -275,11 +276,12 @@ class UpdateViewModel(
         _appCheckResult.value = null
     }
 
-    fun confirmAppDownload(version: String) {
+    fun confirmAppDownload(version: String, source: UpdateSource = updateSource.value) {
         Timber.i("确认下载 App 更新: version=$version")
+        lastAppDownloadVersion = version
         viewModelScope.launch {
             updateService.downloadApp(
-                source = updateSource.value,
+                source = source,
                 version = version,
                 channel = updateChannel.value
             )
@@ -288,6 +290,44 @@ class UpdateViewModel(
 
     fun resetAppUpdate() {
         updateService.resetAppProcess()
+    }
+
+    // ==================== 取消下载 / 下载中换源 ====================
+
+    private var lastAppDownloadVersion: String? = null
+
+    fun cancelAppDownload() {
+        viewModelScope.launch {
+            updateService.cancelAppDownload()
+            _toastMessage.tryEmit(appContext.getString(R.string.update_toast_download_canceled))
+        }
+    }
+
+    fun cancelResourceDownload() {
+        viewModelScope.launch {
+            updateService.cancelResourceDownload()
+            _toastMessage.tryEmit(appContext.getString(R.string.update_toast_download_canceled))
+        }
+    }
+
+    fun switchSourceAndRestartDownload(source: UpdateSource) {
+        val appDownloading = appUpdateState.value is UpdateProcessState.Downloading
+        val resourceDownloading = resourceUpdateState.value is UpdateProcessState.Downloading
+        viewModelScope.launch {
+            appSettingsManager.setUpdateSource(source)
+            // 重下用传入的 source，不读 updateSource.value：DataStore 回灌是异步的
+            when {
+                appDownloading -> {
+                    updateService.cancelAppDownload()
+                    lastAppDownloadVersion?.let { confirmAppDownload(it, source) }
+                }
+
+                resourceDownloading -> {
+                    updateService.cancelResourceDownload()
+                    confirmResourceDownload(source)
+                }
+            }
+        }
     }
 
     // ==================== 更新公告 ====================
