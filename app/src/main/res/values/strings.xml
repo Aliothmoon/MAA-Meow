@@ -1123,7 +1123,7 @@
     <string name="panel_wakeup_client_yostar_kr">韩服 (YoStarKR)</string>
     <string name="panel_wakeup_client_txwy">繁中服 (txwy)</string>
     <string name="panel_wakeup_account_switch">账号切换</string>
-    <string name="panel_wakeup_account_hint">需要切换至的账号，留空以禁用。输入登录界面显示的内容，例如 123****4567 或 1234；支持部分匹配。繁中服和韩服账号为 Email，建议填不含星号的明文片段，如 01@gmail。仅支持官服、B服、繁中服及韩服，不支持第三方登录方式。</string>
+    <string name="panel_wakeup_account_hint">只有一个账号时无需填写，直接留空即可。需要切换至的账号，留空以禁用。输入登录界面显示的内容，例如 123****4567 或 1234；支持部分匹配。繁中服和韩服账号为 Email，建议填不含星号的明文片段，如 01@gmail。仅支持官服、B服、繁中服及韩服，不支持第三方登录方式。</string>
     <string name="panel_wakeup_launch_game">启动游戏</string>
 
     <!-- panel: fight -->
