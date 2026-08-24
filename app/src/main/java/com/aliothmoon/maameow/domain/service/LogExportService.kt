@@ -1,14 +1,25 @@
 package com.aliothmoon.maameow.domain.service
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Point
+import android.os.Build
+import android.os.PowerManager
+import android.view.WindowManager
 import androidx.core.content.FileProvider
+import com.aliothmoon.maameow.BuildConfig
+import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.resource.MaaCoreVersion
+import com.aliothmoon.maameow.manager.ShizukuManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import rikka.shizuku.Shizuku
 import timber.log.Timber
 import java.io.BufferedOutputStream
 import java.io.File
@@ -16,6 +27,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -23,21 +35,18 @@ class LogExportService(
     private val context: Context,
     private val pathConfig: MaaPathConfig,
     private val appSettingsManager: AppSettingsManager,
+    private val taskChainState: TaskChainState,
     private val achievementRepository: AchievementRepository,
 ) {
     companion object {
         private val DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
+        private val INFO_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS (Z)")
     }
 
-    /** 导出日志 ZIP；失败或无日志返回 null。不删除 debug 源日志。 */
+    /** 导出日志 ZIP；失败返回 null。无日志时仍生成仅含 properties/device_info 的包。不删除 debug 源日志。 */
     suspend fun exportZip(): File? = withContext(Dispatchers.IO) {
         try {
             val dir = File(pathConfig.debugDir)
-            if (!dir.exists()) {
-                Timber.w("Debug directory does not exist")
-                return@withContext null
-            }
-
             val exportDir = File(dir, LogExportCollector.EXPORT_DIR_NAME)
             exportDir.mkdirs()
             cleanupOldExports(exportDir)
@@ -47,8 +56,7 @@ class LogExportService(
 
             val logFiles = LogExportCollector.collect(dir)
             if (logFiles.isEmpty()) {
-                Timber.w("No log files found to export")
-                return@withContext null
+                Timber.w("No log files found, exporting device info only")
             }
 
             createZipFile(zipFile, logFiles, dir)
@@ -98,18 +106,24 @@ class LogExportService(
 
     private fun createZipFile(zipFile: File, logFiles: List<File>, baseDir: File) {
         ZipOutputStream(BufferedOutputStream(FileOutputStream(zipFile))).use { zos ->
-            if (appSettingsManager.debugMode.value) {
-                try {
-                    val process = Runtime.getRuntime().exec("getprop")
-                    zos.putNextEntry(ZipEntry("properties.txt"))
-                    process.inputStream.use { input ->
-                        input.copyTo(zos, bufferSize = 8192)
-                    }
-                    zos.closeEntry()
-                    process.waitFor()
-                } catch (e: Exception) {
-                    Timber.w(e, "Failed to collect device properties")
+            try {
+                val process = Runtime.getRuntime().exec("getprop")
+                zos.putNextEntry(ZipEntry("properties.txt"))
+                process.inputStream.use { input ->
+                    input.copyTo(zos, bufferSize = 8192)
                 }
+                zos.closeEntry()
+                process.waitFor()
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to collect device properties")
+            }
+
+            try {
+                zos.putNextEntry(ZipEntry("device_info.txt"))
+                zos.write(buildDeviceInfo().toByteArray(Charsets.UTF_8))
+                zos.closeEntry()
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to collect device info")
             }
 
             for (file in logFiles) {
@@ -125,6 +139,109 @@ class LogExportService(
             }
         }
     }
+
+    /** 导出时采集的设备与运行环境快照，用于 issue 排障 */
+    private fun buildDeviceInfo(): String = buildString {
+        val line = "=".repeat(60)
+        append(line).append("\n")
+        append("=== MaaMeow Device & App Info ===\n")
+        append("Export Time : ${ZonedDateTime.now().format(INFO_TIME_FORMAT)}\n")
+        append("App         : ${BuildConfig.APPLICATION_ID}\n")
+        append("Version     : ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n")
+        append("Build Type  : ${BuildConfig.BUILD_TYPE}\n")
+        append("Device      : ${Build.MANUFACTURER} ${Build.MODEL}\n")
+        append("Android     : ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n")
+        append("Security    : ${Build.VERSION.SECURITY_PATCH}\n")
+        append("ABI         : ${Build.SUPPORTED_ABIS.joinToString()}\n")
+        append("--- MAA ---\n")
+        append("Core        : ${MaaCoreVersion.current.ifBlank { "unknown" }}\n")
+        append("Resource    : ${pathConfig.readDiskResourceVersion() ?: "none"}\n")
+        append("Client      : ${taskChainState.clientType}\n")
+        append("Game        : $gameVersionInfo\n")
+        append(
+            "Run Mode    : ${appSettingsManager.runMode.value} / " +
+                    "${appSettingsManager.backgroundResolution.value} / " +
+                    "forceFullscreen=${appSettingsManager.forceFullscreenOnVirtualDisplay.value}\n"
+        )
+        append("--- Backend ---\n")
+        append("Startup     : ${appSettingsManager.startupBackend.value.display}\n")
+        append("Shizuku     : $shizukuStatus\n")
+        append("--- Device ---\n")
+        append("Screen      : $screenInfo (density ${context.resources.displayMetrics.densityDpi}dpi)\n")
+        append("RAM         : ${memoryInfo}\n")
+        append("Storage     : $storageInfo\n")
+        append("Battery Opt : $batteryOptimized\n")
+        append("SELinux     : $selinuxMode\n")
+        append(line).append("\n")
+    }
+
+    private val gameVersionInfo: String
+        get() = runCatching {
+            val pkg = Packages[taskChainState.clientType] ?: return@runCatching "unknown package"
+            val info = context.packageManager.getPackageInfo(pkg, 0)
+            "$pkg ${info.versionName ?: "?"}"
+        }.getOrElse { "${Packages[taskChainState.clientType] ?: "?"} not installed" }
+
+    private val shizukuStatus: String
+        get() = runCatching {
+            if (!ShizukuManager.isShizukuAvailable()) return@runCatching "unavailable"
+            val granted = if (ShizukuManager.isGranted()) "granted" else "not granted"
+            val api = runCatching { Shizuku.getVersion() }.getOrNull()
+            val uid = runCatching { Shizuku.getUid() }.getOrNull()
+            val identity = if (uid == 0) "root" else "adb"
+            "available, $granted, API $api, uid $uid ($identity)"
+        }.getOrElse { "unknown" }
+
+    private val screenInfo: String
+        get() = runCatching {
+            val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            @Suppress("DEPRECATION")
+            val (w, h) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                wm.maximumWindowMetrics.bounds.let { it.width() to it.height() }
+            } else {
+                val size = Point().also(wm.defaultDisplay::getRealSize)
+                size.x to size.y
+            }
+            @Suppress("DEPRECATION")
+            val refresh = wm.defaultDisplay.refreshRate
+            "$w x $h @ ${"%.0f".format(Locale.US, refresh)}Hz"
+        }.getOrElse { "unknown" }
+
+    private val memoryInfo: String
+        get() = runCatching {
+            val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            val mi = ActivityManager.MemoryInfo()
+            am.getMemoryInfo(mi)
+            "${formatGb(mi.totalMem)} total, ${formatGb(mi.availMem)} free"
+        }.getOrElse { "unknown" }
+
+    private val storageInfo: String
+        get() = runCatching {
+            val dir = File(pathConfig.rootDir)
+            "${formatGb(dir.usableSpace)} usable / ${formatGb(dir.totalSpace)} total"
+        }.getOrElse { "unknown" }
+
+    private val batteryOptimized: String
+        get() = runCatching {
+            val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+            if (pm.isIgnoringBatteryOptimizations(context.packageName)) {
+                "ignored (app exempt)"
+            } else {
+                "NOT ignored (schedule may be killed)"
+            }
+        }.getOrElse { "unknown" }
+
+    private val selinuxMode: String
+        get() = runCatching {
+            when (File("/sys/fs/selinux/enforce").readText().trim()) {
+                "1" -> "enforcing"
+                "0" -> "permissive"
+                else -> "unknown"
+            }
+        }.getOrDefault("unknown")
+
+    private fun formatGb(bytes: Long): String =
+        "%.1f GB".format(Locale.US, bytes / 1024f / 1024f / 1024f)
 
     private fun createShareIntent(zipFile: File): Intent {
         val authority = "${context.packageName}.fileprovider"

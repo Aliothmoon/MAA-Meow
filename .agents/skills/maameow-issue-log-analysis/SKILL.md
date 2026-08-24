@@ -2,7 +2,7 @@
 name: maameow-issue-log-analysis
 description: >
   分析 MaaMeow（Aliothmoon/MAA-Meow）的 GitHub Issue 或本地 `maa_logs_*.zip` 日志包。
-  下载附件后从 gui/meow_log、error_logs、logcat/core|app、asst.log、properties.txt 交叉取证，
+  下载附件后从 gui/meow_log、error_logs、logcat/core|app、asst.log、properties.txt、device_info.txt 交叉取证，
   对照双进程（App + Shizuku/Root 提权）与 MaaCore/bridge 代码判断根因。
   Use when analyzing MaaMeow/MAA-Meow issues, log zips, task failures, service death,
   Shizuku/Root elevation, virtual display, recognition errors, or connection init failures.
@@ -132,7 +132,14 @@ libMaaCore.so → JNA AsstApiCallback → MaaCoreServiceImpl
 
 ### `properties.txt`
 
-- 多在 Debug 导出；`getprop`；看 ROM/厂商定制对虚拟显示、提权兼容性的影响
+- 始终导出；`getprop`；看 ROM/厂商定制对虚拟显示、提权兼容性的影响
+
+### `device_info.txt`
+
+- 导出时采集的设备与运行环境快照
+- 含：App 版本、MAA Core/资源版本、客户端类型+游戏版本、运行模式/后台分辨率、
+  Shizuku 状态（API 版本/uid/身份）、屏幕/内存/存储、电池优化豁免、SELinux
+- 排障第一步先看它：版本匹配、后端状态、电池优化未豁免（定时任务被杀）等一眼定位
 
 ## How To Filter Evidence
 
@@ -154,12 +161,12 @@ libMaaCore.so → JNA AsstApiCallback → MaaCoreServiceImpl
 |----------|--------|------|
 | 识别/任务逻辑 | `asst.log` | `meow_log` |
 | 服务崩溃/异常终止 | `logcat/core` | `error_logs`、`meow_log` |
-| 提权/绑定失败 | `logcat/app` + `logcat/core` | `error_logs` |
-| 虚拟显示 | `logcat/core` | `logcat/app`、native bridge |
-| 资源加载 | `meow_log` | `asst.log`、`error_logs` |
+| 提权/绑定失败 | `logcat/app` + `logcat/core` | `error_logs`、`device_info.txt`（Shizuku 状态） |
+| 虚拟显示 | `logcat/core` | `logcat/app`、native bridge、`device_info.txt`（分辨率/ROM） |
+| 资源加载 | `meow_log` | `asst.log`、`error_logs`、`device_info.txt`（Core/资源版本） |
 | IPC / DeadObject | `logcat/core` + `logcat/app` | `error_logs` |
 | UI/权限/浮窗 | `logcat/app` | `error_logs` |
-| 定时任务未触发 | issue 文本 + ROM 信息 | `error_logs`、schedule 相关 |
+| 定时任务未触发 | issue 文本 + ROM 信息 | `error_logs`、schedule 相关、`device_info.txt`（Battery Opt） |
 
 ### 本次复现
 
