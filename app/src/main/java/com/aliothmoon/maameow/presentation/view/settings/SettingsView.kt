@@ -1181,10 +1181,10 @@ private fun SettingWakeUnlockTypeItem(
         val options = listOf(
             AppSettingsManager.WAKE_TYPE_SWIPE to
                 stringResource(R.string.settings_wake_unlock_type_swipe),
-            AppSettingsManager.WAKE_TYPE_PIN to
-                stringResource(R.string.settings_wake_unlock_type_pin),
             AppSettingsManager.WAKE_TYPE_GESTURE to
                 stringResource(R.string.settings_wake_unlock_type_gesture),
+            AppSettingsManager.WAKE_TYPE_PIN to
+                stringResource(R.string.settings_wake_unlock_type_pin),
         )
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             options.forEachIndexed { index, (type, label) ->
