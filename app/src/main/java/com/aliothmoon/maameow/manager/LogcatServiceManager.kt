@@ -1,8 +1,6 @@
 package com.aliothmoon.maameow.manager
 
-import android.content.ComponentName
 import android.content.Context
-import android.content.ServiceConnection
 import android.os.IBinder
 import android.os.Process
 import com.aliothmoon.maameow.BuildConfig
@@ -22,7 +20,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import rikka.shizuku.Shizuku
 import timber.log.Timber
 import java.io.File
 import java.util.UUID
@@ -38,19 +35,9 @@ object LogcatServiceManager {
     // --- Shizuku ---
     private val serviceTag = UUID.randomUUID().toString()
     private val serviceVersion = AtomicInteger(100)
-    private var currentServiceArgs: Shizuku.UserServiceArgs? = null
 
-    private val shizukuConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-            Timber.i("LogcatService connected via Shizuku: %s", name)
-            _service.value = ILogcatService.Stub.asInterface(binder)
-        }
-
-        override fun onServiceDisconnected(name: ComponentName?) {
-            Timber.i("LogcatService disconnected via Shizuku: %s", name)
-            _service.value = null
-        }
-    }
+    // 进行中的绑定版本，迟到的旧回调靠它丢弃
+    private val shizukuActiveVersion = AtomicInteger(0)
 
     // --- Root ---
     private val initialized = AtomicBoolean(false)
@@ -85,15 +72,8 @@ object LogcatServiceManager {
 
     fun unbind() {
         // Shizuku
-        val args = currentServiceArgs
-        if (args != null) {
-            currentServiceArgs = null
-            runCatching {
-                Shizuku.unbindUserService(args, shizukuConnection, true)
-            }.onFailure {
-                Timber.w(it, "unbind logcat shizuku service failed")
-            }
-        }
+        shizukuActiveVersion.set(0)
+        ShizukuUserServiceBinder.unbind(serviceTag, remove = true)
 
         // Root
         val active = rootActiveLaunch
@@ -119,21 +99,39 @@ object LogcatServiceManager {
     // --- Shizuku 绑定 ---
 
     private fun bindViaShizuku() {
-        val args = Shizuku.UserServiceArgs(
-            ComponentName(BuildConfig.APPLICATION_ID, LogcatCaptureServiceImpl::class.java.name)
-        ).apply {
-            processNameSuffix("logcat")
-            daemon(false)
-            tag(serviceTag)
-            version(serviceVersion.incrementAndGet())
-            debuggable(BuildConfig.DEBUG)
-        }
-        currentServiceArgs = args
+        // 进行中别重复拉起，server 侧 version 递增会杀旧进程起新进程
+        if (ShizukuUserServiceBinder.isBinding(serviceTag)) return
+        val version = serviceVersion.incrementAndGet()
+        shizukuActiveVersion.set(version)
+        ServiceBootLogger.event("LOGCAT_BIND_CALL", "version=$version tag=$serviceTag")
 
-        try {
-            Shizuku.bindUserService(args, shizukuConnection)
-        } catch (e: Exception) {
-            Timber.e(e, "bindLogcatService via Shizuku failed")
+        val boundTag = ShizukuUserServiceBinder.bind(
+            serviceClass = LogcatCaptureServiceImpl::class.java,
+            processNameSuffix = "logcat",
+            tag = serviceTag,
+            version = version,
+            onConnected = { binder ->
+                if (shizukuActiveVersion.get() != version) return@bind
+                Timber.i("LogcatService connected via Shizuku")
+                _service.value = ILogcatService.Stub.asInterface(binder)
+            },
+            onDisconnected = {
+                if (shizukuActiveVersion.get() != version) return@bind
+                Timber.i("LogcatService disconnected via Shizuku")
+                _service.value = null
+            },
+            onError = { throwable ->
+                if (shizukuActiveVersion.get() != version) return@bind
+                // 维持旧语义：失败只记日志，_service 保持 null 由 startCapture 超时兜底
+                Timber.e(throwable, "bindLogcatService via Shizuku failed")
+                ServiceBootLogger.event(
+                    "LOGCAT_BIND_ERROR",
+                    "${throwable.javaClass.simpleName}: ${throwable.message}"
+                )
+            },
+        )
+        if (boundTag == null) {
+            shizukuActiveVersion.set(0)
         }
     }
 

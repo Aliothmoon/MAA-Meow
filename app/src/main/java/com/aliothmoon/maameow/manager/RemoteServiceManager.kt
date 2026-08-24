@@ -32,7 +32,8 @@ object RemoteServiceManager {
         data class Error(val exception: Throwable) : ServiceState()
     }
 
-    private const val CONNECT_TIMEOUT_MS = 20_000L
+    // 纯兜底：Shizuku 连接器 35s 看门狗先报错，此处晚于它；Root 连接器自带 15s 超时先行
+    private const val CONNECT_TIMEOUT_MS = 40_000L
 
     // 状态迁移（boundBackend / currentBinder / _state）统一在此锁内完成
     private val lock = Any()
@@ -199,7 +200,6 @@ object RemoteServiceManager {
         startConnectTimeout(attempt, backend)
     }
 
-    /** 连接超时兜底，主要覆盖无超时机制的 Shizuku 路径（Root 连接器自带 15s 超时先行） */
     private fun startConnectTimeout(attempt: Int, backend: RemoteBackend) {
         timeoutScope.launch {
             delay(CONNECT_TIMEOUT_MS)

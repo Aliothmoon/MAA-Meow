@@ -68,14 +68,10 @@ class RemoteServiceImpl : RemoteService.Stub() {
     private var setup = false
 
     init {
+        // ctor 必须轻量：重活放 setup()，attach 前零阻塞
         Workarounds.apply()
         startHeartbeatWatchdog()
-        // 清上一实例可能残留的 xmsf 断网规则；同步执行保证先于任何 AIDL 调用
-        runCatching { XmsfFirewall.ensureRestored() }
-            .onFailure { Ln.w("XmsFw boot restore failed: ${it.message}") }
-        RemoteBootTrace.mark("CTOR_BEFORE_MAA_SERVICE")
-        Ln.i("$TAG: RemoteServiceImpl init, version: ${MaaCoreManager.maaService.GetVersion()}")
-        RemoteBootTrace.mark("CTOR_AFTER_MAA_SERVICE")
+        Ln.i("$TAG: RemoteServiceImpl created (lightweight ctor)")
         RemoteBootTrace.mark("CTOR_DONE")
     }
 
@@ -109,6 +105,11 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun setup(userDir: String?, isDebug: Boolean): Boolean {
         if (!setup) {
+            RemoteBootTrace.mark("SETUP_BEGIN")
+            // 清上一实例可能残留的断网规则，同步执行先于业务 AIDL
+            runCatching { XmsfFirewall.ensureRestored() }
+                .onFailure { Ln.w("XmsFw boot restore failed: ${it.message}") }
+            RemoteBootTrace.mark("SETUP_XMSF_RESTORED")
             val ctx = MaaCoreManager.MaaContext ?: run {
                 Ln.e("$TAG: setup failed - MaaContext is null")
                 return false
@@ -123,6 +124,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
             }
             PermissionGrantHelper.disablePhantomProcessKiller()
             setup = true
+            RemoteBootTrace.mark("SETUP_DONE")
         }
         return true
     }

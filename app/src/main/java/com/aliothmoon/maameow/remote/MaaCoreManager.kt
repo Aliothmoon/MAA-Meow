@@ -7,7 +7,7 @@ import com.sun.jna.Native
 object MaaCoreManager {
     private const val TAG = "MaaCoreManager"
 
-    val MaaContext: MaaCoreLibrary? by lazy {
+    private val contextLazy: Lazy<MaaCoreLibrary?> = lazy {
         runCatching {
             System.setProperty("jna.tmpdir", "/data/local/tmp")
             RemoteBootTrace.mark("MAA_LOAD_BEGIN", "jna.tmpdir=/data/local/tmp")
@@ -23,9 +23,17 @@ object MaaCoreManager {
         }.getOrNull()
     }
 
-    val maaService: MaaCoreServiceImpl = MaaCoreServiceImpl(MaaContext)
+    val MaaContext: MaaCoreLibrary? by contextLazy
+
+    // lazy 化：shutdown 清理触碰本对象不再连带触发加载链
+    val maaService: MaaCoreServiceImpl by lazy { MaaCoreServiceImpl(MaaContext) }
 
     fun destroy() {
+        // 未加载即跳过，退出路径不做 JNA 加载
+        if (!contextLazy.isInitialized()) {
+            Ln.i("$TAG: destroy() skipped, core never loaded")
+            return
+        }
         Ln.i("$TAG: destroy()")
         maaService.DestroyInstance()
     }
