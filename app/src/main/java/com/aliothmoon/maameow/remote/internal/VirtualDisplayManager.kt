@@ -173,7 +173,8 @@ object VirtualDisplayManager {
     }
 
     private fun buildDisplayFlags(): Int {
-        var flags = (VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY
+        var flags = (VIRTUAL_DISPLAY_FLAG_PUBLIC
+                or VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY
                 or VIRTUAL_DISPLAY_FLAG_SUPPORTS_TOUCH)
 
         if (VD_DESTROY_CONTENT) {
