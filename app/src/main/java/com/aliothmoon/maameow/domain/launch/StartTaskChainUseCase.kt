@@ -62,6 +62,9 @@ class StartTaskChainUseCase(
             }
         }
 
+        // 必须先于静音，换进程会让旧进程收尾时解除静音
+        composition.prepareResources(plan.clientType)
+
         if (appSettingsManager.muteOnGameLaunch.value) {
             muteCoordinator.mute(plan.clientType)
         }

@@ -297,10 +297,35 @@ class MaaCompositionService(
         return result
     }
 
-    private suspend fun checkPreconditions(mode: RunMode): StartResult? {
+    /**
+     * 启动前对齐资源档，必须早于 mute——换进程会让旧进程收尾时解除游戏静音
+     * 持 [startMutex] 挡住并发启动，加锁顺序与 [executeStart] 一致
+     * 失败交给 [checkPreconditions] 统一报错
+     */
+    suspend fun prepareResources(clientType: String) = startMutex.withLock {
+        // 换进程会杀掉虚拟显示器
+        when (_state.value) {
+            MaaExecutionState.IDLE, MaaExecutionState.ERROR -> Unit
+            else -> {
+                Timber.i("Skip resource prepare while busy: %s", _state.value)
+                return@withLock
+            }
+        }
+        // 可能在主线程调用，解绑是同步 binder 调用
+        withContext(Dispatchers.IO) {
+            resourceLoader.ensureLoaded(clientType)
+        }
+        Unit
+    }
+
+    private suspend fun checkPreconditions(mode: RunMode, clientType: String): StartResult? {
         // 服务连接中时直接拒绝，避免与后台自动 load() 并发触发 LoadResource
+        // 换进程重连是资源加载自己发起的，不算，交给 ensureLoaded 等它结束
         val serviceState = RemoteServiceManager.state.value
-        if (serviceState is RemoteServiceManager.ServiceState.Connecting) {
+        val resourceState = resourceLoader.state.value
+        val reconnectingForResource = resourceState is MaaResourceLoader.State.Loading ||
+            resourceState is MaaResourceLoader.State.Reloading
+        if (serviceState is RemoteServiceManager.ServiceState.Connecting && !reconnectingForResource) {
             return rejectStart(
                 context.getString(R.string.runlog_service_connecting),
                 "SERVICE_CONNECTING",
@@ -318,8 +343,8 @@ class MaaCompositionService(
             )
         }
 
-        activityManager.runIfDirty { resourceLoader.load() }
-        val loaded = resourceLoader.ensureLoaded()
+        activityManager.runIfDirty { resourceLoader.load(clientType) }
+        val loaded = resourceLoader.ensureLoaded(clientType)
         if (loaded.isFailure) {
             return rejectStart(
                 context.getString(R.string.runlog_resource_load_failed), "RESOURCE_ERROR",
@@ -523,7 +548,7 @@ class MaaCompositionService(
         sessionLogger.appendAndWait(fetchDeviceMemoryInfo(), LogLevel.INFO)
 
         return withContext(Dispatchers.IO) {
-            checkPreconditions(mode)?.let { return@withContext it }
+            checkPreconditions(mode, clientType)?.let { return@withContext it }
 
             setRunState(MaaExecutionState.STARTING)
 

@@ -444,8 +444,8 @@ class SettingsViewModel(
     fun setTasksOverrideEnabled(enabled: Boolean) {
         viewModelScope.launch {
             appSettingsManager.setTasksOverrideEnabled(enabled)
-            // 开关变更后重置加载状态，下次任务启动时按最新配置重新加载
-            resourceLoader.reset()
+            // 进程还活着，用 invalidate 保留资源档信息
+            resourceLoader.invalidate()
         }
     }
 

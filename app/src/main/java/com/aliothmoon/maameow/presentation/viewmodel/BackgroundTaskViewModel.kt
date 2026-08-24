@@ -487,6 +487,9 @@ class BackgroundTaskViewModel(
             }
         }
 
+        // 必须先于静音，换进程会让旧进程收尾时解除静音
+        compositionService.prepareResources(plan.clientType)
+
         // 先静音后拉起游戏：appops 状态持久，提前设置零成本，消除游戏启动初期的漏音空窗
         val muteRequested = appSettingsManager.muteOnGameLaunch.value
         if (muteRequested && !gameMuteCoordinator.mute(plan.clientType)) {

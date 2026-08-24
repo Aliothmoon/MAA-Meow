@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.java.KoinJavaComponent.inject
 import timber.log.Timber
 import java.util.concurrent.Executors
 
@@ -36,6 +37,9 @@ class UnifiedStateDispatcher(
 ) {
     private val dispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
+
+    // MaaCompositionService 反向依赖本类，只能懒取
+    private val compositionService: MaaCompositionService by inject(MaaCompositionService::class.java)
 
     private val _serviceDiedEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val serviceDiedEvent: SharedFlow<Unit> = _serviceDiedEvent.asSharedFlow()
@@ -129,11 +133,13 @@ class UnifiedStateDispatcher(
                 .distinctUntilChanged()
                 .drop(1)
                 .collect { newClientType ->
-                    if (newClientType != null && resourceLoader.state.value is MaaResourceLoader.State.Ready) {
-                        Timber.i("Client type changed to $newClientType, reloading resources")
-                        withContext(Dispatchers.IO) {
-                            resourceLoader.load(newClientType)
-                        }
+                    if (newClientType == null || resourceLoader.state.value !is MaaResourceLoader.State.Ready) {
+                        return@collect
+                    }
+                    Timber.i("Client type changed to $newClientType, preparing resources")
+                    // prepareResources 持 startMutex 并复查执行状态，任务在跑时自动推迟
+                    withContext(Dispatchers.IO) {
+                        compositionService.prepareResources(newClientType)
                     }
                 }
         }

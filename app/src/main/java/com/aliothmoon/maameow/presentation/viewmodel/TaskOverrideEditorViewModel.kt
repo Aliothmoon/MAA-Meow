@@ -72,7 +72,7 @@ class TaskOverrideEditorViewModel(
                 val dest = pathConfig.overrideTasksFile
                 dest.parentFile?.mkdirs()
                 dest.writeText(content)
-                resourceLoader.reset()
+                resourceLoader.invalidate()
                 Timber.i("覆盖文件已保存: ${dest.absolutePath}")
             }.fold(
                 onSuccess = { _saveState.value = SaveState.Success },

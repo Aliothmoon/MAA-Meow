@@ -78,7 +78,12 @@ object RootRemoteServiceConnector : RemoteServiceConnectorBackend {
                 }
 
                 try {
+                    // 按 token 认领：root→root 重启时 backend 相同，上层过滤不掉旧进程死讯
                     binder.linkToDeath({
+                        if (activeLaunch?.token != token) {
+                            Timber.i("Stale root binder death ignored (token=%s)", token)
+                            return@linkToDeath
+                        }
                         Timber.e("Root process died unexpectedly.")
                         callbacks.onDisconnected(backend)
                     }, 0)

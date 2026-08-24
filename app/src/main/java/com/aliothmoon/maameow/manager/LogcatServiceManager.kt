@@ -67,7 +67,16 @@ object LogcatServiceManager {
     }
 
     fun bind() {
-        if (_service.value != null) return
+        val existing = _service.value
+        if (existing != null) {
+            // 死 binder 不能当已绑定，否则永远早退
+            if (existing.asBinder()?.isBinderAlive == true) return
+            Timber.i("LogcatService binder is dead, rebinding")
+            _service.value = null
+            rootActiveLaunch = null
+        }
+        // root 拉起是异步的，进行中别重复起进程
+        if (rootActiveLaunch?.job?.isActive == true) return
         when (RemoteAccessCoordinator.configuredBackend()) {
             RemoteBackend.SHIZUKU -> bindViaShizuku()
             RemoteBackend.ROOT -> bindViaRoot()
@@ -165,6 +174,18 @@ object LogcatServiceManager {
                     RootServiceBootstrapRegistry.unregister(token)
                     return@onSuccess
                 }
+                // 按 token 认领，旧进程死讯不能清掉新连接
+                runCatching {
+                    binder.linkToDeath({
+                        if (rootActiveLaunch?.token != token) {
+                            Timber.i("Stale root logcat binder death ignored (token=%s)", token)
+                            return@linkToDeath
+                        }
+                        Timber.w("Root logcat process died, clearing binder")
+                        rootActiveLaunch = null
+                        _service.value = null
+                    }, 0)
+                }.onFailure { Timber.w(it, "Failed to link to death for root logcat binder") }
                 Timber.i("LogcatService connected via root bootstrap")
                 _service.value = ILogcatService.Stub.asInterface(binder)
             }.onFailure { throwable ->
