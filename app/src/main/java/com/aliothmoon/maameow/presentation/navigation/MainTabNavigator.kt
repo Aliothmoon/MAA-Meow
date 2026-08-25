@@ -4,6 +4,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+/** @param animate false = 瞬时切页，引导黑场里剪辑用 */
+data class MainTabRequest(val tab: BottomNavTab, val animate: Boolean = true)
+
 /**
  * 主 Tab（HorizontalPager）导航的共享请求
  *
@@ -12,13 +15,13 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class MainTabNavigator {
 
-    private val _request = MutableStateFlow<BottomNavTab?>(null)
+    private val _request = MutableStateFlow<MainTabRequest?>(null)
 
     /** [consume] 置空后，同一 Tab 的下次请求仍会重新发射 */
-    val request: StateFlow<BottomNavTab?> = _request.asStateFlow()
+    val request: StateFlow<MainTabRequest?> = _request.asStateFlow()
 
-    fun navigateTo(tab: BottomNavTab) {
-        _request.value = tab
+    fun navigateTo(tab: BottomNavTab, animate: Boolean = true) {
+        _request.value = MainTabRequest(tab, animate)
     }
 
     fun consume() {

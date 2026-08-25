@@ -9,7 +9,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -128,13 +127,6 @@ fun AppNavigation(
             .filter { !it }
             .collect { appSettings.markOnboardingSeen() }
     }
-    // 切步 / 开始 / 重看时把 pager 切到该步所属 Tab
-    val onboardingTab by remember(onboardingState) {
-        derivedStateOf { if (onboardingState.active) onboardingState.currentStep.tab else null }
-    }
-    LaunchedEffect(onboardingTab) {
-        onboardingTab?.let { mainTabNavigator.navigateTo(it) }
-    }
     val scheduledCountdownState by backgroundTaskViewModel.countdownState.collectAsStateWithLifecycle()
 
     // 判断是否处于主 Tab 页面
@@ -244,7 +236,10 @@ fun AppNavigation(
             if (!LocalIsInPip.current) {
                 ResourceLoadingOverlay()
                 // 聚光灯引导：压在主界面之上、轻提示之下，toast 仍可读
-                OnboardingOverlay(state = onboardingState)
+                OnboardingOverlay(
+                    state = onboardingState,
+                    onRequestTab = { mainTabNavigator.navigateTo(it, animate = false) },
+                )
                 // 顶部轻提示（sonner）：替代旧的 Material3 Snackbar，按类型上色（成功=绿、错误=红）
                 Toaster(
                     state = toaster,

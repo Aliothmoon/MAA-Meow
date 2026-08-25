@@ -56,9 +56,13 @@ fun MainScreen(
 
     // targetPage：点击/滑动一旦确定目标即生效，停稳后等于 currentPage。
     // animateScrollToPage 内部走 MutatorMutex，连续调用时后者自动接管，无需手动取消。
-    fun goToPage(index: Int) {
+    fun goToPage(index: Int, animate: Boolean = true) {
         if (index !in BottomNavTab.all.indices || index == pagerState.targetPage) return
         scope.launch {
+            if (!animate) {
+                pagerState.scrollToPage(index)
+                return@launch
+            }
             val distance = abs(index - pagerState.currentPage).coerceAtLeast(1)
             pagerState.animateScrollToPage(
                 page = index,
@@ -76,9 +80,9 @@ fun MainScreen(
     }
 
     // 主 Tab 路由是空占位不能 navigate，只能先 pop 回主界面再滑 pager
-    fun surfaceToTab(tab: BottomNavTab) {
+    fun surfaceToTab(tab: BottomNavTab, animate: Boolean = true) {
         navController.popBackStack(Routes.HOME, false)
-        goToPage(BottomNavTab.all.indexOf(tab))
+        goToPage(BottomNavTab.all.indexOf(tab), animate)
     }
 
     // 定时任务触发时自动浮出后台任务页
@@ -95,8 +99,8 @@ fun MainScreen(
     val mainTabNavigator: MainTabNavigator = koinInject()
     val mainTabRequest by mainTabNavigator.request.collectAsStateWithLifecycle()
     LaunchedEffect(mainTabRequest) {
-        mainTabRequest?.let { tab ->
-            surfaceToTab(tab)
+        mainTabRequest?.let { request ->
+            surfaceToTab(request.tab, request.animate)
             mainTabNavigator.consume()
         }
     }
