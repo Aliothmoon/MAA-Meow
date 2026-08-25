@@ -589,6 +589,7 @@
     <string name="maa_continue_refresh">No recruitment permit, trying to refresh Tags</string>
     <string name="maa_no_recruitment_permit">No recruitment permit, returned</string>
     <string name="maa_not_enough_staff">Insufficient Operators</string>
+    <string name="maa_infrast_facility_layout_recognition_failed">Base layout recognition failed; Normal-mode shift change aborted. Make sure the base overview is shown and unobstructed, then retry</string>
     <string name="maa_recruit_support_operator">Add support unit: %1$s</string>
     <string name="maa_credit_full_only_buy_discount">Doctor! \nPurchasing only discounted items has caused an overflow in credits! \nBe cautious of wasting credits!\nRemaining credits: </string>
     <string name="maa_start_combat">Start combat: </string>
@@ -780,6 +781,8 @@
     <string name="panel_fight_use_expire_medicine_for_activity_tip">When an activity is about to end within 2 days, automatically use sanity potions expiring this week.</string>
     <string name="panel_fight_activity_days_left_open">Days left open: </string>
     <string name="panel_fight_activity_less_than_one_day">Less than 1 day</string>
+    <string name="panel_fight_stage_tip_affiliated_mini_game">Tools→Useful Tasks→%1$s</string>
+    <string name="panel_fight_stage_tip_inventory">Inv:</string>
     <string name="panel_fight_no_activity">No activity</string>
     <string name="panel_fight_hide_unavailable_stage">Hide today not-open stages</string>
     <string name="panel_fight_hide_unavailable_stage_tip">Hide stages that are currently unavailable from the stage list.</string>
@@ -861,6 +864,7 @@
     <string name="panel_infrast_dorm_threshold_tip">When custom shift switching is enabled, this field only applies to autofill and rooms that use worker groups.</string>
     <string name="panel_infrast_facilities_title">Facilities</string>
     <string name="panel_infrast_facilities_tip">Check the facilities that should be swapped.\nThe order of facilities represents shift priority.</string>
+    <string name="panel_infrast_facilities_tip_normal">In Normal mode the shift order is planned automatically by the algorithm. This list only selects which facility types to process; the order here does not matter.\nTo customize the shift order, use Custom Base Mode.</string>
     <string name="panel_infrast_room_mfg">Factory</string>
     <string name="panel_infrast_room_trade">Trading Post</string>
     <string name="panel_infrast_room_control">Control Center</string>
@@ -878,6 +882,22 @@
     <string name="panel_infrast_reception_clue_exchange">Conduct Clue Exchange</string>
     <string name="panel_infrast_reception_send_clue">Send clues</string>
     <string name="panel_infrast_continue_training">After training is complete, try to continue mastering the current Skill</string>
+    <string name="panel_infrast_fiammetta_targets_title">Fiammetta recovery targets</string>
+    <string name="panel_infrast_fiammetta_targets_tip">Pick 1 to 3; picking another when full replaces the earliest pick. During shift changes, the one with the lowest mood among them is moved into the dormitory together with Fiammetta.\nAlthough recovering Shamare and Tequila can theoretically enable 007, it is hard to achieve with automatic shift changes, so selecting them is not recommended.</string>
+    <string name="panel_infrast_fiammetta_target_purestream">Purestream</string>
+    <string name="panel_infrast_fiammetta_target_closure">Closure</string>
+    <string name="panel_infrast_fiammetta_target_proviso">Proviso</string>
+    <string name="panel_infrast_fiammetta_target_shamare">Shamare</string>
+    <string name="panel_infrast_fiammetta_target_tequila">Tequila</string>
+    <string name="panel_infrast_fiammetta_target_gladiia">Gladiia</string>
+    <string name="panel_infrast_use_pinus_sylvestris">Use Pinus Sylvestris cross-facility team</string>
+    <string name="panel_infrast_use_pinus_sylvestris_tip">Required operators: Flametail (E2), Viviana (E2), and at least one of Wild Mane (E2), Ashlock (E2), or Fartooth (E2)\nOperators included in calculation: Gravel</string>
+    <string name="panel_infrast_use_perception_information">Use Perception Information cross-facility team</string>
+    <string name="panel_infrast_use_perception_information_tip">Required operators: Whisperain (E2), Rosmontis (E2), and Ebenholz (E2)\nOperators included in calculation: Dusk, Virtuosa, Iris, and Czerny\nHigher priority than Worldly Plight</string>
+    <string name="panel_infrast_use_worldly_plight">Use Worldly Plight cross-facility team</string>
+    <string name="panel_infrast_use_worldly_plight_tip">Required operators: Mulberry (E2) and Stainless (E2)\nOperators included in calculation: Chongyue, Ling, and Dusk</string>
+    <string name="panel_infrast_use_abyssal_hunter">Use Abyssal Hunter cross-facility team</string>
+    <string name="panel_infrast_use_abyssal_hunter_tip">Required operators: Gladiia (E2), Ulpianus, Skadi, Specter, and Andreana\nDue to algorithm limitations, when Pinus Sylvestris is also selected, the two teams will not participate in scheduling together.</string>
 
     <!-- logs: detail/list -->
     <string name="log_list_meta">%1$d tasks | %2$s</string>
@@ -2167,7 +2187,7 @@
     <string name="settings_pallas_hangover">I won\'t drink so much next time…</string>
     <string name="achievement_SlackingOff_title">Slacking Off</string>
     <string name="achievement_SlackingOff_desc">Done with serious business, time to play something else.</string>
-    <string name="achievement_SlackingOff_condition">Launch a mini-game once</string>
+    <string name="achievement_SlackingOff_condition">Launch Useful Tasks once</string>
     <string name="achievement_AnnouncementStubbornClick_title">Stubborn</string>
     <string name="achievement_AnnouncementStubbornClick_desc">Even after being prompted so many times, you still choose not to read the announcement.</string>
     <string name="achievement_AnnouncementStubbornClick_condition">Click the confirm button more than 20 times without scrolling to the bottom</string>

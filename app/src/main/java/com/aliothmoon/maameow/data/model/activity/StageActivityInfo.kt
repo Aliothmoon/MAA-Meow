@@ -37,17 +37,7 @@ data class StageActivityInfo(
         get() = System.currentTimeMillis() < utcStartTime
 
     /**
-     * 获取剩余天数文本
-     * 迁移自 WPF StageManager.GetDaysLeftText
-     */
-    fun getDaysLeftText(): String {
-        val now = System.currentTimeMillis()
-        val daysLeft = (utcExpireTime - now) / (24 * 60 * 60 * 1000)
-        return if (daysLeft > 0) "${daysLeft}天" else "不足1天"
-    }
-
-    /**
-     * 获取剩余天数（整数）
+     * 获取剩余天数（整数），文案由 ActivityManager 按 locale 拼接
      */
     fun getDaysLeft(): Long {
         val now = System.currentTimeMillis()

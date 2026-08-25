@@ -44,6 +44,15 @@ object UiUsageConstants {
         "30061", "30062", "30063", "30064"
     )
 
+    /** 菲亚梅塔恢复目标可选干员，展示文案见 strings `panel_infrast_fiammetta_target_*` */
+    val fiammettaTargetValues = listOf("清流", "可露希尔", "但书", "巫恋", "龙舌兰", "歌蕾蒂娅")
+
+    /** 与 core DefaultFiammettaTargets 一致 */
+    val defaultFiammettaTargets = listOf("清流", "可露希尔", "但书")
+
+    /** 与 core MaxConfiguredTargets 一致 */
+    const val MAX_FIAMMETTA_TARGETS = 3
+
     // see UsesOfDronesList
     val droneUsageValues = listOf(
         "_NotUse",

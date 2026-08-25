@@ -117,6 +117,7 @@
     <string name="maa_continue_refresh">无招聘许可，继续尝试刷新 Tags</string>
     <string name="maa_no_recruitment_permit">无招聘许可，已返回</string>
     <string name="maa_not_enough_staff">可用干员不足</string>
+    <string name="maa_infrast_facility_layout_recognition_failed">基建布局识别失败，常规模式换班已中止；请确认停留在基建主界面且未遮挡后重试</string>
     <string name="maa_recruit_support_operator">编入助战干员：%1$s</string>
 
     <!-- subtask_extra_credit -->
@@ -833,6 +834,8 @@
     <string name="panel_fight_use_expire_medicine_for_activity">活动结束前 48H 吃当周过期理智药</string>
     <string name="panel_fight_use_expire_medicine_for_activity_tip">当活动即将在 2 天内结束时，自动使用本周内到期的理智药</string>
     <string name="panel_fight_activity_days_left_open">剩余天数: </string>
+    <string name="panel_fight_stage_tip_affiliated_mini_game">小工具→牛杂→%1$s</string>
+    <string name="panel_fight_stage_tip_inventory">库存</string>
     <string name="panel_fight_activity_less_than_one_day">不到 1 天</string>
     <string name="panel_fight_no_activity">暂无活动</string>
     <string name="panel_fight_hide_unavailable_stage">隐藏不可用关卡</string>
@@ -915,6 +918,7 @@
     <string name="panel_infrast_dorm_threshold_tip">若启用自定义换班，该字段仅针对 autofill 和使用工员编组的房间有效</string>
     <string name="panel_infrast_facilities_title">基建设施</string>
     <string name="panel_infrast_facilities_tip">勾选需要换班的设施\n设施顺序代表换班优先级</string>
+    <string name="panel_infrast_facilities_tip_normal">常规模式下换班顺序由算法统一安排，此处仅勾选需要换班的设施类别，列表顺序不生效\n若需自定义换班顺序，请使用自定义基建配置</string>
     <string name="panel_infrast_room_mfg">制造站</string>
     <string name="panel_infrast_room_trade">贸易站</string>
     <string name="panel_infrast_room_control">控制中心</string>
@@ -932,6 +936,22 @@
     <string name="panel_infrast_reception_clue_exchange">进行线索交流</string>
     <string name="panel_infrast_reception_send_clue">赠送线索</string>
     <string name="panel_infrast_continue_training">训练完成后继续尝试专精当前技能</string>
+    <string name="panel_infrast_fiammetta_targets_title">菲亚梅塔恢复目标</string>
+    <string name="panel_infrast_fiammetta_targets_tip">选 1～3 个，选满后再选会顶掉最早选的；换班时优先将其中当前心情最低的干员与菲亚梅塔一同进驻宿舍\n虽然理论上恢复巫恋和龙舌兰可以 007，但自动换班下难以实现，不推荐选择</string>
+    <string name="panel_infrast_fiammetta_target_purestream">清流</string>
+    <string name="panel_infrast_fiammetta_target_closure">可露希尔</string>
+    <string name="panel_infrast_fiammetta_target_proviso">但书</string>
+    <string name="panel_infrast_fiammetta_target_shamare">巫恋</string>
+    <string name="panel_infrast_fiammetta_target_tequila">龙舌兰</string>
+    <string name="panel_infrast_fiammetta_target_gladiia">歌蕾蒂娅</string>
+    <string name="panel_infrast_use_pinus_sylvestris">使用红松骑士团跨设施组合</string>
+    <string name="panel_infrast_use_pinus_sylvestris_tip">必要干员：焰尾(精二)、薇薇安娜(精二)、野鬃(精二)/灰毫(精二)/远牙(精二)至少一个\n参与计算干员：砾</string>
+    <string name="panel_infrast_use_perception_information">使用感知信息跨设施组合</string>
+    <string name="panel_infrast_use_perception_information_tip">必要干员：絮雨(精二)、迷迭香(精二)、黑键(精二)\n参与计算干员：夕、塑心、爱丽丝、车尔尼\n优先度高于人间烟火</string>
+    <string name="panel_infrast_use_worldly_plight">使用人间烟火跨设施组合</string>
+    <string name="panel_infrast_use_worldly_plight_tip">必要干员：桑葚(精二)、乌有(精二)\n参与计算干员：重岳、令、夕</string>
+    <string name="panel_infrast_use_abyssal_hunter">使用深海猎人跨设施组合</string>
+    <string name="panel_infrast_use_abyssal_hunter_tip">必要干员：歌蕾蒂娅(精二)、乌尔比安、斯卡蒂、幽灵鲨、安哲拉\n因算法原因同时勾选红松骑士团时不会和红松骑士团同时参与排班</string>
 
     <!-- logs: detail/list -->
     <string name="log_list_meta">%1$d 个任务 | %2$s</string>
@@ -2223,7 +2243,7 @@
     <string name="settings_pallas_hangover">下次不能喝、喝这么多了……</string>
     <string name="achievement_SlackingOff_title">不务正业</string>
     <string name="achievement_SlackingOff_desc">正事做累了，玩点别的。</string>
-    <string name="achievement_SlackingOff_condition">启动一次小游戏</string>
+    <string name="achievement_SlackingOff_condition">启动一次牛杂</string>
     <string name="achievement_AnnouncementStubbornClick_title">死不悔改</string>
     <string name="achievement_AnnouncementStubbornClick_desc">即使提示了这么多次，你依然选择不看公告。</string>
     <string name="achievement_AnnouncementStubbornClick_condition">在未滚动到底部的情况下点击确认按钮超过 20 次</string>

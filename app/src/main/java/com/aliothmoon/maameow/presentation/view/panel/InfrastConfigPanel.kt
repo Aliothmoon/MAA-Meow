@@ -51,6 +51,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -63,6 +64,7 @@ import com.aliothmoon.maameow.data.model.InfrastConfig
 import com.aliothmoon.maameow.domain.enums.InfrastMode
 import com.aliothmoon.maameow.domain.enums.InfrastRoomType
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
+import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.utils.JsonUtils
@@ -222,6 +224,26 @@ fun InfrastConfigPanel(
                         item {
                             // 继续专精
                             ContinueTrainingSection(config, onConfigChange)
+                        }
+                        item {
+                            // 菲亚梅塔恢复目标 (仅 Normal 模式显示)
+                            MaaAnimatedVisibility(
+                                visible = config.mode == InfrastMode.Normal,
+                                enter = expandVertically(),
+                                exit = shrinkVertically()
+                            ) {
+                                FiammettaTargetsSection(config, onConfigChange)
+                            }
+                        }
+                        item {
+                            // 跨设施组合 (仅 Normal 模式显示)
+                            MaaAnimatedVisibility(
+                                visible = config.mode == InfrastMode.Normal,
+                                enter = expandVertically(),
+                                exit = shrinkVertically()
+                            ) {
+                                CrossFacilityTeamsSection(config, onConfigChange)
+                            }
                         }
                     }
                 }
@@ -819,14 +841,20 @@ private fun FacilitiesSection(
                 expanded = tipExpanded, onExpandedChange = { tipExpanded = it })
         }
 
+        // Normal 模式下换班顺序由 core 统一安排
+        val reorderable = config.mode != InfrastMode.Normal
+
         ExpandableTipContent(
             visible = tipExpanded,
-            tipText = stringResource(R.string.panel_infrast_facilities_tip)
+            tipText = stringResource(
+                if (reorderable) R.string.panel_infrast_facilities_tip
+                else R.string.panel_infrast_facilities_tip_normal
+            )
         )
 
-        // 设施列表（支持拖拽排序 + 勾选）
         FacilityList(
             facilities = config.facilities,
+            reorderable = reorderable,
             onFacilitiesChange = { onConfigChange(config.copy(facilities = it)) })
 
         Row(
@@ -865,14 +893,16 @@ private fun FacilitiesSection(
 }
 
 /**
- * 设施列表展示（支持拖拽排序 + 勾选）
+ * 设施列表展示（勾选 + 可选的拖拽排序）
  *
  * @param facilities 设施列表（有序，含启用状态）
+ * @param reorderable 是否允许长按拖拽排序
  * @param onFacilitiesChange 设施列表变化回调
  */
 @Composable
 private fun FacilityList(
     facilities: List<Pair<InfrastRoomType, Boolean>>,
+    reorderable: Boolean,
     onFacilitiesChange: (List<Pair<InfrastRoomType, Boolean>>) -> Unit
 ) {
 
@@ -896,7 +926,7 @@ private fun FacilityList(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .longPressDraggableHandle()
+                            .then(if (reorderable) Modifier.longPressDraggableHandle() else Modifier)
                             .clickable {
                                 val newList = facilities.map {
                                     if (it.first == facility) it.first to !it.second else it
@@ -1104,3 +1134,117 @@ private fun ContinueTrainingSection(
 }
 
 private fun queryFileName(context: Context, uri: Uri): String? = Misc.queryFileName(context, uri)
+
+/**
+ * 菲亚梅塔恢复目标（仅 Normal 模式显示）
+ * 选 1～3 个，选满后再选顶掉最早选的
+ */
+@Composable
+private fun FiammettaTargetsSection(
+    config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
+) {
+    var tipExpanded by remember { mutableStateOf(false) }
+    val selected = config.fiammettaTargets
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.panel_infrast_fiammetta_targets_title),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            ExpandableTipIcon(
+                expanded = tipExpanded, onExpandedChange = { tipExpanded = it })
+        }
+
+        ExpandableTipContent(
+            visible = tipExpanded,
+            tipText = stringResource(R.string.panel_infrast_fiammetta_targets_tip)
+        )
+
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            UiUsageConstants.fiammettaTargetValues.forEach { name ->
+                val checked = name in selected
+                Surface(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable {
+                            val next = when {
+                                // 至少保留 1 个，core 对空名单会回退默认三人
+                                checked && selected.size <= 1 -> return@clickable
+                                checked -> selected - name
+                                selected.size >= UiUsageConstants.MAX_FIAMMETTA_TARGETS ->
+                                    selected.drop(1) + name
+                                else -> selected + name
+                            }
+                            onConfigChange(config.copy(fiammettaTargets = next))
+                        },
+                    color = if (checked) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text(
+                        text = fiammettaTargetLabel(name),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (checked) MaterialTheme.colorScheme.onPrimary
+                        else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun fiammettaTargetLabel(name: String): String = when (name) {
+    "清流" -> stringResource(R.string.panel_infrast_fiammetta_target_purestream)
+    "可露希尔" -> stringResource(R.string.panel_infrast_fiammetta_target_closure)
+    "但书" -> stringResource(R.string.panel_infrast_fiammetta_target_proviso)
+    "巫恋" -> stringResource(R.string.panel_infrast_fiammetta_target_shamare)
+    "龙舌兰" -> stringResource(R.string.panel_infrast_fiammetta_target_tequila)
+    "歌蕾蒂娅" -> stringResource(R.string.panel_infrast_fiammetta_target_gladiia)
+    else -> name
+}
+
+/**
+ * 跨设施组合（仅 Normal 模式显示）
+ */
+@Composable
+private fun CrossFacilityTeamsSection(
+    config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        CheckBoxWithExpandableTip(
+            checked = config.usePinusSylvestris,
+            onCheckedChange = { onConfigChange(config.copy(usePinusSylvestris = it)) },
+            label = stringResource(R.string.panel_infrast_use_pinus_sylvestris),
+            tipText = stringResource(R.string.panel_infrast_use_pinus_sylvestris_tip)
+        )
+        CheckBoxWithExpandableTip(
+            checked = config.usePerceptionInformation,
+            onCheckedChange = { onConfigChange(config.copy(usePerceptionInformation = it)) },
+            label = stringResource(R.string.panel_infrast_use_perception_information),
+            tipText = stringResource(R.string.panel_infrast_use_perception_information_tip)
+        )
+        CheckBoxWithExpandableTip(
+            checked = config.useWorldlyPlight,
+            onCheckedChange = { onConfigChange(config.copy(useWorldlyPlight = it)) },
+            label = stringResource(R.string.panel_infrast_use_worldly_plight),
+            tipText = stringResource(R.string.panel_infrast_use_worldly_plight_tip)
+        )
+        CheckBoxWithExpandableTip(
+            checked = config.useAbyssalHunter,
+            onCheckedChange = { onConfigChange(config.copy(useAbyssalHunter = it)) },
+            label = stringResource(R.string.panel_infrast_use_abyssal_hunter),
+            tipText = stringResource(R.string.panel_infrast_use_abyssal_hunter_tip)
+        )
+    }
+}

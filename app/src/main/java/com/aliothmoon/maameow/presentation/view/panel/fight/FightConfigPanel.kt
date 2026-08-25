@@ -47,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.StageResetMode
+import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.StageGroup
@@ -76,7 +77,8 @@ fun FightConfigPanel(
     onConfigChange: (FightConfig) -> Unit,
     modifier: Modifier = Modifier,
     activityManager: ActivityManager = koinInject(),
-    itemHelper: ItemHelper = koinInject()
+    itemHelper: ItemHelper = koinInject(),
+    depotRepository: DepotRepository = koinInject()
 ) {
     // 资源收集
     val resourceCollectionInfo by activityManager.resourceCollection.collectAsStateWithLifecycle()
@@ -84,7 +86,10 @@ fun FightConfigPanel(
 
     val dropItemsList by itemHelper.dropItems.collectAsStateWithLifecycle()
     val activityStages by activityManager.activityStages.collectAsStateWithLifecycle()
-    val stageTips = remember(activityStages) { activityManager.getStageTips() }
+    val depotSnapshot by depotRepository.snapshot.collectAsStateWithLifecycle()
+    val stageTips = remember(activityStages, depotSnapshot) {
+        activityManager.getStageTips(inventory = depotSnapshot.items)
+    }
     val todayName = remember(activityStages) { activityManager.getYjDayOfWeekName() }
 
     // 分组列表 -- 依赖 hideUnavailableStage 和活动关卡数据

@@ -235,7 +235,7 @@ class ActivityManager(
             activityGroups.forEach { (activityKey, stages) ->
                 val activityInfo = stages.firstOrNull()?.activity
                 val activityTip = activityInfo?.tip ?: activityKey
-                val daysLeftText = activityInfo?.getDaysLeftText()
+                val daysLeftText = activityInfo?.let { daysLeftText(it) }
                 val stageItems = stages.map { stage ->
                     StageItem(
                         code = stage.value,
@@ -518,12 +518,17 @@ class ActivityManager(
      * 迁移自 WPF StageManager.GetStageTips
      *
      * @param dayOfWeek 星期几
+     * @param inventory 仓库识别结果 itemId → 数量，未识别的物品不带库存
      * @return 提示文本行列表
      */
-    fun getStageTips(dayOfWeek: DayOfWeek = getYjDayOfWeek()): List<String> {
+    fun getStageTips(
+        dayOfWeek: DayOfWeek = getYjDayOfWeek(),
+        inventory: Map<String, Int> = emptyMap()
+    ): List<String> {
         val lines = mutableListOf<String>()
         val shownSideStories = mutableSetOf<String>()
         var resourceTipShown = false
+        val inventoryLabel = context.getString(R.string.panel_fight_stage_tip_inventory)
 
         for ((_, stageInfo) in _stages.value) {
             if (!stageInfo.isStageOpen(dayOfWeek)) continue
@@ -532,21 +537,36 @@ class ActivityManager(
 
             // 1. 资源收集活动提示 (只显示一次)
             if (!resourceTipShown && activity != null && activity.isResourceCollection && activity.isOpen) {
-                lines.add(0, "｢${activity.tip}｣ 剩余开放${activity.getDaysLeftText()}")
+                lines.add(0, daysLeftLine(activity.tip, activity))
                 resourceTipShown = true
             }
 
             // 2. 支线活动提示 (按活动名去重)
             if (activity != null && activity.name.isNotEmpty() && !activity.isResourceCollection) {
                 if (shownSideStories.add(activity.name)) {
-                    lines.add("｢${activity.name}｣ 剩余开放${activity.getDaysLeftText()}")
+                    lines.add(daysLeftLine(activity.name, activity))
+                    // 同名活动下的小游戏入口
+                    _miniGames.value
+                        .filter { it.activity == activity.name && it.isOpen }
+                        .forEach { game ->
+                            lines.add(
+                                context.getString(
+                                    R.string.panel_fight_stage_tip_affiliated_mini_game,
+                                    game.display.resolve(context)
+                                )
+                            )
+                        }
                 }
             }
 
-            // 3. 活动关卡掉落物品
+            // 3. 活动关卡掉落物品，识别过的物品带库存
             if (!stageInfo.drop.isNullOrEmpty()) {
                 val text = itemHelper.getItemInfo(stageInfo.drop)?.name ?: stageInfo.drop
-                lines.add("${stageInfo.code}: $text")
+                val count = inventory[stageInfo.drop]
+                lines.add(
+                    if (count != null) "${stageInfo.code}: $text ($inventoryLabel $count)"
+                    else "${stageInfo.code}: $text"
+                )
             }
 
             // 4. 常规关卡提示
@@ -556,6 +576,16 @@ class ActivityManager(
         }
 
         return lines
+    }
+
+    private fun daysLeftLine(name: String, activity: StageActivityInfo): String =
+        "｢$name｣ ${context.getString(R.string.panel_fight_activity_days_left_open)}${daysLeftText(activity)}"
+
+    /** 迁移自 WPF StageManager.GetDaysLeftText */
+    private fun daysLeftText(activity: StageActivityInfo): String {
+        val daysLeft = activity.getDaysLeft()
+        return if (daysLeft > 0) daysLeft.toString()
+        else context.getString(R.string.panel_fight_activity_less_than_one_day)
     }
 
     // ============ 活动感知过期药辅助 ============

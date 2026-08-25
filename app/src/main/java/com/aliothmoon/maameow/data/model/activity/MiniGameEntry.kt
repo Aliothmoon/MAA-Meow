@@ -34,5 +34,9 @@ data class MiniGameEntry(
     val utcExpireTime: String? = null,
 
     @SerialName("TimeZone")
-    val timeZone: Int = 8
+    val timeZone: Int = 8,
+
+    /** 所属活动名，与 StageActivityInfo.name 匹配后并入其关卡提示 */
+    @SerialName("Activity")
+    val activity: String? = null
 )

@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.data.model
 
 import com.aliothmoon.maameow.domain.enums.InfrastMode
 import com.aliothmoon.maameow.domain.enums.InfrastRoomType
+import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.utils.JsonUtils
@@ -180,6 +181,26 @@ data class InfrastConfig(
      */
     val continueTraining: Boolean = false,
 
+    // ============ 常规模式效率算法（仅 Normal 模式生效） ============
+
+    /**
+     * 菲亚梅塔恢复目标，最多 3 个，core 取其中心情最低者，顺序无关
+     * 可选值见 [UiUsageConstants.fiammettaTargetValues]
+     */
+    val fiammettaTargets: List<String> = UiUsageConstants.defaultFiammettaTargets,
+
+    /** 红松骑士团跨设施组合 */
+    val usePinusSylvestris: Boolean = false,
+
+    /** 感知信息跨设施组合，优先度高于人间烟火 */
+    val usePerceptionInformation: Boolean = false,
+
+    /** 人间烟火跨设施组合 */
+    val useWorldlyPlight: Boolean = false,
+
+    /** 深海猎人跨设施组合，不与红松骑士团同时参与排班 */
+    val useAbyssalHunter: Boolean = false,
+
     /**
      * 自定义基建计划的时间段数据（不参与序列化）
      *
@@ -220,6 +241,18 @@ data class InfrastConfig(
             put("reception_message_board", receptionMessageBoard)
             put("reception_clue_exchange", receptionClueExchange)
             put("reception_send_clue", receptionSendClue)
+            // 始终下发，非 Normal 模式由 core 忽略
+            put("fiammetta_targets", buildJsonArray {
+                fiammettaTargets
+                    .filter { it.isNotBlank() }
+                    .distinct()
+                    .take(UiUsageConstants.MAX_FIAMMETTA_TARGETS)
+                    .forEach { add(JsonPrimitive(it)) }
+            })
+            put("use_pinus_sylvestris", usePinusSylvestris)
+            put("use_perception_information", usePerceptionInformation)
+            put("use_worldly_plight", useWorldlyPlight)
+            put("use_abyssal_hunter", useAbyssalHunter)
             put("mode", mode.value)
             if(mode == InfrastMode.Custom){
                 put("filename", customInfrastFile)

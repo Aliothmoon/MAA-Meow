@@ -157,6 +157,20 @@ class SubTaskHandler(
                 }
             }
 
+            "InfrastInfoTask" -> {
+                // 常规模式下布局识别失败会中止整个基建任务
+                val what = details.getJSONObject("details")?.getString("what")
+                if (what == "FacilityLayoutRecognitionFailed") {
+                    append(str("InfrastFacilityLayoutRecognitionFailed"), LogLevel.ERROR)
+                }
+                ioScope.launch {
+                    achievementRepository.report {
+                        event = AchievementEvents.SUB_TASK_ERROR
+                        "subtask" to subtask
+                    }
+                }
+            }
+
             else -> {
                 ioScope.launch {
                     achievementRepository.report {
