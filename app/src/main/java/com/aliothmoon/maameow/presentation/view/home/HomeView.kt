@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Build
@@ -46,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,10 +73,15 @@ import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
 import com.aliothmoon.maameow.presentation.components.ChangelogDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.UpdateCard
+import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
+import com.aliothmoon.maameow.presentation.onboarding.OnboardingTarget
+import com.aliothmoon.maameow.presentation.onboarding.onboardingBlocksStartupDialogs
+import com.aliothmoon.maameow.presentation.onboarding.onboardingTarget
 import com.aliothmoon.maameow.presentation.state.StatusColorType
 import com.aliothmoon.maameow.presentation.state.UiEffect
 import com.aliothmoon.maameow.presentation.viewmodel.HomeViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.UpdateViewModel
+import com.aliothmoon.maameow.theme.LocalReduceMotion
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.asString
@@ -83,10 +90,19 @@ import com.aliothmoon.maameow.utils.i18n.remoteBackendPermissionLabel
 import com.aliothmoon.maameow.utils.i18n.resolve
 import com.aliothmoon.maameow.utils.i18n.runModeDisplayName
 import dev.jeziellago.compose.markdowntext.MarkdownText
+import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import timber.log.Timber
 
+
+// LazyColumn 项序（2 是更新卡），item 顺序变了要同步
+private val ONBOARDING_SCROLL_INDEX = mapOf(
+    OnboardingTarget.SERVICE_STATUS to 0,
+    OnboardingTarget.RUN_MODE to 1,
+    OnboardingTarget.PERMISSIONS to 3,
+    OnboardingTarget.SERVICE_BUTTON to 4,
+)
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -108,6 +124,24 @@ fun HomeView(
     val shizukuShortcutEnabled by appSettingsManager.shizukuShortcutEnabled.collectAsStateWithLifecycle()
 
     val startupDialog by updateViewModel.startupUpdateDialog.collectAsStateWithLifecycle()
+
+    // 首启引导：靶点对应项滚进视野；pager 重建首页后 effect 重跑自动补滚
+    val onboarding = LocalOnboardingState.current
+    val homeListState = rememberLazyListState()
+    val reduceMotion = LocalReduceMotion.current
+    LaunchedEffect(onboarding, homeListState, reduceMotion) {
+        if (onboarding == null) return@LaunchedEffect
+        snapshotFlow { onboarding.takeIf { it.active }?.currentStep?.target }
+            .collectLatest { target ->
+                val index = target?.let { ONBOARDING_SCROLL_INDEX[it] } ?: return@collectLatest
+                if (reduceMotion) {
+                    homeListState.scrollToItem(index)
+                } else {
+                    homeListState.animateScrollToItem(index)
+                }
+            }
+    }
+    val startupDialogsBlocked = onboardingBlocksStartupDialogs()
 
     // 启动时检查资源初始化
     LaunchedEffect(Unit) {
@@ -138,6 +172,11 @@ fun HomeView(
         if (uiState.resourceInitState is ResourceInitState.Ready) {
             updateViewModel.refreshResourceVersion()
             updateViewModel.checkPendingChangelog()
+        }
+    }
+    // 更新检查等引导结束再做：自动下载完直接拉起安装器，不能盖在引导上
+    LaunchedEffect(uiState.resourceInitState, startupDialogsBlocked) {
+        if (uiState.resourceInitState is ResourceInitState.Ready && !startupDialogsBlocked) {
             updateViewModel.checkUpdatesOnStartup()
         }
     }
@@ -150,7 +189,7 @@ fun HomeView(
 
     // 更新公告弹窗
     val changelogDialog by updateViewModel.changelogDialog.collectAsStateWithLifecycle()
-    changelogDialog?.let {
+    changelogDialog?.takeIf { !startupDialogsBlocked }?.let {
         ChangelogDialog(
             content = it,
             onDismiss = { updateViewModel.dismissChangelog() }
@@ -158,7 +197,7 @@ fun HomeView(
     }
 
     // 发现更新弹窗
-    startupDialog?.let { result ->
+    startupDialog?.takeIf { !startupDialogsBlocked }?.let { result ->
         val appVersionLine = result.appUpdate?.let {
             stringResource(R.string.dialog_update_app_version_line, it.version)
         }.orEmpty()
@@ -233,6 +272,7 @@ fun HomeView(
                 )
             )
             LazyColumn(
+                state = homeListState,
                 modifier = Modifier
                     .fillMaxSize()
                     .weight(1f),
@@ -247,6 +287,7 @@ fun HomeView(
             ) {
                 item {
                     ScreenInfoCard(
+                        modifier = Modifier.onboardingTarget(OnboardingTarget.SERVICE_STATUS),
                         screenWidth = width,
                         screenHeight = height,
                         resourceVersion = resourceVersion,
@@ -259,6 +300,7 @@ fun HomeView(
 
                 item {
                     RunModeCard(
+                        modifier = Modifier.onboardingTarget(OnboardingTarget.RUN_MODE),
                         runMode = uiState.runMode,
                         onRunModeChange = { viewModel.onRunModeChange(it) },
                         changeEnabled = viewModel.checkRunModeChangeEnabled()
@@ -271,6 +313,7 @@ fun HomeView(
 
                 item {
                     PermissionCard(
+                        modifier = Modifier.onboardingTarget(OnboardingTarget.PERMISSIONS),
                         permissionState = permissionState,
                         isShowAccessibility = uiState.runMode == RunMode.FOREGROUND && uiState.overlayControlMode == OverlayControlMode.ACCESSIBILITY,
                         isGranting = uiState.isGranting,
@@ -285,6 +328,7 @@ fun HomeView(
 
                 item {
                     HomeServiceActionButtons(
+                        modifier = Modifier.onboardingTarget(OnboardingTarget.SERVICE_BUTTON),
                         remoteServiceActive = uiState.remoteServiceActive,
                         isLoading = uiState.isLoading,
                         showShizukuShortcut = permissionState.startupBackend == RemoteBackend.SHIZUKU &&
@@ -319,7 +363,9 @@ fun HomeView(
             }
         }
 
-        ShizukuReadinessGate()
+        if (!startupDialogsBlocked) {
+            ShizukuReadinessGate()
+        }
     }
 }
 
@@ -331,11 +377,12 @@ private fun ScreenInfoCard(
     appVersion: String,
     serviceStatusColor: StatusColorType,
     serviceStatusText: UiText,
-    serviceStatusLoading: Boolean
+    serviceStatusLoading: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     val serviceStatusLabel = serviceStatusText.asString()
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
@@ -456,10 +503,11 @@ private fun HomeServiceActionButtons(
     isLoading: Boolean,
     showShizukuShortcut: Boolean,
     onOpenShizuku: () -> Unit,
-    onToggleRemoteService: () -> Unit
+    onToggleRemoteService: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         val serviceButtonContent: @Composable RowScope.() -> Unit = {
@@ -556,11 +604,12 @@ private fun HomeServiceActionButtons(
 private fun RunModeCard(
     runMode: RunMode,
     onRunModeChange: (Boolean) -> Unit,
-    changeEnabled: Boolean
+    changeEnabled: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
@@ -650,14 +699,15 @@ private fun PermissionCard(
     onRequestStorage: () -> Unit,
     onRequestBatteryWhitelist: () -> Unit,
     onRequestAccessibility: () -> Unit,
-    onRequestNotification: () -> Unit
+    onRequestNotification: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     var expandedPermissions by remember { mutableStateOf(false) }
     val contentColor = MaterialTheme.colorScheme.onSurface
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(

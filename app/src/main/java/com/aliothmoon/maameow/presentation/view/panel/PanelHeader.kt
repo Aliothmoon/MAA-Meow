@@ -34,10 +34,11 @@ fun PanelHeader(
     showActions: Boolean = true,
     isLocked: Boolean = false,
     onLockToggle: (Boolean) -> Unit = {},
-    onHome: () -> Unit = {}
+    onHome: () -> Unit = {},
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(bottom = 4.dp),
         horizontalArrangement = if (showActions) Arrangement.SpaceBetween else Arrangement.SpaceEvenly,

@@ -34,7 +34,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -228,22 +227,7 @@ fun AnnouncementDialog(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                    shape = CircleShape,
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Campaign,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
+                        DialogIconBadge(icon = Icons.Rounded.Campaign)
                         Text(
                             text = stringResource(R.string.announcement_title),
                             style = MaterialTheme.typography.titleLarge,

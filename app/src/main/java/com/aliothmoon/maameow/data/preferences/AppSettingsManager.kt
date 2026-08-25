@@ -49,6 +49,9 @@ class AppSettingsManager(
         /** 纯数字 PIN 最大位数 */
         const val MAX_PIN_LENGTH = 16
 
+        /** 首启引导版本，内容大改需全员重看时 +1 */
+        const val ONBOARDING_VERSION = 1
+
         /** 页面缩放：0 = 自动；手动为 80–110 */
         const val FONT_SIZE_SCALE_MIN = 80
         const val FONT_SIZE_SCALE_MAX = 110
@@ -601,6 +604,23 @@ class AppSettingsManager(
     suspend fun setAnnouncementReadHash(hash: String) {
         with(AppSettingsSchema) {
             context.dataStore.edit { it[announcementReadHash] = hash }
+        }
+    }
+
+    private fun parseNeedsOnboarding(raw: String): Boolean =
+        (raw.toIntOrNull() ?: 0) < ONBOARDING_VERSION
+
+    val needsOnboarding: StateFlow<Boolean> = settings
+        .map { parseNeedsOnboarding(it.onboardingSeenVersion) }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            parseNeedsOnboarding(initialSettings.onboardingSeenVersion)
+        )
+
+    suspend fun markOnboardingSeen() {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[onboardingSeenVersion] = ONBOARDING_VERSION.toString() }
         }
     }
 

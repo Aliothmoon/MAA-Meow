@@ -103,6 +103,10 @@ data class AppSettings(
     @PrefKey(name = "announcement_read_version", default = "")
     val announcementReadHash: String = "",
 
+    /** 已看过的首启引导版本，小于当前版本则展示 */
+    @PrefKey(default = "0")
+    val onboardingSeenVersion: String = "0",
+
     @PrefKey(default = "false")
     val forceFullscreenOnVirtualDisplay: String = "false",
 

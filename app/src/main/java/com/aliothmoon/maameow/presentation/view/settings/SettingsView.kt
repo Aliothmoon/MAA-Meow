@@ -136,6 +136,7 @@ import org.koin.compose.koinInject
 fun SettingsView(
     navController: NavController,
     onViewAnnouncement: () -> Unit = {},
+    onViewOnboarding: () -> Unit = {},
     viewModel: SettingsViewModel = koinViewModel(),
     achievementViewModel: AchievementViewModel = koinViewModel(),
     resourceInitService: ResourceInitService = koinInject(),
@@ -1034,6 +1035,14 @@ fun SettingsView(
                             contentColor = contentColor
                         ) {
                             onViewAnnouncement()
+                        }
+                        ListItemDivider()
+                        SettingClickItem(
+                            title = stringResource(R.string.settings_about_onboarding),
+                            description = stringResource(R.string.settings_about_onboarding_desc),
+                            contentColor = contentColor
+                        ) {
+                            onViewOnboarding()
                         }
                         ListItemDivider()
                         Text(

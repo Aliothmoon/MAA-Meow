@@ -107,6 +107,11 @@ import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
+import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
+import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
+import com.aliothmoon.maameow.presentation.onboarding.OnboardingTarget
+import com.aliothmoon.maameow.presentation.onboarding.onboardingBlocksStartupDialogs
+import com.aliothmoon.maameow.presentation.onboarding.onboardingTarget
 import com.aliothmoon.maameow.presentation.pip.LocalIsInPip
 import com.aliothmoon.maameow.presentation.pip.PipController
 import com.aliothmoon.maameow.presentation.pip.PipHost
@@ -174,6 +179,19 @@ fun BackgroundTaskView(
     val selectedNode = nodes.find { it.id == state.selectedNodeId }
     val clientType = remember(nodes) { viewModel.chainState.clientType }
     val canShowTaskActions = PanelTab.canShowTaskActions(state.current)
+
+    // 引导靶点在任务面板，重看时先切回去
+    val onboarding = LocalOnboardingState.current
+    val onboardingOnThisPage by remember(onboarding) {
+        derivedStateOf {
+            onboarding?.active == true && onboarding.currentStep.tab == BottomNavTab.BACKGROUND
+        }
+    }
+    LaunchedEffect(onboardingOnThisPage) {
+        if (onboardingOnThisPage && state.current != PanelTab.TASKS) {
+            viewModel.onTabChange(PanelTab.TASKS)
+        }
+    }
 
     val pagerState = rememberPagerState(
         initialPage = state.current.ordinal, pageCount = { PanelTab.entries.size })
@@ -348,8 +366,10 @@ fun BackgroundTaskView(
         return
     }
 
-    // 放在画中画分支之后，小窗里不该弹准备度引导
-    ShizukuReadinessGate()
+    // 放在画中画分支之后，小窗里不该弹准备度引导；首启引导期间也让路
+    if (!onboardingBlocksStartupDialogs()) {
+        ShizukuReadinessGate()
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -364,6 +384,7 @@ fun BackgroundTaskView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(3f)
+                    .onboardingTarget(OnboardingTarget.BG_PREVIEW)
             ) {
                 if (!state.isFullscreenMonitor) {
                     VirtualDisplayPreview(
@@ -402,7 +423,8 @@ fun BackgroundTaskView(
                 PanelHeader(
                     selectedTab = state.current,
                     onTabSelected = { tab -> viewModel.onTabChange(tab) },
-                    showActions = false
+                    showActions = false,
+                    modifier = Modifier.onboardingTarget(OnboardingTarget.BG_PANEL_TABS),
                 )
 
                 if (isInitialized) {
@@ -415,7 +437,8 @@ fun BackgroundTaskView(
                             state = pagerState,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .weight(1f),
+                                .weight(1f)
+                                .onboardingTarget(OnboardingTarget.BG_TASK_LIST),
                             userScrollEnabled = true,
                             beyondViewportPageCount = 0
                         ) { page ->
@@ -506,7 +529,9 @@ fun BackgroundTaskView(
                                 maaState != MaaExecutionState.STOPPING
                             if (!hideStartBarForGachaDisclaimer) {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .onboardingTarget(OnboardingTarget.BG_START),
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {

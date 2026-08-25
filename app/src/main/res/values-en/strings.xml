@@ -483,6 +483,8 @@
     <string name="settings_about_changelog">Changelog</string>
     <string name="settings_about_changelog_empty">No changelog yet. After you update to a new version from within the app, the release notes for that version are kept here.</string>
     <string name="settings_about_announcement">View Announcement</string>
+    <string name="settings_about_onboarding">Getting Started</string>
+    <string name="settings_about_onboarding_desc">Replay the walkthrough of the home screen</string>
     <string name="settings_about_star">⭐ Star us if you like it</string>
 
     <!-- ============================================================
@@ -1848,6 +1850,39 @@
     <string name="announcement_not_finished_confirm_1">You haven\'t finished reading. Please confirm after you finish.</string>
     <string name="announcement_not_finished_confirm_2">Yes, you — still clicking</string>
     <string name="announcement_not_finished_confirm_3">Still clicking</string>
+
+    <!-- First-launch onboarding (spotlight over the home screen) -->
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_previous">Back</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_done">Get Started</string>
+    <string name="onboarding_step_counter">%1$d / %2$d</string>
+    <string name="onboarding_welcome_title">Welcome to MaaMeow</string>
+    <string name="onboarding_welcome_body">Run MAA natively on your phone, no PC required.\n\nShizuku or Root is needed for privileges. Take a minute to learn the key areas of the home screen — you can skip at any time.</string>
+    <string name="onboarding_status_title">Status Overview</string>
+    <string name="onboarding_status_body">Shows screen resolution, resource and app versions, and the connection state of the privileged service.\nTasks can only start once the service is connected.</string>
+    <string name="onboarding_run_mode_title">Run Mode</string>
+    <string name="onboarding_run_mode_body">• Background (recommended): the game runs on a virtual display so you can keep using your phone, but the screen must stay on and unlocked\n• Foreground: the game runs on the device screen in landscape and is controlled through the floating window</string>
+    <string name="onboarding_permissions_title">Permissions</string>
+    <string name="onboarding_permissions_body">Grant Shizuku or Root access here first — nothing works without it.\nThen grant overlay, notification and battery whitelist as prompted; Accessibility is only needed for volume-key control in foreground mode.</string>
+    <string name="onboarding_service_title">Start the Service</string>
+    <string name="onboarding_service_body">After granting access, tap here to start the privileged service; the MAA core loads in a separate process.\nThe first start takes a little longer — the status card above shows progress.</string>
+    <string name="onboarding_bg_preview_title">Live View</string>
+    <string name="onboarding_bg_preview_body">In background mode the game runs on a virtual display and its picture shows up here in real time.\nTap to go fullscreen and control it by hand; going home while a task runs enters picture-in-picture automatically.</string>
+    <string name="onboarding_bg_panel_tabs_title">Panels</string>
+    <string name="onboarding_bg_panel_tabs_body">• Tasks: the daily task chain\n• Auto Battle: copilot operations\n• Tools: recruit, depot and operator recognition and more\n• Log: detailed record of the current run</string>
+    <string name="onboarding_bg_task_list_title">Task Chain</string>
+    <string name="onboarding_bg_task_list_body">Tick the tasks to run (sanity, recruit, infrastructure, roguelike, …); edit mode lets you reorder, add and remove. Tap a task name to tune its stage, count and other settings on the right.\nSave different setups as profiles and switch between them any time.</string>
+    <string name="onboarding_bg_start_title">Start</string>
+    <string name="onboarding_bg_start_body">Tap Start to run the ticked tasks in order; you can stop at any time.\nQuick Options holds toggles such as screen-off idle, close game, mute game and screenshot.</string>
+    <string name="onboarding_schedule_add_title">New Schedule</string>
+    <string name="onboarding_schedule_add_body">Tap here to create one: choose the task profile, trigger time and repeat rule, and the device wakes up and runs it on time.</string>
+    <string name="onboarding_schedule_list_title">Schedule List</string>
+    <string name="onboarding_schedule_list_body">Existing schedules can be toggled and edited here.\nIf a health notice appears at the top (exact alarms, battery optimization, …), fix it first or the schedule may not fire; some ROMs also need auto-start and background permissions.</string>
+    <string name="onboarding_schedule_trigger_log_title">Trigger Log</string>
+    <string name="onboarding_schedule_trigger_log_body">Schedule didn\'t run? Check here for the result and reason of every trigger.</string>
+    <string name="onboarding_tab_settings_title">Settings &amp; Help</string>
+    <string name="onboarding_tab_settings_body">Announcements, changelog, log export and the QQ group all live in Settings.\nYou can replay this walkthrough any time from About.</string>
 
     <!-- i18n: overlay floatball -->
     <string name="overlay_floatball_countdown_desc">Countdown, %1$s seconds remaining</string>

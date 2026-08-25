@@ -56,6 +56,9 @@ import com.aliothmoon.maameow.presentation.components.BackendReadyFixHost
 import com.aliothmoon.maameow.presentation.components.InfoCard
 import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.TopAppBar
+import com.aliothmoon.maameow.presentation.onboarding.OnboardingTarget
+import com.aliothmoon.maameow.presentation.onboarding.onboardingBlocksStartupDialogs
+import com.aliothmoon.maameow.presentation.onboarding.onboardingTarget
 import com.aliothmoon.maameow.presentation.components.rememberBackendReadyFixState
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.schedule.model.ScheduleHealthIssue
@@ -94,8 +97,10 @@ fun ScheduleListView(
 
     // 键取布尔而非计数，否则每次启停策略都会重跑整套跨进程探测
     val hasEnabledStrategy = state.strategies.any { it.enabled }
-    LaunchedEffect(hasEnabledStrategy) {
-        if (!hasEnabledStrategy) return@LaunchedEffect
+    // 引导期间不弹，也不标记本次开机已提醒
+    val onboardingBlocking = onboardingBlocksStartupDialogs()
+    LaunchedEffect(hasEnabledStrategy, onboardingBlocking) {
+        if (!hasEnabledStrategy || onboardingBlocking) return@LaunchedEffect
         // prefs 与 resolveActivity 都是跨进程，整段留在 IO 上
         val target = withContext(Dispatchers.IO) {
             if (!AutoStartHelper.shouldRemindThisBoot(context, schedulePrefs)) return@withContext null
@@ -142,13 +147,19 @@ fun ScheduleListView(
                             )
                         }
                     }
-                    IconButton(onClick = { navController.navigate(Routes.SCHEDULE_TRIGGER_LOG) }) {
+                    IconButton(
+                        onClick = { navController.navigate(Routes.SCHEDULE_TRIGGER_LOG) },
+                        modifier = Modifier.onboardingTarget(OnboardingTarget.SCHEDULE_TRIGGER_LOG),
+                    ) {
                         Icon(
                             imageVector = Icons.Outlined.History,
                             contentDescription = stringResource(R.string.schedule_trigger_log_title),
                         )
                     }
-                    IconButton(onClick = { navController.navigate("schedule_edit/new") }) {
+                    IconButton(
+                        onClick = { navController.navigate("schedule_edit/new") },
+                        modifier = Modifier.onboardingTarget(OnboardingTarget.SCHEDULE_ADD),
+                    ) {
                         Icon(
                             imageVector = Icons.Outlined.Add,
                             contentDescription = stringResource(R.string.schedule_create_strategy),
@@ -164,7 +175,8 @@ fun ScheduleListView(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
+                .onboardingTarget(OnboardingTarget.SCHEDULE_LIST),
             contentPadding = PaddingValues(
                 horizontal = MaaDesignTokens.Spacing.listHorizontal,
                 vertical = MaaDesignTokens.Spacing.sm,

@@ -9,11 +9,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.luminance
@@ -33,11 +35,16 @@ import com.aliothmoon.maameow.domain.launch.LaunchEffect
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.ExternalNotificationService
+import com.aliothmoon.maameow.domain.service.ResourceInitService
+import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.presentation.LocalToaster
 import com.aliothmoon.maameow.presentation.components.AnnouncementDialog
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
 import com.aliothmoon.maameow.presentation.components.clearFocusOnBlankTap
+import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
+import com.aliothmoon.maameow.presentation.onboarding.OnboardingOverlay
+import com.aliothmoon.maameow.presentation.onboarding.OnboardingState
 import com.aliothmoon.maameow.presentation.pip.LocalIsInPip
 import com.aliothmoon.maameow.presentation.state.UiEffect
 import com.aliothmoon.maameow.presentation.view.notification.NotificationSettingsView
@@ -59,6 +66,8 @@ import com.dokar.sonner.ToastType
 import com.dokar.sonner.Toaster
 import com.dokar.sonner.rememberToasterState
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -75,6 +84,8 @@ fun AppNavigation(
     overlayController: OverlayController = koinInject(),
     announcementManager: AnnouncementManager = koinInject(),
     achievementReporter: AchievementReporter = koinInject(),
+    resourceInitService: ResourceInitService = koinInject(),
+    mainTabNavigator: MainTabNavigator = koinInject(),
     appEventsViewModel: AppEventsViewModel = koinViewModel(),
 ) {
     val navController = rememberNavController()
@@ -99,6 +110,30 @@ fun AppNavigation(
     // 远端公告：ETag 条件请求，304（内容未变）不会触发弹窗；语言切换时重拉
     LaunchedEffect(language) {
         announcementManager.refresh(language)
+    }
+
+    // 首启引导：资源就绪后自动开始
+    val needsOnboarding by appSettings.needsOnboarding.collectAsStateWithLifecycle()
+    val onboardingState = remember { OnboardingState(pending = needsOnboarding) }
+    LaunchedEffect(needsOnboarding) { onboardingState.pending = needsOnboarding }
+    val resourceInitState by resourceInitService.state.collectAsStateWithLifecycle()
+    val resourceReady = resourceInitState is ResourceInitState.Ready
+    LaunchedEffect(resourceReady, needsOnboarding) {
+        if (resourceReady && needsOnboarding) onboardingState.start()
+    }
+    // 跳过或看完都算看过；重看再写一次是幂等的
+    LaunchedEffect(onboardingState) {
+        snapshotFlow { onboardingState.active }
+            .drop(1)
+            .filter { !it }
+            .collect { appSettings.markOnboardingSeen() }
+    }
+    // 切步 / 开始 / 重看时把 pager 切到该步所属 Tab
+    val onboardingTab by remember(onboardingState) {
+        derivedStateOf { if (onboardingState.active) onboardingState.currentStep.tab else null }
+    }
+    LaunchedEffect(onboardingTab) {
+        onboardingTab?.let { mainTabNavigator.navigateTo(it) }
     }
     val scheduledCountdownState by backgroundTaskViewModel.countdownState.collectAsStateWithLifecycle()
 
@@ -152,12 +187,16 @@ fun AppNavigation(
 
     // LocalToaster 未提供即抛错，须同时覆盖 pager 与 NavHost 子页
     val reduceMotion = LocalReduceMotion.current
-    CompositionLocalProvider(LocalToaster provides toaster) {
+    CompositionLocalProvider(
+        LocalToaster provides toaster,
+        LocalOnboardingState provides onboardingState,
+    ) {
         Box(modifier = Modifier.fillMaxSize().clearFocusOnBlankTap()) {
             MainScreen(
                 navController = navController,
                 backgroundTaskViewModel = backgroundTaskViewModel,
                 onViewAnnouncement = { forceShowAnnouncement = true },
+                onViewOnboarding = { onboardingState.start() },
                 visible = isOnMainTab,
                 fullscreen = isFullscreen,
             )
@@ -204,6 +243,8 @@ fun AppNavigation(
             // 画中画只留预览画面
             if (!LocalIsInPip.current) {
                 ResourceLoadingOverlay()
+                // 聚光灯引导：压在主界面之上、轻提示之下，toast 仍可读
+                OnboardingOverlay(state = onboardingState)
                 // 顶部轻提示（sonner）：替代旧的 Material3 Snackbar，按类型上色（成功=绿、错误=红）
                 Toaster(
                     state = toaster,
@@ -227,8 +268,8 @@ fun AppNavigation(
                 // 长期公告弹窗：远端内容变化（哈希与已读标记不符）后首次启动自动弹出，或从设置中手动打开
                 val current = announcementContent
                 val needsToShow = current != null && current.hash != announcementReadHash
-                val showAnnouncement =
-                    forceShowAnnouncement || (needsToShow && !announcementDismissedOnce)
+                val showAnnouncement = forceShowAnnouncement ||
+                    (needsToShow && !announcementDismissedOnce && !onboardingState.blocksStartupDialogs)
                 val shownAnnouncement = remember(showAnnouncement, language, current) {
                     if (!showAnnouncement) {
                         null

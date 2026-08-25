@@ -687,6 +687,8 @@
     <string name="settings_about_changelog">更新日志</string>
     <string name="settings_about_changelog_empty">暂无更新日志。应用内更新到新版本后，这里会留档当前版本的更新说明</string>
     <string name="settings_about_announcement">查看公告</string>
+    <string name="settings_about_onboarding">新手引导</string>
+    <string name="settings_about_onboarding_desc">重新查看首页各区域的功能介绍</string>
     <string name="settings_about_star">⭐ 喜欢就给个 Star 吧</string>
 
     <!-- common: additional -->
@@ -1904,6 +1906,39 @@
     <string name="announcement_not_finished_confirm_1">没看完点什么确认</string>
     <string name="announcement_not_finished_confirm_2">说的就是你，还点</string>
     <string name="announcement_not_finished_confirm_3">还点</string>
+
+    <!-- 首启引导（聚光灯式，盖在首页上） -->
+    <string name="onboarding_skip">跳过</string>
+    <string name="onboarding_previous">上一步</string>
+    <string name="onboarding_next">下一步</string>
+    <string name="onboarding_done">开始使用</string>
+    <string name="onboarding_step_counter">%1$d / %2$d</string>
+    <string name="onboarding_welcome_title">欢迎使用 MaaMeow</string>
+    <string name="onboarding_welcome_body">在手机上原生运行 MAA，不需要电脑。\n\n运行前需要 Shizuku 或 Root 提供权限。接下来花一分钟了解首页的几个关键区域，随时可以跳过。</string>
+    <string name="onboarding_status_title">状态总览</string>
+    <string name="onboarding_status_body">这里显示屏幕分辨率、资源与应用版本，以及提权服务的连接状态。\n服务连接成功后才能开始任务。</string>
+    <string name="onboarding_run_mode_title">运行模式</string>
+    <string name="onboarding_run_mode_body">• 后台（推荐）：游戏在虚拟显示器中运行，手机可以同时做别的事，但需要保持亮屏解锁\n• 前台：游戏在本机屏幕上运行，需横屏并通过悬浮窗控制</string>
+    <string name="onboarding_permissions_title">权限</string>
+    <string name="onboarding_permissions_body">先在这里完成 Shizuku 或 Root 授权，这是运行的前提。\n悬浮窗、通知、电池优化白名单按提示逐项授予；无障碍仅前台模式的音量键控制需要。</string>
+    <string name="onboarding_service_title">启动服务</string>
+    <string name="onboarding_service_body">授权完成后点这里启动提权服务，MAA 核心会在独立进程中加载。\n首次启动会稍慢，上方状态卡片会显示连接进度。</string>
+    <string name="onboarding_bg_preview_title">实时画面</string>
+    <string name="onboarding_bg_preview_body">后台模式下游戏在虚拟显示器里运行，画面实时显示在这里。\n点一下可以全屏查看和手动操作；任务运行中回到桌面会自动进入画中画。</string>
+    <string name="onboarding_bg_panel_tabs_title">面板切换</string>
+    <string name="onboarding_bg_panel_tabs_body">• 任务：日常任务链\n• 自动战斗：抄作业\n• 工具箱：公招识别、仓库识别、干员识别等\n• 日志：本次运行的详细记录</string>
+    <string name="onboarding_bg_task_list_title">任务链</string>
+    <string name="onboarding_bg_task_list_body">勾选要执行的任务（理智、公招、基建、肉鸽等），编辑模式下可以排序和增删；点任务名在右侧调整关卡、次数等参数。\n多套配置可以存成不同方案随时切换。</string>
+    <string name="onboarding_bg_start_title">开始任务</string>
+    <string name="onboarding_bg_start_body">点开始后按顺序执行勾选的任务，运行中可随时停止。\n「快捷选项」里有熄屏挂机、关闭游戏、游戏静音、截图等开关。</string>
+    <string name="onboarding_schedule_add_title">新建定时</string>
+    <string name="onboarding_schedule_add_body">点这里新建：选择要跑的任务方案、触发时间和重复规则，到点自动唤醒设备并执行。</string>
+    <string name="onboarding_schedule_list_title">定时列表</string>
+    <string name="onboarding_schedule_list_body">已建的定时在这里开关和编辑。\n顶部若出现健康提示（精确闹钟、电池优化等），先按提示修复，否则可能不触发；部分国产 ROM 还需允许自启动和后台运行。</string>
+    <string name="onboarding_schedule_trigger_log_title">触发记录</string>
+    <string name="onboarding_schedule_trigger_log_body">定时没跑？来这里看每次触发的结果和原因。</string>
+    <string name="onboarding_tab_settings_title">设置与帮助</string>
+    <string name="onboarding_tab_settings_body">公告、更新日志、日志导出和 QQ 交流群都在设置页。\n随时可以在「关于」中重新查看本引导。</string>
 
     <!-- i18n: overlay floatball -->
     <string name="overlay_floatball_countdown_desc">正在倒计时，剩余 %1$s 秒</string>

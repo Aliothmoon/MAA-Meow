@@ -32,6 +32,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Routes
+import com.aliothmoon.maameow.presentation.onboarding.OnboardingTarget
+import com.aliothmoon.maameow.presentation.onboarding.onboardingTarget
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 
 sealed class BottomNavTab(
@@ -91,9 +93,15 @@ fun AppBottomNavigation(
                     val selected = currentRoute == tab.route
                     val contentColor = if (selected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    // 首启引导：底栏只指一下设置
+                    val targetModifier = if (tab == BottomNavTab.SETTINGS) {
+                        Modifier.onboardingTarget(OnboardingTarget.TAB_SETTINGS)
+                    } else {
+                        Modifier
+                    }
 
                     Column(
-                        modifier = Modifier
+                        modifier = targetModifier
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null

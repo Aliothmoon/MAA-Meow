@@ -73,3 +73,12 @@ fun Modifier.clearFocusOnBlankTap(): Modifier {
             }
         }
 }
+
+/** 吞掉全部指针事件挡住下层；子节点先收到，自身按钮照常可点 */
+fun Modifier.consumeAllPointerEvents(): Modifier = pointerInput(Unit) {
+    awaitPointerEventScope {
+        while (true) {
+            awaitPointerEvent().changes.forEach { it.consume() }
+        }
+    }
+}

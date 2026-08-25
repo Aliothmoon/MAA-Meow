@@ -16,12 +16,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
+import com.aliothmoon.maameow.presentation.components.consumeAllPointerEvents
 import com.aliothmoon.maameow.presentation.pip.LocalIsInPip
 import com.aliothmoon.maameow.presentation.view.background.BackgroundTaskView
 import com.aliothmoon.maameow.presentation.view.home.HomeView
@@ -45,6 +45,7 @@ fun MainScreen(
     navController: NavController,
     backgroundTaskViewModel: BackgroundTaskViewModel,
     onViewAnnouncement: () -> Unit = {},
+    onViewOnboarding: () -> Unit = {},
     visible: Boolean = true,
     fullscreen: Boolean = false,
 ) {
@@ -146,22 +147,14 @@ fun MainScreen(
                         BottomNavTab.SETTINGS -> SettingsView(
                             navController = navController,
                             onViewAnnouncement = onViewAnnouncement,
+                            onViewOnboarding = onViewOnboarding,
                         )
                     }
                 }
 
                 // 隐藏（子页面叠加其上）时吞掉所有指针，防止横滑切走主 Tab / 点击穿透到底层页。
                 if (!visible) {
-                    Box(
-                        Modifier
-                            .matchParentSize()
-                            .pointerInput(Unit) {
-                                awaitPointerEventScope {
-                                    while (true) {
-                                        awaitPointerEvent().changes.forEach { it.consume() }
-                                    }
-                                }
-                            })
+                    Box(Modifier.matchParentSize().consumeAllPointerEvents())
                 }
             }
         }
