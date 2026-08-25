@@ -20,7 +20,6 @@ enum class OnboardingTarget {
     SERVICE_STATUS,
     RUN_MODE,
     PERMISSIONS,
-    SERVICE_BUTTON,
 
     // 后台任务页
     BG_PREVIEW,

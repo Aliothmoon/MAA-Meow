@@ -11,7 +11,6 @@ import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Tab
 import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material.icons.rounded.VerifiedUser
@@ -62,13 +61,6 @@ object OnboardingSteps {
             icon = Icons.Rounded.VerifiedUser,
             titleRes = R.string.onboarding_permissions_title,
             bodyRes = R.string.onboarding_permissions_body,
-        ),
-        OnboardingStep(
-            tab = BottomNavTab.HOME,
-            target = OnboardingTarget.SERVICE_BUTTON,
-            icon = Icons.Rounded.PowerSettingsNew,
-            titleRes = R.string.onboarding_service_title,
-            bodyRes = R.string.onboarding_service_body,
         ),
         // 后台任务页
         OnboardingStep(

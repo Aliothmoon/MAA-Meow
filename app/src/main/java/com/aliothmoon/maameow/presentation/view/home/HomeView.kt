@@ -101,7 +101,6 @@ private val ONBOARDING_SCROLL_INDEX = mapOf(
     OnboardingTarget.SERVICE_STATUS to 0,
     OnboardingTarget.RUN_MODE to 1,
     OnboardingTarget.PERMISSIONS to 3,
-    OnboardingTarget.SERVICE_BUTTON to 4,
 )
 
 @Composable
@@ -328,7 +327,6 @@ fun HomeView(
 
                 item {
                     HomeServiceActionButtons(
-                        modifier = Modifier.onboardingTarget(OnboardingTarget.SERVICE_BUTTON),
                         remoteServiceActive = uiState.remoteServiceActive,
                         isLoading = uiState.isLoading,
                         showShizukuShortcut = permissionState.startupBackend == RemoteBackend.SHIZUKU &&
@@ -504,10 +502,9 @@ private fun HomeServiceActionButtons(
     showShizukuShortcut: Boolean,
     onOpenShizuku: () -> Unit,
     onToggleRemoteService: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         val serviceButtonContent: @Composable RowScope.() -> Unit = {
