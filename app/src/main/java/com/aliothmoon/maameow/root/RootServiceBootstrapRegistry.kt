@@ -5,7 +5,14 @@ import android.os.IBinder
 import kotlinx.coroutines.CompletableDeferred
 import java.util.concurrent.ConcurrentHashMap
 
-object RootServiceBootstrapRegistry {
+/** 按 token 认领回投的 binder；抽成接口便于连接器测试注入 */
+interface BootstrapRegistry {
+    fun register(token: String): CompletableDeferred<IBinder>
+
+    fun unregister(token: String)
+}
+
+object RootServiceBootstrapRegistry : BootstrapRegistry {
 
     const val AUTHORITY_SUFFIX = ".root.bootstrap"
     const val METHOD_ATTACH_REMOTE_SERVICE = "attachRemoteService"
@@ -17,11 +24,11 @@ object RootServiceBootstrapRegistry {
     private val pendingBinders = ConcurrentHashMap<String, CompletableDeferred<IBinder>>()
     private val appLifecycleBinder = Binder()
 
-    fun register(token: String): CompletableDeferred<IBinder> {
+    override fun register(token: String): CompletableDeferred<IBinder> {
         return CompletableDeferred<IBinder>().also { pendingBinders[token] = it }
     }
 
-    fun unregister(token: String) {
+    override fun unregister(token: String) {
         pendingBinders.remove(token)?.cancel()
     }
 

@@ -32,8 +32,11 @@ object RemoteServiceManager {
         data class Error(val exception: Throwable) : ServiceState()
     }
 
-    // 纯兜底：Shizuku 连接器 35s 看门狗先报错，此处晚于它；Root 连接器自带 15s 超时先行
-    private const val CONNECT_TIMEOUT_MS = 40_000L
+    // 纯兜底：连接器自带超时先行归因，此处按其最坏时长再放余量
+    private const val CONNECT_TIMEOUT_GRACE_MS = 2_000L
+
+    // 调用方默认等待须晚于兜底：先于连接器超时就只剩裸超时，launcher 日志尾部等根因全被截胡
+    private const val CALLER_WAIT_MARGIN_MS = 1_000L
 
     // 状态迁移（boundBackend / currentBinder / _state）统一在此锁内完成
     private val lock = Any()
@@ -46,8 +49,8 @@ object RemoteServiceManager {
     private val connectAttempt = AtomicInteger(0)
 
     private val connectors: Map<RemoteBackend, RemoteServiceConnectorBackend> = mapOf(
-        RemoteBackend.SHIZUKU to ShizukuRemoteServiceConnector,
-        RemoteBackend.ROOT to RootRemoteServiceConnector
+        RemoteBackend.SHIZUKU to ShizukuProcessServiceConnector,
+        RemoteBackend.ROOT to RootRemoteServiceConnector,
     )
 
     @Volatile
@@ -134,6 +137,7 @@ object RemoteServiceManager {
         ShizukuManager.initSui(context.packageName)
         RemoteAccessCoordinator.initialize(appSettings)
         RootRemoteServiceConnector.initialize(context)
+        ShizukuProcessServiceConnector.initialize(context)
         LogcatServiceManager.initialize(context)
     }
 
@@ -201,8 +205,9 @@ object RemoteServiceManager {
     }
 
     private fun startConnectTimeout(attempt: Int, backend: RemoteBackend) {
+        val timeoutMs = fallbackTimeoutMs(backend)
         timeoutScope.launch {
-            delay(CONNECT_TIMEOUT_MS)
+            delay(timeoutMs)
             synchronized(lock) {
                 if (connectAttempt.get() != attempt ||
                     _state.value !is ServiceState.Connecting ||
@@ -212,7 +217,7 @@ object RemoteServiceManager {
                 }
                 ServiceBootLogger.event(
                     "CONNECT_TIMEOUT",
-                    "still CONNECTING after ${CONNECT_TIMEOUT_MS}ms (backend=$backend attempt=$attempt) — 服务进程疑似启动失败/未回投 binder，见 service_boot_debug.log"
+                    "still CONNECTING after ${timeoutMs}ms (backend=$backend attempt=$attempt) — 服务进程疑似启动失败/未回投 binder，见 service_boot_debug.log"
                 )
                 runCatching {
                     connectors.getValue(backend).disconnect(currentBinder.get())
@@ -222,7 +227,7 @@ object RemoteServiceManager {
                 clearCurrentBinderLocked()
                 boundBackend = null
                 _state.value = ServiceState.Error(
-                    TimeoutException("connect timeout after ${CONNECT_TIMEOUT_MS}ms (backend=$backend)")
+                    TimeoutException("connect timeout after ${timeoutMs}ms (backend=$backend)")
                 )
             }
         }
@@ -249,12 +254,21 @@ object RemoteServiceManager {
         }
     }
 
-    suspend fun getInstance(timeoutMs: Long = 10_000): RemoteService {
+    private fun fallbackTimeoutMs(backend: RemoteBackend): Long =
+        connectors.getValue(backend).worstCaseConnectMs + CONNECT_TIMEOUT_GRACE_MS
+
+    /** 调用方默认等待：覆盖连接器超时与兜底超时，保证拿到的是带根因的 Error 而非裸超时 */
+    private fun defaultWaitMs(backend: RemoteBackend): Long =
+        fallbackTimeoutMs(backend) + CALLER_WAIT_MARGIN_MS
+
+    /** [timeoutMs] 为 null 时按当前后端推算默认等待 */
+    suspend fun getInstance(timeoutMs: Long? = null): RemoteService {
         getInstanceOrNull()?.let { return it }
 
         bind()
+        val waitMs = timeoutMs ?: defaultWaitMs(boundBackend ?: RemoteAccessCoordinator.configuredBackend())
         return try {
-            withTimeout(timeoutMs) {
+            withTimeout(waitMs) {
                 _state.first { it is ServiceState.Connected || it is ServiceState.Error }
                     .let { currentState ->
                         when (currentState) {
@@ -265,7 +279,7 @@ object RemoteServiceManager {
                     }
             }
         } catch (e: TimeoutCancellationException) {
-            ServiceBootLogger.event("GET_INSTANCE_TIMEOUT", "after ${timeoutMs}ms state=${_state.value}")
+            ServiceBootLogger.event("GET_INSTANCE_TIMEOUT", "after ${waitMs}ms state=${_state.value}")
             throw e
         }
     }
@@ -280,8 +294,9 @@ object RemoteServiceManager {
         if (_state.value is ServiceState.Connected) boundBackend else null
 
 
+    /** [timeoutMs] 为 null 时按当前后端推算默认等待 */
     suspend fun <R> useRemoteService(
-        timeoutMs: Long = 12_000,
+        timeoutMs: Long? = null,
         action: suspend (RemoteService) -> R
     ): R {
         var accessState = RemoteAccessCoordinator.refresh()

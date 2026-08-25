@@ -217,6 +217,14 @@ int main(int argc, char **argv) {
 
     LOGFI("launcher start: apk=%s uid=%d", args.apk_path, args.uid);
 
+    /* 已是 shell 身份（Shizuku adb 模式）：无需降权，直接 exec 不 fork，
+       调用方追踪到的就是服务进程本身，探活与退出码不隔一层 */
+    if (getuid() == kShellUid) {
+        LOGFI("already shell uid, exec app_process directly");
+        exec_app_process(&args);
+        return 1;
+    }
+
     pid_t child = fork();
     if (child < 0) {
         LOGFE("fork failed: %s", strerror(errno));

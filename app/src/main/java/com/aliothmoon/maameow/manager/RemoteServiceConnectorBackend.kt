@@ -6,6 +6,9 @@ import com.aliothmoon.maameow.domain.models.RemoteBackend
 interface RemoteServiceConnectorBackend {
     val backend: RemoteBackend
 
+    /** 本连接器最坏连接时长，上层兜底超时据此推算 */
+    val worstCaseConnectMs: Long
+
     fun connect(callbacks: Callbacks)
 
     fun disconnect(currentBinder: IBinder?)

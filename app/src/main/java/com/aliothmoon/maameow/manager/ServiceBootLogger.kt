@@ -21,7 +21,7 @@ import java.time.format.DateTimeFormatter
  * 补一条 STUCK 标记，直接定位"流程卡在 IPC 边界、服务进程未起来"——再配合服务进程侧的
  * service_boot_debug.log 即可判断是 native 加载崩溃还是连接后才死亡。
  *
- * 设计为 object：RemoteServiceManager / ShizukuRemoteServiceConnector 均为单例 object，统一静态访问，
+ * 设计为 object：RemoteServiceManager / 各连接器均为单例 object，统一静态访问，
  * 不必把引用穿透各处。init() 前调用一律 no-op。路径直接由 Context 推导，不依赖 MaaPathConfig。
  */
 object ServiceBootLogger {
