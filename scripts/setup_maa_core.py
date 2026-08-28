@@ -9,6 +9,7 @@ usage:
     python scripts/setup_maa_core.py                    # download latest release and deploy
     python scripts/setup_maa_core.py --tag v6.3.0       # download specific tag
     python scripts/setup_maa_core.py --skip-download     # deploy from cache only
+    python scripts/setup_maa_core.py --maafw-tag v5.13.0-beta.5  # override the MaaFramework control unit
 
 Note: target directories (assets/MaaSync/MaaResource and jniLibs/<abi>/<MAA *.so>)
 are always cleaned before deploy to avoid stale files from previous versions.
@@ -24,6 +25,7 @@ import sys
 import tarfile
 import urllib.request
 import urllib.error
+import zipfile
 from pathlib import Path
 
 import convert_ocr_ncnn
@@ -52,6 +54,13 @@ EXCLUDE_SO = {"libc++_shared.so", "libfastdeploy_ppocr.so"}
 
 # Ignored file extensions
 IGNORE_EXTENSIONS = {".h"}
+
+# MAA CI bundles libMaaAndroidNativeControlUnit.so from MaaFramework's *latest stable*
+# release, which can lag features the app relies on (e.g. multi-touch landed in
+# v5.13.0-beta.3). --maafw-tag swaps in the control unit from a chosen MaaFramework tag.
+MAAFW_REPO = "MaaXYZ/MaaFramework"
+MAAFW_CONTROL_UNIT_SO = "libMaaAndroidNativeControlUnit.so"
+MAAFW_ASSET_ARCH = {"arm64-v8a": "aarch64", "x86_64": "x86_64"}
 
 # Target paths (relative to project root)
 ASSETS_RESOURCE_DIR = "app/src/main/assets/MaaSync/MaaResource"
@@ -136,11 +145,12 @@ def download_file(url: str, dest: Path):
         print()
 
 
-def get_release_assets(tag: str = None) -> list:
+def get_release_assets(tag: str = None, repo: str = None) -> list:
+    base = f"https://api.github.com/repos/{repo}" if repo else API_BASE
     if tag:
-        url = f"{API_BASE}/releases/tags/{tag}"
+        url = f"{base}/releases/tags/{tag}"
     else:
-        url = f"{API_BASE}/releases/latest"
+        url = f"{base}/releases/latest"
     print(f"[FETCH] Fetching release info: {url}")
     try:
         data = fetch_json(url)
@@ -237,6 +247,36 @@ def extract_and_deploy(tarball: Path, abi: str, project_root: Path):
     return stats
 
 
+def override_maafw_control_unit(tag: str, target_abis: list, cache_dir: Path, project_root: Path,
+                                skip_download: bool):
+    print(f"\n[MAAFW] Overriding {MAAFW_CONTROL_UNIT_SO} with MaaFramework {tag}...")
+    # Same cache rule as the MAA tarballs: reuse only when the size matches the release asset
+    assets = {}
+    if not skip_download:
+        _, release_assets = get_release_assets(tag, repo=MAAFW_REPO)
+        assets = {a["name"]: a for a in release_assets}
+    for abi in target_abis:
+        name = f"MAA-android-{MAAFW_ASSET_ARCH[abi]}-{tag}.zip"
+        archive = cache_dir / name
+        info = assets.get(name)
+        if not skip_download and info is None:
+            print(f"[ERROR] {name} not found in {MAAFW_REPO} release {tag}")
+            sys.exit(1)
+        if archive.exists() and (info is None or archive.stat().st_size == info["size"]):
+            print(f"  [CACHE] {name} already exists, skipping download")
+        elif skip_download:
+            print(f"[ERROR] {name} not in cache and --skip-download given")
+            sys.exit(1)
+        else:
+            download_file(info["browser_download_url"], archive)
+        with zipfile.ZipFile(archive) as zf:
+            data = zf.read(f"bin/{MAAFW_CONTROL_UNIT_SO}")
+        dest = project_root / JNILIBS_DIR / abi / MAAFW_CONTROL_UNIT_SO
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(data)
+        print(f"  [OVERRIDE] {abi}/{MAAFW_CONTROL_UNIT_SO} <- {name} ({len(data) / (1024 * 1024):.1f} MB)")
+
+
 def write_version_file(version: str, project_root: Path):
     version_file = project_root / VERSION_FILE
     version_file.write_text(version + "\n", encoding="utf-8")
@@ -253,6 +293,9 @@ def main():
     parser.add_argument("--skip-download", "-s", action="store_true", help="Skip download, use cache")
     parser.add_argument("--abi", choices=["arm64-v8a", "x86_64", "all"], default="all",
                         help="Process only specified ABI (default: all)")
+    parser.add_argument("--maafw-tag",
+                        help=f"Replace {MAAFW_CONTROL_UNIT_SO} with the one from this MaaFramework "
+                             "release tag (e.g. v5.13.0-beta.5); default keeps MAA's bundled copy")
     parser.add_argument("--skip-ncnn", action="store_true",
                         help="Skip OCR onnx->ncnn conversion (Android OCR needs ncnn; debug only)")
     parser.add_argument("--keep-onnx", action="store_true",
@@ -321,6 +364,10 @@ def main():
     if not resource_deployed:
         print("[ERROR] No tar.gz files found in cache. Run without --skip-download first.")
         sys.exit(1)
+
+    if args.maafw_tag:
+        override_maafw_control_unit(args.maafw_tag, target_abis, cache_dir, project_root,
+                                    args.skip_download)
 
     # Record deployed MAA Core version for the Gradle build (BuildConfig.MAA_CORE_VERSION)
     if deployed_version:

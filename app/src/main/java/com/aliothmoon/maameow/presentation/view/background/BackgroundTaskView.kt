@@ -79,14 +79,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChangedIgnoreConsumed
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -116,6 +121,7 @@ import com.aliothmoon.maameow.presentation.pip.LocalIsInPip
 import com.aliothmoon.maameow.presentation.pip.PipController
 import com.aliothmoon.maameow.presentation.pip.PipHost
 import com.aliothmoon.maameow.presentation.pip.PipRequest
+import com.aliothmoon.maameow.presentation.state.PreviewPointerSlots
 import com.aliothmoon.maameow.presentation.view.panel.AutoBattlePanel
 import com.aliothmoon.maameow.presentation.view.panel.LocalToolboxFileExporter
 import com.aliothmoon.maameow.presentation.view.panel.LogPanel
@@ -855,31 +861,47 @@ fun BackgroundTaskView(
                     .fillMaxSize()
                     .background(Color.Black)
                     .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                val change = event.changes.firstOrNull() ?: continue
-                                viewToVirtualDisplay(
-                                    viewX = change.position.x,
-                                    viewY = change.position.y,
-                                    viewWidth = size.width,
-                                    viewHeight = size.height,
-                                    bufferWidth = displayResolution.width,
-                                    bufferHeight = displayResolution.height
-                                ) { vx, vy ->
-                                    when (event.type) {
-                                        PointerEventType.Press -> viewModel.onTouchDown(vx, vy)
-                                        PointerEventType.Move -> {
-                                            if (change.pressed) {
-                                                viewModel.onTouchMove(vx, vy)
+                        val slots = PreviewPointerSlots()
+                        try {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    for (change in event.changes) {
+                                        val pointerId = change.id.value
+                                        val down = change.changedToDownIgnoreConsumed()
+                                        val up = change.changedToUpIgnoreConsumed()
+                                        if (!down && !up && !change.positionChangedIgnoreConsumed()) continue
+
+                                        // 画面外按下忽略；拖出画面钳到边缘，保证抬起送达
+                                        val point = viewToVirtualDisplay(change.position, size, displayResolution)
+                                        val (x, y) = point.offset
+                                        when {
+                                            down -> {
+                                                if (!point.inside) continue
+                                                val contact = slots.acquire(pointerId)
+                                                if (contact < 0) continue
+                                                viewModel.onTouchDown(x, y, contact)
+                                            }
+
+                                            up -> {
+                                                val contact = slots.release(pointerId)
+                                                if (contact < 0) continue
+                                                viewModel.onTouchUp(x, y, contact)
+                                            }
+
+                                            else -> {
+                                                val contact = slots.indexOf(pointerId)
+                                                if (contact < 0) continue
+                                                viewModel.onTouchMove(x, y, contact)
                                             }
                                         }
-
-                                        PointerEventType.Release -> viewModel.onTouchUp(vx, vy)
+                                        change.consume()
                                     }
                                 }
-                                change.consume()
                             }
+                        } finally {
+                            // 预览退出时仍按着的手指由远端整体 CANCEL
+                            viewModel.onTouchCancel()
                         }
                     }, contentAlignment = Alignment.Center
             ) {
@@ -961,24 +983,26 @@ fun BackgroundTaskView(
     }
 }
 
-private inline fun viewToVirtualDisplay(
-    viewX: Float,
-    viewY: Float,
-    viewWidth: Int,
-    viewHeight: Int,
-    bufferWidth: Int,
-    bufferHeight: Int,
-    block: (vx: Int, vy: Int) -> Unit,
-) {
-    val bufferW = bufferWidth.toFloat()
-    val bufferH = bufferHeight.toFloat()
-    val scale = minOf(viewWidth / bufferW, viewHeight / bufferH)
-    val offsetX = (viewWidth - bufferW * scale) / 2f
-    val offsetY = (viewHeight - bufferH * scale) / 2f
-    val vx = ((viewX - offsetX) / scale).toInt()
-    val vy = ((viewY - offsetY) / scale).toInt()
-    if (vx < 0 || vx >= bufferW.toInt() || vy < 0 || vy >= bufferH.toInt()) return
-    block(vx, vy)
+/** offset 已钳到边缘，inside 取原始落点 */
+private class DisplayPoint(val offset: IntOffset, val inside: Boolean)
+
+private fun viewToVirtualDisplay(
+    view: Offset,
+    viewSize: IntSize,
+    display: DefaultDisplayConfig.Resolution,
+): DisplayPoint {
+    val bufferW = display.width.toFloat()
+    val bufferH = display.height.toFloat()
+    val scale = minOf(viewSize.width / bufferW, viewSize.height / bufferH)
+    val offsetX = (viewSize.width - bufferW * scale) / 2f
+    val offsetY = (viewSize.height - bufferH * scale) / 2f
+    val vx = ((view.x - offsetX) / scale).toInt()
+    val vy = ((view.y - offsetY) / scale).toInt()
+    val inside = vx in 0 until display.width && vy in 0 until display.height
+    return DisplayPoint(
+        IntOffset(vx.coerceIn(0, display.width - 1), vy.coerceIn(0, display.height - 1)),
+        inside,
+    )
 }
 
 

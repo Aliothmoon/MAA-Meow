@@ -260,27 +260,35 @@ class BackgroundTaskViewModel(
 
     // ==================== Touch Input ====================
 
-    fun onTouchDown(x: Int, y: Int) {
+    fun onTouchDown(x: Int, y: Int, contact: Int) {
         runCatching {
-            RemoteServiceManager.getInstanceOrNull()?.touchDown(x, y)
+            RemoteServiceManager.getInstanceOrNull()?.touchDown(x, y, contact)
         }.onFailure {
-            Timber.e(it, "touchDown failed at ($x, $y)")
+            Timber.e(it, "touchDown failed at ($x, $y) contact=$contact")
         }
     }
 
-    fun onTouchMove(x: Int, y: Int) {
+    fun onTouchMove(x: Int, y: Int, contact: Int) {
         runCatching {
-            RemoteServiceManager.getInstanceOrNull()?.touchMove(x, y)
+            RemoteServiceManager.getInstanceOrNull()?.touchMove(x, y, contact)
         }.onFailure {
-            Timber.e(it, "touchMove failed at ($x, $y)")
+            Timber.e(it, "touchMove failed at ($x, $y) contact=$contact")
         }
     }
 
-    fun onTouchUp(x: Int, y: Int) {
+    fun onTouchUp(x: Int, y: Int, contact: Int) {
         runCatching {
-            RemoteServiceManager.getInstanceOrNull()?.touchUp(x, y)
+            RemoteServiceManager.getInstanceOrNull()?.touchUp(x, y, contact)
         }.onFailure {
-            Timber.e(it, "touchUp failed at ($x, $y)")
+            Timber.e(it, "touchUp failed at ($x, $y) contact=$contact")
+        }
+    }
+
+    fun onTouchCancel() {
+        runCatching {
+            RemoteServiceManager.getInstanceOrNull()?.touchCancel()
+        }.onFailure {
+            Timber.e(it, "touchCancel failed")
         }
     }
 

@@ -6,8 +6,6 @@ import com.aliothmoon.maameow.remote.internal.ActivityUtils;
 import com.aliothmoon.maameow.remote.internal.PrimaryDisplayManager;
 import com.aliothmoon.maameow.third.Ln;
 
-import timber.log.Timber;
-
 /**
  * upcall driver
  */
@@ -56,24 +54,28 @@ public final class DriverClass {
         }
     }
 
-    public static boolean touchDown(int x, int y, int displayId) {
-        Ln.i(TAG + ": touchDown(" + x + ", " + y + ", displayId=" + displayId + ")");
-        boolean result = InputControlUtils.down(x, y, displayId);
-        Ln.i(TAG + ": touchDown result=" + result);
+    /* 触控是热路径（一次滑动几十次 MOVE），坐标由 MaaCore 记，这里只记失败 */
+    public static boolean touchDown(int x, int y, int contact, int displayId) {
+        boolean result = InputControlUtils.down(x, y, contact, displayId);
+        if (!result) {
+            Ln.w(TAG + ": touchDown failed (" + x + ", " + y + ", contact=" + contact + ", displayId=" + displayId + ")");
+        }
         return result;
     }
 
-    public static boolean touchMove(int x, int y, int displayId) {
-        Ln.i(TAG + ": touchMove(" + x + ", " + y + ", displayId=" + displayId + ")");
-        boolean result = InputControlUtils.move(x, y, displayId);
-        Ln.i(TAG + ": touchMove result=" + result);
+    public static boolean touchMove(int x, int y, int contact, int displayId) {
+        boolean result = InputControlUtils.move(x, y, contact, displayId);
+        if (!result) {
+            Ln.w(TAG + ": touchMove failed (" + x + ", " + y + ", contact=" + contact + ", displayId=" + displayId + ")");
+        }
         return result;
     }
 
-    public static boolean touchUp(int x, int y, int displayId) {
-        Ln.i(TAG + ": touchUp(" + x + ", " + y + ", displayId=" + displayId + ")");
-        boolean result = InputControlUtils.up(x, y, displayId);
-        Ln.i(TAG + ": touchUp result=" + result);
+    public static boolean touchUp(int x, int y, int contact, int displayId) {
+        boolean result = InputControlUtils.up(x, y, contact, displayId);
+        if (!result) {
+            Ln.w(TAG + ": touchUp failed (" + x + ", " + y + ", contact=" + contact + ", displayId=" + displayId + ")");
+        }
         return result;
     }
 

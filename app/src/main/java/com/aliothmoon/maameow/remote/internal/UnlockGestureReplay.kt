@@ -68,13 +68,13 @@ internal object UnlockGestureReplay {
             when (action) {
                 is InjectAction.Sleep -> Thread.sleep(action.ms)
                 is InjectAction.Down ->
-                    InputControlUtils.down(action.x, action.y, Display.DEFAULT_DISPLAY)
+                    InputControlUtils.down(action.x, action.y, InputControlUtils.SINGLE_CONTACT, Display.DEFAULT_DISPLAY)
 
                 is InjectAction.Move ->
-                    InputControlUtils.move(action.x, action.y, Display.DEFAULT_DISPLAY)
+                    InputControlUtils.move(action.x, action.y, InputControlUtils.SINGLE_CONTACT, Display.DEFAULT_DISPLAY)
 
                 is InjectAction.Up ->
-                    InputControlUtils.up(action.x, action.y, Display.DEFAULT_DISPLAY)
+                    InputControlUtils.up(action.x, action.y, InputControlUtils.SINGLE_CONTACT, Display.DEFAULT_DISPLAY)
             }
         }
     }

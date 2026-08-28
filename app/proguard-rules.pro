@@ -12,9 +12,9 @@
 # libbridge FindClass + GetStaticMethodID
 -keep class com.aliothmoon.maameow.maa.DriverClass {
     public static boolean startApp(java.lang.String, int, boolean);
-    public static boolean touchDown(int, int, int);
-    public static boolean touchMove(int, int, int);
-    public static boolean touchUp(int, int, int);
+    public static boolean touchDown(int, int, int, int);
+    public static boolean touchMove(int, int, int, int);
+    public static boolean touchUp(int, int, int, int);
     public static boolean keyDown(int, int);
     public static boolean keyUp(int, int);
 }

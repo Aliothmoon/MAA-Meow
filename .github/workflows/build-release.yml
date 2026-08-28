@@ -11,6 +11,10 @@ on:
         description: 'MAA Core release tag'
         required: false
         default: 'latest'
+      maafw_tag:
+        description: 'MaaFramework tag to override libMaaAndroidNativeControlUnit.so (empty = keep the one bundled by MAA)'
+        required: false
+        default: ''
 
 jobs:
   build:
@@ -82,14 +86,22 @@ jobs:
           if [ -n "${{ github.event.inputs.maa_repo }}" ]; then
             REPO_ARG="--repo ${{ github.event.inputs.maa_repo }}"
           fi
+          MAAFW_ARG=""
+          MAAFW_TAG="${{ github.event.inputs.maafw_tag }}"
+          if [ -n "$MAAFW_TAG" ]; then
+            MAAFW_ARG="--maafw-tag $MAAFW_TAG"
+          fi
           if [ "${{ matrix.abi }}" = "all" ]; then
-            python scripts/setup_maa_core.py --clean $TAG_ARG $REPO_ARG
+            python scripts/setup_maa_core.py --clean $TAG_ARG $REPO_ARG $MAAFW_ARG
           else
-            python scripts/setup_maa_core.py --clean --abi ${{ matrix.abi }} $TAG_ARG $REPO_ARG
+            python scripts/setup_maa_core.py --clean --abi ${{ matrix.abi }} $TAG_ARG $REPO_ARG $MAAFW_ARG
           fi
 
       - name: Print MAA Resource version
         run: cat app/src/main/assets/MaaSync/MaaResource/version.json
+
+      - name: Print MaaFramework control unit version
+        run: python scripts/print_maafw_version.py
 
       - name: Disable KleidiCV SVE2 dispatch
         if: matrix.nosve

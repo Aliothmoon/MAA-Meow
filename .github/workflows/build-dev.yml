@@ -18,6 +18,10 @@ on:
         description: 'MAA Core release tag'
         required: false
         default: 'latest'
+      maafw_tag:
+        description: 'MaaFramework tag to override libMaaAndroidNativeControlUnit.so (empty = keep the one bundled by MAA)'
+        required: false
+        default: ''
 
 jobs:
   build:
@@ -74,10 +78,18 @@ jobs:
           if [ -n "$MAA_REPO" ]; then
             REPO_ARG="--repo $MAA_REPO"
           fi
-          python scripts/setup_maa_core.py --clean $TAG_ARG $REPO_ARG
+          MAAFW_ARG=""
+          MAAFW_TAG="${{ github.event.inputs.maafw_tag }}"
+          if [ -n "$MAAFW_TAG" ]; then
+            MAAFW_ARG="--maafw-tag $MAAFW_TAG"
+          fi
+          python scripts/setup_maa_core.py --clean $TAG_ARG $REPO_ARG $MAAFW_ARG
 
       - name: Print MAA Resource version
         run: cat app/src/main/assets/MaaSync/MaaResource/version.json
+
+      - name: Print MaaFramework control unit version
+        run: python scripts/print_maafw_version.py
 
       - name: Build Debug APK
         run: |

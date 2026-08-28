@@ -43,6 +43,16 @@ fun TouchPreviewOverlay(
                 y = size.height * marker.y.coerceIn(0, maxY) / maxY.toFloat()
             )
 
+            // 外环区分非首指
+            if (marker.contact > 0) {
+                drawCircle(
+                    color = Color.White.copy(alpha = alpha * 0.7f),
+                    radius = 9.dp.toPx(),
+                    center = center,
+                    style = Stroke(width = 1.dp.toPx())
+                )
+            }
+
             when (marker.action) {
                 MotionEvent.ACTION_DOWN -> {
                     drawCircle(

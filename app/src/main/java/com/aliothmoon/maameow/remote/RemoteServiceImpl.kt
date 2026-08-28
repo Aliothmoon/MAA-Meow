@@ -219,27 +219,35 @@ class RemoteServiceImpl : RemoteService.Stub() {
         InputControlUtils.setTouchCallback(callback)
     }
 
-    override fun touchDown(x: Int, y: Int) {
+    override fun touchDown(x: Int, y: Int, contact: Int) {
         if (virtualDisplayMode.get() == DisplayMode.PRIMARY) return
         val displayId = VirtualDisplayManager.getDisplayId()
         if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
-            InputControlUtils.down(x, y, displayId)
+            InputControlUtils.down(x, y, contact, displayId)
         }
     }
 
-    override fun touchMove(x: Int, y: Int) {
+    override fun touchMove(x: Int, y: Int, contact: Int) {
         if (virtualDisplayMode.get() == DisplayMode.PRIMARY) return
         val displayId = VirtualDisplayManager.getDisplayId()
         if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
-            InputControlUtils.move(x, y, displayId)
+            InputControlUtils.move(x, y, contact, displayId)
         }
     }
 
-    override fun touchUp(x: Int, y: Int) {
+    override fun touchUp(x: Int, y: Int, contact: Int) {
         if (virtualDisplayMode.get() == DisplayMode.PRIMARY) return
         val displayId = VirtualDisplayManager.getDisplayId()
         if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
-            InputControlUtils.up(x, y, displayId)
+            InputControlUtils.up(x, y, contact, displayId)
+        }
+    }
+
+    override fun touchCancel() {
+        if (virtualDisplayMode.get() == DisplayMode.PRIMARY) return
+        val displayId = VirtualDisplayManager.getDisplayId()
+        if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
+            InputControlUtils.cancel(displayId)
         }
     }
 

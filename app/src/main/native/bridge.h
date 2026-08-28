@@ -52,6 +52,10 @@ struct InputArgs {
 
 struct TouchArgs {
     Position p;
+    // 手指 id 0..15，对齐 MaaFramework >= 5.13.0-beta.3 的 AndroidExternalLib.h；
+    // 旧版 control unit 不写此字段，但 fw 侧 MethodParam 一直是 { } 初始化，
+    // 此处与 StartGameArgs.force_stop(=0) 同偏移，读到的恒为 0，无需版本闸
+    int contact;
 };
 
 struct KeyArgs {

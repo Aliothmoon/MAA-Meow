@@ -10,31 +10,35 @@ static jmethodID g_key_down_method = nullptr;
 static jmethodID g_key_up_method = nullptr;
 static jmethodID g_start_app_method = nullptr;
 
-static int
-UpcallInputControl(JNIEnv *env, MethodType method, int x, int y, int keyCode, int displayId) {
-    if (!env || !g_driver_clz) {
+/* upcall 落到 DriverClass -> InputControlUtils/ActivityUtils，那边全是对隐藏 API 的反射，
+ * 各家 ROM 上抛异常是常态。异常挂在 JNIEnv 上不清掉，下一次 JNI 调用就是未定义行为
+ * （表现为下一轮 upcall 开头的 NewStringUTF 里 SIGSEGV），每次 upcall 后必须清 */
+static int FinishUpcall(JNIEnv *env, jboolean result, const char *context) {
+    if (CheckJNIException(env, context)) {
         return -1;
     }
+    return result ? 0 : -1;
+}
 
-    switch (method) {
-        case TOUCH_DOWN:
-            return env->CallStaticBooleanMethod(g_driver_clz, g_touch_down_method, x, y, displayId)
-                   ? 0 : -1;
-        case TOUCH_MOVE:
-            return env->CallStaticBooleanMethod(g_driver_clz, g_touch_move_method, x, y, displayId)
-                   ? 0 : -1;
-        case TOUCH_UP:
-            return env->CallStaticBooleanMethod(g_driver_clz, g_touch_up_method, x, y, displayId)
-                   ? 0 : -1;
-        case KEY_DOWN:
-            return env->CallStaticBooleanMethod(g_driver_clz, g_key_down_method, keyCode, displayId)
-                   ? 0 : -1;
-        case KEY_UP:
-            return env->CallStaticBooleanMethod(g_driver_clz, g_key_up_method, keyCode, displayId)
-                   ? 0 : -1;
-        default:
-            return -1;
+static int UpcallTouch(JNIEnv *env, MethodType method, const TouchArgs &touch, int displayId) {
+    jmethodID mid = method == TOUCH_DOWN ? g_touch_down_method
+                    : method == TOUCH_MOVE ? g_touch_move_method
+                                           : g_touch_up_method;
+    if (!env || !g_driver_clz || !mid) {
+        return -1;
     }
+    jboolean result = env->CallStaticBooleanMethod(g_driver_clz, mid, touch.p.x, touch.p.y,
+                                                   touch.contact, displayId);
+    return FinishUpcall(env, result, "DriverClass.touch");
+}
+
+static int UpcallKey(JNIEnv *env, MethodType method, int keyCode, int displayId) {
+    jmethodID mid = method == KEY_DOWN ? g_key_down_method : g_key_up_method;
+    if (!env || !g_driver_clz || !mid) {
+        return -1;
+    }
+    jboolean result = env->CallStaticBooleanMethod(g_driver_clz, mid, keyCode, displayId);
+    return FinishUpcall(env, result, "DriverClass.key");
 }
 
 static int UpcallStartApp(JNIEnv *env, const char *packageName, int displayId, bool forceStop) {
@@ -46,7 +50,7 @@ static int UpcallStartApp(JNIEnv *env, const char *packageName, int displayId, b
     jboolean result = env->CallStaticBooleanMethod(g_driver_clz, g_start_app_method, jPackageName,
                                                    displayId, static_cast<jboolean>(forceStop));
     env->DeleteLocalRef(jPackageName);
-    return result ? 0 : -1;
+    return FinishUpcall(env, result, "DriverClass.startApp");
 }
 
 bool InitInputBridge(JavaVM *vm, JNIEnv *env, const char *driverClassName) {
@@ -66,9 +70,9 @@ bool InitInputBridge(JavaVM *vm, JNIEnv *env, const char *driverClassName) {
         return false;
     }
 
-    g_touch_down_method = env->GetStaticMethodID(g_driver_clz, "touchDown", "(III)Z");
-    g_touch_move_method = env->GetStaticMethodID(g_driver_clz, "touchMove", "(III)Z");
-    g_touch_up_method = env->GetStaticMethodID(g_driver_clz, "touchUp", "(III)Z");
+    g_touch_down_method = env->GetStaticMethodID(g_driver_clz, "touchDown", "(IIII)Z");
+    g_touch_move_method = env->GetStaticMethodID(g_driver_clz, "touchMove", "(IIII)Z");
+    g_touch_up_method = env->GetStaticMethodID(g_driver_clz, "touchUp", "(IIII)Z");
     g_key_down_method = env->GetStaticMethodID(g_driver_clz, "keyDown", "(II)Z");
     g_key_up_method = env->GetStaticMethodID(g_driver_clz, "keyUp", "(II)Z");
     g_start_app_method = env->GetStaticMethodID(g_driver_clz, "startApp", "(Ljava/lang/String;IZ)Z");
@@ -137,19 +141,12 @@ BRIDGE_API int DispatchInputMessage(MethodParam param) {
 
     switch (param.method) {
         case TOUCH_DOWN:
-            return UpcallInputControl(env, TOUCH_DOWN, param.args.touch.p.x, param.args.touch.p.y,
-                                      0, param.display_id);
         case TOUCH_MOVE:
-            return UpcallInputControl(env, TOUCH_MOVE, param.args.touch.p.x, param.args.touch.p.y,
-                                      0, param.display_id);
         case TOUCH_UP:
-            return UpcallInputControl(env, TOUCH_UP, param.args.touch.p.x, param.args.touch.p.y, 0,
-                                      param.display_id);
+            return UpcallTouch(env, param.method, param.args.touch, param.display_id);
         case KEY_DOWN:
-            return UpcallInputControl(env, KEY_DOWN, 0, 0, param.args.key.key_code,
-                                      param.display_id);
         case KEY_UP:
-            return UpcallInputControl(env, KEY_UP, 0, 0, param.args.key.key_code, param.display_id);
+            return UpcallKey(env, param.method, param.args.key.key_code, param.display_id);
         case START_GAME:
             return UpcallStartApp(env, param.args.start_game.package_name, param.display_id,
                                   param.args.start_game.force_stop != 0);

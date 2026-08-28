@@ -49,3 +49,4 @@ __pycache__/
 # 本地工具目录
 .pi/
 tmp.txt
+.cache/

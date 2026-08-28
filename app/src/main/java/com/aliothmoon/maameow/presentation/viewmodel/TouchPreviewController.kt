@@ -27,18 +27,21 @@ class TouchPreviewController(
 
     val callback = lazy {
         object : ITouchEventCallback.Stub() {
-            override fun onCallback(x: Int, y: Int, type: Int) {
-                if (type != MotionEvent.ACTION_DOWN
-                    && type != MotionEvent.ACTION_MOVE
-                    && type != MotionEvent.ACTION_UP
-                ) {
-                    return
+            override fun onCallback(x: Int, y: Int, type: Int, contact: Int) {
+                val action = when (type) {
+                    MotionEvent.ACTION_DOWN,
+                    MotionEvent.ACTION_MOVE,
+                    MotionEvent.ACTION_UP -> type
+                    MotionEvent.ACTION_POINTER_DOWN -> MotionEvent.ACTION_DOWN
+                    MotionEvent.ACTION_POINTER_UP -> MotionEvent.ACTION_UP
+                    else -> return
                 }
                 val newMarker = PreviewTouchMarker(
                     id = markerId.incrementAndGet(),
                     x = x,
                     y = y,
-                    action = type,
+                    action = action,
+                    contact = contact,
                     createdAtMs = SystemClock.elapsedRealtime()
                 )
                 _markers.update { current ->

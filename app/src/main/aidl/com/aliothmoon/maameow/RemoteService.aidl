@@ -37,11 +37,15 @@ interface RemoteService {
 
     void stopVirtualDisplay() = 15;
 
-    oneway void touchDown(int x, int y) = 17;
+    // contact: 手指 id 0..15，与 MotionEvent pointer id 一致
+    oneway void touchDown(int x, int y, int contact) = 17;
 
-    oneway void touchMove(int x, int y) = 18;
+    oneway void touchMove(int x, int y, int contact) = 18;
 
-    oneway void touchUp(int x, int y) = 19;
+    oneway void touchUp(int x, int y, int contact) = 19;
+
+    // 整体取消当前手势，预览退出时仍按着的手指由远端释放
+    oneway void touchCancel() = 42;
 
     oneway void setDisplayPower(boolean on) = 20;
 
