@@ -274,7 +274,8 @@ class SubTaskHandler(
             }
 
             "InfrastDormDoubleConfirmButton" -> {
-                append(str("InfrastDormDoubleConfirmed"), LogLevel.ERROR)
+                // 待进驻干员已进驻其他设施，Core 会自动点确认，仅提示
+                append(str("InfrastDormDoubleConfirmed"), LogLevel.INFO)
             }
 
             "ExitThenAbandon" -> {

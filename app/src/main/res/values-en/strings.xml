@@ -502,6 +502,7 @@
     <string name="maa_try_to_reconnect">Emulator disconnected, trying to reconnect</string>
     <string name="maa_fastest_way_to_screencap">Screenshot test tasks: %1$sms (%2$s)</string>
     <string name="maa_task_error">Task error: </string>
+    <string name="maa_out_of_memory_error">The %1$s task stopped due to insufficient memory. Close some background apps or restart MaaMeow and try again</string>
     <string name="maa_combat_error">Combat error</string>
     <string name="maa_start_task">Start task: </string>
     <string name="maa_complete_task">Complete task: </string>
@@ -539,7 +540,7 @@
     <string name="maa_fight_mission_failed_and_stop">Proxy failed too many times, task stopped</string>
     <string name="maa_labels_refreshed">Labels refreshed</string>
     <string name="maa_recruit_confirm">Recruit confirm</string>
-    <string name="maa_infrast_dorm_double_confirmed">Operator conflict</string>
+    <string name="maa_infrast_dorm_double_confirmed">Some operators are already assigned to another facility; the transfer has been confirmed automatically</string>
     <string name="maa_exploration_abandoned">Abandoned this Exploration</string>
     <string name="maa_fight_completed">Combat completed</string>
     <string name="maa_fight_failed">Combat failed</string>

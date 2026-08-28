@@ -122,7 +122,13 @@ class TaskChainHandler(
 
         val taskchain = details.getString("taskchain") ?: "Unknown"
         val taskName = str(taskchain)
-        sessionLogger.append("${str("TaskError")}$taskName", LogLevel.ERROR)
+        // details.error 为 Core 侧 TaskExceptionKind 名（如 OutOfMemory），普通识别错误无此字段
+        val message = if (exceptionKind(details) == "OutOfMemory") {
+            str("OutOfMemoryError", taskName)
+        } else {
+            "${str("TaskError")}$taskName"
+        }
+        sessionLogger.append(message, LogLevel.ERROR)
         notificationCenter.notifyTaskError(taskName)
         callbackScope.launch {
             achievementRepository.report {
@@ -272,6 +278,10 @@ class TaskChainHandler(
             taskChainState.clearRecruitUseExpeditedFlags()
         }
     }
+
+    /** Core 写在 details.details.error；WPF 读的是根级 error，两处都兼容 */
+    private fun exceptionKind(details: JSONObject): String? =
+        details.getJSONObject("details")?.getString("error") ?: details.getString("error")
 
     /**
      * 辅助方法：获取 i18n 字符串（无参数）

@@ -16,6 +16,7 @@
 
     <!-- taskchain -->
     <string name="maa_task_error">任务出错: </string>
+    <string name="maa_out_of_memory_error">%1$s任务因内存不足停止，请关闭部分后台应用或重启 MaaMeow 后重试</string>
     <string name="maa_combat_error">战斗出错</string>
     <string name="maa_start_task">开始任务: </string>
     <string name="maa_complete_task">完成任务: </string>
@@ -59,7 +60,7 @@
     <string name="maa_fight_mission_failed_and_stop">代理失败次数已达上限，任务已停止</string>
     <string name="maa_labels_refreshed">已刷新标签</string>
     <string name="maa_recruit_confirm">已确认招募</string>
-    <string name="maa_infrast_dorm_double_confirmed">干员冲突</string>
+    <string name="maa_infrast_dorm_double_confirmed">检测到干员已进驻其他设施，已自动确认将其调动</string>
     <string name="maa_exploration_abandoned">已放弃本次探索</string>
     <string name="maa_fight_completed">战斗完成</string>
     <string name="maa_fight_failed">战斗失败</string>
