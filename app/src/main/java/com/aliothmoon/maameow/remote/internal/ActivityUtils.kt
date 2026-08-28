@@ -198,6 +198,12 @@ object ActivityUtils {
         }.getOrNull()
     }
 
+    fun findTaskId(packageName: String): Int? {
+        val task = runCatching { findRecentTask(packageName) }.getOrNull() ?: return null
+        @Suppress("DEPRECATION")
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) task.taskId else task.id
+    }
+
     private fun findRecentTask(packageName: String): ActivityManager.RunningTaskInfo? {
         val am = FakeContext.get().getSystemService(ActivityManager::class.java) ?: return null
         @Suppress("DEPRECATION")
@@ -208,12 +214,10 @@ object ActivityUtils {
     }
 
     private fun moveAppTaskToDisplay(packageName: String, displayId: Int): Boolean {
-        val task = runCatching { findRecentTask(packageName) }.getOrNull() ?: run {
+        val taskId = findTaskId(packageName) ?: run {
             Ln.w("moveAppTaskToDisplay: no running task of $packageName")
             return false
         }
-        @Suppress("DEPRECATION")
-        val taskId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) task.taskId else task.id
         moveTaskToDisplayMethod?.let { method ->
             runCatching {
                 method.invoke(activityTaskManager, taskId, displayId)

@@ -13,6 +13,7 @@ import com.aliothmoon.maameow.maa.InputControlUtils
 import android.content.Intent
 import com.aliothmoon.maameow.remote.internal.ActivityUtils
 import com.aliothmoon.maameow.remote.internal.GameAudioMuteController
+import com.aliothmoon.maameow.remote.internal.GameFpsMonitor
 import com.aliothmoon.maameow.remote.internal.GestureRecorder
 import com.aliothmoon.maameow.remote.internal.PermissionGrantHelper
 import com.aliothmoon.maameow.remote.internal.PowerController
@@ -81,6 +82,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
         }
         Ln.i("$TAG: destroy()")
         InputControlUtils.setTouchCallback(null)
+        GameFpsMonitor.stop()
         performEmergencyCleanup()
         exitProcess(0)
     }
@@ -274,12 +276,15 @@ class RemoteServiceImpl : RemoteService.Stub() {
         when (virtualDisplayMode.get()) {
             DisplayMode.PRIMARY -> PrimaryDisplayManager.stop()
             DisplayMode.BACKGROUND -> {
+                GameFpsMonitor.stop()
                 PowerController.stopUserActivityKeepAlive()
                 VirtualDisplayManager.stop()
             }
         }
         GameAudioMuteController.restoreAll()
     }
+
+    override fun getGameFps(): Float = GameFpsMonitor.currentFps()
 
     override fun setPlayAudioOpAllowed(packageName: String?, isAllowed: Boolean): Boolean {
         if (packageName.isNullOrBlank()) return false
@@ -320,7 +325,10 @@ class RemoteServiceImpl : RemoteService.Stub() {
     override fun isAppOnVirtualDisplay(packageName: String): Boolean {
         val targetDisplayId = VirtualDisplayManager.getDisplayId()
         if (targetDisplayId == DefaultDisplayConfig.DISPLAY_NONE) return true
-        return ActivityUtils.isAppOnDisplay(packageName, targetDisplayId)
+        val onDisplay = ActivityUtils.isAppOnDisplay(packageName, targetDisplayId)
+        // 游戏不是 MaaMeow 拉起的（未启用自动启动）时，这里是首次得知它在虚拟屏上
+        if (onDisplay) GameFpsMonitor.ensureStarted(packageName)
+        return onDisplay
     }
 
     override fun moveAppToVirtualDisplay(packageName: String): Boolean {

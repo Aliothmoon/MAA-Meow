@@ -94,6 +94,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -334,6 +335,19 @@ fun BackgroundTaskView(
                         displayResolution = displayResolution,
                         modifier = Modifier.fillMaxSize()
                     )
+                    val gameFps by viewModel.gameFps.collectAsStateWithLifecycle()
+                    gameFps?.let { fps ->
+                        Text(
+                            text = "${fps.roundToInt()} FPS",
+                            color = Color.White.copy(alpha = 0.85f),
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(6.dp)
+                                .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 5.dp, vertical = 2.dp)
+                        )
+                    }
                 }
             }
         }

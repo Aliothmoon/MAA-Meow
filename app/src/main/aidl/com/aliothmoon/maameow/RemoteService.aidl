@@ -47,6 +47,9 @@ interface RemoteService {
     // 整体取消当前手势，预览退出时仍按着的手指由远端释放
     oneway void touchCancel() = 42;
 
+    // 后台模式游戏实时帧率，未监控返回 -1
+    float getGameFps() = 43;
+
     oneway void setDisplayPower(boolean on) = 20;
 
     boolean setPlayAudioOpAllowed(String packageName, boolean isAllowed) = 21;

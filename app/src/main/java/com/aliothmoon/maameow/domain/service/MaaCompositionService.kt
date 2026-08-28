@@ -66,6 +66,7 @@ class MaaCompositionService(
     private val sessionLogger: MaaSessionLogger,
     private val activityManager: ActivityManager,
     private val appWatchdog: AppWatchdog,
+    private val gameFpsWatcher: GameFpsWatcher,
     private val taskChainState: TaskChainState,
     private val subTaskHandler: SubTaskHandler,
     private val taskChainStatusTracker: TaskChainStatusTracker,
@@ -197,7 +198,7 @@ class MaaCompositionService(
     init {
         scope.launch {
             unifiedStateDispatcher.serviceDiedEvent.collect {
-                appWatchdog.stopWatching()
+                stopBackgroundMonitors()
                 setRunState(MaaExecutionState.ERROR)
                 sessionLogger.completeSessionAndWait(
                     "SERVICE_DIED",
@@ -494,7 +495,7 @@ class MaaCompositionService(
         }
         setRunState(MaaExecutionState.RUNNING)
         if (mode == RunMode.BACKGROUND) {
-            appWatchdog.startWatching()
+            startBackgroundMonitors()
         }
         sessionLogger.appendAndWait(successMessage, LogLevel.SUCCESS)
         return StartResult.Success(maa.GetVersion())
@@ -663,8 +664,19 @@ class MaaCompositionService(
         }
     }
 
-    private fun finishStop(result: StopResult): StopResult {
+    // 后台模式随会话启停的监视器：游戏存活/漂移看门狗、帧率
+    private fun startBackgroundMonitors() {
+        appWatchdog.startWatching()
+        gameFpsWatcher.start()
+    }
+
+    private fun stopBackgroundMonitors() {
         appWatchdog.stopWatching()
+        gameFpsWatcher.stop()
+    }
+
+    private fun finishStop(result: StopResult): StopResult {
+        stopBackgroundMonitors()
         setRunState(MaaExecutionState.IDLE)
         val status = if (result is StopResult.Success) "STOPPED" else "STOP_FAILED"
         sessionLogger.append(
@@ -678,7 +690,7 @@ class MaaCompositionService(
 
     suspend fun stopVirtualDisplay() {
         try {
-            appWatchdog.stopWatching()
+            stopBackgroundMonitors()
             _displayResolution.value = defaultResolution
             withContext(Dispatchers.IO) {
                 val service = RemoteServiceManager.getInstanceOrNull()

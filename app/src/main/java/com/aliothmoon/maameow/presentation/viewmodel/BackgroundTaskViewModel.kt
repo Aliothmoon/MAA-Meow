@@ -18,6 +18,7 @@ import com.aliothmoon.maameow.domain.launch.LaunchSession
 import com.aliothmoon.maameow.domain.launch.LaunchUserEvent
 import com.aliothmoon.maameow.domain.launch.toCountdownState
 import com.aliothmoon.maameow.domain.service.AchievementReporter
+import com.aliothmoon.maameow.domain.service.GameFpsWatcher
 import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
@@ -67,6 +68,7 @@ class BackgroundTaskViewModel(
     private val pathConfig: MaaPathConfig,
     private val achievementReporter: AchievementReporter,
     private val gameMuteCoordinator: GameMuteCoordinator,
+    gameFpsWatcher: GameFpsWatcher,
     private val launchPipeline: LaunchPipeline,
     private val taskEndRegistry: TaskEndRegistry,
     private val application: Context,
@@ -106,6 +108,8 @@ class BackgroundTaskViewModel(
     private val surfaceRef = AtomicReference<Surface>()
 
     val isGameMuted: StateFlow<Boolean> = gameMuteCoordinator.isMuted
+    // 后台模式游戏实时帧率，null = 未监控
+    val gameFps: StateFlow<Float?> = gameFpsWatcher.fps
 
     // 调试截图结果（已本地化的提示文案），供 UI 以 Toast 展示
     private val _screenshotMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
