@@ -810,6 +810,7 @@ fun SettingsView(
                     SettingsGroupCard {
                         SettingSwitchItem(
                             title = stringResource(R.string.settings_deploy_with_pause),
+                            description = stringResource(R.string.settings_deploy_with_pause_desc),
                             contentColor = contentColor,
                             checked = deployWithPause,
                             onCheckedChange = { viewModel.setDeployWithPause(it) }

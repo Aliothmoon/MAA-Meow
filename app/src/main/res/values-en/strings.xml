@@ -105,7 +105,8 @@
     <string name="settings_shizuku_launch_app_loading">Loading app list…</string>
     <string name="settings_shizuku_launch_app_search_hint">Search app name or package</string>
     <string name="settings_shizuku_launch_app_empty">No matching apps found</string>
-    <string name="settings_deploy_with_pause">Pause Trick (Experimental)</string>
+    <string name="settings_deploy_with_pause">Pause Trick</string>
+    <string name="settings_deploy_with_pause_desc">Copilot only. Experimental, not recommended for now</string>
     <string name="settings_force_fullscreen_on_virtual_display">Force fullscreen in background mode</string>
     <string name="settings_force_fullscreen_on_virtual_display_desc">Applies to the background virtual display only. May not take effect on all devices and can cause extra issues</string>
     <string name="settings_pip_on_home">Auto picture-in-picture on Home</string>
