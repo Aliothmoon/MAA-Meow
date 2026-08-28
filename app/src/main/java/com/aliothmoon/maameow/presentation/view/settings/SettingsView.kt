@@ -152,7 +152,7 @@ fun SettingsView(
     val skipShizukuCheck by viewModel.skipShizukuCheck.collectAsStateWithLifecycle()
     val shizukuShortcutEnabled by viewModel.shizukuShortcutEnabled.collectAsStateWithLifecycle()
     val shizukuLaunchPackage by viewModel.shizukuLaunchPackage.collectAsStateWithLifecycle()
-    val deploymentWithPause by viewModel.deploymentWithPause.collectAsStateWithLifecycle()
+    val deployWithPause by viewModel.deployWithPause.collectAsStateWithLifecycle()
     val reportToPenguin by viewModel.reportToPenguin.collectAsStateWithLifecycle()
     val reportToYituliu by viewModel.reportToYituliu.collectAsStateWithLifecycle()
     val penguinId by viewModel.penguinId.collectAsStateWithLifecycle()
@@ -801,7 +801,7 @@ fun SettingsView(
                 }
             }
 
-            // 任务设置：暂停时部署干员、MAA 任务覆盖
+            // 任务设置：划火柴模式、MAA 任务覆盖
             item {
                 CollapsibleSection(
                     title = stringResource(R.string.settings_section_task),
@@ -809,11 +809,10 @@ fun SettingsView(
                 ) {
                     SettingsGroupCard {
                         SettingSwitchItem(
-                            title = stringResource(R.string.settings_deployment_with_pause),
-                            description = stringResource(R.string.settings_deployment_with_pause_tip),
+                            title = stringResource(R.string.settings_deploy_with_pause),
                             contentColor = contentColor,
-                            checked = deploymentWithPause,
-                            onCheckedChange = { viewModel.setDeploymentWithPause(it) }
+                            checked = deployWithPause,
+                            onCheckedChange = { viewModel.setDeployWithPause(it) }
                         )
                         ListItemDivider()
                         SettingSwitchItem(

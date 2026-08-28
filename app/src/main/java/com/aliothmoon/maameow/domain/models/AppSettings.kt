@@ -92,13 +92,9 @@ data class AppSettings(
     @PrefKey(default = "")
     val currentChangelogContent: String = "",
 
-    /**
-     * 自动战斗 干员部署"按住-暂停"模式 (对应 Core ControlFeat::SWIPE_WITH_PAUSE)
-     * 启用后部署干员前会模拟按住 ESC 暂停游戏, 提高干员部署精确度;
-     * 个别设备上 ESC 注入异常时可关闭, 改用普通滑动部署
-     */
-    @PrefKey(default = "true")
-    val deploymentWithPause: String = "true",
+    /** 划火柴模式（Core DeploymentWithPause）；与 WPF RuntimeSettings.DeployWithPause 同名同默认 */
+    @PrefKey(default = "false")
+    val deployWithPause: String = "false",
 
     @PrefKey(name = "announcement_read_version", default = "")
     val announcementReadHash: String = "",

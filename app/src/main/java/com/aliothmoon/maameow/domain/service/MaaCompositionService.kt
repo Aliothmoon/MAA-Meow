@@ -429,10 +429,8 @@ class MaaCompositionService(
         // 在 MAA 连接（含 force_stop 重启游戏）之前提前授予电池优化豁免与后台不受限权限，
         // 让新进程一启动就处于受保护状态
         grantGameBatteryExemption(clientType)
-        // 每次连接前同步「干员部署按住-暂停」开关 (对应 Core ControlFeat::SWIPE_WITH_PAUSE),
-        // 用户改了设置下次启动任务即生效
-        val pauseEnabled = appSettings.deploymentWithPause.value
-        maa.SetInstanceOption(DEPLOYMENT_WITH_PAUSE, if (pauseEnabled) "1" else "0")
+        // Assistant 实例跨任务复用，关闭时必须显式写 0
+        maa.SetInstanceOption(DEPLOYMENT_WITH_PAUSE, if (appSettings.deployWithPause.value) "1" else "0")
         return asyncConnect(maa, config)
     }
 

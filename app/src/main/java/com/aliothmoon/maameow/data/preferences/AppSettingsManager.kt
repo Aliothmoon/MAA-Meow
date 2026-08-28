@@ -329,18 +329,17 @@ class AppSettingsManager(
         }
     }
 
-    // 自动战斗干员部署「按住-暂停」(SWIPE_WITH_PAUSE)
-    val deploymentWithPause: StateFlow<Boolean> = settings
-        .map { it.deploymentWithPause.toBooleanStrictOrNull() ?: true }
+    val deployWithPause: StateFlow<Boolean> = settings
+        .map { it.deployWithPause.toBooleanStrictOrNull() ?: false }
         .distinctUntilChanged()
         .stateIn(
             scope, SharingStarted.Eagerly,
-            initialSettings.deploymentWithPause.toBooleanStrictOrNull() ?: true
+            initialSettings.deployWithPause.toBooleanStrictOrNull() ?: false
         )
 
-    suspend fun setDeploymentWithPause(enabled: Boolean) {
+    suspend fun setDeployWithPause(enabled: Boolean) {
         with(AppSettingsSchema) {
-            context.dataStore.edit { it[deploymentWithPause] = enabled.toString() }
+            context.dataStore.edit { it[deployWithPause] = enabled.toString() }
         }
     }
 

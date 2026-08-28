@@ -304,8 +304,7 @@
     <string name="settings_shizuku_launch_app_loading">正在加载应用列表…</string>
     <string name="settings_shizuku_launch_app_search_hint">搜索应用名或包名</string>
     <string name="settings_shizuku_launch_app_empty">未找到匹配应用</string>
-    <string name="settings_deployment_with_pause">暂停时部署干员</string>
-    <string name="settings_deployment_with_pause_tip">部署干员前模拟按住 ESC 暂停游戏，提高部署精确度。如遇 ESC 注入异常或部分干员部署不到位，可关闭改用普通滑动</string>
+    <string name="settings_deploy_with_pause">划火柴模式（自动战斗相关）（不稳定, 暂不推荐开启）</string>
     <string name="settings_force_fullscreen_on_virtual_display">后台模式强制全屏模式</string>
     <string name="settings_force_fullscreen_on_virtual_display_desc">仅后台虚拟屏生效。效果因机型而异，不一定生效，也可能带来额外问题</string>
     <string name="settings_pip_on_home">后台运行时自动画中画</string>
