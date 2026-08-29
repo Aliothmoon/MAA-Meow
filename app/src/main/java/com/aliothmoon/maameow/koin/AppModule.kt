@@ -116,6 +116,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
+import org.koin.android.ext.koin.androidApplication
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.qualifier.named
@@ -277,7 +278,7 @@ val appModule = module {
     single<AppAliveChecker> { RemoteAppAliveChecker() }
     singleOf(::AppWatchdog)
     single<GameFpsReader> { RemoteGameFpsReader() }
-    singleOf(::GameFpsWatcher)
+    single { GameFpsWatcher(reader = get(), sessionLogger = get(), context = androidApplication()) }
     singleOf(::MaaCompositionService)
     single<MaaExecutionStateHolder> { get<MaaCompositionService>() }
     single { GameMuteCoordinator(get(), RemoteGameAudioAdapter) }
