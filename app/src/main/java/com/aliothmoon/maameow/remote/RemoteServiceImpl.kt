@@ -124,6 +124,10 @@ class RemoteServiceImpl : RemoteService.Stub() {
                 }
                 Ln.i("MaaCore ${AsstGetVersion()}")
             }
+            MaaCoreManager.userDir = userDir
+            if (userDir != null) {
+                DebugLogPermissionFixer.makeReadableForApp(File(userDir, "debug"))
+            }
             PermissionGrantHelper.disablePhantomProcessKiller()
             setup = true
             RemoteBootTrace.mark("SETUP_DONE")

@@ -28,6 +28,12 @@ object MaaCoreManager {
     // lazy 化：shutdown 清理触碰本对象不再连带触发加载链
     val maaService: MaaCoreServiceImpl by lazy { MaaCoreServiceImpl(MaaContext) }
 
+    /**
+     * setup() 记录的 userDir，用于 CreateInstance 后修复 debug 日志权限。
+     */
+    @Volatile
+    var userDir: String? = null
+
     fun destroy() {
         // 未加载即跳过，退出路径不做 JNA 加载
         if (!contextLazy.isInitialized()) {

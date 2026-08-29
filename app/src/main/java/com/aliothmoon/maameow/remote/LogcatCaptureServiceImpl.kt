@@ -54,6 +54,8 @@ class LogcatCaptureServiceImpl : ILogcatService.Stub() {
             Ln.i("$TAG: Capturing app PID $appPid -> ${appLog.absolutePath}")
             watchTargets[appPid] = pipeLogcat(appPid, appLog)
         }
+        // 提权进程创建的目录/文件要对 App 进程可读，否则导出日志时 EACCES
+        DebugLogPermissionFixer.makeReadableForApp(debugDir)
     }
 
     private fun pipeLogcat(pid: Int, outFile: File): Process {
@@ -65,6 +67,7 @@ class LogcatCaptureServiceImpl : ILogcatService.Stub() {
             try {
                 process.inputStream.use { input ->
                     FileOutputStream(outFile, true).use { output ->
+                        outFile.setReadable(true, false)
                         input.copyTo(output)
                     }
                 }

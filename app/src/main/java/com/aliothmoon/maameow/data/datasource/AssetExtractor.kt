@@ -15,6 +15,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
+import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
@@ -113,6 +114,9 @@ class AssetExtractor(private val context: Context) {
                                     }
                                     val count = extractedCount.incrementAndGet()
                                     onProgress(ExtractProgress(count, totalFiles, relativePath))
+                                } catch (e: FileNotFoundException) {
+                                    // 清单里有但 APK 中缺失（如被 AAPT2 过滤的 .DS_Store），跳过而非整体失败
+                                    Timber.w("跳过清单中存在但 APK 缺失的资源: $assetPath")
                                 } catch (e: Exception) {
                                     Timber.e(e, "文件复制最终失败: $assetPath")
                                     throw ExtractFailedException(assetPath, 3, e)
