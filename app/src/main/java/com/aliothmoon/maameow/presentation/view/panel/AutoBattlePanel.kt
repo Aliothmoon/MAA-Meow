@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlaylistRemove
 import androidx.compose.material.icons.filled.Public
@@ -81,9 +82,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.model.copilot.CopilotDocumentation
 import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
 import com.aliothmoon.maameow.data.resource.CopilotResourceProvider
 import com.aliothmoon.maameow.domain.service.OperatorDisplayItem
+import com.aliothmoon.maameow.domain.service.OperatorSummaryData
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
@@ -96,6 +99,7 @@ import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
 import com.aliothmoon.maameow.theme.DenseTabTypography
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.utils.Misc
+import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.asString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -413,147 +417,20 @@ fun AutoBattlePanel(
                 }
             }
 
-            // 作业详情 + 视频链接
-            if (state.currentCopilot != null) {
-                val doc = state.currentCopilot!!.doc
-                val hasDetail =
-                    doc.title.isNotBlank() || doc.details.isNotBlank() || state.operatorSummary?.isEmpty == false
-                val hasVideo = state.videoUrl.isNotBlank()
-                if (hasDetail || hasVideo || state.requirementWarnings.isNotEmpty()) {
-                    item {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(6.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(10.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                SelectionContainer {
-                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        if (doc.title.isNotBlank()) {
-                                            Text(
-                                                text = doc.title,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Medium,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                                            )
-                                        }
-                                        if (doc.details.isNotBlank()) {
-                                            Text(
-                                                text = doc.details,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                                            )
-                                        }
-                                    }
-                                }
-                                // 干员需求自动校正提示，跟着作业详情一起展示
-                                if (state.requirementWarnings.isNotEmpty()) {
-                                    HorizontalDivider(
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
-                                            alpha = 0.2f
-                                        )
-                                    )
-                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        state.requirementWarnings.forEach { warning ->
-                                            Text(
-                                                text = warning.asString(),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.error,
-                                            )
-                                        }
-                                    }
-                                }
-
-                                val summary = state.operatorSummary
-                                if (summary != null && !summary.isEmpty) {
-                                    if (doc.title.isNotBlank() || doc.details.isNotBlank()) {
-                                        HorizontalDivider(
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
-                                                alpha = 0.2f
-                                            )
-                                        )
-                                    }
-                                    val textMeasurer = rememberTextMeasurer()
-                                    val labelStyle = MaterialTheme.typography.labelSmall
-                                    val density = LocalDensity.current
-                                    val nameColumnWidth = remember(summary) {
-                                        val allNames = summary.operators.map { it.name } +
-                                                summary.groups.flatMap { (_, opers) -> opers.map { it.name } }
-                                        val maxTextWidth = allNames.maxOfOrNull { name ->
-                                            textMeasurer.measure(name, labelStyle).size.width
-                                        } ?: 0
-                                        maxTextWidth + with(density) { 8.dp.roundToPx() }
-                                    }
-                                    val nameWidth = remember(nameColumnWidth) {
-                                        with(density) { nameColumnWidth.toDp() }
-                                    }
-                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        // 独立干员
-                                        if (summary.operators.isNotEmpty()) {
-                                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                Text(
-                                                    text = stringResource(R.string.panel_autobattle_operator_header),
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                                )
-                                                summary.operators.forEach { oper ->
-                                                    OperatorRow(oper, nameWidth = nameWidth)
-                                                }
-                                            }
-                                        }
-                                        // 备选组
-                                        summary.groups.forEach { (groupName, opers) ->
-                                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                Text(
-                                                    text = stringResource(
-                                                        R.string.panel_autobattle_group_header,
-                                                        groupName
-                                                    ),
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                                )
-                                                opers.forEach { oper ->
-                                                    OperatorRow(oper, nameWidth = nameWidth)
-                                                }
-                                            }
-                                        }
-                                        // 统计
-                                        Text(
-                                            text = stringResource(
-                                                R.string.panel_autobattle_summary_count,
-                                                summary.totalCount
-                                            ),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
-                                                alpha = 0.6f
-                                            )
-                                        )
-                                    }
-                                }
-                                if (hasVideo) {
-                                    Text(
-                                        text = stringResource(R.string.common_video),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.Medium,
-                                        modifier = Modifier.clickable {
-                                            Misc.openUriSafely(
-                                                context,
-                                                state.videoUrl
-                                            )
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
+            // 作业详情卡片
+            val currentCopilot = state.currentCopilot
+            if (currentCopilot != null) {
+                item(key = "copilot_detail") {
+                    CopilotDetailCard(
+                        stageLabel = state.copilotTaskName,
+                        doc = currentCopilot.doc,
+                        copilotId = state.copilotId,
+                        fromWeb = state.isDataFromWeb,
+                        videoUrl = state.videoUrl,
+                        warnings = state.requirementWarnings,
+                        summary = state.operatorSummary,
+                        onOpenVideo = { Misc.openUriSafely(context, state.videoUrl) },
+                    )
                 }
             }
 
@@ -944,6 +821,205 @@ private fun ReorderableCollectionItemScope.BattleListRow(
     }
 }
 
+/** 当前作业详情：头部（关卡 / 标题 / 视频）→ 描述（可折叠）→ 校正提示 → 干员需求 */
+@Composable
+private fun CopilotDetailCard(
+    stageLabel: String,
+    doc: CopilotDocumentation,
+    copilotId: Int,
+    fromWeb: Boolean,
+    videoUrl: String,
+    warnings: List<UiText>,
+    summary: OperatorSummaryData?,
+    onOpenVideo: () -> Unit,
+) {
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // 头部
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                if (stageLabel.isNotBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(
+                            text = stageLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
+                }
+                SelectionContainer(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = doc.title.ifBlank { stageLabel },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (videoUrl.isNotBlank()) {
+                    Surface(
+                        onClick = onOpenVideo,
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(start = 4.dp, end = 6.dp, top = 2.dp, bottom = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.common_video),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                    }
+                }
+            }
+            Text(
+                text = if (fromWeb && copilotId > 0) {
+                    stringResource(R.string.panel_autobattle_source_web, copilotId)
+                } else {
+                    stringResource(R.string.panel_autobattle_source_local)
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            // 描述：默认折叠，溢出才给展开入口
+            if (doc.details.isNotBlank()) {
+                HorizontalDivider(color = dividerColor)
+                var expanded by remember(doc.details) { mutableStateOf(false) }
+                var overflowed by remember(doc.details) { mutableStateOf(false) }
+                SelectionContainer {
+                    Text(
+                        text = doc.details,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = if (expanded) Int.MAX_VALUE else DETAIL_COLLAPSED_LINES,
+                        overflow = TextOverflow.Ellipsis,
+                        onTextLayout = { if (!expanded) overflowed = it.hasVisualOverflow }
+                    )
+                }
+                if (overflowed || expanded) {
+                    Text(
+                        text = stringResource(if (expanded) R.string.common_collapse else R.string.common_expand),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable { expanded = !expanded }
+                    )
+                }
+            }
+
+            // 干员需求自动校正提示
+            if (warnings.isNotEmpty()) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        warnings.forEach { warning ->
+                            Text(
+                                text = warning.asString(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 干员需求
+            if (summary != null && !summary.isEmpty) {
+                HorizontalDivider(color = dividerColor)
+                val textMeasurer = rememberTextMeasurer()
+                val labelStyle = MaterialTheme.typography.labelSmall
+                val density = LocalDensity.current
+                val nameWidth = remember(summary) {
+                    val allNames = summary.operators.map { it.name } +
+                            summary.groups.flatMap { (_, opers) -> opers.map { it.name } }
+                    val maxTextWidth = allNames.maxOfOrNull { name ->
+                        textMeasurer.measure(name, labelStyle).size.width
+                    } ?: 0
+                    with(density) { (maxTextWidth + 8.dp.roundToPx()).toDp() }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.panel_autobattle_operator_header),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.panel_autobattle_summary_count,
+                                summary.totalCount
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    summary.operators.forEach { oper ->
+                        OperatorRow(oper, nameWidth = nameWidth)
+                    }
+                    summary.groups.forEach { (groupName, opers) ->
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = stringResource(
+                                    R.string.panel_autobattle_group_header,
+                                    groupName
+                                ),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            opers.forEach { oper ->
+                                OperatorRow(oper, nameWidth = nameWidth)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private const val DETAIL_COLLAPSED_LINES = 3
+
 @Composable
 private fun OperatorRow(
     item: OperatorDisplayItem,
@@ -978,7 +1054,7 @@ private fun OperatorRow(
             item.tags.forEach { tag ->
                 Surface(
                     shape = RoundedCornerShape(4.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant
+                    color = MaterialTheme.colorScheme.surface
                 ) {
                     Text(
                         text = tag,

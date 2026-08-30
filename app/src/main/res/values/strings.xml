@@ -771,6 +771,8 @@
     <string name="panel_autobattle_loading">读取中…</string>
     <string name="panel_autobattle_read_single">读取作业</string>
     <string name="panel_autobattle_operator_header">干员</string>
+    <string name="panel_autobattle_source_web">作业站 #%1$d</string>
+    <string name="panel_autobattle_source_local">本地作业</string>
     <string name="panel_autobattle_group_header">干员组: %1$s</string>
     <string name="panel_autobattle_summary_count">共 %1$d 名干员/组</string>
     <string name="panel_autobattle_auto_formation">自动编队</string>

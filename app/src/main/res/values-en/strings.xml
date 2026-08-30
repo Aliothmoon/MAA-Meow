@@ -717,6 +717,8 @@
     <string name="panel_autobattle_loading">Loading…</string>
     <string name="panel_autobattle_read_single">Load Copilot</string>
     <string name="panel_autobattle_operator_header">Operators</string>
+    <string name="panel_autobattle_source_web">PRTS Plus #%1$d</string>
+    <string name="panel_autobattle_source_local">Local homework</string>
     <string name="panel_autobattle_group_header">Group: %1$s</string>
     <string name="panel_autobattle_summary_count">Total %1$d operators / groups</string>
     <string name="panel_autobattle_auto_formation">Auto Squad</string>
