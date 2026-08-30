@@ -2,6 +2,7 @@
 
 位置：小工具 → 牛杂 → AT-相谈室
 
+
 ## 奇象巡展-牛牛画画
 
 在牛杂里选图，自动转换成 24×24 官方 40 色像素画并自动点格上色
@@ -33,8 +34,7 @@
 ---
 
 ## 运行说明
-
-请不要使用在使用过程中使用 **护眼模式** 或者 **智能分辨率**，避免影响正常运行识别
+请不要在MAAMeow运行过程中使用 **护眼模式** 或者 **智能分辨率**，避免影响正常运行识别
 
 自动战斗应该在游戏内开启高帧率模式，优先开启高画质模式避免出现识别错误
 
@@ -52,8 +52,7 @@
 
 请优先通过以下 **官方渠道** 获取 MaaMeow：
 
-- **GitHub Release
-  **：[github.com/Aliothmoon/MAA-Meow](https://github.com/Aliothmoon/MAA-Meow/releases)
+- **GitHub Release**：[github.com/Aliothmoon/MAA-Meow](https://github.com/Aliothmoon/MAA-Meow/releases)
 
 - **QQ 官方群**：群内公告/文件（可通过「设置 → 关于 → 问题反馈 QQ 群」加群）
 
