@@ -39,6 +39,8 @@ fun LogExportController(
 
     val chooserTitle = stringResource(R.string.settings_log_export_chooser_title)
     val inProgressText = stringResource(R.string.log_export_in_progress)
+    val failedText = stringResource(R.string.log_export_failed)
+    val saveSuccessTemplate = stringResource(R.string.log_export_save_success)
 
     LaunchedEffect(toastMessage) {
         toastMessage?.let { msg ->
@@ -58,9 +60,9 @@ fun LogExportController(
             val name = logExportService.exportToUri(uri)
             isExporting = false
             toastMessage = if (name != null) {
-                context.getString(R.string.log_export_save_success, name)
+                saveSuccessTemplate.format(name)
             } else {
-                context.getString(R.string.log_export_failed)
+                failedText
             }
         }
     }
@@ -86,7 +88,7 @@ fun LogExportController(
                 if (intent != null) {
                     context.startActivity(Intent.createChooser(intent, chooserTitle))
                 } else {
-                    toastMessage = context.getString(R.string.log_export_failed)
+                    toastMessage = failedText
                 }
             }
         },

@@ -1,8 +1,5 @@
 package com.aliothmoon.maameow.presentation.view.panel.depot
 
-import com.aliothmoon.maameow.theme.LocalReduceMotion
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
-import com.aliothmoon.maameow.theme.MaaMotion
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -16,7 +13,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -83,6 +79,9 @@ import com.aliothmoon.maameow.presentation.view.panel.common.ItemButtonGroup
 import com.aliothmoon.maameow.presentation.view.panel.common.StageInputField
 import com.aliothmoon.maameow.presentation.view.panel.common.StageRow
 import com.aliothmoon.maameow.presentation.view.panel.common.stageDisplayName
+import com.aliothmoon.maameow.theme.LocalReduceMotion
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaMotion
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -270,7 +269,8 @@ private fun PlanSummary(
 
             plans.forEachIndexed { index, plan ->
                 val outcome = outcomes[index]
-                val muted = outcome != DepotPlanOutcome.Runnable && outcome != DepotPlanOutcome.Enough
+                val muted =
+                    outcome != DepotPlanOutcome.Runnable && outcome != DepotPlanOutcome.Enough
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -369,131 +369,133 @@ private fun ColumnScope.GeneralTab(
         label = "presetArrow",
     )
 
-        if (config.plans.isNotEmpty()) {
-            PlanSummary(
-                plans = config.plans,
-                outcomes = planOutcomes,
-                stageGroups = stageGroups,
-                itemNameMap = itemNameMap,
-                inventory = inventory,
-                inventorySynced = inventorySynced,
-            )
-        }
-        // 三个即时操作横排；预设是展开器，独占一行贴着下面展开的面板
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+    if (config.plans.isNotEmpty()) {
+        PlanSummary(
+            plans = config.plans,
+            outcomes = planOutcomes,
+            stageGroups = stageGroups,
+            itemNameMap = itemNameMap,
+            inventory = inventory,
+            inventorySynced = inventorySynced,
+        )
+    }
+    // 三个即时操作横排；预设是展开器，独占一行贴着下面展开的面板
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Button(
+            onClick = {
+                onConfigChange(config.copy(plans = config.plans + DepotMaintainPlan()))
+            },
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            shape = RoundedCornerShape(8.dp),
         ) {
-            Button(
-                onClick = {
-                    onConfigChange(config.copy(plans = config.plans + DepotMaintainPlan()))
-                },
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(horizontal = 8.dp),
-                shape = RoundedCornerShape(8.dp),
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(stringResource(R.string.panel_depot_add_plan))
-            }
-            OutlinedButton(
-                onClick = { expandedIndices.clear() },
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(horizontal = 8.dp),
-                shape = RoundedCornerShape(8.dp),
-            ) {
-                Icon(
-                    Icons.Default.UnfoldLess,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(stringResource(R.string.panel_depot_collapse_all))
-            }
-            OutlinedButton(
-                onClick = {
+            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(stringResource(R.string.panel_depot_add_plan))
+        }
+        OutlinedButton(
+            onClick = { expandedIndices.clear() },
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            Icon(
+                Icons.Default.UnfoldLess,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(stringResource(R.string.panel_depot_collapse_all))
+        }
+        OutlinedButton(
+            onClick = {
                 onShowClearConfirmChange(true)
                 onPresetPanelExpandedChange(false)
             },
-                modifier = Modifier.weight(1f),
-                enabled = config.plans.isNotEmpty(),
-                contentPadding = PaddingValues(horizontal = 8.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                ),
-            ) {
-                Icon(
-                    Icons.Default.DeleteSweep,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(stringResource(R.string.panel_depot_clear_plans))
-            }
-        }
-        PresetPicker(
-            expanded = presetPanelExpanded,
-            onExpandedChange = {
-                onPresetPanelExpandedChange(it)
-                if (it) onShowClearConfirmChange(false)
-            },
-            selected = selectedPreset,
-            onSelectedChange = onSelectedPresetChange,
-            onApply = { preset ->
-                onConfigChange(config.copy(plans = appendDepotMaintainPreset(config.plans, preset)))
-            },
-        )
-        InlineConfirmPanel(
-            visible = showClearConfirm && config.plans.isNotEmpty(),
-            message = stringResource(
-                R.string.panel_depot_clear_plans_confirm,
-                config.plans.size,
+            modifier = Modifier.weight(1f),
+            enabled = config.plans.isNotEmpty(),
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.error
             ),
-            onConfirm = {
-                expandedIndices.clear()
-                onConfigChange(config.copy(plans = emptyList()))
-                onShowClearConfirmChange(false)
-            },
-            onDismiss = { onShowClearConfirmChange(false) },
-        )
-        config.plans.forEachIndexed { index, plan ->
-            PlanCard(
-                plan = plan,
-                expanded = index in expandedIndices,
-                onToggleExpand = {
-                    if (index in expandedIndices) expandedIndices.remove(index)
-                    else expandedIndices.add(index)
-                },
-                customStageCode = config.customStageCode,
-                showMedicine = config.useMedicine,
-                showStone = config.useStone,
-                stageGroups = stageGroups,
-                stageCodes = stageCodes,
-                itemIds = itemIds,
-                itemNameMap = itemNameMap,
-                onPlanChange = { updated ->
-                    onConfigChange(
-                        config.copy(
-                        plans = config.plans.toMutableList().also { it[index] = updated }))
-                },
-                onRemove = {
-                    // 删除 index 后：>index 的展开下标整体 -1，==index 移除
-                    val remapped = expandedIndices.mapNotNull { i ->
-                            when {
-                                i < index -> i
-                                i == index -> null
-                                else -> i - 1
-                            }
-                        }.distinct()
-                    expandedIndices.clear()
-                    expandedIndices.addAll(remapped)
-                    onConfigChange(
-                        config.copy(
-                        plans = config.plans.toMutableList().also { it.removeAt(index) }))
-                },
+        ) {
+            Icon(
+                Icons.Default.DeleteSweep,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
             )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(stringResource(R.string.panel_depot_clear_plans))
         }
+    }
+    PresetPicker(
+        expanded = presetPanelExpanded,
+        onExpandedChange = {
+            onPresetPanelExpandedChange(it)
+            if (it) onShowClearConfirmChange(false)
+        },
+        selected = selectedPreset,
+        onSelectedChange = onSelectedPresetChange,
+        onApply = { preset ->
+            onConfigChange(config.copy(plans = appendDepotMaintainPreset(config.plans, preset)))
+        },
+    )
+    InlineConfirmPanel(
+        visible = showClearConfirm && config.plans.isNotEmpty(),
+        message = stringResource(
+            R.string.panel_depot_clear_plans_confirm,
+            config.plans.size,
+        ),
+        onConfirm = {
+            expandedIndices.clear()
+            onConfigChange(config.copy(plans = emptyList()))
+            onShowClearConfirmChange(false)
+        },
+        onDismiss = { onShowClearConfirmChange(false) },
+    )
+    config.plans.forEachIndexed { index, plan ->
+        PlanCard(
+            plan = plan,
+            expanded = index in expandedIndices,
+            onToggleExpand = {
+                if (index in expandedIndices) expandedIndices.remove(index)
+                else expandedIndices.add(index)
+            },
+            customStageCode = config.customStageCode,
+            showMedicine = config.useMedicine,
+            showStone = config.useStone,
+            stageGroups = stageGroups,
+            stageCodes = stageCodes,
+            itemIds = itemIds,
+            itemNameMap = itemNameMap,
+            onPlanChange = { updated ->
+                onConfigChange(
+                    config.copy(
+                        plans = config.plans.toMutableList().also { it[index] = updated })
+                )
+            },
+            onRemove = {
+                // 删除 index 后：>index 的展开下标整体 -1，==index 移除
+                val remapped = expandedIndices.mapNotNull { i ->
+                    when {
+                        i < index -> i
+                        i == index -> null
+                        else -> i - 1
+                    }
+                }.distinct()
+                expandedIndices.clear()
+                expandedIndices.addAll(remapped)
+                onConfigChange(
+                    config.copy(
+                        plans = config.plans.toMutableList().also { it.removeAt(index) })
+                )
+            },
+        )
+    }
 }
 
 /** 预设选择器：点开后就地展开单选组，选中再确认才追加计划 */
@@ -511,83 +513,83 @@ private fun ColumnScope.PresetPicker(
         label = "presetArrow",
     )
 
-        OutlinedButton(
-            onClick = {
-                onExpandedChange(!expanded)
-                if (expanded) onSelectedChange(null)
-            },
+    OutlinedButton(
+        onClick = {
+            onExpandedChange(!expanded)
+            if (expanded) onSelectedChange(null)
+        },
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+    ) {
+        Text(stringResource(R.string.panel_depot_preset))
+        Spacer(modifier = Modifier.width(6.dp))
+        Icon(
+            Icons.Default.KeyboardArrowDown,
+            contentDescription = null,
+            modifier = Modifier
+                .size(18.dp)
+                .rotate(arrowRotation),
+        )
+    }
+    MaaAnimatedVisibility(
+        visible = expanded,
+        enter = expandVertically(),
+        exit = shrinkVertically(),
+    ) {
+        Surface(
             modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surfaceVariant,
             shape = RoundedCornerShape(8.dp),
         ) {
-            Text(stringResource(R.string.panel_depot_preset))
-            Spacer(modifier = Modifier.width(6.dp))
-            Icon(
-                Icons.Default.KeyboardArrowDown,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(18.dp)
-                    .rotate(arrowRotation),
-            )
-        }
-        MaaAnimatedVisibility(
-            visible = expanded,
-            enter = expandVertically(),
-            exit = shrinkVertically(),
-        ) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(8.dp),
-            ) {
-                Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                    DepotMaintainPreset.entries.forEach { preset ->
-                        val selected = selected == preset
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = selected,
-                                    role = Role.RadioButton,
-                                ) { onSelectedChange(preset) }
-                                .padding(horizontal = 8.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(selected = selected, onClick = null)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = stringResource(preset.labelRes),
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.weight(1f),
-                            )
-                            // 提前告知会加几条，芯片预设一次进 8 条
-                            Text(
-                                text = stringResource(
-                                    R.string.panel_depot_preset_plan_count,
-                                    preset.plans.size,
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                DepotMaintainPreset.entries.forEach { preset ->
+                    val selected = selected == preset
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = selected,
+                                role = Role.RadioButton,
+                            ) { onSelectedChange(preset) }
+                            .padding(horizontal = 8.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = selected, onClick = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = stringResource(preset.labelRes),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        // 提前告知会加几条，芯片预设一次进 8 条
+                        Text(
+                            text = stringResource(
+                                R.string.panel_depot_preset_plan_count,
+                                preset.plans.size,
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
-                    InlineActionRow(
-                        confirmText = stringResource(R.string.panel_depot_preset_apply),
-                        dismissText = stringResource(R.string.common_cancel),
-                        confirmEnabled = selected != null,
-                        onConfirm = {
-                            selected?.let(onApply)
-                            onExpandedChange(false)
-                            onSelectedChange(null)
-                        },
-                        onDismiss = {
-                            onExpandedChange(false)
-                            onSelectedChange(null)
-                        },
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    )
                 }
+                InlineActionRow(
+                    confirmText = stringResource(R.string.panel_depot_preset_apply),
+                    dismissText = stringResource(R.string.common_cancel),
+                    confirmEnabled = selected != null,
+                    onConfirm = {
+                        selected?.let(onApply)
+                        onExpandedChange(false)
+                        onSelectedChange(null)
+                    },
+                    onDismiss = {
+                        onExpandedChange(false)
+                        onSelectedChange(null)
+                    },
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                )
             }
         }
+    }
 }
 
 /** 高级设置页：对齐上游 DepotMaintainTaskUserControl 的三个分组 */
