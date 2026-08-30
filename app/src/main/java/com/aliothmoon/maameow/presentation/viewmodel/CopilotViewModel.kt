@@ -46,10 +46,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
-private const val TAB_MAIN = 0
-private const val TAB_SSS = 1
-private const val TAB_PARADOX = 2
-private const val TAB_OTHER_ACTIVITY = 3
+private const val TAB_MAIN = CopilotTabs.MAIN
+private const val TAB_SSS = CopilotTabs.SSS
+private const val TAB_PARADOX = CopilotTabs.PARADOX
+private const val TAB_OTHER_ACTIVITY = CopilotTabs.OTHER_ACTIVITY
 private val DIRECT_STAGE_NAME_REGEX = Regex("""^[0-9a-z-]+$""")
 private val STAGE_NAME_REGEX =
     Regex(
@@ -100,7 +100,6 @@ data class CopilotUiState(
     val currentFilePath: String = "",
     val copilotTaskName: String = "",
     val config: CopilotConfig = CopilotConfig(),
-    val useCopilotList: Boolean = false,
     val taskList: List<CopilotListItem> = emptyList(),
     val hasRequirementIgnored: Boolean = false,
     val isLoading: Boolean = false,
@@ -113,7 +112,14 @@ data class CopilotUiState(
     val builtinLoaded: Boolean = false,
     val builtinTree: List<CopilotResourceProvider.Node> = emptyList(),
     val builtinExpandedFolders: Set<String> = emptySet(),
-)
+) {
+    /** 用户偏好，随 config 落盘；是否真正生效看 listModeActive */
+    val useCopilotList: Boolean get() = config.useCopilotList
+
+    /** 列表模式是否生效：偏好开启且当前页签支持。切到不支持的页签不改写偏好，切回即恢复 */
+    val listModeActive: Boolean
+        get() = useCopilotList && CopilotTabs.supportsBattleList(tabIndex)
+}
 
 class CopilotViewModel(
     private val appContext: Context,
@@ -141,6 +147,9 @@ class CopilotViewModel(
     val maaState: StateFlow<MaaExecutionState> = compositionService.state
 
     private var pendingStartContext: TaskStartContext? = null
+
+    /** 列表被忽略的提醒已确认，确认后重入 onStart 时跳过该检查 */
+    private var listGuardAcknowledged = false
     private val pendingCopilotIds = mutableListOf<Int>()
     private val recentlyRatedCopilotIds = mutableSetOf<Int>()
     private val ratingInFlightCopilotIds = mutableSetOf<Int>()
@@ -261,7 +270,7 @@ class CopilotViewModel(
                 lastFilePath = filePath
                 lastJson = fixed.json
 
-                if (files.size > 1 || _state.value.useCopilotList) {
+                if (files.size > 1 || _state.value.listModeActive) {
                     autoAddLoadedCopilotToListIfNeeded(
                         data = fixed.data,
                         filePath = filePath,
@@ -281,7 +290,7 @@ class CopilotViewModel(
                 return@launch
             }
 
-            if (files.size == 1 && !_state.value.useCopilotList) {
+            if (files.size == 1 && !_state.value.listModeActive) {
                 applyLoadedCopilot(
                     data = lastData!!,
                     json = lastJson,
@@ -506,14 +515,17 @@ class CopilotViewModel(
                 } else {
                     text(R.string.copilot_status_imported_set, newItems.size, ids.size)
                 }
-                val previousTabIndex = _state.value.tabIndex
                 _state.update { current ->
                     val base = applyTabConstraints(current, workingTabIndex)
                     val listModeEnabled = supportsBattleList(workingTabIndex)
                     base.copy(
                         taskList = base.taskList + newItems,
-                        useCopilotList = listModeEnabled,
-                        config = if (listModeEnabled) base.config.copy(formation = true) else base.config,
+                        // 落到支持列表的页签就开启列表模式；不支持时保留用户偏好，不再清掉
+                        config = if (listModeEnabled) {
+                            base.config.copy(useCopilotList = true, formation = true)
+                        } else {
+                            base.config
+                        },
                         isLoading = false,
                         statusMessage = buildSetStatusMessage(
                             setName = setInfo.name,
@@ -522,9 +534,7 @@ class CopilotViewModel(
                         )
                     )
                 }
-                if (previousTabIndex != workingTabIndex) {
-                    persistConfig()
-                }
+                persistConfig()
                 persistTaskList()
             },
             onFailure = { e ->
@@ -675,8 +685,7 @@ class CopilotViewModel(
         source: String
     ) {
         val snapshot = _state.value
-        val tabIndex = snapshot.tabIndex
-        if (!snapshot.useCopilotList || !supportsBattleList(tabIndex)) {
+        if (!snapshot.listModeActive) {
             return
         }
 
@@ -773,7 +782,6 @@ class CopilotViewModel(
     }
 
     private fun applyTabConstraints(state: CopilotUiState, tabIndex: Int): CopilotUiState {
-        val listAllowed = supportsBattleList(tabIndex)
         val regularCopilotOptionsAllowed = supportsRegularCopilotOptions(tabIndex)
         val newConfig = if (regularCopilotOptionsAllowed) {
             state.config
@@ -790,7 +798,6 @@ class CopilotViewModel(
         }
         return state.copy(
             tabIndex = tabIndex,
-            useCopilotList = if (listAllowed) state.useCopilotList else false,
             config = newConfig
         )
     }
@@ -919,8 +926,10 @@ class CopilotViewModel(
         }
         _state.update {
             it.copy(
-                useCopilotList = enabled,
-                config = if (enabled) it.config.copy(formation = true) else it.config
+                config = it.config.copy(
+                    useCopilotList = enabled,
+                    formation = enabled || it.config.formation
+                )
             )
         }
         persistConfig()
@@ -1010,14 +1019,18 @@ class CopilotViewModel(
                             currentJsonContent = json,
                             currentFilePath = item.filePath,
                             copilotTaskName = item.name.ifBlank { inferLoadedCopilotName(data) },
-                            useCopilotList = if (disableListMode) false else base.useCopilotList,
+                            config = if (disableListMode) {
+                                base.config.copy(useCopilotList = false)
+                            } else {
+                                base.config
+                            },
                             statusMessage = text(
                                 R.string.copilot_status_selected_list_item,
                                 item.name
                             )
                         )
                     }
-                    if (previousTabIndex != targetTabIndex) {
+                    if (previousTabIndex != targetTabIndex || disableListMode) {
                         persistConfig()
                     }
                 },
@@ -1094,6 +1107,12 @@ class CopilotViewModel(
 
     fun onDialogDismiss() {
         _dialog.value = null
+        clearPendingStart()
+    }
+
+    private fun clearPendingStart() {
+        pendingStartContext = null
+        listGuardAcknowledged = false
     }
 
     fun onStart() = onStart(TaskStartContext(TaskStartMode.MANUAL))
@@ -1102,6 +1121,19 @@ class CopilotViewModel(
         viewModelScope.launch {
             val snapshot = _state.value
             if (!validateStart(snapshot)) return@launch
+
+            // 反馈场景：列表模式被关掉（或从未开启）但列表里还有勾选项，用户以为会接着列表打
+            if (!listGuardAcknowledged && shouldWarnListIgnored(snapshot)) {
+                listGuardAcknowledged = true
+                pendingStartContext = context
+                _dialog.value = appContext.createStartWarningDialog(
+                    text(
+                        R.string.copilot_list_ignored_warning,
+                        snapshot.taskList.count { it.isChecked }
+                    )
+                )
+                return@launch
+            }
 
             when (val readiness = checkGameReadiness(
                 clientType = chainState.clientType,
@@ -1117,18 +1149,18 @@ class CopilotViewModel(
                 }
 
                 is GameReadiness.Blocked -> {
-                    pendingStartContext = null
+                    clearPendingStart()
                     _dialog.value = appContext.createStartBlockedDialog(
                         appContext.resolveTaskStartBlockedMessage(readiness.reason)
                     )
                     return@launch
                 }
 
-                is GameReadiness.Ready -> pendingStartContext = null
+                is GameReadiness.Ready -> clearPendingStart()
             }
 
             val config = buildEffectiveConfig(snapshot)
-            val tasks = if (snapshot.useCopilotList) {
+            val tasks = if (snapshot.listModeActive) {
                 val checked = snapshot.taskList.filter { it.isChecked }
                 pendingCopilotIds.clear()
                 pendingCopilotIds.addAll(checked.map { it.copilotId }.filter { it > 0 })
@@ -1163,8 +1195,14 @@ class CopilotViewModel(
         launchRateCopilot(id = id, isLike = isLike, updateStatusMessage = true)
     }
 
+    private fun shouldWarnListIgnored(snapshot: CopilotUiState): Boolean {
+        return !snapshot.listModeActive &&
+                CopilotTabs.supportsBattleList(snapshot.tabIndex) &&
+                snapshot.taskList.any { it.isChecked }
+    }
+
     private suspend fun validateStart(snapshot: CopilotUiState): Boolean {
-        if (snapshot.useCopilotList) {
+        if (snapshot.listModeActive) {
             return validateTaskListStrict(snapshot.taskList)
         }
 
@@ -1214,7 +1252,11 @@ class CopilotViewModel(
         }
 
         if (types.size > 1) {
-            _state.update { it.copy(statusMessage = text(R.string.copilot_mixed_list)) }
+            val typeNames = uiTextJoin(
+                *types.map { currentTabDisplayName(it.tabIndex) }.toTypedArray(),
+                separator = uiTextDynamic(", ")
+            )
+            _state.update { it.copy(statusMessage = text(R.string.copilot_mixed_list, typeNames)) }
             return false
         }
 
@@ -1287,17 +1329,14 @@ class CopilotViewModel(
         return true
     }
 
-    private fun supportsBattleList(tabIndex: Int): Boolean {
-        return tabIndex == TAB_MAIN || tabIndex == TAB_PARADOX || tabIndex == TAB_SSS
-    }
+    private fun supportsBattleList(tabIndex: Int): Boolean =
+        CopilotTabs.supportsBattleList(tabIndex)
 
-    private fun supportsRegularCopilotOptions(tabIndex: Int): Boolean {
-        return tabIndex == TAB_MAIN || tabIndex == TAB_OTHER_ACTIVITY
-    }
+    private fun supportsRegularCopilotOptions(tabIndex: Int): Boolean =
+        CopilotTabs.supportsRegularCopilotOptions(tabIndex)
 
-    private fun supportsLoopCount(tabIndex: Int): Boolean {
-        return tabIndex == TAB_SSS || tabIndex == TAB_OTHER_ACTIVITY
-    }
+    private fun supportsLoopCount(tabIndex: Int): Boolean =
+        CopilotTabs.supportsLoopCount(tabIndex)
 
 
     private fun resolveSingleTaskType(snapshot: CopilotUiState): MaaTaskType {
@@ -1327,7 +1366,7 @@ class CopilotViewModel(
         if (!supportsLoopCount(snapshot.tabIndex)) {
             config = config.copy(loop = false, loopTimes = 1)
         }
-        if (!(snapshot.useCopilotList && snapshot.tabIndex == TAB_MAIN)) {
+        if (!(snapshot.listModeActive && snapshot.tabIndex == TAB_MAIN)) {
             config = config.copy(useSanityPotion = false)
         }
         return config
@@ -1339,7 +1378,7 @@ class CopilotViewModel(
         }
 
         val current = _state.value
-        if (!current.useCopilotList) return
+        if (!current.listModeActive) return
 
         // 上游 #16985: 优先用 core 回传的当前作业下标(跳过失败后下标可能不是第一个勾选项);
         // 回传缺失(-1)或越界/已取消时回退旧行为(第一个勾选项)。

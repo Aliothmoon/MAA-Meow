@@ -550,7 +550,8 @@
     <string name="copilot_empty_load_first">作业为空，请先读取作业</string>
     <string name="copilot_type_mismatch">当前选择的作业与页签不匹配</string>
     <string name="copilot_empty_list">正在使用 ｢战斗列表｣, 但未添加任何作业</string>
-    <string name="copilot_mixed_list">正在使用 ｢战斗列表｣，不支持混用不同类型作业</string>
+    <string name="copilot_mixed_list">正在使用 ｢战斗列表｣，不支持混用不同类型作业：%1$s</string>
+    <string name="copilot_list_ignored_warning">战斗列表中有 %1$d 项已勾选，但未启用 ｢战斗列表｣，本次将仅执行当前作业</string>
     <string name="copilot_task_name_empty">存在关卡名为空的作业</string>
     <string name="copilot_single_list_warning">正在使用 ｢战斗列表｣ 执行单个作业, 不推荐此行为。 单个作业请直接运行</string>
     <string name="copilot_unsupported_stage">不支持的关卡 %1$s，如果是新活动的关卡，请等待地图资源更新后再使用自动战斗</string>
@@ -789,6 +790,7 @@
     <string name="panel_autobattle_sequence_tip">标签顺序可拖动</string>
     <string name="panel_autobattle_drag_handle">拖动排序</string>
     <string name="panel_autobattle_empty_entries">暂无条目</string>
+    <string name="panel_autobattle_battle_list_inactive_hint">未启用，仅执行当前作业</string>
     <string name="panel_autobattle_raid_suffix"> (突袭)</string>
     <string name="panel_autobattle_tips_title">小提示</string>
     <string name="panel_autobattle_tips_body">1. 使用前请确认作业与所选的关卡类型一致。\n2. 主线、故事集、SideStory: 请在关卡界面的右下角存在 ｢开始行动｣ 按钮界面启动。\n3. 保全派驻: resource/copilot 文件夹内置多份作业。请先手动编队，在右下角存在 ｢开始部署｣ 按钮界面启动，可配合 ｢循环次数｣。\n4. 悖论模拟: 选好技能后，在技能选择界面存在 ｢开始模拟｣ 按钮界面启动，½ 星干员（无技能）在右下角存在 ｢开始模拟｣ 按钮界面开始。若使用 ｢战斗列表｣，请从干员列表 ｢等级/稀有度｣ 筛选下启动。\n5. 其他活动: 仅支持单作业与常规 Copilot 配置，请在目标活动关卡界面直接启动，不支持作业集和战斗列表。\n6. 使用好友助战时，请关闭 ｢自动编队｣ 和 ｢战斗列表｣，手动选择干员后，在编队界面右下角存在 ｢开始行动｣ 按钮界面启动。\n7. 干员若被标记为 ｢特别关注｣，可能影响 ｢自动编队｣ 的识别与选择。建议使用 ｢自动编队｣ 时移除关注，或在报错后关闭 ｢自动编队｣，根据提示手动补充缺失的干员。\n8. Copilot 作业站的神秘代码可在输入框输入后读取：\n• 点击「读取作业」= 读取单作业。\n• 点击「读取作业集」= 导入作业集（仅主线/故事集/SideStory、悖论模拟）。\n9. 战斗列表:\n• 选择作业后，检查下方关卡名是否正确 (例: CV-EX-1)。\n• 可通过「添加普通/添加突袭」按钮添加任务（突袭仅主线）。\n• 可通过「清空列表/清除未勾选」按钮快速整理任务。\n• 请在能看到目标关卡名的界面启动，不支持跨章节导航。\n• 遇到理智不足、战斗失败、未能三星结算时将自动中止。</string>

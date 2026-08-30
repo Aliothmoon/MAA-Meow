@@ -91,6 +91,7 @@ import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
+import com.aliothmoon.maameow.presentation.viewmodel.CopilotTabs
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
 import com.aliothmoon.maameow.theme.DenseTabTypography
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
@@ -108,8 +109,6 @@ private data class CopilotTabUiSpec(
     val index: Int,
     @param:StringRes val titleRes: Int,
     @param:StringRes val subtitleRes: Int? = null,
-    val supportsBattleList: Boolean,
-    val supportsRegularOptions: Boolean,
 )
 
 @Composable
@@ -159,35 +158,26 @@ fun AutoBattlePanel(
     val tabSubtitleTextStyle = DenseTabTypography.Subtitle
     val tabSpecs = listOf(
         CopilotTabUiSpec(
-            index = 0,
+            index = CopilotTabs.MAIN,
             titleRes = R.string.panel_autobattle_tab_mainline,
             subtitleRes = R.string.panel_autobattle_tab_mainline_subtitle,
-            supportsBattleList = true,
-            supportsRegularOptions = true,
         ),
         CopilotTabUiSpec(
-            index = 1,
+            index = CopilotTabs.SSS,
             titleRes = R.string.panel_autobattle_tab_security,
-            supportsBattleList = false,
-            supportsRegularOptions = false,
         ),
         CopilotTabUiSpec(
-            index = 2,
+            index = CopilotTabs.PARADOX,
             titleRes = R.string.panel_autobattle_tab_paradox,
-            supportsBattleList = true,
-            supportsRegularOptions = false,
         ),
         CopilotTabUiSpec(
-            index = 3,
+            index = CopilotTabs.OTHER_ACTIVITY,
             titleRes = R.string.panel_autobattle_tab_other,
-            supportsBattleList = false,
-            supportsRegularOptions = true,
         )
     )
-    val current = tabSpecs.firstOrNull { it.index == state.tabIndex } ?: tabSpecs.first()
-    val regularCopilotTab = current.supportsRegularOptions
-    val loopCountSupportedTab = current.index == 1 || current.index == 3
-    val battleListSupportedTab = current.supportsBattleList
+    val regularCopilotTab = CopilotTabs.supportsRegularCopilotOptions(state.tabIndex)
+    val loopCountSupportedTab = CopilotTabs.supportsLoopCount(state.tabIndex)
+    val battleListSupportedTab = CopilotTabs.supportsBattleList(state.tabIndex)
 
     // 战斗列表直接平铺在外层 LazyColumn 里，拖拽状态绑外层列表：不再嵌套滚动，自动滚动作用于整个面板
     val listState = rememberLazyListState()
@@ -701,7 +691,7 @@ fun AutoBattlePanel(
                         )
                     }
 
-                    if (state.useCopilotList && state.tabIndex == 0) {
+                    if (state.listModeActive && state.tabIndex == CopilotTabs.MAIN) {
                         CheckBoxWithLabel(
                             checked = state.config.useSanityPotion,
                             onCheckedChange = {
@@ -711,7 +701,7 @@ fun AutoBattlePanel(
                         )
                     }
 
-                    if (!state.useCopilotList && loopCountSupportedTab) {
+                    if (!state.listModeActive && loopCountSupportedTab) {
                         CheckBoxWithLabel(
                             checked = state.config.loop,
                             onCheckedChange = {
@@ -742,7 +732,7 @@ fun AutoBattlePanel(
             }
 
 
-            if (state.useCopilotList && battleListSupportedTab) {
+            if (battleListSupportedTab && (state.listModeActive || state.taskList.isNotEmpty())) {
                 item(key = "battle_list_header") {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -753,6 +743,13 @@ fun AutoBattlePanel(
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium
                         )
+                        if (!state.listModeActive) {
+                            Text(
+                                stringResource(R.string.panel_autobattle_battle_list_inactive_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
                         var sequenceTipExpanded by remember { mutableStateOf(false) }
                         ExpandableTipIcon(
                             expanded = sequenceTipExpanded,

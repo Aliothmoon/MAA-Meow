@@ -16,4 +16,5 @@ data class CopilotConfig(
     val formationIndex: Int = 1,             // 编队索引 1-4
     val addUserAdditional: Boolean = false,  // 是否追加自定义干员
     val userAdditional: String = "",         // 自定义干员 JSON
+    val useCopilotList: Boolean = false,     // 战斗列表模式（用户偏好，是否生效见 CopilotUiState.listModeActive）
 )

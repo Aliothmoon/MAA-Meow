@@ -256,20 +256,10 @@ class CopilotManager(
         items: List<CopilotListItem>,
         config: CopilotConfig
     ): List<MaaTaskParams> {
-        val checkedItems = items.filter { it.isChecked }
         // 上游 #16985: 每个作业项携带其在完整列表中的稳定下标 id(从0起), core 据此回传当前执行项,
         // 用于跳过失败作业后仍能把"成功"归属到正确项。坐标系须与 onCopilotTaskSuccess 对全列表取下标一致。
         val indexed = items.withIndex().filter { it.value.isChecked }
-        if (tabIndex == 1) { // TAB_SSS — MAA Core SSSCopilot 只接受单个 filename，逐个提交
-            return checkedItems.map { item ->
-                MaaTaskParams(
-                    type = MaaTaskType.SSS_COPILOT,
-                    params = buildJsonObject {
-                        put("filename", item.filePath)
-                    }.toString()
-                )
-            }
-        }
+        // 与 WPF 一致：保全/其他活动不支持战斗列表，只有主线与悖论两种列表形态
         if (tabIndex == 2) { // TAB_PARADOX
             return listOf(
                 MaaTaskParams(
