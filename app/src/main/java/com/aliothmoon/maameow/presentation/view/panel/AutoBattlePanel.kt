@@ -13,6 +13,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -79,7 +80,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.copilot.CopilotDocumentation
@@ -96,7 +96,6 @@ import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotTabs
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
-import com.aliothmoon.maameow.theme.DenseTabTypography
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.UiText
@@ -112,7 +111,6 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 private data class CopilotTabUiSpec(
     val index: Int,
     @param:StringRes val titleRes: Int,
-    @param:StringRes val subtitleRes: Int? = null,
 )
 
 @Composable
@@ -156,15 +154,10 @@ fun AutoBattlePanel(
             }
         }
     } else null
-    val tabTitleTextStyle = MaterialTheme.typography.bodySmall.copy(
-        lineHeight = 16.sp
-    )
-    val tabSubtitleTextStyle = DenseTabTypography.Subtitle
     val tabSpecs = listOf(
         CopilotTabUiSpec(
             index = CopilotTabs.MAIN,
             titleRes = R.string.panel_autobattle_tab_mainline,
-            subtitleRes = R.string.panel_autobattle_tab_mainline_subtitle,
         ),
         CopilotTabUiSpec(
             index = CopilotTabs.SSS,
@@ -201,86 +194,82 @@ fun AutoBattlePanel(
                 .padding(PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp)),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    tabSpecs.chunked(2).forEach { rowSpecs ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            rowSpecs.forEach { spec ->
-                                val selected = state.tabIndex == spec.index
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = if (selected) {
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    } else {
-                                        MaterialTheme.colorScheme.surface
-                                    },
-                                    border = BorderStroke(
-                                        width = 1.dp,
+            item(key = "copilot_tabs") {
+                val textMeasurer = rememberTextMeasurer()
+                val density = LocalDensity.current
+                val labelStyle = MaterialTheme.typography.labelMedium
+                val titles = tabSpecs.map { stringResource(it.titleRes) }
+                // 最宽标签（按选中态粗体）放不进半宽就退化成单列
+                val widestLabel = remember(titles, labelStyle) {
+                    val boldStyle = labelStyle.copy(fontWeight = FontWeight.Bold)
+                    with(density) {
+                        titles.maxOf { title ->
+                            textMeasurer.measure(title, boldStyle, softWrap = false).size.width
+                        }.toDp()
+                    }
+                }
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val spacing = 6.dp
+                    val cellInset = 8.dp * 2 + 2.dp
+                    val columns = if (widestLabel <= (maxWidth - spacing) / 2 - cellInset) 2 else 1
+                    Column(verticalArrangement = Arrangement.spacedBy(spacing)) {
+                        tabSpecs.chunked(columns).forEach { rowSpecs ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(spacing)
+                            ) {
+                                rowSpecs.forEach { spec ->
+                                    val selected = state.tabIndex == spec.index
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
                                         color = if (selected) {
-                                            MaterialTheme.colorScheme.primary
+                                            MaterialTheme.colorScheme.primaryContainer
                                         } else {
-                                            MaterialTheme.colorScheme.outlineVariant
-                                        }
-                                    ),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .heightIn(min = 56.dp)
-                                        .clickable { viewModel.onTabChanged(spec.index) }
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        Text(
-                                            text = stringResource(spec.titleRes),
-                                            style = tabTitleTextStyle,
+                                            MaterialTheme.colorScheme.surface
+                                        },
+                                        border = BorderStroke(
+                                            width = 1.dp,
                                             color = if (selected) {
-                                                MaterialTheme.colorScheme.onPrimaryContainer
+                                                MaterialTheme.colorScheme.primary
                                             } else {
-                                                MaterialTheme.colorScheme.onSurface
-                                            },
-                                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                            textAlign = TextAlign.Center,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.fillMaxWidth(),
-                                        )
-                                        spec.subtitleRes?.let { subtitleRes ->
-                                            Spacer(modifier = Modifier.height(1.dp))
+                                                MaterialTheme.colorScheme.outlineVariant
+                                            }
+                                        ),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .heightIn(min = 36.dp)
+                                            .clickable { viewModel.onTabChanged(spec.index) }
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
                                             Text(
-                                                text = stringResource(subtitleRes),
-                                                style = tabSubtitleTextStyle,
+                                                text = stringResource(spec.titleRes),
+                                                style = labelStyle,
                                                 color = if (selected) {
-                                                    MaterialTheme.colorScheme.onPrimaryContainer.copy(
-                                                        alpha = 0.8f
-                                                    )
+                                                    MaterialTheme.colorScheme.onPrimaryContainer
                                                 } else {
-                                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                                    MaterialTheme.colorScheme.onSurface
                                                 },
+                                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                                                 textAlign = TextAlign.Center,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
-                                                modifier = Modifier.fillMaxWidth(),
                                             )
                                         }
                                     }
                                 }
-                            }
-                            if (rowSpecs.size < 2) {
-                                Spacer(modifier = Modifier.weight(1f))
+                                if (rowSpecs.size < columns) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
                             }
                         }
                     }
-                    HorizontalDivider()
                 }
             }
-
             item {
                 ITextField(
                     value = state.inputText,

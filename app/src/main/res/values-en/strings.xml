@@ -706,8 +706,7 @@
     <string name="operbox_export_no">No</string>
 
     <!-- panel: auto battle -->
-    <string name="panel_autobattle_tab_mainline">Main Theme / Story Collection</string>
-    <string name="panel_autobattle_tab_mainline_subtitle">Side Story</string>
+    <string name="panel_autobattle_tab_mainline">Main / Story / Side Story</string>
     <string name="panel_autobattle_tab_security">SSS</string>
     <string name="panel_autobattle_tab_paradox">Paradox Simulation</string>
     <string name="panel_autobattle_tab_other">Other Activities</string>

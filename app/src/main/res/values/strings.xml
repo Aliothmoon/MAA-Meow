@@ -760,8 +760,7 @@
     <string name="operbox_export_no">否</string>
 
     <!-- panel: auto battle -->
-    <string name="panel_autobattle_tab_mainline">主线 / 故事集</string>
-    <string name="panel_autobattle_tab_mainline_subtitle">SideStory</string>
+    <string name="panel_autobattle_tab_mainline">主线 / 故事集 / SideStory</string>
     <string name="panel_autobattle_tab_security">保全派驻</string>
     <string name="panel_autobattle_tab_paradox">悖论模拟</string>
     <string name="panel_autobattle_tab_other">其他活动</string>
