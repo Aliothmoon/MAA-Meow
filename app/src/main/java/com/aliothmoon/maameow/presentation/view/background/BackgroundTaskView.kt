@@ -110,6 +110,7 @@ import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.components.LogExportController
 import com.aliothmoon.maameow.presentation.components.MaaWindowInsets
 import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
 import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
@@ -177,6 +178,11 @@ fun BackgroundTaskView(
 
     var showCloseConfirm by remember { mutableStateOf(false) }
     var showMoreActions by remember { mutableStateOf(false) }
+    var showLogExportSheet by remember { mutableStateOf(false) }
+    LogExportController(
+        sheetVisible = showLogExportSheet,
+        onSheetDismiss = { showLogExportSheet = false },
+    )
 
     val copilotDialog by copilotViewModel.dialog.collectAsStateWithLifecycle()
     val toolboxDialog by toolboxViewModel.dialog.collectAsStateWithLifecycle()
@@ -515,6 +521,7 @@ fun BackgroundTaskView(
                                     LogPanel(
                                         logs = runtimeLogs,
                                         onClearLogs = { viewModel.onClearLogs() },
+                                        onExportLogs = { showLogExportSheet = true },
                                     )
                                 }
                             }

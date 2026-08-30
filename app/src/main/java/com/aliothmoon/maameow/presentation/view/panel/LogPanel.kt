@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.FolderZip
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -68,6 +69,7 @@ fun LogPanel(
     modifier: Modifier = Modifier,
     logs: List<LogItem>,
     onClearLogs: () -> Unit,
+    onExportLogs: (() -> Unit)? = null,
 ) {
     val listState = rememberLazyListState()
     var isAutoScroll by remember { mutableStateOf(true) }
@@ -108,6 +110,15 @@ fun LogPanel(
             }
 
             Row {
+                if (onExportLogs != null) {
+                    IconButton(onClick = onExportLogs) {
+                        Icon(
+                            imageVector = Icons.Rounded.FolderZip,
+                            contentDescription = stringResource(R.string.settings_log_export_title),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 IconButton(onClick = onClearLogs) {
                     Icon(
                         imageVector = Icons.Rounded.Delete,
