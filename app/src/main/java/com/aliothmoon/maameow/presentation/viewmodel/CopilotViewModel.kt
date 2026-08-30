@@ -654,7 +654,7 @@ class CopilotViewModel(
         val targetTabIndex = resolveLoadedTabIndex(data, previousTabIndex)
         val inferredType = inferTaskType(data)
         val inferredName = inferLoadedCopilotName(data)
-        val videoUrl = extractVideoUrl(data.doc.details)
+        val videoUrl = copilotManager.extractVideoUrl(data.doc.details)
         val operatorSummary = copilotManager.getOperatorSummary(data)
         _state.update { current ->
             val base = applyTabConstraints(current, targetTabIndex)
@@ -1434,12 +1434,6 @@ class CopilotViewModel(
                 ratingInFlightCopilotIds.remove(id)
             }
         }
-    }
-
-    private fun extractVideoUrl(details: String): String {
-        if (details.isBlank()) return ""
-        val match = Regex("[aAbB][vV]\\d+").find(details) ?: return ""
-        return "https://www.bilibili.com/video/${match.value}"
     }
 
     private fun persistTaskList() {

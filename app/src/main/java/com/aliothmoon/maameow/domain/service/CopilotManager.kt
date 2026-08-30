@@ -89,6 +89,12 @@ class CopilotManager(
 
         /** 新格式作业集前缀，prts://s12345 为作业集 */
         private const val NEW_SET_ID_PREFIX = "prts://s"
+
+        private const val BILIBILI_VIDEO_URL = "https://www.bilibili.com/video/"
+
+        /** 与 WPF BVRegex 一致：av 号纯数字，BV 号固定 10 位字母数字，可带 /?p=N 分 P；加 \b 防止命中 nav12 之类 */
+        private val BILIBILI_VIDEO_ID_REGEX =
+            Regex("""\b(?:av\d+|bv[a-z0-9]{10})(?:/\?p=\d+)?""", RegexOption.IGNORE_CASE)
     }
 
     // ===== 作业解析 =====
@@ -352,6 +358,13 @@ class CopilotManager(
         return trimmed.toIntOrNull()?.let {
             CopilotCode(CopilotCodeType.COPILOT, it, ambiguous = true)
         }
+    }
+
+    /** 从作业介绍文本里提取 B 站视频链接，没有则返回空串 */
+    fun extractVideoUrl(details: String): String {
+        if (details.isBlank()) return ""
+        val match = BILIBILI_VIDEO_ID_REGEX.find(details) ?: return ""
+        return BILIBILI_VIDEO_URL + match.value
     }
 
     /**
