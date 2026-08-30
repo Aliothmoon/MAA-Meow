@@ -37,14 +37,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.PlaylistRemove
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,8 +66,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -74,6 +81,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
 import com.aliothmoon.maameow.data.resource.CopilotResourceProvider
 import com.aliothmoon.maameow.domain.service.OperatorDisplayItem
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -92,6 +100,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
+import sh.calvin.reorderable.ReorderableCollectionItemScope
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -180,9 +189,19 @@ fun AutoBattlePanel(
     val loopCountSupportedTab = current.index == 1 || current.index == 3
     val battleListSupportedTab = current.supportsBattleList
 
+    // 战斗列表直接平铺在外层 LazyColumn 里，拖拽状态绑外层列表：不再嵌套滚动，自动滚动作用于整个面板
+    val listState = rememberLazyListState()
+    val haptic = LocalHapticFeedback.current
+    val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
+        // 非列表项（标题、按钮等）的 key 在 VM 里查不到 id，会被忽略
+        val fromId = from.key as? String ?: return@rememberReorderableLazyListState
+        val toId = to.key as? String ?: return@rememberReorderableLazyListState
+        viewModel.onReorderList(fromId, toId)
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp)),
@@ -723,8 +742,8 @@ fun AutoBattlePanel(
             }
 
 
-            item {
-                if (state.useCopilotList && battleListSupportedTab) {
+            if (state.useCopilotList && battleListSupportedTab) {
+                item(key = "battle_list_header") {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -743,124 +762,67 @@ fun AutoBattlePanel(
                             tipText = stringResource(R.string.panel_autobattle_sequence_tip)
                         )
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 300.dp)
-                    ) {
-                        if (state.taskList.isEmpty()) {
+                }
+                if (state.taskList.isEmpty()) {
+                    item(key = "battle_list_empty") {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Text(
                                 stringResource(R.string.panel_autobattle_empty_entries),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(8.dp)
                             )
-                        } else {
-                            val lazyListState = rememberLazyListState()
-                            val reorderableState = rememberReorderableLazyListState(
-                                lazyListState = lazyListState,
-                                onMove = { from, to ->
-                                    viewModel.onReorderList(from.index, to.index)
-                                }
-                            )
-                            LazyColumn(
-                                state = lazyListState,
-                                modifier = Modifier.fillMaxWidth(),
-                                contentPadding = PaddingValues(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                itemsIndexed(
-                                    state.taskList,
-                                    key = { index, item -> "${item.filePath}-${item.name}-$index" }
-                                ) { index, item ->
-                                    ReorderableItem(
-                                        reorderableState,
-                                        key = "${item.filePath}-${item.name}-$index"
-                                    ) { isDragging ->
-                                        Surface(
-                                            tonalElevation = if (isDragging) 4.dp else 0.dp,
-                                            shape = RoundedCornerShape(6.dp),
-                                            color = MaterialTheme.colorScheme.surface,
-                                            modifier = Modifier
-                                                .longPressDraggableHandle()
-                                                .fillMaxWidth()
-                                        ) {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(
-                                                        start = 8.dp,
-                                                        end = 4.dp,
-                                                        top = 2.dp,
-                                                        bottom = 2.dp
-                                                    ),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                            ) {
-                                                CheckBoxWithLabel(
-                                                    checked = item.isChecked,
-                                                    onCheckedChange = {
-                                                        viewModel.onToggleListItem(
-                                                            index
-                                                        )
-                                                    },
-                                                    label = item.name + if (item.isRaid) {
-                                                        stringResource(R.string.panel_autobattle_raid_suffix)
-                                                    } else {
-                                                        ""
-                                                    },
-                                                    modifier = Modifier.weight(1f)
-                                                )
-                                                OutlinedButton(
-                                                    onClick = { viewModel.onSelectListItem(index) },
-                                                    shape = compactButtonShape,
-                                                    contentPadding = compactButtonPadding
-                                                ) { Text(stringResource(R.string.common_load)) }
-                                                IconButton(
-                                                    onClick = { viewModel.onRemoveFromList(index) },
-                                                    modifier = Modifier.size(32.dp)
-                                                ) {
-                                                    Icon(
-                                                        Icons.Default.Delete,
-                                                        contentDescription = stringResource(R.string.common_delete),
-                                                        tint = MaterialTheme.colorScheme.error,
-                                                        modifier = Modifier.size(18.dp)
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
                         }
                     }
+                }
+                itemsIndexed(
+                    state.taskList,
+                    key = { _, item -> item.id }
+                ) { index, item ->
+                    ReorderableItem(reorderableState, key = item.id) { isDragging ->
+                        BattleListRow(
+                            item = item,
+                            isDragging = isDragging,
+                            onDragStarted = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            },
+                            onDragStopped = viewModel::onReorderSettled,
+                            onToggle = { viewModel.onToggleListItem(index) },
+                            onLoad = { viewModel.onSelectListItem(index) },
+                            onRemove = { viewModel.onRemoveFromList(index) },
+                            buttonShape = compactButtonShape,
+                            buttonPadding = compactButtonPadding,
+                        )
+                    }
+                }
+                item(key = "battle_list_actions") {
                     // TODO: 恢复手动输入关卡名 + 添加普通/添加突袭功能
-                    Spacer(modifier = Modifier.height(6.dp))
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedButton(
+                        BattleListActionButton(
+                            text = stringResource(R.string.panel_autobattle_clear_unchecked),
+                            icon = Icons.Default.PlaylistRemove,
+                            enabled = controlsEnabled && state.taskList.any { !it.isChecked },
                             onClick = viewModel::onCleanUnchecked,
-                            shape = compactButtonShape,
-                            contentPadding = compactButtonPadding
-                        ) { Text(stringResource(R.string.panel_autobattle_clear_unchecked)) }
-                        OutlinedButton(
+                        )
+                        BattleListActionButton(
+                            text = stringResource(R.string.panel_autobattle_clear_list),
+                            icon = Icons.Default.DeleteSweep,
+                            enabled = controlsEnabled && state.taskList.isNotEmpty(),
+                            destructive = true,
                             onClick = viewModel::onClearList,
-                            shape = compactButtonShape,
-                            contentPadding = compactButtonPadding
-                        ) { Text(stringResource(R.string.panel_autobattle_clear_list)) }
+                        )
                     }
                 }
             }
 
-
-
-
-            item {
+            item(key = "tips") {
                 var expanded by remember { mutableStateOf(true) }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -879,6 +841,109 @@ fun AutoBattlePanel(
             }
         }
 
+    }
+}
+
+/** 列表整理按钮：填充色块保证可见；清空列表用 error 色标出破坏性 */
+@Composable
+private fun RowScope.BattleListActionButton(
+    text: String,
+    icon: ImageVector,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    destructive: Boolean = false,
+) {
+    val colors = if (destructive) {
+        ButtonDefaults.filledTonalButtonColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    } else {
+        ButtonDefaults.filledTonalButtonColors()
+    }
+    FilledTonalButton(
+        onClick = onClick,
+        enabled = enabled,
+        shape = RoundedCornerShape(8.dp),
+        colors = colors,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+        modifier = Modifier.weight(1f),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(text = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun ReorderableCollectionItemScope.BattleListRow(
+    item: CopilotListItem,
+    isDragging: Boolean,
+    onDragStarted: () -> Unit,
+    onDragStopped: () -> Unit,
+    onToggle: () -> Unit,
+    onLoad: () -> Unit,
+    onRemove: () -> Unit,
+    buttonShape: RoundedCornerShape,
+    buttonPadding: PaddingValues,
+) {
+    Surface(
+        shadowElevation = if (isDragging) 4.dp else 0.dp,
+        shape = RoundedCornerShape(6.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 2.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // 只有把手能拖，行的其余区域保持滚动 / 点击语义
+            Icon(
+                Icons.Default.DragIndicator,
+                contentDescription = stringResource(R.string.panel_autobattle_drag_handle),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .size(32.dp)
+                    .draggableHandle(
+                        onDragStarted = { onDragStarted() },
+                        onDragStopped = onDragStopped,
+                    )
+                    .padding(6.dp)
+            )
+            CheckBoxWithLabel(
+                checked = item.isChecked,
+                onCheckedChange = { onToggle() },
+                label = item.name + if (item.isRaid) {
+                    stringResource(R.string.panel_autobattle_raid_suffix)
+                } else {
+                    ""
+                },
+                modifier = Modifier.weight(1f)
+            )
+            OutlinedButton(
+                onClick = onLoad,
+                shape = buttonShape,
+                contentPadding = buttonPadding
+            ) { Text(stringResource(R.string.common_load)) }
+            IconButton(
+                onClick = onRemove,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.common_delete),
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
     }
 }
 

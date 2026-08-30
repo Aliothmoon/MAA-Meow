@@ -733,6 +733,7 @@
     <string name="panel_autobattle_use_sanity_potion">Use Sanity Potion</string>
     <string name="panel_autobattle_loop">Loop Times</string>
     <string name="panel_autobattle_sequence_tip">Jobs can be dragged</string>
+    <string name="panel_autobattle_drag_handle">Drag to reorder</string>
     <string name="panel_autobattle_empty_entries">No entries yet</string>
     <string name="panel_autobattle_raid_suffix"> (Challenge)</string>
     <string name="panel_autobattle_tips_title">Tips</string>

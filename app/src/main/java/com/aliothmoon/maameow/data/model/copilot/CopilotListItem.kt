@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.model.copilot
 
 import kotlinx.serialization.Serializable
+import java.util.UUID
 
 /**
  * 自动战斗作业列表单项
@@ -15,4 +16,6 @@ data class CopilotListItem(
     val copilotId: Int = 0,         // PRTS Plus 作业 ID
     val isChecked: Boolean = true,  // 是否勾选执行
     val source: String = "web",     // web / local / resource
+    /** 稳定唯一标识，供列表 key 与拖拽定位；同一作业的普通/突袭两项 filePath 与 name 相同，不能拿它们当 key */
+    val id: String = UUID.randomUUID().toString(),
 )

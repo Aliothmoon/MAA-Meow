@@ -1060,15 +1060,20 @@ class CopilotViewModel(
         persistTaskList()
     }
 
-    fun onReorderList(from: Int, to: Int) {
+    /** 拖拽过程中按 id 移动；落盘交给 onReorderSettled，避免每次交换都写文件 */
+    fun onReorderList(fromId: String, toId: String) {
+        if (fromId == toId) return
         _state.update {
             val list = it.taskList.toMutableList()
-            if (from in list.indices && to in list.indices) {
-                val item = list.removeAt(from)
-                list.add(to, item)
-            }
+            val from = list.indexOfFirst { item -> item.id == fromId }
+            val to = list.indexOfFirst { item -> item.id == toId }
+            if (from < 0 || to < 0) return@update it
+            list.add(to, list.removeAt(from))
             it.copy(taskList = list)
         }
+    }
+
+    fun onReorderSettled() {
         persistTaskList()
     }
 

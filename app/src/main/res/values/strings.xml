@@ -787,6 +787,7 @@
     <string name="panel_autobattle_use_sanity_potion">使用理智药</string>
     <string name="panel_autobattle_loop">循环次数</string>
     <string name="panel_autobattle_sequence_tip">标签顺序可拖动</string>
+    <string name="panel_autobattle_drag_handle">拖动排序</string>
     <string name="panel_autobattle_empty_entries">暂无条目</string>
     <string name="panel_autobattle_raid_suffix"> (突袭)</string>
     <string name="panel_autobattle_tips_title">小提示</string>
