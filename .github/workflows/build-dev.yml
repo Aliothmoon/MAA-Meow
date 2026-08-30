@@ -91,19 +91,10 @@ jobs:
       - name: Print MaaFramework control unit version
         run: python scripts/print_maafw_version.py
 
-      - name: Build Debug APK
+      - name: Run Lint
         run: |
           chmod +x ./gradlew
-          ./gradlew clean assembleDebug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-apk
-          path: app/build/outputs/apk/debug/*.apk
-
-      - name: Run Lint
-        run: ./gradlew :app:lintDebug
+          ./gradlew :app:lintDebug
 
       - name: Upload Lint Report
         if: always()
@@ -111,3 +102,12 @@ jobs:
         with:
           name: lint-report
           path: app/build/reports/lint-results-debug.html
+
+      - name: Build Debug APK
+        run: ./gradlew clean assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: app/build/outputs/apk/debug/*.apk
