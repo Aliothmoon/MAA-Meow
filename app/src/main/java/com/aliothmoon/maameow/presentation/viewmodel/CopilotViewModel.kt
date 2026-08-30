@@ -113,10 +113,10 @@ data class CopilotUiState(
     val builtinTree: List<CopilotResourceProvider.Node> = emptyList(),
     val builtinExpandedFolders: Set<String> = emptySet(),
 ) {
-    /** 用户偏好，随 config 落盘；是否真正生效看 listModeActive */
+    /** 用户偏好；是否生效看 listModeActive */
     val useCopilotList: Boolean get() = config.useCopilotList
 
-    /** 列表模式是否生效：偏好开启且当前页签支持。切到不支持的页签不改写偏好，切回即恢复 */
+    /** 切到不支持的页签不改写偏好，切回即恢复 */
     val listModeActive: Boolean
         get() = useCopilotList && CopilotTabs.supportsBattleList(tabIndex)
 }
@@ -148,7 +148,7 @@ class CopilotViewModel(
 
     private var pendingStartContext: TaskStartContext? = null
 
-    /** 列表被忽略的提醒已确认，确认后重入 onStart 时跳过该检查 */
+    /** 确认后重入 onStart 时跳过列表被忽略的检查 */
     private var listGuardAcknowledged = false
     private val pendingCopilotIds = mutableListOf<Int>()
     private val recentlyRatedCopilotIds = mutableSetOf<Int>()
@@ -520,7 +520,7 @@ class CopilotViewModel(
                     val listModeEnabled = supportsBattleList(workingTabIndex)
                     base.copy(
                         taskList = base.taskList + newItems,
-                        // 落到支持列表的页签就开启列表模式；不支持时保留用户偏好，不再清掉
+                        // 不支持列表的页签保留用户偏好，不清掉
                         config = if (listModeEnabled) {
                             base.config.copy(useCopilotList = true, formation = true)
                         } else {
@@ -1073,7 +1073,7 @@ class CopilotViewModel(
         persistTaskList()
     }
 
-    /** 拖拽过程中按 id 移动；落盘交给 onReorderSettled，避免每次交换都写文件 */
+    /** 落盘交给 onReorderSettled，避免拖拽中每次交换都写文件 */
     fun onReorderList(fromId: String, toId: String) {
         if (fromId == toId) return
         _state.update {
@@ -1122,7 +1122,7 @@ class CopilotViewModel(
             val snapshot = _state.value
             if (!validateStart(snapshot)) return@launch
 
-            // 反馈场景：列表模式被关掉（或从未开启）但列表里还有勾选项，用户以为会接着列表打
+            // 列表有勾选项但未启用列表模式，用户多半以为会接着列表打
             if (!listGuardAcknowledged && shouldWarnListIgnored(snapshot)) {
                 listGuardAcknowledged = true
                 pendingStartContext = context

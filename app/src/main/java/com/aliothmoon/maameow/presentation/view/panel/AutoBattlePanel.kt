@@ -183,11 +183,11 @@ fun AutoBattlePanel(
     val loopCountSupportedTab = CopilotTabs.supportsLoopCount(state.tabIndex)
     val battleListSupportedTab = CopilotTabs.supportsBattleList(state.tabIndex)
 
-    // 战斗列表直接平铺在外层 LazyColumn 里，拖拽状态绑外层列表：不再嵌套滚动，自动滚动作用于整个面板
+    // 列表平铺进外层 LazyColumn，拖拽状态绑外层：避免嵌套滚动
     val listState = rememberLazyListState()
     val haptic = LocalHapticFeedback.current
     val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
-        // 非列表项（标题、按钮等）的 key 在 VM 里查不到 id，会被忽略
+        // 非列表项的 key 在 VM 里查不到 id，直接忽略
         val fromId = from.key as? String ?: return@rememberReorderableLazyListState
         val toId = to.key as? String ?: return@rememberReorderableLazyListState
         viewModel.onReorderList(fromId, toId)
@@ -417,7 +417,6 @@ fun AutoBattlePanel(
                 }
             }
 
-            // 作业详情卡片
             val currentCopilot = state.currentCopilot
             if (currentCopilot != null) {
                 item(key = "copilot_detail") {
@@ -718,7 +717,6 @@ fun AutoBattlePanel(
     }
 }
 
-/** 列表整理按钮：填充色块保证可见；清空列表用 error 色标出破坏性 */
 @Composable
 private fun RowScope.BattleListActionButton(
     text: String,
@@ -821,7 +819,6 @@ private fun ReorderableCollectionItemScope.BattleListRow(
     }
 }
 
-/** 当前作业详情：头部（关卡 / 标题 / 视频）→ 描述（可折叠）→ 校正提示 → 干员需求 */
 @Composable
 private fun CopilotDetailCard(
     stageLabel: String,
@@ -845,7 +842,6 @@ private fun CopilotDetailCard(
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // 头部
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -910,7 +906,6 @@ private fun CopilotDetailCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // 描述：默认折叠，溢出才给展开入口
             if (doc.details.isNotBlank()) {
                 HorizontalDivider(color = dividerColor)
                 var expanded by remember(doc.details) { mutableStateOf(false) }
@@ -936,7 +931,6 @@ private fun CopilotDetailCard(
                 }
             }
 
-            // 干员需求自动校正提示
             if (warnings.isNotEmpty()) {
                 Surface(
                     shape = RoundedCornerShape(6.dp),
@@ -958,7 +952,6 @@ private fun CopilotDetailCard(
                 }
             }
 
-            // 干员需求
             if (summary != null && !summary.isEmpty) {
                 HorizontalDivider(color = dividerColor)
                 val textMeasurer = rememberTextMeasurer()

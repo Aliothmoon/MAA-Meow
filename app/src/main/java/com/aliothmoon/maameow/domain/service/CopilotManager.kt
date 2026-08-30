@@ -92,7 +92,7 @@ class CopilotManager(
 
         private const val BILIBILI_VIDEO_URL = "https://www.bilibili.com/video/"
 
-        /** 与 WPF BVRegex 一致：av 号纯数字，BV 号固定 10 位字母数字，可带 /?p=N 分 P；加 \b 防止命中 nav12 之类 */
+        /** 同 WPF BVRegex；\b 防止命中 nav12 之类 */
         private val BILIBILI_VIDEO_ID_REGEX =
             Regex("""\b(?:av\d+|bv[a-z0-9]{10})(?:/\?p=\d+)?""", RegexOption.IGNORE_CASE)
     }
@@ -265,7 +265,7 @@ class CopilotManager(
         // 上游 #16985: 每个作业项携带其在完整列表中的稳定下标 id(从0起), core 据此回传当前执行项,
         // 用于跳过失败作业后仍能把"成功"归属到正确项。坐标系须与 onCopilotTaskSuccess 对全列表取下标一致。
         val indexed = items.withIndex().filter { it.value.isChecked }
-        // 与 WPF 一致：保全/其他活动不支持战斗列表，只有主线与悖论两种列表形态
+        // 保全/其他活动不支持战斗列表（同 WPF）
         if (tabIndex == 2) { // TAB_PARADOX
             return listOf(
                 MaaTaskParams(
@@ -360,7 +360,6 @@ class CopilotManager(
         }
     }
 
-    /** 从作业介绍文本里提取 B 站视频链接，没有则返回空串 */
     fun extractVideoUrl(details: String): String {
         if (details.isBlank()) return ""
         val match = BILIBILI_VIDEO_ID_REGEX.find(details) ?: return ""
