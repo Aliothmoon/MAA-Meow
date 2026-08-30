@@ -16,10 +16,9 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -57,6 +56,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.createBitmap
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.presentation.components.MaaWindowInsets
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -373,7 +373,7 @@ private fun WallpaperCropContent(
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
                 .onSizeChanged { topBarHeight = it.height }
-                .statusBarsPadding()
+                .windowInsetsPadding(MaaWindowInsets.topBar)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically,
@@ -400,7 +400,7 @@ private fun WallpaperCropContent(
                         )
                     )
                 )
-                .navigationBarsPadding()
+                .windowInsetsPadding(MaaWindowInsets.bottomBar)
                 .padding(horizontal = 24.dp, vertical = 28.dp),
             contentAlignment = Alignment.Center,
         ) {

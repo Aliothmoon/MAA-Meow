@@ -4,7 +4,7 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -39,6 +39,7 @@ import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.presentation.LocalToaster
 import com.aliothmoon.maameow.presentation.components.AnnouncementDialog
+import com.aliothmoon.maameow.presentation.components.MaaWindowInsets
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
 import com.aliothmoon.maameow.presentation.components.clearFocusOnBlankTap
 import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
@@ -250,7 +251,7 @@ fun AppNavigation(
                     showCloseButton = true,
                     darkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f,
                     containerPadding = PaddingValues(top = 8.dp),
-                    modifier = Modifier.statusBarsPadding(),
+                    modifier = Modifier.windowInsetsPadding(MaaWindowInsets.topBar),
                 )
                 // 全局定时任务倒计时弹窗（前台所有控制模式均不弹出对话框，静默处理）
                 val countdown = scheduledCountdownState

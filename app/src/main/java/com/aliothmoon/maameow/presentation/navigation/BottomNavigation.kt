@@ -6,10 +6,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -32,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Routes
+import com.aliothmoon.maameow.presentation.components.MaaWindowInsets
 import com.aliothmoon.maameow.presentation.onboarding.OnboardingTarget
 import com.aliothmoon.maameow.presentation.onboarding.onboardingTarget
 import com.aliothmoon.maameow.theme.MaaDesignTokens
@@ -83,7 +82,7 @@ fun AppBottomNavigation(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .windowInsetsPadding(MaaWindowInsets.bottomBar)
                     .padding(horizontal = 24.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically

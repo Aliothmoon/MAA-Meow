@@ -27,8 +27,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -110,6 +110,7 @@ import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.components.MaaWindowInsets
 import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
 import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
 import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
@@ -397,7 +398,7 @@ fun BackgroundTaskView(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
+                .windowInsetsPadding(MaaWindowInsets.topBar)
                 .padding(horizontal = 16.dp)
                 .padding(top = 8.dp, bottom = 8.dp)
         ) {
