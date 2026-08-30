@@ -98,6 +98,7 @@ class GameDataReportService(
                     delayMs(backoff)
                     backoff = (backoff * 3) / 2
                 }
+
                 else -> return result
             }
         }

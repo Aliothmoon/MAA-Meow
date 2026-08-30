@@ -4,7 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
-import com.aliothmoon.maameow.domain.enums.UiUsageConstants.Roguelike as RoguelikeUi
 import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
 
 /**

@@ -40,10 +40,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.job
 import timber.log.Timber
 import java.io.File
@@ -110,10 +110,22 @@ class UpdateService(
                 version,
                 channel
             )
-            _appProcessState.value = UpdateProcessState.Downloading(0, context.getString(R.string.update_preparing_download), 0L, 0L)
+            _appProcessState.value = UpdateProcessState.Downloading(
+                0,
+                context.getString(R.string.update_preparing_download),
+                0L,
+                0L
+            )
 
             val resolver = appDownloadResolvers[source]
-                ?: return failApp(UpdateError.UnknownError(uiTextOf(R.string.update_error_unsupported_source, source)))
+                ?: return failApp(
+                    UpdateError.UnknownError(
+                        uiTextOf(
+                            R.string.update_error_unsupported_source,
+                            source
+                        )
+                    )
+                )
 
             val url = resolver.resolve(version, channel).getOrElse { e ->
                 // 解析器内部是 runCatching，取消也会落进 failure
@@ -255,10 +267,22 @@ class UpdateService(
         resourceDownloadJob = currentCoroutineContext().job
         try {
             Timber.i("downloadResource start: source=%s", source)
-            _resourceProcessState.value = UpdateProcessState.Downloading(0, context.getString(R.string.update_preparing_download), 0L, 0L)
+            _resourceProcessState.value = UpdateProcessState.Downloading(
+                0,
+                context.getString(R.string.update_preparing_download),
+                0L,
+                0L
+            )
 
             val resolver = resourceDownloadResolvers[source]
-                ?: return failResource(UpdateError.UnknownError(uiTextOf(R.string.update_error_unsupported_source, source)))
+                ?: return failResource(
+                    UpdateError.UnknownError(
+                        uiTextOf(
+                            R.string.update_error_unsupported_source,
+                            source
+                        )
+                    )
+                )
 
             val url = resolver.resolve(currentVersion).getOrElse { e ->
                 currentCoroutineContext().ensureActive()

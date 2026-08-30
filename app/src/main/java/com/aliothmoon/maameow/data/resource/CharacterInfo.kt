@@ -30,7 +30,16 @@ data class CharacterInfo(
     val rangeId: List<String>? = null
 ) {
     val isOperator: Boolean
-        get() = profession in setOf("CASTER", "MEDIC", "PIONEER", "SNIPER", "SPECIAL", "SUPPORT", "TANK", "WARRIOR")
+        get() = profession in setOf(
+            "CASTER",
+            "MEDIC",
+            "PIONEER",
+            "SNIPER",
+            "SPECIAL",
+            "SUPPORT",
+            "TANK",
+            "WARRIOR"
+        )
 
     val codeName: String
         get() {

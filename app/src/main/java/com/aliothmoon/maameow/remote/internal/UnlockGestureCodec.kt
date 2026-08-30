@@ -69,9 +69,9 @@ internal object UnlockGestureCodec {
         for ((i, p) in points.withIndex()) {
             val last = kept.lastOrNull()
             val keep = last == null ||
-                i == points.lastIndex ||
-                p.tMs - last.tMs >= MIN_POINT_INTERVAL_MS ||
-                farther(p.x - last.x, p.y - last.y, SHARP_MOVE_PX - 1)
+                    i == points.lastIndex ||
+                    p.tMs - last.tMs >= MIN_POINT_INTERVAL_MS ||
+                    farther(p.x - last.x, p.y - last.y, SHARP_MOVE_PX - 1)
             if (keep) kept += p
         }
         val sampled = if (kept.size > MAX_POINTS_PER_SWIPE) resample(kept) else kept

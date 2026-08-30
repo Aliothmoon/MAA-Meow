@@ -18,9 +18,11 @@ internal fun formatSpeed(bytesPerSecond: Long): String = when {
     bytesPerSecond >= 1024 * 1024 -> String.format(
         Locale.US, "%.1f MB/s", bytesPerSecond / (1024.0 * 1024)
     )
+
     bytesPerSecond >= 1024 -> String.format(
         Locale.US, "%.1f KB/s", bytesPerSecond / 1024.0
     )
+
     else -> "$bytesPerSecond B/s"
 }
 

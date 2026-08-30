@@ -56,8 +56,8 @@ object LaunchIntentMapper {
         return Intent(context, com.aliothmoon.maameow.MainActivity::class.java).apply {
             action = ScheduledExecutionRequest.ACTION_SHOW_SCHEDULE_EXECUTION
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra(ScheduledExecutionRequest.EXTRA_REQUEST_ID, request.requestId)
             putExtra(ScheduledExecutionRequest.EXTRA_STRATEGY_ID, request.strategyId)
             putExtra(ScheduledExecutionRequest.EXTRA_STRATEGY_NAME, request.displayName)

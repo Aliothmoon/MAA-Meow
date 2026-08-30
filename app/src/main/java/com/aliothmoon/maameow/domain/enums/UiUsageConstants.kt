@@ -1,5 +1,8 @@
 package com.aliothmoon.maameow.domain.enums
 
+import com.aliothmoon.maameow.domain.enums.UiUsageConstants.USER_DEFINED_INFRAST
+
+
 object UiUsageConstants {
     /** 用户自定义文件的 key */
     const val USER_DEFINED_INFRAST = "user_defined"

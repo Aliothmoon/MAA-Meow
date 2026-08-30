@@ -51,7 +51,10 @@ object OnboardingPlacement {
         )
         val needHorizontal = cardWidth + gap
         if (area.right - holeRight >= needHorizontal) return IntOffset(holeRight + gap, centeredY)
-        if (holeLeft - area.left >= needHorizontal) return IntOffset(holeLeft - gap - cardWidth, centeredY)
+        if (holeLeft - area.left >= needHorizontal) return IntOffset(
+            holeLeft - gap - cardWidth,
+            centeredY
+        )
 
         val y = if (spaceBelow >= spaceAbove) area.bottom - cardHeight else area.top
         return IntOffset(centeredX, clamp(y, area.top, area.bottom - cardHeight))

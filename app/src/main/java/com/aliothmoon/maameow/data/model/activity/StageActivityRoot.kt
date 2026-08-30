@@ -26,7 +26,7 @@ object StageActivityRoot {
             val clientData = root[clientType] ?: return null
             json.decodeFromJsonElement<ClientStageActivity>(clientData)
         } catch (e: Exception) {
-            Timber.e(e,"StageActivityRoot parse error")
+            Timber.e(e, "StageActivityRoot parse error")
             null
         }
     }

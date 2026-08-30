@@ -4,7 +4,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -86,6 +85,7 @@ import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
 import com.aliothmoon.maameow.theme.DenseTabTypography
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.asString
 import kotlinx.coroutines.Dispatchers
@@ -381,9 +381,15 @@ fun AutoBattlePanel(
                             enabled = controlsEnabled,
                             onClick = {
                                 if (filePicker != null) {
-                                    filePicker.launch(arrayOf("application/json", "application/octet-stream"))
+                                    filePicker.launch(
+                                        arrayOf(
+                                            "application/json",
+                                            "application/octet-stream"
+                                        )
+                                    )
                                 } else {
-                                    Toast.makeText(context, importFloatHint, Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, importFloatHint, Toast.LENGTH_SHORT)
+                                        .show()
                                 }
                             },
                         )
@@ -439,7 +445,9 @@ fun AutoBattlePanel(
                                 // 干员需求自动校正提示，跟着作业详情一起展示
                                 if (state.requirementWarnings.isNotEmpty()) {
                                     HorizontalDivider(
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f)
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
+                                            alpha = 0.2f
+                                        )
                                     )
                                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                         state.requirementWarnings.forEach { warning ->
@@ -543,14 +551,14 @@ fun AutoBattlePanel(
             if (regularCopilotTab) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            CheckBoxWithExpandableTip(
-                                checked = state.config.formation,
-                                onCheckedChange = {
-                                    viewModel.onConfigChanged(state.config.copy(formation = it))
-                                },
-                                label = stringResource(R.string.panel_autobattle_auto_formation),
-                                tipText = stringResource(R.string.panel_autobattle_auto_formation_tip)
-                            )
+                        CheckBoxWithExpandableTip(
+                            checked = state.config.formation,
+                            onCheckedChange = {
+                                viewModel.onConfigChanged(state.config.copy(formation = it))
+                            },
+                            label = stringResource(R.string.panel_autobattle_auto_formation),
+                            tipText = stringResource(R.string.panel_autobattle_auto_formation_tip)
+                        )
                         if (state.config.formation) {
                             CheckBoxWithLabel(
                                 checked = state.config.useFormation,
@@ -988,54 +996,54 @@ private fun BuiltinCopilotTree(
         exit = shrinkVertically() + fadeOut(),
         modifier = modifier,
     ) {
-            val visibleNodes = remember(tree, expandedFolders) {
-                flattenVisibleNodes(tree, expandedFolders)
-            }
-            Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 6.dp)
-                    .heightIn(max = 320.dp)
-                    .animateContentSize()
-            ) {
-                when {
-                    !loaded -> CircularProgressIndicator(
-                        modifier = Modifier
-                            .padding(12.dp)
-                            .size(16.dp),
-                        strokeWidth = 2.dp
-                    )
+        val visibleNodes = remember(tree, expandedFolders) {
+            flattenVisibleNodes(tree, expandedFolders)
+        }
+        Surface(
+            shape = RoundedCornerShape(6.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp)
+                .heightIn(max = 320.dp)
+                .animateContentSize()
+        ) {
+            when {
+                !loaded -> CircularProgressIndicator(
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .size(16.dp),
+                    strokeWidth = 2.dp
+                )
 
-                    visibleNodes.isEmpty() -> Text(
-                        text = stringResource(R.string.copilot_builtin_picker_empty),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(12.dp)
-                    )
+                visibleNodes.isEmpty() -> Text(
+                    text = stringResource(R.string.copilot_builtin_picker_empty),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(12.dp)
+                )
 
-                    else -> LazyColumn(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(vertical = 4.dp)
-                    ) {
-                        items(visibleNodes, key = { it.node.relativePath }) { entry ->
-                            BuiltinNodeRow(
-                                entry = entry,
-                                expanded = entry.node.relativePath in expandedFolders,
-                                enabled = enabled,
-                                onClick = {
-                                    if (entry.node.isFolder) {
-                                        onToggleFolder(entry.node.relativePath)
-                                    } else {
-                                        onSelectFile(entry.node)
-                                    }
+                else -> LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(vertical = 4.dp)
+                ) {
+                    items(visibleNodes, key = { it.node.relativePath }) { entry ->
+                        BuiltinNodeRow(
+                            entry = entry,
+                            expanded = entry.node.relativePath in expandedFolders,
+                            enabled = enabled,
+                            onClick = {
+                                if (entry.node.isFolder) {
+                                    onToggleFolder(entry.node.relativePath)
+                                } else {
+                                    onSelectFile(entry.node)
                                 }
-                            )
-                        }
+                            }
+                        )
                     }
                 }
             }
+        }
     }
 }
 

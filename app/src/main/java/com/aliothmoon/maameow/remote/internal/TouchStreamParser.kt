@@ -100,7 +100,7 @@ internal class TouchStreamParser {
     }
 
     private fun isPrimaryContact() = mtFrameIndex == 0 &&
-        if (usesTrackingId) slot == primarySlot else slot == 0
+            if (usesTrackingId) slot == primarySlot else slot == 0
 
     private fun commitFrame(tMs: Int) {
         val down = when {

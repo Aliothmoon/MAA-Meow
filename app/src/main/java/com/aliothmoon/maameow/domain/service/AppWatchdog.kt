@@ -4,6 +4,8 @@ import android.os.SystemClock
 import androidx.annotation.VisibleForTesting
 import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.domain.service.AppWatchdog.Companion.MAX_REPIN_ATTEMPTS
+import com.aliothmoon.maameow.domain.service.AppWatchdog.Companion.REPIN_GRACE_MS
 import com.aliothmoon.maameow.remote.AppAliveStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

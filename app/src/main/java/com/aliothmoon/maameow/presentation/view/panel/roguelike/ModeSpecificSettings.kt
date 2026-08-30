@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.presentation.view.panel.roguelike
 
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -17,6 +16,7 @@ import com.aliothmoon.maameow.domain.enums.RoguelikeBoskySubNodeType
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.ITextField
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants.Roguelike as RoguelikeUi
 
 @Composable
@@ -107,7 +107,8 @@ fun ModeSpecificSettings(
 
             // WPF: CheckComboBox (xaml:225-234) 开局奖励选择
             // Visibility: Mode==Collectible AND !RoguelikeOnlyStartWithEliteTwo
-            val computedOnlyEliteTwo = config.onlyStartWithEliteTwo && config.startWithEliteTwo && squadIsProfessional
+            val computedOnlyEliteTwo =
+                config.onlyStartWithEliteTwo && config.startWithEliteTwo && squadIsProfessional
             if (!computedOnlyEliteTwo) {
                 val awardOptions = localizedRoguelikeCollectibleAwardOptions(config.theme)
                 Text(

@@ -80,7 +80,12 @@ class ExternalNotificationService(
             when (result) {
                 is NotificationSendResult.Success -> {
                     if (isTest) {
-                        _feedbackMessages.tryEmit(uiTextOf(R.string.notification_feedback_send_success, id))
+                        _feedbackMessages.tryEmit(
+                            uiTextOf(
+                                R.string.notification_feedback_send_success,
+                                id
+                            )
+                        )
                     }
                 }
 

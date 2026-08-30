@@ -151,7 +151,10 @@ private fun ErrorLogFileListView(
                         )
                     }
                     TextButton(onClick = { showCleanupConfirm = true }) {
-                        Text(stringResource(R.string.log_cleanup_all), color = MaterialTheme.colorScheme.error)
+                        Text(
+                            stringResource(R.string.log_cleanup_all),
+                            color = MaterialTheme.colorScheme.error
+                        )
                     }
                 }
             )

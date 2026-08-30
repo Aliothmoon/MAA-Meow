@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.presentation.view.panel.common
 
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
@@ -30,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 
 /** 材料选择（可折叠，交互对齐 [GroupedStageButtonGroup]） */
 @Composable

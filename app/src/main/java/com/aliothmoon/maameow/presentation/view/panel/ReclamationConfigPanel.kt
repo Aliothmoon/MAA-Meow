@@ -1,11 +1,8 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,8 +22,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -35,6 +30,7 @@ import com.aliothmoon.maameow.data.model.ReclamationConfig
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import kotlinx.coroutines.launch
 
 @Composable
@@ -163,7 +159,8 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                             isRelaunchAnchor -> {
                                 item {
                                     val containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                                    val onContainerColor = MaterialTheme.colorScheme.onTertiaryContainer
+                                    val onContainerColor =
+                                        MaterialTheme.colorScheme.onTertiaryContainer
                                     val tipRes = when (config.mode) {
                                         ReclamationConfig.MODE_RA15 -> R.string.panel_reclamation_relaunch_anchor_tip_ra15
                                         ReclamationConfig.MODE_RA4 -> R.string.panel_reclamation_relaunch_anchor_tip_ra4

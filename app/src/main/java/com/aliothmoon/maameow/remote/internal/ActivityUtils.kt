@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
 import android.view.Display
+import com.aliothmoon.maameow.remote.internal.ActivityUtils.DISPLAY_NO_TASK
 import com.aliothmoon.maameow.third.FakeContext
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
@@ -45,7 +46,11 @@ object ActivityUtils {
      */
     @JvmStatic
     @JvmOverloads
-    fun startActivity(intent: Intent, displayId: Int = 0, forceFullscreen: Boolean = false): Boolean {
+    fun startActivity(
+        intent: Intent,
+        displayId: Int = 0,
+        forceFullscreen: Boolean = false
+    ): Boolean {
         val am = ServiceManager.getActivityManager()
         try {
             val launchOptions = ActivityOptions.makeBasic()
@@ -244,7 +249,11 @@ object ActivityUtils {
         val atm = activityTaskManager ?: return@lazy null
         sequenceOf("moveRootTaskToDisplay", "moveStackToDisplay").firstNotNullOfOrNull { name ->
             runCatching {
-                atm.javaClass.getMethod(name, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+                atm.javaClass.getMethod(
+                    name,
+                    Int::class.javaPrimitiveType,
+                    Int::class.javaPrimitiveType
+                )
             }.getOrNull()
         } ?: run {
             Ln.w("moveTaskToDisplayMethod: no candidate method found")
@@ -254,7 +263,8 @@ object ActivityUtils {
 
     private fun moveTaskViaAmCommand(taskId: Int, displayId: Int): Boolean {
         return try {
-            val args = arrayOf("am", "display", "move-stack", taskId.toString(), displayId.toString())
+            val args =
+                arrayOf("am", "display", "move-stack", taskId.toString(), displayId.toString())
             Ln.i("moveTaskViaAmCommand: exec: ${args.joinToString(" ")}")
             val process = Runtime.getRuntime().exec(args)
             val exitCode = process.waitFor()

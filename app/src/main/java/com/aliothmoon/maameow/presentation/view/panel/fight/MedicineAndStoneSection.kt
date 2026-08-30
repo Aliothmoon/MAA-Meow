@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.presentation.view.panel.fight
 
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +16,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.INumericField
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 
 /**
  * 理智药/源石/次数区域
@@ -87,7 +87,11 @@ fun MedicineAndStoneSection(
                         shape = RoundedCornerShape(4.dp)
                     ) {
                         Text(
-                            text = stringResource(R.string.panel_fight_series_warning, config.maxTimes, config.series),
+                            text = stringResource(
+                                R.string.panel_fight_series_warning,
+                                config.maxTimes,
+                                config.series
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onTertiaryContainer,
                             modifier = Modifier.padding(8.dp)

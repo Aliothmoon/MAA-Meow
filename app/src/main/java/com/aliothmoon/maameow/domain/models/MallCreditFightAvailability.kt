@@ -39,6 +39,7 @@ class MallCreditFightAvailability private constructor(
                             order,
                             reason.stageIndex,
                         )
+
                         BlockingReason.NoOpenStage -> uiTextOf(
                             R.string.mall_credit_fight_blocked_by_closed_stage,
                             it.name,

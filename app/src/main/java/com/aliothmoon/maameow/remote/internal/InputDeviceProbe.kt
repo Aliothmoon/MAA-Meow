@@ -51,7 +51,7 @@ internal object InputDeviceProbe {
         candidates.drop(1).forEach { Ln.i("$TAG: candidate ${it.path} \"${it.name}\"") }
         Ln.i(
             "$TAG: using ${info.path} \"${info.name}\"" +
-                " x=[${info.absXMin},${info.absXMax}] y=[${info.absYMin},${info.absYMax}]"
+                    " x=[${info.absXMin},${info.absXMax}] y=[${info.absYMin},${info.absYMax}]"
         )
         return info
     }

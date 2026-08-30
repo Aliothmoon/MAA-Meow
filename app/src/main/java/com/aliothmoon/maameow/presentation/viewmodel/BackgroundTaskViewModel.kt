@@ -93,9 +93,11 @@ class BackgroundTaskViewModel(
                         is LaunchSession.Phase.Counting,
                         LaunchSession.Phase.Preparing,
                         LaunchSession.Phase.Starting -> session.request.requestId
+
                         else -> null
                     }
                 }
+
                 LaunchSession.Idle -> null
             }
         }
@@ -108,6 +110,7 @@ class BackgroundTaskViewModel(
     private val surfaceRef = AtomicReference<Surface>()
 
     val isGameMuted: StateFlow<Boolean> = gameMuteCoordinator.isMuted
+
     // 后台模式游戏实时帧率，null = 未监控
     val gameFps: StateFlow<Float?> = gameFpsWatcher.fps
 

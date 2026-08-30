@@ -32,7 +32,10 @@ class CheckGameReadinessUseCase(
     ): GameReadiness {
         val packageName = Packages[clientType]
         if (packageName == null) {
-            Timber.w("CheckGameReadiness: cannot resolve package name for clientType=%s", clientType)
+            Timber.w(
+                "CheckGameReadiness: cannot resolve package name for clientType=%s",
+                clientType
+            )
             return GameReadiness.Ready(gameAliveBeforeStart = null)
         }
 
@@ -84,7 +87,11 @@ class CheckGameReadinessUseCase(
 
             else -> {
                 // UNKNOWN 或非预期状态：无法确认游戏是否存活，保守放行
-                Timber.w("CheckGameReadiness: unknown alive status %d for %s", aliveStatus, packageName)
+                Timber.w(
+                    "CheckGameReadiness: unknown alive status %d for %s",
+                    aliveStatus,
+                    packageName
+                )
                 GameReadiness.Ready(gameAliveBeforeStart = null)
             }
         }

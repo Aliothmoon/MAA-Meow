@@ -70,7 +70,7 @@ fun AchievementDebugView(
                 AchievementEffect.Cleared -> R.string.achievement_debug_clear_done
                 AchievementEffect.PallasEnteredDebug,
                 AchievementEffect.PallasExitedDebug,
-                -> return@collect
+                    -> return@collect
             }
             Toast.makeText(context, resId, Toast.LENGTH_SHORT).show()
         }
@@ -136,7 +136,10 @@ fun AchievementDebugView(
                                     )
                                     Text(
                                         text = "${state.definition.id} - ${
-                                            achievementText(state.definition.id, AchievementField.TITLE)
+                                            achievementText(
+                                                state.definition.id,
+                                                AchievementField.TITLE
+                                            )
                                         }",
                                         style = MaterialTheme.typography.bodyMedium,
                                         maxLines = 1,

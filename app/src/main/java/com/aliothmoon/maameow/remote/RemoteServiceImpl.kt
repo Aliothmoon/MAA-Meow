@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.remote
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Process
 import android.view.Surface
@@ -10,7 +11,6 @@ import com.aliothmoon.maameow.bridge.NativeBridgeLib
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.DisplayMode
 import com.aliothmoon.maameow.maa.InputControlUtils
-import android.content.Intent
 import com.aliothmoon.maameow.remote.internal.ActivityUtils
 import com.aliothmoon.maameow.remote.internal.GameAudioMuteController
 import com.aliothmoon.maameow.remote.internal.GameFpsMonitor

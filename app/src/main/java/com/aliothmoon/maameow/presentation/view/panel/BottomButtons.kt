@@ -38,7 +38,9 @@ fun BottomButtons(
     ) {
         OutlinedButton(
             onClick = onClose,
-            modifier = Modifier.weight(1f).height(36.dp),
+            modifier = Modifier
+                .weight(1f)
+                .height(36.dp),
             shape = RoundedCornerShape(8.dp),
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
             enabled = !isStarting,
@@ -54,7 +56,9 @@ fun BottomButtons(
 
         Button(
             onClick = onStart,
-            modifier = Modifier.weight(1f).height(36.dp),
+            modifier = Modifier
+                .weight(1f)
+                .height(36.dp),
             shape = RoundedCornerShape(8.dp),
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
             enabled = !isStarting,

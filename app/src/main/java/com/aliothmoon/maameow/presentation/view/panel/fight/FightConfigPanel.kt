@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.presentation.view.panel.fight
 
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
@@ -61,6 +60,7 @@ import com.aliothmoon.maameow.presentation.view.panel.common.GroupedStageButtonG
 import com.aliothmoon.maameow.presentation.view.panel.common.StageBadge
 import com.aliothmoon.maameow.presentation.view.panel.common.StageInputField
 import com.aliothmoon.maameow.presentation.view.panel.common.StageRow
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -177,7 +177,10 @@ fun FightConfigPanel(
                             MedicineAndStoneSection(config, onConfigChange)
                         }
                         item {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant,
+                                thickness = 0.5.dp
+                            )
                         }
                         item {
                             // 指定材料掉落
@@ -187,7 +190,10 @@ fun FightConfigPanel(
                             )
                         }
                         item {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant,
+                                thickness = 0.5.dp
+                            )
                         }
                         // 代理倍率（HideSeries=false 时显示）
                         if (!config.hideSeries) {
@@ -195,7 +201,10 @@ fun FightConfigPanel(
                                 SeriesSection(config, onConfigChange)
                             }
                             item {
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant,
+                                    thickness = 0.5.dp
+                                )
                             }
                         }
                         item {
@@ -262,7 +271,13 @@ fun FightConfigPanel(
                                 // 使用即将过期的理智药
                                 CheckBoxWithExpandableTip(
                                     checked = config.useExpiringMedicine,
-                                    onCheckedChange = { onConfigChange(config.copy(useExpiringMedicine = it)) },
+                                    onCheckedChange = {
+                                        onConfigChange(
+                                            config.copy(
+                                                useExpiringMedicine = it
+                                            )
+                                        )
+                                    },
                                     label = stringResource(R.string.panel_fight_use_expiring_medicine),
                                     tipText = stringResource(R.string.panel_fight_use_expiring_medicine_tip)
                                 )
@@ -276,20 +291,36 @@ fun FightConfigPanel(
                                             label = stringResource(R.string.panel_fight_medicine_expire_days),
                                             selectedValue = config.medicineExpireDays,
                                             options = MEDICINE_EXPIRE_DAY_OPTIONS,
-                                            onSelected = { onConfigChange(config.copy(medicineExpireDays = it)) }
+                                            onSelected = {
+                                                onConfigChange(
+                                                    config.copy(
+                                                        medicineExpireDays = it
+                                                    )
+                                                )
+                                            }
                                         )
                                         CheckBoxWithExpandableTip(
                                             checked = config.useExpireMedicineForActivity,
-                                            onCheckedChange = { onConfigChange(config.copy(useExpireMedicineForActivity = it)) },
+                                            onCheckedChange = {
+                                                onConfigChange(
+                                                    config.copy(
+                                                        useExpireMedicineForActivity = it
+                                                    )
+                                                )
+                                            },
                                             label = stringResource(R.string.panel_fight_use_expire_medicine_for_activity),
                                             tipText = stringResource(R.string.panel_fight_use_expire_medicine_for_activity_tip)
                                         )
-                                        val summaries = remember { activityManager.getOpenActivitySummaries() }
-                                        val daysLeftLabel = stringResource(R.string.panel_fight_activity_days_left_open)
-                                        val lessThanOneDay = stringResource(R.string.panel_fight_activity_less_than_one_day)
+                                        val summaries =
+                                            remember { activityManager.getOpenActivitySummaries() }
+                                        val daysLeftLabel =
+                                            stringResource(R.string.panel_fight_activity_days_left_open)
+                                        val lessThanOneDay =
+                                            stringResource(R.string.panel_fight_activity_less_than_one_day)
                                         if (summaries.isNotEmpty()) {
                                             summaries.forEach { s ->
-                                                val dayText = if (s.daysLeft > 0) "${s.daysLeft}+" else lessThanOneDay
+                                                val dayText =
+                                                    if (s.daysLeft > 0) "${s.daysLeft}+" else lessThanOneDay
                                                 Text(
                                                     text = "｢${s.name}｣ $daysLeftLabel$dayText",
                                                     style = MaterialTheme.typography.labelSmall,
@@ -540,10 +571,13 @@ private fun GroupedStageSelectionSection(
     val stageWarning = when {
         alternatesBlocked ->
             stringResource(R.string.panel_fight_permanent_stage_blocks_alternate)
+
         config.stage1.isNotBlank() && executingStage == null ->
             stringResource(R.string.panel_fight_stage_all_closed, config.stage1)
+
         !stage1Open && config.stage1.isNotBlank() && config.useAlternateStage ->
             stringResource(R.string.panel_fight_primary_stage_closed_with_alternate, config.stage1)
+
         else -> null
     }
 
@@ -636,21 +670,25 @@ private fun GroupedStageSelectionSection(
             fun updateAlternate(index: Int, value: String) {
                 onConfigChange(
                     config.copy(
-                        alternateStages = config.alternateStages.toMutableList().also { it[index] = value }
+                        alternateStages = config.alternateStages.toMutableList()
+                            .also { it[index] = value }
                     )
                 )
             }
+
             // 删除指定序号的备选关卡
             fun removeAlternate(index: Int) {
                 onConfigChange(
                     config.copy(
-                        alternateStages = config.alternateStages.toMutableList().also { it.removeAt(index) }
+                        alternateStages = config.alternateStages.toMutableList()
+                            .also { it.removeAt(index) }
                     )
                 )
             }
 
             config.alternateStages.forEachIndexed { index, stage ->
-                val alternateLabel = stringResource(R.string.panel_fight_alternate_stage_label, index + 1)
+                val alternateLabel =
+                    stringResource(R.string.panel_fight_alternate_stage_label, index + 1)
                 if (config.customStageCode) {
                     // 文本输入模式
                     StageRow(onRemove = { removeAlternate(index) }) {

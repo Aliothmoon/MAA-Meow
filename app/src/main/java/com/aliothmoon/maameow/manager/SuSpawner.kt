@@ -14,7 +14,9 @@ object SuSpawner : ProcessSpawner {
 
     override fun spawn(command: String): SpawnHandle? {
         val result = Shell.cmd(command).exec()
-        check(result.code == 0) { result.err.joinToString("\n").ifBlank { "exit code=${result.code}" } }
+        check(result.code == 0) {
+            result.err.joinToString("\n").ifBlank { "exit code=${result.code}" }
+        }
         return null
     }
 

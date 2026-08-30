@@ -16,6 +16,7 @@ import java.util.UUID
 enum class ScheduleType {
     /** 固定星期 + 时刻 */
     FIXED_TIME,
+
     /** 指定开始时间 + 间隔周期 */
     INTERVAL,
 }

@@ -109,8 +109,9 @@ fun SpecifiedDropsSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (config.isInventoryTarget && hasDepotData) {
-                    val need = (config.dropsQuantity - (depotSnapshot.items[config.dropsItemId] ?: 0))
-                        .coerceAtLeast(0)
+                    val need =
+                        (config.dropsQuantity - (depotSnapshot.items[config.dropsItemId] ?: 0))
+                            .coerceAtLeast(0)
                     Text(
                         text = if (need <= 0) {
                             stringResource(R.string.panel_fight_inventory_enough)

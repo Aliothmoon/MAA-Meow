@@ -39,7 +39,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -158,7 +157,10 @@ fun RecruitConfigPanel(
                                 // 保留指定词条
                                 PreserveTagSection(config, onConfigChange)
 
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant,
+                                    thickness = 1.dp
+                                )
 
                                 // 自动选择三星
                                 ChooseLevel3Section(config, onConfigChange)
@@ -397,7 +399,10 @@ private fun AutoRecruitFirstListSection(
                 // 已选择计数
                 if (config.autoRecruitFirstList.isNotEmpty()) {
                     Text(
-                        text = stringResource(R.string.panel_recruit_selected_count, config.autoRecruitFirstList.size),
+                        text = stringResource(
+                            R.string.panel_recruit_selected_count,
+                            config.autoRecruitFirstList.size
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -573,7 +578,10 @@ private fun PreserveTagSection(
 
                     if (config.preserveTagList.isNotEmpty()) {
                         Text(
-                            text = stringResource(R.string.panel_recruit_selected_count, config.preserveTagList.size),
+                            text = stringResource(
+                                R.string.panel_recruit_selected_count,
+                                config.preserveTagList.size
+                            ),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -616,10 +624,12 @@ private fun ChooseLevel3Section(
             enabled = config.chooseLevel3,
             totalMinutes = config.chooseLevel3Hour * 60 + config.chooseLevel3Min,
             onTimeChange = { total ->
-                onConfigChange(config.copy(
-                    chooseLevel3Hour = total / 60,
-                    chooseLevel3Min = total % 60
-                ))
+                onConfigChange(
+                    config.copy(
+                        chooseLevel3Hour = total / 60,
+                        chooseLevel3Min = total % 60
+                    )
+                )
             }
         )
     }
@@ -655,10 +665,12 @@ private fun ChooseLevel4Section(
             enabled = config.chooseLevel4,
             totalMinutes = config.chooseLevel4Hour * 60 + config.chooseLevel4Min,
             onTimeChange = { total ->
-                onConfigChange(config.copy(
-                    chooseLevel4Hour = total / 60,
-                    chooseLevel4Min = total % 60
-                ))
+                onConfigChange(
+                    config.copy(
+                        chooseLevel4Hour = total / 60,
+                        chooseLevel4Min = total % 60
+                    )
+                )
             }
         )
     }

@@ -69,19 +69,19 @@ object MaaMotion {
     fun expandIn(reduceMotion: Boolean): EnterTransition {
         if (reduceMotion) return EnterTransition.None
         return fadeIn(spec(false, Fast, Linear)) +
-            expandVertically(
-                animationSpec = spec(false, Medium),
-                expandFrom = Alignment.Top,
-            )
+                expandVertically(
+                    animationSpec = spec(false, Medium),
+                    expandFrom = Alignment.Top,
+                )
     }
 
     fun expandOut(reduceMotion: Boolean): ExitTransition {
         if (reduceMotion) return ExitTransition.None
         return fadeOut(spec(false, Fast, Linear)) +
-            shrinkVertically(
-                animationSpec = spec(false, Medium),
-                shrinkTowards = Alignment.Top,
-            )
+                shrinkVertically(
+                    animationSpec = spec(false, Medium),
+                    shrinkTowards = Alignment.Top,
+                )
     }
 
     fun fadeIn(reduceMotion: Boolean): EnterTransition {
@@ -97,27 +97,27 @@ object MaaMotion {
     fun dialogIn(reduceMotion: Boolean): EnterTransition {
         if (reduceMotion) return EnterTransition.None
         return fadeIn(spec(false, Fast, Linear)) +
-            scaleIn(initialScale = 0.94f, animationSpec = spec(false, Medium))
+                scaleIn(initialScale = 0.94f, animationSpec = spec(false, Medium))
     }
 
     fun dialogOut(reduceMotion: Boolean): ExitTransition {
         if (reduceMotion) return ExitTransition.None
         return fadeOut(spec(false, Fast, Linear)) +
-            scaleOut(targetScale = 0.94f, animationSpec = spec(false, Fast))
+                scaleOut(targetScale = 0.94f, animationSpec = spec(false, Fast))
     }
 
     fun pageEnter(forward: Boolean, reduceMotion: Boolean): EnterTransition {
         if (reduceMotion) return EnterTransition.None
         val from = if (forward) { w: Int -> w } else { w: Int -> -w / 2 }
         return slideInHorizontally(spec(false, Page), from) +
-            fadeIn(spec(false, Page, Linear))
+                fadeIn(spec(false, Page, Linear))
     }
 
     fun pageExit(forward: Boolean, reduceMotion: Boolean): ExitTransition {
         if (reduceMotion) return ExitTransition.None
         val to = if (forward) { w: Int -> -w / 2 } else { w: Int -> w }
         return slideOutHorizontally(spec(false, Page), to) +
-            fadeOut(spec(false, Page, Linear))
+                fadeOut(spec(false, Page, Linear))
     }
 }
 

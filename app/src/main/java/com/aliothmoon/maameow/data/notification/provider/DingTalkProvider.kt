@@ -35,7 +35,10 @@ class DingTalkProvider(
             val mac = Mac.getInstance("HmacSHA256")
             mac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
             val sign = URLEncoder.encode(
-                Base64.encodeToString(mac.doFinal(stringToSign.toByteArray(Charsets.UTF_8)), Base64.NO_WRAP),
+                Base64.encodeToString(
+                    mac.doFinal(stringToSign.toByteArray(Charsets.UTF_8)),
+                    Base64.NO_WRAP
+                ),
                 "UTF-8"
             )
             url += "&timestamp=$timestamp&sign=$sign"

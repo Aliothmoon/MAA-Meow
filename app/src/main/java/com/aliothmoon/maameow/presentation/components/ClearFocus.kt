@@ -60,7 +60,7 @@ fun Modifier.clearFocusOnBlankTap(): Modifier {
                     val x = posInWindow.x.toInt()
                     val y = posInWindow.y.toInt()
                     val inside = x in loc[0] until (loc[0] + focused.width) &&
-                        y in loc[1] until (loc[1] + focused.height)
+                            y in loc[1] until (loc[1] + focused.height)
                     if (!inside) {
                         latestClear.clear()
                     }

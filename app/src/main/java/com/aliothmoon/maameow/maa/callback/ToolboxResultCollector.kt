@@ -43,7 +43,8 @@ class ToolboxResultCollector(
     /** 返回解析结果，免得调用方再解一遍 */
     fun onPixelPaintProgress(details: JSONObject?): PixelPaintProgress? {
         val done = details?.getIntValue("done") ?: return null
-        val progress = PixelPaintProgress(done, details.getIntValue("total"), details.getIntValue("color"))
+        val progress =
+            PixelPaintProgress(done, details.getIntValue("total"), details.getIntValue("color"))
         _pixelPaintProgress.value = progress
         return progress
     }

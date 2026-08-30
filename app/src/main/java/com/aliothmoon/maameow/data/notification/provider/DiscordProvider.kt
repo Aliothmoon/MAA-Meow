@@ -34,6 +34,7 @@ class DiscordProvider(
                 return NotificationSendResult.Failed(
                     uiTextOf(R.string.notification_err_discord_dm_failed)
                 )
+
             is DmChannelResult.NetworkError ->
                 return NotificationSendResult.Transient(uiTextOf(R.string.notification_err_network))
         }

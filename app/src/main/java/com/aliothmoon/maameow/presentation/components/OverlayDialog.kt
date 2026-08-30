@@ -1,8 +1,5 @@
 package com.aliothmoon.maameow.presentation.components
 
-import com.aliothmoon.maameow.theme.LocalReduceMotion
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
-import com.aliothmoon.maameow.theme.MaaMotion
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -41,6 +38,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.theme.LocalReduceMotion
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaMotion
 
 /**
  * 悬浮窗专用对话框组件

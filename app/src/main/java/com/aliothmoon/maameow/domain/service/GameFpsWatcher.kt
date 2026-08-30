@@ -25,7 +25,8 @@ interface GameFpsReader {
 
 class RemoteGameFpsReader : GameFpsReader {
     override suspend fun readGameFps(): Float? = withContext(Dispatchers.IO) {
-        runCatching { RemoteServiceManager.getInstanceOrNull()?.gameFps }.getOrNull()?.takeIf { it >= 0f }
+        runCatching { RemoteServiceManager.getInstanceOrNull()?.gameFps }.getOrNull()
+            ?.takeIf { it >= 0f }
     }
 }
 
@@ -74,10 +75,16 @@ class GameFpsWatcher(
             val fps = advice.medianFps.roundToInt()
             when (advice.level) {
                 GameFpsAdvisor.Level.LOW ->
-                    sessionLogger.append(context.getString(R.string.runlog_game_fps_low, fps), LogLevel.ERROR)
+                    sessionLogger.append(
+                        context.getString(R.string.runlog_game_fps_low, fps),
+                        LogLevel.ERROR
+                    )
 
                 GameFpsAdvisor.Level.DEGRADED ->
-                    sessionLogger.append(context.getString(R.string.runlog_game_fps_degraded, fps), LogLevel.WARNING)
+                    sessionLogger.append(
+                        context.getString(R.string.runlog_game_fps_degraded, fps),
+                        LogLevel.WARNING
+                    )
             }
         }
     }

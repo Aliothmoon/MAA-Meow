@@ -30,7 +30,11 @@ class ToolboxExportService(
         "${prefix}_${ZonedDateTime.now().format(DATE_FORMAT)}.${fileType.extension}"
 
     /** 写入缓存并返回分享 Intent；失败返回 null。悬浮窗宿主需自行追加 FLAG_ACTIVITY_NEW_TASK。 */
-    suspend fun buildShareIntent(prefix: String, content: String, fileType: ToolboxExportFileType): Intent? =
+    suspend fun buildShareIntent(
+        prefix: String,
+        content: String,
+        fileType: ToolboxExportFileType
+    ): Intent? =
         withContext(Dispatchers.IO) {
             try {
                 val exportDir = File(context.cacheDir, EXPORT_DIR).apply { mkdirs() }

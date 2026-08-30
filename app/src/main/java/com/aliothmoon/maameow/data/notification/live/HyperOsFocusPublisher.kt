@@ -29,6 +29,7 @@ class HyperOsFocusPublisher(
 
     private val appContext = context.applicationContext
     private val plain = PlainNotificationPublisher(appContext, factory, promotedDetector)
+
     // xmsf 门闸含跨进程 shell 往返；持续更新与结果首浮入队后台单线程，避免阻塞调用方（主线程 collector）
     private val publishExecutor = Executors.newSingleThreadExecutor { r ->
         Thread(r, "hyper-focus-pub").apply { isDaemon = true }
@@ -76,8 +77,8 @@ class HyperOsFocusPublisher(
         if (needsHold(session)) holdProgress()
         val notification = assemble(session)
         val firstResultFloat = session.category == LiveCategory.RESULT &&
-            session.firstFloat &&
-            !isHeld()
+                session.firstFloat &&
+                !isHeld()
         if (firstResultFloat && bypassEnabled()) {
             xmsfGate.pulse { plain.notifyOrSkip(session.sessionId, notification) }
         } else {
@@ -202,7 +203,10 @@ class HyperOsFocusPublisher(
                         }
                     }
                     textInfo = TextInfo().apply {
-                        title = (if (isProgress) stripProgressPrefix(session, body) else headline).take(18)
+                        title =
+                            (if (isProgress) stripProgressPrefix(session, body) else headline).take(
+                                18
+                            )
                         content = body.take(32)
                         showHighlightColor = true
                         narrowFont = true

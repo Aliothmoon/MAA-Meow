@@ -24,7 +24,8 @@ class PlainNotificationPublisher(
     override val capability: LiveCapability
         get() = LiveCapability(
             backend = LiveBackend.PLAIN,
-            postNotifications = NotificationManagerCompat.from(appContext).areNotificationsEnabled(),
+            postNotifications = NotificationManagerCompat.from(appContext)
+                .areNotificationsEnabled(),
             promotedAvailable = promotedDetector.isApiSupported(),
             promotedGranted = promotedDetector.isGranted(),
             focusLikely = false,

@@ -32,6 +32,7 @@ class TouchPreviewController(
                     MotionEvent.ACTION_DOWN,
                     MotionEvent.ACTION_MOVE,
                     MotionEvent.ACTION_UP -> type
+
                     MotionEvent.ACTION_POINTER_DOWN -> MotionEvent.ACTION_DOWN
                     MotionEvent.ACTION_POINTER_UP -> MotionEvent.ACTION_UP
                     else -> return
@@ -58,7 +59,7 @@ class TouchPreviewController(
     }
 
     fun onTouchCallbackChange(enabled: Boolean) {
-        val service = RemoteServiceManager.getInstanceOrNull()?: return
+        val service = RemoteServiceManager.getInstanceOrNull() ?: return
         if (enabled) {
             scope.launch(Dispatchers.IO) {
                 runCatching { service.setTouchCallback(callback.value) }

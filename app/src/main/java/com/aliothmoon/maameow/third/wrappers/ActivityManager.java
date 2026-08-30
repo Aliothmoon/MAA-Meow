@@ -24,6 +24,10 @@ public final class ActivityManager {
     private Method startActivityAsUserMethod;
     private Method forceStopPackageMethod;
 
+    private ActivityManager(IInterface manager) {
+        this.manager = manager;
+    }
+
     static ActivityManager create() {
         try {
             // On old Android versions, the ActivityManager is not exposed via AIDL,
@@ -35,10 +39,6 @@ public final class ActivityManager {
         } catch (ReflectiveOperationException e) {
             throw new AssertionError(e);
         }
-    }
-
-    private ActivityManager(IInterface manager) {
-        this.manager = manager;
     }
 
     private Method getGetContentProviderExternalMethod() throws NoSuchMethodException {

@@ -20,8 +20,15 @@ object ShizukuInstallHelper {
         NOT_INSTALLED       // 均未检测到，需要安装
     }
 
-    fun checkStatus(context: Context, launchPackageName: String = OFFICIAL_SHIZUKU_PACKAGE): ShizukuStatus {
-        val isSuiAvailable = try { Sui.init(context.packageName) } catch (_: Exception) { false }
+    fun checkStatus(
+        context: Context,
+        launchPackageName: String = OFFICIAL_SHIZUKU_PACKAGE
+    ): ShizukuStatus {
+        val isSuiAvailable = try {
+            Sui.init(context.packageName)
+        } catch (_: Exception) {
+            false
+        }
         if (isSuiAvailable) return ShizukuStatus.SUI_AVAILABLE
         if (ShizukuManager.isShizukuAvailable()) return ShizukuStatus.READY
 
@@ -52,7 +59,10 @@ object ShizukuInstallHelper {
         }
     }
 
-    fun openShizuku(context: Context, launchPackageName: String = OFFICIAL_SHIZUKU_PACKAGE): Boolean {
+    fun openShizuku(
+        context: Context,
+        launchPackageName: String = OFFICIAL_SHIZUKU_PACKAGE
+    ): Boolean {
         return try {
             val intent = launchIntentForPackage(context, launchPackageName) ?: return false
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

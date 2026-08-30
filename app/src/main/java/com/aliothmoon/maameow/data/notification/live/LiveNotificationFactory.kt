@@ -35,7 +35,8 @@ class LiveNotificationFactory(private val context: Context) {
                 appContext.getString(R.string.notification_channel_task_execution_live),
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
-                description = appContext.getString(R.string.notification_channel_task_execution_desc)
+                description =
+                    appContext.getString(R.string.notification_channel_task_execution_desc)
                 setShowBadge(false)
                 setSound(null, null)
                 enableVibration(false)

@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.data.model
 
+import com.aliothmoon.maameow.data.model.WakeUpConfig.Companion.ACCOUNT_SWITCH_CLIENT_TYPES
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import kotlinx.serialization.Serializable

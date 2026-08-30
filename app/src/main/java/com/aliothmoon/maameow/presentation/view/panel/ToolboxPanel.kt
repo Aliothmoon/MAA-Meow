@@ -99,6 +99,7 @@ fun ToolboxPanel(
                 delegate = viewModel.miniGame,
                 pixelArt = viewModel.pixelArt,
             )
+
             ToolboxTab.GACHA -> GachaPanel(viewModel = viewModel, modifier = Modifier.fillMaxSize())
             ToolboxTab.RECRUIT_CALC -> RecruitCalcPanel(modifier = Modifier.fillMaxSize())
             ToolboxTab.DEPOT -> DepotRecognitionPanel(modifier = Modifier.fillMaxSize())

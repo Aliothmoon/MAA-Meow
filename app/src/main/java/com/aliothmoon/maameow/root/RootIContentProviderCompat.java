@@ -9,10 +9,10 @@ import android.system.Os;
 
 public final class RootIContentProviderCompat {
 
+    private static final String SHELL_PACKAGE = "com.android.shell";
+
     private RootIContentProviderCompat() {
     }
-
-    private static final String SHELL_PACKAGE = "com.android.shell";
 
     public static Bundle call(
             IContentProvider provider,

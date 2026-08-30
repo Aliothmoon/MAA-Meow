@@ -126,6 +126,7 @@ class ScreenSaverOverlayManager(
 
     private fun createLayoutParams(): WindowManager.LayoutParams {
         val type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+
         @Suppress("DEPRECATION")
         val flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or

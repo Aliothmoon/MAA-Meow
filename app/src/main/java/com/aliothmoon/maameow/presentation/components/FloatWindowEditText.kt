@@ -145,8 +145,8 @@ fun FloatWindowEditText(
                         setOnEditorActionListener { _, actionId, event ->
                             if (!currentSingleLine) return@setOnEditorActionListener false
                             val isEnterKey = event != null &&
-                                event.keyCode == KeyEvent.KEYCODE_ENTER &&
-                                event.action == KeyEvent.ACTION_DOWN
+                                    event.keyCode == KeyEvent.KEYCODE_ENTER &&
+                                    event.action == KeyEvent.ACTION_DOWN
                             if (isImeDoneAction(actionId) || isEnterKey) {
                                 currentOnImeAction?.invoke()
                                 clearFocus()
@@ -213,6 +213,7 @@ private fun isImeDoneAction(actionId: Int): Boolean = when (actionId) {
     EditorInfo.IME_ACTION_SEND,
     EditorInfo.IME_ACTION_NEXT,
     EditorInfo.IME_NULL -> true
+
     else -> false
 }
 

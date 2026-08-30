@@ -24,7 +24,8 @@ class NotificationSettingsManager(private val context: Context) {
         val Context.notificationDataStore: DataStore<Preferences> by preferencesDataStore(name = "notification_settings")
     }
 
-    val settings: Flow<NotificationSettings> = with(NotificationSettingsSchema) { context.notificationDataStore.flow }
+    val settings: Flow<NotificationSettings> =
+        with(NotificationSettingsSchema) { context.notificationDataStore.flow }
 
     private val initialSettings: NotificationSettings = runBlocking { settings.first() }
 

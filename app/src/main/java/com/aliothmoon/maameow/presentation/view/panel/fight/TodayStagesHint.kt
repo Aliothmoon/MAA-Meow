@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.presentation.view.panel.fight
 
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
@@ -26,12 +25,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.StageGroup
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 
 /**
  * 今日开放关卡提示
@@ -122,7 +121,9 @@ fun TodayStagesHint(
                     )
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = if (expanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
+                        contentDescription = if (expanded) stringResource(R.string.common_collapse) else stringResource(
+                            R.string.common_expand
+                        ),
                         tint = MaterialTheme.colorScheme.onSecondaryContainer,
                         modifier = Modifier.size(20.dp)
                     )
@@ -139,7 +140,8 @@ fun TodayStagesHint(
                     ) {
                         regularTips.forEach { tip ->
                             val color = when {
-                                tip.trimStart().startsWith("(") -> MaterialTheme.colorScheme.onSurfaceVariant // 仓库信息用灰色
+                                tip.trimStart()
+                                    .startsWith("(") -> MaterialTheme.colorScheme.onSurfaceVariant // 仓库信息用灰色
                                 else -> MaterialTheme.colorScheme.onSecondaryContainer // 资源提示用绿色
                             }
                             Text(

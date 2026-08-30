@@ -56,6 +56,7 @@ sealed interface PallasClickResult {
     data object ExitedDebug : PallasClickResult
     data class Counting(val n: Int) : PallasClickResult
     data object MissedRoll : PallasClickResult
+
     /** 防抖 / 退出冷却内，不改变状态。 */
     data object Ignored : PallasClickResult
 }

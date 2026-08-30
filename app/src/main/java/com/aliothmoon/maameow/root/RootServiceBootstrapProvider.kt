@@ -6,7 +6,6 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Binder
 import android.os.Bundle
-import android.os.IBinder
 import android.os.Process
 import timber.log.Timber
 

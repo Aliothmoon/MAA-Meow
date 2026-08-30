@@ -78,6 +78,7 @@ fun NotificationSettings.withWebhookPreset(id: String): NotificationSettings {
 // 导入恢复：导出脱敏清掉了 URL/Headers，选中预置且两字段皆空则按模板补回，Body 未脱敏不动
 fun NotificationSettings.reapplyWebhookPresetIfBlank(): NotificationSettings {
     if (customWebhookUrl.isNotBlank() || customWebhookHeaders.isNotBlank()) return this
-    val template = WEBHOOK_PRESET_TEMPLATES.firstOrNull { it.id == customWebhookPresetId } ?: return this
+    val template =
+        WEBHOOK_PRESET_TEMPLATES.firstOrNull { it.id == customWebhookPresetId } ?: return this
     return copy(customWebhookUrl = template.url, customWebhookHeaders = template.headers)
 }

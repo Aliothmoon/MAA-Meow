@@ -29,8 +29,8 @@ object UiScale {
             sw >= REF_WIDTH_DP -> REF_SCALE
             sw <= NARROW_WIDTH_DP -> NARROW_SCALE
             else -> NARROW_SCALE +
-                (sw - NARROW_WIDTH_DP) * (REF_SCALE - NARROW_SCALE) /
-                (REF_WIDTH_DP - NARROW_WIDTH_DP)
+                    (sw - NARROW_WIDTH_DP) * (REF_SCALE - NARROW_SCALE) /
+                    (REF_WIDTH_DP - NARROW_WIDTH_DP)
         }
         // 窄屏 + 系统大字：控件不再跟着重缩，只让出 5% 给变大的字
         if (sw < REF_WIDTH_DP && fontScale > 1.3f) {

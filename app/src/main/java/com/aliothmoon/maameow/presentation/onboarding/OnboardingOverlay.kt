@@ -152,7 +152,11 @@ private fun Spotlight(
     val defocusInflate = with(density) { DefocusInflate.toPx() }
 
     val holeRect = remember {
-        Animatable(Rect.Zero, Rect.VectorConverter, visibilityThreshold = Rect(0.5f, 0.5f, 0.5f, 0.5f))
+        Animatable(
+            Rect.Zero,
+            Rect.VectorConverter,
+            visibilityThreshold = Rect(0.5f, 0.5f, 0.5f, 0.5f)
+        )
     }
     val holeAlpha = remember { Animatable(0f) }
     val cardAlpha = remember { Animatable(0f) }
@@ -172,8 +176,18 @@ private fun Spotlight(
                 return
             }
             coroutineScope {
-                launch { holeAlpha.animateTo(0f, MaaMotion.spec(false, MaaMotion.Fast, MaaMotion.Linear)) }
-                launch { holeRect.animateTo(holeRect.value.inflate(defocusInflate), MaaMotion.spec(false, MaaMotion.Fast)) }
+                launch {
+                    holeAlpha.animateTo(
+                        0f,
+                        MaaMotion.spec(false, MaaMotion.Fast, MaaMotion.Linear)
+                    )
+                }
+                launch {
+                    holeRect.animateTo(
+                        holeRect.value.inflate(defocusInflate),
+                        MaaMotion.spec(false, MaaMotion.Fast)
+                    )
+                }
             }
         }
 
@@ -187,7 +201,12 @@ private fun Spotlight(
             coroutineScope {
                 launch { holeRect.animateTo(rect, SpotlightSpring) }
                 if (holeAlpha.value < 1f) {
-                    launch { holeAlpha.animateTo(1f, MaaMotion.spec(false, MaaMotion.Medium, MaaMotion.Linear)) }
+                    launch {
+                        holeAlpha.animateTo(
+                            1f,
+                            MaaMotion.spec(false, MaaMotion.Medium, MaaMotion.Linear)
+                        )
+                    }
                 }
             }
         }
@@ -202,7 +221,10 @@ private fun Spotlight(
         suspend fun showCard() {
             if (cardAlpha.value < 1f) {
                 if (reduceMotion) cardAlpha.snapTo(1f)
-                else cardAlpha.animateTo(1f, MaaMotion.spec(false, MaaMotion.Medium, MaaMotion.Linear))
+                else cardAlpha.animateTo(
+                    1f,
+                    MaaMotion.spec(false, MaaMotion.Medium, MaaMotion.Linear)
+                )
             }
             cardHidden = false
         }
@@ -329,9 +351,9 @@ private fun Spotlight(
                     left = safeInsets.calculateLeftPadding(layoutDirection).roundToPx() + margin,
                     top = safeInsets.calculateTopPadding().roundToPx() + margin,
                     right = constraints.maxWidth -
-                        safeInsets.calculateRightPadding(layoutDirection).roundToPx() - margin,
+                            safeInsets.calculateRightPadding(layoutDirection).roundToPx() - margin,
                     bottom = constraints.maxHeight -
-                        safeInsets.calculateBottomPadding().roundToPx() - margin,
+                            safeInsets.calculateBottomPadding().roundToPx() - margin,
                 )
                 val cardWidth = minOf(area.width, CardMaxWidth.roundToPx()).coerceAtLeast(0)
                 val placeable = measurables.first().measure(
@@ -373,16 +395,27 @@ private fun OnboardingCard(
                 transitionSpec = {
                     if (reduceMotion) {
                         EnterTransition.None togetherWith ExitTransition.None using
-                            SizeTransform(clip = false) { _, _ -> snap() }
+                                SizeTransform(clip = false) { _, _ -> snap() }
                     } else {
                         val forward = targetState > initialState
-                        val enter = fadeIn(MaaMotion.spec(false, MaaMotion.Medium, MaaMotion.Linear)) +
-                            slideInVertically(MaaMotion.spec(false, MaaMotion.Medium)) { height ->
-                                if (forward) height / 8 else -height / 8
-                            }
+                        val enter =
+                            fadeIn(MaaMotion.spec(false, MaaMotion.Medium, MaaMotion.Linear)) +
+                                    slideInVertically(
+                                        MaaMotion.spec(
+                                            false,
+                                            MaaMotion.Medium
+                                        )
+                                    ) { height ->
+                                        if (forward) height / 8 else -height / 8
+                                    }
                         val exit = fadeOut(MaaMotion.spec(false, MaaMotion.Fast, MaaMotion.Linear))
                         enter togetherWith exit using
-                            SizeTransform(clip = false) { _, _ -> MaaMotion.spec(false, MaaMotion.Medium) }
+                                SizeTransform(clip = false) { _, _ ->
+                                    MaaMotion.spec(
+                                        false,
+                                        MaaMotion.Medium
+                                    )
+                                }
                     }
                 },
                 label = "OnboardingCardContent",
@@ -409,7 +442,11 @@ private fun OnboardingCardContent(state: OnboardingState, step: OnboardingStep, 
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = stringResource(R.string.onboarding_step_counter, index + 1, state.steps.size),
+                    text = stringResource(
+                        R.string.onboarding_step_counter,
+                        index + 1,
+                        state.steps.size
+                    ),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -25,7 +25,8 @@ class PrepareTaskStartUseCase(
             }
         }
 
-        return when (val readiness = checkGameReadiness(plan.clientType, plan.launchesGame, context)) {
+        return when (val readiness =
+            checkGameReadiness(plan.clientType, plan.launchesGame, context)) {
             is GameReadiness.Ready ->
                 TaskStartDecision.Ready(plan.copy(gameAliveBeforeStart = readiness.gameAliveBeforeStart))
 

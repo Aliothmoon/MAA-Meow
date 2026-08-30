@@ -579,7 +579,11 @@ class ActivityManager(
     }
 
     private fun daysLeftLine(name: String, activity: StageActivityInfo): String =
-        "｢$name｣ ${context.getString(R.string.panel_fight_activity_days_left_open)}${daysLeftText(activity)}"
+        "｢$name｣ ${context.getString(R.string.panel_fight_activity_days_left_open)}${
+            daysLeftText(
+                activity
+            )
+        }"
 
     /** 迁移自 WPF StageManager.GetDaysLeftText */
     private fun daysLeftText(activity: StageActivityInfo): String {

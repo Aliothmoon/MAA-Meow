@@ -8,13 +8,13 @@ import android.os.Build
 import com.aliothmoon.maameow.MainActivity
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import com.aliothmoon.maameow.schedule.model.ScheduleType
 import com.aliothmoon.maameow.schedule.model.ScheduledExecutionRequest
-import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import timber.log.Timber
 import java.time.Instant
-import java.time.ZonedDateTime
 import java.time.ZoneId
+import java.time.ZonedDateTime
 
 class ScheduleAlarmManager(
     private val context: Context,
@@ -66,7 +66,11 @@ class ScheduleAlarmManager(
                 pendingIntent,
             )
         } else {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMs, pendingIntent)
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerMs,
+                pendingIntent
+            )
         }
 
         Timber.i(
@@ -88,7 +92,7 @@ class ScheduleAlarmManager(
     /** API 31 起用户可单独关掉精确闹钟；关了仍能定时（走 setAlarmClock），只是状态栏多个图标 */
     fun canScheduleExact(): Boolean {
         val granted = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-            alarmManager.canScheduleExactAlarms()
+                alarmManager.canScheduleExactAlarms()
         return ExactAlarmSettings.isAllowed(Build.VERSION.SDK_INT, granted)
     }
 
@@ -113,7 +117,10 @@ class ScheduleAlarmManager(
     /**
      * [FIXED_TIME] 扫描未来 7 天，匹配 dayOfWeek + executionTimes。
      */
-    private fun computeNextFixedTime(strategy: ScheduleStrategy, afterEpochMs: Long): ZonedDateTime? {
+    private fun computeNextFixedTime(
+        strategy: ScheduleStrategy,
+        afterEpochMs: Long
+    ): ZonedDateTime? {
         if (strategy.daysOfWeek.isEmpty() || strategy.executionTimes.isEmpty()) {
             return null
         }
@@ -145,7 +152,10 @@ class ScheduleAlarmManager(
      * [INTERVAL] 从 startTimeMs 起，每隔 intervalMinutes 触发一次。
      * 计算公式: next = startTime + ceil((baseline - startTime) / interval) * interval
      */
-    private fun computeNextInterval(strategy: ScheduleStrategy, afterEpochMs: Long): ZonedDateTime? {
+    private fun computeNextInterval(
+        strategy: ScheduleStrategy,
+        afterEpochMs: Long
+    ): ZonedDateTime? {
         val startMs = strategy.startTimeMs ?: return null
         val intervalMs = (strategy.intervalMinutes ?: return null) * 60_000L
         if (intervalMs <= 0) return null

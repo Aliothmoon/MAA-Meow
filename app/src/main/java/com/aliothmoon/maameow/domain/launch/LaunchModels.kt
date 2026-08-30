@@ -67,10 +67,13 @@ fun LaunchSession.toCountdownState(): CountdownState {
                 strategyName = request.displayName,
                 remainingSeconds = phase.remainingSeconds,
             )
+
             LaunchSession.Phase.Preparing,
             LaunchSession.Phase.Starting -> CountdownState.Executing
+
             else -> CountdownState.Idle
         }
+
         LaunchSession.Idle -> CountdownState.Idle
     }
 }

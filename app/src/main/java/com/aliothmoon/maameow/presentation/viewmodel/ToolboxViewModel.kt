@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.achievement.AchievementIds
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
+import com.aliothmoon.maameow.data.model.toolbox.OperBoxExportFormatter
+import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.repository.DepotRepository
@@ -21,8 +23,6 @@ import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
 import com.aliothmoon.maameow.domain.usecase.GameReadiness
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
 import com.aliothmoon.maameow.domain.usecase.TaskStartMode
-import com.aliothmoon.maameow.data.model.toolbox.OperBoxExportFormatter
-import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.maa.callback.ToolboxResultCollector
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
@@ -95,7 +95,12 @@ class ToolboxViewModel(
     val pixelArt = PixelArtDelegate(appContext, collector, compositionService.state, viewModelScope)
 
     val miniGame = MiniGameDelegate(
-        appContext, activityManager, compositionService, viewModelScope, achievementRepository, pixelArt,
+        appContext,
+        activityManager,
+        compositionService,
+        viewModelScope,
+        achievementRepository,
+        pixelArt,
         sessionLogger,
     )
 
@@ -118,6 +123,7 @@ class ToolboxViewModel(
     val dialog: StateFlow<PanelDialogUiState?> = _dialog.asStateFlow()
 
     private var pendingStartContext: TaskStartContext? = null
+
     /** 牛牛抽卡：底部「开始任务」或面板按钮共用；null = 非 gacha 启动。 */
     private var pendingGachaOnce: Boolean? = null
     private var gachaTipJob: Job? = null
@@ -220,6 +226,7 @@ class ToolboxViewModel(
                 pendingGachaOnce = null
                 miniGame.onStart()
             }
+
             ToolboxTab.GACHA -> {
                 if (appSettingsManager.runMode.value == RunMode.FOREGROUND) {
                     pendingGachaOnce = null
@@ -229,14 +236,17 @@ class ToolboxViewModel(
                 pendingGachaOnce = null
                 doStartGacha(once)
             }
+
             ToolboxTab.RECRUIT_CALC -> {
                 pendingGachaOnce = null
                 onStartRecruitCalc()
             }
+
             ToolboxTab.DEPOT -> {
                 pendingGachaOnce = null
                 onStartDepot()
             }
+
             ToolboxTab.OPER_BOX -> {
                 pendingGachaOnce = null
                 onStartOperBox()
@@ -310,6 +320,7 @@ class ToolboxViewModel(
                 stopGachaTipRotation()
                 _statusMessage.value = uiTextOf(R.string.toolbox_status_stopped)
             }
+
             else -> viewModelScope.launch {
                 _statusMessage.value = uiTextOf(R.string.toolbox_status_stopping)
                 compositionService.stop()

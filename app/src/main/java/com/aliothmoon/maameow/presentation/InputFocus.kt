@@ -21,7 +21,7 @@ interface InputFocusManager {
 val LocalInputFocusManager = staticCompositionLocalOf<InputFocusManager> {
     error(
         "LocalInputFocusManager not provided. " +
-            "Wrap content with ProvideInputFocusManager { }."
+                "Wrap content with ProvideInputFocusManager { }."
     )
 }
 

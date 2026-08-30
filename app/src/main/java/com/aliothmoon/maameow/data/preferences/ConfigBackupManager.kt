@@ -41,7 +41,8 @@ class ConfigBackupManager(
             version = CURRENT_VERSION,
             exportedAt = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
             appSettings = appSettingsManager.settings.first().sanitized(),
-            notificationSettings = notificationSettingsManager.settings.first().sanitizedForExport(),
+            notificationSettings = notificationSettingsManager.settings.first()
+                .sanitizedForExport(),
             taskProfiles = taskChainState.profiles.value.map { it.sanitized() },
             activeProfileId = taskChainState.profileId.value,
             scheduleStrategies = scheduleStrategyRepository.strategies.value,

@@ -1,7 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
 import android.widget.Toast
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
@@ -52,6 +51,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ITextField
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -117,7 +117,9 @@ fun ProfileManagementPanel(
         )
         LazyColumn(
             state = lazyListState,
-            modifier = Modifier.fillMaxWidth().weight(1f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             itemsIndexed(profiles, key = { _, item -> item.id }) { _, profile ->
@@ -311,7 +313,10 @@ private fun ProfileCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         TextButton(onClick = onRenameConfirm) {
-                            Text(stringResource(R.string.common_confirm), style = MaterialTheme.typography.labelMedium)
+                            Text(
+                                stringResource(R.string.common_confirm),
+                                style = MaterialTheme.typography.labelMedium
+                            )
                         }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -326,7 +331,8 @@ private fun ProfileCard(
                         IconButton(
                             onClick = {
                                 clipboardManager.setText(AnnotatedString(profile.id))
-                                Toast.makeText(context, profileIdCopiedText, Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, profileIdCopiedText, Toast.LENGTH_SHORT)
+                                    .show()
                             },
                             modifier = Modifier.size(28.dp)
                         ) {

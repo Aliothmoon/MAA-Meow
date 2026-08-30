@@ -13,10 +13,6 @@ public final class RootServiceBootstrapClient {
     private RootServiceBootstrapClient() {
     }
 
-    /** 握手结果：app 生命周期 binder 与 app 进程 pid */
-    public record BootstrapResult(IBinder lifecycleBinder, int appPid) {
-    }
-
     public static BootstrapResult attachRemoteService(String packageName, int userId, String token, IBinder serviceBinder) {
         String authority = packageName + RootServiceBootstrapRegistry.AUTHORITY_SUFFIX;
         IBinder providerToken = new Binder();
@@ -76,5 +72,11 @@ public final class RootServiceBootstrapClient {
                 ServiceManager.getActivityManager().removeContentProviderExternal(authority, providerToken);
             }
         }
+    }
+
+    /**
+     * 握手结果：app 生命周期 binder 与 app 进程 pid
+     */
+    public record BootstrapResult(IBinder lifecycleBinder, int appPid) {
     }
 }

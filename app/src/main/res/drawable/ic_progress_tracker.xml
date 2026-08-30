@@ -12,72 +12,72 @@
         <!-- 外围四个细柄 -->
         <path
             android:fillColor="#FFFFFFFF"
-            android:strokeColor="#FFE32626"
+            android:pathData="M11.2,0.9 h1.6 a0.2,0.2 0 0 1 0.2,0.2 v3 a0.2,0.2 0 0 1 -0.2,0.2 h-1.6 a0.2,0.2 0 0 1 -0.2,-0.2 v-3 a0.2,0.2 0 0 1 0.2,-0.2z"
             android:strokeWidth="1"
-            android:pathData="M11.2,0.9 h1.6 a0.2,0.2 0 0 1 0.2,0.2 v3 a0.2,0.2 0 0 1 -0.2,0.2 h-1.6 a0.2,0.2 0 0 1 -0.2,-0.2 v-3 a0.2,0.2 0 0 1 0.2,-0.2z" />
+            android:strokeColor="#FFE32626" />
 
         <path
             android:fillColor="#FFFFFFFF"
-            android:strokeColor="#FFE32626"
+            android:pathData="M11.2,19.7 h1.6 a0.2,0.2 0 0 1 0.2,0.2 v3 a0.2,0.2 0 0 1 -0.2,0.2 h-1.6 a0.2,0.2 0 0 1 -0.2,-0.2 v-3 a0.2,0.2 0 0 1 0.2,-0.2z"
             android:strokeWidth="1"
-            android:pathData="M11.2,19.7 h1.6 a0.2,0.2 0 0 1 0.2,0.2 v3 a0.2,0.2 0 0 1 -0.2,0.2 h-1.6 a0.2,0.2 0 0 1 -0.2,-0.2 v-3 a0.2,0.2 0 0 1 0.2,-0.2z" />
+            android:strokeColor="#FFE32626" />
 
         <path
             android:fillColor="#FFFFFFFF"
-            android:strokeColor="#FFE32626"
+            android:pathData="M0.9,11.2 h3 a0.2,0.2 0 0 1 0.2,0.2 v1.6 a0.2,0.2 0 0 1 -0.2,0.2 h-3 a0.2,0.2 0 0 1 -0.2,-0.2 v-1.6 a0.2,0.2 0 0 1 0.2,-0.2z"
             android:strokeWidth="1"
-            android:pathData="M0.9,11.2 h3 a0.2,0.2 0 0 1 0.2,0.2 v1.6 a0.2,0.2 0 0 1 -0.2,0.2 h-3 a0.2,0.2 0 0 1 -0.2,-0.2 v-1.6 a0.2,0.2 0 0 1 0.2,-0.2z" />
+            android:strokeColor="#FFE32626" />
 
         <path
             android:fillColor="#FFFFFFFF"
-            android:strokeColor="#FFE32626"
+            android:pathData="M19.7,11.2 h3 a0.2,0.2 0 0 1 0.2,0.2 v1.6 a0.2,0.2 0 0 1 -0.2,0.2 h-3 a0.2,0.2 0 0 1 -0.2,-0.2 v-1.6 a0.2,0.2 0 0 1 0.2,-0.2z"
             android:strokeWidth="1"
-            android:pathData="M19.7,11.2 h3 a0.2,0.2 0 0 1 0.2,0.2 v1.6 a0.2,0.2 0 0 1 -0.2,0.2 h-3 a0.2,0.2 0 0 1 -0.2,-0.2 v-1.6 a0.2,0.2 0 0 1 0.2,-0.2z" />
+            android:strokeColor="#FFE32626" />
 
         <!-- 四个连接块 -->
         <path
             android:fillColor="#FFFFFFFF"
-            android:strokeColor="#FFE32626"
+            android:pathData="M10.35,3.45 h3.3 a0.28,0.28 0 0 1 0.28,0.28 v1.84 a0.28,0.28 0 0 1 -0.28,0.28 h-3.3 a0.28,0.28 0 0 1 -0.28,-0.28 v-1.84 a0.28,0.28 0 0 1 0.28,-0.28z"
             android:strokeWidth="1"
-            android:pathData="M10.35,3.45 h3.3 a0.28,0.28 0 0 1 0.28,0.28 v1.84 a0.28,0.28 0 0 1 -0.28,0.28 h-3.3 a0.28,0.28 0 0 1 -0.28,-0.28 v-1.84 a0.28,0.28 0 0 1 0.28,-0.28z" />
+            android:strokeColor="#FFE32626" />
 
         <path
             android:fillColor="#FFFFFFFF"
-            android:strokeColor="#FFE32626"
+            android:pathData="M10.35,18.15 h3.3 a0.28,0.28 0 0 1 0.28,0.28 v1.84 a0.28,0.28 0 0 1 -0.28,0.28 h-3.3 a0.28,0.28 0 0 1 -0.28,-0.28 v-1.84 a0.28,0.28 0 0 1 0.28,-0.28z"
             android:strokeWidth="1"
-            android:pathData="M10.35,18.15 h3.3 a0.28,0.28 0 0 1 0.28,0.28 v1.84 a0.28,0.28 0 0 1 -0.28,0.28 h-3.3 a0.28,0.28 0 0 1 -0.28,-0.28 v-1.84 a0.28,0.28 0 0 1 0.28,-0.28z" />
+            android:strokeColor="#FFE32626" />
 
         <path
             android:fillColor="#FFFFFFFF"
-            android:strokeColor="#FFE32626"
+            android:pathData="M3.45,10.35 h1.84 a0.28,0.28 0 0 1 0.28,0.28 v3.3 a0.28,0.28 0 0 1 -0.28,0.28 h-1.84 a0.28,0.28 0 0 1 -0.28,-0.28 v-3.3 a0.28,0.28 0 0 1 0.28,-0.28z"
             android:strokeWidth="1"
-            android:pathData="M3.45,10.35 h1.84 a0.28,0.28 0 0 1 0.28,0.28 v3.3 a0.28,0.28 0 0 1 -0.28,0.28 h-1.84 a0.28,0.28 0 0 1 -0.28,-0.28 v-3.3 a0.28,0.28 0 0 1 0.28,-0.28z" />
+            android:strokeColor="#FFE32626" />
 
         <path
             android:fillColor="#FFFFFFFF"
-            android:strokeColor="#FFE32626"
+            android:pathData="M18.15,10.35 h1.84 a0.28,0.28 0 0 1 0.28,0.28 v3.3 a0.28,0.28 0 0 1 -0.28,0.28 h-1.84 a0.28,0.28 0 0 1 -0.28,-0.28 v-3.3 a0.28,0.28 0 0 1 0.28,-0.28z"
             android:strokeWidth="1"
-            android:pathData="M18.15,10.35 h1.84 a0.28,0.28 0 0 1 0.28,0.28 v3.3 a0.28,0.28 0 0 1 -0.28,0.28 h-1.84 a0.28,0.28 0 0 1 -0.28,-0.28 v-3.3 a0.28,0.28 0 0 1 0.28,-0.28z" />
+            android:strokeColor="#FFE32626" />
 
         <!-- 外层大菱形 -->
         <path
             android:fillColor="#FFFFFFFF"
-            android:strokeColor="#FFE32626"
+            android:pathData="M5.9,5 L18.1,5 Q19,5 19,5.9 L19,18.1 Q19,19 18.1,19 L5.9,19 Q5,19 5,18.1 L5,5.9 Q5,5 5.9,5 Z"
             android:strokeWidth="1"
-            android:pathData="M5.9,5 L18.1,5 Q19,5 19,5.9 L19,18.1 Q19,19 18.1,19 L5.9,19 Q5,19 5,18.1 L5,5.9 Q5,5 5.9,5 Z" />
+            android:strokeColor="#FFE32626" />
 
         <!-- 内层菱形 -->
         <path
             android:fillColor="#FFFFFFFF"
-            android:strokeColor="#FFE32626"
+            android:pathData="M8.15,7.8 L15.85,7.8 Q16.2,7.8 16.2,8.15 L16.2,15.85 Q16.2,16.2 15.85,16.2 L8.15,16.2 Q7.8,16.2 7.8,15.85 L7.8,8.15 Q7.8,7.8 8.15,7.8 Z"
             android:strokeWidth="1"
-            android:pathData="M8.15,7.8 L15.85,7.8 Q16.2,7.8 16.2,8.15 L16.2,15.85 Q16.2,16.2 15.85,16.2 L8.15,16.2 Q7.8,16.2 7.8,15.85 L7.8,8.15 Q7.8,7.8 8.15,7.8 Z" />
+            android:strokeColor="#FFE32626" />
 
         <!-- 中间小菱形：偏上偏左 -->
         <path
             android:fillColor="#FFFFFFFF"
-            android:strokeColor="#FFE32626"
+            android:pathData="M9.88,9.35 L12.02,9.35 Q12.2,9.35 12.2,9.53 L12.2,11.67 Q12.2,11.85 12.02,11.85 L9.88,11.85 Q9.7,11.85 9.7,11.67 L9.7,9.53 Q9.7,9.35 9.88,9.35 Z"
             android:strokeWidth="1"
-            android:pathData="M9.88,9.35 L12.02,9.35 Q12.2,9.35 12.2,9.53 L12.2,11.67 Q12.2,11.85 12.02,11.85 L9.88,11.85 Q9.7,11.85 9.7,11.67 L9.7,9.53 Q9.7,9.35 9.88,9.35 Z" />
+            android:strokeColor="#FFE32626" />
     </group>
 </vector>

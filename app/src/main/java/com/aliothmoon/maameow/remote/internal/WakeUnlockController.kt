@@ -6,6 +6,9 @@ import com.aliothmoon.maameow.domain.models.UnlockGesture
 import com.aliothmoon.maameow.maa.InputControlUtils
 import com.aliothmoon.maameow.remote.internal.ScreenPowerAttempts.SleepAction
 import com.aliothmoon.maameow.remote.internal.ScreenPowerAttempts.WakeAction
+import com.aliothmoon.maameow.remote.internal.WakeUnlockController.LOCK_SETTLE_MS
+import com.aliothmoon.maameow.remote.internal.WakeUnlockController.lockAndSleep
+import com.aliothmoon.maameow.remote.internal.WakeUnlockController.unlock
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.wrappers.PowerManager
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
@@ -184,7 +187,7 @@ object WakeUnlockController {
         if (screen.width != gesture.screenWidth || screen.height != gesture.screenHeight) {
             Ln.w(
                 "$TAG: screen ${screen.width}x${screen.height} != recorded" +
-                    " ${gesture.screenWidth}x${gesture.screenHeight}, scaling"
+                        " ${gesture.screenWidth}x${gesture.screenHeight}, scaling"
             )
         }
 
@@ -218,10 +221,12 @@ object WakeUnlockController {
                             Ln.w("$TAG: wakeUp() invoke failed, polling then falling back to keys")
                         }
                     }
+
                     WakeAction.KEY_WAKEUP -> {
                         Ln.w("$TAG: injecting KEYCODE_WAKEUP")
                         injectKey(KeyEvent.KEYCODE_WAKEUP)
                     }
+
                     WakeAction.KEY_POWER -> if (!pm.isScreenOn(0)) {
                         Ln.w("$TAG: injecting KEYCODE_POWER")
                         injectKey(KeyEvent.KEYCODE_POWER)
@@ -251,10 +256,12 @@ object WakeUnlockController {
                             Ln.w("$TAG: goToSleep() invoke failed, polling then falling back to keys")
                         }
                     }
+
                     SleepAction.KEY_SLEEP -> {
                         Ln.w("$TAG: injecting KEYCODE_SLEEP")
                         injectKey(KeyEvent.KEYCODE_SLEEP)
                     }
+
                     SleepAction.KEY_POWER -> if (pm.isScreenOn(0)) {
                         Ln.w("$TAG: injecting KEYCODE_POWER")
                         injectKey(KeyEvent.KEYCODE_POWER)

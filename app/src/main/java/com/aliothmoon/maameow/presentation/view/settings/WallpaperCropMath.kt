@@ -84,7 +84,8 @@ internal object WallpaperCropMath {
         val requiredHalfWidth = (cropWidth * abs(cosine) + cropHeight * abs(sine)) / 2f
         val requiredHalfHeight = (cropWidth * abs(sine) + cropHeight * abs(cosine)) / 2f
         val maxLocalX = (displayWidth * constrainedScale / 2f - requiredHalfWidth).coerceAtLeast(0f)
-        val maxLocalY = (displayHeight * constrainedScale / 2f - requiredHalfHeight).coerceAtLeast(0f)
+        val maxLocalY =
+            (displayHeight * constrainedScale / 2f - requiredHalfHeight).coerceAtLeast(0f)
 
         val localX = panX * cosine + panY * sine
         val localY = -panX * sine + panY * cosine

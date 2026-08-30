@@ -12,19 +12,49 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 public final class PowerManager {
+    private static final int USER_ACTIVITY_EVENT_OTHER = 0;
+    private static final int WAKE_REASON_APPLICATION = 2;
+    private static final int GO_TO_SLEEP_REASON_APPLICATION = 2;
     private final IInterface manager;
     private Method isScreenOnMethod;
     private Method userActivityMethod;
+    private Method wakeUpMethod;
+    private int wakeUpMethodVersion = -1;
+    private Method goToSleepMethod;
+    private int goToSleepMethodVersion = -1;
 
-    private static final int USER_ACTIVITY_EVENT_OTHER = 0;
+    // ───────────────── wakeUp ─────────────────
+    // 比注入 KEYCODE_WAKEUP 可靠：不经过 PhoneWindowManager 的按键策略
+
+    private PowerManager(IInterface manager) {
+        this.manager = manager;
+    }
 
     static PowerManager create() {
         IInterface manager = ServiceManager.getService("power", "android.os.IPowerManager");
         return new PowerManager(manager);
     }
 
-    private PowerManager(IInterface manager) {
-        this.manager = manager;
+    /**
+     * Binder 已发出后读回包时 AppOps 会走 DeviceConfig → Settings → ContentResolver
+     * FakeContext 的 acquireProvider 若被 R8 删掉会 AbstractMethodError，不代表系统没执行
+     */
+    static boolean isClientSideProviderError(Throwable cause) {
+        for (Throwable t = cause; t != null; t = t.getCause()) {
+            if (t instanceof AbstractMethodError) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean handlePowerInvokeError(String name, InvocationTargetException e) {
+        if (isClientSideProviderError(e.getCause())) {
+            Ln.w(name + "() likely applied; client ContentResolver/AppOps failed: " + e.getCause());
+            return true;
+        }
+        Ln.e("Could not invoke " + name, e);
+        return false;
     }
 
     private Method getIsScreenOnMethod() throws NoSuchMethodException {
@@ -51,6 +81,8 @@ public final class PowerManager {
             return false;
         }
     }
+
+    // ───────────────── goToSleep ─────────────────
 
     private Method getUserActivityMethod() throws NoSuchMethodException {
         if (userActivityMethod == null) {
@@ -79,14 +111,6 @@ public final class PowerManager {
         }
     }
 
-    // ───────────────── wakeUp ─────────────────
-    // 比注入 KEYCODE_WAKEUP 可靠：不经过 PhoneWindowManager 的按键策略
-
-    private static final int WAKE_REASON_APPLICATION = 2;
-
-    private Method wakeUpMethod;
-    private int wakeUpMethodVersion = -1;
-
     private Method getWakeUpMethod() throws NoSuchMethodException {
         if (wakeUpMethod == null) {
             Class<?> cls = manager.getClass();
@@ -109,7 +133,9 @@ public final class PowerManager {
         return wakeUpMethod;
     }
 
-    /** 反射命中的 wakeUp 重载，-1 表示未找到。 */
+    /**
+     * 反射命中的 wakeUp 重载，-1 表示未找到。
+     */
     public int resolveWakeUpVariant() {
         try {
             getWakeUpMethod();
@@ -119,7 +145,9 @@ public final class PowerManager {
         return wakeUpMethodVersion;
     }
 
-    /** @return 反射调用是否发出；客户端 AppOps/Settings 读失败仍视为已发出，需轮询 isScreenOn */
+    /**
+     * @return 反射调用是否发出；客户端 AppOps/Settings 读失败仍视为已发出，需轮询 isScreenOn
+     */
     public boolean wakeUp() {
         try {
             Method method = getWakeUpMethod();
@@ -143,13 +171,6 @@ public final class PowerManager {
         }
     }
 
-    // ───────────────── goToSleep ─────────────────
-
-    private static final int GO_TO_SLEEP_REASON_APPLICATION = 2;
-
-    private Method goToSleepMethod;
-    private int goToSleepMethodVersion = -1;
-
     private Method getGoToSleepMethod() throws NoSuchMethodException {
         if (goToSleepMethod == null) {
             Class<?> cls = manager.getClass();
@@ -166,7 +187,9 @@ public final class PowerManager {
         return goToSleepMethod;
     }
 
-    /** @return 反射调用是否发出；客户端 AppOps/Settings 读失败仍视为已发出，需轮询 isScreenOn */
+    /**
+     * @return 反射调用是否发出；客户端 AppOps/Settings 读失败仍视为已发出，需轮询 isScreenOn
+     */
     public boolean goToSleep() {
         try {
             Method method = getGoToSleepMethod();
@@ -183,28 +206,6 @@ public final class PowerManager {
             Ln.e("Could not invoke goToSleep", e);
             return false;
         }
-    }
-
-    /**
-     * Binder 已发出后读回包时 AppOps 会走 DeviceConfig → Settings → ContentResolver
-     * FakeContext 的 acquireProvider 若被 R8 删掉会 AbstractMethodError，不代表系统没执行
-     */
-    static boolean isClientSideProviderError(Throwable cause) {
-        for (Throwable t = cause; t != null; t = t.getCause()) {
-            if (t instanceof AbstractMethodError) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean handlePowerInvokeError(String name, InvocationTargetException e) {
-        if (isClientSideProviderError(e.getCause())) {
-            Ln.w(name + "() likely applied; client ContentResolver/AppOps failed: " + e.getCause());
-            return true;
-        }
-        Ln.e("Could not invoke " + name, e);
-        return false;
     }
 
 }

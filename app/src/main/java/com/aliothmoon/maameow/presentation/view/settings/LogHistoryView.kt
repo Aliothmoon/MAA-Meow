@@ -143,7 +143,10 @@ private fun LogFileListView(
                         )
                     }
                     TextButton(onClick = onCleanup) {
-                        Text(stringResource(R.string.log_cleanup_30_days), color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            stringResource(R.string.log_cleanup_30_days),
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             )
@@ -301,6 +304,7 @@ private fun LogDetailView(
                             Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
+
                     is LogEntry.Log -> {
                         val color = getLogLevelColor(entry.level)
                         Text(
@@ -309,6 +313,7 @@ private fun LogDetailView(
                             style = LogTypography.BodyMonospace
                         )
                     }
+
                     is LogEntry.Footer -> {
                         Column {
                             Spacer(modifier = Modifier.height(8.dp))
@@ -326,7 +331,9 @@ private fun LogDetailView(
                             )
                             Text(
                                 text = stringResource(R.string.log_detail_status, entry.status),
-                                color = if (entry.status == "COMPLETED") Color(0xFF4CAF50) else Color(0xFFF44336),
+                                color = if (entry.status == "COMPLETED") Color(0xFF4CAF50) else Color(
+                                    0xFFF44336
+                                ),
                                 style = LogTypography.BodyMonospace
                             )
                             Text(

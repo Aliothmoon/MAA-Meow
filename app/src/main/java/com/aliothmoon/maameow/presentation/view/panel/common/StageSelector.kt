@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.presentation.view.panel.common
 
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
@@ -39,6 +38,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.StageAliasMapper
 import com.aliothmoon.maameow.data.resource.StageGroup
 import com.aliothmoon.maameow.presentation.components.ITextFieldWithFocus
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 
 /**
  * 已选关卡徽章：主色底、白字、圆角

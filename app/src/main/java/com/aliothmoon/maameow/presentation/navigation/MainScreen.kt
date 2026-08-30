@@ -29,8 +29,8 @@ import com.aliothmoon.maameow.presentation.view.settings.SettingsView
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.ui.ScheduleListView
 import com.aliothmoon.maameow.theme.LocalReduceMotion
-import com.aliothmoon.maameow.theme.MaaMotion
 import com.aliothmoon.maameow.theme.MaaBackgroundHost
+import com.aliothmoon.maameow.theme.MaaMotion
 import com.aliothmoon.maameow.theme.MaxBackgroundBlur
 import com.aliothmoon.maameow.theme.ProvideColorScheme
 import com.aliothmoon.maameow.theme.toGlass
@@ -158,7 +158,9 @@ fun MainScreen(
 
                 // 隐藏（子页面叠加其上）时吞掉所有指针，防止横滑切走主 Tab / 点击穿透到底层页。
                 if (!visible) {
-                    Box(Modifier.matchParentSize().consumeAllPointerEvents())
+                    Box(Modifier
+                        .matchParentSize()
+                        .consumeAllPointerEvents())
                 }
             }
         }

@@ -31,7 +31,7 @@ object LogExportCollector {
 
     fun select(files: Iterable<File>): List<File> {
         val cutoff = System.currentTimeMillis() -
-            LogConfig.EXPORT_ROLLING_LOG_DAYS * MS_PER_DAY
+                LogConfig.EXPORT_ROLLING_LOG_DAYS * MS_PER_DAY
         return files.filter { shouldExport(it, cutoff) }
     }
 

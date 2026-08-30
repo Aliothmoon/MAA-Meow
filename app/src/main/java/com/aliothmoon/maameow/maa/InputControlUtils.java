@@ -17,30 +17,26 @@ import java.util.Collections;
 import java.util.List;
 
 
-/** 多指触控注入：{@link TouchPointerSequence} 规划 MotionEvent，这里注入并维护槽位 */
+/**
+ * 多指触控注入：{@link TouchPointerSequence} 规划 MotionEvent，这里注入并维护槽位
+ */
 public final class InputControlUtils {
 
+    public static final int SINGLE_CONTACT = 0;
     private static final String TAG = "InputControlUtils";
-
-    private static InputManager manager;
-    private static volatile ITouchEventCallback touchCallback;
-
-    private static InputManager getManager() {
-        if (manager == null) {
-            manager = ServiceManager.getInputManager();
-        }
-        return manager;
-    }
-
     private static final int DEFAULT_DEVICE_ID = 0;
     private static final int DEFAULT_SOURCE = InputDevice.SOURCE_TOUCHSCREEN;
-
-    public static final int SINGLE_CONTACT = 0;
-
     private static final MotionEvent.PointerProperties[] POINTER_PROPERTIES =
             new MotionEvent.PointerProperties[TouchPointerSequence.MAX_CONTACTS];
     private static final MotionEvent.PointerCoords[] POINTER_COORDS =
             new MotionEvent.PointerCoords[TouchPointerSequence.MAX_CONTACTS];
+    private static InputManager manager;
+    private static volatile ITouchEventCallback touchCallback;
+    /**
+     * 在场手指；只整体换引用，注入失败时保持与系统侧一致
+     */
+    private static List<TouchPointerSequence.Pointer> slots = Collections.emptyList();
+    private static long gestureDownTime = 0;
 
     static {
         for (int i = 0; i < TouchPointerSequence.MAX_CONTACTS; i++) {
@@ -50,15 +46,19 @@ public final class InputControlUtils {
             POINTER_COORDS[i] = new MotionEvent.PointerCoords();
         }
     }
-
-    /** 在场手指；只整体换引用，注入失败时保持与系统侧一致 */
-    private static List<TouchPointerSequence.Pointer> slots = Collections.emptyList();
-    private static long gestureDownTime = 0;
-
     private InputControlUtils() {
     }
 
-    /** liftingIndex 为正在抬起的手指（压力置 0），无则传 -1；CANCEL 全部置 0 */
+    private static InputManager getManager() {
+        if (manager == null) {
+            manager = ServiceManager.getInputManager();
+        }
+        return manager;
+    }
+
+    /**
+     * liftingIndex 为正在抬起的手指（压力置 0），无则传 -1；CANCEL 全部置 0
+     */
     private static MotionEvent obtainEvent(List<TouchPointerSequence.Pointer> pointers, long eventTime,
                                            int action, int liftingIndex) {
         boolean cancel = (action & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_CANCEL;
@@ -81,7 +81,9 @@ public final class InputControlUtils {
         );
     }
 
-    /** reportIndex 为本次事件发生变化的手指，触控预览只上报这一根 */
+    /**
+     * reportIndex 为本次事件发生变化的手指，触控预览只上报这一根
+     */
     private static boolean inject(MotionEvent event, int displayId, int mode, int reportIndex) {
         try {
             if (!setDisplayId(event, displayId)) {
@@ -132,7 +134,9 @@ public final class InputControlUtils {
         return next;
     }
 
-    /** 清空系统侧触控槽位 */
+    /**
+     * 清空系统侧触控槽位
+     */
     private static void cancelGesture(int displayId) {
         if (!slots.isEmpty()) {
             MotionEvent cancel = obtainEvent(slots, SystemClock.uptimeMillis(), MotionEvent.ACTION_CANCEL, -1);
@@ -194,7 +198,9 @@ public final class InputControlUtils {
         return apply(TouchPointerSequence.Kind.Up, x, y, contact, displayId);
     }
 
-    /** 整体取消当前手势，仍按着的手指全部释放 */
+    /**
+     * 整体取消当前手势，仍按着的手指全部释放
+     */
     public static synchronized void cancel(int displayId) {
         cancelGesture(displayId);
     }

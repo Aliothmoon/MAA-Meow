@@ -1,8 +1,5 @@
 package com.aliothmoon.maameow.presentation.components
 
-import com.aliothmoon.maameow.theme.LocalReduceMotion
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
-import com.aliothmoon.maameow.theme.MaaMotion
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -26,6 +23,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
+import com.aliothmoon.maameow.theme.LocalReduceMotion
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaMotion
 import com.aliothmoon.maameow.utils.i18n.resourceLoaderMessage
 import org.koin.compose.koinInject
 

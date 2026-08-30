@@ -62,47 +62,48 @@ internal fun scheduleHealthIssueText(
 ): Pair<String, String> = when (issue) {
     ScheduleHealthIssue.BACKEND ->
         stringResource(R.string.schedule_health_backend, backend.display) to
-            stringResource(R.string.schedule_health_backend_desc)
+                stringResource(R.string.schedule_health_backend_desc)
 
     ScheduleHealthIssue.BATTERY ->
         stringResource(R.string.schedule_health_battery) to
-            stringResource(R.string.schedule_health_battery_desc)
+                stringResource(R.string.schedule_health_battery_desc)
 
     ScheduleHealthIssue.EXACT_ALARM ->
         stringResource(R.string.schedule_exact_alarm_blocked) to
-            stringResource(R.string.schedule_exact_alarm_hint)
+                stringResource(R.string.schedule_exact_alarm_hint)
 
     ScheduleHealthIssue.NOTIFICATION ->
         stringResource(R.string.schedule_health_notification) to
-            stringResource(R.string.schedule_health_notification_desc)
+                stringResource(R.string.schedule_health_notification_desc)
 
     ScheduleHealthIssue.OVERLAY ->
         stringResource(R.string.schedule_health_overlay) to
-            stringResource(R.string.schedule_health_overlay_desc)
+                stringResource(R.string.schedule_health_overlay_desc)
 }
 
 /** 向导文案：陈述动作（「关闭电池优化」） */
 @Composable
-internal fun schedulePermissionActionText(issue: ScheduleHealthIssue): Pair<String, String> = when (issue) {
-    ScheduleHealthIssue.BATTERY ->
-        stringResource(R.string.schedule_permission_tip_battery_optimization) to
-            stringResource(R.string.schedule_permission_battery_desc)
+internal fun schedulePermissionActionText(issue: ScheduleHealthIssue): Pair<String, String> =
+    when (issue) {
+        ScheduleHealthIssue.BATTERY ->
+            stringResource(R.string.schedule_permission_tip_battery_optimization) to
+                    stringResource(R.string.schedule_permission_battery_desc)
 
-    ScheduleHealthIssue.EXACT_ALARM ->
-        stringResource(R.string.schedule_permission_tip_exact_alarm) to
-            stringResource(R.string.schedule_exact_alarm_hint)
+        ScheduleHealthIssue.EXACT_ALARM ->
+            stringResource(R.string.schedule_permission_tip_exact_alarm) to
+                    stringResource(R.string.schedule_exact_alarm_hint)
 
-    ScheduleHealthIssue.NOTIFICATION ->
-        stringResource(R.string.schedule_permission_tip_notification) to
-            stringResource(R.string.schedule_health_notification_desc)
+        ScheduleHealthIssue.NOTIFICATION ->
+            stringResource(R.string.schedule_permission_tip_notification) to
+                    stringResource(R.string.schedule_health_notification_desc)
 
-    ScheduleHealthIssue.OVERLAY ->
-        stringResource(R.string.schedule_permission_tip_overlay) to
-            stringResource(R.string.schedule_health_overlay_desc)
+        ScheduleHealthIssue.OVERLAY ->
+            stringResource(R.string.schedule_permission_tip_overlay) to
+                    stringResource(R.string.schedule_health_overlay_desc)
 
-    // 不进向导，回落到卡片文案只为 when 穷尽
-    ScheduleHealthIssue.BACKEND -> scheduleHealthIssueText(issue)
-}
+        // 不进向导，回落到卡片文案只为 when 穷尽
+        ScheduleHealthIssue.BACKEND -> scheduleHealthIssueText(issue)
+    }
 
 @Composable
 internal fun scheduleOemPowerHintText(hint: OemPowerHint?): String? = when (hint) {
@@ -122,7 +123,8 @@ internal fun localizedScheduleStrategySummary(strategy: ScheduleStrategy): Strin
             val days = strategy.daysOfWeek.sorted()
                 .map { scheduleDaySummaryLabel(it) }
                 .joinToString(" ")
-            val times = strategy.executionTimes.joinToString(" ") { it.format(scheduleTimeFormatter) }
+            val times =
+                strategy.executionTimes.joinToString(" ") { it.format(scheduleTimeFormatter) }
             listOf(days, times).filter { it.isNotBlank() }.joinToString(" ")
         }
 

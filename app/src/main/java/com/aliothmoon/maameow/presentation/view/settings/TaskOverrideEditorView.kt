@@ -260,25 +260,29 @@ private fun SymbolInputBar(editor: CodeEditor?, editVersion: Int) {
 
             IconButton(onClick = { editor?.moveSelection(SelectionMovement.UP) }) {
                 Icon(
-                    Icons.Filled.KeyboardArrowUp, contentDescription = stringResource(R.string.editor_move_up),
+                    Icons.Filled.KeyboardArrowUp,
+                    contentDescription = stringResource(R.string.editor_move_up),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             IconButton(onClick = { editor?.moveSelection(SelectionMovement.DOWN) }) {
                 Icon(
-                    Icons.Filled.KeyboardArrowDown, contentDescription = stringResource(R.string.editor_move_down),
+                    Icons.Filled.KeyboardArrowDown,
+                    contentDescription = stringResource(R.string.editor_move_down),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             IconButton(onClick = { editor?.moveSelection(SelectionMovement.LEFT) }) {
                 Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.editor_move_left),
+                    Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    contentDescription = stringResource(R.string.editor_move_left),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             IconButton(onClick = { editor?.moveSelection(SelectionMovement.RIGHT) }) {
                 Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.editor_move_right),
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = stringResource(R.string.editor_move_right),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

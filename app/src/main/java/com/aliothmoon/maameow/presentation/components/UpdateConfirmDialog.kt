@@ -2,10 +2,9 @@ package com.aliothmoon.maameow.presentation.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.datasource.ResourceDownloader
 import com.aliothmoon.maameow.data.model.update.UpdateInfo
@@ -20,7 +19,7 @@ fun UpdateConfirmDialog(
     onDismiss: () -> Unit
 ) {
     val displayVersion = ResourceDownloader.formatVersionForDisplay(updateInfo.version)
-    
+
     AdaptiveTaskPromptDialog(
         visible = true,
         title = stringResource(R.string.update_confirm_title_resource),

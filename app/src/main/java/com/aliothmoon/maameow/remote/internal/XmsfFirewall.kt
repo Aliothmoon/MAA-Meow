@@ -148,7 +148,14 @@ object XmsfFirewall {
         val rule = if (deny) RULE_DENY else RULE_DEFAULT
         for (chain in OEM_DENY_CHAINS) {
             if (deny) invoke(proxy, listOf("setFirewallChainEnabled"), chain, true)
-            if (invoke(proxy, listOf("setUidFirewallRule", "setFirewallUidRule"), chain, uid, rule)) return true
+            if (invoke(
+                    proxy,
+                    listOf("setUidFirewallRule", "setFirewallUidRule"),
+                    chain,
+                    uid,
+                    rule
+                )
+            ) return true
             if (invoke(
                     proxy,
                     listOf("setUidFirewallRules", "setFirewallUidRules"),
@@ -161,8 +168,20 @@ object XmsfFirewall {
         }
         // 旧式 netd 全局链兜底
         if (invoke(proxy, listOf("setFirewallEnabled"), true)) {
-            if (invoke(proxy, listOf("setUidFirewallRule", "setFirewallUidRule"), uid, deny)) return true
-            if (invoke(proxy, listOf("setUidFirewallRule", "setFirewallUidRule"), uid, rule)) return true
+            if (invoke(
+                    proxy,
+                    listOf("setUidFirewallRule", "setFirewallUidRule"),
+                    uid,
+                    deny
+                )
+            ) return true
+            if (invoke(
+                    proxy,
+                    listOf("setUidFirewallRule", "setFirewallUidRule"),
+                    uid,
+                    rule
+                )
+            ) return true
         }
         return false
     }

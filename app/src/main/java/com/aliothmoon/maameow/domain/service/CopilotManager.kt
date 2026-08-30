@@ -304,7 +304,10 @@ class CopilotManager(
                         }
                     })
                     put("formation", config.formation)
-                    put("support_unit_usage", if (config.useSupportUnit) config.supportUnitUsage else 0)
+                    put(
+                        "support_unit_usage",
+                        if (config.useSupportUnit) config.supportUnitUsage else 0
+                    )
                     put("add_trust", config.addTrust)
                     put("ignore_requirements", config.ignoreRequirements)
                     // 与 WPF 一致：战斗列表模式固定单次消费，不复用单作业循环次数配置

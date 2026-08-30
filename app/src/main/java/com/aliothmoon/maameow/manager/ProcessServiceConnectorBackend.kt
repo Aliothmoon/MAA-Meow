@@ -238,12 +238,21 @@ abstract class ProcessServiceConnectorBackend(
             Timber.e("%s launch debug log not found: %s", processName, log.absolutePath)
             return null
         }
-        val lines = runCatching { log.readLines().filter { it.isNotBlank() } }.getOrDefault(emptyList())
+        val lines =
+            runCatching { log.readLines().filter { it.isNotBlank() } }.getOrDefault(emptyList())
         if (lines.isEmpty()) {
-            Timber.e("%s launch debug log is empty (launcher may have crashed before opening it)", processName)
+            Timber.e(
+                "%s launch debug log is empty (launcher may have crashed before opening it)",
+                processName
+            )
             return null
         }
-        Timber.e("%s launch debug log (%s):\n%s", processName, log.absolutePath, lines.joinToString("\n"))
+        Timber.e(
+            "%s launch debug log (%s):\n%s",
+            processName,
+            log.absolutePath,
+            lines.joinToString("\n")
+        )
         return lines.takeLast(LOG_TAIL_LINES).joinToString(" | ")
     }
 

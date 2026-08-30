@@ -186,7 +186,8 @@ class PixelArtDelegate(
         val centerY = current.y + current.height / 2.0
         // 手势右移则内容右移，取景左移
         val x = (centerX - width / 2.0 - panXFraction * width).coerceIn(0.0, max(0.0, 1.0 - width))
-        val y = (centerY - height / 2.0 - panYFraction * height).coerceIn(0.0, max(0.0, 1.0 - height))
+        val y =
+            (centerY - height / 2.0 - panYFraction * height).coerceIn(0.0, max(0.0, 1.0 - height))
         val next = NormalizedRect(x, y, width, height)
         if (next == current) return
         updateOptions { it.copy(view = next) }

@@ -46,7 +46,11 @@ class ScheduleReceiver : BroadcastReceiver() {
             // 限制，此处不应抛异常。保留防御：万一启动失败（如系统异常），ScheduleExecutionService 不会运行、
             // scheduleNext 也不会被调用，故在 goAsync 协程里补注册下次闹钟，维持调度链不断。
             // 补注册会重新走 ScheduleAlarmManager 的选择逻辑（无精确权限时用 setAlarmClock），下次能真正恢复。
-            Timber.e(e, "startForegroundService failed for strategy %s, rescheduling next alarm", strategyId)
+            Timber.e(
+                e,
+                "startForegroundService failed for strategy %s, rescheduling next alarm",
+                strategyId
+            )
             val pendingResult = goAsync()
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
                 try {
@@ -65,7 +69,10 @@ class ScheduleReceiver : BroadcastReceiver() {
                                 message = "前台服务启动失败：${e.message}",
                             )
                             alarmManager.scheduleNext(strategy, scheduledTime)
-                            Timber.i("Rescheduled next alarm for strategy %s after service start failure", strategyId)
+                            Timber.i(
+                                "Rescheduled next alarm for strategy %s after service start failure",
+                                strategyId
+                            )
                         }
                     }
                 } finally {

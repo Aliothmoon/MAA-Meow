@@ -118,11 +118,13 @@ class BackgroundImageStore(
                         postRotate(90f)
                         postScale(-1f, 1f)
                     }
+
                     ExifInterface.ORIENTATION_ROTATE_90 -> postRotate(90f)
                     ExifInterface.ORIENTATION_TRANSVERSE -> {
                         postRotate(-90f)
                         postScale(-1f, 1f)
                     }
+
                     ExifInterface.ORIENTATION_ROTATE_270 -> postRotate(270f)
                 }
             }
@@ -142,28 +144,29 @@ class BackgroundImageStore(
     /**
      * 把裁剪结果写入背景文件：成功后更新令牌并启用背景。
      */
-    suspend fun saveCropped(bitmap: Bitmap): Boolean = withContext(NonCancellable + Dispatchers.IO) {
-        writeMutex.withLock {
-            runCatching {
-                backgroundsDir.mkdirs()
-                // 先写临时文件再同目录原子重命名：压缩失败或进程被杀不会破坏已有背景。
-                val temporaryFile = File(backgroundsDir, "$BG_FILE_NAME.tmp")
-                try {
-                    temporaryFile.outputStream().use { out ->
-                        check(bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out))
+    suspend fun saveCropped(bitmap: Bitmap): Boolean =
+        withContext(NonCancellable + Dispatchers.IO) {
+            writeMutex.withLock {
+                runCatching {
+                    backgroundsDir.mkdirs()
+                    // 先写临时文件再同目录原子重命名：压缩失败或进程被杀不会破坏已有背景。
+                    val temporaryFile = File(backgroundsDir, "$BG_FILE_NAME.tmp")
+                    try {
+                        temporaryFile.outputStream().use { out ->
+                            check(bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out))
+                        }
+                        check(temporaryFile.renameTo(backgroundFile)) { "重命名背景文件失败" }
+                    } finally {
+                        temporaryFile.delete()
                     }
-                    check(temporaryFile.renameTo(backgroundFile)) { "重命名背景文件失败" }
-                } finally {
-                    temporaryFile.delete()
-                }
-                appSettingsManager.setCustomBackgroundState(
-                    enabled = true,
-                    token = System.currentTimeMillis().toString(),
-                )
-                true
-            }.onFailure { Timber.e(it, "saveCropped failed") }.getOrDefault(false)
+                    appSettingsManager.setCustomBackgroundState(
+                        enabled = true,
+                        token = System.currentTimeMillis().toString(),
+                    )
+                    true
+                }.onFailure { Timber.e(it, "saveCropped failed") }.getOrDefault(false)
+            }
         }
-    }
 
     /** 关闭并清除自定义背景。 */
     suspend fun clear() = withContext(Dispatchers.IO) {

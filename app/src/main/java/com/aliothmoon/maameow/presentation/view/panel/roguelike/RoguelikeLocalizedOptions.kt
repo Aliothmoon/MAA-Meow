@@ -83,7 +83,8 @@ fun localizedRoguelikePlaytimeTargetOptions(): List<Pair<String, String>> {
 
 @Composable
 fun localizedRoguelikeCollectibleAwardOptions(theme: String): List<Pair<String, String>> {
-    return RoguelikeUi.getCollectibleAwardKeys(theme).map { it to localizedRoguelikeCollectibleAwardLabel(it) }
+    return RoguelikeUi.getCollectibleAwardKeys(theme)
+        .map { it to localizedRoguelikeCollectibleAwardLabel(it) }
 }
 
 @Composable
@@ -101,7 +102,8 @@ fun localizedRoguelikeDifficultyOptions(theme: String): List<Pair<Int, String>> 
 
 @Composable
 fun localizedRoguelikeSquadOptions(theme: String, mode: RoguelikeMode): List<Pair<String, String>> {
-    return RoguelikeUi.getSquadOptionsForTheme(theme, mode).map { it to localizedRoguelikeSquadLabel(it) }
+    return RoguelikeUi.getSquadOptionsForTheme(theme, mode)
+        .map { it to localizedRoguelikeSquadLabel(it) }
 }
 
 @Composable
@@ -129,6 +131,7 @@ private fun localizedRoguelikeModeLabel(modeKey: String): String {
         "FindPlaytime" -> stringResource(R.string.panel_roguelike_mode_find_playtime)
         "BlackFlowBabyAnimal" ->
             stringResource(R.string.panel_roguelike_mode_blackflow_baby_animal)
+
         else -> modeKey
     }
 }

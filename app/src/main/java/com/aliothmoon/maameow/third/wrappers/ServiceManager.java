@@ -15,6 +15,13 @@ import java.lang.reflect.Method;
 public final class ServiceManager {
 
     private static final Method GET_SERVICE_METHOD;
+    private static WindowManager windowManager;
+    private static DisplayManager displayManager;
+    private static InputManager inputManager;
+    private static PowerManager powerManager;
+    private static StatusBarManager statusBarManager;
+    private static ActivityManager activityManager;
+    private static CameraManager cameraManager;
 
     static {
         try {
@@ -23,14 +30,6 @@ public final class ServiceManager {
             throw new AssertionError(e);
         }
     }
-
-    private static WindowManager windowManager;
-    private static DisplayManager displayManager;
-    private static InputManager inputManager;
-    private static PowerManager powerManager;
-    private static StatusBarManager statusBarManager;
-    private static ActivityManager activityManager;
-    private static CameraManager cameraManager;
 
     private ServiceManager() {
         /* not instantiable */
@@ -81,7 +80,6 @@ public final class ServiceManager {
         }
         return statusBarManager;
     }
-
 
 
     public static ActivityManager getActivityManager() {

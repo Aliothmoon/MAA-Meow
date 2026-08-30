@@ -32,7 +32,11 @@ object Misc {
     }
 
     /** 是否接近 16:9（长短边比，与横竖屏无关） */
-    fun isAspectRatio16x9(width: Int, height: Int, tolerance: Float = ASPECT_16X9_TOLERANCE): Boolean {
+    fun isAspectRatio16x9(
+        width: Int,
+        height: Int,
+        tolerance: Float = ASPECT_16X9_TOLERANCE
+    ): Boolean {
         val longSide = maxOf(width, height)
         val shortSide = minOf(width, height)
         if (shortSide <= 0) return false

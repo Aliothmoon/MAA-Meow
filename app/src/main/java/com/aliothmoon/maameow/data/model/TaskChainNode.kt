@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.data.model
 
-import com.aliothmoon.maameow.data.model.TaskParamProvider
 import kotlinx.serialization.Serializable
 import java.util.UUID
 

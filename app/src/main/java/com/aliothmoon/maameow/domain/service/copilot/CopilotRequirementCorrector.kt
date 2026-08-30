@@ -73,7 +73,10 @@ object CopilotRequirementCorrector {
                 add(
                     buildJsonObject {
                         obj.forEach { (key, value) ->
-                            if (key == "opers") put(key, correctOpers(value, rarityOf, out)) else put(key, value)
+                            if (key == "opers") put(
+                                key,
+                                correctOpers(value, rarityOf, out)
+                            ) else put(key, value)
                         }
                     }
                 )
@@ -121,7 +124,8 @@ object CopilotRequirementCorrector {
             skillLevel <= 10 -> 2
             else -> 0
         }
-        val moduleElite = if ((requirements?.get("module")?.jsonPrimitive?.intOrNull ?: 0) > 0) 2 else 0
+        val moduleElite =
+            if ((requirements?.get("module")?.jsonPrimitive?.intOrNull ?: 0) > 0) 2 else 0
         val required = maxOf(skillElite, skillLevelElite, moduleElite)
 
         var newElite: Int? = null

@@ -318,7 +318,8 @@ class CopilotViewModel(
     fun onToggleBuiltinFolder(relativePath: String) {
         _state.update {
             val folders = it.builtinExpandedFolders
-            val next = if (relativePath in folders) folders - relativePath else folders + relativePath
+            val next =
+                if (relativePath in folders) folders - relativePath else folders + relativePath
             it.copy(builtinExpandedFolders = next)
         }
     }
@@ -472,7 +473,8 @@ class CopilotViewModel(
                         onSuccess = { (copilotId, data, json) ->
                             val fixed = correctRequirements(data, json, copilotId)
                             val filePath = repository.saveCopilotJson(copilotId, fixed.json)
-                            val resolvedTabIndex = resolveLoadedTabIndex(fixed.data, workingTabIndex)
+                            val resolvedTabIndex =
+                                resolveLoadedTabIndex(fixed.data, workingTabIndex)
                             newItems.addAll(
                                 createListItemsForLoadedCopilot(
                                     data = fixed.data,
@@ -623,7 +625,12 @@ class CopilotViewModel(
                 text(R.string.copilot_elite_filled, correction.operatorName, correction.to)
 
             CopilotRequirementCorrector.Kind.ELITE_RAISED ->
-                text(R.string.copilot_elite_raised, correction.operatorName, correction.from, correction.to)
+                text(
+                    R.string.copilot_elite_raised,
+                    correction.operatorName,
+                    correction.from,
+                    correction.to
+                )
         }
 
     private fun applyLoadedCopilot(
@@ -858,7 +865,8 @@ class CopilotViewModel(
             data.opers.firstOrNull()?.name,
             data.stageName
         )
-        return candidates.firstOrNull { !it.isNullOrBlank() } ?: string(R.string.copilot_unknown_operator)
+        return candidates.firstOrNull { !it.isNullOrBlank() }
+            ?: string(R.string.copilot_unknown_operator)
     }
 
     private fun extractParadoxCodeName(stageId: String?): String? {
@@ -1003,7 +1011,10 @@ class CopilotViewModel(
                             currentFilePath = item.filePath,
                             copilotTaskName = item.name.ifBlank { inferLoadedCopilotName(data) },
                             useCopilotList = if (disableListMode) false else base.useCopilotList,
-                            statusMessage = text(R.string.copilot_status_selected_list_item, item.name)
+                            statusMessage = text(
+                                R.string.copilot_status_selected_list_item,
+                                item.name
+                            )
                         )
                     }
                     if (previousTabIndex != targetTabIndex) {
@@ -1069,6 +1080,7 @@ class CopilotViewModel(
                 pendingStartContext = null
                 if (pending != null) onStart(pending)
             }
+
             else -> {
                 _dialog.value = null
             }
@@ -1327,11 +1339,12 @@ class CopilotViewModel(
         // 上游 #16985: 优先用 core 回传的当前作业下标(跳过失败后下标可能不是第一个勾选项);
         // 回传缺失(-1)或越界/已取消时回退旧行为(第一个勾选项)。
         val tracked = runtimeStateStore.currentCopilotIndex.value
-        val index = if (tracked in current.taskList.indices && current.taskList[tracked].isChecked) {
-            tracked
-        } else {
-            current.taskList.indexOfFirst { it.isChecked }
-        }
+        val index =
+            if (tracked in current.taskList.indices && current.taskList[tracked].isChecked) {
+                tracked
+            } else {
+                current.taskList.indexOfFirst { it.isChecked }
+            }
         if (index !in current.taskList.indices) return
 
         val completed = current.taskList[index]

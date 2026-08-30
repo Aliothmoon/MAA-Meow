@@ -16,37 +16,39 @@ public final class WindowManager {
     public static final int DISPLAY_IME_POLICY_LOCAL = 0;
     public static final int DISPLAY_IME_POLICY_FALLBACK_DISPLAY = 1;
     public static final int DISPLAY_IME_POLICY_HIDE = 2;
-
+    private static final String TASK_FPS_CALLBACK_CLASS = "android.window.ITaskFpsCallback";
+    private static Class<?> captureArgsClass;
+    private static Class<?> screenCaptureListenerClass;
     private final IInterface manager;
     private Method getRotationMethod;
-
     private Method freezeDisplayRotationMethod;
     private int freezeDisplayRotationMethodVersion;
-
     private Method isDisplayRotationFrozenMethod;
     private int isDisplayRotationFrozenMethodVersion;
-
     private Method thawDisplayRotationMethod;
     private int thawDisplayRotationMethodVersion;
-
     private Method getDisplayImePolicyMethod;
     private Method setDisplayImePolicyMethod;
-
     private Method setForcedDisplaySizeMethod;
     private Method clearForcedDisplaySizeMethod;
-
     private Method syncInputTransactions;
-
     private Method registerTaskFpsCallbackMethod;
     private Method unregisterTaskFpsCallbackMethod;
+    private Method captureDisplayMethod;
+    private Method isKeyguardLockedMethod;
+    private Method isKeyguardSecureMethod;
+    private int isKeyguardSecureMethodVersion;
+    private Method dismissKeyguardMethod;
+    private Method lockNowMethod;
+    private int lockNowMethodVersion = -1;
+
+    private WindowManager(IInterface manager) {
+        this.manager = manager;
+    }
 
     static WindowManager create() {
         IInterface manager = ServiceManager.getService("window", "android.view.IWindowManager");
         return new WindowManager(manager);
-    }
-
-    private WindowManager(IInterface manager) {
-        this.manager = manager;
     }
 
     private Method getGetRotationMethod() throws NoSuchMethodException {
@@ -123,9 +125,6 @@ public final class WindowManager {
         return thawDisplayRotationMethod;
     }
 
-
-    private static final String TASK_FPS_CALLBACK_CLASS = "android.window.ITaskFpsCallback";
-
     private Method getRegisterTaskFpsCallbackMethod() throws ReflectiveOperationException {
         if (registerTaskFpsCallbackMethod == null) {
             Class<?> callbackClass = Class.forName(TASK_FPS_CALLBACK_CLASS);
@@ -153,6 +152,25 @@ public final class WindowManager {
         }
     }
 
+//    @TargetApi(AndroidVersions.API_30_ANDROID_11)
+//    public int[] registerDisplayWindowListener(IDisplayWindowListener listener) {
+//        try {
+//            return (int[]) manager.getClass().getMethod("registerDisplayWindowListener", IDisplayWindowListener.class).invoke(manager, listener);
+//        } catch (Exception e) {
+//            Ln.e("Could not register display window listener", e);
+//        }
+//        return null;
+//    }
+//
+//    @TargetApi(AndroidVersions.API_30_ANDROID_11)
+//    public void unregisterDisplayWindowListener(IDisplayWindowListener listener) {
+//        try {
+//            manager.getClass().getMethod("unregisterDisplayWindowListener", IDisplayWindowListener.class).invoke(manager, listener);
+//        } catch (Exception e) {
+//            Ln.e("Could not unregister display window listener", e);
+//        }
+//    }
+
     public boolean unregisterTaskFpsCallback(Object callback) {
         try {
             getUnregisterTaskFpsCallbackMethod().invoke(manager, callback);
@@ -177,7 +195,6 @@ public final class WindowManager {
         return clearForcedDisplaySizeMethod;
     }
 
-
     public boolean setForcedDisplaySize(int displayId, int width, int height) {
         try {
             Method method = getSetForcedDisplaySizeMethod();
@@ -189,6 +206,8 @@ public final class WindowManager {
         return false;
     }
 
+    // ============ Android 14+ 截图支持 ============
+
     public boolean clearForcedDisplaySize(int displayId) {
         try {
             Method method = getClearForcedDisplaySizeMethod();
@@ -199,7 +218,6 @@ public final class WindowManager {
         }
         return false;
     }
-
 
     public int getRotation() {
         try {
@@ -253,6 +271,8 @@ public final class WindowManager {
         }
     }
 
+    // ───────────────── Keyguard ─────────────────
+
     public void thawRotation(int displayId) {
         try {
             Method method = getThawDisplayRotationMethod();
@@ -275,25 +295,6 @@ public final class WindowManager {
             Ln.e("Could not invoke method", e);
         }
     }
-
-//    @TargetApi(AndroidVersions.API_30_ANDROID_11)
-//    public int[] registerDisplayWindowListener(IDisplayWindowListener listener) {
-//        try {
-//            return (int[]) manager.getClass().getMethod("registerDisplayWindowListener", IDisplayWindowListener.class).invoke(manager, listener);
-//        } catch (Exception e) {
-//            Ln.e("Could not register display window listener", e);
-//        }
-//        return null;
-//    }
-//
-//    @TargetApi(AndroidVersions.API_30_ANDROID_11)
-//    public void unregisterDisplayWindowListener(IDisplayWindowListener listener) {
-//        try {
-//            manager.getClass().getMethod("unregisterDisplayWindowListener", IDisplayWindowListener.class).invoke(manager, listener);
-//        } catch (Exception e) {
-//            Ln.e("Could not unregister display window listener", e);
-//        }
-//    }
 
     @TargetApi(AndroidVersions.API_29_ANDROID_10)
     private Method getGetDisplayImePolicyMethod() throws NoSuchMethodException {
@@ -350,12 +351,6 @@ public final class WindowManager {
         }
     }
 
-    // ============ Android 14+ 截图支持 ============
-
-    private static Class<?> captureArgsClass;
-    private static Class<?> screenCaptureListenerClass;
-    private Method captureDisplayMethod;
-
     /**
      * Android 14+ 截图
      * 调用 IWindowManager.captureDisplay(displayId, captureArgs, listener)
@@ -385,14 +380,9 @@ public final class WindowManager {
         }
     }
 
-    // ───────────────── Keyguard ─────────────────
-
-    private Method isKeyguardLockedMethod;
-    private Method isKeyguardSecureMethod;
-    private int isKeyguardSecureMethodVersion;
-    private Method dismissKeyguardMethod;
-
-    /** 当前是否处于锁屏（含无密码的滑动锁屏）。反射不可用时返回 null。 */
+    /**
+     * 当前是否处于锁屏（含无密码的滑动锁屏）。反射不可用时返回 null。
+     */
     public Boolean isKeyguardLocked() {
         try {
             if (isKeyguardLockedMethod == null) {
@@ -405,7 +395,9 @@ public final class WindowManager {
         }
     }
 
-    /** 锁屏是否设了凭证（PIN/密码/图案）。反射不可用时返回 null。 */
+    /**
+     * 锁屏是否设了凭证（PIN/密码/图案）。反射不可用时返回 null。
+     */
     public Boolean isKeyguardSecure(int userId) {
         try {
             if (isKeyguardSecureMethod == null) {
@@ -448,9 +440,6 @@ public final class WindowManager {
         }
     }
 
-    private Method lockNowMethod;
-    private int lockNowMethodVersion = -1;
-
     private Method getLockNowMethod() throws NoSuchMethodException {
         if (lockNowMethod == null) {
             Class<?> cls = manager.getClass();
@@ -466,7 +455,9 @@ public final class WindowManager {
         return lockNowMethod;
     }
 
-    /** 立即上锁（弹出 keyguard）。@return 反射调用是否成功 */
+    /**
+     * 立即上锁（弹出 keyguard）。@return 反射调用是否成功
+     */
     public boolean lockNow() {
         try {
             Method method = getLockNowMethod();

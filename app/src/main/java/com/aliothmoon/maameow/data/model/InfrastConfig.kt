@@ -13,10 +13,10 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import timber.log.Timber
 import java.io.File
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import timber.log.Timber
 
 /**
  * 基建换班配置
@@ -254,7 +254,7 @@ data class InfrastConfig(
             put("use_worldly_plight", useWorldlyPlight)
             put("use_abyssal_hunter", useAbyssalHunter)
             put("mode", mode.value)
-            if(mode == InfrastMode.Custom){
+            if (mode == InfrastMode.Custom) {
                 put("filename", customInfrastFile)
                 put("plan_index", resolveCustomPlanIndex())
             }
@@ -285,8 +285,10 @@ data class InfrastConfig(
         for ((index, periods) in effectivePeriods.withIndex()) {
             for (period in periods) {
                 if (period.size < 2) continue
-                val start = runCatching { LocalTime.parse(period[0], formatter) }.getOrNull() ?: continue
-                val end = runCatching { LocalTime.parse(period[1], formatter) }.getOrNull() ?: continue
+                val start =
+                    runCatching { LocalTime.parse(period[0], formatter) }.getOrNull() ?: continue
+                val end =
+                    runCatching { LocalTime.parse(period[1], formatter) }.getOrNull() ?: continue
                 if (start <= end) {
                     if (now in start..end) return index
                 } else {

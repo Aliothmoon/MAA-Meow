@@ -8,7 +8,9 @@
 #include <thread>
 
 #if defined(__ARM_NEON)
+
 #include <arm_neon.h>
+
 #endif
 
 static FrameBuffer g_buffers[FRAME_BUFFER_COUNT] = {};

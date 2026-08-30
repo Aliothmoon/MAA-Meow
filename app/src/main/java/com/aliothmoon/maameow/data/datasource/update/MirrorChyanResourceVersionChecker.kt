@@ -25,7 +25,11 @@ class MirrorChyanResourceVersionChecker(
         return result.fold(
             onSuccess = { data ->
                 val remoteVersion = data.versionName
-                if (remoteVersion.isEmpty() || ResourceDownloader.compareVersions(currentVersion, remoteVersion) >= 0) {
+                if (remoteVersion.isEmpty() || ResourceDownloader.compareVersions(
+                        currentVersion,
+                        remoteVersion
+                    ) >= 0
+                ) {
                     UpdateCheckResult.UpToDate(currentVersion)
                 } else {
                     UpdateCheckResult.Available(

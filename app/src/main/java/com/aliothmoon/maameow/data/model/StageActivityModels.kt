@@ -6,17 +6,6 @@ package com.aliothmoon.maameow.data.model
  */
 
 
-
-
-
-
-
-
-
-
-
-
-
 // ==================== UI 使用的模型 ====================
 
 

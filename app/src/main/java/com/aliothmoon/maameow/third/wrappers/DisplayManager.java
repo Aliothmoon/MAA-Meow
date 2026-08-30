@@ -27,28 +27,13 @@ public final class DisplayManager {
 
     // android.hardware.display.DisplayManager.EVENT_FLAG_DISPLAY_CHANGED
     public static final long EVENT_FLAG_DISPLAY_CHANGED = 1L << 2;
-
-    public interface DisplayListener {
-        /**
-         * Called whenever the properties of a logical {@link Display},
-         * such as size and density, have changed.
-         *
-         * @param displayId The id of the logical display that changed.
-         */
-        void onDisplayChanged(int displayId);
-    }
-
-    public static final class DisplayListenerHandle {
-        private final Object displayListenerProxy;
-        private DisplayListenerHandle(Object displayListenerProxy) {
-            this.displayListenerProxy = displayListenerProxy;
-        }
-    }
-
     private final Object manager; // instance of hidden class android.hardware.display.DisplayManagerGlobal
     private Method getDisplayInfoMethod;
     private Method createVirtualDisplayMethod;
     private Method requestDisplayPowerMethod;
+    private DisplayManager(Object manager) {
+        this.manager = manager;
+    }
 
     static DisplayManager create() {
         try {
@@ -59,10 +44,6 @@ public final class DisplayManager {
         } catch (ReflectiveOperationException e) {
             throw new AssertionError(e);
         }
-    }
-
-    private DisplayManager(Object manager) {
-        this.manager = manager;
     }
 
     // public to call it from unit tests
@@ -198,7 +179,7 @@ public final class DisplayManager {
             Class<?> displayListenerClass = Class.forName("android.hardware.display.DisplayManager$DisplayListener");
             Object displayListenerProxy = Proxy.newProxyInstance(
                     ClassLoader.getSystemClassLoader(),
-                    new Class[] {displayListenerClass},
+                    new Class[]{displayListenerClass},
                     (proxy, method, args) -> {
                         if ("onDisplayChanged".equals(method.getName())) {
                             listener.onDisplayChanged((int) args[0]);
@@ -239,6 +220,24 @@ public final class DisplayManager {
             manager.getClass().getMethod("unregisterDisplayListener", displayListenerClass).invoke(manager, listener.displayListenerProxy);
         } catch (Exception e) {
             Ln.e("Could not unregister display listener", e);
+        }
+    }
+
+    public interface DisplayListener {
+        /**
+         * Called whenever the properties of a logical {@link Display},
+         * such as size and density, have changed.
+         *
+         * @param displayId The id of the logical display that changed.
+         */
+        void onDisplayChanged(int displayId);
+    }
+
+    public static final class DisplayListenerHandle {
+        private final Object displayListenerProxy;
+
+        private DisplayListenerHandle(Object displayListenerProxy) {
+            this.displayListenerProxy = displayListenerProxy;
         }
     }
 }

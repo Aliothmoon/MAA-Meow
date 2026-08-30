@@ -74,6 +74,7 @@ object MiniGameTextRegistry {
         "MiniGame@PF", "MiniGame@PF@Begin" -> R.string.mini_game_name_pf
         "MiniGame@InteractiveExhibition", "MiniGame@InteractiveExhibition@Begin" ->
             R.string.mini_game_name_interactive_exhibition
+
         else -> null
     }
 
@@ -96,6 +97,7 @@ object MiniGameTextRegistry {
         "MiniGame@PF", "MiniGame@PF@Begin" -> R.string.mini_game_tip_pf
         "MiniGame@InteractiveExhibition", "MiniGame@InteractiveExhibition@Begin" ->
             R.string.mini_game_tip_interactive_exhibition
+
         else -> null
     }
 

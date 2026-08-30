@@ -134,7 +134,9 @@ fun PixelArtSection(
                     }
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        preview(Modifier.fillMaxWidth(0.5f).align(Alignment.CenterHorizontally))
+                        preview(Modifier
+                            .fillMaxWidth(0.5f)
+                            .align(Alignment.CenterHorizontally))
                         convertOptions()
                     }
                 }
@@ -245,7 +247,11 @@ fun PixelArtSection(
 
         state.plan?.let {
             Text(
-                text = stringResource(R.string.pixel_art_cell_count, it.paintedCellCount, it.groups.size),
+                text = stringResource(
+                    R.string.pixel_art_cell_count,
+                    it.paintedCellCount,
+                    it.groups.size
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -393,7 +399,12 @@ private fun PixelArtPreview(
         for (row in 0 until plan.size) {
             for (col in 0 until plan.size) {
                 drawRect(
-                    color = Color(PixelPaintHelper.PALETTE[plan.indexAt(col, row)] or 0xFF000000.toInt()),
+                    color = Color(
+                        PixelPaintHelper.PALETTE[plan.indexAt(
+                            col,
+                            row
+                        )] or 0xFF000000.toInt()
+                    ),
                     topLeft = Offset(col * cell, row * cell),
                     size = Size(cell, cell),
                 )

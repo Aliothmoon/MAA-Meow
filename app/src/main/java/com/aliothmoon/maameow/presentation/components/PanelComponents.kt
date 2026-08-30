@@ -112,8 +112,8 @@ fun CheckBoxWithLabel(
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (enabled) MaterialTheme.colorScheme.onSurface 
-                        else MaterialTheme.colorScheme.onSurface.copy(alpha = MaaThemeAlphas.DISABLED)
+                color = if (enabled) MaterialTheme.colorScheme.onSurface
+                else MaterialTheme.colorScheme.onSurface.copy(alpha = MaaThemeAlphas.DISABLED)
             )
             if (subtitle != null) {
                 Text(
@@ -125,7 +125,6 @@ fun CheckBoxWithLabel(
         }
     }
 }
-
 
 
 /**
@@ -158,7 +157,7 @@ fun PlaceholderContent(
         modifier = modifier
             .fillMaxSize()
             .background(
-                MaterialTheme.colorScheme.surfaceVariant, 
+                MaterialTheme.colorScheme.surfaceVariant,
                 RoundedCornerShape(8.dp)
             ),
         contentAlignment = Alignment.Center

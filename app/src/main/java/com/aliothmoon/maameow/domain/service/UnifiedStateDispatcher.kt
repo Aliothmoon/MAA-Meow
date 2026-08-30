@@ -1,8 +1,8 @@
 package com.aliothmoon.maameow.domain.service
 
 import com.aliothmoon.maameow.RemoteService
-import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.model.WakeUpConfig
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.state.ResourceInitState
@@ -106,7 +106,7 @@ class UnifiedStateDispatcher(
                     ) {
                         val loaderState = resourceLoader.state.value
                         val shouldLoad = loaderState is MaaResourceLoader.State.NotLoaded
-                            || (loaderState is MaaResourceLoader.State.Failed && !loaderState.permanent)
+                                || (loaderState is MaaResourceLoader.State.Failed && !loaderState.permanent)
                         if (shouldLoad) {
                             Timber.i("Service connected and resource initialized, loading resources")
                             withContext(Dispatchers.IO) {

@@ -55,7 +55,11 @@ class CustomWebhookProvider(
                     NotificationSendResult.Success
                 } else {
                     val responseBody = response.body.string()
-                    Timber.w("CustomWebhook rejected: HTTP %d, body=%s", response.code, responseBody)
+                    Timber.w(
+                        "CustomWebhook rejected: HTTP %d, body=%s",
+                        response.code,
+                        responseBody
+                    )
                     NotificationSendResult.Failed(
                         uiTextOf(R.string.notification_err_http_status, response.code),
                     )
@@ -73,7 +77,7 @@ class CustomWebhookProvider(
         const val DEL = '\u007F'
 
         fun isValidHeaderName(name: String): Boolean = name.isNotEmpty() &&
-            name.all { it > ' ' && it < DEL && it !in HEADER_NAME_DELIMITERS }
+                name.all { it > ' ' && it < DEL && it !in HEADER_NAME_DELIMITERS }
 
         /** 标题和内容原样嵌进 JSON 模板的字符串字面量，不转义会破坏 JSON 结构 */
         fun escapeJsonString(value: String): String = value

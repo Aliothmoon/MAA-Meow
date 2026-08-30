@@ -2,7 +2,6 @@ package com.aliothmoon.maameow.presentation.view.panel
 
 import android.content.ClipData
 import android.widget.Toast
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -53,6 +52,7 @@ import com.aliothmoon.maameow.data.model.toolbox.OperBoxExportLabels
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.domain.service.ToolboxExportFileType
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.utils.i18n.formatToolboxSyncTime
 import kotlinx.coroutines.launch
@@ -116,8 +116,14 @@ fun OperBoxPanel(
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             val tabs = listOf(
-                                stringResource(R.string.panel_operbox_tab_owned, snapshot.owned.size),
-                                stringResource(R.string.panel_operbox_tab_not_owned, snapshot.notOwned.size)
+                                stringResource(
+                                    R.string.panel_operbox_tab_owned,
+                                    snapshot.owned.size
+                                ),
+                                stringResource(
+                                    R.string.panel_operbox_tab_not_owned,
+                                    snapshot.notOwned.size
+                                )
                             )
                             tabs.forEachIndexed { index, label ->
                                 Text(

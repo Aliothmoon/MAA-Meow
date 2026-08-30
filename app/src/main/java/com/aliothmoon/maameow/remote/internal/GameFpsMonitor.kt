@@ -6,6 +6,7 @@ import android.os.IBinder
 import android.os.Parcel
 import android.os.SystemClock
 import com.aliothmoon.maameow.bridge.NativeBridgeLib
+import com.aliothmoon.maameow.remote.internal.GameFpsMonitor.UNKNOWN
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
 import java.lang.reflect.Proxy
@@ -96,7 +97,12 @@ object GameFpsMonitor {
             }
 
             override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
-                if (code != TRANSACTION_ON_FPS_REPORTED) return super.onTransact(code, data, reply, flags)
+                if (code != TRANSACTION_ON_FPS_REPORTED) return super.onTransact(
+                    code,
+                    data,
+                    reply,
+                    flags
+                )
                 data.enforceInterface(DESCRIPTOR)
                 fps = data.readFloat()
                 lastReportMs = SystemClock.elapsedRealtime()
@@ -163,7 +169,8 @@ object GameFpsMonitor {
                     } catch (_: InterruptedException) {
                         break
                     }
-                    estimator.sample(NativeBridgeLib.getFrameCount(), System.nanoTime())?.let { fps = it }
+                    estimator.sample(NativeBridgeLib.getFrameCount(), System.nanoTime())
+                        ?.let { fps = it }
                 }
             }
             return true

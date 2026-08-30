@@ -6,8 +6,11 @@
 #include <media/NdkImage.h>
 
 void SetPreviewSurface(JNIEnv *env, jobject jSurface);
+
 bool IsPreviewEnabled();
+
 bool DispatchPreview(AImage *image);
+
 void DrainPreviewQueue();
 
 #endif // BRIDGE_PREVIEW_H

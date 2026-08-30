@@ -18,15 +18,17 @@ public final class InputManager {
     public static final int INJECT_INPUT_EVENT_MODE_ASYNC = 0;
     public static final int INJECT_INPUT_EVENT_MODE_WAIT_FOR_RESULT = 1;
     public static final int INJECT_INPUT_EVENT_MODE_WAIT_FOR_FINISH = 2;
-
-    private final android.hardware.input.InputManager manager;
-    private long lastPermissionLogDate;
-
     private static Method injectInputEventMethod;
     private static Method setDisplayIdMethod;
     private static Method setActionButtonMethod;
     private static Method addUniqueIdAssociationByPortMethod;
     private static Method removeUniqueIdAssociationByPortMethod;
+    private final android.hardware.input.InputManager manager;
+    private long lastPermissionLogDate;
+
+    private InputManager(android.hardware.input.InputManager manager) {
+        this.manager = manager;
+    }
 
     static InputManager create() {
         android.hardware.input.InputManager manager = (android.hardware.input.InputManager) FakeContext.get()
@@ -34,42 +36,11 @@ public final class InputManager {
         return new InputManager(manager);
     }
 
-    private InputManager(android.hardware.input.InputManager manager) {
-        this.manager = manager;
-    }
-
     private static Method getInjectInputEventMethod() throws NoSuchMethodException {
         if (injectInputEventMethod == null) {
             injectInputEventMethod = android.hardware.input.InputManager.class.getMethod("injectInputEvent", InputEvent.class, int.class);
         }
         return injectInputEventMethod;
-    }
-
-    public boolean injectInputEvent(InputEvent inputEvent, int mode) {
-        try {
-            Method method = getInjectInputEventMethod();
-            return (boolean) method.invoke(manager, inputEvent, mode);
-        } catch (ReflectiveOperationException e) {
-            if (e instanceof InvocationTargetException) {
-                Throwable cause = e.getCause();
-                if (cause instanceof SecurityException) {
-                    String message = e.getCause().getMessage();
-                    if (message != null && message.contains("INJECT_EVENTS permission")) {
-                        // Do not flood the console, limit to one permission error log every 3 seconds
-                        long now = System.currentTimeMillis();
-                        if (lastPermissionLogDate <= now - 3000) {
-                            Ln.e(message);
-                            Ln.e("Make sure you have enabled \"USB debugging (Security Settings)\" and then rebooted your device.");
-                            lastPermissionLogDate = now;
-                        }
-                        // Do not print the stack trace
-                        return false;
-                    }
-                }
-            }
-            Ln.e("Could not invoke method", e);
-            return false;
-        }
     }
 
     private static Method getSetDisplayIdMethod() throws NoSuchMethodException {
@@ -116,6 +87,41 @@ public final class InputManager {
         return addUniqueIdAssociationByPortMethod;
     }
 
+    private static Method getRemoveUniqueIdAssociationByPortMethod() throws NoSuchMethodException {
+        if (removeUniqueIdAssociationByPortMethod == null) {
+            removeUniqueIdAssociationByPortMethod = android.hardware.input.InputManager.class.getMethod(
+                    "removeUniqueIdAssociationByPort", String.class);
+        }
+        return removeUniqueIdAssociationByPortMethod;
+    }
+
+    public boolean injectInputEvent(InputEvent inputEvent, int mode) {
+        try {
+            Method method = getInjectInputEventMethod();
+            return (boolean) method.invoke(manager, inputEvent, mode);
+        } catch (ReflectiveOperationException e) {
+            if (e instanceof InvocationTargetException) {
+                Throwable cause = e.getCause();
+                if (cause instanceof SecurityException) {
+                    String message = e.getCause().getMessage();
+                    if (message != null && message.contains("INJECT_EVENTS permission")) {
+                        // Do not flood the console, limit to one permission error log every 3 seconds
+                        long now = System.currentTimeMillis();
+                        if (lastPermissionLogDate <= now - 3000) {
+                            Ln.e(message);
+                            Ln.e("Make sure you have enabled \"USB debugging (Security Settings)\" and then rebooted your device.");
+                            lastPermissionLogDate = now;
+                        }
+                        // Do not print the stack trace
+                        return false;
+                    }
+                }
+            }
+            Ln.e("Could not invoke method", e);
+            return false;
+        }
+    }
+
     @TargetApi(AndroidVersions.API_35_ANDROID_15)
     public void addUniqueIdAssociationByPort(String inputPort, String uniqueId) {
         try {
@@ -124,14 +130,6 @@ public final class InputManager {
         } catch (ReflectiveOperationException e) {
             Ln.e("Cannot add unique id association by port", e);
         }
-    }
-
-    private static Method getRemoveUniqueIdAssociationByPortMethod() throws NoSuchMethodException {
-        if (removeUniqueIdAssociationByPortMethod == null) {
-            removeUniqueIdAssociationByPortMethod = android.hardware.input.InputManager.class.getMethod(
-                    "removeUniqueIdAssociationByPort", String.class);
-        }
-        return removeUniqueIdAssociationByPortMethod;
     }
 
     @TargetApi(AndroidVersions.API_35_ANDROID_15)

@@ -2,7 +2,6 @@ package com.aliothmoon.maameow.remote.internal
 
 import android.content.pm.IPackageManager
 import android.os.IDeviceIdleController
-import android.os.Process
 import com.aliothmoon.maameow.third.FakeContext
 import com.aliothmoon.maameow.third.Ln
 import com.android.internal.app.IAppOpsService

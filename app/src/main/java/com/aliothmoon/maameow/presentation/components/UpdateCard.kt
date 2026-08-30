@@ -1,7 +1,6 @@
 package com.aliothmoon.maameow.presentation.components
 
 import android.widget.Toast
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -75,6 +74,7 @@ import com.aliothmoon.maameow.data.model.update.UpdateInfo
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.presentation.viewmodel.UpdateViewModel
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.resolve
 import dev.jeziellago.compose.markdowntext.MarkdownText
@@ -97,10 +97,11 @@ fun UpdateCard(
     val updateSource by viewModel.updateSource.collectAsStateWithLifecycle()
     val mirrorChyanCdk by viewModel.mirrorChyanCdk.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    
+
     val resourceUpToDateMessage = stringResource(R.string.update_toast_resource_up_to_date)
     val appUpToDateMessage = stringResource(R.string.update_toast_app_up_to_date)
-    val resourceUpdateCompleteMessage = stringResource(R.string.update_toast_resource_update_complete)
+    val resourceUpdateCompleteMessage =
+        stringResource(R.string.update_toast_resource_update_complete)
     val apkDownloadCompleteMessage = stringResource(R.string.update_toast_apk_download_complete)
     val resourceCheckFailedFormat = stringResource(R.string.update_toast_check_resource_failed)
     val appCheckFailedFormat = stringResource(R.string.update_toast_check_app_failed)
@@ -123,7 +124,8 @@ fun UpdateCard(
             }
 
             is UpdateCheckResult.Error -> {
-                resourceErrorMessage = resourceCheckFailedFormat.format(result.error.text.resolve(context))
+                resourceErrorMessage =
+                    resourceCheckFailedFormat.format(result.error.text.resolve(context))
                 viewModel.dismissResourceCheckResult()
             }
 
@@ -158,7 +160,8 @@ fun UpdateCard(
     LaunchedEffect(resourceUpdateState) {
         when (val state = resourceUpdateState) {
             is UpdateProcessState.Failed -> {
-                resourceErrorMessage = resourceUpdateFailedFormat.format(state.error.text.resolve(context))
+                resourceErrorMessage =
+                    resourceUpdateFailedFormat.format(state.error.text.resolve(context))
             }
 
             is UpdateProcessState.Success -> {
@@ -450,8 +453,10 @@ fun UpdateCard(
                                 )
 
                                 UpdateSource.MIRROR_CHYAN -> {
-                                    val mirrorBrand = stringResource(R.string.update_card_mirror_brand)
-                                    val mirrorDesc = stringResource(R.string.update_card_mirror_desc)
+                                    val mirrorBrand =
+                                        stringResource(R.string.update_card_mirror_brand)
+                                    val mirrorDesc =
+                                        stringResource(R.string.update_card_mirror_desc)
                                     val primary = MaterialTheme.colorScheme.primary
                                     Text(
                                         text = buildAnnotatedString {
@@ -654,7 +659,10 @@ private fun AppUpdateProgress(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = stringResource(R.string.update_progress_app_downloading, appUpdateState.progress.toString()),
+                        text = stringResource(
+                            R.string.update_progress_app_downloading,
+                            appUpdateState.progress.toString()
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onTertiaryContainer,
                         modifier = Modifier.weight(1f)
@@ -734,7 +742,10 @@ private fun ResourceUpdateProgress(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = stringResource(R.string.update_progress_resource_downloading, resourceUpdateState.progress.toString()),
+                        text = stringResource(
+                            R.string.update_progress_resource_downloading,
+                            resourceUpdateState.progress.toString()
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onTertiaryContainer,
                         modifier = Modifier.weight(1f)
@@ -761,7 +772,10 @@ private fun ResourceUpdateProgress(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = stringResource(R.string.update_progress_resource_extracting, resourceUpdateState.progress.toString()),
+                        text = stringResource(
+                            R.string.update_progress_resource_extracting,
+                            resourceUpdateState.progress.toString()
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onTertiaryContainer
                     )
@@ -822,7 +836,10 @@ private fun UpdateSourceButtonGroup(
                 )
                 Icon(
                     imageVector = Icons.Outlined.Info,
-                    contentDescription = stringResource(R.string.update_card_about_source_cd, sourceName),
+                    contentDescription = stringResource(
+                        R.string.update_card_about_source_cd,
+                        sourceName
+                    ),
                     modifier = Modifier
                         .padding(start = 2.dp)
                         .size(16.dp)

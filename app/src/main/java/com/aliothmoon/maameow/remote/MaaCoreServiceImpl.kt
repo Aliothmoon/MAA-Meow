@@ -26,6 +26,7 @@ class MaaCoreServiceImpl(private val ctx: MaaCoreLibrary?) : MaaCoreService.Stub
 
     private val instance = AtomicReference<Pointer>()
     private val callback = AtomicReference<MaaCoreCallback?>()
+
     /**
      * MaaCore 回调入口，运行在 core 的 msg_proc 线程上。
      *

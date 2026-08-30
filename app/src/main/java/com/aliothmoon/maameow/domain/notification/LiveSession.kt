@@ -71,6 +71,7 @@ object LiveNotifyIds {
     const val TEST_SESSION = "maa:live-test"
 
     const val CHANNEL_PROGRESS = "task_execution_live"
+
     /** 静默结果通道；旧的 task_execution_result 建在默认提示音上，只能换 id 重开 */
     const val CHANNEL_RESULT = "task_execution_result_silent"
     const val CHANNEL_RESULT_ALERT = "task_execution_result_alert"

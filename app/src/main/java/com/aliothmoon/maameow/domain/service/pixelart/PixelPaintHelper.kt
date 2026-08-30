@@ -50,7 +50,13 @@ object PixelPaintHelper {
     /** 色板的 OKLab 预转换缓存，扁平存 [L,a,b, L,a,b, ...]，避免最近色比对时反复解码 */
     private val PALETTE_OKLAB = DoubleArray(COLOR_COUNT * 3).also { cache ->
         for (i in 0 until COLOR_COUNT) {
-            srgb8ToOklab(PALETTE_R[i].toDouble(), PALETTE_G[i].toDouble(), PALETTE_B[i].toDouble(), cache, i * 3)
+            srgb8ToOklab(
+                PALETTE_R[i].toDouble(),
+                PALETTE_G[i].toDouble(),
+                PALETTE_B[i].toDouble(),
+                cache,
+                i * 3
+            )
         }
     }
 
@@ -62,7 +68,8 @@ object PixelPaintHelper {
         height: Int,
         options: PixelConvertOptions,
         skipWhite: Boolean = true,
-    ): PixelArtPlan = convert(prepare(pixels, width, height, options.trimEmptyBorder), options, skipWhite)
+    ): PixelArtPlan =
+        convert(prepare(pixels, width, height, options.trimEmptyBorder), options, skipWhite)
 
     /** 用预处理好的图转换，适合反复调参实时预览 */
     fun convert(
@@ -86,7 +93,12 @@ object PixelPaintHelper {
     }
 
     /** 解码后（可选）去边，结果可复用于多次转换 */
-    fun prepare(pixels: IntArray, width: Int, height: Int, trimEmptyBorder: Boolean = true): PreparedImage {
+    fun prepare(
+        pixels: IntArray,
+        width: Int,
+        height: Int,
+        trimEmptyBorder: Boolean = true
+    ): PreparedImage {
         val src = PreparedImage(pixels, width, height)
         // 恰好 24×24 视为外部已处理好的像素画，原样保留
         if (!trimEmptyBorder || (width == GRID_SIZE && height == GRID_SIZE)) return src
@@ -365,7 +377,13 @@ object PixelPaintHelper {
         )
     }
 
-    private fun sampleBilinear(src: PreparedImage, sx: Double, sy: Double, out: DoubleArray, at: Int) {
+    private fun sampleBilinear(
+        src: PreparedImage,
+        sx: Double,
+        sy: Double,
+        out: DoubleArray,
+        at: Int
+    ) {
         // 越界兜底，补白由调用方按取景矩形判定
         if (sx < 0 || sy < 0 || sx >= src.width || sy >= src.height) {
             fillWhite(out, at)
@@ -424,7 +442,12 @@ object PixelPaintHelper {
         filterInPlace(grid.subs, brightness, contrast, saturation)
     }
 
-    private fun filterInPlace(buffer: DoubleArray, brightness: Double, contrast: Double, saturation: Double) {
+    private fun filterInPlace(
+        buffer: DoubleArray,
+        brightness: Double,
+        contrast: Double,
+        saturation: Double
+    ) {
         var i = 0
         while (i < buffer.size) {
             var r = buffer[i] * brightness
@@ -476,7 +499,13 @@ object PixelPaintHelper {
                 val oldR = work[at]
                 val oldG = work[at + 1]
                 val oldB = work[at + 2]
-                srgb8ToOklab(roundToChannel(oldR), roundToChannel(oldG), roundToChannel(oldB), lab, 0)
+                srgb8ToOklab(
+                    roundToChannel(oldR),
+                    roundToChannel(oldG),
+                    roundToChannel(oldB),
+                    lab,
+                    0
+                )
                 val idx = nearestPaletteIndex(lab, 0)
                 result[y * GRID_SIZE + x] = idx
 

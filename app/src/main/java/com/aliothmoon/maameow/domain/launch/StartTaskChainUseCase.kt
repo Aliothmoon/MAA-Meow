@@ -12,7 +12,6 @@ import com.aliothmoon.maameow.domain.service.resolveStartResultMessage
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
 import com.aliothmoon.maameow.domain.usecase.TaskStartDecision
-import com.aliothmoon.maameow.domain.usecase.TaskStartMode
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
@@ -54,6 +53,7 @@ class StartTaskChainUseCase(
                     ),
                 )
             }
+
             is TaskStartDecision.RequiresConfirmation -> {
                 return Result.Failed(
                     executionResult = ExecutionResult.FAILED_VALIDATION,
@@ -93,6 +93,7 @@ class StartTaskChainUseCase(
                 )
                 Result.Success
             }
+
             else -> Result.Failed(
                 executionResult = ExecutionResult.FAILED_START,
                 message = resolveStartResultMessage(startResult)

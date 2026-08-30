@@ -6,7 +6,6 @@ import com.aliothmoon.maameow.domain.enums.RoguelikeMode
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
-import com.aliothmoon.maameow.data.model.TaskParamProvider
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
@@ -145,7 +144,10 @@ data class RoguelikeConfig(
                     // WPF AsstRoguelikeTask:1089 / Serialize:245
                     put(
                         "start_with_elite_two",
-                        startWithEliteTwo && squadIsProfessional && theme in listOf("Mizuki", "Sami")
+                        startWithEliteTwo && squadIsProfessional && theme in listOf(
+                            "Mizuki",
+                            "Sami"
+                        )
                     )
                     // WPF AsstRoguelikeTask:1090 / Serialize:246 (仅依赖 only 开关与主题)
                     put(

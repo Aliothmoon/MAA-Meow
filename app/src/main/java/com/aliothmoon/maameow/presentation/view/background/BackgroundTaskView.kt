@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -77,6 +76,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
@@ -89,12 +89,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import kotlin.math.roundToInt
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -144,6 +142,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import timber.log.Timber
+import kotlin.math.roundToInt
 
 @Composable
 fun BackgroundTaskView(
@@ -344,7 +343,10 @@ fun BackgroundTaskView(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .padding(6.dp)
-                                .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(4.dp))
+                                .background(
+                                    Color.Black.copy(alpha = 0.35f),
+                                    RoundedCornerShape(4.dp)
+                                )
                                 .padding(horizontal = 5.dp, vertical = 2.dp)
                         )
                     }
@@ -355,12 +357,12 @@ fun BackgroundTaskView(
 
     // 全屏预览态排除在外：auto-enter 没有前置钩子，带着强制横屏和收起的系统栏进小窗会互相打架
     val pipEligible = pipOnHome &&
-        isActivePage &&
-        !state.isFullscreenMonitor &&
-        runMode == RunMode.BACKGROUND &&
-        (maaState == MaaExecutionState.STARTING || maaState == MaaExecutionState.RUNNING) &&
-        isSurfaceAvailable &&
-        PipController.isSupported(context)
+            isActivePage &&
+            !state.isFullscreenMonitor &&
+            runMode == RunMode.BACKGROUND &&
+            (maaState == MaaExecutionState.STARTING || maaState == MaaExecutionState.RUNNING) &&
+            isSurfaceAvailable &&
+            PipController.isSupported(context)
     val pipActivity = pipHost as? Activity
     DisposableEffect(pipHost, pipActivity, pipEligible, displayResolution, previewBounds) {
         fun arm(enabled: Boolean, sourceRect: Rect?) {
@@ -522,15 +524,15 @@ fun BackgroundTaskView(
                             val inputFocusManager = LocalInputFocusManager.current
                             val toolboxTab by toolboxViewModel.currentTab.collectAsStateWithLifecycle()
                             val gachaDisclaimerOk by
-                                toolboxViewModel.gachaDisclaimerAccepted.collectAsStateWithLifecycle()
+                            toolboxViewModel.gachaDisclaimerAccepted.collectAsStateWithLifecycle()
                             // 牛牛抽卡：底部栏改为寻访一次/十次，避免与面板内按钮 + 开始任务重复
                             val isGachaActions = state.current == PanelTab.TOOLS &&
-                                toolboxTab == ToolboxTab.GACHA &&
-                                gachaDisclaimerOk
+                                    toolboxTab == ToolboxTab.GACHA &&
+                                    gachaDisclaimerOk
                             // 未同意免责时隐藏开始栏（只在内容区点「知道了」）
                             val hideStartBarForGachaDisclaimer = state.current == PanelTab.TOOLS &&
-                                toolboxTab == ToolboxTab.GACHA &&
-                                !gachaDisclaimerOk
+                                    toolboxTab == ToolboxTab.GACHA &&
+                                    !gachaDisclaimerOk
                             // 启动按钮的两种「禁用态」：① 前台模式不从后台任务页启动；
                             // ② 远程后端（Shizuku/Root）不可用。两者均显示为禁用态但仍可点击，
                             // 点击给出对应提示（防呆），与领域层 checkPreconditions 守卫一致。
@@ -545,8 +547,8 @@ fun BackgroundTaskView(
                                 permissionState.startupBackend.display
                             )
                             val canStart = maaState != MaaExecutionState.RUNNING &&
-                                maaState != MaaExecutionState.STARTING &&
-                                maaState != MaaExecutionState.STOPPING
+                                    maaState != MaaExecutionState.STARTING &&
+                                    maaState != MaaExecutionState.STOPPING
                             if (!hideStartBarForGachaDisclaimer) {
                                 Row(
                                     modifier = Modifier
@@ -558,7 +560,7 @@ fun BackgroundTaskView(
                                     if (isGachaActions) {
                                         // 运行中换成停止，否则再加「快捷选项」会挤成四键
                                         val gachaRunning = maaState == MaaExecutionState.RUNNING ||
-                                            maaState == MaaExecutionState.STOPPING
+                                                maaState == MaaExecutionState.STOPPING
                                         if (gachaRunning) {
                                             OutlinedButton(
                                                 onClick = { toolboxViewModel.onStop() },
@@ -668,7 +670,7 @@ fun BackgroundTaskView(
                                         // 运行中换成停止，空出的位置给「快捷选项」
                                         val taskRunning =
                                             maaState == MaaExecutionState.RUNNING ||
-                                                maaState == MaaExecutionState.STOPPING
+                                                    maaState == MaaExecutionState.STOPPING
                                         if (taskRunning) {
                                             OutlinedButton(
                                                 onClick = {
@@ -887,7 +889,11 @@ fun BackgroundTaskView(
                                         if (!down && !up && !change.positionChangedIgnoreConsumed()) continue
 
                                         // 画面外按下忽略；拖出画面钳到边缘，保证抬起送达
-                                        val point = viewToVirtualDisplay(change.position, size, displayResolution)
+                                        val point = viewToVirtualDisplay(
+                                            change.position,
+                                            size,
+                                            displayResolution
+                                        )
                                         val (x, y) = point.offset
                                         when {
                                             down -> {

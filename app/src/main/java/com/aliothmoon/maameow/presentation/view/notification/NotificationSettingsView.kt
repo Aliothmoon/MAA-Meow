@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.presentation.view.notification
 
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -29,13 +28,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.aliothmoon.maameow.domain.notification.LiveBackend
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.notification.WEBHOOK_PRESET_TEMPLATES
 import com.aliothmoon.maameow.data.notification.withWebhookPreset
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager.EventNotificationLevel
+import com.aliothmoon.maameow.domain.notification.LiveBackend
 import com.aliothmoon.maameow.domain.service.MaaEventNotifier
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.components.ListItemDivider
@@ -45,6 +44,7 @@ import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.SettingsGroupCard
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.viewmodel.NotificationSettingsViewModel
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -120,8 +120,10 @@ fun NotificationSettingsView(
                     val styleLabel = when (liveCapability.backend) {
                         LiveBackend.HYPER_OS_FOCUS ->
                             stringResource(R.string.notification_live_style_hyperos)
+
                         LiveBackend.AOSP_PROMOTED ->
                             stringResource(R.string.notification_live_style_aosp)
+
                         LiveBackend.PLAIN ->
                             stringResource(R.string.notification_live_style_plain)
                     }

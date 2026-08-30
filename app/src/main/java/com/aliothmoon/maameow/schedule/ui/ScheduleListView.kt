@@ -56,10 +56,10 @@ import com.aliothmoon.maameow.presentation.components.BackendReadyFixHost
 import com.aliothmoon.maameow.presentation.components.InfoCard
 import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.TopAppBar
+import com.aliothmoon.maameow.presentation.components.rememberBackendReadyFixState
 import com.aliothmoon.maameow.presentation.onboarding.OnboardingTarget
 import com.aliothmoon.maameow.presentation.onboarding.onboardingBlocksStartupDialogs
 import com.aliothmoon.maameow.presentation.onboarding.onboardingTarget
-import com.aliothmoon.maameow.presentation.components.rememberBackendReadyFixState
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.schedule.model.ScheduleHealthIssue
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
@@ -103,7 +103,11 @@ fun ScheduleListView(
         if (!hasEnabledStrategy || onboardingBlocking) return@LaunchedEffect
         // prefs 与 resolveActivity 都是跨进程，整段留在 IO 上
         val target = withContext(Dispatchers.IO) {
-            if (!AutoStartHelper.shouldRemindThisBoot(context, schedulePrefs)) return@withContext null
+            if (!AutoStartHelper.shouldRemindThisBoot(
+                    context,
+                    schedulePrefs
+                )
+            ) return@withContext null
             AutoStartHelper.resolveTarget(context)
                 ?.also { AutoStartHelper.markRemindedThisBoot(context, schedulePrefs) }
         }
@@ -231,10 +235,17 @@ fun ScheduleListView(
                     TextButton(onClick = {
                         viewModel.onDeleteStrategy(deleteConfirmId!!)
                         deleteConfirmId = null
-                    }) { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) }
+                    }) {
+                        Text(
+                            stringResource(R.string.common_delete),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                 },
                 dismissButton = {
-                    TextButton(onClick = { deleteConfirmId = null }) { Text(stringResource(R.string.common_cancel)) }
+                    TextButton(onClick = {
+                        deleteConfirmId = null
+                    }) { Text(stringResource(R.string.common_cancel)) }
                 }
             )
         }

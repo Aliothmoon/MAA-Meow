@@ -24,11 +24,31 @@ enum class LogLevel(
     RECRUIT_STAR_6(R.string.log_level_recruit_star_6, LogColorRole.STAR_6, LogSeverity.INFO),
     RECRUIT_ROBOT(R.string.log_level_recruit_robot, LogColorRole.ROBOT, LogSeverity.INFO),
 
-    ROGUELIKE_SUCCESS(R.string.log_level_roguelike_success, LogColorRole.ROGUELIKE_SUCCESS, LogSeverity.INFO),
-    ROGUELIKE_COMBAT(R.string.log_level_roguelike_combat, LogColorRole.ROGUELIKE_COMBAT, LogSeverity.INFO),
-    ROGUELIKE_EMERGENCY(R.string.log_level_roguelike_emergency, LogColorRole.ROGUELIKE_EMERGENCY, LogSeverity.INFO),
-    ROGUELIKE_BOSS(R.string.log_level_roguelike_boss, LogColorRole.ROGUELIKE_BOSS, LogSeverity.INFO),
-    ROGUELIKE_ABANDON(R.string.log_level_roguelike_abandon, LogColorRole.ROGUELIKE_ABANDON, LogSeverity.INFO),
+    ROGUELIKE_SUCCESS(
+        R.string.log_level_roguelike_success,
+        LogColorRole.ROGUELIKE_SUCCESS,
+        LogSeverity.INFO
+    ),
+    ROGUELIKE_COMBAT(
+        R.string.log_level_roguelike_combat,
+        LogColorRole.ROGUELIKE_COMBAT,
+        LogSeverity.INFO
+    ),
+    ROGUELIKE_EMERGENCY(
+        R.string.log_level_roguelike_emergency,
+        LogColorRole.ROGUELIKE_EMERGENCY,
+        LogSeverity.INFO
+    ),
+    ROGUELIKE_BOSS(
+        R.string.log_level_roguelike_boss,
+        LogColorRole.ROGUELIKE_BOSS,
+        LogSeverity.INFO
+    ),
+    ROGUELIKE_ABANDON(
+        R.string.log_level_roguelike_abandon,
+        LogColorRole.ROGUELIKE_ABANDON,
+        LogSeverity.INFO
+    ),
 
     RARE(R.string.log_level_rare, LogColorRole.RARE, LogSeverity.INFO);
 

@@ -11,7 +11,6 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
-import androidx.core.graphics.createBitmap
 
 /**
  * 仓库物品图标加载器

@@ -17,6 +17,7 @@ object RemoteAccessCoordinator {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val listener = RemoteAccessStateListener { refresh() }
     private val _state = MutableStateFlow(snapshot())
+
     @Volatile
     private var appSettings: AppSettingsManager? = null
 
@@ -31,7 +32,7 @@ object RemoteAccessCoordinator {
         this.appSettings = appSettings
         if (initialized.compareAndSet(false, true)) {
             backends.values.forEach { it.addStateListener(listener) }
-            
+
             scope.launch {
                 val backend = configuredBackend()
                 if (backend == RemoteBackend.ROOT) {

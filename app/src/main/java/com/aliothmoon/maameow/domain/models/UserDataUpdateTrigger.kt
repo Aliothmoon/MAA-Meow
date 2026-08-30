@@ -1,10 +1,10 @@
 package com.aliothmoon.maameow.domain.models
 
+import kotlinx.serialization.Serializable
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.IsoFields
-import kotlinx.serialization.Serializable
 
 /**
  * 「更新数据」任务的触发间隔。

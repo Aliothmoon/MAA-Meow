@@ -185,18 +185,22 @@ fun SettingsView(
             when (effect) {
                 AchievementEffect.PallasEnteredDebug ->
                     pallasFlavorDialog = PallasFlavorDialog.Drunk
+
                 AchievementEffect.PallasExitedDebug ->
                     pallasFlavorDialog = PallasFlavorDialog.Hangover
+
                 AchievementEffect.UnlockedAll -> Toast.makeText(
                     context,
                     R.string.achievement_debug_unlock_all_done,
                     Toast.LENGTH_SHORT,
                 ).show()
+
                 AchievementEffect.Cleared -> Toast.makeText(
                     context,
                     R.string.achievement_debug_clear_done,
                     Toast.LENGTH_SHORT,
                 ).show()
+
                 AchievementEffect.Unlocked -> Unit
             }
         }
@@ -663,137 +667,138 @@ fun SettingsView(
                     sectionKey = "settings_section_other",
                 ) {
                     SettingsGroupCard {
-                    SettingRemoteBackendItem(
-                        contentColor = contentColor,
-                        selectedBackend = startupBackend,
-                        onBackendSelected = { viewModel.setStartupBackend(it) }
-                    )
-                    ListItemDivider()
-                    if (startupBackend == RemoteBackend.SHIZUKU) {
-                        SettingSwitchItem(
-                            title = stringResource(R.string.settings_shizuku_launch_mode_title),
-                            description = stringResource(R.string.settings_shizuku_launch_mode_desc),
+                        SettingRemoteBackendItem(
                             contentColor = contentColor,
-                            checked = shizukuShortcutEnabled,
-                            onCheckedChange = { viewModel.setShizukuShortcutEnabled(it) }
+                            selectedBackend = startupBackend,
+                            onBackendSelected = { viewModel.setStartupBackend(it) }
                         )
                         ListItemDivider()
+                        if (startupBackend == RemoteBackend.SHIZUKU) {
+                            SettingSwitchItem(
+                                title = stringResource(R.string.settings_shizuku_launch_mode_title),
+                                description = stringResource(R.string.settings_shizuku_launch_mode_desc),
+                                contentColor = contentColor,
+                                checked = shizukuShortcutEnabled,
+                                onCheckedChange = { viewModel.setShizukuShortcutEnabled(it) }
+                            )
+                            ListItemDivider()
+                            MaaAnimatedVisibility(
+                                visible = shizukuShortcutEnabled,
+                                enter = expandVertically(),
+                                exit = shrinkVertically()
+                            ) {
+                                Column {
+                                    val shizukuLaunchAppName =
+                                        ShizukuInstallHelper.getLaunchAppLabel(
+                                            context,
+                                            shizukuLaunchPackage
+                                        )
+                                    val shizukuLaunchAppDescription =
+                                        if (shizukuLaunchPackage == OFFICIAL_SHIZUKU_PACKAGE) {
+                                            stringResource(R.string.settings_shizuku_launch_app_default_desc)
+                                        } else {
+                                            stringResource(
+                                                R.string.settings_shizuku_launch_app_selected_desc,
+                                                shizukuLaunchAppName ?: shizukuLaunchPackage
+                                            )
+                                        }
+                                    SettingClickItem(
+                                        title = stringResource(R.string.settings_shizuku_launch_app_title),
+                                        description = shizukuLaunchAppDescription,
+                                        contentColor = contentColor
+                                    ) {
+                                        // 先展示弹窗，再异步查询应用列表，避免点击后长时间无反馈。
+                                        shizukuAppSearch = ""
+                                        shizukuAppPickerLoadKey += 1
+                                        showShizukuAppPicker = true
+                                    }
+                                    ListItemDivider()
+                                    SettingClickItem(
+                                        title = stringResource(R.string.settings_shizuku_launch_app_reset_title),
+                                        description = stringResource(R.string.settings_shizuku_launch_app_reset_desc),
+                                        contentColor = contentColor
+                                    ) {
+                                        viewModel.setShizukuLaunchPackage(OFFICIAL_SHIZUKU_PACKAGE)
+                                    }
+                                    ListItemDivider()
+                                }
+                            }
+                        }
+                        ListItemDivider()
+                        SettingBackgroundResolutionItem(
+                            contentColor = contentColor,
+                            selectedPreference = backgroundResolution,
+                            onPreferenceSelected = { viewModel.setBackgroundResolution(it) }
+                        )
+                        ListItemDivider()
+                        SettingSwitchItem(
+                            title = stringResource(R.string.settings_skip_shizuku_check),
+                            contentColor = contentColor,
+                            checked = skipShizukuCheck,
+                            enabled = startupBackend == RemoteBackend.SHIZUKU,
+                            onCheckedChange = { viewModel.setSkipShizukuCheck(it) }
+                        )
+                        ListItemDivider()
+                        SettingSwitchItem(
+                            title = stringResource(R.string.settings_force_fullscreen_on_virtual_display),
+                            description = stringResource(R.string.settings_force_fullscreen_on_virtual_display_desc),
+                            contentColor = contentColor,
+                            checked = forceFullscreenOnVirtualDisplay,
+                            onCheckedChange = { enabled ->
+                                if (enabled) {
+                                    showForceFullscreenConfirm = true
+                                } else {
+                                    viewModel.setForceFullscreenOnVirtualDisplay(false)
+                                }
+                            }
+                        )
+                        ListItemDivider()
+                        SettingSwitchItem(
+                            title = stringResource(R.string.settings_pip_on_home),
+                            description = stringResource(R.string.settings_pip_on_home_desc),
+                            contentColor = contentColor,
+                            checked = pipOnHome,
+                            onCheckedChange = { viewModel.setPipOnHome(it) }
+                        )
+                        ListItemDivider()
+                        SettingWakeUnlockTypeItem(
+                            contentColor = contentColor,
+                            selectedType = wakeUnlockType,
+                            onTypeSelected = { viewModel.setWakeUnlockType(it) },
+                        )
                         MaaAnimatedVisibility(
-                            visible = shizukuShortcutEnabled,
+                            visible = wakeUnlockType == AppSettingsManager.WAKE_TYPE_PIN,
                             enter = expandVertically(),
-                            exit = shrinkVertically()
+                            exit = shrinkVertically(),
                         ) {
                             Column {
-                                val shizukuLaunchAppName = ShizukuInstallHelper.getLaunchAppLabel(
-                                    context,
-                                    shizukuLaunchPackage
+                                ListItemDivider()
+                                SettingWakePinSection(
+                                    contentColor = contentColor,
+                                    wakeCredential = wakeCredential,
+                                    onCredentialChange = { viewModel.setWakeCredential(it) },
+                                    onTest = { viewModel.runWakeTest() },
                                 )
-                                val shizukuLaunchAppDescription =
-                                    if (shizukuLaunchPackage == OFFICIAL_SHIZUKU_PACKAGE) {
-                                        stringResource(R.string.settings_shizuku_launch_app_default_desc)
-                                    } else {
-                                        stringResource(
-                                            R.string.settings_shizuku_launch_app_selected_desc,
-                                            shizukuLaunchAppName ?: shizukuLaunchPackage
-                                        )
-                                    }
-                                SettingClickItem(
-                                    title = stringResource(R.string.settings_shizuku_launch_app_title),
-                                    description = shizukuLaunchAppDescription,
-                                    contentColor = contentColor
-                                ) {
-                                    // 先展示弹窗，再异步查询应用列表，避免点击后长时间无反馈。
-                                    shizukuAppSearch = ""
-                                    shizukuAppPickerLoadKey += 1
-                                    showShizukuAppPicker = true
-                                }
-                                ListItemDivider()
-                                SettingClickItem(
-                                    title = stringResource(R.string.settings_shizuku_launch_app_reset_title),
-                                    description = stringResource(R.string.settings_shizuku_launch_app_reset_desc),
-                                    contentColor = contentColor
-                                ) {
-                                    viewModel.setShizukuLaunchPackage(OFFICIAL_SHIZUKU_PACKAGE)
-                                }
-                                ListItemDivider()
                             }
                         }
-                    }
-                    ListItemDivider()
-                    SettingBackgroundResolutionItem(
-                        contentColor = contentColor,
-                        selectedPreference = backgroundResolution,
-                        onPreferenceSelected = { viewModel.setBackgroundResolution(it) }
-                    )
-                    ListItemDivider()
-                    SettingSwitchItem(
-                        title = stringResource(R.string.settings_skip_shizuku_check),
-                        contentColor = contentColor,
-                        checked = skipShizukuCheck,
-                        enabled = startupBackend == RemoteBackend.SHIZUKU,
-                        onCheckedChange = { viewModel.setSkipShizukuCheck(it) }
-                    )
-                    ListItemDivider()
-                    SettingSwitchItem(
-                        title = stringResource(R.string.settings_force_fullscreen_on_virtual_display),
-                        description = stringResource(R.string.settings_force_fullscreen_on_virtual_display_desc),
-                        contentColor = contentColor,
-                        checked = forceFullscreenOnVirtualDisplay,
-                        onCheckedChange = { enabled ->
-                            if (enabled) {
-                                showForceFullscreenConfirm = true
-                            } else {
-                                viewModel.setForceFullscreenOnVirtualDisplay(false)
+                        MaaAnimatedVisibility(
+                            visible = wakeUnlockType == AppSettingsManager.WAKE_TYPE_GESTURE,
+                            enter = expandVertically(),
+                            exit = shrinkVertically(),
+                        ) {
+                            Column {
+                                ListItemDivider()
+                                SettingWakeGestureSection(
+                                    contentColor = contentColor,
+                                    gesture = unlockGesture,
+                                    recordState = gestureRecordState,
+                                    onRecord = { viewModel.startGestureRecord() },
+                                    onCancelRecord = { viewModel.cancelGestureRecord() },
+                                    onClear = { viewModel.clearGesture() },
+                                    onTest = { viewModel.runWakeTest() },
+                                )
                             }
                         }
-                    )
-                    ListItemDivider()
-                    SettingSwitchItem(
-                        title = stringResource(R.string.settings_pip_on_home),
-                        description = stringResource(R.string.settings_pip_on_home_desc),
-                        contentColor = contentColor,
-                        checked = pipOnHome,
-                        onCheckedChange = { viewModel.setPipOnHome(it) }
-                    )
-                    ListItemDivider()
-                    SettingWakeUnlockTypeItem(
-                        contentColor = contentColor,
-                        selectedType = wakeUnlockType,
-                        onTypeSelected = { viewModel.setWakeUnlockType(it) },
-                    )
-                    MaaAnimatedVisibility(
-                        visible = wakeUnlockType == AppSettingsManager.WAKE_TYPE_PIN,
-                        enter = expandVertically(),
-                        exit = shrinkVertically(),
-                    ) {
-                        Column {
-                            ListItemDivider()
-                            SettingWakePinSection(
-                                contentColor = contentColor,
-                                wakeCredential = wakeCredential,
-                                onCredentialChange = { viewModel.setWakeCredential(it) },
-                                onTest = { viewModel.runWakeTest() },
-                            )
-                        }
-                    }
-                    MaaAnimatedVisibility(
-                        visible = wakeUnlockType == AppSettingsManager.WAKE_TYPE_GESTURE,
-                        enter = expandVertically(),
-                        exit = shrinkVertically(),
-                    ) {
-                        Column {
-                            ListItemDivider()
-                            SettingWakeGestureSection(
-                                contentColor = contentColor,
-                                gesture = unlockGesture,
-                                recordState = gestureRecordState,
-                                onRecord = { viewModel.startGestureRecord() },
-                                onCancelRecord = { viewModel.cancelGestureRecord() },
-                                onClear = { viewModel.clearGesture() },
-                                onTest = { viewModel.runWakeTest() },
-                            )
-                        }
-                    }
                     }
                 }
             }
@@ -1186,11 +1191,11 @@ private fun SettingWakeUnlockTypeItem(
         )
         val options = listOf(
             AppSettingsManager.WAKE_TYPE_SWIPE to
-                stringResource(R.string.settings_wake_unlock_type_swipe),
+                    stringResource(R.string.settings_wake_unlock_type_swipe),
             AppSettingsManager.WAKE_TYPE_GESTURE to
-                stringResource(R.string.settings_wake_unlock_type_gesture),
+                    stringResource(R.string.settings_wake_unlock_type_gesture),
             AppSettingsManager.WAKE_TYPE_PIN to
-                stringResource(R.string.settings_wake_unlock_type_pin),
+                    stringResource(R.string.settings_wake_unlock_type_pin),
         )
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             options.forEachIndexed { index, (type, label) ->
@@ -1225,7 +1230,7 @@ private fun SettingWakeGestureSection(
     onTest: () -> Unit,
 ) {
     val recording = recordState is SettingsViewModel.GestureRecordState.Preparing ||
-        recordState is SettingsViewModel.GestureRecordState.Recording
+            recordState is SettingsViewModel.GestureRecordState.Recording
 
     Column(
         modifier = Modifier

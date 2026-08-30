@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.remote.internal
 import android.os.SystemClock
 import com.aliothmoon.maameow.constant.WakeUnlockResult
 import com.aliothmoon.maameow.domain.models.GestureRecordResult
+import com.aliothmoon.maameow.remote.internal.GestureRecorder.poll
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
 import com.aliothmoon.maameow.utils.JsonUtils
@@ -147,8 +148,8 @@ internal object GestureRecorder {
 
         Ln.i(
             "$TAG: captured ${strokes.size} strokes on ${screen.width}x${screen.height}" +
-                " rotation=${screen.rotation}," +
-                " events raw=${rawEvents.get()} collected=${collectedEvents.get()}"
+                    " rotation=${screen.rotation}," +
+                    " events raw=${rawEvents.get()} collected=${collectedEvents.get()}"
         )
 
         val mapped = TouchCoordMapper.mapStrokes(strokes, device, screen)

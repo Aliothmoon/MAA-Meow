@@ -2,14 +2,13 @@ package com.aliothmoon.maameow.domain.service
 
 import android.content.Context
 import com.alibaba.fastjson2.JSON
-import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.MaaCoreCallback
 import com.aliothmoon.maameow.MaaCoreService
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.model.LogLevel
-
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.ActivityManager
@@ -40,14 +39,14 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.buildJsonObject
@@ -325,7 +324,7 @@ class MaaCompositionService(
         val serviceState = RemoteServiceManager.state.value
         val resourceState = resourceLoader.state.value
         val reconnectingForResource = resourceState is MaaResourceLoader.State.Loading ||
-            resourceState is MaaResourceLoader.State.Reloading
+                resourceState is MaaResourceLoader.State.Reloading
         if (serviceState is RemoteServiceManager.ServiceState.Connecting && !reconnectingForResource) {
             return rejectStart(
                 context.getString(R.string.runlog_service_connecting),
@@ -431,7 +430,10 @@ class MaaCompositionService(
         // 让新进程一启动就处于受保护状态
         grantGameBatteryExemption(clientType)
         // Assistant 实例跨任务复用，关闭时必须显式写 0
-        maa.SetInstanceOption(DEPLOYMENT_WITH_PAUSE, if (appSettings.deployWithPause.value) "1" else "0")
+        maa.SetInstanceOption(
+            DEPLOYMENT_WITH_PAUSE,
+            if (appSettings.deployWithPause.value) "1" else "0"
+        )
         return asyncConnect(maa, config)
     }
 
@@ -532,6 +534,7 @@ class MaaCompositionService(
             MaaExecutionState.STARTING,
             MaaExecutionState.RUNNING,
             MaaExecutionState.STOPPING -> return StartResult.AlreadyRunning
+
             MaaExecutionState.IDLE,
             MaaExecutionState.ERROR -> Unit
         }

@@ -22,8 +22,8 @@ static int FinishUpcall(JNIEnv *env, jboolean result, const char *context) {
 
 static int UpcallTouch(JNIEnv *env, MethodType method, const TouchArgs &touch, int displayId) {
     jmethodID mid = method == TOUCH_DOWN ? g_touch_down_method
-                    : method == TOUCH_MOVE ? g_touch_move_method
-                                           : g_touch_up_method;
+                                         : method == TOUCH_MOVE ? g_touch_move_method
+                                                                : g_touch_up_method;
     if (!env || !g_driver_clz || !mid) {
         return -1;
     }
@@ -75,7 +75,8 @@ bool InitInputBridge(JavaVM *vm, JNIEnv *env, const char *driverClassName) {
     g_touch_up_method = env->GetStaticMethodID(g_driver_clz, "touchUp", "(IIII)Z");
     g_key_down_method = env->GetStaticMethodID(g_driver_clz, "keyDown", "(II)Z");
     g_key_up_method = env->GetStaticMethodID(g_driver_clz, "keyUp", "(II)Z");
-    g_start_app_method = env->GetStaticMethodID(g_driver_clz, "startApp", "(Ljava/lang/String;IZ)Z");
+    g_start_app_method = env->GetStaticMethodID(g_driver_clz, "startApp",
+                                                "(Ljava/lang/String;IZ)Z");
 
     if (CheckJNIException(env, "GetStaticMethodID(DriverClass)") ||
         !g_touch_down_method || !g_touch_move_method || !g_touch_up_method ||

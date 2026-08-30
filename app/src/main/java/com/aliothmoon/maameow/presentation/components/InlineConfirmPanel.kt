@@ -1,8 +1,5 @@
 package com.aliothmoon.maameow.presentation.components
 
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,6 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 
 /**
  * 内嵌二次确认面板

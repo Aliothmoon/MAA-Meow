@@ -1,9 +1,6 @@
 package com.aliothmoon.maameow.presentation.components
 
 import android.content.res.Configuration
-import com.aliothmoon.maameow.theme.LocalReduceMotion
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
-import com.aliothmoon.maameow.theme.MaaMotion
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -55,6 +52,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
+import com.aliothmoon.maameow.theme.LocalReduceMotion
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaMotion
 import com.aliothmoon.maameow.theme.OpaqueTheme
 
 /** 普通提示弹窗的最大宽度上限（手机按比例、平板/宽屏封顶） */

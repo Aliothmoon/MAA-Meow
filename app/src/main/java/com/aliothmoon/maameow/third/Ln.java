@@ -18,11 +18,6 @@ public final class Ln {
 
     private static final PrintStream CONSOLE_OUT = new PrintStream(new FileOutputStream(FileDescriptor.out));
     private static final PrintStream CONSOLE_ERR = new PrintStream(new FileOutputStream(FileDescriptor.err));
-
-    public enum Level {
-        VERBOSE, DEBUG, INFO, WARN, ERROR
-    }
-
     private static Level threshold = Level.DEBUG;
 
     private Ln() {
@@ -97,6 +92,10 @@ public final class Ln {
 
     public static void e(String message) {
         e(message, null);
+    }
+
+    public enum Level {
+        VERBOSE, DEBUG, INFO, WARN, ERROR
     }
 
     static class NullOutputStream extends OutputStream {

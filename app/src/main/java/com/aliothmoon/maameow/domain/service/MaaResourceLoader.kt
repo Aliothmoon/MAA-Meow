@@ -52,6 +52,7 @@ class MaaResourceLoader(
         data class Loading(val message: String = "") : State()
         data class Reloading(val message: String = "") : State()
         data object Ready : State()
+
         /**
          * @param permanent true = 资源文件缺失，重试无意义，需用户手动重新初始化；
          *                  false = IPC/IO 临时失败，ensureLoaded() 可再次尝试加载。
@@ -211,12 +212,14 @@ class MaaResourceLoader(
                 // 临时失败（IPC/IO），重新尝试加载
                 load(clientType)
             }
+
             is State.Loading, is State.Reloading -> {
                 // 等待当前加载结束，避免并发启动时误报失败
                 val terminal = _state.first { it is State.Ready || it is State.Failed }
                 if (terminal is State.Ready) ensureProfile(clientType)
                 else Result.failure(Exception((terminal as State.Failed).message))
             }
+
             else -> load(clientType)
         }
     }

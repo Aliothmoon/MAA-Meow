@@ -41,7 +41,8 @@ class SmtpProvider(
                 uiTextOf(R.string.notification_err_smtp_to_empty)
             )
         val useSsl = settings.smtpUseSsl.toBooleanStrictOrNull() ?: false
-        val requireAuthentication = settings.smtpRequireAuthentication.toBooleanStrictOrNull() ?: false
+        val requireAuthentication =
+            settings.smtpRequireAuthentication.toBooleanStrictOrNull() ?: false
         val user = settings.smtpUser
         val password = settings.smtpPassword
 

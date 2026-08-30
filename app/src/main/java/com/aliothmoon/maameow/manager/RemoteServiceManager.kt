@@ -67,7 +67,10 @@ object RemoteServiceManager {
             val service: RemoteService
             synchronized(lock) {
                 if (boundBackend != backend) {
-                    ServiceBootLogger.event("CB_ON_CONNECTED_STALE", "backend=$backend bound=$boundBackend")
+                    ServiceBootLogger.event(
+                        "CB_ON_CONNECTED_STALE",
+                        "backend=$backend bound=$boundBackend"
+                    )
                     Timber.w("Ignoring stale %s connection", backend)
                     return
                 }
@@ -120,7 +123,10 @@ object RemoteServiceManager {
                 if (boundBackend != backend) {
                     return
                 }
-                ServiceBootLogger.event("CB_ON_ERROR", "backend=$backend ${throwable.javaClass.simpleName}: ${throwable.message}")
+                ServiceBootLogger.event(
+                    "CB_ON_ERROR",
+                    "backend=$backend ${throwable.javaClass.simpleName}: ${throwable.message}"
+                )
                 Timber.e(throwable, "RemoteService connection failed: %s", backend)
                 clearCurrentBinderLocked()
                 boundBackend = null
@@ -266,7 +272,8 @@ object RemoteServiceManager {
         getInstanceOrNull()?.let { return it }
 
         bind()
-        val waitMs = timeoutMs ?: defaultWaitMs(boundBackend ?: RemoteAccessCoordinator.configuredBackend())
+        val waitMs =
+            timeoutMs ?: defaultWaitMs(boundBackend ?: RemoteAccessCoordinator.configuredBackend())
         return try {
             withTimeout(waitMs) {
                 _state.first { it is ServiceState.Connected || it is ServiceState.Error }
@@ -279,7 +286,10 @@ object RemoteServiceManager {
                     }
             }
         } catch (e: TimeoutCancellationException) {
-            ServiceBootLogger.event("GET_INSTANCE_TIMEOUT", "after ${waitMs}ms state=${_state.value}")
+            ServiceBootLogger.event(
+                "GET_INSTANCE_TIMEOUT",
+                "after ${waitMs}ms state=${_state.value}"
+            )
             throw e
         }
     }

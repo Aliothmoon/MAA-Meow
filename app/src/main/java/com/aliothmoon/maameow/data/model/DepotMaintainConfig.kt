@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.model
 
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.model.DepotMaintainConfig.Companion.EXPIRING_MEDICINE_DAYS
 import com.aliothmoon.maameow.domain.models.DropTarget
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
@@ -103,12 +104,18 @@ data class DepotMaintainConfig(
             val outcome = depotPlanOutcome(plan, current) { ctx.activityManager.isStageOpen(it) }
             when (outcome) {
                 DepotPlanOutcome.NoItem -> {
-                    ctx.appendLog(uiTextOf(R.string.runlog_depot_plan_invalid_drop, no), LogLevel.ERROR)
+                    ctx.appendLog(
+                        uiTextOf(R.string.runlog_depot_plan_invalid_drop, no),
+                        LogLevel.ERROR
+                    )
                     return@forEachIndexed
                 }
 
                 DepotPlanOutcome.ZeroTarget -> {
-                    ctx.appendLog(uiTextOf(R.string.runlog_depot_plan_zero_count, no), LogLevel.ERROR)
+                    ctx.appendLog(
+                        uiTextOf(R.string.runlog_depot_plan_zero_count, no),
+                        LogLevel.ERROR
+                    )
                     return@forEachIndexed
                 }
 

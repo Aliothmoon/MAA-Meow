@@ -1,10 +1,8 @@
 package com.aliothmoon.maameow.third.wrappers;
 
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.os.IBinder;
 import android.system.Os;
-
 
 import com.aliothmoon.maameow.constant.AndroidVersions;
 import com.aliothmoon.maameow.third.Ln;
@@ -16,6 +14,8 @@ import java.lang.reflect.Method;
 public final class DisplayControl {
 
     private static final Class<?> CLASS;
+    private static Method getPhysicalDisplayTokenMethod;
+    private static Method getPhysicalDisplayIdsMethod;
 
     static {
         Class<?> displayControlClass = null;
@@ -39,9 +39,6 @@ public final class DisplayControl {
         }
         CLASS = displayControlClass;
     }
-
-    private static Method getPhysicalDisplayTokenMethod;
-    private static Method getPhysicalDisplayIdsMethod;
 
     private DisplayControl() {
         // only static methods

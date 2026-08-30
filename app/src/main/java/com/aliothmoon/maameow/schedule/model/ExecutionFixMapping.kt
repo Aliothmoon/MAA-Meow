@@ -18,6 +18,7 @@ object ExecutionFixMapping {
         ExecutionResult.SKIPPED_LOCKED -> ScheduleFixAction.UNLOCK_CREDENTIAL
         ExecutionResult.FAILED_UI_LAUNCH,
         ExecutionResult.FAILED_START -> ScheduleFixAction.BACKEND_READY
+
         else -> null
     }
 }

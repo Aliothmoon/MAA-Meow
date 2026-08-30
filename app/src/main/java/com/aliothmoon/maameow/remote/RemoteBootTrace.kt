@@ -51,8 +51,12 @@ object RemoteBootTrace {
                     file.parentFile?.mkdirs()
                     file.appendText(
                         "==== service boot pid=${Process.myPid()} ${Build.MANUFACTURER} ${Build.MODEL} " +
-                            "api=${Build.VERSION.SDK_INT} abi=${Build.SUPPORTED_ABIS.joinToString(",")} " +
-                            "t=${System.currentTimeMillis()} ====\n"
+                                "api=${Build.VERSION.SDK_INT} abi=${
+                                    Build.SUPPORTED_ABIS.joinToString(
+                                        ","
+                                    )
+                                } " +
+                                "t=${System.currentTimeMillis()} ====\n"
                     )
                     headerWritten = true
                 }

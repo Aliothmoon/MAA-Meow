@@ -1,7 +1,10 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
 import android.content.Context
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
@@ -35,13 +38,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.ui.res.stringResource
-import com.aliothmoon.maameow.R
-import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -53,10 +49,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import com.aliothmoon.maameow.utils.Misc
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.MaaApi
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.model.CustomInfrastConfig
@@ -64,10 +61,13 @@ import com.aliothmoon.maameow.data.model.InfrastConfig
 import com.aliothmoon.maameow.domain.enums.InfrastMode
 import com.aliothmoon.maameow.domain.enums.InfrastRoomType
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
+import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.utils.JsonUtils
+import com.aliothmoon.maameow.utils.Misc
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -614,13 +614,13 @@ private fun PlanSelectButtonGroup(
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = stringResource(
-                            R.string.panel_infrast_plan_auto_switch,
-                            currentPlanDisplayName
-                        ),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                Text(
+                    text = stringResource(
+                        R.string.panel_infrast_plan_auto_switch,
+                        currentPlanDisplayName
+                    ),
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
 
@@ -737,9 +737,9 @@ private fun UsesOfDronesSection(
 ) {
     val options = localizedDroneUsageOptions()
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = stringResource(R.string.panel_infrast_drones_title),
-                style = MaterialTheme.typography.bodyMedium,
+        Text(
+            text = stringResource(R.string.panel_infrast_drones_title),
+            style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
         )
 
@@ -1182,6 +1182,7 @@ private fun FiammettaTargetsSection(
                                 checked -> selected - name
                                 selected.size >= UiUsageConstants.MAX_FIAMMETTA_TARGETS ->
                                     selected.drop(1) + name
+
                                 else -> selected + name
                             }
                             onConfigChange(config.copy(fiammettaTargets = next))

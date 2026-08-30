@@ -183,7 +183,9 @@ fun AppNavigation(
         LocalToaster provides toaster,
         LocalOnboardingState provides onboardingState,
     ) {
-        Box(modifier = Modifier.fillMaxSize().clearFocusOnBlankTap()) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .clearFocusOnBlankTap()) {
             MainScreen(
                 navController = navController,
                 backgroundTaskViewModel = backgroundTaskViewModel,
@@ -264,7 +266,7 @@ fun AppNavigation(
                 val current = announcementContent
                 val needsToShow = current != null && current.hash != announcementReadHash
                 val showAnnouncement = forceShowAnnouncement ||
-                    (needsToShow && !announcementDismissedOnce && !onboardingState.blocksStartupDialogs)
+                        (needsToShow && !announcementDismissedOnce && !onboardingState.blocksStartupDialogs)
                 val shownAnnouncement = remember(showAnnouncement, language, current) {
                     if (!showAnnouncement) {
                         null

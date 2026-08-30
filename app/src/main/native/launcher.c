@@ -103,21 +103,20 @@ static bool parse_args(int argc, char **argv, LauncherArgs *out) {
     out->uid = -1;
 
     for (int i = 1; i < argc; ++i) {
-        if (starts_with(argv[i], "--apk="))           out->apk_path      = argv[i] + 6;
-        else if (starts_with(argv[i], "--process-name=")) out->process_name  = argv[i] + 15;
+        if (starts_with(argv[i], "--apk=")) out->apk_path = argv[i] + 6;
+        else if (starts_with(argv[i], "--process-name=")) out->process_name = argv[i] + 15;
         else if (starts_with(argv[i], "--starter-class=")) out->starter_class = argv[i] + 16;
-        else if (starts_with(argv[i], "--token="))     out->token         = argv[i] + 8;
-        else if (starts_with(argv[i], "--package="))   out->package_name  = argv[i] + 10;
-        else if (starts_with(argv[i], "--class="))     out->service_class = argv[i] + 8;
-        else if (starts_with(argv[i], "--debug-name=")) out->debug_name   = argv[i] + 13;
-        else if (starts_with(argv[i], "--log-file="))  out->log_file      = argv[i] + 11;
+        else if (starts_with(argv[i], "--token=")) out->token = argv[i] + 8;
+        else if (starts_with(argv[i], "--package=")) out->package_name = argv[i] + 10;
+        else if (starts_with(argv[i], "--class=")) out->service_class = argv[i] + 8;
+        else if (starts_with(argv[i], "--debug-name=")) out->debug_name = argv[i] + 13;
+        else if (starts_with(argv[i], "--log-file=")) out->log_file = argv[i] + 11;
         else if (starts_with(argv[i], "--uid=")) {
             if (!parse_int(argv[i] + 6, &out->uid)) {
                 LOGE("Invalid uid: %s", argv[i] + 6);
                 return false;
             }
-        }
-        else if (strcmp(argv[i], "--keep-root") == 0) out->keep_root = true;
+        } else if (strcmp(argv[i], "--keep-root") == 0) out->keep_root = true;
     }
 
     return out->apk_path != NULL
@@ -134,7 +133,10 @@ static bool parse_args(int argc, char **argv, LauncherArgs *out) {
 static char *format_arg(const char *prefix, const char *value) {
     size_t size = strlen(prefix) + strlen(value) + 1;
     char *out = (char *) malloc(size);
-    if (out == NULL) { LOGE("malloc failed: %s", strerror(errno)); return NULL; }
+    if (out == NULL) {
+        LOGE("malloc failed: %s", strerror(errno));
+        return NULL;
+    }
     snprintf(out, size, "%s%s", prefix, value);
     return out;
 }
@@ -149,17 +151,21 @@ static void exec_app_process(const LauncherArgs *args) {
     snprintf(uid_text, sizeof(uid_text), "%d", args->uid);
 
     nice_name_arg = format_arg("--nice-name=", args->process_name);
-    token_arg     = format_arg("--token=",     args->token);
-    package_arg   = format_arg("--package=",   args->package_name);
-    service_arg   = format_arg("--class=",     args->service_class);
-    uid_arg       = format_arg("--uid=",       uid_text);
+    token_arg = format_arg("--token=", args->token);
+    package_arg = format_arg("--package=", args->package_name);
+    service_arg = format_arg("--class=", args->service_class);
+    uid_arg = format_arg("--uid=", uid_text);
     if (args->debug_name != NULL)
         debug_arg = format_arg("--debug-name=", args->debug_name);
 
     if (!nice_name_arg || !token_arg || !package_arg || !service_arg || !uid_arg
         || (args->debug_name != NULL && !debug_arg)) {
-        free(nice_name_arg); free(token_arg); free(package_arg);
-        free(service_arg);   free(uid_arg);   free(debug_arg);
+        free(nice_name_arg);
+        free(token_arg);
+        free(package_arg);
+        free(service_arg);
+        free(uid_arg);
+        free(debug_arg);
         exit(1);
     }
 
@@ -189,8 +195,12 @@ static void exec_app_process(const LauncherArgs *args) {
 
     execv(kAppProcessPath, exec_args);
     LOGE("execv(%s) failed: %s", kAppProcessPath, strerror(errno));
-    free(nice_name_arg); free(token_arg); free(package_arg);
-    free(service_arg);   free(uid_arg);   free(debug_arg);
+    free(nice_name_arg);
+    free(token_arg);
+    free(package_arg);
+    free(service_arg);
+    free(uid_arg);
+    free(debug_arg);
     exit(1);
 }
 

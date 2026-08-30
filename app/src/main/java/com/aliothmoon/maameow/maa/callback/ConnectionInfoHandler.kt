@@ -32,7 +32,13 @@ class ConnectionInfoHandler(
                 val width = innerDetails?.getIntValue("width") ?: 0
                 val height = innerDetails?.getIntValue("height") ?: 0
                 val msg = if (width > 0 && height > 0) {
-                    "${str("ResolutionNotSupported")} (${str("ResolutionNotSupportedCurrentResolution", width, height)})"
+                    "${str("ResolutionNotSupported")} (${
+                        str(
+                            "ResolutionNotSupportedCurrentResolution",
+                            width,
+                            height
+                        )
+                    })"
                 } else {
                     str("ResolutionNotSupported")
                 }

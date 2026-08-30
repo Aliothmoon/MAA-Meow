@@ -95,6 +95,7 @@ fun ScheduleTriggerLogView(
         when (action) {
             ScheduleFixAction.UNLOCK_CREDENTIAL ->
                 mainTabNavigator.navigateTo(BottomNavTab.SETTINGS)
+
             ScheduleFixAction.BACKEND_READY -> backendFix.request()
         }
     }
@@ -121,7 +122,10 @@ fun ScheduleTriggerLogView(
                 actions = {
                     if (summaries.isNotEmpty()) {
                         IconButton(onClick = { showClearConfirm = true }) {
-                            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.schedule_log_clear_title))
+                            Icon(
+                                Icons.Rounded.Delete,
+                                contentDescription = stringResource(R.string.schedule_log_clear_title)
+                            )
                         }
                     }
                 }
@@ -169,7 +173,10 @@ fun ScheduleTriggerLogView(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding),
-                    contentPadding = PaddingValues(horizontal = MaaDesignTokens.Spacing.listHorizontal, vertical = MaaDesignTokens.Spacing.sm),
+                    contentPadding = PaddingValues(
+                        horizontal = MaaDesignTokens.Spacing.listHorizontal,
+                        vertical = MaaDesignTokens.Spacing.sm
+                    ),
                     verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm)
                 ) {
                     items(summaries, key = { it.fileName }) { summary ->
@@ -192,10 +199,17 @@ fun ScheduleTriggerLogView(
                     TextButton(onClick = {
                         viewModel.onClearAll()
                         showClearConfirm = false
-                    }) { Text(stringResource(R.string.schedule_log_clear_title), color = MaterialTheme.colorScheme.error) }
+                    }) {
+                        Text(
+                            stringResource(R.string.schedule_log_clear_title),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showClearConfirm = false }) { Text(stringResource(R.string.common_cancel)) }
+                    TextButton(onClick = {
+                        showClearConfirm = false
+                    }) { Text(stringResource(R.string.common_cancel)) }
                 }
             )
         }
@@ -209,10 +223,17 @@ fun ScheduleTriggerLogView(
                     TextButton(onClick = {
                         viewModel.onDeleteLog(deleteConfirmFileName!!)
                         deleteConfirmFileName = null
-                    }) { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) }
+                    }) {
+                        Text(
+                            stringResource(R.string.common_delete),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                 },
                 dismissButton = {
-                    TextButton(onClick = { deleteConfirmFileName = null }) { Text(stringResource(R.string.common_cancel)) }
+                    TextButton(onClick = {
+                        deleteConfirmFileName = null
+                    }) { Text(stringResource(R.string.common_cancel)) }
                 }
             )
         }
@@ -330,7 +351,10 @@ private fun DetailView(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(horizontal = MaaDesignTokens.Spacing.listHorizontal, vertical = MaaDesignTokens.Spacing.sm),
+            contentPadding = PaddingValues(
+                horizontal = MaaDesignTokens.Spacing.listHorizontal,
+                vertical = MaaDesignTokens.Spacing.sm
+            ),
             verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm)
         ) {
             itemsIndexed(entries, key = { index, _ -> index }) { _, entry ->
@@ -459,7 +483,8 @@ private fun formatTime(epochMs: Long): String {
 
 private fun formatTimeFull(epochMs: Long): String {
     if (epochMs <= 0) return "--"
-    return Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault()).format(fullDateTimeFormatter)
+    return Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault())
+        .format(fullDateTimeFormatter)
 }
 
 private fun formatTimeShort(epochMs: Long): String {

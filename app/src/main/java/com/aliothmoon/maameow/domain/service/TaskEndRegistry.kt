@@ -21,6 +21,7 @@ class TaskEndRegistry(
     enum class Reason {
         /** RUNNING → IDLE/ERROR */
         NATURAL,
+
         /** STOPPING → IDLE/ERROR */
         MANUAL,
     }

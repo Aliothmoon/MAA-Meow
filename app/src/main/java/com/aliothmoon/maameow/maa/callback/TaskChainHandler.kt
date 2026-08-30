@@ -2,12 +2,11 @@ package com.aliothmoon.maameow.maa.callback
 
 import android.content.Context
 import com.alibaba.fastjson2.JSONObject
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
-
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.preferences.TaskChainState
-import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.FightDropsRefresher
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter

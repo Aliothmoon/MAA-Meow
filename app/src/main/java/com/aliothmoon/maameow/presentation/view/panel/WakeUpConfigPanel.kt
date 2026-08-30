@@ -80,7 +80,10 @@ fun WakeUpConfigPanel(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            RoundedCornerShape(8.dp)
+                        )
                         .padding(horizontal = 10.dp, vertical = 8.dp)
                 )
             }

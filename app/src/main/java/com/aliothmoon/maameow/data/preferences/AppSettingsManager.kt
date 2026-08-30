@@ -9,15 +9,15 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
-
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.model.update.UpdateSource
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager.Companion.FONT_SIZE_SCALE_AUTO
 import com.aliothmoon.maameow.domain.models.AppSettings
 import com.aliothmoon.maameow.domain.models.AppSettingsSchema
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RemoteBackend
-import com.aliothmoon.maameow.domain.models.UnlockCredential
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.models.UnlockCredential
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -46,6 +46,7 @@ class AppSettingsManager(
         const val WAKE_TYPE_PIN = UnlockCredential.TYPE_PIN
         const val WAKE_TYPE_GESTURE = UnlockCredential.TYPE_GESTURE
         val WAKE_UNLOCK_TYPES = UnlockCredential.TYPES
+
         /** 纯数字 PIN 最大位数 */
         const val MAX_PIN_LENGTH = 16
 

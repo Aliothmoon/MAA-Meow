@@ -47,7 +47,8 @@ class ResourceInitService(
     }
 
     suspend fun doExtractFromAssets() {
-        _state.value = ResourceInitState.Extracting(0, 0, context.getString(R.string.resource_init_preparing))
+        _state.value =
+            ResourceInitState.Extracting(0, 0, context.getString(R.string.resource_init_preparing))
 
         try {
             withContext(Dispatchers.IO) {
