@@ -1,15 +1,25 @@
-import javax.xml.parsers.DocumentBuilderFactory
+package com.aliothmoon.maameow.buildlogic
+
+import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
 import org.w3c.dom.Element
+import java.io.File
+import javax.xml.parsers.DocumentBuilderFactory
 
 // i18n 资源一致性校验 gate
 // 对比默认 values(中文源)与 values-en(英文),发现以下问题时使构建失败:
 //   - 英文漏翻 / 英文多余(key 集合不一致)
 //   - 占位符 %n$X 中英不匹配
 //   - 单文件内重复定义 key
-// 英文里残留中文仅告警(带白名单,见 cjkAllowed),不阻断构建。
+// 英文里残留中文仅告警(带白名单,见 cjkAllowed),不阻断构建
 // 校验规则与 scripts/check_i18n_strings.py 保持一致;脚本另含 --clean 清理与更详细
-// 报告,供本地使用。本任务挂到 preBuild,本地 assemble* 与 CI 构建均自动触发。
-
+// 报告,供本地使用;本任务挂到 preBuild,本地 assemble* 与 CI 构建均自动触发
 abstract class VerifyI18nStringsTask : DefaultTask() {
 
     @get:InputFile
@@ -62,7 +72,7 @@ abstract class VerifyI18nStringsTask : DefaultTask() {
         warns.forEach { logger.warn("[i18n][WARN] $it") }
 
         if (errors.isNotEmpty()) {
-            throw org.gradle.api.GradleException(
+            throw GradleException(
                 buildString {
                     appendLine("i18n verification failed (${errors.size} issue type(s)):")
                     errors.forEach { appendLine("  - $it") }
@@ -102,14 +112,21 @@ abstract class VerifyI18nStringsTask : DefaultTask() {
         placeholderRe.findAll(s).map { it.value }.groupingBy { it }.eachCount()
 }
 
-val verifyI18nStrings by tasks.registering(VerifyI18nStringsTask::class) {
-    description = "Verify i18n consistency between values (Chinese) and values-en (English)"
-    group = "verification"
-    defaultStrings.set(layout.projectDirectory.file("src/main/res/values/strings.xml"))
-    enStrings.set(layout.projectDirectory.file("src/main/res/values-en/strings.xml"))
-    stampFile.set(layout.buildDirectory.file("i18n-verify/verify.stamp"))
-}
+class I18nVerifyPlugin : Plugin<Project> {
+    override fun apply(project: Project) {
+        val verifyI18nStrings = project.tasks.register(
+            "verifyI18nStrings",
+            VerifyI18nStringsTask::class.java,
+        ) {
+            description = "Verify i18n consistency between values (Chinese) and values-en (English)"
+            group = "verification"
+            defaultStrings.set(project.layout.projectDirectory.file("src/main/res/values/strings.xml"))
+            enStrings.set(project.layout.projectDirectory.file("src/main/res/values-en/strings.xml"))
+            stampFile.set(project.layout.buildDirectory.file("i18n-verify/verify.stamp"))
+        }
 
-tasks.matching { it.name.startsWith("preBuild") }.configureEach {
-    dependsOn(verifyI18nStrings)
+        project.tasks.matching { it.name.startsWith("preBuild") }.configureEach {
+            dependsOn(verifyI18nStrings)
+        }
+    }
 }

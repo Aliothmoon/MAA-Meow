@@ -9,6 +9,8 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.ksp)
+    id("com.aliothmoon.maameow.asset-manifest")
+    id("com.aliothmoon.maameow.i18n-verify")
 }
 
 val localProperties = Properties().apply {
@@ -91,7 +93,7 @@ android {
         ndk {
             abiFilters.addAll(nativeAbis)
         }
-
+        @Suppress("UnstableApiUsage")
         externalNativeBuild {
             cmake {
                 arguments(
@@ -120,7 +122,7 @@ android {
 
     buildTypes {
         val minifyProguardFiles = listOf(
-            getDefaultProguardFile("proguard-android-optimize.txt"),
+            getDefaultProguardFile("proguard-android-optimize.txt").absolutePath,
             "proguard-rules.pro",
         )
         // local.properties: maa.debugR8=true 时 debug 也走 R8
@@ -180,15 +182,8 @@ android {
     }
 
     androidResources {
+        @Suppress("UnstableApiUsage")
         localeFilters += listOf("zh", "en")
-    }
-
-    lint {
-        // AGP 9 强制使用 K2 UAST，其在分析 .gradle.kts 构建脚本时会崩溃
-        // (findFirCompiledSymbol on non-compiled declaration)，导致 release
-        // 构建的 lintVitalRelease 失败。旧的 android.lint.useK2Uast=false 开关
-        // 在 AGP 9 已失效，故关闭 release 期间自动触发的 lint-vital 检查。
-        checkReleaseBuilds = false
     }
 }
 
@@ -263,13 +258,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }
-
-// Apply asset manifest generation script
-apply(from = "asset-manifest.gradle.kts")
-
-// Apply i18n strings consistency gate (verifyI18nStrings hooked to preBuild)
-apply(from = "i18n-verify.gradle.kts")
-
 
 abstract class GenerateAchievementStringResTask : DefaultTask() {
 
