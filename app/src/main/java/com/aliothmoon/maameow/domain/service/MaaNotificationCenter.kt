@@ -44,8 +44,12 @@ class MaaNotificationCenter(
         publishResult(title, message, timeoutSec = 30, isError = true)
     }
 
-    fun notifySubTaskFailure(message: String) {
+    /** [sendExternal] 掉线这类要外推的场景置真，走任务出错开关 */
+    fun notifySubTaskFailure(message: String, sendExternal: Boolean = false) {
         eventNotifier.notifySubTaskFailure(message)
+        if (sendExternal && settings.sendOnError.value) {
+            externalService.send(message, message)
+        }
     }
 
     fun notifyHandoverRequired(title: String, content: String) {

@@ -334,8 +334,8 @@ class SubTaskHandler(
             // 队列剩余任务要在这里一起中止
             "OfflineConfirm", "OfflineConfirmAfterBattle" -> {
                 val message = str("GameDrop")
-                append(message, LogLevel.WARNING)
-                notificationCenter.notifySubTaskFailure(message)
+                append(message, LogLevel.ERROR)
+                notificationCenter.notifySubTaskFailure(message, sendExternal = true)
                 executionStateHolder.requestStopFromCallback()
             }
 
