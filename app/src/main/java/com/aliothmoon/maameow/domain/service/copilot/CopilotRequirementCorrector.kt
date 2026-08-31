@@ -22,6 +22,9 @@ object CopilotRequirementCorrector {
     /** 校正用到的最小干员数据，domain 不依赖 data 层模型 */
     data class OperatorInfo(val rarity: Int, val id: String)
 
+    /** 阿米娅五星有三技能，上游按 id 放行 */
+    private const val AMIYA_ID = "char_002_amiya"
+
     enum class Kind {
         /** 稀有度不够，取消技能选择 */
         UNSUPPORTED_SKILL,
@@ -113,8 +116,7 @@ object CopilotRequirementCorrector {
         val info = lookup(name)
         val rarity = info?.rarity ?: -1
         var newSkill = skill
-        // 阿米娅五星有三技能，对齐上游按 id 放行
-        if ((skill == 3 && rarity < 6 && info?.id != "char_002_amiya") || (skill == 2 && rarity < 4) || (skill == 1 && rarity < 3)) {
+        if ((skill == 3 && rarity < 6 && info?.id != AMIYA_ID) || (skill == 2 && rarity < 4) || (skill == 1 && rarity < 3)) {
             newSkill = 0
             out += Correction(Kind.UNSUPPORTED_SKILL, name, skill, 0)
         }
