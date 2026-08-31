@@ -2431,9 +2431,10 @@
     <string name="blackflow_milestone_burn_floor2_final">第二层抵达险路尽头</string>
     <string name="blackflow_milestone_baby_check_seed_shop">第一层检查商店中的种子</string>
     <string name="blackflow_milestone_baby_cultivate_scrap_shop">第一至三层进入秘境行商培育种子</string>
+    <string name="blackflow_milestone_baby_cultivate_scrap_shop_transit">第一、二层进入秘境行商培育种子后前往层出口</string>
+    <string name="blackflow_milestone_baby_cultivate_scrap_shop_final">第三层进入秘境行商培育种子</string>
     <string name="blackflow_milestone_baby_explore_hidden">尚未发现秘境行商时尽量多开未知的诡秘</string>
     <string name="blackflow_milestone_baby_visit_incident">顺路进入不期而遇</string>
-    <string name="blackflow_milestone_baby_visit_light">顺路进入羽瞰点</string>
     <string name="blackflow_milestone_baby_floor2_shops">第二层经过普通商店时继续获取种子</string>
     <string name="blackflow_milestone_baby_floor3_shops">第三层经过普通商店时卖货、刷新并尽量购买种子</string>
     <string name="blackflow_milestone_ending2_sandtable_a">获得沙盘 A</string>

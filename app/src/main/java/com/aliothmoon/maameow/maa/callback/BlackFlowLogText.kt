@@ -15,7 +15,7 @@ object BlackFlowLogText {
     fun profile(code: String?): Int = when (code) {
         "investment" -> R.string.panel_roguelike_mode_desc_investment
         "burn", "burn_with_investment" -> R.string.panel_roguelike_mode_desc_exp_blackflow
-        "baby_animal" -> R.string.panel_roguelike_mode_blackflow_baby_animal
+        "baby_animal", "baby_animal_floor3" -> R.string.panel_roguelike_mode_blackflow_baby_animal
         else -> R.string.blackflow_strategy_unknown
     }
 
@@ -235,9 +235,12 @@ object BlackFlowLogText {
         "burn_floor2_final" -> R.string.blackflow_milestone_burn_floor2_final
         "baby_check_seed_shop" -> R.string.blackflow_milestone_baby_check_seed_shop
         "baby_cultivate_scrap_shop" -> R.string.blackflow_milestone_baby_cultivate_scrap_shop
+        "baby_cultivate_scrap_shop_transit" ->
+            R.string.blackflow_milestone_baby_cultivate_scrap_shop_transit
+        "baby_cultivate_scrap_shop_final" ->
+            R.string.blackflow_milestone_baby_cultivate_scrap_shop_final
         "baby_explore_hidden" -> R.string.blackflow_milestone_baby_explore_hidden
         "baby_visit_incident" -> R.string.blackflow_milestone_baby_visit_incident
-        "baby_visit_light" -> R.string.blackflow_milestone_baby_visit_light
         "baby_floor2_shops" -> R.string.blackflow_milestone_baby_floor2_shops
         "baby_floor3_shops" -> R.string.blackflow_milestone_baby_floor3_shops
         "ending2_sandtable_a" -> R.string.blackflow_milestone_ending2_sandtable_a

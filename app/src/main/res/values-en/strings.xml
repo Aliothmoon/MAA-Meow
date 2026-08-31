@@ -2374,9 +2374,10 @@
     <string name="blackflow_milestone_burn_floor2_final">Reach the final node on floor 2</string>
     <string name="blackflow_milestone_baby_check_seed_shop">Check the floor 1 shop for seeds</string>
     <string name="blackflow_milestone_baby_cultivate_scrap_shop">Enter a scrap trader on floors 1-3 to cultivate seeds</string>
+    <string name="blackflow_milestone_baby_cultivate_scrap_shop_transit">Enter a scrap trader on floors 1-2 to cultivate seeds, then head for the exit</string>
+    <string name="blackflow_milestone_baby_cultivate_scrap_shop_final">Enter the scrap trader on floor 3 to cultivate seeds</string>
     <string name="blackflow_milestone_baby_explore_hidden">Reveal as many unknown nodes as possible until a scrap trader is found</string>
     <string name="blackflow_milestone_baby_visit_incident">Visit an encounter along the way</string>
-    <string name="blackflow_milestone_baby_visit_light">Visit a vantage point along the way</string>
     <string name="blackflow_milestone_baby_floor2_shops">Continue collecting seeds when visiting a normal shop on floor 2</string>
     <string name="blackflow_milestone_baby_floor3_shops">Sell items, refresh stock, and collect seeds when visiting a normal shop on floor 3</string>
     <string name="blackflow_milestone_ending2_sandtable_a">Obtain Sandtable A</string>
