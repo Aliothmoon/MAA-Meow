@@ -603,7 +603,8 @@ class CopilotViewModel(
         copilotId: Int,
     ): CorrectedCopilot {
         val result = CopilotRequirementCorrector.correct(json) { name ->
-            resourceDataManager.getCharacterByNameOrAlias(name)?.rarity ?: -1
+            resourceDataManager.getCharacterByNameOrAlias(name)
+                ?.let { CopilotRequirementCorrector.OperatorInfo(it.rarity, it.id) }
         }
         if (result.corrections.isEmpty()) {
             return CorrectedCopilot(data, json, copilotId)

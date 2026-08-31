@@ -20,18 +20,22 @@ import org.junit.Test
  */
 class CopilotRequirementCorrectorTest {
 
-    /** 六星 6、四星 4、三星 3、二星 2，其余当未收录 */
-    private val rarity: (String) -> Int = { name ->
+    /** 六星 6、五星 5、四星 4、三星 3、二星 2，其余当未收录 */
+    private val lookup: (String) -> CopilotRequirementCorrector.OperatorInfo? = { name ->
         when (name) {
-            "银灰" -> 6
-            "白面鸮" -> 4
-            "芬" -> 3
-            "12F" -> 2
-            else -> -1
+            "银灰" -> info(6, "char_172_svrash")
+            "阿米娅" -> info(5, "char_002_amiya")
+            "蓝毒" -> info(5, "char_129_bluep")
+            "白面鸮" -> info(4, "char_128_plosis")
+            "芬" -> info(3, "char_123_fang")
+            "12F" -> info(2, "char_009_12fce")
+            else -> null
         }
     }
 
-    private fun correct(json: String) = CopilotRequirementCorrector.correct(json, rarity)
+    private fun info(rarity: Int, id: String) = CopilotRequirementCorrector.OperatorInfo(rarity, id)
+
+    private fun correct(json: String) = CopilotRequirementCorrector.correct(json, lookup)
 
     private fun opers(json: String) =
         Json.parseToJsonElement(json).jsonObject["opers"]!!.jsonArray.map { it.jsonObject }
@@ -171,5 +175,22 @@ class CopilotRequirementCorrectorTest {
         val result = correct(broken)
         assertSame(broken, result.json)
         assertTrue(result.corrections.isEmpty())
+    }
+
+    @Test
+    fun `阿米娅五星三技能按 id 放行`() {
+        val result = correct("""{"opers":[{"name":"阿米娅","skill":3}]}""")
+        // 技能保留，三技能照常推精二
+        assertEquals(listOf(Kind.ELITE_FILLED), result.corrections.map { it.kind })
+        assertEquals(3, opers(result.json)[0].int("skill"))
+        assertEquals(2, opers(result.json)[0].elite())
+        assertEquals(false, result.altered)
+    }
+
+    @Test
+    fun `其他五星三技能仍被取消`() {
+        val result = correct("""{"opers":[{"name":"蓝毒","skill":3}]}""")
+        assertEquals(listOf(Kind.UNSUPPORTED_SKILL), result.corrections.map { it.kind })
+        assertEquals(0, opers(result.json)[0].int("skill"))
     }
 }
