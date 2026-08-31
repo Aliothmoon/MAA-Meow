@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.domain.notification.LiveCategory
 import com.aliothmoon.maameow.domain.notification.LiveNotifyIds
 import com.aliothmoon.maameow.domain.notification.LiveSession
 import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
+import kotlinx.coroutines.flow.StateFlow
 
 /** 聚合实况结果、队列卡片和外推 */
 class MaaNotificationCenter(
@@ -34,9 +35,7 @@ class MaaNotificationCenter(
 
     fun notifyTaskError(taskName: String) {
         eventNotifier.notifyTaskError(taskName)
-        if (settings.sendOnError.value) {
-            externalService.send("任务出错", "任务链 $taskName 执行失败")
-        }
+        pushExternal(settings.sendOnError, "任务出错", "任务链 $taskName 执行失败")
     }
 
     fun notifyStartFailed(message: String) {
@@ -47,16 +46,14 @@ class MaaNotificationCenter(
     /** [sendExternal] 掉线这类要外推的场景置真，走任务出错开关 */
     fun notifySubTaskFailure(message: String, sendExternal: Boolean = false) {
         eventNotifier.notifySubTaskFailure(message)
-        if (sendExternal && settings.sendOnError.value) {
-            externalService.send(message, message)
+        if (sendExternal) {
+            pushExternal(settings.sendOnError, message, message)
         }
     }
 
     fun notifyHandoverRequired(title: String, content: String) {
         eventNotifier.notifyEvent(title, content)
-        if (settings.sendOnComplete.value) {
-            externalService.send(title, content)
-        }
+        pushExternal(settings.sendOnComplete, title, content)
     }
 
     fun notifyRecruitSpecialTag(tag: String) {
@@ -76,8 +73,13 @@ class MaaNotificationCenter(
         val text = appContext.getString(R.string.notification_event_service_died_text)
         // 服务可能在空闲期挂掉，不能占用本轮运行的一次性结果闸门
         liveCoordinator.publishEvent(resultSession(title, text, timeoutSec = 180, isError = true))
-        if (settings.sendOnServiceDied.value) {
-            externalService.send("服务异常", "MAA 服务意外终止")
+        pushExternal(settings.sendOnServiceDied, "服务异常", "MAA 服务意外终止")
+    }
+
+    /** 按对应开关外推 */
+    private fun pushExternal(gate: StateFlow<Boolean>, title: String, content: String) {
+        if (gate.value) {
+            externalService.send(title, content)
         }
     }
 
