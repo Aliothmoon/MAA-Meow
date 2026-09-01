@@ -130,7 +130,7 @@ data class InfrastConfig(
      * 启用后，宿舍有空位时会优先安排信赖未满的干员进入宿舍
      * 注意: Rotation模式下不显示此选项
      */
-    val dormTrustEnabled: Boolean = false,
+    val dormTrustEnabled: Boolean = true,
 
     /**
      * 宿舍是否使用未进驻筛选标签

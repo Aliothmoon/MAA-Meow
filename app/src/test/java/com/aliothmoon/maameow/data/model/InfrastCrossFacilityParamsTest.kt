@@ -30,6 +30,8 @@ class InfrastCrossFacilityParamsTest {
         assertEquals(listOf("清流", "可露希尔", "但书"), fiammettaTargetsOf(json))
         // 上游 v6.17.0-beta.9 起菲亚梅塔恢复默认关闭
         assertFalse(json.getValue("fiammetta_recovery_enabled").jsonPrimitive.boolean)
+        // 与 WPF InfrastTask.DormTrustEnabled 默认值对齐
+        assertTrue(json.getValue("dorm_trust_enabled").jsonPrimitive.boolean)
         crossFacilityKeys.forEach { key ->
             assertFalse(key, json.getValue(key).jsonPrimitive.boolean)
         }
