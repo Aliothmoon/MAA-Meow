@@ -277,6 +277,56 @@ def override_maafw_control_unit(tag: str, target_abis: list, cache_dir: Path, pr
         print(f"  [OVERRIDE] {abi}/{MAAFW_CONTROL_UNIT_SO} <- {name} ({len(data) / (1024 * 1024):.1f} MB)")
 
 
+def _version_sort_key(version: str):
+    """Order tags like v6.17.0-beta.9 < v6.17.0-beta.10 < v6.17.0."""
+    m = re.match(r"v(\d+)\.(\d+)\.(\d+)(?:-(.+))?$", version)
+    if not m:
+        return ((0, 0, 0), 0, ())
+    core = tuple(int(x) for x in m.group(1, 2, 3))
+    pre = m.group(4)
+    if not pre:
+        return (core, 1, ())
+    parts = tuple((0, int(p), "") if p.isdigit() else (1, 0, p)
+                  for p in re.split(r"[.-]", pre))
+    return (core, 0, parts)
+
+
+def select_deploy_tarballs(cache_dir: Path, target_abis: list, wanted_version: str = None):
+    """Pick the cached tarballs of exactly one version.
+
+    The cache accumulates every version ever fetched. Deploying more than one
+    resurrects files that upstream has since moved, renamed or deleted -- the
+    newest extraction overwrites shared paths but never removes the extras, and
+    MaaCore rejects the whole resource dir when a template basename shows up in
+    two directories.
+    """
+    by_version = {}
+    for tarball in sorted(cache_dir.glob("*.tar.gz")):
+        m = TARBALL_VERSION_RE.search(tarball.name)
+        if not m:
+            continue
+        for keyword, abi in ABI_MAP.items():
+            if keyword in tarball.name and abi in target_abis:
+                by_version.setdefault(m.group(1), []).append((tarball, abi))
+
+    if not by_version:
+        return None, []
+
+    if wanted_version and wanted_version in by_version:
+        version = wanted_version
+    elif wanted_version:
+        print(f"[ERROR] No cached tarball for {wanted_version}; run without --skip-download")
+        sys.exit(1)
+    else:
+        version = max(by_version, key=_version_sort_key)
+        print(f"  [CACHE] No tag given, using newest cached version: {version}")
+
+    skipped = sum(len(v) for k, v in by_version.items() if k != version)
+    if skipped:
+        print(f"  [SKIP] Ignoring {skipped} cached tarball(s) from other versions")
+    return version, by_version[version]
+
+
 def write_version_file(version: str, project_root: Path):
     version_file = project_root / VERSION_FILE
     version_file.write_text(version + "\n", encoding="utf-8")
@@ -321,6 +371,7 @@ def main():
         shutil.rmtree(assets_dir)
 
     target_abis = list(ABI_MAP.values()) if args.abi == "all" else [args.abi]
+    tag_name = args.tag if args.tag and args.tag != "latest" else None
 
     if not args.skip_download:
         tag_name, assets = get_release_assets(args.tag)
@@ -350,20 +401,14 @@ def main():
 
     # Deploy
     print(f"\n[DEPLOY] Deploying artifacts...")
-    resource_deployed = False
-    deployed_version = None
-    for tarball in sorted(cache_dir.glob("*.tar.gz")):
-        for keyword, abi in ABI_MAP.items():
-            if keyword in tarball.name and abi in target_abis:
-                extract_and_deploy(tarball, abi, project_root)
-                resource_deployed = True
-                m = TARBALL_VERSION_RE.search(tarball.name)
-                if m:
-                    deployed_version = m.group(1)
+    deployed_version, tarballs = select_deploy_tarballs(cache_dir, target_abis, tag_name)
 
-    if not resource_deployed:
+    if not tarballs:
         print("[ERROR] No tar.gz files found in cache. Run without --skip-download first.")
         sys.exit(1)
+
+    for tarball, abi in tarballs:
+        extract_and_deploy(tarball, abi, project_root)
 
     if args.maafw_tag:
         override_maafw_control_unit(args.maafw_tag, target_abis, cache_dir, project_root,
