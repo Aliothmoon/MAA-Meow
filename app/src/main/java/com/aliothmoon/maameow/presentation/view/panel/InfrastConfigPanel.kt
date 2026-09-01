@@ -226,23 +226,27 @@ fun InfrastConfigPanel(
                             ContinueTrainingSection(config, onConfigChange)
                         }
                         item {
-                            // 菲亚梅塔心情恢复 (仅 Normal 模式显示)
+                            // 菲亚梅塔心情恢复 + 恢复目标 (仅 Normal 模式显示)
+                            // 同一个 item：恢复目标关闭时若单独占槽位，会多吃一份 item 间距
                             MaaAnimatedVisibility(
                                 visible = config.mode == InfrastMode.Normal,
                                 enter = expandVertically(),
                                 exit = shrinkVertically()
                             ) {
-                                FiammettaRecoverySection(config, onConfigChange)
-                            }
-                        }
-                        item {
-                            // 菲亚梅塔恢复目标 (仅 Normal 模式且恢复开启时显示)
-                            MaaAnimatedVisibility(
-                                visible = config.mode == InfrastMode.Normal && config.fiammettaRecoveryEnabled,
-                                enter = expandVertically(),
-                                exit = shrinkVertically()
-                            ) {
-                                FiammettaTargetsSection(config, onConfigChange)
+                                Column {
+                                    FiammettaRecoverySection(config, onConfigChange)
+                                    MaaAnimatedVisibility(
+                                        visible = config.fiammettaRecoveryEnabled,
+                                        enter = expandVertically(),
+                                        exit = shrinkVertically()
+                                    ) {
+                                        FiammettaTargetsSection(
+                                            config,
+                                            onConfigChange,
+                                            modifier = Modifier.padding(top = 12.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                         item {
@@ -1187,12 +1191,13 @@ private fun FiammettaRecoverySection(
  */
 @Composable
 private fun FiammettaTargetsSection(
-    config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
+    config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var tipExpanded by remember { mutableStateOf(false) }
     val selected = config.fiammettaTargets
 
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = modifier) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
