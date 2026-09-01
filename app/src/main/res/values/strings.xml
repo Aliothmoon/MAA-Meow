@@ -50,6 +50,13 @@
     <string name="maa_drop_recognition_error">掉落识别错误</string>
     <string name="maa_give_up_uploading_penguins">放弃上传企鹅物流</string>
     <string name="maa_the_ex">无奖励关卡，已停止</string>
+    <string name="maa_identify_the_mistakes">识别错误</string>
+    <string name="maa_recruit_refresh_limit_reached">刷新次数达到上限</string>
+    <string name="maa_penguin_upload_unknown_stage">未识别关卡</string>
+    <string name="maa_penguin_upload_not_three_stars">非三星结算</string>
+    <string name="maa_penguin_upload_unknown_times">未识别关卡次数</string>
+    <string name="maa_penguin_upload_unknown_drop_type">未识别掉落类型</string>
+    <string name="maa_penguin_upload_unknown_drops">未识别掉落物</string>
     <string name="maa_missing_operators">缺少以下干员组中的干员：</string>
     <string name="maa_copilot_user_additional_name_invalid">追加自定干员名称无效: %1$s，请检查拼写</string>
 
@@ -114,6 +121,7 @@
     <!-- subtask_extra_recruit -->
     <string name="maa_recruiting_results">公招识别结果: </string>
     <string name="maa_choose">选择</string>
+    <string name="maa_recruit_tags_selected_log">选择 Tags：\n%1$s</string>
     <string name="maa_refreshed">当前槽位已刷新</string>
     <string name="maa_continue_refresh">无招聘许可，继续尝试刷新 Tags</string>
     <string name="maa_no_recruitment_permit">无招聘许可，已返回</string>

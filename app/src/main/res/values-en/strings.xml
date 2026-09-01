@@ -533,6 +533,13 @@
     <string name="maa_drop_recognition_error">Drops recognition error</string>
     <string name="maa_give_up_uploading_penguins">Abort upload to Penguin Statistics</string>
     <string name="maa_the_ex">No bonus stage, stopped</string>
+    <string name="maa_identify_the_mistakes">Recognition error</string>
+    <string name="maa_recruit_refresh_limit_reached">Refresh count reached the limit</string>
+    <string name="maa_penguin_upload_unknown_stage">Unknown stage</string>
+    <string name="maa_penguin_upload_not_three_stars">Not a three-star run</string>
+    <string name="maa_penguin_upload_unknown_times">Unknown stage times</string>
+    <string name="maa_penguin_upload_unknown_drop_type">Unknown drop type</string>
+    <string name="maa_penguin_upload_unknown_drops">Unknown drops</string>
     <string name="maa_missing_operators">Operators of the following Operator groups are missing: </string>
     <string name="maa_copilot_user_additional_name_invalid">Additional custom Operator name invalid: %1$s, please check spelling</string>
     <string name="maa_mission_start">Mission started</string>
@@ -587,6 +594,7 @@
     <string name="maa_training_time_left">Remaining Time</string>
     <string name="maa_recruiting_results">Recruitment Results: </string>
     <string name="maa_choose">Choose</string>
+    <string name="maa_recruit_tags_selected_log">Selected tags:\n%1$s</string>
     <string name="maa_refreshed">Refreshed</string>
     <string name="maa_continue_refresh">No recruitment permit, trying to refresh Tags</string>
     <string name="maa_no_recruitment_permit">No recruitment permit, returned</string>

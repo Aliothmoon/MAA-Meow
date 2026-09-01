@@ -100,7 +100,7 @@ class SubTaskHandler(
 
             "AutoRecruitTask" -> {
                 val why = details.getString("why") ?: str("ErrorOccurred")
-                append("$why, ${str("HasReturned")}", LogLevel.ERROR)
+                append("${localizedWhy(why)}, ${str("HasReturned")}", LogLevel.ERROR)
             }
 
             "RecognizeDrops" -> {
@@ -109,7 +109,7 @@ class SubTaskHandler(
 
             "ReportToPenguinStats" -> {
                 val why = details.getString("why") ?: ""
-                append("$why, ${str("GiveUpUploadingPenguins")}", LogLevel.WARNING)
+                append("${localizedWhy(why)}, ${str("GiveUpUploadingPenguins")}", LogLevel.WARNING)
             }
 
             "CheckStageValid" -> {
@@ -622,7 +622,7 @@ class SubTaskHandler(
 
             "RecruitTagsSelected" -> {
                 val tags = subDetails?.getJSONArray("tags")?.joinToString("\n") ?: str("NoDrop")
-                append("${str("Choose")} Tags：\n$tags", LogLevel.TRACE)
+                append(str("RecruitTagsSelectedLog", tags), LogLevel.TRACE)
             }
 
             "RecruitTagsRefreshed" -> {
@@ -1026,6 +1026,23 @@ class SubTaskHandler(
     }
 
     // ==================== 字符串资源辅助方法 ====================
+
+    /**
+     * core 回调 why 值 -> 本地化文案
+     *
+     * 上游 v6.17.0-beta.9 把 core 侧 why 统一改为英文，企鹅物流的 why 一直是英文标识符
+     * 未收录的值原样返回，core 新增原因时不至于显示空白
+     */
+    private fun localizedWhy(why: String): String = when (why) {
+        "recognition error" -> str("IdentifyTheMistakes")
+        "refresh count reached the limit" -> str("RecruitRefreshLimitReached")
+        "UnknownStage" -> str("PenguinUploadUnknownStage")
+        "NotThreeStars" -> str("PenguinUploadNotThreeStars")
+        "UnknownTimes" -> str("PenguinUploadUnknownTimes")
+        "UnknownDropType" -> str("PenguinUploadUnknownDropType")
+        "UnknownDrops" -> str("PenguinUploadUnknownDrops")
+        else -> why
+    }
 
     private fun str(key: String): String = MaaStringRes.getString(resources, packageName, key)
 
