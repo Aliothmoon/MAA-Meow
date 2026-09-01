@@ -1027,12 +1027,7 @@ class SubTaskHandler(
 
     // ==================== 字符串资源辅助方法 ====================
 
-    /**
-     * core 回调 why 值 -> 本地化文案
-     *
-     * 上游 v6.17.0-beta.9 把 core 侧 why 统一改为英文，企鹅物流的 why 一直是英文标识符
-     * 未收录的值原样返回，core 新增原因时不至于显示空白
-     */
+    /** core 回调 why -> 本地化文案，未收录的原样返回 */
     private fun localizedWhy(why: String): String = when (why) {
         "recognition error" -> str("IdentifyTheMistakes")
         "refresh count reached the limit" -> str("RecruitRefreshLimitReached")

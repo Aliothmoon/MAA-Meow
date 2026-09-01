@@ -273,10 +273,9 @@ data class InfrastConfig(
     }
 
     /**
-     * 补齐设施列表：去重、剔除未知项，并把缺失的设施类型追加为未启用
+     * 去重并把缺失的设施类型补为未启用，对应 WPF RefreshInfrastRoomList 的补全分支
      *
-     * 对应 WPF: InfrastSettingsUserControlModel.RefreshInfrastRoomList 的补全分支。
-     * 上游新增设施类型时，老配置里不会有这一项，不补齐就会永久漏掉
+     * 只能补缺项，存量 JSON 里的未知房间名会让反序列化抛异常、整份 profiles 回退默认链
      */
     fun normalizedFacilities(): List<Pair<InfrastRoomType, Boolean>> {
         val known = facilities.distinctBy { it.first }

@@ -231,7 +231,7 @@ fun InfrastConfigPanel(
                         }
                         item {
                             // 菲亚梅塔心情恢复 + 恢复目标 (仅 Normal 模式显示)
-                            // 同一个 item：恢复目标关闭时若单独占槽位，会多吃一份 item 间距
+                            // 合并成一个 item：拆开时隐藏的那个仍占槽位，会多吃一份间距
                             MaaAnimatedVisibility(
                                 visible = config.mode == InfrastMode.Normal,
                                 enter = expandVertically(),
@@ -862,6 +862,9 @@ private fun FacilitiesSection(
         // Normal 模式下换班顺序由 core 统一安排
         val reorderable = config.mode != InfrastMode.Normal
 
+        // List 不是稳定类型，不记忆会让列表每次重组都重建
+        val facilities = remember(config.facilities) { config.normalizedFacilities() }
+
         ExpandableTipContent(
             visible = tipExpanded,
             tipText = stringResource(
@@ -871,7 +874,7 @@ private fun FacilitiesSection(
         )
 
         FacilityList(
-            facilities = config.normalizedFacilities(),
+            facilities = facilities,
             reorderable = reorderable,
             onFacilitiesChange = { onConfigChange(config.copy(facilities = it)) })
 
@@ -883,7 +886,7 @@ private fun FacilitiesSection(
                 onClick = {
                     onConfigChange(
                         config.copy(
-                            facilities = config.normalizedFacilities().map { it.first to true },
+                            facilities = facilities.map { it.first to true },
                         ),
                     )
                 },
@@ -897,7 +900,7 @@ private fun FacilitiesSection(
                 onClick = {
                     onConfigChange(
                         config.copy(
-                            facilities = config.normalizedFacilities().map { it.first to false },
+                            facilities = facilities.map { it.first to false },
                         ),
                     )
                 },
@@ -1199,10 +1202,7 @@ private fun ContinueTrainingSection(
 
 private fun queryFileName(context: Context, uri: Uri): String? = Misc.queryFileName(context, uri)
 
-/**
- * 菲亚梅塔心情恢复开关（仅 Normal 模式显示）
- * 关闭时 core 跳过宿舍前置轮，恢复目标一并隐藏
- */
+/** 菲亚梅塔心情恢复开关（仅 Normal 模式显示），关闭时 core 跳过宿舍前置轮 */
 @Composable
 private fun FiammettaRecoverySection(
     config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit

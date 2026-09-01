@@ -17,10 +17,7 @@ import io.mockk.verify
 import org.junit.Before
 import org.junit.Test
 
-/**
- * 上游 v6.17.0-beta.9 把 core 侧 why 改为英文，日志不能再原样透出。
- * 企鹅物流的 why 一直是英文标识符，一并本地化。
- */
+/** 上游 v6.17.0-beta.9 起 core 的 why 是英文，日志不能再原样透出 */
 class SubTaskHandlerWhyLocalizationTest {
 
     private val pkg = "com.aliothmoon.maameow"

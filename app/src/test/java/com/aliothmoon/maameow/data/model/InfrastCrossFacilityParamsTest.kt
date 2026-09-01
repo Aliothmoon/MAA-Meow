@@ -100,7 +100,6 @@ class InfrastCrossFacilityParamsTest {
             com.aliothmoon.maameow.domain.enums.InfrastRoomType.values.size,
             normalized.size,
         )
-        // 已有项保持原顺序与状态
         assertEquals(
             listOf(
                 com.aliothmoon.maameow.domain.enums.InfrastRoomType.Trade,
@@ -108,7 +107,7 @@ class InfrastCrossFacilityParamsTest {
             ),
             normalized.take(2).map { it.first },
         )
-        // 补齐的一律未启用，不会凭空多跑设施
+        // 补齐项一律未启用，不会凭空多跑设施
         normalized.drop(2).forEach { assertFalse(it.first.name, it.second) }
         assertEquals(listOf("Trade", "Mfg"), facilityOf(paramsOf(partial)))
     }
