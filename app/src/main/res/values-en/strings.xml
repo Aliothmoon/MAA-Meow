@@ -877,6 +877,7 @@
     <string name="panel_infrast_dorm_threshold_tip">When custom shift switching is enabled, this field only applies to autofill and rooms that use worker groups.</string>
     <string name="panel_infrast_facilities_title">Facilities</string>
     <string name="panel_infrast_facilities_tip">Check the facilities that should be swapped.\nThe order of facilities represents shift priority.</string>
+    <string name="panel_infrast_facility_drag_reorder">Drag to reorder</string>
     <string name="panel_infrast_facilities_tip_normal">In Normal mode the shift order is planned automatically by the algorithm. This list only selects which facility types to process; the order here does not matter.\nTo customize the shift order, use Custom Base Mode.</string>
     <string name="panel_infrast_room_mfg">Factory</string>
     <string name="panel_infrast_room_trade">Trading Post</string>

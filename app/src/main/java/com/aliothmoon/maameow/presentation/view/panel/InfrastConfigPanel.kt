@@ -26,11 +26,14 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
@@ -51,6 +54,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
@@ -933,35 +937,81 @@ private fun FacilityList(
                 }
                 onFacilitiesChange(newList)
             }, modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) { _, entry, _ ->
+        ) { index, entry, isDragging ->
             key(entry.first) {
                 ReorderableItem {
                     val (facility, enabled) = entry
-                    Row(
+                    val toggle = {
+                        onFacilitiesChange(
+                            facilities.map {
+                                if (it.first == facility) it.first to !it.second else it
+                            }
+                        )
+                    }
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .then(if (reorderable) Modifier.longPressDraggableHandle() else Modifier)
-                            .clickable {
-                                val newList = facilities.map {
-                                    if (it.first == facility) it.first to !it.second else it
-                                }
-                                onFacilitiesChange(newList)
+                            .then(if (reorderable) Modifier.longPressDraggableHandle() else Modifier),
+                        colors = CardDefaults.cardColors(
+                            containerColor = when {
+                                isDragging -> MaterialTheme.colorScheme.surfaceVariant
+                                enabled -> MaterialTheme.colorScheme.surface
+                                else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
                             }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
-                            checked = enabled, onCheckedChange = { checked ->
-                                val newList = facilities.map {
-                                    if (it.first == facility) it.first to checked else it
-                                }
-                                onFacilitiesChange(newList)
-                            }, modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = infrastRoomTypeLabel(facility),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        ),
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = if (isDragging) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.outlineVariant
+                        ),
+                        elevation = CardDefaults.cardElevation(
+                            defaultElevation = if (isDragging) 8.dp else 0.dp
+                        ),
+                        shape = MaterialTheme.shapes.extraSmall
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(onClick = toggle)
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = enabled,
+                                onCheckedChange = { toggle() },
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            // 顺序即换班优先级，仅可排序时才有意义
+                            if (reorderable) {
+                                Text(
+                                    text = "${index + 1}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.width(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                            }
+                            Text(
+                                text = infrastRoomTypeLabel(facility),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (enabled) MaterialTheme.colorScheme.onSurface
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (reorderable) {
+                                Icon(
+                                    Icons.Default.Menu,
+                                    contentDescription = stringResource(R.string.panel_infrast_facility_drag_reorder),
+                                    modifier = Modifier
+                                        .draggableHandle()
+                                        .size(28.dp)
+                                        .padding(5.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                     }
                 }
             }

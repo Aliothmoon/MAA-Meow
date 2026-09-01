@@ -931,6 +931,7 @@
     <string name="panel_infrast_dorm_threshold_tip">若启用自定义换班，该字段仅针对 autofill 和使用工员编组的房间有效</string>
     <string name="panel_infrast_facilities_title">基建设施</string>
     <string name="panel_infrast_facilities_tip">勾选需要换班的设施\n设施顺序代表换班优先级</string>
+    <string name="panel_infrast_facility_drag_reorder">拖动排序</string>
     <string name="panel_infrast_facilities_tip_normal">常规模式下换班顺序由算法统一安排，此处仅勾选需要换班的设施类别，列表顺序不生效\n若需自定义换班顺序，请使用自定义基建配置</string>
     <string name="panel_infrast_room_mfg">制造站</string>
     <string name="panel_infrast_room_trade">贸易站</string>
