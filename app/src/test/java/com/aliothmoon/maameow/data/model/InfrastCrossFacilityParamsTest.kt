@@ -28,9 +28,29 @@ class InfrastCrossFacilityParamsTest {
     fun defaults_matchUpstream() {
         val json = paramsOf(InfrastConfig())
         assertEquals(listOf("清流", "可露希尔", "但书"), fiammettaTargetsOf(json))
+        // 上游 v6.17.0-beta.9 起菲亚梅塔恢复默认关闭
+        assertFalse(json.getValue("fiammetta_recovery_enabled").jsonPrimitive.boolean)
         crossFacilityKeys.forEach { key ->
             assertFalse(key, json.getValue(key).jsonPrimitive.boolean)
         }
+    }
+
+    @Test
+    fun fiammettaRecoveryEnabled_isEmittedRegardlessOfMode() {
+        val config = InfrastConfig(fiammettaRecoveryEnabled = true)
+        com.aliothmoon.maameow.domain.enums.InfrastMode.entries.forEach { mode ->
+            val json = paramsOf(config.copy(mode = mode))
+            assertTrue("$mode", json.getValue("fiammetta_recovery_enabled").jsonPrimitive.boolean)
+        }
+    }
+
+    @Test
+    fun fiammettaTargets_stillEmittedWhenRecoveryDisabled_coreIgnoresThem() {
+        // core 关闭恢复时直接把名单置空，GUI 侧不做裁剪，保留用户选择
+        val json = paramsOf(
+            InfrastConfig(fiammettaRecoveryEnabled = false, fiammettaTargets = listOf("巫恋"))
+        )
+        assertEquals(listOf("巫恋"), fiammettaTargetsOf(json))
     }
 
     @Test

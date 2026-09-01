@@ -184,8 +184,16 @@ data class InfrastConfig(
     // ============ 常规模式效率算法（仅 Normal 模式生效） ============
 
     /**
+     * 菲亚梅塔心情恢复开关
+     * 对应 WPF: FiammettaRecoveryEnabled (bool)
+     *
+     * 关闭时 core 不把宿舍前置轮纳入子任务序列，[fiammettaTargets] 一并失效
+     */
+    val fiammettaRecoveryEnabled: Boolean = false,
+
+    /**
      * 菲亚梅塔恢复目标，最多 3 个，core 取其中心情最低者，顺序无关
-     * 可选值见 [UiUsageConstants.fiammettaTargetValues]
+     * 仅 [fiammettaRecoveryEnabled] 开启时生效，可选值见 [UiUsageConstants.fiammettaTargetValues]
      */
     val fiammettaTargets: List<String> = UiUsageConstants.defaultFiammettaTargets,
 
@@ -242,6 +250,7 @@ data class InfrastConfig(
             put("reception_clue_exchange", receptionClueExchange)
             put("reception_send_clue", receptionSendClue)
             // 始终下发，非 Normal 模式由 core 忽略
+            put("fiammetta_recovery_enabled", fiammettaRecoveryEnabled)
             put("fiammetta_targets", buildJsonArray {
                 fiammettaTargets
                     .filter { it.isNotBlank() }

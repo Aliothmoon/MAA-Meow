@@ -226,9 +226,19 @@ fun InfrastConfigPanel(
                             ContinueTrainingSection(config, onConfigChange)
                         }
                         item {
-                            // 菲亚梅塔恢复目标 (仅 Normal 模式显示)
+                            // 菲亚梅塔心情恢复 (仅 Normal 模式显示)
                             MaaAnimatedVisibility(
                                 visible = config.mode == InfrastMode.Normal,
+                                enter = expandVertically(),
+                                exit = shrinkVertically()
+                            ) {
+                                FiammettaRecoverySection(config, onConfigChange)
+                            }
+                        }
+                        item {
+                            // 菲亚梅塔恢复目标 (仅 Normal 模式且恢复开启时显示)
+                            MaaAnimatedVisibility(
+                                visible = config.mode == InfrastMode.Normal && config.fiammettaRecoveryEnabled,
                                 enter = expandVertically(),
                                 exit = shrinkVertically()
                             ) {
@@ -1134,6 +1144,42 @@ private fun ContinueTrainingSection(
 }
 
 private fun queryFileName(context: Context, uri: Uri): String? = Misc.queryFileName(context, uri)
+
+/**
+ * 菲亚梅塔心情恢复开关（仅 Normal 模式显示）
+ * 关闭时 core 跳过宿舍前置轮，恢复目标一并隐藏
+ */
+@Composable
+private fun FiammettaRecoverySection(
+    config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
+) {
+    var tipExpanded by remember { mutableStateOf(false) }
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Checkbox(
+                checked = config.fiammettaRecoveryEnabled,
+                onCheckedChange = { onConfigChange(config.copy(fiammettaRecoveryEnabled = it)) },
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                text = stringResource(R.string.panel_infrast_fiammetta_recovery),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            ExpandableTipIcon(
+                expanded = tipExpanded, onExpandedChange = { tipExpanded = it })
+        }
+        ExpandableTipContent(
+            visible = tipExpanded,
+            tipText = stringResource(R.string.panel_infrast_fiammetta_recovery_tip)
+        )
+    }
+}
 
 /**
  * 菲亚梅塔恢复目标（仅 Normal 模式显示）
