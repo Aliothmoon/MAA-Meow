@@ -86,6 +86,46 @@ class InfrastCrossFacilityParamsTest {
     }
 
     @Test
+    fun facilities_missingRoomsAreAppendedDisabled() {
+        // 老配置缺项时补齐为未启用，对齐 WPF RefreshInfrastRoomList 的补全分支
+        val partial = InfrastConfig(
+            facilities = listOf(
+                com.aliothmoon.maameow.domain.enums.InfrastRoomType.Trade to true,
+                com.aliothmoon.maameow.domain.enums.InfrastRoomType.Mfg to true,
+            )
+        )
+        val normalized = partial.normalizedFacilities()
+
+        assertEquals(
+            com.aliothmoon.maameow.domain.enums.InfrastRoomType.values.size,
+            normalized.size,
+        )
+        // 已有项保持原顺序与状态
+        assertEquals(
+            listOf(
+                com.aliothmoon.maameow.domain.enums.InfrastRoomType.Trade,
+                com.aliothmoon.maameow.domain.enums.InfrastRoomType.Mfg,
+            ),
+            normalized.take(2).map { it.first },
+        )
+        // 补齐的一律未启用，不会凭空多跑设施
+        normalized.drop(2).forEach { assertFalse(it.first.name, it.second) }
+        assertEquals(listOf("Trade", "Mfg"), facilityOf(paramsOf(partial)))
+    }
+
+    @Test
+    fun facilities_duplicatesAreDropped() {
+        val dup = InfrastConfig(
+            facilities = InfrastConfig().facilities +
+                (com.aliothmoon.maameow.domain.enums.InfrastRoomType.Mfg to false)
+        )
+        assertEquals(
+            com.aliothmoon.maameow.domain.enums.InfrastRoomType.values.size,
+            dup.normalizedFacilities().size,
+        )
+    }
+
+    @Test
     fun fiammettaTargetOptions_matchUpstreamAndContainDefaults() {
         assertEquals(
             listOf("清流", "可露希尔", "但书", "巫恋", "龙舌兰", "歌蕾蒂娅"),
@@ -96,6 +136,9 @@ class InfrastCrossFacilityParamsTest {
         )
         assertEquals(3, UiUsageConstants.MAX_FIAMMETTA_TARGETS)
     }
+
+    private fun facilityOf(json: JsonObject): List<String> =
+        json.getValue("facility").jsonArray.map { it.jsonPrimitive.content }
 
     private fun fiammettaTargetsOf(json: JsonObject): List<String> =
         json.getValue("fiammetta_targets").jsonArray.map { it.jsonPrimitive.content }

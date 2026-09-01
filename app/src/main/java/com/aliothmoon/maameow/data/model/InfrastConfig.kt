@@ -234,7 +234,7 @@ data class InfrastConfig(
         val threshold = dormThreshold / 100.0
         val paramsJson = buildJsonObject {
             put("facility", buildJsonArray {
-                facilities.filter { it.second }
+                normalizedFacilities().filter { it.second }
                     .map { it.first.name }
                     .forEach {
                         add(JsonPrimitive(it))
@@ -270,6 +270,20 @@ data class InfrastConfig(
         }
 
         return listOf(MaaTaskParams(MaaTaskType.INFRAST, paramsJson.toString()))
+    }
+
+    /**
+     * 补齐设施列表：去重、剔除未知项，并把缺失的设施类型追加为未启用
+     *
+     * 对应 WPF: InfrastSettingsUserControlModel.RefreshInfrastRoomList 的补全分支。
+     * 上游新增设施类型时，老配置里不会有这一项，不补齐就会永久漏掉
+     */
+    fun normalizedFacilities(): List<Pair<InfrastRoomType, Boolean>> {
+        val known = facilities.distinctBy { it.first }
+        val missing = InfrastRoomType.values.filterNot { room ->
+            known.any { it.first == room }
+        }
+        return if (missing.isEmpty()) known else known + missing.map { it to false }
     }
 
     /**

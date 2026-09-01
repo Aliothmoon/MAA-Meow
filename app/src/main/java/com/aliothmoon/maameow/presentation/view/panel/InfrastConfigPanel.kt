@@ -871,7 +871,7 @@ private fun FacilitiesSection(
         )
 
         FacilityList(
-            facilities = config.facilities,
+            facilities = config.normalizedFacilities(),
             reorderable = reorderable,
             onFacilitiesChange = { onConfigChange(config.copy(facilities = it)) })
 
@@ -883,7 +883,7 @@ private fun FacilitiesSection(
                 onClick = {
                     onConfigChange(
                         config.copy(
-                            facilities = config.facilities.map { it.first to true },
+                            facilities = config.normalizedFacilities().map { it.first to true },
                         ),
                     )
                 },
@@ -897,7 +897,7 @@ private fun FacilitiesSection(
                 onClick = {
                     onConfigChange(
                         config.copy(
-                            facilities = config.facilities.map { it.first to false },
+                            facilities = config.normalizedFacilities().map { it.first to false },
                         ),
                     )
                 },
