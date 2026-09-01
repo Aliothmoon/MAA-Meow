@@ -68,7 +68,8 @@ fun InlineAddItemPanel(
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(
                     onClick = { onItemAdded(inputText) },
-                    enabled = inputText.isNotBlank()
+                    enabled = inputText.isNotBlank(),
+                    shape = RoundedCornerShape(8.dp)
                 ) { Text(stringResource(R.string.common_add)) }
             }
         }

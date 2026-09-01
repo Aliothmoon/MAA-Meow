@@ -73,7 +73,8 @@ fun InlineBlacklistAddPanel(
                 Button(
                     onClick = { onItemAdded(inputText) },
                     enabled = inputText.isNotBlank(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    shape = RoundedCornerShape(8.dp)
                 ) { Text(stringResource(R.string.common_add)) }
             }
         }

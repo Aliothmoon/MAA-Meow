@@ -586,7 +586,8 @@ private fun BlacklistSection(config: MallConfig, onConfigChange: (MallConfig) ->
                 containerColor = if (showAddPanel) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.error.copy(
                     alpha = 0.8f
                 )
-            )
+            ),
+            shape = RoundedCornerShape(8.dp)
         ) {
             Text(
                 if (showAddPanel) {
