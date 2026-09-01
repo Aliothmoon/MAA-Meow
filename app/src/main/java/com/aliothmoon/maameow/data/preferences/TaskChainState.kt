@@ -500,6 +500,7 @@ class TaskChainState(
     private suspend inline fun <T> mutate(
         crossinline block: (MutableList<TaskChainNode>) -> T
     ): T {
+        _isLoaded.first { it }
         val current = _chain.value.toMutableList()
         val ret = block(current)
         reindex(current)
