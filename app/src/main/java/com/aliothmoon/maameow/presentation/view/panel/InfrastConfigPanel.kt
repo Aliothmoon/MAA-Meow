@@ -73,6 +73,8 @@ import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.Misc
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
@@ -578,10 +580,17 @@ private fun PlanSelectButtonGroup(
     val hasPeriodicPlan = plans.any { it.period.isNotEmpty() }
     val hasNonPeriodicPlan = plans.any { it.period.isEmpty() }
 
+    var now by remember { mutableStateOf(LocalTime.now()) }
+    LaunchedEffect(hasPeriodicPlan) {
+        if (!hasPeriodicPlan) return@LaunchedEffect
+        while (isActive) {
+            now = LocalTime.now()
+            delay(60_000L - (System.currentTimeMillis() % 60_000L))
+        }
+    }
+
     // 计算当前时间匹配的计划名（用于时间轮换显示）
-    // TODO: 定时刷新时间轮换显示（WPF 每分钟调用 RefreshInfrastTimeRotationDisplay 更新）
     val currentPlanName = if (hasPeriodicPlan) {
-        val now = LocalTime.now()
         val formatter = DateTimeFormatter.ofPattern("H:mm")
         val matched = plans.firstOrNull { plan ->
             plan.period.any { range ->
