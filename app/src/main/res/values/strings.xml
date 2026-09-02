@@ -919,6 +919,7 @@
     <string name="panel_infrast_plan_tip">如「基建计划」存在执行时间，「基建换班」任务开始前或任务运行时不会自动切换，将保持 Link Start! 时的状态，仅在空闲或任务完成后切换</string>
     <string name="panel_infrast_plan_auto_switch">根据时间段自动切换 (%1$s)</string>
     <string name="panel_infrast_plan_missing_period_warning">自定义基建配置仅有部分计划存在时间段，可能会存在预期外的行为。如需设置换班时间段请保证所有计划均设置时间段，否则请全部留空。</string>
+    <string name="panel_infrast_plan_period_gap_warning">当前时间不在任何计划的时间段内，将默认使用第一个计划 (%1$s)</string>
     <string name="panel_infrast_drones_title">无人机用途</string>
     <string name="panel_infrast_drones_not_use">不使用无人机</string>
     <string name="panel_infrast_drones_money">贸易站-龙门币</string>

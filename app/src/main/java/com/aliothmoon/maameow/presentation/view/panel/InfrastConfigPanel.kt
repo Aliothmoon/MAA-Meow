@@ -589,10 +589,10 @@ private fun PlanSelectButtonGroup(
         }
     }
 
-    // 计算当前时间匹配的计划名（用于时间轮换显示）
-    val currentPlanName = if (hasPeriodicPlan) {
+    // 计算当前时间匹配的计划, 匹配不到时兜底第一个
+    val matchedPlan = if (hasPeriodicPlan) {
         val formatter = DateTimeFormatter.ofPattern("H:mm")
-        val matched = plans.firstOrNull { plan ->
+        plans.firstOrNull { plan ->
             plan.period.any { range ->
                 if (range.size < 2) return@any false
                 val start = runCatching { LocalTime.parse(range[0], formatter) }.getOrNull()
@@ -603,10 +603,10 @@ private fun PlanSelectButtonGroup(
                 else now >= start || now <= end
             }
         }
-        matched?.name ?: plans.firstOrNull()?.name ?: "???"
     } else null
-
-    val currentPlanDisplayName = currentPlanName ?: "???"
+    val inPeriodGap = hasPeriodicPlan && matchedPlan == null
+    val currentPlanDisplayName =
+        (matchedPlan ?: plans.firstOrNull())?.name ?: "???"
 
     var tipExpanded by remember { mutableStateOf(false) }
 
@@ -688,6 +688,18 @@ private fun PlanSelectButtonGroup(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+
+        // 当前时间不在任何时间段内, 说明兜底行为
+        if (inPeriodGap && selectedPlanIndex == -1) {
+            Text(
+                text = stringResource(
+                    R.string.panel_infrast_plan_period_gap_warning,
+                    currentPlanDisplayName
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
         }
 
         // 部分计划无时间段警告

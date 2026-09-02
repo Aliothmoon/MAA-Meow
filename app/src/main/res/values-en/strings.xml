@@ -865,6 +865,7 @@
     <string name="panel_infrast_plan_tip">If \"Base Schedule\" has execution time configured, it will not switch automatically before the \"Base Shift\" task starts or during task execution. It stays in the state at Link Start! and only switches when idle or after the task is completed.</string>
     <string name="panel_infrast_plan_auto_switch">Auto switch by time (%1$s)</string>
     <string name="panel_infrast_plan_missing_period_warning">Some rotations in the Custom Base Mode configuration have time periods set, which may lead to unexpected behavior. To set shift change time periods, ensure all rotations have time periods configured; otherwise, leave them all blank.</string>
+    <string name="panel_infrast_plan_period_gap_warning">Current time is not within the time period of any plan; the first plan (%1$s) will be used by default</string>
     <string name="panel_infrast_drones_title">Drone Usage</string>
     <string name="panel_infrast_drones_not_use">Do not use Drones</string>
     <string name="panel_infrast_drones_money">LMD</string>
