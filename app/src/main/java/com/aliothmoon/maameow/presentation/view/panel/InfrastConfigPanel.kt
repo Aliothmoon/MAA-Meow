@@ -28,6 +28,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -678,6 +679,39 @@ private fun PlanSelectButtonGroup(
             }
         }
 
+        // 当前时间不在任何时间段内, 说明兜底行为
+        if (inPeriodGap && selectedPlanIndex == -1) {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.errorContainer,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.panel_infrast_plan_period_gap_warning,
+                            currentPlanDisplayName
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        }
+
         // 当前选中计划的描述
         if (selectedPlanIndex >= 0 && selectedPlanIndex < plans.size) {
             val desc = plans[selectedPlanIndex].description
@@ -688,18 +722,6 @@ private fun PlanSelectButtonGroup(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
-
-        // 当前时间不在任何时间段内, 说明兜底行为
-        if (inPeriodGap && selectedPlanIndex == -1) {
-            Text(
-                text = stringResource(
-                    R.string.panel_infrast_plan_period_gap_warning,
-                    currentPlanDisplayName
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
-            )
         }
 
         // 部分计划无时间段警告
