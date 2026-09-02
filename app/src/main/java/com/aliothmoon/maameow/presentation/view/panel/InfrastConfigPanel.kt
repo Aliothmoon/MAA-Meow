@@ -631,6 +631,39 @@ private fun PlanSelectButtonGroup(
             visible = tipExpanded, tipText = tip
         )
 
+        // 当前时间不在任何时间段内, 说明兜底行为
+        if (inPeriodGap && selectedPlanIndex == -1) {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.errorContainer,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.panel_infrast_plan_period_gap_warning,
+                            currentPlanDisplayName
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        }
+
         // 时间轮换项（仅当存在带 period 的计划时显示）
         if (hasPeriodicPlan) {
             Row(
@@ -676,39 +709,6 @@ private fun PlanSelectButtonGroup(
                 Text(
                     text = label, style = MaterialTheme.typography.bodyMedium
                 )
-            }
-        }
-
-        // 当前时间不在任何时间段内, 说明兜底行为
-        if (inPeriodGap && selectedPlanIndex == -1) {
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.errorContainer,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.panel_infrast_plan_period_gap_warning,
-                            currentPlanDisplayName
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                }
             }
         }
 
