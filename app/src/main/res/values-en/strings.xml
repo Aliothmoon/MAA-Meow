@@ -482,8 +482,12 @@
     <string name="settings_section_about">About</string>
     <string name="settings_about_version">Version</string>
     <string name="settings_about_developer">Developer</string>
-    <string name="settings_about_qq_group_title">Feedback QQ Group</string>
-    <string name="settings_about_qq_group_desc">Got issues or suggestions? Join the QQ group to discuss</string>
+    <string name="settings_about_faq_title">FAQ</string>
+    <string name="settings_about_faq_desc">Check here first; most common issues already have answers</string>
+    <string name="settings_about_feedback_title">Report an Issue</string>
+    <string name="settings_about_feedback_desc">Please make sure your issue is not covered by the FAQ before reporting it</string>
+    <string name="settings_about_qq_group_title">QQ Group</string>
+    <string name="settings_about_qq_group_desc">Join the QQ group to chat with other users</string>
     <string name="settings_about_changelog">Changelog</string>
     <string name="settings_about_changelog_empty">No changelog yet. After you update to a new version from within the app, the release notes for that version are kept here.</string>
     <string name="settings_about_announcement">View Announcement</string>

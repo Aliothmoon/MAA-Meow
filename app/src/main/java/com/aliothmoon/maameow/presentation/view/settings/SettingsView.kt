@@ -1017,6 +1017,22 @@ fun SettingsView(
                         )
                         ListItemDivider()
                         SettingClickItem(
+                            title = stringResource(R.string.settings_about_faq_title),
+                            description = stringResource(R.string.settings_about_faq_desc),
+                            contentColor = contentColor
+                        ) {
+                            Misc.openUriSafely(context, "https://docs.maameow.com/faq/getting-started/")
+                        }
+                        ListItemDivider()
+                        SettingClickItem(
+                            title = stringResource(R.string.settings_about_feedback_title),
+                            description = stringResource(R.string.settings_about_feedback_desc),
+                            contentColor = contentColor
+                        ) {
+                            Misc.openUriSafely(context, "https://github.com/Aliothmoon/MAA-Meow/issues")
+                        }
+                        ListItemDivider()
+                        SettingClickItem(
                             title = stringResource(R.string.settings_about_qq_group_title),
                             description = stringResource(R.string.settings_about_qq_group_desc),
                             contentColor = contentColor

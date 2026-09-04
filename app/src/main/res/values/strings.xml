@@ -696,8 +696,12 @@
     <string name="settings_section_about">关于</string>
     <string name="settings_about_version">版本</string>
     <string name="settings_about_developer">开发者</string>
-    <string name="settings_about_qq_group_title">问题反馈 QQ 群</string>
-    <string name="settings_about_qq_group_desc">遇到问题或有建议？欢迎加群交流反馈</string>
+    <string name="settings_about_faq_title">常见问题</string>
+    <string name="settings_about_faq_desc">遇到问题先看这里，多数问题都有现成解答</string>
+    <string name="settings_about_feedback_title">问题反馈</string>
+    <string name="settings_about_feedback_desc">请在确认您的问题不属于「常见问题」后，再进行「问题反馈」</string>
+    <string name="settings_about_qq_group_title">QQ 群</string>
+    <string name="settings_about_qq_group_desc">欢迎加群交流</string>
     <string name="settings_about_changelog">更新日志</string>
     <string name="settings_about_changelog_empty">暂无更新日志。应用内更新到新版本后，这里会留档当前版本的更新说明</string>
     <string name="settings_about_announcement">查看公告</string>
