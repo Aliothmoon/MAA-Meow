@@ -69,7 +69,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.announcement.AnnouncementSectionParser
-import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -279,7 +278,7 @@ fun AnnouncementDialog(
                                 .fillMaxWidth()
                                 .verticalScroll(scrollState),
                         ) {
-                            MarkdownText(
+                            MaaMarkdownText(
                                 markdown = shownMarkdown,
                                 modifier = Modifier.fillMaxWidth(),
                                 style = MaterialTheme.typography.bodyMedium,

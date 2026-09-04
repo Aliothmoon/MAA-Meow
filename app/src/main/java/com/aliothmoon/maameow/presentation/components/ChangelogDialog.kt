@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
-import dev.jeziellago.compose.markdowntext.MarkdownText
 
 @Composable
 fun ChangelogDialog(
@@ -32,7 +31,7 @@ fun ChangelogDialog(
         content = {
             Column {
                 Spacer(modifier = Modifier.height(12.dp))
-                MarkdownText(
+                MaaMarkdownText(
                     markdown = content,
                     modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.bodyMedium

@@ -77,7 +77,6 @@ import com.aliothmoon.maameow.presentation.viewmodel.UpdateViewModel
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.resolve
-import dev.jeziellago.compose.markdowntext.MarkdownText
 
 /**
  * 更新管理卡片
@@ -882,7 +881,7 @@ private fun AppUpdateConfirmDialog(
                 )
                 if (!updateInfo.releaseNote.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
-                    MarkdownText(
+                    MaaMarkdownText(
                         markdown = updateInfo.releaseNote,
                         modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.bodyMedium

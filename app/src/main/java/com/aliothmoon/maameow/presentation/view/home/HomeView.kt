@@ -89,7 +89,7 @@ import com.aliothmoon.maameow.utils.i18n.overlayControlModeDisplayName
 import com.aliothmoon.maameow.utils.i18n.remoteBackendPermissionLabel
 import com.aliothmoon.maameow.utils.i18n.resolve
 import com.aliothmoon.maameow.utils.i18n.runModeDisplayName
-import dev.jeziellago.compose.markdowntext.MarkdownText
+import com.aliothmoon.maameow.presentation.components.MaaMarkdownText
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -231,7 +231,7 @@ fun HomeView(
                     )
                     if (!releaseNote.isNullOrBlank()) {
                         Spacer(modifier = Modifier.height(12.dp))
-                        MarkdownText(
+                        MaaMarkdownText(
                             markdown = releaseNote,
                             modifier = Modifier.fillMaxWidth(),
                             style = MaterialTheme.typography.bodyMedium,
