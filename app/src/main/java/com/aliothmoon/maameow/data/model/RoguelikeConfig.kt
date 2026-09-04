@@ -19,7 +19,7 @@ import kotlinx.serialization.json.put
 @Serializable
 data class RoguelikeConfig(
     // 基础设置
-    val theme: String = "JieGarden",  // 主题：Phantom/Mizuki/Sami/Sarkaz/JieGarden/BlackFlow
+    val theme: String = "Phantom",  // 主题：Phantom/Mizuki/Sami/Sarkaz/JieGarden/BlackFlow
     val difficulty: Int = Int.MAX_VALUE,  // 难度：-1=当前, MAX_VALUE=最高, 0=最低
     val mode: RoguelikeMode = RoguelikeMode.Exp,  // 策略模式
     val squad: String = "",  // 起始分队
