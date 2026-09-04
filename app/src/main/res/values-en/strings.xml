@@ -398,11 +398,14 @@
     <string name="bg_auto_mute_on_launch">Mute game audio on launch</string>
     <string name="bg_auto_close_on_end">Close game when task ends</string>
     <string name="bg_toast_auto_closed_on_end">Task finished. Game closed automatically</string>
-    <string name="bg_toast_mute_failed">Mute operation failed. Your system may restrict this feature</string>
+    <string name="bg_toast_mute_failed">Mute failed. Use the volume keys to lower media volume instead</string>
     <string name="bg_auto_hardware_screen_off">Turn off screen when AFK</string>
     <string name="bg_auto_show_touch_preview">Show touch preview</string>
 
     <!-- dialog: hardware screen off -->
+    <string name="dialog_mute_game_title">Mute the game?</string>
+    <string name="dialog_mute_game_message">This relies on system APIs and may not work or may fail to restore audio on some devices.\nA more reliable option is to set media volume to 0 with the volume keys.</string>
+    <string name="dialog_mute_game_confirm">Mute anyway</string>
     <string name="dialog_hardware_screen_off_title">Enable hardware screen-off?</string>
     <string name="dialog_hardware_screen_off_message">When enabled, tapping "Screen Off" fully turns off the screen for maximum power saving.\n• Stays awake: while enabled, the screen won\'t turn off automatically when MaaMeow is in the foreground, preventing the system from sleeping and interrupting tasks.\n• Wake-up: press the power button twice (the lock screen lights up first, then unlock).\n• Screen-saver mode: if disabled, a screen-saver clock is shown so you can monitor task progress and battery at any time.</string>
 

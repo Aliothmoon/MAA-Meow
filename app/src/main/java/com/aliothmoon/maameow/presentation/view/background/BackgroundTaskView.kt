@@ -1052,6 +1052,8 @@ private fun BackgroundMoreActionsOverlay(
     val showTouchPreview by appSettingsManager.showTouchPreview.collectAsStateWithLifecycle()
     val debugMode by appSettingsManager.debugMode.collectAsStateWithLifecycle()
     var showHardwareScreenOffConfirm by remember { mutableStateOf(false) }
+    // 非空表示静音确认框待确认，确认后执行；仅静音方向弹，解除不弹
+    var pendingMuteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     val overlayInteractionSource = remember { MutableInteractionSource() }
     val cardInteractionSource = remember { MutableInteractionSource() }
@@ -1124,7 +1126,9 @@ private fun BackgroundMoreActionsOverlay(
                         icon = if (isGameMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
                         label = if (isGameMuted) stringResource(R.string.bg_action_game_muted)
                         else stringResource(R.string.bg_action_mute_game),
-                        onClick = onToggleGameSound,
+                        onClick = {
+                            if (isGameMuted) onToggleGameSound() else pendingMuteAction = onToggleGameSound
+                        },
                         modifier = Modifier.weight(1f),
                         containerColor = if (isGameMuted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary,
                         contentColor = if (isGameMuted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
@@ -1168,8 +1172,12 @@ private fun BackgroundMoreActionsOverlay(
                     icon = Icons.Filled.NotificationsPaused,
                     label = stringResource(R.string.bg_auto_mute_on_launch),
                     checked = muteOnGameLaunch,
-                    onCheckedChange = {
-                        coroutineScope.launch { appSettingsManager.setMuteOnGameLaunch(it) }
+                    onCheckedChange = { checked ->
+                        val apply = {
+                            coroutineScope.launch { appSettingsManager.setMuteOnGameLaunch(checked) }
+                            Unit
+                        }
+                        if (checked) pendingMuteAction = apply else apply()
                     })
                 SettingSwitchRow(
                     icon = Icons.Filled.Cancel,
@@ -1202,6 +1210,24 @@ private fun BackgroundMoreActionsOverlay(
                     })
             }
         }
+    }
+
+    pendingMuteAction?.let { action ->
+        AdaptiveTaskPromptDialog(
+            visible = true,
+            title = stringResource(R.string.dialog_mute_game_title),
+            message = AnnotatedString(stringResource(R.string.dialog_mute_game_message)),
+            onDismissRequest = { pendingMuteAction = null },
+            onConfirm = {
+                pendingMuteAction = null
+                action()
+            },
+            confirmText = stringResource(R.string.dialog_mute_game_confirm),
+            dismissText = stringResource(R.string.common_cancel),
+            icon = Icons.AutoMirrored.Filled.VolumeOff,
+            iconTint = MaterialTheme.colorScheme.primary,
+            confirmColor = MaterialTheme.colorScheme.primary,
+        )
     }
 
     if (showHardwareScreenOffConfirm) {

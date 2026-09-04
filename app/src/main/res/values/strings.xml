@@ -611,11 +611,14 @@
     <string name="bg_auto_mute_on_launch">游戏启动时关闭游戏声音</string>
     <string name="bg_auto_close_on_end">任务自动结束时关闭游戏</string>
     <string name="bg_toast_auto_closed_on_end">任务已结束，已自动关闭游戏</string>
-    <string name="bg_toast_mute_failed">静音操作失败，当前系统可能限制该功能</string>
+    <string name="bg_toast_mute_failed">静音失败，建议直接用系统音量键调低媒体音量</string>
     <string name="bg_auto_hardware_screen_off">熄屏挂机时关闭屏幕</string>
     <string name="bg_auto_show_touch_preview">显示触摸预览</string>
 
     <!-- dialog: hardware screen off -->
+    <string name="dialog_mute_game_title">确认关闭游戏声音？</string>
+    <string name="dialog_mute_game_message">该功能依赖系统接口，部分机型可能无效或无法自动恢复声音。\n更稳妥的做法是直接用音量键把媒体音量调到 0。</string>
+    <string name="dialog_mute_game_confirm">仍要静音</string>
     <string name="dialog_hardware_screen_off_title">确认开启硬件熄屏？</string>
     <string name="dialog_hardware_screen_off_message">开启后，点击「熄屏挂机」将彻底关闭屏幕，进入极致省电状态。\n• 屏幕常亮：启用期间 MaaMeow 在前台时不会自动息屏，以防系统休眠中断任务。\n• 唤醒说明：需按两次电源键（先亮锁屏，再解锁定）。\n• 屏保模式：不开启则显示屏保时钟，可随时查看任务进度与电量。</string>
 
