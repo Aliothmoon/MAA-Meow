@@ -56,7 +56,7 @@ private val STAGE_NAME_REGEX =
         """[a-z]{0,3}\d{0,2}-(?:(?:A|B|C|D|EX|S|TR|MO)-?)?\d{1,2}""",
         RegexOption.IGNORE_CASE
     )
-private val SIDE_STORY_STAGE_ID_REGEX = Regex("""^(act\d+(side|mini)|a00\d+)_""")
+private val SIDE_STORY_STAGE_ID_REGEX = Regex("""^(act\d+(side|mini|d\d+)|a00\d+)_""")
 private val MAIN_STAGE_ID_REGEX = Regex("""^(main|sub|tough|hard)_""")
 
 private enum class CopilotType(val tabIndex: Int) {
