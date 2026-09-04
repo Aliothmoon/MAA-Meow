@@ -1327,7 +1327,7 @@
     <string name="panel_roguelike_stop_before_boss">在第五层 BOSS 前暂停</string>
     <string name="panel_roguelike_stop_at_max_level">满级后自动停止</string>
     <string name="panel_roguelike_collectible_settings">刷开局模式设置</string>
-    <string name="panel_roguelike_collectible_squad">烧水使用分队</string>
+    <string name="panel_roguelike_collectible_squad">刷开局使用分队</string>
     <string name="panel_roguelike_collectible_shopping">刷开局模式启用购物</string>
     <string name="panel_roguelike_start_with_elite_two">凹「开局干员」直升精二</string>
     <string name="panel_roguelike_only_start_with_elite_two">只凹「开局干员」直升精二，不进行作战</string>
@@ -1346,7 +1346,7 @@
     <string name="panel_roguelike_refresh_trader_with_dice">刷新商店（指路鳞）</string>
     <string name="panel_roguelike_sami_settings">萨米专用设置</string>
     <string name="panel_roguelike_first_floor_foldartal">凹第一层远见密文板，不进行作战</string>
-    <string name="panel_roguelike_foldartal_placeholder">密文板名称</string>
+    <string name="panel_roguelike_foldartal_placeholder">填写远见密文板名称，多个用英文分号 ; 隔开</string>
     <string name="panel_roguelike_new_squad_foldartal">生活队凹开局密文板</string>
     <string name="panel_roguelike_new_squad_foldartal_placeholder">最多写三个，并用英文分号 ; 隔开</string>
     <string name="panel_roguelike_start_with_seed">使用指定种子开局</string>

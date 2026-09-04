@@ -1291,7 +1291,7 @@
     <string name="panel_roguelike_refresh_trader_with_dice">Refresh Rogue Trader with Dice</string>
     <string name="panel_roguelike_sami_settings">Sami-Specific Settings</string>
     <string name="panel_roguelike_first_floor_foldartal">Repeat for foldartal foreseed first floor, No Battle</string>
-    <string name="panel_roguelike_foldartal_placeholder">Foldartal name</string>
+    <string name="panel_roguelike_foldartal_placeholder">Enter the foldartal names, separated by English semicolons (;)</string>
     <string name="panel_roguelike_new_squad_foldartal">Start with ｢Life Prioritizing Squad｣ and acquire the cypherboard</string>
     <string name="panel_roguelike_new_squad_foldartal_placeholder">Write up to three items and separate them with English semicolons (;)</string>
     <string name="panel_roguelike_start_with_seed">Start with seed</string>
