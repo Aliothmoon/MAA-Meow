@@ -83,7 +83,7 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved) {
 
     JNIEnv *env = nullptr;
     if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) == JNI_OK && env) {
-        SetPreviewSurface(env, nullptr);
+        ShutdownPreview(env);
         ReleaseInputBridge(env);
     }
 }

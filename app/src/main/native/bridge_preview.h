@@ -7,6 +7,8 @@
 
 void SetPreviewSurface(JNIEnv *env, jobject jSurface);
 
+void ShutdownPreview(JNIEnv *env);
+
 bool IsPreviewEnabled();
 
 bool DispatchPreview(AImage *image);

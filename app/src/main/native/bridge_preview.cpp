@@ -22,13 +22,14 @@ static PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR = nullptr;
 static PFNEGLDESTROYIMAGEKHRPROC eglDestroyImageKHR = nullptr;
 static PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES = nullptr;
 
+/** 只有 surface 跟窗口有关，其余几项建一次用到进程结束 */
 struct EGLState {
     EGLDisplay display = EGL_NO_DISPLAY;
-    EGLSurface surface = EGL_NO_SURFACE;
+    EGLConfig config = nullptr;
     EGLContext context = EGL_NO_CONTEXT;
+    EGLSurface surface = EGL_NO_SURFACE;
     GLuint program = 0;
     GLuint textureId = 0;
-    bool initialized = false;
 };
 
 static const char *VERTEX_SHADER = R"(
@@ -62,6 +63,7 @@ static std::mutex g_renderMutex;
 static std::condition_variable g_renderCv;
 static std::atomic<bool> g_renderThreadRunning{false};
 static ANativeWindow *g_pendingWindow = nullptr;
+static bool g_pendingDetach = false;
 
 static GLuint LoadShader(GLenum type, const char *source) {
     GLuint shader = glCreateShader(type);
@@ -77,46 +79,15 @@ static void DrainPreviewQueueLocked() {
     }
 }
 
-static void DeinitEGL() {
-    if (!g_eglState.initialized) {
-        return;
-    }
-
+/** display 是进程级单例，eglTerminate 会把它整个作废，下一次 eglInitialize 得把驱动重新拉起来 */
+static bool EnsureEglDisplay() {
     if (g_eglState.display != EGL_NO_DISPLAY) {
-        if (g_eglState.surface != EGL_NO_SURFACE && g_eglState.context != EGL_NO_CONTEXT) {
-            eglMakeCurrent(g_eglState.display, g_eglState.surface, g_eglState.surface,
-                           g_eglState.context);
-            if (g_eglState.textureId) {
-                glDeleteTextures(1, &g_eglState.textureId);
-            }
-            if (g_eglState.program) {
-                glDeleteProgram(g_eglState.program);
-            }
-        }
-        eglMakeCurrent(g_eglState.display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-        if (g_eglState.surface != EGL_NO_SURFACE) {
-            eglDestroySurface(g_eglState.display, g_eglState.surface);
-        }
-        if (g_eglState.context != EGL_NO_CONTEXT) {
-            eglDestroyContext(g_eglState.display, g_eglState.context);
-        }
-        eglTerminate(g_eglState.display);
+        return true;
     }
-
-    g_eglState.display = EGL_NO_DISPLAY;
-    g_eglState.surface = EGL_NO_SURFACE;
-    g_eglState.context = EGL_NO_CONTEXT;
-    g_eglState.program = 0;
-    g_eglState.textureId = 0;
-    g_eglState.initialized = false;
-}
-
-static bool InitEGL(ANativeWindow *window) {
-    DeinitEGL();
 
     EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     if (display == EGL_NO_DISPLAY || eglInitialize(display, nullptr, nullptr) == EGL_FALSE) {
-        LOGE("InitEGL: eglInitialize failed");
+        LOGE("EnsureEglDisplay: eglInitialize failed");
         return false;
     }
 
@@ -132,33 +103,19 @@ static bool InitEGL(ANativeWindow *window) {
     EGLint numConfigs = 0;
     if (eglChooseConfig(display, configAttribs, &config, 1, &numConfigs) == EGL_FALSE ||
         numConfigs <= 0) {
-        LOGE("InitEGL: eglChooseConfig failed");
-        eglTerminate(display);
+        LOGE("EnsureEglDisplay: eglChooseConfig failed");
         return false;
     }
 
-    EGLSurface surface = eglCreateWindowSurface(display, config, window, nullptr);
-    if (surface == EGL_NO_SURFACE) {
-        LOGE("InitEGL: eglCreateWindowSurface failed");
-        eglTerminate(display);
-        return false;
-    }
+    g_eglState.display = display;
+    g_eglState.config = config;
+    return true;
+}
 
-    const EGLint contextAttribs[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
-    EGLContext context = eglCreateContext(display, config, EGL_NO_CONTEXT, contextAttribs);
-    if (context == EGL_NO_CONTEXT) {
-        LOGE("InitEGL: eglCreateContext failed");
-        eglDestroySurface(display, surface);
-        eglTerminate(display);
-        return false;
-    }
-
-    if (eglMakeCurrent(display, surface, surface, context) == EGL_FALSE) {
-        LOGE("InitEGL: eglMakeCurrent failed");
-        eglDestroyContext(display, context);
-        eglDestroySurface(display, surface);
-        eglTerminate(display);
-        return false;
+/** 须在 eglMakeCurrent 之后调；这些挂在 context 上，context 不重建就不用重来 */
+static void EnsureGlObjects() {
+    if (g_eglState.program) {
+        return;
     }
 
     eglGetNativeClientBufferANDROID = reinterpret_cast<PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC>(
@@ -188,19 +145,88 @@ static bool InitEGL(ANativeWindow *window) {
     glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    g_eglState.display = display;
-    g_eglState.surface = surface;
-    g_eglState.context = context;
     g_eglState.program = program;
     g_eglState.textureId = textureId;
-    g_eglState.initialized = true;
+}
 
-    eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+/** EGLSurface 必须先于 ANativeWindow_release 销毁 */
+static void DetachWindow() {
+    if (g_eglState.surface == EGL_NO_SURFACE) {
+        return;
+    }
+    eglMakeCurrent(g_eglState.display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    eglDestroySurface(g_eglState.display, g_eglState.surface);
+    g_eglState.surface = EGL_NO_SURFACE;
+}
+
+static bool AttachWindow(ANativeWindow *window) {
+    if (!EnsureEglDisplay()) {
+        return false;
+    }
+
+    EGLSurface surface = eglCreateWindowSurface(g_eglState.display, g_eglState.config, window,
+                                                nullptr);
+    if (surface == EGL_NO_SURFACE) {
+        LOGE("AttachWindow: eglCreateWindowSurface failed, error=0x%x", eglGetError());
+        return false;
+    }
+
+    if (g_eglState.context == EGL_NO_CONTEXT) {
+        const EGLint contextAttribs[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
+        g_eglState.context = eglCreateContext(g_eglState.display, g_eglState.config, EGL_NO_CONTEXT,
+                                              contextAttribs);
+        if (g_eglState.context == EGL_NO_CONTEXT) {
+            LOGE("AttachWindow: eglCreateContext failed");
+            eglDestroySurface(g_eglState.display, surface);
+            return false;
+        }
+    }
+
+    if (eglMakeCurrent(g_eglState.display, surface, surface, g_eglState.context) == EGL_FALSE) {
+        LOGE("AttachWindow: eglMakeCurrent failed, error=0x%x", eglGetError());
+        eglDestroySurface(g_eglState.display, surface);
+        return false;
+    }
+
+    // 先切到新 surface 再销毁旧的：销毁 current 的 surface 是未定义行为
+    EGLSurface previous = g_eglState.surface;
+    g_eglState.surface = surface;
+    if (previous != EGL_NO_SURFACE) {
+        eglDestroySurface(g_eglState.display, previous);
+    }
+
+    EnsureGlObjects();
+
+    // viewport 只在 context 首次 makeCurrent 时按当时的 surface 定下来，换 surface 不会跟着走
+    EGLint width = 0;
+    EGLint height = 0;
+    eglQuerySurface(g_eglState.display, surface, EGL_WIDTH, &width);
+    eglQuerySurface(g_eglState.display, surface, EGL_HEIGHT, &height);
+    glViewport(0, 0, width, height);
+
+    eglMakeCurrent(g_eglState.display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     return true;
 }
 
+/** 只在进程退出时走：eglTerminate 仅此一处 */
+static void DestroyEgl() {
+    if (g_eglState.display == EGL_NO_DISPLAY) {
+        return;
+    }
+    eglMakeCurrent(g_eglState.display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    if (g_eglState.surface != EGL_NO_SURFACE) {
+        eglDestroySurface(g_eglState.display, g_eglState.surface);
+    }
+    // program 与 texture 随 context 一起回收
+    if (g_eglState.context != EGL_NO_CONTEXT) {
+        eglDestroyContext(g_eglState.display, g_eglState.context);
+    }
+    eglTerminate(g_eglState.display);
+    g_eglState = EGLState{};
+}
+
 static void RenderPreview(AHardwareBuffer *hb) {
-    if (!g_eglState.initialized || !hb) {
+    if (g_eglState.surface == EGL_NO_SURFACE || !g_eglState.program || !hb) {
         return;
     }
     if (!eglGetNativeClientBufferANDROID || !eglCreateImageKHR ||
@@ -251,29 +277,43 @@ static void RenderLoop() {
 
     while (g_renderThreadRunning.load(std::memory_order_acquire)) {
         AImage *image = nullptr;
+        ANativeWindow *nextWindow = nullptr;
+        bool detach = false;
         {
             std::unique_lock<std::mutex> lock(g_renderMutex);
             g_renderCv.wait(lock, [] {
                 return !g_renderThreadRunning.load(std::memory_order_acquire) ||
-                       !g_renderQueue.empty() || g_pendingWindow != nullptr;
+                       !g_renderQueue.empty() || g_pendingWindow != nullptr || g_pendingDetach;
             });
 
             if (!g_renderThreadRunning.load(std::memory_order_acquire)) {
                 break;
             }
 
-            if (g_pendingWindow) {
-                if (window) {
-                    ANativeWindow_release(window);
-                }
-                window = g_pendingWindow;
-                g_pendingWindow = nullptr;
-                InitEGL(window);
-            }
+            detach = g_pendingDetach;
+            g_pendingDetach = false;
+            nextWindow = g_pendingWindow;
+            g_pendingWindow = nullptr;
 
             if (!g_renderQueue.empty()) {
                 image = g_renderQueue.front();
                 g_renderQueue.pop();
+            }
+        }
+
+        // EGL 只在这条线程上动
+        if (detach || nextWindow) {
+            DetachWindow();
+            if (window) {
+                ANativeWindow_release(window);
+                window = nullptr;
+            }
+        }
+        if (nextWindow) {
+            window = nextWindow;
+            if (!AttachWindow(window)) {
+                ANativeWindow_release(window);
+                window = nullptr;
             }
         }
 
@@ -286,12 +326,14 @@ static void RenderLoop() {
         }
     }
 
-    DeinitEGL();
+    DetachWindow();
     if (window) {
         ANativeWindow_release(window);
     }
+    DestroyEgl();
 }
 
+/** 换窗口不停渲染线程：join 在 binder 事务里做，调用方主线程得一直等着。收摊走 [ShutdownPreview] */
 void SetPreviewSurface(JNIEnv *env, jobject jSurface) {
     std::lock_guard<std::mutex> lock(g_previewMutex);
 
@@ -299,46 +341,53 @@ void SetPreviewSurface(JNIEnv *env, jobject jSurface) {
         return;
     }
 
-    if (g_renderThreadRunning.load(std::memory_order_acquire)) {
-        g_renderThreadRunning.store(false, std::memory_order_release);
-        g_renderCv.notify_all();
-        if (g_renderThread.joinable()) {
-            g_renderThread.join();
+    if (g_previewSurfaceObj && env) {
+        env->DeleteGlobalRef(g_previewSurfaceObj);
+        g_previewSurfaceObj = nullptr;
+    }
+
+    ANativeWindow *window = nullptr;
+    if (jSurface && env) {
+        window = ANativeWindow_fromSurface(env, jSurface);
+        if (window) {
+            g_previewSurfaceObj = env->NewGlobalRef(jSurface);
+        } else {
+            LOGE("SetPreviewSurface: ANativeWindow_fromSurface failed");
         }
     }
+
+    g_hasPreview.store(window != nullptr, std::memory_order_release);
 
     {
         std::lock_guard<std::mutex> queueLock(g_renderMutex);
         DrainPreviewQueueLocked();
         if (g_pendingWindow) {
             ANativeWindow_release(g_pendingWindow);
-            g_pendingWindow = nullptr;
+        }
+        g_pendingWindow = window;
+        g_pendingDetach = true;
+    }
+
+    if (window && !g_renderThreadRunning.load(std::memory_order_acquire)) {
+        if (g_renderThread.joinable()) {
+            g_renderThread.join();
+        }
+        g_renderThreadRunning.store(true, std::memory_order_release);
+        g_renderThread = std::thread(RenderLoop);
+    }
+    g_renderCv.notify_all();
+}
+
+void ShutdownPreview(JNIEnv *env) {
+    SetPreviewSurface(env, nullptr);
+
+    std::lock_guard<std::mutex> lock(g_previewMutex);
+    if (g_renderThreadRunning.exchange(false, std::memory_order_acq_rel)) {
+        g_renderCv.notify_all();
+        if (g_renderThread.joinable()) {
+            g_renderThread.join();
         }
     }
-
-    if (g_previewSurfaceObj && env) {
-        env->DeleteGlobalRef(g_previewSurfaceObj);
-        g_previewSurfaceObj = nullptr;
-    }
-
-    if (jSurface && env) {
-        g_previewSurfaceObj = env->NewGlobalRef(jSurface);
-        ANativeWindow *window = ANativeWindow_fromSurface(env, jSurface);
-        if (window) {
-            g_renderThreadRunning.store(true, std::memory_order_release);
-            {
-                std::lock_guard<std::mutex> queueLock(g_renderMutex);
-                g_pendingWindow = window;
-            }
-            g_renderThread = std::thread(RenderLoop);
-        } else {
-            env->DeleteGlobalRef(g_previewSurfaceObj);
-            g_previewSurfaceObj = nullptr;
-        }
-    }
-
-    g_hasPreview.store(g_renderThreadRunning.load(std::memory_order_acquire),
-                       std::memory_order_release);
 }
 
 bool IsPreviewEnabled() {
@@ -346,7 +395,7 @@ bool IsPreviewEnabled() {
 }
 
 bool DispatchPreview(AImage *image) {
-    if (!image || !g_renderThreadRunning.load(std::memory_order_acquire)) {
+    if (!image || !g_hasPreview.load(std::memory_order_acquire)) {
         return false;
     }
 
@@ -361,7 +410,7 @@ bool DispatchPreview(AImage *image) {
     AImage *imageToDelete = nullptr;
     {
         std::lock_guard<std::mutex> lock(g_renderMutex);
-        if (!g_renderThreadRunning.load(std::memory_order_acquire)) {
+        if (!g_hasPreview.load(std::memory_order_acquire)) {
             return false;
         }
         if (!g_renderQueue.empty()) {
