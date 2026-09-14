@@ -199,18 +199,14 @@ class ToolboxViewModel(
             )) {
                 is GameReadiness.RequiresConfirmation -> {
                     pendingStartContext = context.acknowledged(readiness.acknowledgement)
-                    _dialog.value = appContext.createStartWarningDialog(
-                        appContext.resolveTaskStartConfirmationMessage(readiness.acknowledgement)
-                    )
+                    _dialog.value = appContext.createStartWarningDialog(readiness.acknowledgement.message)
                     return@launch
                 }
 
                 is GameReadiness.Blocked -> {
                     pendingStartContext = null
                     pendingGachaOnce = null
-                    _dialog.value = appContext.createStartBlockedDialog(
-                        appContext.resolveTaskStartBlockedMessage(readiness.reason)
-                    )
+                    _dialog.value = appContext.createStartBlockedDialog(readiness.reason.message)
                     return@launch
                 }
 

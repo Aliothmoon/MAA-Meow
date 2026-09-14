@@ -21,16 +21,20 @@ fun Context.overlayControlModeDisplayName(mode: OverlayControlMode): String {
     }
 }
 
-fun Context.wakeUpClientTypeDisplayName(clientType: String): String {
+fun wakeUpClientTypeLabel(clientType: String): UiText {
     return when (clientType) {
-        "Official" -> getString(R.string.panel_wakeup_client_official)
-        "Bilibili" -> getString(R.string.panel_wakeup_client_bilibili)
-        "YoStarEN" -> getString(R.string.panel_wakeup_client_yostar_en)
-        "YoStarJP" -> getString(R.string.panel_wakeup_client_yostar_jp)
-        "YoStarKR" -> getString(R.string.panel_wakeup_client_yostar_kr)
-        "txwy" -> getString(R.string.panel_wakeup_client_txwy)
-        else -> clientType
+        "Official" -> uiTextOf(R.string.panel_wakeup_client_official)
+        "Bilibili" -> uiTextOf(R.string.panel_wakeup_client_bilibili)
+        "YoStarEN" -> uiTextOf(R.string.panel_wakeup_client_yostar_en)
+        "YoStarJP" -> uiTextOf(R.string.panel_wakeup_client_yostar_jp)
+        "YoStarKR" -> uiTextOf(R.string.panel_wakeup_client_yostar_kr)
+        "txwy" -> uiTextOf(R.string.panel_wakeup_client_txwy)
+        else -> uiTextDynamic(clientType)
     }
+}
+
+fun Context.wakeUpClientTypeDisplayName(clientType: String): String {
+    return wakeUpClientTypeLabel(clientType).resolve(this)
 }
 
 fun Context.remoteBackendPermissionLabel(backend: RemoteBackend): String {

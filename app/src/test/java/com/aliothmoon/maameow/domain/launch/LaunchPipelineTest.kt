@@ -1,6 +1,8 @@
 package com.aliothmoon.maameow.domain.launch
 
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskChainNode
+import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.models.RunMode
@@ -15,6 +17,7 @@ import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.schedule.service.ScheduleTriggerLogger
 import com.aliothmoon.maameow.utils.i18n.UiText
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
@@ -22,6 +25,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -55,6 +59,7 @@ class LaunchPipelineTest {
     private lateinit var chainState: TaskChainState
     private lateinit var composition: MaaCompositionService
     private lateinit var logger: ScheduleTriggerLogger
+    private lateinit var logSession: ScheduleTriggerLogger.Session
     private lateinit var repository: ScheduleStrategyRepository
     private lateinit var startTaskChain: StartTaskChainUseCase
     private lateinit var screenSaver: ScreenSaverController
@@ -148,6 +153,7 @@ class LaunchPipelineTest {
             every { isLoaded } returns this@LaunchPipelineTest.isLoaded
             every { profileId } returns this@LaunchPipelineTest.profileId
             every { chain } returns this@LaunchPipelineTest.chain
+            every { profiles } returns MutableStateFlow(emptyList())
             coEvery { switchProfile(any()) } just runs
         }
         composition = mockk(relaxed = true) {
@@ -166,7 +172,7 @@ class LaunchPipelineTest {
             coEvery { stopVirtualDisplay() } just runs
         }
         taskEndRegistry = TaskEndRegistry(composition, scope).apply { start() }
-        val logSession = mockk<ScheduleTriggerLogger.Session>(relaxed = true) {
+        logSession = mockk(relaxed = true) {
             every { append(any()) } just runs
             every { end(any(), any()) } just runs
         }
@@ -289,6 +295,24 @@ class LaunchPipelineTest {
         compositionState.value = MaaExecutionState.STOPPING
         delay(200)
         compositionState.value = MaaExecutionState.IDLE
+    }
+
+    @Test
+    fun switchProfile_logsProfileName() = runBlocking<Unit> {
+        profileId.value = "profile-0"
+        every { chainState.profiles } returns MutableStateFlow(
+            listOf(TaskProfile(id = "profile-1", name = "Daily", chain = emptyList())),
+        )
+        pipeline().execute(scheduleRequest()).join()
+        verify { logSession.append(uiTextOf(R.string.schedule_log_switch_profile, "Daily")) }
+    }
+
+    /** 目标配置已删时退回 ID */
+    @Test
+    fun switchProfile_missingProfile_logsProfileId() = runBlocking<Unit> {
+        profileId.value = "profile-0"
+        pipeline().execute(scheduleRequest()).join()
+        verify { logSession.append(uiTextOf(R.string.schedule_log_switch_profile, "profile-1")) }
     }
 
     @Test

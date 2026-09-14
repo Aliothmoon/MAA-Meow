@@ -1608,7 +1608,7 @@
     <string name="task_start_warning_game_not_running">The game is not running. Continuing may fail immediately. Start anyway?</string>
     <string name="task_start_warning_game_not_installed">The game package for the current client type was not detected. Check the client type in Wake Up. Start anyway?</string>
     <string name="task_start_error_no_task_selected">Please select the tasks to run first</string>
-    <string name="task_start_error_conflicting_client_types">The task chain contains different client types (%1$s). Please keep them consistent</string>
+    <string name="task_start_error_conflicting_client_types">The task chain contains different client types. Please keep them consistent</string>
     <string name="task_start_error_no_executable_tasks">There are no executable tasks in the current task chain</string>
     <string name="task_start_error_scheduled_no_wakeup">Wake Up is not configured and the game is not running. This scheduled run was cancelled</string>
     <string name="task_start_error_scheduled_game_not_installed">The game package for the current client type was not detected. Check the client type in Wake Up. This scheduled run was cancelled</string>

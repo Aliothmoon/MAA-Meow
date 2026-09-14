@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.domain.usecase
 
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.AwardConfig
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.WakeUpConfig
@@ -10,6 +11,10 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.AppAliveChecker
 import com.aliothmoon.maameow.remote.AppAliveStatus
+import com.aliothmoon.maameow.utils.i18n.uiTextDynamic
+import com.aliothmoon.maameow.utils.i18n.uiTextJoin
+import com.aliothmoon.maameow.utils.i18n.uiTextLines
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import io.mockk.every
 import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
@@ -69,6 +74,55 @@ class PrepareTaskStartUseCaseTest {
         assertEquals(
             TaskStartDecision.Blocked(reason = TaskStartDecisionReason.NO_TASK_SELECTED),
             result
+        )
+    }
+
+    @Test
+    fun conflictingClientTypes_listsLocalizedNamesAsDetail() = runBlocking {
+        val result = useCase(AppAliveStatus.ALIVE)(
+            chain = listOf(
+                TaskChainNode(
+                    name = "开始唤醒1",
+                    order = 1,
+                    enabled = true,
+                    config = WakeUpConfig(clientType = "Official"),
+                ),
+                TaskChainNode(
+                    name = "开始唤醒2",
+                    order = 2,
+                    enabled = true,
+                    config = WakeUpConfig(clientType = "Bilibili"),
+                ),
+            ),
+            context = TaskStartContext(mode = TaskStartMode.SCHEDULED),
+        )
+
+        assertEquals(
+            TaskStartDecision.Blocked(
+                reason = TaskStartDecisionReason.CONFLICTING_CLIENT_TYPES,
+                details = listOf(
+                    uiTextJoin(
+                        uiTextOf(R.string.panel_wakeup_client_official),
+                        uiTextOf(R.string.panel_wakeup_client_bilibili),
+                        separator = uiTextOf(R.string.common_enumeration_separator),
+                    ),
+                ),
+            ),
+            result
+        )
+    }
+
+    @Test
+    fun blockedMessage_isReasonTextFollowedByDetails() {
+        val detail = uiTextDynamic("detail")
+        val decision = TaskStartDecision.Blocked(
+            reason = TaskStartDecisionReason.GAME_NOT_RUNNING_WITHOUT_WAKE_UP,
+            details = listOf(detail),
+        )
+
+        assertEquals(
+            uiTextLines(uiTextOf(R.string.task_start_error_scheduled_no_wakeup), detail),
+            decision.message,
         )
     }
 

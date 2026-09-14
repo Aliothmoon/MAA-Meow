@@ -488,7 +488,7 @@ class BackgroundTaskViewModel(
 
             is TaskStartDecision.Blocked -> {
                 pendingStart = null
-                val message = application.resolveTaskStartDecisionMessage(decision)
+                val message = decision.message
                 Timber.w("Validation failed: %s", message.resolve(application))
                 showDialog(application.createStartBlockedDialog(message))
                 return message
@@ -496,7 +496,7 @@ class BackgroundTaskViewModel(
 
             is TaskStartDecision.RequiresConfirmation -> {
                 pendingStart = PendingStart(context.acknowledged(decision.acknowledgement))
-                val message = application.resolveTaskStartDecisionMessage(decision)
+                val message = decision.message
                 showDialog(application.createStartWarningDialog(message))
                 return message
             }

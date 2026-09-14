@@ -205,7 +205,10 @@ class LaunchPipeline(
             log.append(uiTextOf(R.string.schedule_log_wait_profile))
             chainState.isLoaded.first { it }
             if (chainState.profileId.value != request.profileId) {
-                log.append(uiTextOf(R.string.schedule_log_switch_profile, request.profileId))
+                // 目标配置可能已删，取不到名字退回 ID
+                val profileName = chainState.profiles.value
+                    .find { it.id == request.profileId }?.name ?: request.profileId
+                log.append(uiTextOf(R.string.schedule_log_switch_profile, profileName))
                 chainState.switchProfile(request.profileId)
             }
             if (chainState.profileId.value != request.profileId) {

@@ -1664,7 +1664,7 @@
     <string name="task_start_warning_game_not_running">检测到游戏未运行，继续执行可能直接失败，是否仍然启动？</string>
     <string name="task_start_warning_game_not_installed">未检测到当前客户端类型对应的游戏安装包，请检查「开始唤醒」中的客户端类型设置是否正确。是否仍要启动？</string>
     <string name="task_start_error_no_task_selected">请先选择要执行的任务</string>
-    <string name="task_start_error_conflicting_client_types">任务链中存在多个不同的客户端类型（%1$s），请保持一致</string>
+    <string name="task_start_error_conflicting_client_types">任务链中存在多个不同的客户端类型，请保持一致</string>
     <string name="task_start_error_no_executable_tasks">当前没有可执行的任务（可能被周计划过滤）</string>
     <string name="task_start_error_scheduled_no_wakeup">未配置开始唤醒且游戏未运行，已取消本次定时执行</string>
     <string name="task_start_error_scheduled_game_not_installed">未检测到当前客户端类型对应的游戏安装包，请检查「开始唤醒」中的客户端类型设置，已取消本次定时执行</string>

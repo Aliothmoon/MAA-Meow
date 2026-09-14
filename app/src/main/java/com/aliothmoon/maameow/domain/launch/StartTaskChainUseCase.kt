@@ -47,10 +47,7 @@ class StartTaskChainUseCase(
             is TaskStartDecision.Blocked -> {
                 return Result.Failed(
                     executionResult = ExecutionResult.FAILED_VALIDATION,
-                    message = uiTextOf(
-                        R.string.schedule_log_task_blocked,
-                        decision.reason.name,
-                    ),
+                    message = uiTextOf(R.string.schedule_log_task_blocked, decision.message),
                 )
             }
 
