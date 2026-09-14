@@ -769,6 +769,7 @@ private fun infrastRoomTypeLabel(roomType: InfrastRoomType): String {
         InfrastRoomType.Dorm -> stringResource(R.string.panel_infrast_room_dorm)
         InfrastRoomType.Processing -> stringResource(R.string.panel_infrast_room_processing)
         InfrastRoomType.Training -> stringResource(R.string.panel_infrast_room_training)
+        InfrastRoomType.AssistantChange -> stringResource(R.string.panel_infrast_room_assistant_change)
     }
 }
 

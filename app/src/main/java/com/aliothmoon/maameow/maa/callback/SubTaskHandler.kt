@@ -573,6 +573,7 @@ class SubTaskHandler(
             }
 
             "BlackFlowMilestoneChanged" -> handleBlackFlowMilestoneChanged(subDetails)
+            "BlackFlowInventoryCleanup" -> handleBlackFlowInventoryCleanup(subDetails)
 
             "StageDrops" -> handleStageDrops(subDetails)
             "AccountSwitch" -> {
@@ -1107,6 +1108,31 @@ class SubTaskHandler(
             resources.getString(R.string.blackflow_strategy_result, outcome, reason),
             if (subDetails?.getBooleanValue("succeeded") == true) LogLevel.INFO else LogLevel.WARNING,
         )
+    }
+
+    // 零件箱超载清理，name 仅 discarded 时有值
+    private fun handleBlackFlowInventoryCleanup(subDetails: JSONObject?) {
+        when (subDetails?.getString("status")) {
+            "started" -> append(
+                resources.getString(R.string.blackflow_inventory_cleanup_started), LogLevel.WARNING
+            )
+
+            "discarded" -> append(
+                resources.getString(
+                    R.string.blackflow_inventory_cleanup_discarded,
+                    subDetails.getString("name").orEmpty(),
+                ),
+                LogLevel.INFO,
+            )
+
+            "completed" -> append(
+                resources.getString(R.string.blackflow_inventory_cleanup_completed), LogLevel.SUCCESS
+            )
+
+            "failed" -> append(
+                resources.getString(R.string.blackflow_inventory_cleanup_failed), LogLevel.ERROR
+            )
+        }
     }
 
     private fun handleBlackFlowRoutingDecision(subDetails: JSONObject?) {

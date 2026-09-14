@@ -909,6 +909,7 @@
     <string name="panel_infrast_room_dorm">Dormitory</string>
     <string name="panel_infrast_room_processing">Workshop</string>
     <string name="panel_infrast_room_training">Training Room</string>
+    <string name="panel_infrast_room_assistant_change">Assistant Change</string>
     <string name="panel_infrast_dorm_trust">Trust farming in Dormitory</string>
     <string name="panel_infrast_dorm_filter_not_stationed">Do not move stationed operators into dorms</string>
     <string name="panel_infrast_dorm_filter_not_stationed_tip">When enabled, operators such as Irene and Logos will not be removed from the Training Room; stationed operators with low mood are swapped out by their own facility shift and then move into a dormitory to rest.</string>
@@ -2355,6 +2356,10 @@
     <string name="blackflow_strategy_result">Roguelike strategy ended: %1$s (%2$s)</string>
     <string name="blackflow_strategy_started">BlackFlow strategy started: %1$s</string>
     <string name="blackflow_strategy_unknown">Unknown strategy</string>
+    <string name="blackflow_inventory_cleanup_started">Parts box overloaded, discarding parts</string>
+    <string name="blackflow_inventory_cleanup_discarded">Discarded part: %1$s</string>
+    <string name="blackflow_inventory_cleanup_completed">Parts box cleanup completed</string>
+    <string name="blackflow_inventory_cleanup_failed">Parts box cleanup failed</string>
     <string name="blackflow_decision_probe_unknown_node">Probe the nearest unclassified node on the route</string>
     <string name="blackflow_decision_policy_order">Selected by the configured policy order</string>
     <string name="blackflow_decision_detail_unknown">Decision detail unknown</string>
@@ -2464,7 +2469,7 @@
     <string name="blackflow_outcome_move_confirmation_failed">Failed to confirm the move</string>
     <string name="blackflow_outcome_post_move_validation_failed">Post-move state validation failed</string>
     <string name="blackflow_outcome_planning_retry_exhausted">Route replanning limit reached</string>
-    <string name="blackflow_outcome_state_machine_dead_end">Interface flow reached a dead end</string>
+    <string name="blackflow_outcome_state_machine_dead_end">Internal state machine error</string>
     <string name="blackflow_outcome_map_recovery_exhausted">Map recovery retries exhausted</string>
     <string name="blackflow_outcome_floor_recognition_failed">Floor recognition failed</string>
     <string name="blackflow_outcome_movement_inventory_failed">Movement item recognition failed</string>
@@ -2494,7 +2499,7 @@
     <string name="blackflow_termination_perception_port_unavailable">Map perception and task interfaces are unavailable</string>
     <string name="blackflow_termination_map_rebuild_failed_twice">Map rebuild failed twice consecutively</string>
     <string name="blackflow_termination_planning_retry_exhausted">Preview changes exhausted the route replanning limit</string>
-    <string name="blackflow_termination_unknown">See the file log for details</string>
+    <string name="blackflow_termination_unknown">To report this, go to Settings → About → Report an Issue</string>
     <string name="panel_depot_only_first_insufficient_plan">Only run the first insufficient plan</string>
     <string name="panel_depot_only_first_insufficient_plan_tip">Use the inventory saved at startup to select the first plan with insufficient stock and an available stage. Later plans are considered on the next run.</string>
     <string name="runlog_append_task_failed">Failed to add task to the queue: %1$s</string>

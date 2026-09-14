@@ -113,6 +113,23 @@ class InfrastCrossFacilityParamsTest {
     }
 
     @Test
+    fun assistantChange_newProfileEnabled_existingProfileBackfilledDisabled() {
+        // 对齐 WPF：新配置全部启用，老配置补全时不启用
+        assertEquals("AssistantChange", facilityOf(paramsOf(InfrastConfig())).last())
+
+        val legacy = InfrastConfig(
+            facilities = com.aliothmoon.maameow.domain.enums.InfrastRoomType.values
+                .filter { it != com.aliothmoon.maameow.domain.enums.InfrastRoomType.AssistantChange }
+                .map { it to true }
+        )
+        assertEquals(
+            com.aliothmoon.maameow.domain.enums.InfrastRoomType.AssistantChange to false,
+            legacy.normalizedFacilities().last(),
+        )
+        assertFalse(facilityOf(paramsOf(legacy)).contains("AssistantChange"))
+    }
+
+    @Test
     fun facilities_duplicatesAreDropped() {
         val dup = InfrastConfig(
             facilities = InfrastConfig().facilities +

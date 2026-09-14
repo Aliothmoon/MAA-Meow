@@ -26,7 +26,10 @@ enum class InfrastRoomType {
     Processing,
 
     /** 训练室 */
-    Training;
+    Training,
+
+    /** 副手换人(core ≥ v6.18.0-beta.1，旧 core 会拒掉整个基建任务) */
+    AssistantChange;
 
     companion object {
         val values = InfrastRoomType.entries
