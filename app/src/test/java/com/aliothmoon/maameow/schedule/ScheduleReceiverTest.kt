@@ -5,10 +5,15 @@ import android.content.Context
 import android.content.Intent
 import android.os.PowerManager
 import androidx.core.content.ContextCompat
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
+import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import com.aliothmoon.maameow.schedule.receiver.ScheduleReceiver
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
+import com.aliothmoon.maameow.schedule.service.ScheduleFailureReporter
+import com.aliothmoon.maameow.schedule.service.ScheduleTriggerLogger
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -19,6 +24,7 @@ import io.mockk.spyk
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Test
@@ -35,10 +41,17 @@ class ScheduleReceiverTest {
         coEvery { repository.getById(strategy.id) } returns strategy
         coEvery { repository.recordExecutionResult(any(), any(), any(), any()) } throws IOException("disk full")
         val alarms = mockk<ScheduleAlarmManager>(relaxed = true)
+        val triggerLogger = mockk<ScheduleTriggerLogger>(relaxed = true) {
+            every { resolveMessage(any()) } returns "service start failed"
+        }
+        val settings = mockk<AppSettingsManager> {
+            every { runMode } returns MutableStateFlow(RunMode.BACKGROUND)
+        }
         startKoin {
             modules(module {
                 single { repository }
                 single { alarms }
+                single { ScheduleFailureReporter(triggerLogger, repository, settings) }
             })
         }
         try {
@@ -50,7 +63,6 @@ class ScheduleReceiverTest {
             }
             val context = mockk<Context> {
                 every { getSystemService(Context.POWER_SERVICE) } returns power
-                every { getString(any(), *anyVararg()) } returns "service start failed"
             }
             val incoming = mockk<Intent> {
                 every { action } returns ScheduleAlarmManager.ACTION_SCHEDULE_TRIGGER
@@ -76,6 +88,16 @@ class ScheduleReceiverTest {
             withTimeout(2_000L) { finished.await() }
             verify(exactly = 1) { alarms.scheduleNext(strategy, 123L) }
             verify(exactly = 0) { alarms.scheduleRetry(any(), any(), any()) }
+            verify(exactly = 1) {
+                triggerLogger.writeClosed(
+                    strategyId = strategy.id,
+                    strategyName = strategy.name,
+                    scheduledTimeMs = 123L,
+                    result = ExecutionResult.FAILED_UI_LAUNCH,
+                    message = any(),
+                    runMode = RunMode.BACKGROUND.name,
+                )
+            }
             coVerify(exactly = 1) { repository.recordExecutionResult(strategy.id, any(), "service start failed", any()) }
             verify(exactly = 1) { lock.release() }
         } finally {

@@ -109,6 +109,7 @@ import com.aliothmoon.maameow.schedule.LaunchIntentMapper
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.service.CountdownUIImpl
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
+import com.aliothmoon.maameow.schedule.service.ScheduleFailureReporter
 import com.aliothmoon.maameow.schedule.service.ScheduleTriggerHandler
 import com.aliothmoon.maameow.schedule.service.ScheduleTriggerLogger
 import com.aliothmoon.maameow.utils.CrashHandler
@@ -165,6 +166,7 @@ val appModule = module {
     singleOf(::AchievementReporter)
     single { ScheduleStrategyRepository(androidContext()) }
     singleOf(::ScheduleTriggerLogger)
+    singleOf(::ScheduleFailureReporter)
     singleOf(::ScheduleAlarmManager)
     single { ScheduleTriggerHandler(get(), get(), get(), get(), get()) }
     singleOf(::LaunchMutex)

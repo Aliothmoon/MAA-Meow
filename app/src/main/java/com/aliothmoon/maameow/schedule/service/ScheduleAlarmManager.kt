@@ -29,6 +29,8 @@ class ScheduleAlarmManager(
 
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
+    private val showIntent: PendingIntent by lazy { mainActivityPendingIntent(context) }
+
     /**
      * 按设定时间注册下一个闹钟，后台倒计时在触发后开始
      */
@@ -75,15 +77,15 @@ class ScheduleAlarmManager(
         triggerMs: Long,
         retryCount: Int = 0,
     ): Boolean {
-        // setAlarmClock 同样需要精确闹钟权限，等待授权后统一恢复
+        // setAlarmClock 也要精确闹钟权限，等待授权后统一恢复
         if (!canScheduleExact()) {
             Timber.w("策略 [%s] 未注册：缺少精确闹钟权限", strategyId)
             return false
         }
         return try {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                triggerMs,
+            // 强制脱 Doze 准时投递，代价是状态栏常驻闹钟图标
+            alarmManager.setAlarmClock(
+                AlarmManager.AlarmClockInfo(triggerMs, showIntent),
                 buildPendingIntent(strategyId, scheduledTimeMs, retryCount),
             )
             true
@@ -128,7 +130,7 @@ class ScheduleAlarmManager(
     }
 
     /**
-     * [FIXED_TIME] 扫描未来 7 天，匹配 dayOfWeek + executionTimes。
+     * 扫描未来 7 天，匹配 dayOfWeek + executionTimes。
      */
     private fun computeNextFixedTime(
         strategy: ScheduleStrategy,
@@ -162,7 +164,7 @@ class ScheduleAlarmManager(
     }
 
     /**
-     * [INTERVAL] 从 startTimeMs 起，每隔 intervalMinutes 触发一次。
+     * 从 startTimeMs 起，每隔 intervalMinutes 触发一次。
      * 计算公式: next = startTime + ceil((baseline - startTime) / interval) * interval
      */
     private fun computeNextInterval(

@@ -1660,6 +1660,7 @@
     <string name="schedule_exact_alarm_hint">Schedules cannot trigger until exact alarms are allowed. Scheduling resumes automatically after permission is granted</string>
     <string name="schedule_log_data_unavailable">Schedule configuration is temporarily unavailable</string>
     <string name="schedule_log_service_start_failed">Failed to start foreground service: %1$s</string>
+    <string name="schedule_log_app_init_failed">App initialization failed: %1$s</string>
     <string name="schedule_exact_alarm_settings">Exact alarm settings</string>
     <string name="schedule_delete_strategy_title">Delete schedule</string>
     <string name="schedule_delete_strategy_message">Delete this schedule?</string>

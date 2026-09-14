@@ -1716,6 +1716,7 @@
     <string name="schedule_exact_alarm_hint">定时任务暂无法触发，请允许精确闹钟，授权后自动恢复调度</string>
     <string name="schedule_log_data_unavailable">定时配置暂时无法读取</string>
     <string name="schedule_log_service_start_failed">前台服务启动失败：%1$s</string>
+    <string name="schedule_log_app_init_failed">应用初始化失败：%1$s</string>
     <string name="schedule_exact_alarm_settings">精确闹钟设置</string>
     <string name="schedule_delete_strategy_title">删除策略</string>
     <string name="schedule_delete_strategy_message">确定要删除该定时策略吗？</string>

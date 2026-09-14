@@ -3,16 +3,16 @@ package com.aliothmoon.maameow.schedule.service
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.aliothmoon.maameow.MaaApplication
-import com.aliothmoon.maameow.MainActivity
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.service.SpecialUseFgsGate
+import com.aliothmoon.maameow.schedule.model.ExecutionResult
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,6 +24,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.koin.android.ext.android.inject
 import timber.log.Timber
+import kotlin.time.Duration.Companion.milliseconds
 
 /** 定时触发 FGS，持锁等待启动流程完成 */
 class ScheduleExecutionService : Service() {
@@ -37,6 +38,7 @@ class ScheduleExecutionService : Service() {
 
     private val triggerHandler: ScheduleTriggerHandler by inject()
     private val scheduleAlarmManager: ScheduleAlarmManager by inject()
+    private val failureReporter: ScheduleFailureReporter by inject()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     /** Service 生命周期跟在途触发数绑定，不跟最后一个 startId */
@@ -63,6 +65,7 @@ class ScheduleExecutionService : Service() {
 
         val scheduledTime = intent.getLongExtra(ScheduleAlarmManager.EXTRA_SCHEDULED_TIME, 0L)
         val retryCount = intent.getIntExtra(ScheduleAlarmManager.EXTRA_RETRY_COUNT, 0)
+        Timber.i("$TAG: started: %s, scheduled=%d, retry=%d", strategyId, scheduledTime, retryCount)
         // 须先于 launch：协程调度前计数仍是 0，会被并发触发的收尾停掉
         val wakeLock = ScheduleWakeLock.acquire(this, STARTUP_WAKE_TIMEOUT_MS)
         wakeLocks.add(wakeLock)
@@ -71,10 +74,11 @@ class ScheduleExecutionService : Service() {
             var startupReady = false
             try {
                 // 通知和唤醒锁已就位，挂起等待不会阻塞主线程
-                withTimeout(STARTUP_WAKE_TIMEOUT_MS) {
+                withTimeout(STARTUP_WAKE_TIMEOUT_MS.milliseconds) {
                     (application as MaaApplication).awaitReady()
                 }
                 startupReady = true
+                Timber.i("$TAG: app ready: %s", strategyId)
                 withContext(Dispatchers.IO) {
                     triggerHandler.handle(strategyId, scheduledTime, retryCount)
                 }
@@ -82,6 +86,19 @@ class ScheduleExecutionService : Service() {
                 currentCoroutineContext().ensureActive()
                 if (!startupReady) {
                     scheduleAlarmManager.scheduleRetry(strategyId, scheduledTime, retryCount)
+                    // 应用未就绪，拿不到策略名
+                    withContext(Dispatchers.IO) {
+                        failureReporter.report(
+                            strategyId = strategyId,
+                            strategyName = strategyId,
+                            scheduledTimeMs = scheduledTime,
+                            result = ExecutionResult.FAILED_START,
+                            message = uiTextOf(
+                                R.string.schedule_log_app_init_failed,
+                                e.message ?: e.javaClass.simpleName,
+                            ),
+                        )
+                    }
                 }
                 Timber.e(e, "$TAG: trigger failed: %s", strategyId)
             } finally {
@@ -127,16 +144,6 @@ class ScheduleExecutionService : Service() {
         }
     }
 
-    private fun buildContentIntent(): PendingIntent {
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        return PendingIntent.getActivity(
-            this, 0, intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-    }
-
     private fun buildPreparingNotification(): Notification {
         val contentText = getString(R.string.notification_schedule_preparing)
         return NotificationCompat.Builder(this, CHANNEL_ID)
@@ -144,7 +151,7 @@ class ScheduleExecutionService : Service() {
             .setContentTitle(getString(R.string.notification_schedule_title))
             .setContentText(contentText)
             .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
-            .setContentIntent(buildContentIntent())
+            .setContentIntent(mainActivityPendingIntent(this))
             .setOngoing(true)
             .setRequestPromotedOngoing(true)
             .setSilent(true)

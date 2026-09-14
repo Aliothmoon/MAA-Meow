@@ -8,8 +8,8 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
+import com.aliothmoon.maameow.schedule.service.ScheduleFailureReporter
 import com.aliothmoon.maameow.schedule.service.ScheduleWakeLock
-import com.aliothmoon.maameow.utils.i18n.resolve
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import org.koin.core.context.GlobalContext
 import timber.log.Timber
+import kotlin.time.Duration.Companion.milliseconds
 
 /** 接收定时触发并启动 ScheduleExecutionService。 */
 class ScheduleReceiver : BroadcastReceiver() {
@@ -28,13 +29,19 @@ class ScheduleReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != ScheduleAlarmManager.ACTION_SCHEDULE_TRIGGER) return
+
         val strategyId = intent.getStringExtra(ScheduleAlarmManager.EXTRA_STRATEGY_ID) ?: return
         val scheduledTime = intent.getLongExtra(ScheduleAlarmManager.EXTRA_SCHEDULED_TIME, 0L)
         val retryCount = intent.getIntExtra(ScheduleAlarmManager.EXTRA_RETRY_COUNT, 0)
 
-        if (intent.action != ScheduleAlarmManager.ACTION_SCHEDULE_TRIGGER) return
-
-        Timber.i("Schedule alarm triggered for strategy: %s", strategyId)
+        val delayMs = if (scheduledTime > 0L) System.currentTimeMillis() - scheduledTime else 0L
+        Timber.i(
+            "Schedule alarm triggered: %s, delay=+%dms, retry=%d",
+            strategyId,
+            delayMs,
+            retryCount,
+        )
         val serviceIntent = Intent().apply {
             setClassName(context, EXECUTION_SERVICE_CLASS)
             action = ScheduleAlarmManager.ACTION_SCHEDULE_TRIGGER
@@ -61,8 +68,9 @@ class ScheduleReceiver : BroadcastReceiver() {
                     val koin = GlobalContext.get()
                     val repository: ScheduleStrategyRepository = koin.get()
                     val alarmManager: ScheduleAlarmManager = koin.get()
+                    val failureReporter: ScheduleFailureReporter = koin.get()
                     val strategy = try {
-                        withTimeout(5_000L) { repository.getById(strategyId) }
+                        withTimeout(5_000L.milliseconds) { repository.getById(strategyId) }
                     } catch (restoreError: Exception) {
                         Timber.w(restoreError, "Schedule fallback failed: %s", strategyId)
                         alarmManager.scheduleRetry(strategyId, scheduledTime, retryCount)
@@ -71,16 +79,16 @@ class ScheduleReceiver : BroadcastReceiver() {
                     if (strategy != null && strategy.enabled) {
                         // 先续排，结果写盘失败也不丢闹钟
                         alarmManager.scheduleNext(strategy, scheduledTime)
-                        withTimeout(5_000L) {
-                            repository.recordExecutionResult(
-                                strategyId = strategyId,
-                                result = ExecutionResult.FAILED_UI_LAUNCH,
-                                message = uiTextOf(
-                                    R.string.schedule_log_service_start_failed,
-                                    e.message ?: e.javaClass.simpleName,
-                                ).resolve(context),
-                            )
-                        }
+                        failureReporter.report(
+                            strategyId = strategyId,
+                            strategyName = strategy.name.ifEmpty { strategyId },
+                            scheduledTimeMs = scheduledTime,
+                            result = ExecutionResult.FAILED_UI_LAUNCH,
+                            message = uiTextOf(
+                                R.string.schedule_log_service_start_failed,
+                                e.message ?: e.javaClass.simpleName,
+                            ),
+                        )
                     }
                 } catch (restoreError: Exception) {
                     Timber.e(restoreError, "Cannot restore schedule: %s", strategyId)
