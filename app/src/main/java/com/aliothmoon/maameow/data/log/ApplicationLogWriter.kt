@@ -19,10 +19,8 @@ import java.time.format.DateTimeFormatter
 
 class ApplicationLogWriter(
     private val pathConfig: MaaPathConfig,
-    appSettings: AppSettingsManager
+    private val appSettings: AppSettingsManager
 ) {
-
-    private val isDebug = appSettings.debugMode.value
 
     companion object {
         private const val INTERNAL_TAG = "ApplicationLogWriter"
@@ -55,7 +53,9 @@ class ApplicationLogWriter(
 
     init {
         scope.launch {
-            if (isDebug) {
+            // 读盘后再消费，启动头才在最前
+            runCatching { appSettings.awaitLoaded() }
+            if (appSettings.debugMode.value) {
                 writeAppInfoHeader()
             }
             for (entry in writeChannel) {

@@ -16,7 +16,7 @@ class LogTreeHolder(
             } else {
                 ReleaseTree()
             },
-            FileLogTree(writer, appSettings.debugMode.value)
+            FileLogTree(writer, appSettings.debugMode)
         )
     }
 

@@ -5,6 +5,8 @@ import android.os.Build
 import android.os.Process
 import com.aliothmoon.maameow.constant.LogConfig
 import com.aliothmoon.maameow.data.config.MaaPathConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
 import java.io.PrintWriter
@@ -26,7 +28,6 @@ class CrashHandler(private val pathConfig: MaaPathConfig) : Thread.UncaughtExcep
         Timber.i("CrashHandler init")
         this.context = context.applicationContext
         Thread.setDefaultUncaughtExceptionHandler(this)
-        cleanOldCrashLogs()
     }
 
     override fun uncaughtException(thread: Thread, throwable: Throwable) {
@@ -82,7 +83,7 @@ class CrashHandler(private val pathConfig: MaaPathConfig) : Thread.UncaughtExcep
     }
 
 
-    private fun cleanOldCrashLogs() {
+    suspend fun cleanOldCrashLogs(): Unit = withContext(Dispatchers.IO) {
         try {
             val crashDir = File(pathConfig.debugDir, CRASH_LOG_DIR)
             if (crashDir.exists() && crashDir.isDirectory) {

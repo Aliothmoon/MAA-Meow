@@ -61,6 +61,9 @@ class MaaApplication : Application() {
             androidContext(app)
             modules(appModule, useCaseModule, viewModelModule, floatingWindowModule)
         }
+        // 不等设置读盘，冷启动 receiver / FGS 的日志与崩溃才接得住
+        treeHolder.setup()
+        crashHandler.init(this)
 
         applicationScope.launch(Dispatchers.Main) {
             appSettingsManager.awaitLoaded()
@@ -73,9 +76,7 @@ class MaaApplication : Application() {
     }
 
     private fun postCreateApplication() {
-        treeHolder.setup()
         RemoteServiceManager.initialize(this, appSettingsManager, pathConfig)
-        crashHandler.init(this)
         overlayController.setup()
         unifiedStateDispatcher.start()
         taskEndRegistry.start()
@@ -83,6 +84,7 @@ class MaaApplication : Application() {
         depotRepository.start()
         operBoxRepository.start()
         cleanCachedUpdateApks()
+        applicationScope.launch { crashHandler.cleanOldCrashLogs() }
         doSyncScheduleAlarms()
     }
 
