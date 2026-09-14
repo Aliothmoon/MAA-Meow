@@ -1917,7 +1917,7 @@
     <!-- i18n: announcement -->
     <string name="announcement_title">Important Notice</string>
     <string name="announcement_dont_show_again">Do not show again until the next update</string>
-    <string name="announcement_dont_show_again_hint">Please read the full announcement and stay for %1$d seconds to enable</string>
+    <string name="announcement_dont_show_again_hint">Please read the full announcement and stay for %1$d seconds to confirm or check</string>
     <string name="announcement_scroll_to_bottom_hint">Please read the full announcement first</string>
     <string name="announcement_confirm">Confirm</string>
     <string name="announcement_section_all">All Announcements</string>

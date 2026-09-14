@@ -1973,7 +1973,7 @@
     <!-- i18n: announcement -->
     <string name="announcement_title">重要公告</string>
     <string name="announcement_dont_show_again">下次公告更新前不再显示</string>
-    <string name="announcement_dont_show_again_hint">请阅读完公告并停留 %1$d 秒后可勾选</string>
+    <string name="announcement_dont_show_again_hint">请阅读完公告并停留 %1$d 秒后可确认或勾选</string>
     <string name="announcement_scroll_to_bottom_hint">请阅读完公告内容</string>
     <string name="announcement_confirm">确认</string>
     <string name="announcement_section_all">全部公告</string>

@@ -72,8 +72,8 @@ import com.aliothmoon.maameow.announcement.AnnouncementSectionParser
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 
-/** 勾选"不再显示"前需停留的秒数 */
-private const val STAY_SECONDS_REQUIRED = 5
+/** 滚到底后需停留的秒数，满了才能确认或勾选"不再显示" */
+private const val STAY_SECONDS_REQUIRED = 7
 
 /** 未读完狂点确认：超过该次数放行并解锁成就 */
 private const val STUBBORN_CLICKS_TO_UNLOCK = 20
@@ -127,14 +127,17 @@ fun AnnouncementDialog(
             delay(1000)
             elapsedSeconds++
         }
+        // 倒计时结束，按钮文案恢复
+        stubbornClicks = 0
     }
 
-    // 勾选框是否可启用
-    val canCheck by remember {
+    // 滚到底且停留满时长才算读完，确认与勾选都以此为准
+    val readComplete by remember {
         derivedStateOf { scrolledToBottom && elapsedSeconds >= STAY_SECONDS_REQUIRED }
     }
 
-    // 未读完点确认不关闭：文案逐次升级，累计 20+ 次解锁成就并放行（对齐 WPF）
+    // 未读完点确认不关闭：文案逐次升级，累计 20+ 次解锁成就并放行
+    // 与 WPF 不同：滚到底不够，须等倒计时结束
     val confirmLabel = when {
         stubbornClicks <= 0 -> stringResource(R.string.announcement_confirm)
         stubbornClicks == 1 -> stringResource(R.string.announcement_not_finished_confirm_1)
@@ -143,7 +146,7 @@ fun AnnouncementDialog(
                 "?".repeat(stubbornClicks - 3)
     }
     val onConfirmClick = {
-        if (scrolledToBottom || dontShowAgain) {
+        if (readComplete) {
             onDismiss(dontShowAgain)
         } else {
             stubbornClicks++
@@ -206,7 +209,7 @@ fun AnnouncementDialog(
                 val inLandscape =
                     LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
                 val stayHint = when {
-                    canCheck -> null
+                    readComplete -> null
                     !scrolledToBottom -> stringResource(R.string.announcement_scroll_to_bottom_hint)
                     else -> stringResource(
                         R.string.announcement_dont_show_again_hint,
@@ -329,7 +332,7 @@ fun AnnouncementDialog(
                         ) {
                             DontShowAgainToggle(
                                 checked = dontShowAgain,
-                                enabled = canCheck,
+                                enabled = readComplete,
                                 hint = stayHint,
                                 compact = true,
                                 modifier = Modifier.weight(1f),
@@ -352,7 +355,7 @@ fun AnnouncementDialog(
                     } else {
                         DontShowAgainToggle(
                             checked = dontShowAgain,
-                            enabled = canCheck,
+                            enabled = readComplete,
                             hint = stayHint,
                             compact = false,
                             modifier = Modifier.fillMaxWidth(),
