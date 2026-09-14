@@ -624,6 +624,15 @@
     <string name="bg_auto_mute_on_launch">游戏启动时关闭游戏声音</string>
     <string name="bg_auto_close_on_end">任务自动结束时关闭游戏</string>
     <string name="bg_toast_auto_closed_on_end">任务已结束，已自动关闭游戏</string>
+    <string name="bg_auto_run_duration_limit">限制单次运行时长</string>
+    <string name="bg_auto_run_duration_limit_value">%1$d 分钟</string>
+    <string name="bg_auto_run_duration_limit_remaining">本轮剩余 %1$s</string>
+    <string name="bg_auto_run_duration_limit_decrease">减少时长</string>
+    <string name="bg_auto_run_duration_limit_increase">增加时长</string>
+    <string name="bg_auto_run_duration_limit_edit">手动输入时长</string>
+    <string name="bg_auto_run_duration_limit_input_title">运行时长上限</string>
+    <string name="bg_auto_run_duration_limit_input_label">分钟</string>
+    <string name="bg_auto_run_duration_limit_input_hint">范围 %1$d–%2$d 分钟</string>
     <string name="bg_toast_mute_failed">静音失败，建议直接用系统音量键调低媒体音量</string>
     <string name="bg_auto_hardware_screen_off">熄屏挂机时关闭屏幕</string>
     <string name="bg_auto_show_touch_preview">显示触摸预览</string>
@@ -2340,6 +2349,7 @@
     <string name="runlog_remote_connect_failed">无法连接远程服务：%1$s</string>
     <string name="runlog_task_stopping">正在停止任务...</string>
     <string name="runlog_task_stopped">任务停止，状态: %1$s</string>
+    <string name="runlog_run_duration_limit_reached">已达到运行时长上限（%1$d 分钟），停止任务</string>
     <string name="runlog_service_terminated">MAA服务异常终止</string>
     <string name="runlog_game_process_gone">游戏进程未启动或被异常关闭(%1$s)</string>
     <string name="runlog_game_fps_low">游戏画面帧率仅 %1$d FPS，低于 30，自动战斗可能出错；请在游戏设置中开启高帧率模式，并关闭省电模式</string>

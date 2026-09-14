@@ -27,6 +27,9 @@ class TaskEndRegistry(
 
         /** STOPPING → IDLE/ERROR，回调侧（掉线等）中止 */
         ABORTED,
+
+        /** STOPPING → IDLE/ERROR，到达运行时长上限，按自动结束执行收尾 */
+        DURATION_LIMIT,
     }
 
     fun interface PendingAction {
@@ -75,6 +78,7 @@ class TaskEndRegistry(
             MaaExecutionState.STOPPING -> when (compositionService.lastStopOrigin) {
                 MaaCompositionService.StopOrigin.CALLBACK -> Reason.ABORTED
                 MaaCompositionService.StopOrigin.USER -> Reason.MANUAL
+                MaaCompositionService.StopOrigin.RUN_DURATION_LIMIT -> Reason.DURATION_LIMIT
             }
             else -> null
         }

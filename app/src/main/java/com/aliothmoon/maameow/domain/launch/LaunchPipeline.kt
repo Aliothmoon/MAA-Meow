@@ -473,7 +473,7 @@ class LaunchPipeline(
             "LaunchPipeline: task end reason=%s closeGame=%s autoSleep=%s saver=%s",
             reason, closeGame, autoSleep, releaseScreenSaver,
         )
-        // 手动停止不关游戏，其余结束（自然完成 / 掉线中止）都关
+        // 手动停止不关游戏，其余结束（自然完成 / 掉线中止 / 到达时长上限）都关
         if (closeGame && reason != TaskEndRegistry.Reason.MANUAL) {
             compositionService.stopVirtualDisplay()
         }

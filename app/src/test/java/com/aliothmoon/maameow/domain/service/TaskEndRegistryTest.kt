@@ -107,6 +107,16 @@ class TaskEndRegistryTest {
     }
 
     @Test
+    fun durationLimitStop_isDurationLimit() = runBlocking<Unit> {
+        drive(MaaExecutionState.RUNNING)
+        registry.armOnce { pendingSeen.add(it) }
+        stopOrigin = MaaCompositionService.StopOrigin.RUN_DURATION_LIMIT
+        drive(MaaExecutionState.STOPPING, MaaExecutionState.IDLE)
+        assertEquals(listOf(TaskEndRegistry.Reason.DURATION_LIMIT), emitted)
+        assertEquals(listOf(TaskEndRegistry.Reason.DURATION_LIMIT), pendingSeen)
+    }
+
+    @Test
     fun startingToIdle_emitsNothing() = runBlocking<Unit> {
         drive(MaaExecutionState.STARTING, MaaExecutionState.IDLE)
         assertEquals(emptyList<TaskEndRegistry.Reason>(), emitted)

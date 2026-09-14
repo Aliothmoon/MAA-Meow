@@ -82,10 +82,15 @@ class MaaCompositionService(
     private val _state = MutableStateFlow(MaaExecutionState.IDLE)
     val state: StateFlow<MaaExecutionState> = _state.asStateFlow()
 
-    /** 停止发起方：用户操作 / 回调侧（掉线等）中止 */
-    enum class StopOrigin { USER, CALLBACK }
+    /** 停止发起方：用户操作 / 回调侧（掉线等）中止 / 到达运行时长上限 */
+    enum class StopOrigin { USER, CALLBACK, RUN_DURATION_LIMIT }
 
-    /** 本轮 STOPPING 的发起方，STARTING 时复位；供 TaskEndRegistry 区分手动停止与异常中止 */
+    private val runDeadlineGuard = RunDeadlineGuard()
+
+    /** 本轮运行时长上限的截止时间（elapsedRealtime），未计时为 null */
+    val runDeadline: StateFlow<Long?> = runDeadlineGuard.deadline
+
+    /** 本轮 STOPPING 的发起方，STARTING 时复位；供 TaskEndRegistry 区分手动停止、异常中止与到达时长上限 */
     @Volatile
     var lastStopOrigin: StopOrigin = StopOrigin.USER
         private set
@@ -133,6 +138,10 @@ class MaaCompositionService(
         // startForeground 契约未履行直接杀进程（RemoteServiceException）。
         // 服务自身观察状态流，startForeground 后对 IDLE/ERROR 自行 stopSelf
         if (state != MaaExecutionState.STARTING) {
+            // 自然完成走回调直接置 IDLE，不经过 finishStop，统一在这里撤掉计时
+            if (state == MaaExecutionState.IDLE || state == MaaExecutionState.ERROR) {
+                runDeadlineGuard.disarm()
+            }
             _state.value = state
             return
         }
@@ -285,8 +294,10 @@ class MaaCompositionService(
         successMessage = context.getString(R.string.runlog_task_started),
         preflightLogs = preflightLogs,
         onSessionStarted = onSessionStarted,
+        limitRunDuration = true,
     )
 
+    // 抄作业 / 工具箱 / 小游戏不受运行时长上限约束
     suspend fun startCopilot(
         tasks: List<MaaTaskParams>,
         clientType: String = taskChainState.clientType
@@ -528,6 +539,7 @@ class MaaCompositionService(
         fallbacks: Map<TaskSlot, TaskFallbackChain>,
         successMessage: String,
         mode: RunMode,
+        limitRunDuration: Boolean,
     ): StartResult {
         // 独立目录：先投递用户文件，送不过去 core 那边就是 file-not-found，直接报资源错误
         if (!coreDataPusher.pushUserData()) {
@@ -556,12 +568,36 @@ class MaaCompositionService(
                 StartResult.StartError
             )
         }
+        // 先于 RUNNING 计时，秒完的回调置 IDLE 时才能撤掉
+        if (limitRunDuration && appSettings.runDurationLimitEnabled.value) {
+            val limitMinutes = appSettings.runDurationLimitMinutes.value
+            runDeadlineGuard.arm(limitMinutes) { stopByRunDurationLimit(limitMinutes) }
+        }
         setRunState(MaaExecutionState.RUNNING)
         if (mode == RunMode.BACKGROUND) {
             startBackgroundMonitors()
         }
         sessionLogger.appendAndWait(successMessage, LogLevel.SUCCESS)
         return StartResult.Success(maa.GetVersion())
+    }
+
+    private suspend fun stopByRunDurationLimit(limitMinutes: Int) {
+        // 检查与切 STOPPING 须原子，被抢先则交给原流程
+        if (!_state.compareAndSet(MaaExecutionState.RUNNING, MaaExecutionState.STOPPING)) return
+        lastStopOrigin = StopOrigin.RUN_DURATION_LIMIT
+        try {
+            Timber.i("Run duration limit reached: %d min, stopping", limitMinutes)
+            sessionLogger.appendAndWait(
+                context.getString(R.string.runlog_run_duration_limit_reached, limitMinutes),
+                LogLevel.WARNING,
+            )
+            performStop()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // 计时协程没有异常处理器，漏出去会直接崩进程
+            Timber.e(e, "Stop by run duration limit failed")
+        }
     }
 
     /** 启动互斥：前置检查耗时，双入口/双击可能同时穿过 AlreadyRunning 窗口 */
@@ -575,9 +611,11 @@ class MaaCompositionService(
         preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
         fallbacks: Map<TaskSlot, TaskFallbackChain> = emptyMap(),
         onSessionStarted: (suspend () -> Unit)? = null,
+        limitRunDuration: Boolean = false,
     ): StartResult = startMutex.withLock {
         executeStartLocked(
             tasks, clientType, startMessage, successMessage, preflightLogs, fallbacks, onSessionStarted,
+            limitRunDuration,
         )
     }
 
@@ -589,6 +627,7 @@ class MaaCompositionService(
         preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
         fallbacks: Map<TaskSlot, TaskFallbackChain> = emptyMap(),
         onSessionStarted: (suspend () -> Unit)? = null,
+        limitRunDuration: Boolean,
     ): StartResult {
         // 会话与日志先开；STARTING/FGS 必须在前置检查通过后再进入。
         // 否则竖屏等快速失败会 stop 尚未 startForeground 的 FGS，触发
@@ -628,7 +667,9 @@ class MaaCompositionService(
                         mode,
                         clientType
                     )?.let { return@useRemoteService it }
-                    val result = appendTasksAndStart(maa, tasks, fallbacks, successMessage, mode)
+                    val result = appendTasksAndStart(
+                        maa, tasks, fallbacks, successMessage, mode, limitRunDuration,
+                    )
                     if (result is StartResult.Success) {
                         taskChainState.saveLastUsedClientType(clientType)
                     }
@@ -703,6 +744,10 @@ class MaaCompositionService(
         // 先记来源再切状态，TaskEndRegistry 在 STOPPING→IDLE 边沿读取
         lastStopOrigin = origin
         setRunState(MaaExecutionState.STOPPING)
+        return performStop()
+    }
+
+    private suspend fun performStop(): StopResult {
         sessionLogger.appendAndWait(context.getString(R.string.runlog_task_stopping), LogLevel.INFO)
 
         return withContext(Dispatchers.IO) {

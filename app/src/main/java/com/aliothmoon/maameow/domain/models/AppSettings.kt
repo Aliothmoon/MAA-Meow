@@ -59,6 +59,13 @@ data class AppSettings(
     @PrefKey(default = "false")
     val closeAppOnTaskEnd: String = "false",
 
+    /** 主任务链运行时长上限，到点停止并视为自动结束 */
+    @PrefKey(default = "false")
+    val runDurationLimitEnabled: String = "false",
+
+    @PrefKey(default = "240")
+    val runDurationLimitMinutes: String = "240",
+
     @PrefKey(default = "false")
     val useHardwareScreenOff: String = "false",
 

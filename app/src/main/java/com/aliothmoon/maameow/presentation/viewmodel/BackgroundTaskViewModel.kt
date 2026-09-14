@@ -200,7 +200,7 @@ class BackgroundTaskViewModel(
     private fun observeTaskEnd() {
         viewModelScope.launch {
             taskEndRegistry.taskEnded.collect { reason ->
-                // 手动停止不关游戏，其余结束（自然完成 / 掉线中止）都关
+                // 手动停止不关游戏，其余结束（自然完成 / 掉线中止 / 到达时长上限）都关
                 if (reason != TaskEndRegistry.Reason.MANUAL
                     && appSettingsManager.closeAppOnTaskEnd.value
                 ) {

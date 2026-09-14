@@ -11,10 +11,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -249,7 +252,8 @@ private fun MaterialTaskPromptDialog(
             decorFitsSystemWindows = false
         ),
     ) {
-        val safeInsets = WindowInsets.safeDrawing.asPaddingValues()
+        // safeDrawing 含 IME，对称留白会把键盘高度加到上下两侧，IME 改由 imePadding 让出
+        val safeInsets = WindowInsets.safeDrawing.exclude(WindowInsets.ime).asPaddingValues()
         val layoutDirection = LocalLayoutDirection.current
         val maxHorizontalInset = max(
             safeInsets.calculateLeftPadding(layoutDirection),
@@ -261,7 +265,9 @@ private fun MaterialTaskPromptDialog(
         )
 
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding(),
             contentAlignment = Alignment.Center
         ) {
             TaskPromptCard(

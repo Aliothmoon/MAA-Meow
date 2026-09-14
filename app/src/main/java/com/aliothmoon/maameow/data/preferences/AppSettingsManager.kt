@@ -17,6 +17,7 @@ import com.aliothmoon.maameow.domain.models.AppSettingsSchema
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RemoteBackend
+import com.aliothmoon.maameow.domain.models.RunDurationLimit
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.models.UnlockCredential
 import kotlinx.coroutines.CompletableDeferred
@@ -278,6 +279,28 @@ class AppSettingsManager internal constructor(
     suspend fun setCloseAppOnTaskEnd(enabled: Boolean) {
         with(AppSettingsSchema) {
             context.dataStore.edit { it[closeAppOnTaskEnd] = enabled.toString() }
+        }
+    }
+
+    val runDurationLimitEnabled: StateFlow<Boolean> =
+        setting { it.runDurationLimitEnabled.toBooleanStrictOrNull() ?: false }
+
+    suspend fun setRunDurationLimitEnabled(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[runDurationLimitEnabled] = enabled.toString() }
+        }
+    }
+
+    val runDurationLimitMinutes: StateFlow<Int> = setting {
+        it.runDurationLimitMinutes.toIntOrNull()
+            ?.coerceIn(RunDurationLimit.MIN_MINUTES, RunDurationLimit.MAX_MINUTES)
+            ?: RunDurationLimit.DEFAULT_MINUTES
+    }
+
+    suspend fun setRunDurationLimitMinutes(minutes: Int) {
+        val clamped = minutes.coerceIn(RunDurationLimit.MIN_MINUTES, RunDurationLimit.MAX_MINUTES)
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[runDurationLimitMinutes] = clamped.toString() }
         }
     }
 

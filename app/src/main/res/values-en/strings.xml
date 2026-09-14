@@ -411,6 +411,15 @@
     <string name="bg_auto_mute_on_launch">Mute game audio on launch</string>
     <string name="bg_auto_close_on_end">Close game when task ends</string>
     <string name="bg_toast_auto_closed_on_end">Task finished. Game closed automatically</string>
+    <string name="bg_auto_run_duration_limit">Limit run duration</string>
+    <string name="bg_auto_run_duration_limit_value">%1$d min</string>
+    <string name="bg_auto_run_duration_limit_remaining">Remaining: %1$s</string>
+    <string name="bg_auto_run_duration_limit_decrease">Decrease duration</string>
+    <string name="bg_auto_run_duration_limit_increase">Increase duration</string>
+    <string name="bg_auto_run_duration_limit_edit">Enter duration</string>
+    <string name="bg_auto_run_duration_limit_input_title">Run duration limit</string>
+    <string name="bg_auto_run_duration_limit_input_label">Minutes</string>
+    <string name="bg_auto_run_duration_limit_input_hint">Range: %1$d–%2$d min</string>
     <string name="bg_toast_mute_failed">Mute failed. Use the volume keys to lower media volume instead</string>
     <string name="bg_auto_hardware_screen_off">Turn off screen when AFK</string>
     <string name="bg_auto_show_touch_preview">Show touch preview</string>
@@ -2283,6 +2292,7 @@
     <string name="runlog_remote_connect_failed">Cannot connect to remote service: %1$s</string>
     <string name="runlog_task_stopping">Stopping tasks...</string>
     <string name="runlog_task_stopped">Tasks stopped, status: %1$s</string>
+    <string name="runlog_run_duration_limit_reached">Run duration limit reached (%1$d min), stopping tasks</string>
     <string name="runlog_service_terminated">MAA service terminated unexpectedly</string>
     <string name="runlog_game_process_gone">Game process not started or closed unexpectedly (%1$s)</string>
     <string name="runlog_game_fps_low">Game frame rate is only %1$d FPS (below 30); copilot may misbehave. Enable the high frame rate option in the game settings and turn off battery saver</string>
