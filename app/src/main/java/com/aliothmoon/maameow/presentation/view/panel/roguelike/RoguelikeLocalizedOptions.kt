@@ -39,9 +39,14 @@ fun localizedRoguelikeModeDescription(mode: RoguelikeMode, theme: String): Strin
     }
 }
 
-/** 主题专属的开局配置建议；上游其余主题的建议尚未搬运，故只有黑流树海返回非 null */
+/** 主题专属的开局配置建议，与上游 MAA 的推荐配置对应。 */
 @Composable
 fun localizedRoguelikeThemeTip(theme: String): String? = when (theme) {
+    "Phantom" -> stringResource(R.string.panel_roguelike_theme_tip_phantom)
+    "Mizuki" -> stringResource(R.string.panel_roguelike_theme_tip_mizuki)
+    "Sami" -> stringResource(R.string.panel_roguelike_theme_tip_sami)
+    "Sarkaz" -> stringResource(R.string.panel_roguelike_theme_tip_sarkaz)
+    "JieGarden" -> stringResource(R.string.panel_roguelike_theme_tip_jiegarden)
     RoguelikeUi.THEME_BLACK_FLOW ->
         stringResource(R.string.panel_roguelike_theme_tip_blackflow)
 
