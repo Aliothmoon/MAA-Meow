@@ -88,6 +88,7 @@
 
     <!-- subtask_completed -->
     <string name="maa_clue_exchange_unlocked">已开启线索交流</string>
+    <string name="maa_clues_sent">已赠送线索</string>
     <string name="maa_begun_to_explore">已开始探索</string>
     <string name="maa_credit_fight">借助战打 OF-1 赚信用</string>
     <string name="maa_visiting">访问好友</string>
