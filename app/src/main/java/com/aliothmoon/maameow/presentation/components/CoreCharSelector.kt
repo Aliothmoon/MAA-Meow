@@ -77,7 +77,9 @@ fun CoreCharSelector(
     val themeChars = remember(theme) { resourceDataManager.getRoguelikeCoreCharList(theme) }
     LaunchedEffect(themeChars) {
         recommendedChars = themeChars
-        filteredSuggestions = themeChars
+        if (inputText.isBlank()) {
+            filteredSuggestions = themeChars
+        }
     }
 
     // 处理输入变化的函数
@@ -202,26 +204,28 @@ fun CoreCharSelector(
                                 )
                             }
                         }
-                        IconButton(
-                            onClick = {
-                                showSuggestions = !showSuggestions
-                                if (showSuggestions) {
-                                    filteredSuggestions = recommendedChars
-                                }
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (showSuggestions) {
-                                    Icons.Default.KeyboardArrowUp
-                                } else {
-                                    Icons.Default.KeyboardArrowDown
+                        if (recommendedChars.isNotEmpty()) {
+                            IconButton(
+                                onClick = {
+                                    showSuggestions = !showSuggestions
+                                    if (showSuggestions) {
+                                        filteredSuggestions = recommendedChars
+                                    }
                                 },
-                                contentDescription = stringResource(
-                                    if (showSuggestions) R.string.core_char_selector_collapse
-                                    else R.string.core_char_selector_recommended
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (showSuggestions) {
+                                        Icons.Default.KeyboardArrowUp
+                                    } else {
+                                        Icons.Default.KeyboardArrowDown
+                                    },
+                                    contentDescription = stringResource(
+                                        if (showSuggestions) R.string.core_char_selector_collapse
+                                        else R.string.core_char_selector_recommended
+                                    )
                                 )
-                            )
+                            }
                         }
                     }
                 }
