@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,6 +15,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -76,9 +77,7 @@ fun CoreCharSelector(
     val themeChars = remember(theme) { resourceDataManager.getRoguelikeCoreCharList(theme) }
     LaunchedEffect(themeChars) {
         recommendedChars = themeChars
-        if (inputText.isBlank()) {
-            filteredSuggestions = themeChars
-        }
+        filteredSuggestions = themeChars
     }
 
     // 处理输入变化的函数
@@ -144,7 +143,7 @@ fun CoreCharSelector(
         verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = modifier
     ) {
-        // 标签行 + 展开按钮
+        // 标签行与主题提示；推荐列表的展开按钮放在输入框内。
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -173,23 +172,6 @@ fun CoreCharSelector(
                     )
                 }
             }
-            if (recommendedChars.isNotEmpty()) {
-                Text(
-                    text = if (showSuggestions) {
-                        stringResource(R.string.core_char_selector_collapse)
-                    } else {
-                        stringResource(R.string.core_char_selector_recommended)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable {
-                        showSuggestions = !showSuggestions
-                        if (showSuggestions) {
-                            filteredSuggestions = recommendedChars
-                        }
-                    }
-                )
-            }
         }
 
         if (themeTip != null) {
@@ -206,23 +188,42 @@ fun CoreCharSelector(
                 placeholder = stringResource(R.string.core_char_selector_placeholder),
                 outlineColor = if (!isValid && !isValidating) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
                 modifier = Modifier.fillMaxWidth(),
-                trailingIcon = if (inputText.isNotEmpty()) {
-                    {
+                trailingIcon = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (inputText.isNotEmpty()) {
+                            IconButton(
+                                onClick = { handleInputChange("") },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.common_clear),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
                         IconButton(
-                            onClick = { handleInputChange("") },
-                            modifier = Modifier
-                                .size(32.dp)
-                                .offset(x = (-4).dp)
+                            onClick = {
+                                showSuggestions = !showSuggestions
+                                if (showSuggestions) {
+                                    filteredSuggestions = recommendedChars
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = stringResource(R.string.common_clear),
-                                modifier = Modifier.size(18.dp)
+                                imageVector = if (showSuggestions) {
+                                    Icons.Default.KeyboardArrowUp
+                                } else {
+                                    Icons.Default.KeyboardArrowDown
+                                },
+                                contentDescription = stringResource(
+                                    if (showSuggestions) R.string.core_char_selector_collapse
+                                    else R.string.core_char_selector_recommended
+                                )
                             )
                         }
                     }
-                } else {
-                    null
                 }
             )
         }
