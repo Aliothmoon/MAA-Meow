@@ -46,6 +46,7 @@ composeMarkdown = "0.5.8"
 deviceCompat = "2.3"
 xxPermissions = "28.0"
 reorderable = "3.1.0"
+androidsvg = "1.4"
 
 # Kotlin libraries
 kotlinxCoroutines = "1.11.0"
@@ -114,6 +115,7 @@ compose-markdown = { group = "com.github.jeziellago", name = "compose-markdown",
 reorderable = { group = "sh.calvin.reorderable", name = "reorderable", version.ref = "reorderable" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 xzakota-focus-api = { group = "com.xzakota.hyper.notification", name = "focus-api", version.ref = "hyperNotification" }
+androidsvg = { group = "com.caverock", name = "androidsvg", version.ref = "androidsvg" }
 
 
 
