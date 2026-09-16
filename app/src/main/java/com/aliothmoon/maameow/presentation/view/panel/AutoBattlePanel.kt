@@ -195,78 +195,59 @@ fun AutoBattlePanel(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item(key = "copilot_tabs") {
-                val textMeasurer = rememberTextMeasurer()
-                val density = LocalDensity.current
-                val labelStyle = MaterialTheme.typography.labelMedium
-                val titles = tabSpecs.map { stringResource(it.titleRes) }
-                // 最宽标签（按选中态粗体）放不进半宽就退化成单列
-                val widestLabel = remember(titles, labelStyle) {
-                    val boldStyle = labelStyle.copy(fontWeight = FontWeight.Bold)
-                    with(density) {
-                        titles.maxOf { title ->
-                            textMeasurer.measure(title, boldStyle, softWrap = false).size.width
-                        }.toDp()
-                    }
-                }
-                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                    val spacing = 6.dp
-                    val cellInset = 8.dp * 2 + 2.dp
-                    val columns = if (widestLabel <= (maxWidth - spacing) / 2 - cellInset) 2 else 1
-                    Column(verticalArrangement = Arrangement.spacedBy(spacing)) {
-                        tabSpecs.chunked(columns).forEach { rowSpecs ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(spacing)
-                            ) {
-                                rowSpecs.forEach { spec ->
-                                    val selected = state.tabIndex == spec.index
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = if (selected) {
-                                            MaterialTheme.colorScheme.primaryContainer
-                                        } else {
-                                            MaterialTheme.colorScheme.surface
-                                        },
-                                        border = BorderStroke(
-                                            width = 1.dp,
-                                            color = if (selected) {
-                                                MaterialTheme.colorScheme.primary
-                                            } else {
-                                                MaterialTheme.colorScheme.outlineVariant
-                                            }
-                                        ),
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .heightIn(min = 36.dp)
-                                            .clickable { viewModel.onTabChanged(spec.index) }
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = stringResource(spec.titleRes),
-                                                style = labelStyle,
-                                                color = if (selected) {
-                                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                                } else {
-                                                    MaterialTheme.colorScheme.onSurface
-                                                },
-                                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                                textAlign = TextAlign.Center,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                            )
-                                        }
-                                    }
-                                }
-                                if (rowSpecs.size < columns) {
-                                    Spacer(modifier = Modifier.weight(1f))
-                                }
-                            }
+                // 加载作业时多数会自动切页签，默认收起
+                var expanded by remember { mutableStateOf(false) }
+                val currentSpec = tabSpecs.firstOrNull { it.index == state.tabIndex } ?: tabSpecs.first()
+                Column {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 36.dp)
+                            .clickable { expanded = !expanded }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(currentSpec.titleRes),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Icon(
+                                imageVector = if (expanded) {
+                                    Icons.Default.ExpandLess
+                                } else {
+                                    Icons.Default.ExpandMore
+                                },
+                                contentDescription = stringResource(
+                                    if (expanded) R.string.common_collapse else R.string.common_expand
+                                ),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
+                    }
+                    MaaAnimatedVisibility(
+                        visible = expanded,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut(),
+                    ) {
+                        CopilotTabGrid(
+                            tabSpecs = tabSpecs,
+                            selectedIndex = state.tabIndex,
+                            onSelect = { index ->
+                                viewModel.onTabChanged(index)
+                                expanded = false
+                            },
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
                     }
                 }
             }
@@ -703,6 +684,89 @@ fun AutoBattlePanel(
             }
         }
 
+    }
+}
+
+@Composable
+private fun CopilotTabGrid(
+    tabSpecs: List<CopilotTabUiSpec>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val labelStyle = MaterialTheme.typography.labelMedium
+    val titles = tabSpecs.map { stringResource(it.titleRes) }
+    // 最宽标签（按选中态粗体）放不进半宽就退化成单列
+    val widestLabel = remember(titles, labelStyle) {
+        val boldStyle = labelStyle.copy(fontWeight = FontWeight.Bold)
+        with(density) {
+            titles.maxOf { title ->
+                textMeasurer.measure(title, boldStyle, softWrap = false).size.width
+            }.toDp()
+        }
+    }
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val spacing = 6.dp
+        val cellInset = 8.dp * 2 + 2.dp
+        val columns = if (widestLabel <= (maxWidth - spacing) / 2 - cellInset) 2 else 1
+        Column(verticalArrangement = Arrangement.spacedBy(spacing)) {
+            tabSpecs.chunked(columns).forEach { rowSpecs ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(spacing)
+                ) {
+                    rowSpecs.forEach { spec ->
+                        val selected = selectedIndex == spec.index
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (selected) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            },
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = if (selected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.outlineVariant
+                                }
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 36.dp)
+                                .clickable { onSelect(spec.index) }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = stringResource(spec.titleRes),
+                                    style = labelStyle,
+                                    color = if (selected) {
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    },
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    }
+                    if (rowSpecs.size < columns) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
     }
 }
 
