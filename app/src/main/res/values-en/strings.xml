@@ -620,6 +620,7 @@
     <string name="maa_reclamation_pis_mode_error">Current task mode requires you to have a save with craftable items. Please consider switching modes.</string>
     <string name="maa_complete_combat">Complete combat</string>
     <string name="maa_clue_exchange_unlocked">Clue Exchange Unlocked</string>
+    <string name="maa_clues_sent">Clues sent</string>
     <string name="maa_begun_to_explore">Exploration started</string>
     <string name="maa_credit_fight">Combat with Support to earn Credits</string>
     <string name="maa_visiting">Visit Friends</string>
