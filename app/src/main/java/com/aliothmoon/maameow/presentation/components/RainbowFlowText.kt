@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -53,7 +54,7 @@ fun RainbowFlowText(
 
     Text(
         text = text,
-        modifier = modifier,
+        modifier = modifier.graphicsLayer(),
         style = style.copy(brush = brush),
         fontWeight = fontWeight,
         textAlign = textAlign,
