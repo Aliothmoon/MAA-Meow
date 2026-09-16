@@ -146,38 +146,28 @@ fun CoreCharSelector(
         verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = modifier
     ) {
-        // 标签行与主题提示；推荐列表的展开按钮放在输入框内。
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Text(
+            text = stringResource(R.string.core_char_selector_title),
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium
+        )
+
+        // 只有带专属开局建议的主题才显示入口，单独占一行
+        if (themeTip != null) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(R.string.core_char_selector_title),
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium
+                ExpandableTipIcon(
+                    expanded = tipExpanded,
+                    onExpandedChange = { tipExpanded = it }
                 )
-                // 只有带专属开局建议的主题才显示入口
-                if (themeTip != null) {
-                    ExpandableTipIcon(
-                        expanded = tipExpanded,
-                        onExpandedChange = { tipExpanded = it }
-                    )
-                    Text(
-                        text = stringResource(R.string.panel_roguelike_theme_tip_recommended),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable { tipExpanded = !tipExpanded }
-                    )
-                }
+                RainbowFlowText(
+                    text = stringResource(R.string.panel_roguelike_theme_tip_recommended),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.clickable { tipExpanded = !tipExpanded }
+                )
             }
-        }
-
-        if (themeTip != null) {
             ExpandableTipContent(visible = tipExpanded, tipText = themeTip)
         }
 
