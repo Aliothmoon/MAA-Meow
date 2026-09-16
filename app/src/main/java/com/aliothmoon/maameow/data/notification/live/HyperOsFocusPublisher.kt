@@ -6,6 +6,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Icon
 import android.os.Bundle
 import androidx.core.graphics.drawable.toBitmap
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.notification.LiveBackend
 import com.aliothmoon.maameow.domain.notification.LiveCapability
@@ -25,6 +26,8 @@ class HyperOsFocusPublisher(
     private val xmsfGate: XmsfNetworkGate,
     private val appSettings: AppSettingsManager,
     promotedDetector: AospPromotedDetector,
+    private val style: LiveUpdateStyle,
+    private val trackerIcons: TrackerIconStore,
 ) : LiveUpdatePublisher {
 
     private val appContext = context.applicationContext
@@ -144,8 +147,9 @@ class HyperOsFocusPublisher(
             else -> "…"
         }
         return FocusNotification.buildV3 {
+            val progressColor = style.colorHexOrNull() ?: PROGRESS_COLOR
             val appPic = createPicture(PIC_PROGRESS_APP, icon)
-            val capsulePic = createPicture(PIC_PROGRESS_CAPSULE, icon)
+            val capsulePic = createPicture(PIC_PROGRESS_CAPSULE, trackerIcon() ?: icon)
             business = if (session.category == LiveCategory.PROGRESS) {
                 BUSINESS_PROGRESS
             } else {
@@ -177,7 +181,7 @@ class HyperOsFocusPublisher(
             if (percent != null) {
                 multiProgressInfo {
                     progress = percent
-                    color = PROGRESS_COLOR
+                    color = progressColor
                 }
             }
 
@@ -226,7 +230,7 @@ class HyperOsFocusPublisher(
                             }
                             progressInfo {
                                 progress = percent
-                                colorReach = PROGRESS_COLOR
+                                colorReach = progressColor
                                 colorUnReach = PROGRESS_UNREACH
                                 isCCW = true
                             }
@@ -247,6 +251,15 @@ class HyperOsFocusPublisher(
     private fun stripProgressPrefix(session: LiveSession, body: String): String {
         val label = session.progressLabel ?: return body
         return body.removePrefix("$label · ")
+    }
+
+    /** 用户选用的追踪图标；默认方案返回 null，岛沿用应用图标 */
+    private fun trackerIcon(): Icon? = when (val source = trackerIcons.resolve()) {
+        is TrackerIconSource.Res ->
+            if (source.id == R.drawable.ic_progress_tracker) null
+            else Icon.createWithResource(appContext, source.id)
+
+        is TrackerIconSource.Bmp -> Icon.createWithBitmap(source.bitmap)
     }
 
     private companion object {

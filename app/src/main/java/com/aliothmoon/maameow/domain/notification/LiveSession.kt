@@ -35,6 +35,8 @@ data class LiveSession(
     val title: String,
     val text: String,
     val capsuleText: String,
+    /** 用户选择「不显示」时置位：显式清空状态栏 chip，避免系统回退显示默认文本 */
+    val capsuleHidden: Boolean = false,
     val progressCurrent: Int? = null,
     val progressMax: Int? = null,
     /** 任务计数文案，如 "2/5"；岛左栏用它替代百分比 */
@@ -47,7 +49,7 @@ data class LiveSession(
     val alert: Boolean = false,
 ) {
     fun fingerprint(): String =
-        "$sessionId|$title|$text|$capsuleText|$progressCurrent|$progressMax|$progressLabel|$ongoing|$isError"
+        "$sessionId|$title|$text|$capsuleText|$capsuleHidden|$progressCurrent|$progressMax|$progressLabel|$ongoing|$isError"
 
     fun progressPercent(): Int? {
         val cur = progressCurrent ?: return null

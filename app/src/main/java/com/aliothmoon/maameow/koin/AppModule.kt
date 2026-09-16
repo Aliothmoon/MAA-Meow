@@ -25,6 +25,8 @@ import com.aliothmoon.maameow.data.notification.live.AospPromotedDetector
 import com.aliothmoon.maameow.data.notification.live.FocusSequenceStore
 import com.aliothmoon.maameow.data.notification.live.HyperOsFocusDetector
 import com.aliothmoon.maameow.data.notification.live.LiveNotificationFactory
+import com.aliothmoon.maameow.data.notification.live.LiveUpdateStyle
+import com.aliothmoon.maameow.data.notification.live.TrackerIconStore
 import com.aliothmoon.maameow.data.notification.live.LivePublisherRouter
 import com.aliothmoon.maameow.data.notification.live.XmsfNetworkGate
 import com.aliothmoon.maameow.data.notification.provider.BarkProvider
@@ -262,6 +264,8 @@ val appModule = module {
 
     // 通知 / 实况
     singleOf(::LiveNotificationFactory)
+    singleOf(::TrackerIconStore)
+    singleOf(::LiveUpdateStyle)
     singleOf(::AospPromotedDetector)
     singleOf(::HyperOsFocusDetector)
     singleOf(::FocusSequenceStore)
