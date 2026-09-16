@@ -6,8 +6,10 @@ import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
 import com.aliothmoon.maameow.domain.usecase.SwitchCoreDataLocationUseCase
 import com.aliothmoon.maameow.manager.RemoteServiceManager
+import com.aliothmoon.maameow.utils.EyeProtectionDetector
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 import timber.log.Timber
 
@@ -44,6 +46,7 @@ val useCaseModule = module {
                     }
                 }
             },
+            isEyeProtectionEnabled = { EyeProtectionDetector.isEyeProtectionEnabled(androidContext()) },
         )
     }
     factory {

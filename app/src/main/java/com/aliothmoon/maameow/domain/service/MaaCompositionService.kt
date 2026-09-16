@@ -34,6 +34,7 @@ import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
 import com.aliothmoon.maameow.manager.ShizukuManager
 import com.aliothmoon.maameow.remote.PermissionGrantRequest
+import com.aliothmoon.maameow.utils.EyeProtectionDetector
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.resolve
@@ -650,6 +651,15 @@ class MaaCompositionService(
             sessionLogger.appendAndWait(text.resolve(context), level)
         }
         sessionLogger.appendAndWait(fetchDeviceMemoryInfo(), LogLevel.INFO)
+        val eyeProtection = EyeProtectionDetector.detect(context)
+        if (eyeProtection.isEnabled) {
+            val eyeProtectionMsg = context.getString(
+                R.string.task_start_eye_protection_warning_log,
+                eyeProtection.source.orEmpty()
+            )
+            sessionLogger.appendAndWait(eyeProtectionMsg, LogLevel.WARNING)
+            Timber.w("isEyeProtectionEnabled at runtime: true (source=%s)", eyeProtection.source)
+        }
 
         return withContext(Dispatchers.IO) {
             checkPreconditions(mode, clientType)?.let { return@withContext it }

@@ -38,6 +38,8 @@ import com.aliothmoon.maameow.presentation.pip.PipRequest
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.LaunchIntentMapper
 import com.aliothmoon.maameow.theme.MaaMeowTheme
+import com.aliothmoon.maameow.utils.EyeProtectionDetector
+import timber.log.Timber
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -77,6 +79,8 @@ class MainActivity : AppCompatActivity(), PipHost {
         val splash = installSplashScreen()
         splash.setKeepOnScreenCondition { !isUiReady }
         super.onCreate(savedInstanceState)
+        val eyeProtection = EyeProtectionDetector.detect(this)
+        Timber.i("isEyeProtectionEnabled: %s (source=%s)", eyeProtection.isEnabled, eyeProtection.source)
         launchDispatched = savedInstanceState?.getBoolean(STATE_LAUNCH_DISPATCHED) ?: false
         if (!launchDispatched) dispatchScheduledLaunchIntent(intent)
         enableEdgeToEdge()

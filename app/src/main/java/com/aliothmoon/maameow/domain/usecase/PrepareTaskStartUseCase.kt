@@ -67,6 +67,7 @@ enum class TaskStartMode {
 enum class TaskStartAcknowledgement(val message: UiText) {
     GAME_NOT_RUNNING_WITHOUT_WAKE_UP(uiTextOf(R.string.task_start_warning_game_not_running)),
     GAME_NOT_INSTALLED(uiTextOf(R.string.task_start_warning_game_not_installed)),
+    EYE_PROTECTION_ENABLED(uiTextOf(R.string.task_start_warning_eye_protection_enabled)),
 }
 
 /** 拦截原因，文案随枚举走，定时与手动入口共用 */

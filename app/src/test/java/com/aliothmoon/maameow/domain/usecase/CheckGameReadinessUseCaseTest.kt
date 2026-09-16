@@ -26,11 +26,13 @@ class CheckGameReadinessUseCaseTest {
         onBackgroundDisplay: Boolean? = null,
         runMode: RunMode = RunMode.BACKGROUND,
         isPackageInstalled: suspend (String) -> Boolean = { true },
+        isEyeProtectionEnabled: () -> Boolean = { false },
     ) = CheckGameReadinessUseCase(
         appAliveChecker = FakeAppAliveChecker(aliveStatus, onBackgroundDisplay),
         appSettings = appSettings(runMode),
         achievementReporter = achievementReporter,
         isPackageInstalled = isPackageInstalled,
+        isEyeProtectionEnabled = isEyeProtectionEnabled,
     )
 
     private fun context(
@@ -165,6 +167,38 @@ class CheckGameReadinessUseCaseTest {
             "Official",
             false,
             context(),
+        )
+
+        assertEquals(GameReadiness.Ready(gameAliveBeforeStart = true), result)
+    }
+
+    @Test
+    fun eyeProtectionEnabled_manual_requiresConfirmation() = runBlocking {
+        val result = useCase(isEyeProtectionEnabled = { true })("Official", false, context())
+
+        assertEquals(
+            GameReadiness.RequiresConfirmation(TaskStartAcknowledgement.EYE_PROTECTION_ENABLED),
+            result
+        )
+    }
+
+    @Test
+    fun eyeProtectionEnabled_scheduled_autoReady() = runBlocking {
+        val result = useCase(isEyeProtectionEnabled = { true })(
+            "Official",
+            false,
+            context(TaskStartMode.SCHEDULED)
+        )
+
+        assertEquals(GameReadiness.Ready(gameAliveBeforeStart = true), result)
+    }
+
+    @Test
+    fun eyeProtectionEnabled_acknowledged_returnsReady() = runBlocking {
+        val result = useCase(isEyeProtectionEnabled = { true })(
+            "Official",
+            false,
+            context(acks = setOf(TaskStartAcknowledgement.EYE_PROTECTION_ENABLED))
         )
 
         assertEquals(GameReadiness.Ready(gameAliveBeforeStart = true), result)

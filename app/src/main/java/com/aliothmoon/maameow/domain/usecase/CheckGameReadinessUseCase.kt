@@ -19,6 +19,7 @@ class CheckGameReadinessUseCase(
     private val appSettings: AppSettingsManager,
     private val achievementReporter: AchievementReporter,
     private val isPackageInstalled: suspend (String) -> Boolean = { true },
+    private val isEyeProtectionEnabled: () -> Boolean = { false },
 ) {
     /**
      * @param clientType   游戏客户端类型(用于解析包名)
@@ -36,7 +37,7 @@ class CheckGameReadinessUseCase(
                 "CheckGameReadiness: cannot resolve package name for clientType=%s",
                 clientType
             )
-            return GameReadiness.Ready(gameAliveBeforeStart = null)
+            return checkEyeProtectionOrReady(context, gameAliveBeforeStart = null)
         }
 
         // 1) 安装检查
@@ -58,7 +59,7 @@ class CheckGameReadinessUseCase(
             || runMode == RunMode.FOREGROUND
             || context.acknowledgements.contains(TaskStartAcknowledgement.GAME_NOT_RUNNING_WITHOUT_WAKE_UP)
         ) {
-            return GameReadiness.Ready(gameAliveBeforeStart = aliveStatus == AppAliveStatus.ALIVE)
+            return checkEyeProtectionOrReady(context, gameAliveBeforeStart = aliveStatus == AppAliveStatus.ALIVE)
         }
 
         // 3) 存活检查
@@ -81,7 +82,7 @@ class CheckGameReadinessUseCase(
                 ) {
                     GameReadiness.Blocked(TaskStartDecisionReason.GAME_NOT_ON_BACKGROUND_DISPLAY)
                 } else {
-                    GameReadiness.Ready(gameAliveBeforeStart = true)
+                    checkEyeProtectionOrReady(context, gameAliveBeforeStart = true)
                 }
             }
 
@@ -92,9 +93,22 @@ class CheckGameReadinessUseCase(
                     aliveStatus,
                     packageName
                 )
-                GameReadiness.Ready(gameAliveBeforeStart = null)
+                checkEyeProtectionOrReady(context, gameAliveBeforeStart = null)
             }
         }
+    }
+
+    private fun checkEyeProtectionOrReady(
+        context: TaskStartContext,
+        gameAliveBeforeStart: Boolean?,
+    ): GameReadiness {
+        if (context.mode == TaskStartMode.MANUAL
+            && !context.acknowledgements.contains(TaskStartAcknowledgement.EYE_PROTECTION_ENABLED)
+            && isEyeProtectionEnabled()
+        ) {
+            return GameReadiness.RequiresConfirmation(TaskStartAcknowledgement.EYE_PROTECTION_ENABLED)
+        }
+        return GameReadiness.Ready(gameAliveBeforeStart = gameAliveBeforeStart)
     }
 
     private fun confirmOrBlock(

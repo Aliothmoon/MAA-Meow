@@ -1,4 +1,4 @@
-﻿<resources>
+<resources>
     <string name="app_name">MaaMeow</string>
     <string name="volume_key_service_description">双击音量下键快速切换操作面板</string>
     <string name="accessibility_helper_service_description">无障碍辅助服务：双击音量下键快速切换操作面板</string>
@@ -1699,6 +1699,7 @@
     <!-- i18n: task start -->
     <string name="task_start_warning_game_not_running">检测到游戏未运行，继续执行可能直接失败，是否仍然启动？</string>
     <string name="task_start_warning_game_not_installed">未检测到当前客户端类型对应的游戏安装包，请检查「开始唤醒」中的客户端类型设置是否正确。是否仍要启动？</string>
+    <string name="task_start_warning_eye_protection_enabled">检测到设备已开启护眼/夜光模式，可能会影响图像色彩识别准确度。是否仍然启动？</string>
     <string name="task_start_error_no_task_selected">请先选择要执行的任务</string>
     <string name="task_start_error_conflicting_client_types">任务链中存在多个不同的客户端类型，请保持一致</string>
     <string name="task_start_error_no_executable_tasks">当前没有可执行的任务（可能被周计划过滤）</string>
@@ -1730,6 +1731,7 @@
     <string name="task_start_device_memory">设备内存: 可用 %1$dMB / 共 %2$dMB (已用 %3$d%%)</string>
     <string name="task_start_device_memory_low"> [系统已处于低内存]</string>
     <string name="task_start_device_memory_unavailable">设备内存: 读取失败</string>
+    <string name="task_start_eye_protection_warning_log">设备当前处于护眼/夜光模式 (%1$s)，可能影响正常图像识别，请手动关闭</string>
 
     <!-- i18n: toolbox / mini game -->
     <string name="toolbox_status_starting">正在启动…</string>

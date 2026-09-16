@@ -1,4 +1,4 @@
-﻿<resources>
+<resources>
     <string name="app_name">MaaMeow</string>
     <string name="volume_key_service_description">Double-tap volume down to toggle the control panel</string>
     <string name="accessibility_helper_service_description">Accessibility helper: double-tap volume down to toggle the control panel</string>
@@ -1643,6 +1643,7 @@
     <!-- i18n: task start -->
     <string name="task_start_warning_game_not_running">The game is not running. Continuing may fail immediately. Start anyway?</string>
     <string name="task_start_warning_game_not_installed">The game package for the current client type was not detected. Check the client type in Wake Up. Start anyway?</string>
+    <string name="task_start_warning_eye_protection_enabled">Eye comfort / night mode is enabled, which may affect color recognition accuracy. Start anyway?</string>
     <string name="task_start_error_no_task_selected">Please select the tasks to run first</string>
     <string name="task_start_error_conflicting_client_types">The task chain contains different client types. Please keep them consistent</string>
     <string name="task_start_error_no_executable_tasks">There are no executable tasks in the current task chain</string>
@@ -1674,6 +1675,7 @@
     <string name="task_start_device_memory">Device memory: %1$dMB free / %2$dMB total (%3$d%% used)</string>
     <string name="task_start_device_memory_low"> [system is low on memory]</string>
     <string name="task_start_device_memory_unavailable">Device memory: unavailable</string>
+    <string name="task_start_eye_protection_warning_log">Eye comfort / night mode is active (%1$s), which may affect normal image recognition. Please turn it off manually</string>
 
     <!-- i18n: toolbox / mini game -->
     <string name="toolbox_status_starting">Starting…</string>
