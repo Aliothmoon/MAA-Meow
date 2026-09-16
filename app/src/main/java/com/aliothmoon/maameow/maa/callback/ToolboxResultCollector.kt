@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 /** 像素画填色进度 */
 data class PixelPaintProgress(val done: Int, val total: Int, val color: Int)
 
-/** 工具类任务结果：SubTaskHandler 回调转发。 */
+/** 工具类任务结果：SubTaskHandler 回调转发，干员识别还被一图流拉取复用。 */
 class ToolboxResultCollector(
     private val resourceDataManager: ResourceDataManager,
     private val achievementRepository: AchievementRepository,
@@ -124,6 +124,11 @@ class ToolboxResultCollector(
             )
         } ?: return
 
+        applyOperBoxResult(ownOpers)
+    }
+
+    /** 落库 + 成就，Core 识别与一图流拉取共用 */
+    fun applyOperBoxResult(ownOpers: List<OperBoxOperator>) {
         val ownedIds = ownOpers.map { it.id }.toSet()
 
         val notOwned = resourceDataManager.operators.value

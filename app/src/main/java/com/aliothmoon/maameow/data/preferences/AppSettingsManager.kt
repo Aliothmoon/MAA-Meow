@@ -19,7 +19,9 @@ import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunDurationLimit
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.UnlockCredential
+import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -414,6 +416,12 @@ class AppSettingsManager internal constructor(
         EN("en"),
     }
 
+    /** 资源与干员名用的语言码，system 收敛成显式语言 */
+    val displayLanguage: String
+        get() = ResourceDataManager.displayLanguageCode(
+            LocaleBootstrap.resolveSelectedLanguage(language.value)
+        )
+
     val language: StateFlow<AppLanguage> = setting {
         runCatching { AppLanguage.valueOf(it.language) }
             .getOrDefault(AppLanguage.SYSTEM)
@@ -635,6 +643,23 @@ class AppSettingsManager internal constructor(
     suspend fun setPenguinId(id: String) {
         with(AppSettingsSchema) {
             context.dataStore.edit { it[penguinId] = id.trim() }
+        }
+    }
+
+    val yituliuOpenApiToken: StateFlow<String> = setting { it.yituliuOpenApiToken }
+
+    suspend fun setYituliuOpenApiToken(token: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[yituliuOpenApiToken] = token.trim() }
+        }
+    }
+
+    val operBoxUseYituliuApi: StateFlow<Boolean> =
+        setting { it.operBoxUseYituliuApi.toBooleanStrictOrNull() ?: false }
+
+    suspend fun setOperBoxUseYituliuApi(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[operBoxUseYituliuApi] = enabled.toString() }
         }
     }
 

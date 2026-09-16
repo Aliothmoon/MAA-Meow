@@ -19,6 +19,7 @@ import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
+import com.aliothmoon.maameow.domain.service.OperBoxYituliuSync
 import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
 import com.aliothmoon.maameow.domain.usecase.GameReadiness
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
@@ -90,6 +91,7 @@ class ToolboxViewModel(
     private val itemHelper: ItemHelper,
     private val appSettingsManager: AppSettingsManager,
     private val sessionLogger: MaaSessionLogger,
+    private val operBoxYituliuSync: OperBoxYituliuSync,
 ) : ViewModel() {
 
     val pixelArt = PixelArtDelegate(appContext, collector, compositionService.state, viewModelScope)
@@ -191,6 +193,11 @@ class ToolboxViewModel(
     fun onStart() = onStart(TaskStartContext(TaskStartMode.MANUAL))
 
     private fun onStart(context: TaskStartContext) {
+        // 一图流拉取不发 Core 任务，不过游戏就绪闸门
+        if (useYituliuOperBox()) {
+            onStartOperBox()
+            return
+        }
         viewModelScope.launch {
             when (val readiness = checkGameReadiness(
                 clientType = chainState.clientType,
@@ -372,7 +379,20 @@ class ToolboxViewModel(
 
     // ==================== 干员识别 ====================
 
+    private fun useYituliuOperBox(): Boolean =
+        _currentTab.value == ToolboxTab.OPER_BOX && appSettingsManager.operBoxUseYituliuApi.value
+
     private fun onStartOperBox() {
+        if (useYituliuOperBox()) {
+            viewModelScope.launch {
+                _statusMessage.value = uiTextOf(R.string.oper_box_yituliu_fetching)
+                _statusMessage.value = when (val result = operBoxYituliuSync.sync()) {
+                    is OperBoxYituliuSync.Result.Success -> result.message
+                    is OperBoxYituliuSync.Result.Failed -> result.message
+                }
+            }
+            return
+        }
         viewModelScope.launch {
             _statusMessage.value = uiTextOf(R.string.toolbox_status_starting_oper_box)
             handleStartResult(

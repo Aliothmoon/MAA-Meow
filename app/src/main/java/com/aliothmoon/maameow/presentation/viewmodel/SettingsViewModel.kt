@@ -10,6 +10,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.api.YituliuApiService
+import com.aliothmoon.maameow.data.api.message
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
@@ -74,6 +76,7 @@ class SettingsViewModel(
     private val coreDataPusher: CoreDataPusher,
     private val switchCoreDataLocation: SwitchCoreDataLocationUseCase,
     private val compositionService: MaaCompositionService,
+    private val yituliuApiService: YituliuApiService,
 ) : ViewModel() {
 
     // ========== 导入导出 ==========
@@ -283,6 +286,65 @@ class SettingsViewModel(
 
     fun setPenguinId(id: String) {
         viewModelScope.launch { appSettingsManager.setPenguinId(id) }
+    }
+
+    val yituliuOpenApiToken: StateFlow<String> = appSettingsManager.yituliuOpenApiToken
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    fun setYituliuOpenApiToken(token: String) {
+        _yituliuVerifyMessage.value = null
+        viewModelScope.launch { appSettingsManager.setYituliuOpenApiToken(token) }
+    }
+
+    val operBoxUseYituliuApi: StateFlow<Boolean> = appSettingsManager.operBoxUseYituliuApi
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun setOperBoxUseYituliuApi(enabled: Boolean) {
+        viewModelScope.launch { appSettingsManager.setOperBoxUseYituliuApi(enabled) }
+    }
+
+    /** [ok] 决定提示用什么颜色 */
+    data class TokenVerifyMessage(val text: UiText, val ok: Boolean)
+
+    private val _yituliuVerifyMessage = MutableStateFlow<TokenVerifyMessage?>(null)
+    val yituliuVerifyMessage: StateFlow<TokenVerifyMessage?> = _yituliuVerifyMessage.asStateFlow()
+
+    private val _yituliuVerifying = MutableStateFlow(false)
+    val yituliuVerifying: StateFlow<Boolean> = _yituliuVerifying.asStateFlow()
+
+    /** 只报结果，不自己打开干员识别开关 */
+    fun verifyYituliuToken() {
+        val token = appSettingsManager.yituliuOpenApiToken.value.trim()
+        if (token.isEmpty()) {
+            _yituliuVerifyMessage.value = TokenVerifyMessage(
+                uiTextOf(R.string.settings_yituliu_token_empty),
+                ok = false,
+            )
+            return
+        }
+        if (_yituliuVerifying.value) return
+        viewModelScope.launch {
+            _yituliuVerifying.value = true
+            val result = yituliuApiService.fetchOperators(token)
+            // 等待期间 Token 被改过就丢掉这次结果
+            if (token != appSettingsManager.yituliuOpenApiToken.value.trim()) {
+                _yituliuVerifying.value = false
+                return@launch
+            }
+            _yituliuVerifyMessage.value = when (result) {
+                is YituliuApiService.Result.Success -> TokenVerifyMessage(
+                    text = if (result.operators.isEmpty()) {
+                        uiTextOf(R.string.settings_yituliu_token_valid_no_data)
+                    } else {
+                        uiTextOf(R.string.settings_yituliu_token_valid, result.operators.size)
+                    },
+                    ok = true,
+                )
+
+                is YituliuApiService.Result.Failure -> TokenVerifyMessage(result.message(), ok = false)
+            }
+            _yituliuVerifying.value = false
+        }
     }
 
     val forceFullscreenOnVirtualDisplay: StateFlow<Boolean> =

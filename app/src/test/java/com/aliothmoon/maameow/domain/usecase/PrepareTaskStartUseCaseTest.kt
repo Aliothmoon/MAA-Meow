@@ -2,12 +2,15 @@ package com.aliothmoon.maameow.domain.usecase
 
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.AwardConfig
+import com.aliothmoon.maameow.data.model.UserDataUpdateConfig
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.repository.OperBoxSnapshot
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.models.PlanSideTask
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.AppAliveChecker
 import com.aliothmoon.maameow.remote.AppAliveStatus
@@ -32,6 +35,7 @@ class PrepareTaskStartUseCaseTest {
         every { clientType } returns "Official"
     }
     private val resourceDataManager = mockk<ResourceDataManager>(relaxed = true)
+    private val operBoxViaYituliu = MutableStateFlow(false)
     private val analyzeTaskChainUseCase = AnalyzeTaskChainUseCase(
         taskChainState = taskChainState,
         resourceDataManager = resourceDataManager,
@@ -43,6 +47,7 @@ class PrepareTaskStartUseCaseTest {
         },
         operBoxRepository = mockk(relaxed = true) {
             every { isLoaded } returns MutableStateFlow(true)
+            every { snapshot } returns MutableStateFlow(OperBoxSnapshot())
         },
         itemHelper = mockk(relaxed = true),
         dropsRefresher = mockk(relaxed = true),
@@ -50,6 +55,7 @@ class PrepareTaskStartUseCaseTest {
             every { reportToPenguin } returns MutableStateFlow(true)
             every { reportToYituliu } returns MutableStateFlow(true)
             every { penguinId } returns MutableStateFlow("")
+            every { operBoxUseYituliuApi } returns operBoxViaYituliu
         },
     )
 
@@ -159,8 +165,29 @@ class PrepareTaskStartUseCaseTest {
         )
     }
 
+    @Test
+    fun pureSideTaskPlan_skipsReadinessGate() = runBlocking {
+        // 不起 Core 也不碰游戏，游戏没开也该放行
+        operBoxViaYituliu.value = true
+        val result = useCase(AppAliveStatus.DEAD)(
+            chain = listOf(
+                TaskChainNode(
+                    name = "更新数据",
+                    enabled = true,
+                    config = UserDataUpdateConfig(updateDepot = false),
+                ),
+            ),
+            context = TaskStartContext(mode = TaskStartMode.SCHEDULED),
+        )
+
+        val plan = (result as TaskStartDecision.Ready).plan
+        assertTrue(plan.params.isEmpty())
+        assertEquals(listOf(PlanSideTask.OPER_BOX_YITULIU), plan.sideTasks)
+    }
+
     private class FakeAppAliveChecker(private val status: Int) : AppAliveChecker {
         override suspend fun isAppAlive(packageName: String): Int = status
         override suspend fun isAppOnBackgroundDisplay(packageName: String): Boolean? = null
     }
+
 }

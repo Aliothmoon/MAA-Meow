@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.data.model
 
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.ServerTimezone
+import com.aliothmoon.maameow.domain.models.PlanSideTask
 import com.aliothmoon.maameow.domain.models.UserDataUpdateTriggerInterval
 import com.aliothmoon.maameow.domain.models.isUserDataUpdateDue
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
@@ -40,9 +41,15 @@ data class UserDataUpdateConfig(
             return emptyList()
         }
 
+        // 干员识别改走一图流：不占任务位，启动时并行拉取
+        val operViaYituliu = operDue && ctx.operBoxUseYituliuApi
+        if (operViaYituliu) {
+            ctx.registerSideTask(PlanSideTask.OPER_BOX_YITULIU)
+        }
+
         // 对齐上游：先干员后仓库（串行）。
         return buildList {
-            if (operDue) add(
+            if (operDue && !operViaYituliu) add(
                 MaaTaskParams(
                     MaaTaskType.OPER_BOX,
                     "{}",

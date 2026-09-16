@@ -28,9 +28,13 @@ class StartTaskChainUseCase(
     private val sessionLogger: MaaSessionLogger,
     private val appSettingsManager: AppSettingsManager,
     private val appContext: Context,
+    private val sideTaskRunner: PlanSideTaskRunner,
 ) {
     sealed interface Result {
         data object Success : Result
+
+        /** 只跑了旁路任务，Core 根本没起 */
+        data class SuccessWithoutCore(val message: UiText?) : Result
         data class Failed(
             val executionResult: ExecutionResult,
             val message: UiText,
@@ -59,6 +63,15 @@ class StartTaskChainUseCase(
             }
         }
 
+        if (plan.params.isEmpty()) {
+            // 不起 Core，但必须等在这里：前台服务与唤醒锁只活到本方法返回
+            val outcome = sideTaskRunner.runWithoutCore(plan.sideTasks)
+            return when {
+                outcome == null || outcome.ok -> Result.SuccessWithoutCore(outcome?.message)
+                else -> Result.Failed(ExecutionResult.FAILED_START, outcome.message)
+            }
+        }
+
         // 必须先于静音，换进程会让旧进程收尾时解除静音
         composition.prepareResources(plan.clientType)
 
@@ -84,6 +97,8 @@ class StartTaskChainUseCase(
 
         return when (startResult) {
             is MaaCompositionService.StartResult.Success -> {
+                // 晚于 startSession 发出，拉取日志才有会话接住
+                sideTaskRunner.launch(plan.sideTasks)
                 achievements.reportTaskStarted(
                     taskCount = plan.params.size,
                     launchesGame = plan.launchesGame,

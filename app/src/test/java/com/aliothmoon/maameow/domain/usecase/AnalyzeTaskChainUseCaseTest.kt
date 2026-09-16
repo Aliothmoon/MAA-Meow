@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.UserDataUpdateConfig
+import com.aliothmoon.maameow.domain.models.PlanSideTask
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
@@ -45,10 +46,12 @@ class AnalyzeTaskChainUseCaseTest {
         // 分析阶段开头的 `isLoaded.first { it }` 会挂死
         every { isLoaded } returns MutableStateFlow(true)
     }
+    private val operBoxViaYituliu = MutableStateFlow(false)
     private val appSettingsManager = mockk<AppSettingsManager> {
         every { reportToPenguin } returns MutableStateFlow(true)
         every { reportToYituliu } returns MutableStateFlow(true)
         every { penguinId } returns MutableStateFlow("")
+        every { operBoxUseYituliuApi } returns operBoxViaYituliu
     }
     private val useCase = AnalyzeTaskChainUseCase(
         taskChainState = taskChainState,
@@ -280,5 +283,67 @@ class AnalyzeTaskChainUseCaseTest {
             listOf(MaaTaskType.DEPOT, MaaTaskType.AWARD, MaaTaskType.DEPOT),
             ready.plan.params.map { it.type },
         )
+    }
+
+    @Test
+    fun operBoxViaYituliu_isReadyWithSideTaskOnly() = runBlocking {
+        operBoxViaYituliu.value = true
+        val result = useCase(
+            listOf(
+                TaskChainNode(
+                    name = "更新数据",
+                    enabled = true,
+                    config = UserDataUpdateConfig(updateDepot = false),
+                ),
+            )
+        )
+
+        val plan = (result as AnalyzeTaskChainResult.Ready).plan
+        assertTrue(plan.params.isEmpty())
+        assertEquals(listOf(PlanSideTask.OPER_BOX_YITULIU), plan.sideTasks)
+    }
+
+    @Test
+    fun operBoxViaYituliu_keepsOtherCoreTasks() = runBlocking {
+        operBoxViaYituliu.value = true
+        val result = useCase(
+            listOf(
+                TaskChainNode(
+                    name = "更新数据",
+                    enabled = true,
+                    config = UserDataUpdateConfig(),
+                ),
+            )
+        )
+
+        val plan = (result as AnalyzeTaskChainResult.Ready).plan
+        assertEquals(listOf(MaaTaskType.DEPOT), plan.params.map { it.type })
+        assertEquals(listOf(PlanSideTask.OPER_BOX_YITULIU), plan.sideTasks)
+    }
+
+    @Test
+    fun operBoxViaYituliu_isDedupedAcrossNodes() = runBlocking {
+        operBoxViaYituliu.value = true
+        val result = useCase(
+            listOf(
+                TaskChainNode(
+                    id = "a",
+                    name = "更新数据",
+                    enabled = true,
+                    order = 0,
+                    config = UserDataUpdateConfig(updateDepot = false),
+                ),
+                TaskChainNode(
+                    id = "b",
+                    name = "更新数据",
+                    enabled = true,
+                    order = 1,
+                    config = UserDataUpdateConfig(updateDepot = false),
+                ),
+            )
+        )
+
+        val plan = (result as AnalyzeTaskChainResult.Ready).plan
+        assertEquals(listOf(PlanSideTask.OPER_BOX_YITULIU), plan.sideTasks)
     }
 }

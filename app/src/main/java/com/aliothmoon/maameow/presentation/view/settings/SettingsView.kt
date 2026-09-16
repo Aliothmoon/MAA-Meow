@@ -91,6 +91,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.MaaApi
 import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
@@ -170,6 +171,10 @@ fun SettingsView(
     val reportToPenguin by viewModel.reportToPenguin.collectAsStateWithLifecycle()
     val reportToYituliu by viewModel.reportToYituliu.collectAsStateWithLifecycle()
     val penguinId by viewModel.penguinId.collectAsStateWithLifecycle()
+    val yituliuOpenApiToken by viewModel.yituliuOpenApiToken.collectAsStateWithLifecycle()
+    val operBoxUseYituliuApi by viewModel.operBoxUseYituliuApi.collectAsStateWithLifecycle()
+    val yituliuVerifyMessage by viewModel.yituliuVerifyMessage.collectAsStateWithLifecycle()
+    val yituliuVerifying by viewModel.yituliuVerifying.collectAsStateWithLifecycle()
     val forceFullscreenOnVirtualDisplay by viewModel.forceFullscreenOnVirtualDisplay.collectAsStateWithLifecycle()
     val pipOnHome by viewModel.pipOnHome.collectAsStateWithLifecycle()
     val wakeUnlockType by viewModel.wakeUnlockType.collectAsStateWithLifecycle()
@@ -888,35 +893,19 @@ fun SettingsView(
                 }
             }
 
-            // 任务设置：划火柴模式、MAA 任务覆盖
+            // 三方服务：数据上报与一图流 OpenAPI
             item {
                 CollapsibleSection(
-                    title = stringResource(R.string.settings_section_task),
-                    sectionKey = "settings_section_task",
+                    title = stringResource(R.string.settings_section_third_party),
+                    sectionKey = "settings_section_third_party",
                 ) {
                     SettingsGroupCard {
-                        SettingSwitchItem(
-                            title = stringResource(R.string.settings_deploy_with_pause),
-                            description = stringResource(R.string.settings_deploy_with_pause_desc),
-                            contentColor = contentColor,
-                            checked = deployWithPause,
-                            onCheckedChange = { viewModel.setDeployWithPause(it) }
-                        )
-                        ListItemDivider()
                         SettingSwitchItem(
                             title = stringResource(R.string.settings_report_penguin),
                             description = stringResource(R.string.settings_report_penguin_desc),
                             contentColor = contentColor,
                             checked = reportToPenguin,
                             onCheckedChange = { viewModel.setReportToPenguin(it) }
-                        )
-                        ListItemDivider()
-                        SettingSwitchItem(
-                            title = stringResource(R.string.settings_report_yituliu),
-                            description = stringResource(R.string.settings_report_yituliu_desc),
-                            contentColor = contentColor,
-                            checked = reportToYituliu,
-                            onCheckedChange = { viewModel.setReportToYituliu(it) }
                         )
                         // ID 只归企鹅物流，一图流的掉落上报不带 ID
                         MaaAnimatedVisibility(
@@ -932,6 +921,48 @@ fun SettingsView(
                                 )
                             }
                         }
+                        ListItemDivider()
+                        SettingSwitchItem(
+                            title = stringResource(R.string.settings_report_yituliu),
+                            description = stringResource(R.string.settings_report_yituliu_desc),
+                            contentColor = contentColor,
+                            checked = reportToYituliu,
+                            onCheckedChange = { viewModel.setReportToYituliu(it) }
+                        )
+                        ListItemDivider()
+                        SettingYituliuTokenSection(
+                            token = yituliuOpenApiToken,
+                            verifying = yituliuVerifying,
+                            verifyMessage = yituliuVerifyMessage,
+                            onTokenChange = { viewModel.setYituliuOpenApiToken(it) },
+                            onVerify = { viewModel.verifyYituliuToken() },
+                        )
+                        ListItemDivider()
+                        SettingSwitchItem(
+                            title = stringResource(R.string.settings_oper_box_yituliu_title),
+                            description = stringResource(R.string.settings_oper_box_yituliu_desc),
+                            contentColor = contentColor,
+                            checked = operBoxUseYituliuApi,
+                            onCheckedChange = { viewModel.setOperBoxUseYituliuApi(it) }
+                        )
+                    }
+                }
+            }
+
+            // 任务设置：划火柴模式、MAA 任务覆盖
+            item {
+                CollapsibleSection(
+                    title = stringResource(R.string.settings_section_task),
+                    sectionKey = "settings_section_task",
+                ) {
+                    SettingsGroupCard {
+                        SettingSwitchItem(
+                            title = stringResource(R.string.settings_deploy_with_pause),
+                            description = stringResource(R.string.settings_deploy_with_pause_desc),
+                            contentColor = contentColor,
+                            checked = deployWithPause,
+                            onCheckedChange = { viewModel.setDeployWithPause(it) }
+                        )
                         ListItemDivider()
                         SettingSwitchItem(
                             title = stringResource(R.string.settings_tasks_override_title),
@@ -1543,54 +1574,112 @@ private fun SettingPenguinIdField(
 }
 
 @Composable
+private fun SettingSecretField(
+    value: String,
+    label: String,
+    placeholder: String,
+    keyboardType: KeyboardType,
+    onValueChange: (String) -> Unit,
+    transform: (String) -> String = { it },
+) {
+    var local by rememberSaveable { mutableStateOf(value) }
+    var visible by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(value) {
+        if (value != local) local = value
+    }
+    OutlinedTextField(
+        value = local,
+        onValueChange = {
+            val next = transform(it)
+            local = next
+            onValueChange(next)
+        },
+        label = { Text(label) },
+        placeholder = { Text(placeholder) },
+        singleLine = true,
+        visualTransformation = if (visible) {
+            VisualTransformation.None
+        } else {
+            PasswordVisualTransformation()
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        trailingIcon = {
+            IconButton(onClick = { visible = !visible }) {
+                Icon(
+                    imageVector = if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                    contentDescription = stringResource(
+                        if (visible) R.string.settings_secret_hide else R.string.settings_secret_show,
+                    ),
+                )
+            }
+        },
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+@Composable
+private fun SettingYituliuTokenSection(
+    token: String,
+    verifying: Boolean,
+    verifyMessage: SettingsViewModel.TokenVerifyMessage?,
+    onTokenChange: (String) -> Unit,
+    onVerify: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.padding(
+            horizontal = MaaDesignTokens.Spacing.lg,
+            vertical = 8.dp,
+        ),
+    ) {
+        SettingSecretField(
+            value = token,
+            label = stringResource(R.string.settings_yituliu_open_api_token),
+            placeholder = stringResource(R.string.settings_yituliu_open_api_token_hint),
+            keyboardType = KeyboardType.Password,
+            onValueChange = onTokenChange,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (verifyMessage != null) {
+                Text(
+                    text = verifyMessage.text.asString(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (verifyMessage.ok) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp),
+                )
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+            TextButton(onClick = onVerify, enabled = !verifying) {
+                Text(stringResource(R.string.settings_yituliu_token_verify))
+            }
+        }
+    }
+}
+
+@Composable
 private fun SettingWakePinSection(
     contentColor: Color,
     wakeCredential: String,
     onCredentialChange: (String) -> Unit,
     onTest: () -> Unit,
 ) {
-    var localPin by rememberSaveable { mutableStateOf(wakeCredential) }
-    var pinVisible by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(wakeCredential) {
-        if (wakeCredential != localPin) localPin = wakeCredential
-    }
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
-        OutlinedTextField(
-            value = localPin,
-            onValueChange = {
-                val digits = it.filter { c -> c.isDigit() }
-                    .take(AppSettingsManager.MAX_PIN_LENGTH)
-                localPin = digits
-                onCredentialChange(digits)
-            },
-            label = { Text(stringResource(R.string.settings_wake_credential)) },
-            placeholder = { Text(stringResource(R.string.settings_wake_credential_hint)) },
-            singleLine = true,
-            visualTransformation = if (pinVisible) {
-                VisualTransformation.None
-            } else {
-                PasswordVisualTransformation()
-            },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            trailingIcon = {
-                IconButton(onClick = { pinVisible = !pinVisible }) {
-                    Icon(
-                        imageVector = if (pinVisible) {
-                            Icons.Filled.VisibilityOff
-                        } else {
-                            Icons.Filled.Visibility
-                        },
-                        contentDescription = stringResource(
-                            if (pinVisible) {
-                                R.string.settings_wake_credential_hide
-                            } else {
-                                R.string.settings_wake_credential_show
-                            },
-                        ),
-                    )
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
+        SettingSecretField(
+            value = wakeCredential,
+            label = stringResource(R.string.settings_wake_credential),
+            placeholder = stringResource(R.string.settings_wake_credential_hint),
+            keyboardType = KeyboardType.NumberPassword,
+            onValueChange = onCredentialChange,
+            transform = { it.filter(Char::isDigit).take(AppSettingsManager.MAX_PIN_LENGTH) },
         )
         Text(
             text = stringResource(R.string.settings_wake_credential_warning),

@@ -65,6 +65,9 @@ object MaaApi {
     // MirrorChyan App 更新源
     const val MIRROR_CHYAN_APP_RESOURCE = "https://mirrorchyan.com/api/resources/MAA-Meow/latest"
 
+    // 一图流 OpenAPI：干员练度数据
+    const val YITULIU_OPERATOR_INFO = "https://backend.yituliu.cn/open-api/operator/info"
+
     const val BASE_SCHEDULING_SCHEMA =
         "https://maa.plus/docs/zh-cn/protocol/base-scheduling-schema.html"
 

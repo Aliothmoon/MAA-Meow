@@ -1,5 +1,7 @@
 package com.aliothmoon.maameow.data.model.toolbox
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 
 /**
@@ -27,6 +29,7 @@ data class DepotItem(
 /**
  * 干员识别结果（可持久化）
  */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class OperBoxOperator(
     val id: String,
@@ -36,4 +39,24 @@ data class OperBoxOperator(
     val level: Int,
     val potential: Int,
     val own: Boolean,
+    // 全局 encodeDefaults 为真，不排除会给每个干员写两个空数组
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val skills: List<OperBoxSkill> = emptyList(),
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val equips: List<OperBoxEquip> = emptyList(),
+)
+
+/** 技能专精，[level] 0–3 */
+@Serializable
+data class OperBoxSkill(
+    val id: String,
+    val level: Int,
+)
+
+/** 模组，[type] 为分支 X / Y */
+@Serializable
+data class OperBoxEquip(
+    val id: String,
+    val type: String,
+    val level: Int,
 )

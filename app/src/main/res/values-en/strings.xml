@@ -136,6 +136,30 @@
     <string name="settings_report_yituliu_desc">Upload drops and recruit results to Yituliu</string>
     <string name="settings_penguin_id">Penguin Statistics ID</string>
     <string name="settings_penguin_id_hint">Digits only; leave empty to let the server assign one</string>
+    <string name="settings_section_third_party">Third-party services</string>
+    <string name="settings_yituliu_open_api_token">OpenAPI token</string>
+    <string name="settings_yituliu_open_api_token_hint">Generated in your Yituliu account; read-only is enough</string>
+    <string name="settings_yituliu_token_verify">Verify</string>
+    <string name="settings_yituliu_token_empty">Enter a token first</string>
+    <string name="settings_yituliu_token_valid">Token is valid, %1$d operators</string>
+    <string name="settings_yituliu_token_valid_no_data">Token is valid, but the account has no operator data</string>
+    <string name="settings_oper_box_yituliu_title">Fetch operator data from Yituliu</string>
+    <string name="settings_oper_box_yituliu_desc">Fetches from Yituliu instead of recognising in-game screenshots. Data comes from Skland imports and only exists for the CN server.</string>
+    <string name="oper_box_yituliu_fetching">Fetching operator data from Yituliu…</string>
+    <string name="oper_box_yituliu_done">Fetched %1$d operators from Yituliu</string>
+    <string name="oper_box_yituliu_done_skipped">Fetched %1$d operators from Yituliu; %2$d not present in local resources were skipped</string>
+    <string name="oper_box_yituliu_local_table_outdated">None of the returned operators are present in local resources; update MAA resources first</string>
+    <string name="oper_box_yituliu_internal_error">Fetch failed, see the log for details</string>
+    <string name="settings_secret_show">Show</string>
+    <string name="settings_secret_hide">Hide</string>
+    <string name="oper_box_yituliu_token_empty">Enter the Yituliu token in Settings first</string>
+    <string name="oper_box_yituliu_no_data">No operator data on this account; local results kept</string>
+    <string name="oper_box_yituliu_write_only">Token lacks read access; use a read-only or read-write token</string>
+    <string name="oper_box_yituliu_invalid">Token is invalid or expired; generate a new one</string>
+    <string name="oper_box_yituliu_network_error">Network error, try again later</string>
+    <string name="oper_box_yituliu_local_data_missing">Local operator data is not loaded; connect the elevated service once</string>
+    <string name="oper_box_yituliu_busy">Already fetching, please wait</string>
+    <string name="runlog_oper_box_yituliu_failed">Failed to fetch operator data from Yituliu: %1$s</string>
     <string name="report_http_failed">Failed to report, abort upload to Penguin Statistics</string>
     <string name="settings_tasks_override_title">MAA Task Override</string>
     <string name="settings_tasks_override_desc">Do not modify unless you know what you are doing — incorrect values will break MAA</string>
@@ -721,6 +745,8 @@
     <string name="panel_operbox_tab_owned">Owned (%1$d)</string>
     <string name="panel_operbox_tab_not_owned">Not Owned (%1$d)</string>
     <string name="panel_operbox_copy_toast">Operator data copied</string>
+    <string name="operbox_export_header_skills">Skill mastery</string>
+    <string name="operbox_export_header_equips">Modules</string>
     <string name="panel_operbox_title">Operator Recognition</string>
     <string name="panel_operbox_hint_scan">Tap \"Start Task\" below to scan owned operator data.</string>
     <string name="panel_operbox_hint_results">After recognition, you can review owned / not owned operators and export the result.</string>
@@ -1849,6 +1875,7 @@
     <string name="schedule_log_user_cancelled">User cancelled the scheduled launch</string>
     <string name="schedule_log_starting_tasks">Preconditions OK, %1$d task(s), starting…</string>
     <string name="schedule_log_start_success">Task start succeeded</string>
+    <string name="schedule_log_side_task_only">Only non-core tasks this round; running them in parallel</string>
     <string name="schedule_log_start_failed">Task start failed: %1$s</string>
     <string name="schedule_log_task_blocked">Task blocked: %1$s</string>
     <string name="schedule_log_task_needs_confirmation">Confirmation required; automation rejected</string>
@@ -2304,8 +2331,6 @@
     <!-- Scheduled lock · PIN -->
     <string name="settings_wake_credential">PIN</string>
     <string name="settings_wake_credential_hint">4–16 digits</string>
-    <string name="settings_wake_credential_show">Show PIN</string>
-    <string name="settings_wake_credential_hide">Hide PIN</string>
     <string name="settings_wake_credential_warning">Pattern and alphanumeric passwords are not supported</string>
     <string name="settings_wake_test_button">Test</string>
     <string name="settings_wake_test_hint">Lock first, then auto-unlock after ~0.5s</string>

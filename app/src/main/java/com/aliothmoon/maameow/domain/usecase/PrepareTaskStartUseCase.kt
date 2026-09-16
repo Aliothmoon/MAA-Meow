@@ -30,6 +30,11 @@ class PrepareTaskStartUseCase(
             }
         }
 
+        // 只有旁路任务时不碰游戏，就绪闸门跳过
+        if (plan.params.isEmpty()) {
+            return TaskStartDecision.Ready(plan)
+        }
+
         return when (val readiness =
             checkGameReadiness(plan.clientType, plan.launchesGame, context)) {
             is GameReadiness.Ready ->

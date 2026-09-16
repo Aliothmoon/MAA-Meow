@@ -13,6 +13,7 @@ import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.launch.LaunchPipeline
+import com.aliothmoon.maameow.domain.launch.PlanSideTaskRunner
 import com.aliothmoon.maameow.domain.launch.LaunchRequest
 import com.aliothmoon.maameow.domain.launch.LaunchSession
 import com.aliothmoon.maameow.domain.launch.LaunchUserEvent
@@ -72,6 +73,7 @@ class BackgroundTaskViewModel(
     private val launchPipeline: LaunchPipeline,
     private val taskEndRegistry: TaskEndRegistry,
     private val application: Context,
+    private val sideTaskRunner: PlanSideTaskRunner,
 ) : ViewModel() {
 
     val launchSession: StateFlow<LaunchSession> = launchPipeline.session
@@ -502,6 +504,12 @@ class BackgroundTaskViewModel(
             }
         }
 
+        if (plan.params.isEmpty()) {
+            // 只有旁路任务，不起 Core；界面上没运行态，靠 Toast 报开始与结果
+            sideTaskRunner.runWithoutCore(plan.sideTasks) { _effects.send(UiEffect.toast(it)) }
+            return null
+        }
+
         // 必须先于静音，换进程会让旧进程收尾时解除静音
         compositionService.prepareResources(plan.clientType)
 
@@ -518,6 +526,8 @@ class BackgroundTaskViewModel(
             fallbacks = plan.fallbacks,
         )
         if (result is MaaCompositionService.StartResult.Success) {
+            // 晚于 startSession 发出，拉取日志才有会话接住
+            sideTaskRunner.launch(plan.sideTasks)
             achievementReporter.reportTaskStarted(
                 taskCount = plan.params.size,
                 launchesGame = plan.launchesGame,

@@ -207,13 +207,13 @@ fun OperBoxPanel(
                             Triple("Markdown", ToolboxExportFileType.MARKDOWN) {
                                 OperBoxExportFormatter.toMarkdown(
                                     viewModel.exportOperBoxList(),
-                                    exportLabels
+                                    exportLabels,
                                 )
                             },
                             Triple("CSV", ToolboxExportFileType.CSV) {
                                 OperBoxExportFormatter.toCsv(
                                     viewModel.exportOperBoxList(),
-                                    exportLabels
+                                    exportLabels,
                                 )
                             },
                         )
@@ -251,8 +251,10 @@ private fun rememberOperBoxExportLabels(): OperBoxExportLabels {
     val potential = stringResource(R.string.operbox_export_header_potential)
     val yes = stringResource(R.string.operbox_export_yes)
     val no = stringResource(R.string.operbox_export_no)
-    return remember(name, id, rarity, elite, level, own, potential, yes, no) {
-        OperBoxExportLabels(name, id, rarity, elite, level, own, potential, yes, no)
+    val skills = stringResource(R.string.operbox_export_header_skills)
+    val equips = stringResource(R.string.operbox_export_header_equips)
+    return remember(name, id, rarity, elite, level, own, potential, yes, no, skills, equips) {
+        OperBoxExportLabels(name, id, rarity, elite, level, own, potential, yes, no, skills, equips)
     }
 }
 

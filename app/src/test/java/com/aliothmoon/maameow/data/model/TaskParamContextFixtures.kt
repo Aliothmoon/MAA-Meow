@@ -32,6 +32,7 @@ fun testTaskParamContext(
     dropsRefresher: FightDropsRefresher = mockk(relaxed = true),
     logSink: PreflightLogSink = CollectingPreflightLogSink(),
     report: ReportOptions = ReportOptions.DEFAULT,
+    operBoxUseYituliuApi: Boolean = false,
 ): TaskParamContext = TaskParamContext(
     clientType = clientType,
     chainAllowsCreditFight = chainAllowsCreditFight,
@@ -44,6 +45,7 @@ fun testTaskParamContext(
     dropsRefresher = dropsRefresher,
     logSink = logSink,
     report = report,
+    operBoxUseYituliuApi = operBoxUseYituliuApi,
 )
 
 /** 最小节点；config 仅占位，展开逻辑以 toTaskParams 的 receiver 为准。 */

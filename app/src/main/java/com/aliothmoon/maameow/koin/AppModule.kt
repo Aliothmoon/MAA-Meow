@@ -10,6 +10,7 @@ import com.aliothmoon.maameow.data.api.ETagCacheManager
 import com.aliothmoon.maameow.data.api.GameDataReportService
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.api.MaaApiService
+import com.aliothmoon.maameow.data.api.YituliuApiService
 import com.aliothmoon.maameow.data.api.MirrorChyanApiClient
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.datasource.AppDownloader
@@ -56,9 +57,11 @@ import com.aliothmoon.maameow.domain.launch.CountdownUI
 import com.aliothmoon.maameow.domain.launch.LaunchMutex
 import com.aliothmoon.maameow.domain.launch.LaunchPipeline
 import com.aliothmoon.maameow.domain.launch.LaunchRequest
+import com.aliothmoon.maameow.domain.launch.PlanSideTaskRunner
 import com.aliothmoon.maameow.domain.launch.StartTaskChainUseCase
 import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
+import com.aliothmoon.maameow.domain.service.OperBoxYituliuSync
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.AppAliveChecker
 import com.aliothmoon.maameow.domain.service.AppWatchdog
@@ -153,6 +156,7 @@ val appModule = module {
     }
     singleOf(::ETagCacheManager)
     singleOf(::MaaApiService)
+    singleOf(::YituliuApiService)
     singleOf(::AnnouncementManager)
     singleOf(::PermissionManager)
     singleOf(::ShizukuReadinessProvider)
@@ -276,6 +280,8 @@ val appModule = module {
     singleOf(::ConnectionInfoHandler)
     singleOf(::CopilotRuntimeStateStore)
     singleOf(::ToolboxResultCollector)
+    singleOf(::OperBoxYituliuSync)
+    single { PlanSideTaskRunner(androidContext(), get(), get()) }
     singleOf(::TaskChainStatusTracker)
     singleOf(::FightDropsRefresher)
     singleOf(::TaskChainHandler)

@@ -31,6 +31,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration.Companion.milliseconds
 
 class MaaResourceLoader(
     private val pathConfig: MaaPathConfig,
@@ -197,18 +198,16 @@ class MaaResourceLoader(
         loadedClientType = null
         runCatching { RemoteServiceManager.unbind() }
             .onFailure { Timber.w(it, "unbind before profile switch failed") }
-        withTimeoutOrNull(SERVICE_RESTART_TIMEOUT_MS) {
+        withTimeoutOrNull(SERVICE_RESTART_TIMEOUT_MS.milliseconds) {
             RemoteServiceManager.state.first { it !is RemoteServiceManager.ServiceState.Connected }
         }
         // destroy 是 oneway，给旧进程留点退出窗口
-        delay(SERVICE_RESTART_SETTLE_MS)
+        delay(SERVICE_RESTART_SETTLE_MS.milliseconds)
     }
 
     private suspend fun doLoadDepsInfo(clientType: String) {
-        val displayLanguage = ResourceDataManager.displayLanguageCode(
-            resolveSelectedLanguage(appSettings.language.value)
-        )
-        withTimeout(30_000) {
+        val displayLanguage = appSettings.displayLanguage
+        withTimeout(30_000.milliseconds) {
             withContext(Dispatchers.IO) {
                 listOf(
                     async { resourceDataManager.load(clientType, displayLanguage) },

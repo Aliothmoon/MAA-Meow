@@ -296,6 +296,7 @@ class MaaResourceLoaderTest {
             val appSettings = mockk<AppSettingsManager> {
                 every { debugMode } returns MutableStateFlow(false)
                 every { language } returns MutableStateFlow(appLanguage)
+                every { displayLanguage } returns ResourceDataManager.displayLanguageCode(appLanguage)
                 every { forceFullscreenOnVirtualDisplay } returns MutableStateFlow(false)
                 every { tasksOverrideEnabled } returns MutableStateFlow(false)
             }

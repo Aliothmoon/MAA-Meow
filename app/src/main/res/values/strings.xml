@@ -343,6 +343,30 @@
     <string name="settings_report_yituliu_desc">掉落与公招结果上传至一图流</string>
     <string name="settings_penguin_id">企鹅物流汇报 ID</string>
     <string name="settings_penguin_id_hint">仅数字部分，可留空由服务器分配</string>
+    <string name="settings_section_third_party">三方服务</string>
+    <string name="settings_yituliu_open_api_token">OpenAPI Token</string>
+    <string name="settings_yituliu_open_api_token_hint">一图流个人中心生成，建议只给读取权限</string>
+    <string name="settings_yituliu_token_verify">验证</string>
+    <string name="settings_yituliu_token_empty">请先填写 Token</string>
+    <string name="settings_yituliu_token_valid">Token 有效，共 %1$d 名干员</string>
+    <string name="settings_yituliu_token_valid_no_data">Token 有效，但账号暂无干员练度数据</string>
+    <string name="settings_oper_box_yituliu_title">干员识别从一图流获取</string>
+    <string name="settings_oper_box_yituliu_desc">开启后不再进游戏截图识别，改为拉取一图流数据；数据来自森空岛导入，仅国服有</string>
+    <string name="oper_box_yituliu_fetching">正在从一图流获取干员数据…</string>
+    <string name="oper_box_yituliu_done">已从一图流获取 %1$d 名干员</string>
+    <string name="oper_box_yituliu_done_skipped">已从一图流获取 %1$d 名干员，%2$d 名在本地资源中不存在，已跳过</string>
+    <string name="oper_box_yituliu_local_table_outdated">返回的干员在本地资源中均不存在，请先更新 MAA 资源</string>
+    <string name="oper_box_yituliu_internal_error">获取失败，详细原因见日志</string>
+    <string name="settings_secret_show">显示</string>
+    <string name="settings_secret_hide">隐藏</string>
+    <string name="oper_box_yituliu_token_empty">请先在设置里填写一图流 Token</string>
+    <string name="oper_box_yituliu_no_data">Token 对应账号暂无干员练度数据，已保留本地结果</string>
+    <string name="oper_box_yituliu_write_only">Token 没有读取权限，请换只读或读写 Token</string>
+    <string name="oper_box_yituliu_invalid">Token 无效或已失效，请重新生成</string>
+    <string name="oper_box_yituliu_network_error">网络错误，请稍后重试</string>
+    <string name="oper_box_yituliu_local_data_missing">本地干员数据未装载，请先连接一次提权服务</string>
+    <string name="oper_box_yituliu_busy">正在拉取，请稍候</string>
+    <string name="runlog_oper_box_yituliu_failed">从一图流获取干员数据失败：%1$s</string>
     <string name="report_http_failed">上报失败，放弃上传企鹅物流</string>
     <string name="settings_tasks_override_title">MAA 任务覆盖</string>
     <string name="settings_tasks_override_desc">如果你不知道这是什么请不要修改，会导致 MAA 无法正常工作</string>
@@ -775,6 +799,8 @@
     <string name="panel_operbox_tab_owned">已拥有 (%1$d)</string>
     <string name="panel_operbox_tab_not_owned">未拥有 (%1$d)</string>
     <string name="panel_operbox_copy_toast">已复制干员数据</string>
+    <string name="operbox_export_header_skills">技能专精</string>
+    <string name="operbox_export_header_equips">模组</string>
     <string name="panel_operbox_title">干员识别</string>
     <string name="panel_operbox_hint_scan">点击下方「开始任务」扫描已拥有的干员信息。</string>
     <string name="panel_operbox_hint_results">识别完成后可查看已拥有 / 未拥有干员，支持导出。</string>
@@ -1905,6 +1931,7 @@
     <string name="schedule_log_user_cancelled">用户取消了定时任务执行</string>
     <string name="schedule_log_starting_tasks">前置条件通过，启用任务 %1$d 项，正在启动…</string>
     <string name="schedule_log_start_success">任务启动成功</string>
+    <string name="schedule_log_side_task_only">本轮只有不经 Core 的任务，已并行执行</string>
     <string name="schedule_log_start_failed">任务启动失败: %1$s</string>
     <string name="schedule_log_task_blocked">任务被拦截，原因: %1$s</string>
     <string name="schedule_log_task_needs_confirmation">任务需要确认，自动化路径已拒绝</string>
@@ -2361,8 +2388,6 @@
     <!-- 定时任务锁屏 · PIN -->
     <string name="settings_wake_credential">PIN</string>
     <string name="settings_wake_credential_hint">4～16 位数字</string>
-    <string name="settings_wake_credential_show">显示 PIN</string>
-    <string name="settings_wake_credential_hide">隐藏 PIN</string>
     <string name="settings_wake_credential_warning">不支持图案和字母密码</string>
     <string name="settings_wake_test_button">测试</string>
     <string name="settings_wake_test_hint">先锁屏，约 0.5 秒后自动解锁</string>

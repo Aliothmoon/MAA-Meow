@@ -193,4 +193,12 @@ data class AppSettings(
     @PrefKey(default = "")
     val penguinId: String = "",
 
+    /** 一图流 OpenAPI Token，只用于干员识别拉取 */
+    @PrefKey(default = "")
+    val yituliuOpenApiToken: String = "",
+
+    /** 干员识别从一图流拉取，不再进游戏截图识别 */
+    @PrefKey(default = "false")
+    val operBoxUseYituliuApi: String = "false",
+
     )

@@ -299,6 +299,14 @@ class LaunchPipeline(
                     log.append(uiTextOf(R.string.schedule_log_start_success))
                 }
 
+                is StartTaskChainUseCase.Result.SuccessWithoutCore -> {
+                    terminalResult = ExecutionResult.STARTED
+                    terminalMessage = null
+                    log.append(uiTextOf(R.string.schedule_log_side_task_only))
+                    // 旁路结果只有定时触发日志能持久保存
+                    result.message?.let { log.append(it) }
+                }
+
                 is StartTaskChainUseCase.Result.Failed -> {
                     terminalResult = result.executionResult
                     terminalMessage = result.message
@@ -378,6 +386,7 @@ class LaunchPipeline(
                     && request.closeGameAfterTask
                     && !appSettingsManager.closeAppOnTaskEnd.value
             val screenSaverEngaged = outcome.screenSaverEngaged
+            // Core 未起时 armOnce 看到 IDLE 会当场补跑，不能整段跳过，否则息屏锁屏不执行
             if (result != ExecutionResult.STARTED) {
                 if (screenSaverEngaged) screenSaver.hide()
             } else if (closeGame || autoSleep || screenSaverEngaged) {

@@ -3,10 +3,12 @@ package com.aliothmoon.maameow.presentation.viewmodel
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.LogItem
 import com.aliothmoon.maameow.data.model.TaskParamProvider
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.domain.launch.PlanSideTaskRunner
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
@@ -41,6 +43,7 @@ class ExpandedControlPanelViewModel(
     private val overlayController: OverlayController,
     private val sessionLogger: MaaSessionLogger,
     private val achievementReporter: AchievementReporter,
+    private val sideTaskRunner: PlanSideTaskRunner,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(FloatingPanelState())
@@ -303,6 +306,12 @@ class ExpandedControlPanelViewModel(
                 }
             }
 
+            if (plan.params.isEmpty()) {
+                // 只有旁路任务，不起 Core；界面上没运行态，靠 Toast 报开始与结果
+                sideTaskRunner.runWithoutCore(plan.sideTasks) { _effects.send(UiEffect.toast(it)) }
+                return@launch
+            }
+
             Timber.i("=== Task JSON List (%d tasks) ===", plan.params.size)
             plan.params.forEachIndexed { index, params ->
                 Timber.i("[%d] Type: %s", index, params.type.value)
@@ -318,6 +327,8 @@ class ExpandedControlPanelViewModel(
             )
             val message = application.formatStartResult(result)
             if (result is MaaCompositionService.StartResult.Success) {
+                // 晚于 startSession 发出，拉取日志才有会话接住
+                sideTaskRunner.launch(plan.sideTasks)
                 achievementReporter.reportTaskStarted(
                     taskCount = plan.params.size,
                     launchesGame = plan.launchesGame,

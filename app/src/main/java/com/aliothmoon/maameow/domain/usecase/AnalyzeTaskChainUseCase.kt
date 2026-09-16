@@ -16,6 +16,7 @@ import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.data.resource.ServerTimezone
 import com.aliothmoon.maameow.domain.models.MallCreditFightAvailability
+import com.aliothmoon.maameow.domain.models.PlanSideTask
 import com.aliothmoon.maameow.domain.models.ReportOptions
 import com.aliothmoon.maameow.domain.service.FightDropsRefresher
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
@@ -71,6 +72,7 @@ class AnalyzeTaskChainUseCase(
         )
         val log = CollectingPreflightLogSink()
         val fallbacks = mutableMapOf<TaskSlot, TaskFallbackChain>()
+        val sideTasks = mutableListOf<PlanSideTask>()
 
         val serverDayOfWeek = ServerTimezone.getYjDayOfWeek(clientType)
         val expanded = nodes.flatMap { node ->
@@ -89,6 +91,7 @@ class AnalyzeTaskChainUseCase(
                 dropsRefresher = dropsRefresher,
                 logSink = log,
                 report = report,
+                operBoxUseYituliuApi = appSettingsManager.operBoxUseYituliuApi.value,
                 relocatePath = relocatePath,
             )
             val expandedNode = node.config.toTaskParams(ctx).mapIndexed { index, task ->
@@ -97,12 +100,14 @@ class AnalyzeTaskChainUseCase(
             ctx.fallbacks.forEach { (index, candidates) ->
                 fallbacks[TaskSlot(node.id, index)] = candidates
             }
+            sideTasks += ctx.sideTasks
             expandedNode
         }
         val params = dropAdjacentDuplicateDepot(expanded)
         val logs = log.entries
 
-        if (params.isEmpty()) {
+        // 只剩旁路任务也算可执行，由启动侧走不起 Core 的轻量路径
+        if (params.isEmpty() && sideTasks.isEmpty()) {
             return AnalyzeTaskChainResult.Blocked(
                 reason = AnalyzeTaskChainFailureReason.NO_EXECUTABLE_TASKS,
                 logs = logs,
@@ -120,6 +125,8 @@ class AnalyzeTaskChainUseCase(
                     .any { it.startGameEnabled },
                 logs = logs,
                 fallbacks = fallbacks,
+                // 开了两个同类节点会攒出两份，并发进去只有一份能拿到锁
+                sideTasks = sideTasks.distinct(),
             )
         )
     }
@@ -165,6 +172,7 @@ data class TaskChainPlan(
     val logs: List<Pair<UiText, LogLevel>> = emptyList(),
     /** 任务位 → 后备候选（按序）；主任务 append 失败时才用到，目前只有库存保持「仅第一个」会产生 */
     val fallbacks: Map<TaskSlot, TaskFallbackChain> = emptyMap(),
+    val sideTasks: List<PlanSideTask> = emptyList(),
 )
 
 enum class AnalyzeTaskChainFailureReason {
