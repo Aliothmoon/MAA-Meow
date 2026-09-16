@@ -39,6 +39,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
+import com.aliothmoon.maameow.presentation.view.panel.common.bringIntoViewOnExpand
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -61,8 +62,8 @@ fun CoreCharSelector(
 
     // 校验状态
     var isValid by remember { mutableStateOf(true) }
-    // 未选过干员时默认展开推荐列表，列表按 priority 排序，首位即该主题最推荐的开局
-    var showSuggestions by remember { mutableStateOf(value.isBlank()) }
+    // 默认不展开推荐列表
+    var showSuggestions by remember { mutableStateOf(false) }
 
     // 是否正在校验（用于显示加载状态）
     var isValidating by remember { mutableStateOf(false) }
@@ -190,44 +191,48 @@ fun CoreCharSelector(
                 placeholder = stringResource(R.string.core_char_selector_placeholder),
                 outlineColor = if (!isValid && !isValidating) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
                 modifier = Modifier.fillMaxWidth(),
-                trailingIcon = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (inputText.isNotEmpty()) {
-                            IconButton(
-                                onClick = { handleInputChange("") },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = stringResource(R.string.common_clear),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                        if (recommendedChars.isNotEmpty()) {
-                            IconButton(
-                                onClick = {
-                                    showSuggestions = !showSuggestions
-                                    if (showSuggestions) {
-                                        filteredSuggestions = recommendedChars
-                                    }
-                                },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (showSuggestions) {
-                                        Icons.Default.KeyboardArrowUp
-                                    } else {
-                                        Icons.Default.KeyboardArrowDown
-                                    },
-                                    contentDescription = stringResource(
-                                        if (showSuggestions) R.string.core_char_selector_collapse
-                                        else R.string.core_char_selector_recommended
+                trailingIcon = if (inputText.isNotEmpty() || recommendedChars.isNotEmpty()) {
+                    {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (inputText.isNotEmpty()) {
+                                IconButton(
+                                    onClick = { handleInputChange("") },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = stringResource(R.string.common_clear),
+                                        modifier = Modifier.size(18.dp)
                                     )
-                                )
+                                }
+                            }
+                            if (recommendedChars.isNotEmpty()) {
+                                IconButton(
+                                    onClick = {
+                                        showSuggestions = !showSuggestions
+                                        if (showSuggestions) {
+                                            filteredSuggestions = recommendedChars
+                                        }
+                                    },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (showSuggestions) {
+                                            Icons.Default.KeyboardArrowUp
+                                        } else {
+                                            Icons.Default.KeyboardArrowDown
+                                        },
+                                        contentDescription = stringResource(
+                                            if (showSuggestions) R.string.core_char_selector_collapse
+                                            else R.string.core_char_selector_recommended
+                                        )
+                                    )
+                                }
                             }
                         }
                     }
+                } else {
+                    null
                 }
             )
         }
@@ -254,6 +259,7 @@ fun CoreCharSelector(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 150.dp)
+                    .bringIntoViewOnExpand(true)
                     .clip(RoundedCornerShape(8.dp))
                     .border(
                         width = 1.dp,
