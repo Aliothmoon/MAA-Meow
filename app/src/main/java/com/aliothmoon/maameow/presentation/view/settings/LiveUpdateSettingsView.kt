@@ -51,6 +51,8 @@ import androidx.navigation.NavController
 import android.graphics.Bitmap
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.notification.LiveBackend
+import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
 import com.aliothmoon.maameow.notification.TrackerIconDecoder
 import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
@@ -105,7 +107,9 @@ private val ColorSwatches = listOf(
 @Composable
 fun LiveUpdateSettingsView(navController: NavController) {
     val appSettingsManager: AppSettingsManager = koinInject()
+    val livePublisher: LiveUpdatePublisher = koinInject()
     val enabled by appSettingsManager.liveUpdateEnabled.collectAsStateWithLifecycle()
+    val useHyperIsland by appSettingsManager.liveUpdateUseHyperIsland.collectAsStateWithLifecycle()
     val chipContent by appSettingsManager.liveUpdateChipContent.collectAsStateWithLifecycle()
     val colorScheme by appSettingsManager.liveUpdateColorScheme.collectAsStateWithLifecycle()
     val customColor by appSettingsManager.liveUpdateCustomColor.collectAsStateWithLifecycle()
@@ -114,6 +118,16 @@ fun LiveUpdateSettingsView(navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
     val contentColor = MaterialTheme.colorScheme.onSurface
     val context = LocalContext.current
+
+    // 同一设置在不同系统作用面不同：超级岛设备作用于岛，原生设备作用于状态栏/进度条，
+    // 文案随实际生效的展示方式变化，避免误导（放开开关与后端选择都会改变结果）
+    val capability = remember(enabled, useHyperIsland) { livePublisher.capability }
+    val onIsland = capability.backend == LiveBackend.HYPER_OS_FOCUS
+    val chipLabelRes =
+        if (onIsland) R.string.live_update_chip_label_island else R.string.live_update_chip_label
+    val iconLabelRes =
+        if (onIsland) R.string.live_update_icon_label_island else R.string.live_update_icon_label
+    val hintRes = if (onIsland) R.string.live_update_hint_island else R.string.live_update_hint
 
     val customTrackerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -186,6 +200,24 @@ fun LiveUpdateSettingsView(navController: NavController) {
                             )
                         },
                     )
+                    // 仅在本机可能是超级岛设备时给出原生 / 超级岛切换
+                    if (capability.focusLikely) {
+                        SettingRow(
+                            title = stringResource(R.string.live_update_use_island_title),
+                            description = stringResource(R.string.live_update_use_island_desc),
+                            titleColor = contentColor,
+                            trailing = {
+                                Switch(
+                                    checked = useHyperIsland,
+                                    onCheckedChange = { value ->
+                                        coroutineScope.launch {
+                                            appSettingsManager.setLiveUpdateUseHyperIsland(value)
+                                        }
+                                    }
+                                )
+                            },
+                        )
+                    }
                 }
             }
 
@@ -194,7 +226,7 @@ fun LiveUpdateSettingsView(navController: NavController) {
                 SectionHeader(stringResource(R.string.live_update_section_display))
                 SettingsGroupCard {
                     Text(
-                        text = stringResource(R.string.live_update_chip_label),
+                        text = stringResource(chipLabelRes),
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -361,7 +393,7 @@ fun LiveUpdateSettingsView(navController: NavController) {
 
             // ── 进度条图标（图标预览 + 标签） ──
             item {
-                SectionHeader(stringResource(R.string.live_update_icon_label))
+                SectionHeader(stringResource(iconLabelRes))
                 SettingsGroupCard {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -507,7 +539,7 @@ fun LiveUpdateSettingsView(navController: NavController) {
             // ── 提示 ──
             item {
                 Text(
-                    text = stringResource(R.string.live_update_hint),
+                    text = stringResource(hintRes),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     modifier = Modifier.padding(

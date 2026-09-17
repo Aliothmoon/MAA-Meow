@@ -432,6 +432,16 @@ class AppSettingsManager internal constructor(
         }
     }
 
+    /// 小米设备上是否用超级岛（焦点通知）展示：关闭则回退原生实时更新样式。
+    val liveUpdateUseHyperIsland: StateFlow<Boolean> =
+        setting { it.liveUpdateUseHyperIsland.toBooleanStrictOrNull() ?: true }
+
+    suspend fun setLiveUpdateUseHyperIsland(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateUseHyperIsland] = enabled.toString() }
+        }
+    }
+
     /// Live Updates 状态栏 chip 短关键文本内容（both=进度+任务名 / progress=仅进度 / task=仅任务名 / log=最新日志 / none=不显示）。
     val liveUpdateChipContent: StateFlow<LiveUpdateChipContent> = setting {
         runCatching { LiveUpdateChipContent.valueOf(it.liveUpdateChipContent) }

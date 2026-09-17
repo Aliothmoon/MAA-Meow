@@ -61,8 +61,9 @@ class LivePublisherRouter(
         // 用户关闭 Live Updates 时整体退化为普通通知
         val backend = when {
             !appSettings.liveUpdateEnabled.value -> LiveBackend.PLAIN
-            hyperDetector.isAvailable() && appSettings.liveIslandXmsfBypass.value ->
-                LiveBackend.HYPER_OS_FOCUS
+            appSettings.liveUpdateUseHyperIsland.value &&
+                hyperDetector.isAvailable() &&
+                appSettings.liveIslandXmsfBypass.value -> LiveBackend.HYPER_OS_FOCUS
 
             promoted -> LiveBackend.AOSP_PROMOTED
             else -> LiveBackend.PLAIN
