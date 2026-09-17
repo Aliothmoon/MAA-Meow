@@ -144,6 +144,8 @@ class LiveNotificationFactory(
         if (hyperIsland) {
             builder.setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             builder.setCategory(categoryOf(session))
+            // 岛上状态栏图标跟随用户设置（原生 Live Updates 保持应用默认图标不变）
+            trackerIcons.bitmapOrNull()?.let { builder.setSmallIcon(IconCompat.createWithBitmap(it)) }
             if (session.category == LiveCategory.PROGRESS) {
                 val percent = session.progressPercent()
                 if (percent == null) {
@@ -214,10 +216,6 @@ class LiveNotificationFactory(
     }
 
     private fun trackerIconCompat(): IconCompat =
-        when (val source = trackerIcons.resolve()) {
-            is TrackerIconSource.Res ->
-                IconCompat.createWithResource(appContext, source.id)
-            is TrackerIconSource.Bmp ->
-                IconCompat.createWithBitmap(source.bitmap)
-        }
+        trackerIcons.bitmapOrNull()?.let { IconCompat.createWithBitmap(it) }
+            ?: IconCompat.createWithResource(appContext, R.drawable.ic_progress_tracker)
 }

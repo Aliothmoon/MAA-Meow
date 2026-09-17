@@ -6,7 +6,6 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Icon
 import android.os.Bundle
 import androidx.core.graphics.drawable.toBitmap
-import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.notification.LiveBackend
 import com.aliothmoon.maameow.domain.notification.LiveCapability
@@ -253,14 +252,9 @@ class HyperOsFocusPublisher(
         return body.removePrefix("$label · ")
     }
 
-    /** 用户选用的追踪图标；默认方案返回 null，岛沿用应用图标 */
-    private fun trackerIcon(): Icon? = when (val source = trackerIcons.resolve()) {
-        is TrackerIconSource.Res ->
-            if (source.id == R.drawable.ic_progress_tracker) null
-            else Icon.createWithResource(appContext, source.id)
-
-        is TrackerIconSource.Bmp -> Icon.createWithBitmap(source.bitmap)
-    }
+    /** 用户在设置里选的图标；默认方案返回 null，岛沿用应用图标 */
+    private fun trackerIcon(): Icon? =
+        trackerIcons.bitmapOrNull()?.let { Icon.createWithBitmap(it) }
 
     private companion object {
         const val PIC_PROGRESS_APP = "miui.focus.pic_progress_app"

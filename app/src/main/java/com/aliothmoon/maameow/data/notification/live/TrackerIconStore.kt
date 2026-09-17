@@ -1,7 +1,10 @@
 package com.aliothmoon.maameow.data.notification.live
 
+import android.content.Context
 import android.graphics.Bitmap
 import androidx.annotation.DrawableRes
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.graphics.drawable.toBitmap
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.notification.TrackerIconDecoder
@@ -14,39 +17,31 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** 追踪图标来源：内置资源或解码后的自定义位图 */
-sealed interface TrackerIconSource {
-    data class Res(@param:DrawableRes val id: Int) : TrackerIconSource
-    data class Bmp(val bitmap: Bitmap) : TrackerIconSource
-}
-
 /**
- * 自定义追踪图标缓存。
+ * 用户自定义的通知图标来源，统一输出位图。
  *
- * 通知每秒刷新，不能每次都做文件 IO / 位图解码 / SVG 解析：缓存命中时同步返回，
- * 未命中时由 [ensureDecoded] 在 IO 线程异步解码，完成后回调刷新当前通知。
- * 位数有限、路径切换少，缓存放 [ConcurrentHashMap] 即可，主线程读、IO 线程写均安全。
+ * 通知每秒刷新，不能每次都做文件 IO / 位图解码 / SVG 解析，命中缓存即同步返回。
+ * 内置图标也在这里转成位图：通知状态栏与超级岛焦点负载对位图的支持最稳。
+ * 自定义图片由 [ensureDecoded] 在 IO 线程解码，完成后回调刷新当前通知。
  */
 class TrackerIconStore(
+    context: Context,
     private val appSettings: AppSettingsManager,
 ) {
+    private val appContext = context.applicationContext
     private val cache = ConcurrentHashMap<String, Bitmap?>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val decodeJob = AtomicReference<Job?>(null)
 
-    /** 当前设置下的追踪图标；自定义图标尚未解码完成时回退默认图标 */
-    fun resolve(): TrackerIconSource = when (appSettings.liveUpdateTrackerIcon.value) {
-        AppSettingsManager.LiveUpdateTrackerIcon.LOGO -> TrackerIconSource.Res(R.drawable.ic_maa_logo)
-        AppSettingsManager.LiveUpdateTrackerIcon.DOT -> TrackerIconSource.Res(R.drawable.ic_tracker_dot)
-        AppSettingsManager.LiveUpdateTrackerIcon.CUSTOM -> {
-            val bitmap = customBitmap()
-            if (bitmap != null) TrackerIconSource.Bmp(bitmap)
-            else TrackerIconSource.Res(R.drawable.ic_progress_tracker)
-        }
-        AppSettingsManager.LiveUpdateTrackerIcon.DEFAULT -> TrackerIconSource.Res(R.drawable.ic_progress_tracker)
+    /** 当前设置下的自定义图标位图；DEFAULT 返回 null，由调用方沿用各自默认图标 */
+    fun bitmapOrNull(): Bitmap? = when (appSettings.liveUpdateTrackerIcon.value) {
+        AppSettingsManager.LiveUpdateTrackerIcon.DEFAULT -> null
+        AppSettingsManager.LiveUpdateTrackerIcon.LOGO -> presetBitmap(R.drawable.ic_maa_logo)
+        AppSettingsManager.LiveUpdateTrackerIcon.DOT -> presetBitmap(R.drawable.ic_tracker_dot)
+        AppSettingsManager.LiveUpdateTrackerIcon.CUSTOM -> customBitmap()
     }
 
-    /** 自定义图标是否已按当前设置解码完成（用于判断是否需要触发异步解码） */
+    /** 自定义图标是否还没按当前设置解码完成 */
     fun needsDecode(): Boolean {
         if (appSettings.liveUpdateTrackerIcon.value != AppSettingsManager.LiveUpdateTrackerIcon.CUSTOM) {
             return false
@@ -70,6 +65,17 @@ class TrackerIconStore(
             withContext(Dispatchers.Main) { onReady() }
         }
         decodeJob.set(job)
+    }
+
+    private fun presetBitmap(@DrawableRes id: Int): Bitmap? {
+        val key = "res|$id"
+        cache[key]?.let { return it }
+        if (cache.containsKey(key)) return null
+        val bitmap = runCatching {
+            AppCompatResources.getDrawable(appContext, id)?.toBitmap()
+        }.getOrNull()
+        cache[key] = bitmap
+        return bitmap
     }
 
     private fun readCachedOrDecode(key: String, path: String): Bitmap? {
