@@ -238,6 +238,7 @@ dependencies {
     implementation(libs.jakarta.activation.api)
     implementation(libs.reorderable)
     implementation(libs.compose.markdown)
+    implementation(libs.androidsvg)
 
     // sora-editor：JSON 语法高亮编辑器（TextMate + darcula 主题）
     implementation(platform(libs.bom))

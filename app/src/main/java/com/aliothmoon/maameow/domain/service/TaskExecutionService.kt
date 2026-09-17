@@ -8,7 +8,10 @@ import android.content.Intent
 import android.os.IBinder
 import android.os.SystemClock
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.notification.live.TrackerIconStore
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.notification.LiveCategory
+import com.aliothmoon.maameow.domain.notification.LiveChipMode
 import com.aliothmoon.maameow.domain.notification.LiveNotifyIds
 import com.aliothmoon.maameow.domain.notification.LiveSession
 import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
@@ -66,6 +69,8 @@ class TaskExecutionService : Service() {
     private val sessionLogger: MaaSessionLogger by inject()
     private val taskChainStatusTracker: TaskChainStatusTracker by inject()
     private val liveCoordinator: LiveSessionCoordinator by inject()
+    private val appSettingsManager: AppSettingsManager by inject()
+    private val trackerIconStore: TrackerIconStore by inject()
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var progressJob: Job? = null
@@ -257,15 +262,21 @@ class TaskExecutionService : Service() {
         val title = activeName ?: getString(R.string.notification_task_running_title)
         val label = progress.label
         val contentText = if (label != null) "$label · $statusText" else statusText
+        // 自定义图标未缓存时先发默认图标，解码完成后回来刷新
+        trackerIconStore.ensureDecoded { refreshActiveNotification() }
         // AOSP 胶囊只有一个字符串：任务名在前，系统从尾部截断时先保住它
-        // 不预截断（8 字上限只是超级岛摘要态的要求）；任务链未登记时留空，由下游决定不设胶囊
-        val capsule = listOfNotNull(activeName, label).joinToString(" ")
+        // 不预截断（8 字上限只是超级岛摘要态的要求）
+        val chipContent = appSettingsManager.liveUpdateChipContent.value
+        val capsule = buildCapsuleText(chipContent, statusText, label, activeName)
         return LiveSession(
             sessionId = LiveNotifyIds.PROGRESS_SESSION,
             category = LiveCategory.PROGRESS,
             title = title,
             text = contentText,
             capsuleText = capsule,
+            // 仅用户明确选择「不显示」时显式清空 chip，其余留空交给下游决定不设胶囊
+            capsuleHidden = chipContent == AppSettingsManager.LiveUpdateChipContent.NONE,
+            chipMode = chipContent.toLiveChipMode(),
             progressCurrent = progress.current,
             progressMax = progress.max,
             progressLabel = progress.label,
@@ -274,6 +285,40 @@ class TaskExecutionService : Service() {
             timeoutSec = 86_400,
             isError = snapshot.state == MaaExecutionState.ERROR || progress.hasTaskError,
         )
+    }
+
+    private fun buildCapsuleText(
+        chipContent: AppSettingsManager.LiveUpdateChipContent,
+        statusText: String,
+        progressLabel: String?,
+        activeTaskName: String?,
+    ): String = when (chipContent) {
+        AppSettingsManager.LiveUpdateChipContent.BOTH -> when {
+            progressLabel != null && activeTaskName != null -> "$progressLabel $activeTaskName"
+            progressLabel != null -> progressLabel
+            activeTaskName != null -> activeTaskName
+            else -> ""
+        }
+
+        AppSettingsManager.LiveUpdateChipContent.PROGRESS -> progressLabel ?: ""
+        AppSettingsManager.LiveUpdateChipContent.TASK -> activeTaskName ?: ""
+        AppSettingsManager.LiveUpdateChipContent.LOG -> statusText
+        AppSettingsManager.LiveUpdateChipContent.NONE -> ""
+    }
+
+    /** 自定义图标解码完成后刷新当前活动通知，让新图标立即生效 */
+    private fun refreshActiveNotification() {
+        if (!liveCoordinator.isCurrent(boundToken)) return
+        updateNotification(boundToken, currentSnapshot())
+    }
+
+    /** 设置层的短文本模式转成领域枚举，供原生与超级岛各自渲染 */
+    private fun AppSettingsManager.LiveUpdateChipContent.toLiveChipMode(): LiveChipMode = when (this) {
+        AppSettingsManager.LiveUpdateChipContent.BOTH -> LiveChipMode.BOTH
+        AppSettingsManager.LiveUpdateChipContent.PROGRESS -> LiveChipMode.PROGRESS
+        AppSettingsManager.LiveUpdateChipContent.TASK -> LiveChipMode.TASK
+        AppSettingsManager.LiveUpdateChipContent.LOG -> LiveChipMode.LOG
+        AppSettingsManager.LiveUpdateChipContent.NONE -> LiveChipMode.NONE
     }
 
     private fun defaultStatusText(state: MaaExecutionState): String = when (state) {

@@ -396,6 +396,106 @@ class AppSettingsManager internal constructor(
         }
     }
 
+    // Live Updates 通知自定义
+    enum class LiveUpdateChipContent(@param:androidx.annotation.StringRes val labelRes: Int) {
+        BOTH(R.string.live_update_chip_both),
+        PROGRESS(R.string.live_update_chip_progress),
+        TASK(R.string.live_update_chip_task),
+        LOG(R.string.live_update_chip_log),
+        NONE(R.string.live_update_chip_none),
+    }
+
+    enum class LiveUpdateColorScheme(@param:androidx.annotation.StringRes val labelRes: Int) {
+        DEFAULT(R.string.live_update_color_default),
+        BLUE(R.string.live_update_color_blue),
+        GREEN(R.string.live_update_color_green),
+        ORANGE(R.string.live_update_color_orange),
+        PURPLE(R.string.live_update_color_purple),
+        PINK(R.string.live_update_color_pink),
+        TEAL(R.string.live_update_color_teal),
+        CUSTOM(R.string.live_update_color_custom),
+    }
+
+    enum class LiveUpdateTrackerIcon(@param:androidx.annotation.StringRes val labelRes: Int) {
+        DEFAULT(R.string.live_update_icon_default),
+        LOGO(R.string.live_update_icon_logo),
+        DOT(R.string.live_update_icon_dot),
+        CUSTOM(R.string.live_update_icon_custom),
+    }
+
+    /// Live Updates 通知是否启用（Android 16+ promoted ongoing / ProgressStyle 展示）。
+    val liveUpdateEnabled: StateFlow<Boolean> = setting { it.liveUpdateEnabled.toBooleanStrictOrNull() ?: true }
+
+    suspend fun setLiveUpdateEnabled(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateEnabled] = enabled.toString() }
+        }
+    }
+
+    /// 小米设备上是否用超级岛（焦点通知）展示：关闭则回退原生实时更新样式。
+    val liveUpdateUseHyperIsland: StateFlow<Boolean> =
+        setting { it.liveUpdateUseHyperIsland.toBooleanStrictOrNull() ?: true }
+
+    suspend fun setLiveUpdateUseHyperIsland(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateUseHyperIsland] = enabled.toString() }
+        }
+    }
+
+    /// Live Updates 状态栏 chip 短关键文本内容（both=进度+任务名 / progress=仅进度 / task=仅任务名 / log=最新日志 / none=不显示）。
+    val liveUpdateChipContent: StateFlow<LiveUpdateChipContent> = setting {
+        runCatching { LiveUpdateChipContent.valueOf(it.liveUpdateChipContent) }
+            .getOrDefault(LiveUpdateChipContent.BOTH)
+    }
+
+    suspend fun setLiveUpdateChipContent(content: LiveUpdateChipContent) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateChipContent] = content.name }
+        }
+    }
+
+    /// Live Updates 进度条颜色方案（default/blue/green/orange/purple/pink/teal/custom）。
+    val liveUpdateColorScheme: StateFlow<LiveUpdateColorScheme> = setting {
+        runCatching { LiveUpdateColorScheme.valueOf(it.liveUpdateColorScheme) }
+            .getOrDefault(LiveUpdateColorScheme.DEFAULT)
+    }
+
+    suspend fun setLiveUpdateColorScheme(scheme: LiveUpdateColorScheme) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateColorScheme] = scheme.name }
+        }
+    }
+
+    /// Live Updates 自定义主色 HEX（如 "#2196F3"），仅 liveUpdateColorScheme=custom 时使用。
+    val liveUpdateCustomColor: StateFlow<String> = setting { it.liveUpdateCustomColor }
+
+    suspend fun setLiveUpdateCustomColor(color: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateCustomColor] = color }
+        }
+    }
+
+    /// Live Updates 进度条追踪图标（default=合成玉 / logo=MAA 图标 / dot=圆点 / custom=自定义图片）。
+    val liveUpdateTrackerIcon: StateFlow<LiveUpdateTrackerIcon> = setting {
+        runCatching { LiveUpdateTrackerIcon.valueOf(it.liveUpdateTrackerIcon) }
+            .getOrDefault(LiveUpdateTrackerIcon.DEFAULT)
+    }
+
+    suspend fun setLiveUpdateTrackerIcon(icon: LiveUpdateTrackerIcon) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateTrackerIcon] = icon.name }
+        }
+    }
+
+    /// Live Updates 自定义追踪图标文件路径，仅 liveUpdateTrackerIcon=custom 时使用。
+    val liveUpdateCustomTrackerPath: StateFlow<String> = setting { it.liveUpdateCustomTrackerPath }
+
+    suspend fun setLiveUpdateCustomTrackerPath(path: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateCustomTrackerPath] = path }
+        }
+    }
+
     // 后台虚拟屏分辨率
     val backgroundResolution: StateFlow<DefaultDisplayConfig.ResolutionPreference> = setting {
         runCatching { DefaultDisplayConfig.ResolutionPreference.valueOf(it.backgroundResolution) }

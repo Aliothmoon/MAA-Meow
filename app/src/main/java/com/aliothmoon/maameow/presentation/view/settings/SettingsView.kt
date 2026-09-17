@@ -1030,6 +1030,13 @@ fun SettingsView(
                         ) {
                             navController.navigate(Routes.NOTIFICATION)
                         }
+                        SettingClickItem(
+                            title = stringResource(R.string.settings_live_update_title),
+                            description = stringResource(R.string.settings_live_update_desc),
+                            contentColor = contentColor
+                        ) {
+                            navController.navigate(Routes.LIVE_UPDATE)
+                        }
                     }
                 }
             }

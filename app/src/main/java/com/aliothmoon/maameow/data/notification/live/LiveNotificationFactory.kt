@@ -16,7 +16,11 @@ import com.aliothmoon.maameow.domain.notification.LiveNotifyIds
 import com.aliothmoon.maameow.domain.notification.LiveSession
 import java.util.concurrent.atomic.AtomicBoolean
 
-class LiveNotificationFactory(private val context: Context) {
+class LiveNotificationFactory(
+    context: Context,
+    private val style: LiveUpdateStyle,
+    private val trackerIcons: TrackerIconStore,
+) {
 
     private val appContext = context.applicationContext
     private val manager =
@@ -119,11 +123,10 @@ class LiveNotificationFactory(private val context: Context) {
             else -> LiveNotifyIds.CHANNEL_RESULT
         }
         val notifyId = LiveNotifyIds.of(session.sessionId)
-        val barColor = when {
-            session.isError -> COLOR_ERROR
-            session.category == LiveCategory.RESULT -> COLOR_COMPLETED
-            else -> COLOR_ACTIVE
-        }
+        val barColor = style.color(
+            isError = session.isError,
+            isCompleted = session.category == LiveCategory.RESULT,
+        )
 
         val builder = NotificationCompat.Builder(appContext, channelId)
             .setSmallIcon(R.drawable.ic_maa_logo)
@@ -141,6 +144,8 @@ class LiveNotificationFactory(private val context: Context) {
         if (hyperIsland) {
             builder.setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             builder.setCategory(categoryOf(session))
+            // 岛上状态栏图标跟随用户设置（原生 Live Updates 保持应用默认图标不变）
+            trackerIcons.bitmapOrNull()?.let { builder.setSmallIcon(IconCompat.createWithBitmap(it)) }
             if (session.category == LiveCategory.PROGRESS) {
                 val percent = session.progressPercent()
                 if (percent == null) {
@@ -154,6 +159,8 @@ class LiveNotificationFactory(private val context: Context) {
         } else {
             if (session.capsuleText.isNotBlank()) {
                 builder.setShortCriticalText(session.capsuleText)
+            } else if (session.capsuleHidden) {
+                builder.setShortCriticalText("")
             }
             builder.setCategory(categoryOf(session))
             builder.setStyle(
@@ -194,25 +201,21 @@ class LiveNotificationFactory(private val context: Context) {
     private fun progressStyle(session: LiveSession): NotificationCompat.ProgressStyle {
         val max = session.progressMax ?: LiveNotifyIds.PROGRESS_STYLE_MAX
         val current = session.progressCurrent ?: 0
-        val color = if (session.isError) COLOR_ERROR else COLOR_ACTIVE
-        val style = NotificationCompat.ProgressStyle()
+        val color = style.color(isError = session.isError, isCompleted = false)
+        val progressStyle = NotificationCompat.ProgressStyle()
             .setStyledByProgress(true)
             .setProgressIndeterminate(session.progressMax == null || session.progressMax == 0)
-            .setProgressTrackerIcon(
-                IconCompat.createWithResource(appContext, R.drawable.ic_progress_tracker)
-            )
+            .setProgressTrackerIcon(trackerIconCompat())
             .addProgressSegment(
                 NotificationCompat.ProgressStyle.Segment(max.coerceAtLeast(1)).setColor(color)
             )
         if (session.progressMax != null && session.progressMax > 0) {
-            style.setProgress(current.coerceIn(0, max))
+            progressStyle.setProgress(current.coerceIn(0, max))
         }
-        return style
+        return progressStyle
     }
 
-    private companion object {
-        const val COLOR_COMPLETED = 0xFF4CAF50.toInt()
-        const val COLOR_ACTIVE = 0xFF2196F3.toInt()
-        const val COLOR_ERROR = 0xFFD32F2F.toInt()
-    }
+    private fun trackerIconCompat(): IconCompat =
+        trackerIcons.bitmapOrNull()?.let { IconCompat.createWithBitmap(it) }
+            ?: IconCompat.createWithResource(appContext, R.drawable.ic_progress_tracker)
 }
