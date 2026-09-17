@@ -11,6 +11,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.notification.live.TrackerIconStore
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.notification.LiveCategory
+import com.aliothmoon.maameow.domain.notification.LiveChipMode
 import com.aliothmoon.maameow.domain.notification.LiveNotifyIds
 import com.aliothmoon.maameow.domain.notification.LiveSession
 import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
@@ -275,6 +276,7 @@ class TaskExecutionService : Service() {
             capsuleText = capsule,
             // 仅用户明确选择「不显示」时显式清空 chip，其余留空交给下游决定不设胶囊
             capsuleHidden = chipContent == AppSettingsManager.LiveUpdateChipContent.NONE,
+            chipMode = chipContent.toLiveChipMode(),
             progressCurrent = progress.current,
             progressMax = progress.max,
             progressLabel = progress.label,
@@ -308,6 +310,15 @@ class TaskExecutionService : Service() {
     private fun refreshActiveNotification() {
         if (!liveCoordinator.isCurrent(boundToken)) return
         updateNotification(boundToken, currentSnapshot())
+    }
+
+    /** 设置层的短文本模式转成领域枚举，供原生与超级岛各自渲染 */
+    private fun AppSettingsManager.LiveUpdateChipContent.toLiveChipMode(): LiveChipMode = when (this) {
+        AppSettingsManager.LiveUpdateChipContent.BOTH -> LiveChipMode.BOTH
+        AppSettingsManager.LiveUpdateChipContent.PROGRESS -> LiveChipMode.PROGRESS
+        AppSettingsManager.LiveUpdateChipContent.TASK -> LiveChipMode.TASK
+        AppSettingsManager.LiveUpdateChipContent.LOG -> LiveChipMode.LOG
+        AppSettingsManager.LiveUpdateChipContent.NONE -> LiveChipMode.NONE
     }
 
     private fun defaultStatusText(state: MaaExecutionState): String = when (state) {

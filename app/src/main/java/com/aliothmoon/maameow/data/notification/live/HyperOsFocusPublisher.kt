@@ -10,6 +10,7 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.notification.LiveBackend
 import com.aliothmoon.maameow.domain.notification.LiveCapability
 import com.aliothmoon.maameow.domain.notification.LiveCategory
+import com.aliothmoon.maameow.domain.notification.LiveChipMode
 import com.aliothmoon.maameow.domain.notification.LiveNotifyIds
 import com.aliothmoon.maameow.domain.notification.LiveSession
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
@@ -140,10 +141,13 @@ class HyperOsFocusPublisher(
             .take(16)
         val headline = session.title.take(40)
         val body = session.text.take(80)
-        val aod = when {
-            session.category == LiveCategory.RESULT -> session.capsuleText.take(8)
-            percent != null -> "$percent%"
-            else -> "…"
+        // 岛左栏是 title + content 两行、另有 AOD 短文案，与原生胶囊的单行字符串结构不同，
+        // 因此按「状态栏显示内容」各自组合，避免照搬原生文案造成重复/误导
+        val island = islandTexts(session, percent)
+        val aod = if (session.category == LiveCategory.RESULT) {
+            session.capsuleText.take(8)
+        } else {
+            island.aod
         }
         return FocusNotification.buildV3 {
             val progressColor = style.colorHexOrNull() ?: PROGRESS_COLOR
@@ -161,7 +165,7 @@ class HyperOsFocusPublisher(
             timeout = (timeoutSec / 60).coerceAtLeast(5)
             sequence = sequenceStore.next(notifyId)
             aodTitle = aod
-            ticker = "$headline $aod".take(40)
+            ticker = "$headline $aod".trim().take(40)
             tickerPic = capsulePic
             filterWhenNoPermission = false
             showSmallIcon = false
@@ -198,10 +202,11 @@ class HyperOsFocusPublisher(
                             pic = appPic
                         }
                         textInfo {
-                            // 左栏=场景与进度：任务名 + "2/5"；百分比只在进度环与 AOD
-                            this.title = (if (isProgress) headline else appLabel).take(16)
-                            content = (session.progressLabel
-                                ?: session.capsuleText.ifBlank { headline }).take(8)
+                            // 左栏=场景与进度：进度会话按「状态栏显示内容」的两行结构填，不再照搬单行胶囊文案
+                            this.title = (if (isProgress) island.leftTitle else appLabel).take(16)
+                            content = (if (isProgress) island.leftContent else session.progressLabel)
+                                .orEmpty()
+                                .take(8)
                             showHighlightColor = true
                         }
                     }
@@ -250,6 +255,32 @@ class HyperOsFocusPublisher(
     private fun stripProgressPrefix(session: LiveSession, body: String): String {
         val label = session.progressLabel ?: return body
         return body.removePrefix("$label · ")
+    }
+
+    private data class IslandTexts(
+        val leftTitle: String,
+        val leftContent: String,
+        val aod: String,
+    )
+
+    /**
+     * 按「状态栏显示内容」组合岛上的短文本。
+     *
+     * 原生胶囊是一条字符串，岛左栏是 title + content 两行、另有 AOD，两者布局不同：
+     * 这里按岛的结构重新分配，BOTH 保持「任务名 + 进度」的原有两行，避免任务名重复出现。
+     */
+    private fun islandTexts(session: LiveSession, percent: Int?): IslandTexts {
+        val taskName = session.title.take(16)
+        val progressText = session.progressLabel.orEmpty().take(8)
+        val percentText = percent?.let { "$it%" } ?: "…"
+        val logText = stripProgressPrefix(session, session.text).take(8)
+        return when (session.chipMode) {
+            LiveChipMode.BOTH -> IslandTexts(taskName, progressText, percentText)
+            LiveChipMode.PROGRESS -> IslandTexts(progressText, "", percentText)
+            LiveChipMode.TASK -> IslandTexts(taskName, "", taskName)
+            LiveChipMode.LOG -> IslandTexts(taskName, logText, logText)
+            LiveChipMode.NONE -> IslandTexts("", "", "")
+        }
     }
 
     /** 用户在设置里选的图标；默认方案返回 null，岛沿用应用图标 */
