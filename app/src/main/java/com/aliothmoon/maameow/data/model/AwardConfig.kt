@@ -16,7 +16,8 @@ data class AwardConfig(
     val freeGacha: Boolean = false,  // 进行每日免费单抽
     val orundum: Boolean = false,  // 领取幸运墙合成玉
     val mining: Boolean = false,  // 领取挖矿合成玉
-    val specialAccess: Boolean = false  // 领取周年特殊月卡
+    val specialAccess: Boolean = false,  // 领取周年特殊月卡
+    val signInEvent: Boolean = false  // 领取限时签到活动奖励
 ) : TaskParamProvider {
     override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
         val paramsJson = buildJsonObject {
@@ -26,6 +27,7 @@ data class AwardConfig(
             put("orundum", orundum)
             put("mining", mining)
             put("specialaccess", specialAccess)
+            put("signinevent", signInEvent)
         }
         return listOf(MaaTaskParams(MaaTaskType.AWARD, paramsJson.toString()))
     }

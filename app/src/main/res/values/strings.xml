@@ -1151,6 +1151,8 @@
     <string name="panel_award_orundum">领取幸运墙的每日合成玉奖励</string>
     <string name="panel_award_mining">领取限时开采许可的每日合成玉奖励</string>
     <string name="panel_award_special_access">领取周年赠送月卡奖励</string>
+    <string name="panel_award_sign_in_event">领取限时签到活动奖励</string>
+    <string name="panel_award_sign_in_event_tip">仅支持常见横向版型；其他版型不支持，可能无法正常运作</string>
 
     <!-- panel: depot -->
     <string name="panel_depot_item_count">共 %1$d 种物品</string>

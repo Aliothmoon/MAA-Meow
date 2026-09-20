@@ -1097,6 +1097,8 @@
     <string name="panel_award_orundum">Collect daily Orundum reward from the Lucky Strips</string>
     <string name="panel_award_mining">Collect daily Orundum reward from the provisional mining permit</string>
     <string name="panel_award_special_access">Collect Special Access rewards</string>
+    <string name="panel_award_sign_in_event">Collect limited-time sign-in event rewards</string>
+    <string name="panel_award_sign_in_event_tip">Only the common horizontal layout is supported; other layouts may not work</string>
 
     <!-- panel: depot -->
     <string name="panel_depot_item_count">%1$d item types</string>

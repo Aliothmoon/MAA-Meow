@@ -20,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.AwardConfig
+import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
@@ -92,6 +93,13 @@ fun AwardConfigPanel(
             checked = config.specialAccess,
             onCheckedChange = { onConfigChange(config.copy(specialAccess = it)) },
             label = stringResource(R.string.panel_award_special_access)
+        )
+
+        CheckBoxWithExpandableTip(
+            checked = config.signInEvent,
+            onCheckedChange = { onConfigChange(config.copy(signInEvent = it)) },
+            label = stringResource(R.string.panel_award_sign_in_event),
+            tipText = stringResource(R.string.panel_award_sign_in_event_tip)
         )
     }
 }
