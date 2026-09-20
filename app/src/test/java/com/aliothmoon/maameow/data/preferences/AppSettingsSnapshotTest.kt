@@ -96,6 +96,18 @@ class AppSettingsSnapshotTest {
     }
 
     @Test
+    fun `设备本地图标路径不入包`() {
+        val text = AppSettingsSnapshot.format(
+            AppSettings(
+                liveUpdateCustomTrackerPath =
+                    "/data/user/0/com.aliothmoon.maameow/files/live_update/tracker_icon_1699",
+            )
+        )
+        assertFalse(text.contains("tracker_icon_1699"))
+        assertTrue(text.contains("omitted: "))
+    }
+
+    @Test
     fun `疑似凭证字段必须掩码`() {
         // 掩码靠硬编码名单，新增凭证字段容易漏；这里兜底，命中关键字就必须已掩码
         val suspicious = Regex("(?i)cdk|credential|token|secret|key|password|pin")

@@ -12,5 +12,6 @@ object Routes {
     const val SCHEDULE_EDIT = "schedule_edit/{strategyId}"
     const val SCHEDULE_TRIGGER_LOG = "schedule_trigger_log"
     const val NOTIFICATION = "notification"
+    const val LIVE_UPDATE = "live_update"
     const val TASK_OVERRIDE_EDITOR = "task_override_editor"
 }
