@@ -17,11 +17,14 @@ class LivePublisherRouter(
     private val appSettings: AppSettingsManager,
     private val hyperDetector: HyperOsFocusDetector,
     private val promotedDetector: AospPromotedDetector,
+    style: LiveUpdateStyle,
+    trackerIcons: TrackerIconStore,
 ) : LiveUpdatePublisher {
 
     private val appContext = context.applicationContext
     private val hyper = HyperOsFocusPublisher(
         appContext, factory, sequenceStore, xmsfGate, appSettings, promotedDetector,
+        style, trackerIcons,
     )
     private val aosp = AospPromotedPublisher(appContext, factory, promotedDetector)
     private val plain = PlainNotificationPublisher(appContext, factory, promotedDetector)
@@ -55,9 +58,12 @@ class LivePublisherRouter(
         val focusGranted = hyperDetector.hasFocusPermission()
         val promoted = promotedDetector.isGranted()
         // 关掉旁路后岛会被云端鉴权摘掉，继续发焦点负载只是白构建，直接退到下一档
+        // 用户关闭 Live Updates 时整体退化为普通通知
         val backend = when {
-            hyperDetector.isAvailable() && appSettings.liveIslandXmsfBypass.value ->
-                LiveBackend.HYPER_OS_FOCUS
+            !appSettings.liveUpdateEnabled.value -> LiveBackend.PLAIN
+            appSettings.liveUpdateUseHyperIsland.value &&
+                hyperDetector.isAvailable() &&
+                appSettings.liveIslandXmsfBypass.value -> LiveBackend.HYPER_OS_FOCUS
 
             promoted -> LiveBackend.AOSP_PROMOTED
             else -> LiveBackend.PLAIN

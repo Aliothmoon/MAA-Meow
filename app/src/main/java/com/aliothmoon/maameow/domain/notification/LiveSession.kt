@@ -20,6 +20,20 @@ enum class LiveResultKind {
     SERVICE_DIED,
 }
 
+/**
+ * 短文本的组成方式（对应设置里的「状态栏显示内容」）。
+ *
+ * 原生 Live Updates 的胶囊只有一个字符串，超级岛的左栏是 title + content 两行、
+ * 另有 AOD 短文案，两端布局不同，不能共用同一条字符串，故由各后端按此模式自行组合。
+ */
+enum class LiveChipMode {
+    BOTH,
+    PROGRESS,
+    TASK,
+    LOG,
+    NONE,
+}
+
 data class LiveCapability(
     val backend: LiveBackend,
     val postNotifications: Boolean,
@@ -35,6 +49,15 @@ data class LiveSession(
     val title: String,
     val text: String,
     val capsuleText: String,
+    /** 用户选择「不显示」时置位：显式清空状态栏 chip，避免系统回退显示默认文本 */
+    val capsuleHidden: Boolean = false,
+    /** 短文本组成方式，供各后端按自身布局渲染（原生胶囊单行 / 岛左栏两行） */
+    val chipMode: LiveChipMode = LiveChipMode.BOTH,
+    /**
+     * 样式版本号：由「影响外观的设置 + 图标缓存状态」派生，参与 [fingerprint] 去重。
+     * 否则改配色/图标后指纹不变，协调器会直接丢弃这次刷新，进行中的通知保持旧样式。
+     */
+    val styleRevision: Int = 0,
     val progressCurrent: Int? = null,
     val progressMax: Int? = null,
     /** 任务计数文案，如 "2/5"；岛左栏用它替代百分比 */
@@ -47,7 +70,7 @@ data class LiveSession(
     val alert: Boolean = false,
 ) {
     fun fingerprint(): String =
-        "$sessionId|$title|$text|$capsuleText|$progressCurrent|$progressMax|$progressLabel|$ongoing|$isError"
+        "$sessionId|$title|$text|$capsuleText|$capsuleHidden|$chipMode|$styleRevision|$progressCurrent|$progressMax|$progressLabel|$ongoing|$isError"
 
     fun progressPercent(): Int? {
         val cur = progressCurrent ?: return null
