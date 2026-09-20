@@ -69,6 +69,8 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
             "减速"
         )
 
+        private val MORPH_SUFFIXES = listOf("-WARRIOR", "-MEDIC")
+
         // 虚拟干员 (预备干员、肉鸽临时干员、阿米娅变体)
         private val VIRTUAL_OPERATORS = setOf(
             "char_504_rguard", // 预备干员-近战
@@ -169,8 +171,20 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
 
     fun getCharacterByNameOrAlias(name: String): CharacterInfo? {
         if (name.isBlank()) return null
-        return _nameIndex.value[name.lowercase()]
+        val index = _nameIndex.value
+        index[name.lowercase()]?.let { return it }
+        // 带职业后缀的升变干员名视作本体的别名：上游 #18190 把后缀从 battle_data 去掉改用 role 区分，
+        // core 已无法按名区分，旧配置与第三方作业里的「阿米娅-WARRIOR」只能落到本体上
+        return MORPH_SUFFIXES.firstNotNullOfOrNull { suffix ->
+            name.takeIf { it.endsWith(suffix, ignoreCase = true) }
+                ?.dropLast(suffix.length)
+                ?.let { index[it.lowercase()] }
+        }
     }
+
+    /** 归一化为 MaaCore 认的简中名，查不到时原样返回 */
+    fun normalizeCharacterName(name: String): String =
+        getCharacterByNameOrAlias(name)?.name ?: name
 
     fun getCharacterById(id: String): CharacterInfo? {
         return _characters.value[id]
