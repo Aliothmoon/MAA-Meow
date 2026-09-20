@@ -2,11 +2,15 @@ package com.aliothmoon.maameow.data.achievement
 
 import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 enum class PallasPrompt { DRUNK, HANGOVER }
+
+/** 弹窗是独立 window，会把飘字整个盖住，先让它升一会儿 */
+private const val PROMPT_LEAD_MS = 450L
 
 class PallasDrunkState(
     private val settings: AppSettingsManager,
@@ -24,10 +28,6 @@ class PallasDrunkState(
 
     val isDrunk: StateFlow<Boolean> = _isDrunk.asStateFlow()
 
-    private val _tip = MutableStateFlow("")
-
-    val tip: StateFlow<String> = _tip.asStateFlow()
-
     private val _prompt = MutableStateFlow<PallasPrompt?>(null)
 
     val prompt: StateFlow<PallasPrompt?> = _prompt.asStateFlow()
@@ -39,17 +39,20 @@ class PallasDrunkState(
 
         when (result) {
             PallasClickResult.EnteredDebug -> {
-                _tip.value = PallasSpeak.random(1, 10)
+                delay(PROMPT_LEAD_MS)
                 _prompt.value = PallasPrompt.DRUNK
             }
 
             PallasClickResult.ExitedDebug -> {
                 val wasDrunk = sober()
-                _tip.value = ""
-                _prompt.value = if (wasDrunk) PallasPrompt.HANGOVER else null
+                _prompt.value = null
+                if (wasDrunk) {
+                    delay(PROMPT_LEAD_MS)
+                    _prompt.value = PallasPrompt.HANGOVER
+                }
             }
 
-            else -> _tip.value = PallasSpeak.random(1, 10)
+            else -> Unit
         }
     }
 

@@ -93,7 +93,6 @@ import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.MaaApi
 import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
 import com.aliothmoon.maameow.constant.Routes
-import com.aliothmoon.maameow.data.achievement.PallasDrunkState
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
@@ -153,7 +152,6 @@ fun SettingsView(
     achievementViewModel: AchievementViewModel = koinViewModel(),
     resourceInitService: ResourceInitService = koinInject(),
     achievementReporter: AchievementReporter = koinInject(),
-    pallasDrunkState: PallasDrunkState = koinInject(),
 ) {
     val resourceInitState by resourceInitService.state.collectAsStateWithLifecycle()
     val showChangelog by viewModel.showChangelog.collectAsStateWithLifecycle()
@@ -1025,13 +1023,6 @@ fun SettingsView(
                                     achievementViewModel.onEvent(AchievementEvent.PallasAvatarClicked)
                                 },
                             )
-                            val pallasTip by pallasDrunkState.tip.collectAsStateWithLifecycle()
-                            if (pallasTip.isNotEmpty()) {
-                                Text(
-                                    text = pallasTip,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
                             MaaAnimatedVisibility(
                                 visible = achievementUiState.pallasDebugActive,
                                 enter = fadeIn() + expandVertically(),

@@ -8,6 +8,9 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -38,6 +41,7 @@ fun PallasDrunkHost(
     content: @Composable () -> Unit,
 ) {
     val isDrunk by state.isDrunk.collectAsStateWithLifecycle()
+    val debugActive by state.debugActive.collectAsStateWithLifecycle()
     val prompt by state.prompt.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
@@ -49,11 +53,21 @@ fun PallasDrunkHost(
         if (isDrunk) DrunkResources(sober) else null
     }
 
+    val cheers = remember { PallasCheerController() }
+
     CompositionLocalProvider(
         LocalResources provides (drunk ?: sober),
         LocalSoberResources provides sober,
+        LocalPallasCheers provides cheers,
     ) {
-        content()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pallasCheerTaps(debugActive, cheers),
+        ) {
+            content()
+        }
+        PallasCheerLayer(cheers)
 
         prompt?.let {
             AdaptiveTaskPromptDialog(

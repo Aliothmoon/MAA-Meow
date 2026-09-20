@@ -52,7 +52,6 @@ class PallasDrunkStateTest {
         // 还没确认，先别醉，也别落盘
         assertFalse(state.isDrunk.value)
         assertFalse(hangoverFlag.value)
-        assertTrue(state.tip.value.isNotEmpty())
     }
 
     @Test
@@ -76,8 +75,6 @@ class PallasDrunkStateTest {
         assertFalse(state.debugActive.value)
         assertFalse(hangoverFlag.value)
         assertEquals(PallasPrompt.HANGOVER, state.prompt.value)
-        // 醒了就把碎碎念收掉
-        assertTrue(state.tip.value.isEmpty())
     }
 
     /** 对齐 WPF HangoverEnd 的提前 return:没真喝下去就退出的不念叨 */
