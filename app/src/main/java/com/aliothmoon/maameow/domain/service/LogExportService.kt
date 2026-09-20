@@ -16,11 +16,13 @@ import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.data.preferences.AppSettingsSnapshot
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.MaaCoreVersion
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.ShizukuManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 import timber.log.Timber
@@ -64,7 +66,7 @@ class LogExportService(
                 Timber.w("No log files found, exporting device info only")
             }
 
-            createZipFile(zipFile, logFiles, dir)
+            createZipFile(zipFile, logFiles, dir, buildSettingsSnapshot())
 
             Timber.i("Exported ${logFiles.size} log files to ${zipFile.absolutePath}")
             achievementRepository.report {
@@ -109,7 +111,17 @@ class LogExportService(
         }
     }
 
-    private fun createZipFile(zipFile: File, logFiles: List<File>, baseDir: File) {
+    private suspend fun buildSettingsSnapshot(): String? =
+        runCatching { AppSettingsSnapshot.format(appSettingsManager.settings.first()) }
+            .onFailure { Timber.w(it, "Failed to snapshot app settings") }
+            .getOrNull()
+
+    private fun createZipFile(
+        zipFile: File,
+        logFiles: List<File>,
+        baseDir: File,
+        settingsSnapshot: String?,
+    ) {
         ZipOutputStream(BufferedOutputStream(FileOutputStream(zipFile))).use { zos ->
             try {
                 val process = Runtime.getRuntime().exec("getprop")
@@ -129,6 +141,16 @@ class LogExportService(
                 zos.closeEntry()
             } catch (e: Exception) {
                 Timber.w(e, "Failed to collect device info")
+            }
+
+            if (settingsSnapshot != null) {
+                try {
+                    zos.putNextEntry(ZipEntry(AppSettingsSnapshot.ENTRY_NAME))
+                    zos.write(settingsSnapshot.toByteArray(Charsets.UTF_8))
+                    zos.closeEntry()
+                } catch (e: Exception) {
+                    Timber.w(e, "Failed to write app settings snapshot")
+                }
             }
 
             appendRemoteDebugFiles(zos)
