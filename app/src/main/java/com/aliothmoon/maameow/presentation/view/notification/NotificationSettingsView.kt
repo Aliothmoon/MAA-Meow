@@ -76,6 +76,8 @@ fun NotificationSettingsView(
     val includeLogDetails by viewModel.includeLogDetails.collectAsStateWithLifecycle()
     val liveCapability by viewModel.liveCapability.collectAsStateWithLifecycle()
     val liveIslandXmsfBypass by viewModel.liveIslandXmsfBypass.collectAsStateWithLifecycle()
+    val liveUpdateEnabled by viewModel.liveUpdateEnabled.collectAsStateWithLifecycle()
+    val liveUpdateUseHyperIsland by viewModel.liveUpdateUseHyperIsland.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -132,6 +134,19 @@ fun NotificationSettingsView(
                         description = styleLabel,
                         titleColor = contentColor,
                     )
+                    ListItemDivider()
+                    // 是否启用与展示后端统一在这里管，样式页只负责样式
+                    SettingRow(
+                        title = stringResource(R.string.notification_live_enable),
+                        description = stringResource(R.string.notification_live_enable_desc),
+                        titleColor = contentColor,
+                        trailing = {
+                            Switch(
+                                checked = liveUpdateEnabled,
+                                onCheckedChange = viewModel::setLiveUpdateEnabled,
+                            )
+                        },
+                    )
                     // 授权行只在缺权限时出现，已授权时没有可操作性
                     if (!liveCapability.postNotifications) {
                         ListItemDivider()
@@ -144,6 +159,19 @@ fun NotificationSettingsView(
                         }
                     }
                     if (liveCapability.focusLikely) {
+                        ListItemDivider()
+                        // 原生实时更新与超级岛二选一，受权限与兼容模式影响
+                        SettingRow(
+                            title = stringResource(R.string.notification_live_use_island),
+                            description = stringResource(R.string.notification_live_use_island_desc),
+                            titleColor = contentColor,
+                            trailing = {
+                                Switch(
+                                    checked = liveUpdateUseHyperIsland,
+                                    onCheckedChange = viewModel::setLiveUpdateUseHyperIsland,
+                                )
+                            },
+                        )
                         ListItemDivider()
                         // 断网旁路会波及全机小米推送，给用户留个开关
                         SettingRow(
