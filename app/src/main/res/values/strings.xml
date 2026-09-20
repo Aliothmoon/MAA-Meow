@@ -971,6 +971,7 @@
     <string name="panel_infrast_preset_153_4x">153 一天 4 换</string>
     <string name="panel_infrast_preset_243_3x">243 一天 3 换</string>
     <string name="panel_infrast_preset_243_4x">243 一天 4 换</string>
+    <string name="panel_infrast_preset_252_3x">252 一天 3 换</string>
     <string name="panel_infrast_preset_333_3x">333 一天 3 换</string>
     <string name="panel_infrast_plan_title">排班计划</string>
     <string name="panel_infrast_plan_tip">如「基建计划」存在执行时间，「基建换班」任务开始前或任务运行时不会自动切换，将保持 Link Start! 时的状态，仅在空闲或任务完成后切换</string>

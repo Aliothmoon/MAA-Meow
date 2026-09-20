@@ -752,6 +752,7 @@ private fun infrastPresetLabel(key: String): String {
         "153_layout_4_times_a_day.json" -> stringResource(R.string.panel_infrast_preset_153_4x)
         "243_layout_3_times_a_day.json" -> stringResource(R.string.panel_infrast_preset_243_3x)
         "243_layout_4_times_a_day.json" -> stringResource(R.string.panel_infrast_preset_243_4x)
+        "252_layout_3_times_a_day.json" -> stringResource(R.string.panel_infrast_preset_252_3x)
         "333_layout_for_Orundum_3_times_a_day.json" -> stringResource(R.string.panel_infrast_preset_333_3x)
         else -> key
     }

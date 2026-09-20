@@ -917,6 +917,7 @@
     <string name="panel_infrast_preset_153_4x">153 4 times a day</string>
     <string name="panel_infrast_preset_243_3x">243 3 times a day</string>
     <string name="panel_infrast_preset_243_4x">243 4 times a day</string>
+    <string name="panel_infrast_preset_252_3x">252 3 times a day</string>
     <string name="panel_infrast_preset_333_3x">333 3 times a day</string>
     <string name="panel_infrast_plan_title">Schedule Plan</string>
     <string name="panel_infrast_plan_tip">If \"Base Schedule\" has execution time configured, it will not switch automatically before the \"Base Shift\" task starts or during task execution. It stays in the state at Link Start! and only switches when idle or after the task is completed.</string>

@@ -18,6 +18,7 @@ object UiUsageConstants {
         "153_layout_4_times_a_day.json",
         "243_layout_3_times_a_day.json",
         "243_layout_4_times_a_day.json",
+        "252_layout_3_times_a_day.json",
         "333_layout_for_Orundum_3_times_a_day.json",
     )
 
