@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -36,6 +37,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -331,47 +333,108 @@ private fun OperatorRow(oper: OperBoxOperator) {
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f, fill = false)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = "${oper.rarity}★",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                    fontWeight = FontWeight.Bold,
-                    color = rarityColor
-                )
-                Text(
-                    text = oper.name,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
+                    Text(
+                        text = "${oper.rarity}★",
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                        fontWeight = FontWeight.Bold,
+                        color = rarityColor
+                    )
+                    Text(
+                        text = oper.name,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (oper.own) {
+                    Text(
+                        text = stringResource(
+                            R.string.panel_operbox_owned_meta,
+                            oper.elite,
+                            oper.level,
+                            oper.potential
+                        ),
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
-            if (oper.own) {
-                Text(
-                    text = stringResource(
-                        R.string.panel_operbox_owned_meta,
-                        oper.elite,
-                        oper.level,
-                        oper.potential
-                    ),
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            OperTrainingBadges(oper)
         }
+    }
+}
+
+/** 模组分支到显示名，对齐上游 ToolboxViewModel.ModTypeDisplay */
+private val MOD_TYPE_DISPLAY = mapOf(
+    "A" to "α", "B" to "β", "X" to "χ", "Y" to "γ", "D" to "Δ"
+)
+
+/**
+ * 技能练度与模组，只有一图流数据带主技能等级，core 识别路径整块不显示
+ * 一个专精都没有（含未满 7 级与 7 级未专精）时只给一个 RANK 徽章
+ */
+@Composable
+private fun OperTrainingBadges(oper: OperBoxOperator) {
+    val mainSkillLevel = oper.mainSkillLevel ?: return
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (oper.skills.none { it.level >= 1 }) {
+            BadgeText("RANK $mainSkillLevel")
+        } else {
+            oper.skills.forEach { MasteryBadge(it.level) }
+        }
+        oper.equips.filter { it.level > 0 }.forEach { equip ->
+            BadgeText("${MOD_TYPE_DISPLAY[equip.type] ?: equip.type}${equip.level}")
+        }
+    }
+}
+
+@Composable
+private fun BadgeText(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
+/** 单技能格的品字三圆：专 1 亮上圆，专 2 加亮右下圆，专 3 全亮 */
+@Composable
+private fun MasteryBadge(level: Int) {
+    val on = MaterialTheme.colorScheme.primary
+    val off = MaterialTheme.colorScheme.outlineVariant
+    Canvas(modifier = Modifier.size(12.dp)) {
+        val radius = size.minDimension / 5f
+        drawCircle(
+            if (level >= 1) on else off, radius, Offset(size.width / 2f, radius)
+        )
+        drawCircle(
+            if (level >= 2) on else off, radius, Offset(size.width - radius, size.height - radius)
+        )
+        drawCircle(
+            if (level >= 3) on else off, radius, Offset(radius, size.height - radius)
+        )
     }
 }
