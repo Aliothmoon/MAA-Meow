@@ -39,12 +39,18 @@ data class OperBoxOperator(
     val level: Int,
     val potential: Int,
     val own: Boolean,
+    /** 主技能等级 1–7，只有一图流数据有，core 识别路径为 null */
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val mainSkillLevel: Int? = null,
     // 全局 encodeDefaults 为真，不排除会给每个干员写两个空数组
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val skills: List<OperBoxSkill> = emptyList(),
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val equips: List<OperBoxEquip> = emptyList(),
-)
+) {
+    val hasTrainingData: Boolean
+        get() = mainSkillLevel != null || skills.isNotEmpty() || equips.isNotEmpty()
+}
 
 /** 技能专精，[level] 0–3 */
 @Serializable

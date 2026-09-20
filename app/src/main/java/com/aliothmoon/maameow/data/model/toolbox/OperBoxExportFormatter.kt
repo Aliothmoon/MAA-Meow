@@ -17,6 +17,7 @@ data class OperBoxExportLabels(
     val potential: String,
     val yes: String,
     val no: String,
+    val mainSkillLevel: String,
     val skills: String,
     val equips: String,
 )
@@ -37,6 +38,7 @@ object OperBoxExportFormatter {
                     put("elite", op.elite)
                     put("level", op.level)
                     put("potential", op.potential)
+                    op.mainSkillLevel?.let { put("mainSkillLevel", it) }
                     if (op.skills.isNotEmpty()) put("skills", formatSkills(op))
                     if (op.equips.isNotEmpty()) put("equips", formatEquips(op))
                 })
@@ -46,36 +48,49 @@ object OperBoxExportFormatter {
     }
 
     fun toMarkdown(opers: List<OperBoxOperator>, labels: OperBoxExportLabels): String {
-        val withTraining = opers.hasTraining()
+        val header = baseLabels(labels) + trainingLabels(labels, opers)
         val sb = StringBuilder()
-        val extraHeader = if (withTraining) " ${labels.skills} | ${labels.equips} |" else ""
-        val extraAlign = if (withTraining) " :-- | :-- |" else ""
-        sb.append("| ${labels.name} | ${labels.id} | ${labels.rarity} | ${labels.elite} | ${labels.level} | ${labels.own} | ${labels.potential} |$extraHeader\n")
-        sb.append("| :-- | :-- | :-- | :-- | :-- | :-- | :-- |$extraAlign\n")
-        opers.forEach { op ->
-            val own = if (op.own) labels.yes else labels.no
-            val extra = if (withTraining) " ${formatSkills(op)} | ${formatEquips(op)} |" else ""
-            sb.append("| ${op.name} | ${op.id} | ${op.rarity} | ${op.elite} | ${op.level} | $own | ${op.potential} |$extra\n")
-        }
+        sb.append(markdownRow(header))
+        sb.append(markdownRow(List(header.size) { ":--" }))
+        opers.forEach { sb.append(markdownRow(cellsOf(it, labels, header.size))) }
         return sb.toString().trimEnd('\n')
     }
 
     fun toCsv(opers: List<OperBoxOperator>, labels: OperBoxExportLabels): String {
-        val withTraining = opers.hasTraining()
+        val header = baseLabels(labels) + trainingLabels(labels, opers)
         val sb = StringBuilder()
-        val extraHeader = if (withTraining) ",${labels.skills},${labels.equips}" else ""
-        sb.append("${labels.name},${labels.id},${labels.rarity},${labels.elite},${labels.level},${labels.own},${labels.potential}$extraHeader\n")
+        sb.append(header.joinToString(",")).append('\n')
         opers.forEach { op ->
-            val own = if (op.own) labels.yes else labels.no
-            val extra = if (withTraining) ",${csvEscape(formatSkills(op))},${csvEscape(formatEquips(op))}" else ""
-            sb.append("${csvEscape(op.name)},${op.id},${op.rarity},${op.elite},${op.level},$own,${op.potential}$extra\n")
+            sb.append(cellsOf(op, labels, header.size).joinToString(",") { csvEscape(it) })
+                .append('\n')
         }
         return sb.toString().trimEnd('\n')
     }
 
-    /** 只有一图流数据带专精与模组 */
-    private fun List<OperBoxOperator>.hasTraining(): Boolean =
-        any { it.skills.isNotEmpty() || it.equips.isNotEmpty() }
+    private fun markdownRow(cells: List<String>) = cells.joinToString(" | ", "| ", " |\n")
+
+    private fun baseLabels(labels: OperBoxExportLabels) = with(labels) {
+        listOf(name, id, rarity, elite, level, own, potential)
+    }
+
+    /** 练度三列只在有一图流数据时出现 */
+    private fun trainingLabels(labels: OperBoxExportLabels, opers: List<OperBoxOperator>) =
+        if (opers.hasTraining()) listOf(labels.mainSkillLevel, labels.skills, labels.equips)
+        else emptyList()
+
+    private fun cellsOf(op: OperBoxOperator, labels: OperBoxExportLabels, columns: Int): List<String> {
+        val base = listOf(
+            op.name, op.id, op.rarity.toString(), op.elite.toString(), op.level.toString(),
+            if (op.own) labels.yes else labels.no, op.potential.toString()
+        )
+        if (columns == base.size) return base
+        return base + listOf(
+            op.mainSkillLevel?.toString().orEmpty(), formatSkills(op), formatEquips(op)
+        )
+    }
+
+
+    private fun List<OperBoxOperator>.hasTraining(): Boolean = any { it.hasTrainingData }
 
     /** 专精按技能顺序拼，如 3/3/0 */
     private fun formatSkills(op: OperBoxOperator): String =

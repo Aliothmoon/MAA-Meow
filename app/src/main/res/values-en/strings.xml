@@ -746,6 +746,7 @@
     <string name="panel_operbox_tab_owned">Owned (%1$d)</string>
     <string name="panel_operbox_tab_not_owned">Not Owned (%1$d)</string>
     <string name="panel_operbox_copy_toast">Operator data copied</string>
+    <string name="operbox_export_header_main_skill_level">Skill level</string>
     <string name="operbox_export_header_skills">Skill mastery</string>
     <string name="operbox_export_header_equips">Modules</string>
     <string name="panel_operbox_title">Operator Recognition</string>

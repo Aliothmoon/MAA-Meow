@@ -800,6 +800,7 @@
     <string name="panel_operbox_tab_owned">已拥有 (%1$d)</string>
     <string name="panel_operbox_tab_not_owned">未拥有 (%1$d)</string>
     <string name="panel_operbox_copy_toast">已复制干员数据</string>
+    <string name="operbox_export_header_main_skill_level">技能等级</string>
     <string name="operbox_export_header_skills">技能专精</string>
     <string name="operbox_export_header_equips">模组</string>
     <string name="panel_operbox_title">干员识别</string>

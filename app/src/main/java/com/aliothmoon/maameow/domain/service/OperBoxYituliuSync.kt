@@ -104,6 +104,8 @@ class OperBoxYituliuSync(
             level = oper.level,
             potential = oper.potentialRank,
             own = true,
+            // 一图流对没上传练度的干员给 0，当作无数据
+            mainSkillLevel = oper.mainSkillLevel.takeIf { it > 0 },
             skills = oper.skills.orEmpty().map { OperBoxSkill(it.id, it.level) },
             equips = oper.equips.orEmpty().map { OperBoxEquip(it.id, it.type, it.level) },
         )

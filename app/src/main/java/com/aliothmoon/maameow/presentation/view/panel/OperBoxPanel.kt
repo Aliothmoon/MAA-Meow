@@ -251,10 +251,15 @@ private fun rememberOperBoxExportLabels(): OperBoxExportLabels {
     val potential = stringResource(R.string.operbox_export_header_potential)
     val yes = stringResource(R.string.operbox_export_yes)
     val no = stringResource(R.string.operbox_export_no)
+    val mainSkillLevel = stringResource(R.string.operbox_export_header_main_skill_level)
     val skills = stringResource(R.string.operbox_export_header_skills)
     val equips = stringResource(R.string.operbox_export_header_equips)
-    return remember(name, id, rarity, elite, level, own, potential, yes, no, skills, equips) {
-        OperBoxExportLabels(name, id, rarity, elite, level, own, potential, yes, no, skills, equips)
+    return remember(
+        name, id, rarity, elite, level, own, potential, yes, no, mainSkillLevel, skills, equips
+    ) {
+        OperBoxExportLabels(
+            name, id, rarity, elite, level, own, potential, yes, no, mainSkillLevel, skills, equips
+        )
     }
 }
 
