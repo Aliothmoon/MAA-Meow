@@ -418,17 +418,18 @@ class CopilotManager(
             tags.add("技能 Lv.${req.skillLevel}")
         }
         if (req != null && req.module >= 0) {
-            val moduleNames = arrayOf("χ", "γ", "α", "Δ")
+            val moduleNames = arrayOf("χ", "γ", "α", "Δ", "β")
             when (req.module) {
                 0 -> tags.add("无模组")
-                in 1..4 -> tags.add("模组 ${moduleNames[req.module - 1]}")
+                in 1..moduleNames.size -> tags.add("模组 ${moduleNames[req.module - 1]}")
             }
         }
         return tags
     }
 
     private fun parseUserAdditional(config: CopilotConfig): JsonElement {
-        // TODO: 恢复并重构“追加自定义干员”逻辑。
+        // TODO: 恢复并重构“追加自定义干员”逻辑
+        //  接线时记得补 getCharacterByNameOrAlias 归一化，上游 #18180 起干员名可能是外服名
         return JsonArray(emptyList())
     }
 }
