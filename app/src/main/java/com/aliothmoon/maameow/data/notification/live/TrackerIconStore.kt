@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -52,6 +53,12 @@ class TrackerIconStore(
      */
     fun revision(): Int = iconRevision.get()
 
+    /**
+     * 预热解码：结果/测试通知不经过进度会话（toSession 才有解码触发点），
+     * 在通知构建时调用一次，缓存未命中就排一次后台解码。
+     */
+    fun warmUp() = ensureDecoded {}
+
     /** 自定义图标是否还没按当前设置解码完成 */
     fun needsDecode(): Boolean {
         if (appSettings.liveUpdateTrackerIcon.value != AppSettingsManager.LiveUpdateTrackerIcon.CUSTOM) {
@@ -73,11 +80,15 @@ class TrackerIconStore(
         val path = appSettings.liveUpdateCustomTrackerPath.value
         val key = keyOf(path)
         pruneStaleCustomEntries(key)
-        val job = scope.launch {
+        val job = scope.launch(start = CoroutineStart.LAZY) {
             decodeToCache(key, path)
+            // 先清引用再回调：路径在解码途中改变时，回调里的新解码请求才不会被这个
+            // 仍在收尾的任务挡掉（否则新路径会停在回退图标）
+            decodeJob.set(null)
             withContext(Dispatchers.Main) { onReady() }
         }
         decodeJob.set(job)
+        job.start()
     }
 
     private fun presetBitmap(@DrawableRes id: Int): Bitmap? {

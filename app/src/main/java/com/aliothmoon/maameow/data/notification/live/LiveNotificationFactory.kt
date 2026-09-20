@@ -115,6 +115,8 @@ class LiveNotificationFactory(
         hyperIsland: Boolean = false,
     ): Notification {
         ensureChannels()
+        // 结果/测试通知不经过进度会话，没有解码触发点：构建时预热一次自定义图标
+        trackerIcons.warmUp()
         // 岛进度走 HIGH 无声专属通道；通知级 setSilent 会压掉浮出
         val channelId = when {
             hyperIsland && session.category == LiveCategory.PROGRESS -> LiveNotifyIds.CHANNEL_ISLAND
