@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.schedule.ui
 
 import android.os.Build
+import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,6 +70,7 @@ import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.presentation.LocalToaster
 import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.components.TopAppBar
+import com.aliothmoon.maameow.presentation.components.WheelTimeFormatToggle
 import com.aliothmoon.maameow.presentation.components.WheelTimePicker
 import com.aliothmoon.maameow.presentation.components.rememberWheelTimePickerState
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
@@ -102,6 +105,8 @@ fun ScheduleEditView(
     var showTimePicker by remember { mutableStateOf(false) }
     var editingTime by remember { mutableStateOf<LocalTime?>(null) }
     val context = LocalContext.current
+
+    var use24HourPicker by rememberSaveable { mutableStateOf(DateFormat.is24HourFormat(context)) }
 
     LaunchedEffect(strategyId) {
         viewModel.loadStrategy(context, strategyId)
@@ -405,6 +410,8 @@ fun ScheduleEditView(
                             }
                             TimePickerDialog(
                                 initialTime = existingTime,
+                                is24Hour = use24HourPicker,
+                                onFormatChange = { use24HourPicker = it },
                                 onDismiss = { showStartTimePicker = false },
                                 onConfirm = { time ->
                                     val dateMs = pendingDateMs ?: return@TimePickerDialog
@@ -697,6 +704,8 @@ fun ScheduleEditView(
     if (showTimePicker) {
         TimePickerDialog(
             initialTime = editingTime,
+            is24Hour = use24HourPicker,
+            onFormatChange = { use24HourPicker = it },
             onDismiss = { showTimePicker = false },
             onConfirm = { time ->
                 val old = editingTime
@@ -765,12 +774,15 @@ private fun PermissionWizardDialog(
 @Composable
 private fun TimePickerDialog(
     initialTime: LocalTime? = null,
+    is24Hour: Boolean,
+    onFormatChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
     onConfirm: (LocalTime) -> Unit
 ) {
     val pickerState = rememberWheelTimePickerState(
         initialHour = initialTime?.hour ?: 0,
-        initialMinute = initialTime?.minute ?: 0
+        initialMinute = initialTime?.minute ?: 0,
+        is24Hour = is24Hour
     )
     val configuration = LocalConfiguration.current
     // 横屏等矮屏只留三行，保证对话框放得下
@@ -785,14 +797,23 @@ private fun TimePickerDialog(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = stringResource(R.string.schedule_time_picker_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = MaaDesignTokens.Spacing.lg)
-                )
+                        .padding(bottom = MaaDesignTokens.Spacing.lg),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.schedule_time_picker_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    WheelTimeFormatToggle(
+                        is24Hour = is24Hour,
+                        onFormatChange = onFormatChange
+                    )
+                }
                 WheelTimePicker(
                     state = pickerState,
                     rows = rows,

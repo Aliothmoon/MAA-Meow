@@ -1853,6 +1853,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_time_picker_title">选择时间</string>
     <string name="time_picker_am">AM</string>
     <string name="time_picker_pm">PM</string>
+    <string name="time_picker_format_12h">12h</string>
+    <string name="time_picker_format_24h">24h</string>
     <string name="schedule_default_name">定时任务-%1$d</string>
     <string name="schedule_error_name_required">请输入策略名称</string>
     <string name="schedule_error_profile_required">请选择任务配置</string>

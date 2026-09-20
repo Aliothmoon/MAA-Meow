@@ -1797,6 +1797,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_time_picker_title">Choose time</string>
     <string name="time_picker_am">AM</string>
     <string name="time_picker_pm">PM</string>
+    <string name="time_picker_format_12h">12h</string>
+    <string name="time_picker_format_24h">24h</string>
     <string name="schedule_default_name">Schedule-%1$d</string>
     <string name="schedule_error_name_required">Enter a schedule name</string>
     <string name="schedule_error_profile_required">Select a task profile</string>
