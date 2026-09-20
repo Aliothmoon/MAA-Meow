@@ -335,12 +335,16 @@ class TaskExecutionService : Service() {
      * 不做这层，改配色/图标后快照指纹不变，协调器会直接丢弃刷新（图标解码本身不改任何字段）。
      */
     private fun currentStyleRevision(): Int = listOf(
+        // 后端选择类开关也要进版本号：关闭实时更新/切换后端时快照其它字段不变，
+        // 否则刷新会被协调器按指纹去重丢掉，通知会维持原样式直到下一次任务事件
+        appSettingsManager.liveUpdateEnabled.value,
+        appSettingsManager.liveUpdateUseHyperIsland.value,
+        appSettingsManager.liveIslandXmsfBypass.value,
         appSettingsManager.liveUpdateChipContent.value,
         appSettingsManager.liveUpdateColorScheme.value,
         appSettingsManager.liveUpdateCustomColor.value,
         appSettingsManager.liveUpdateTrackerIcon.value,
         appSettingsManager.liveUpdateCustomTrackerPath.value,
-        appSettingsManager.liveUpdateUseHyperIsland.value,
         trackerIconStore.revision(),
     ).hashCode()
 

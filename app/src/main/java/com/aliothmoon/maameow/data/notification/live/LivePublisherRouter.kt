@@ -6,6 +6,7 @@ import androidx.core.app.NotificationManagerCompat
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.notification.LiveBackend
 import com.aliothmoon.maameow.domain.notification.LiveCapability
+import com.aliothmoon.maameow.domain.notification.LiveNotifyIds
 import com.aliothmoon.maameow.domain.notification.LiveSession
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
 
@@ -28,6 +29,10 @@ class LivePublisherRouter(
     )
     private val aosp = AospPromotedPublisher(appContext, factory, promotedDetector)
     private val plain = PlainNotificationPublisher(appContext, factory, promotedDetector)
+
+    /** 上一次实际使用的后端，用于在后端切换时释放旧后端占用的资源 */
+    @Volatile
+    private var lastBackend: LiveBackend? = null
 
     override val capability: LiveCapability
         get() = snapshot()
@@ -78,9 +83,21 @@ class LivePublisherRouter(
         )
     }
 
-    private fun current(): LiveUpdatePublisher = when (snapshot().backend) {
-        LiveBackend.HYPER_OS_FOCUS -> hyper
-        LiveBackend.AOSP_PROMOTED -> aosp
-        LiveBackend.PLAIN -> plain
+    private fun current(): LiveUpdatePublisher {
+        val backend = snapshot().backend
+        val previous = lastBackend
+        if (previous != null && previous != backend) {
+            // 后端切换：旧后端可能还攥着断网闸门或在途发布，先释放再由新后端接管，
+            // 否则关掉超级岛后小米推送的网络压制会一直持续到任务结束
+            if (previous == LiveBackend.HYPER_OS_FOCUS) {
+                hyper.cancel(LiveNotifyIds.PROGRESS_SESSION)
+            }
+        }
+        lastBackend = backend
+        return when (backend) {
+            LiveBackend.HYPER_OS_FOCUS -> hyper
+            LiveBackend.AOSP_PROMOTED -> aosp
+            LiveBackend.PLAIN -> plain
+        }
     }
 }
