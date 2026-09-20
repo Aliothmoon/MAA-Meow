@@ -1335,8 +1335,14 @@
     <string name="panel_roguelike_stop_when_invest_full">Stops when invested ingots reach limit</string>
     <string name="panel_roguelike_investment_more_score">Investment mode enables shopping, recruitment, and entering the second floor</string>
     <string name="panel_roguelike_support_settings">Support Unit Settings</string>
-    <string name="panel_roguelike_use_support">Use a support unit for the starting operator</string>
+    <string name="panel_roguelike_use_support_format">Use a support unit for %1$s</string>
     <string name="panel_roguelike_use_support_tip">Enter the starting operator first</string>
+    <string name="panel_roguelike_starting_oper_position">operator %1$d</string>
+    <string name="panel_roguelike_additional_core_chars">Enable the 2nd and 3rd starting operators</string>
+    <string name="panel_roguelike_additional_core_chars_tip">Once enabled, the 2nd and 3rd starting operators can be set in the general settings, and they are recruited in that order.
+The three positions must not share a profession.
+Recruitment only scans the first few pages for the given operator, so a low-cost operator may not be found; that position then falls back to the default strategy.
+Put the operators you want most first.</string>
     <string name="panel_roguelike_nonfriend_support">Enable non-friend support</string>
     <string name="panel_roguelike_starts_count">Stops after starting N times</string>
     <string name="panel_roguelike_exp_settings">Experience Mode Settings</string>
@@ -1351,6 +1357,9 @@
     <string name="panel_roguelike_monthly_squad_settings">Monthly Squad Mode Settings</string>
     <string name="panel_roguelike_monthly_squad_auto_iterate">Monthly Squad Auto-Switch</string>
     <string name="panel_roguelike_monthly_squad_comms">Monthly Squad Communication</string>
+    <string name="panel_roguelike_monthly_squad_comms_tip">When checked, MAA verifies that every communication of the current squad is unlocked before moving on to the next monthly squad
+Uncheck it to cut down on repeated runs if you only want the rewards
+MAA will not end an in-progress exploration early because this option is unchecked</string>
     <string name="panel_roguelike_exploration_settings">Deep Investigation Mode Settings</string>
     <string name="panel_roguelike_exploration_auto_iterate">Deep Investigation Auto-Switch</string>
     <string name="panel_roguelike_collapse_settings">Collapse Paradigm Mode Settings</string>
@@ -1689,6 +1698,7 @@
     <string name="panel_mini_game_started">Mini game task started</string>
     <string name="panel_empty_config_hint">&lt;- Select a task to configure</string>
     <string name="core_char_selector_title">Starting operator</string>
+    <string name="panel_roguelike_starting_core_char">Starting operator %1$d</string>
     <string name="core_char_selector_collapse">Collapse</string>
     <string name="core_char_selector_recommended">Recommended</string>
     <string name="core_char_selector_placeholder">Operator name (optional)</string>

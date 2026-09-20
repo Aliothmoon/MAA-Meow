@@ -759,7 +759,9 @@ object AchievementDefinitions {
             hidden = true, rare = true,
         ) {
             trigger(AchievementEvents.PROCESS_TASK_COMPLETED, AchievementTriggerMode.UNLOCK) {
-                where("taskchain" to "Roguelike", "task" to "StartExplore", "coreChar" to "帕拉斯")
+                where("taskchain" to "Roguelike", "task" to "StartExplore")
+                // coreChars 是逗号分隔的开局顺位干员名，任一顺位命中即可
+                condition("coreChars", AchievementConditionOp.HAS_ITEM, "帕拉斯")
             }
         }
         achievement(

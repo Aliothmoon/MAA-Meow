@@ -5,6 +5,7 @@ import com.aliothmoon.maameow.data.model.AwardConfig
 import com.aliothmoon.maameow.data.model.DepotMaintainConfig
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
+import com.aliothmoon.maameow.data.model.RoguelikeStartingOper
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.UserDataUpdateConfig
 import com.aliothmoon.maameow.domain.models.PlanSideTask
@@ -15,7 +16,6 @@ import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.DepotSnapshot
 import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.repository.OperBoxSnapshot
-import com.aliothmoon.maameow.data.resource.CharacterInfo
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import io.mockk.every
@@ -23,6 +23,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
@@ -191,15 +192,16 @@ class AnalyzeTaskChainUseCaseTest {
     @Test
     fun roguelikeCoreChar_normalizedToSimplifiedChinese_beforeDispatch() = runBlocking {
         // 繁中服选了繁中名,下发前须反查归一化为简中名(MaaCore core_char 仅认简中名)
-        every { resourceDataManager.getCharacterByNameOrAlias("維什戴爾") } returns
-            CharacterInfo(name = "维什戴尔")
+        every { resourceDataManager.normalizeCharacterName("維什戴爾") } returns "维什戴尔"
 
         val result = useCase(
             listOf(
                 TaskChainNode(
                     name = "自动肉鸽",
                     enabled = true,
-                    config = RoguelikeConfig(coreChar = "維什戴爾"),
+                    config = RoguelikeConfig(
+                        startingOpers = listOf(RoguelikeStartingOper("維什戴爾"))
+                    ),
                 )
             )
         )
@@ -207,7 +209,8 @@ class AnalyzeTaskChainUseCaseTest {
         val ready = result as AnalyzeTaskChainResult.Ready
         val roguelikeParams = ready.plan.params.first { it.type == MaaTaskType.ROGUELIKE }
         val coreChar = Json.parseToJsonElement(roguelikeParams.params)
-            .jsonObject["core_char"]?.jsonPrimitive?.content
+            .jsonObject["core_char_list"]!!.jsonArray[0]
+            .jsonObject["name"]?.jsonPrimitive?.content
 
         assertEquals("维什戴尔", coreChar)
     }

@@ -30,6 +30,7 @@ import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
 import com.aliothmoon.maameow.presentation.components.CoreCharSelector
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants.Roguelike as RoguelikeUi
@@ -248,13 +249,36 @@ private fun BasicRoguelikeSettings(
 
         // 核心干员选择 - 带校验和自动补全
         CoreCharSelector(
-            value = config.coreChar,
-            onValueChange = { onConfigChange(config.copy(coreChar = it)) },
+            value = config.startingOperName(0),
+            onValueChange = { name ->
+                onConfigChange(config.withStartingOper(0) { it.copy(name = name) })
+            },
             theme = config.theme,
             resourceDataManager = resourceDataManager,
             modifier = Modifier.fillMaxWidth(),
             themeTip = localizedRoguelikeThemeTip(config.theme)
         )
+
+        // 第 2、3 顺位，开关在高级设置里
+        MaaAnimatedVisibility(visible = config.useAdditionalStartingOpers) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (index in 1 until RoguelikeConfig.MAX_STARTING_OPERS) {
+                    CoreCharSelector(
+                        value = config.startingOperName(index),
+                        onValueChange = { name ->
+                            onConfigChange(config.withStartingOper(index) { it.copy(name = name) })
+                        },
+                        theme = config.theme,
+                        resourceDataManager = resourceDataManager,
+                        modifier = Modifier.fillMaxWidth(),
+                        title = stringResource(
+                            R.string.panel_roguelike_starting_core_char, index + 1
+                        ),
+                        enabled = config.isStartingOperEditable(index)
+                    )
+                }
+            }
+        }
     }
 }
 

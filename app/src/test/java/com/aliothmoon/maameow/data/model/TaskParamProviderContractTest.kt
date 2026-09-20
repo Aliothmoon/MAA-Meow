@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.data.model
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.DepotSnapshot
-import com.aliothmoon.maameow.data.resource.CharacterInfo
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.FightDropsRefresher
 import com.aliothmoon.maameow.maa.task.MaaTaskType
@@ -95,12 +94,14 @@ class TaskParamProviderContractTest {
     @Test
     fun roguelikeConfig_normalizesCoreCharThroughResourceDataManager() {
         val resourceDataManager = mockk<ResourceDataManager> {
-            every { getCharacterByNameOrAlias("維什戴爾") } returns CharacterInfo(name = "维什戴尔")
+            every { normalizeCharacterName("維什戴爾") } returns "维什戴尔"
         }
-        val config = RoguelikeConfig(coreChar = "維什戴爾")
+        val config = RoguelikeConfig(startingOpers = listOf(RoguelikeStartingOper("維什戴爾")))
         val params = jsonOf(config, ctx(resourceDataManager = resourceDataManager))
 
-        assertEquals("维什戴尔", params["core_char"]?.jsonPrimitive?.content)
+        val coreChars = params["core_char_list"]!!.jsonArray
+        assertEquals(1, coreChars.size)
+        assertEquals("维什戴尔", coreChars[0].jsonObject["name"]?.jsonPrimitive?.content)
     }
 
     @Test

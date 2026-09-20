@@ -14,6 +14,7 @@ import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.domain.enums.RoguelikeBlackFlowCultivationTarget
 import com.aliothmoon.maameow.domain.enums.RoguelikeBoskySubNodeType
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
+import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
@@ -83,9 +84,9 @@ fun ModeSpecificSettings(
                     checked = config.startWithEliteTwo,
                     onCheckedChange = { checked ->
                         var newConfig = config.copy(startWithEliteTwo = checked)
-                        // WPF: StartWithEliteTwo setter (line 499-512)
-                        if (checked && config.useSupport) {
-                            newConfig = newConfig.copy(useSupport = false)
+                        // WPF: StartWithEliteTwo setter (line 499-512)，只与第 1 顺位互斥
+                        if (checked && config.startingOperUseSupport(0)) {
+                            newConfig = newConfig.withStartingOper(0) { it.copy(useSupport = false) }
                         }
                         if (!checked) {
                             newConfig = newConfig.copy(onlyStartWithEliteTwo = false)
@@ -147,10 +148,11 @@ fun ModeSpecificSettings(
             )
             // WPF: Visibility="RoguelikeMonthlySquadAutoIterate" (line 357)
             if (config.monthlySquadAutoIterate) {
-                CheckBoxWithLabel(
+                CheckBoxWithExpandableTip(
                     checked = config.monthlySquadCheckComms,
                     onCheckedChange = { onConfigChange(config.copy(monthlySquadCheckComms = it)) },
-                    label = stringResource(R.string.panel_roguelike_monthly_squad_comms)
+                    label = stringResource(R.string.panel_roguelike_monthly_squad_comms),
+                    tipText = stringResource(R.string.panel_roguelike_monthly_squad_comms_tip)
                 )
             }
         }

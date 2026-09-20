@@ -463,12 +463,12 @@ class SubTaskHandler(
                     val times = innerDetails.getIntValue("exec_times", 0)
                     append("${str("BegunToExplore")} $times ${str("UnitTime")}", LogLevel.INFO)
                     ioScope.launch {
-                        val coreChar = normalizedRoguelikeCoreChar()
+                        val coreChars = normalizedRoguelikeCoreChars()
                         achievementRepository.report {
                             event = AchievementEvents.PROCESS_TASK_COMPLETED
                             "taskchain" to taskchain
                             "task" to task
-                            "coreChar" to coreChar
+                            "coreChars" to coreChars
                         }
                     }
                 }
@@ -928,10 +928,13 @@ class SubTaskHandler(
     private fun currentRoguelikeConfig(): RoguelikeConfig? =
         chainState.chain.value.firstNotNullOfOrNull { it.config as? RoguelikeConfig }
 
-    private fun normalizedRoguelikeCoreChar(): String {
-        val coreChar = currentRoguelikeConfig()?.coreChar.orEmpty()
-        return resourceDataManager.getCharacterByNameOrAlias(coreChar)?.name ?: coreChar
-    }
+    /**
+     * 生效顺位的开局干员名，逗号分隔
+     * 任一顺位命中都该算数（对齐 WPF isPallasStarter 的 Any），成就侧用 HAS_ITEM 取元素
+     */
+    private fun normalizedRoguelikeCoreChars(): String =
+        currentRoguelikeConfig()?.normalizedStartingOperNames(resourceDataManager)
+            .orEmpty().joinToString(",")
 
     private fun handleReclamationReport(subDetails: JSONObject?) {
         val totalBadges = subDetails?.getIntValue("total_badges") ?: 0

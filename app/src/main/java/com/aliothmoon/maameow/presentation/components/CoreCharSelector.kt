@@ -40,6 +40,7 @@ import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.presentation.view.panel.common.bringIntoViewOnExpand
+import com.aliothmoon.maameow.theme.MaaThemeAlphas
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -52,6 +53,8 @@ fun CoreCharSelector(
     modifier: Modifier = Modifier,
     /** 该主题的开局配置建议，为 null 时不显示提示入口 */
     themeTip: String? = null,
+    title: String = stringResource(R.string.core_char_selector_title),
+    enabled: Boolean = true,
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -139,17 +142,16 @@ fun CoreCharSelector(
         }
     }
 
-    // 添加状态变化日志
-    Timber.d("[CoreCharSelector] 渲染状态: inputText='$inputText', isValid=$isValid, isValidating=$isValidating, showError=${!isValid && !isValidating && inputText.isNotBlank()}")
-
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = modifier
     ) {
         Text(
-            text = stringResource(R.string.core_char_selector_title),
+            text = title,
             style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface
+            else MaterialTheme.colorScheme.onSurface.copy(alpha = MaaThemeAlphas.DISABLED)
         )
 
         // 只有带专属开局建议的主题才显示入口，单独占一行
@@ -181,7 +183,8 @@ fun CoreCharSelector(
                 placeholder = stringResource(R.string.core_char_selector_placeholder),
                 outlineColor = if (!isValid && !isValidating) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
                 modifier = Modifier.fillMaxWidth(),
-                trailingIcon = if (inputText.isNotEmpty() || recommendedChars.isNotEmpty()) {
+                enabled = enabled,
+                trailingIcon = if (enabled && (inputText.isNotEmpty() || recommendedChars.isNotEmpty())) {
                     {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (inputText.isNotEmpty()) {
@@ -244,7 +247,7 @@ fun CoreCharSelector(
         }
 
         // 建议列表
-        if (showSuggestions && filteredSuggestions.isNotEmpty()) {
+        if (enabled && showSuggestions && filteredSuggestions.isNotEmpty()) {
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()

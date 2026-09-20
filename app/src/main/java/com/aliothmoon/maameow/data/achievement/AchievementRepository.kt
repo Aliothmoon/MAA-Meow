@@ -209,6 +209,7 @@ class AchievementRepository(private val context: Context) {
             }
 
             AchievementConditionOp.CONTAINS -> actual.contains(value, ignoreCase = true)
+            AchievementConditionOp.HAS_ITEM -> actual.split(',').any { it == value }
             AchievementConditionOp.MONTH_DAY -> actual == value
             AchievementConditionOp.MONTH_DAY_BETWEEN -> {
                 val bounds = value.split("..", limit = 2)

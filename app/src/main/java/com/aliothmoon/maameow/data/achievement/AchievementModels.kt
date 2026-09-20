@@ -62,6 +62,7 @@ enum class AchievementConditionOp {
     LTE,
     BETWEEN,
     CONTAINS,
+    HAS_ITEM,
     MONTH_DAY,
     MONTH_DAY_BETWEEN,
 }

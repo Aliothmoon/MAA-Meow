@@ -155,7 +155,7 @@ class TaskChainState(
                     runCatching { json.decodeFromString<List<TaskProfile>>(it) }.onFailure { e ->
                         Timber.e(e, "TaskChainState decodeFromString error")
                     }.getOrNull()
-                }
+                }?.migrated()
 
                 val needsDefaultProfile = storedProfiles.isNullOrEmpty()
 
@@ -539,7 +539,8 @@ class TaskChainState(
         return typeInfo.defaultName(localizedContext)
     }
 
-    suspend fun importProfiles(profiles: List<TaskProfile>, activeId: String) {
+    suspend fun importProfiles(rawProfiles: List<TaskProfile>, activeId: String) {
+        val profiles = rawProfiles.migrated()
         val resolvedActiveId =
             profiles.find { it.id == activeId }?.id ?: profiles.firstOrNull()?.id ?: return
         val activeChain = profiles.find { it.id == resolvedActiveId }?.chain ?: buildDefaultChain()
@@ -550,6 +551,11 @@ class TaskChainState(
         // 导入是用户可见的终态操作（随后会提示「导入成功」），必须确认落盘再返回
         flush()
         Timber.d("Imported %d profiles, active: %s", profiles.size, resolvedActiveId)
+    }
+
+    /** 旧配置迁移，两个解码入口（DataStore 载入与导入备份）共用 */
+    private fun List<TaskProfile>.migrated(): List<TaskProfile> = map { profile ->
+        profile.copy(chain = profile.chain.map { it.copy(config = it.config.migrate()) })
     }
 
     private fun nextProfileName(profiles: List<TaskProfile>): String {

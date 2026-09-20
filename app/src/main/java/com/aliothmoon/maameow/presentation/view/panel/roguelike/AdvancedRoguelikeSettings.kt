@@ -2,19 +2,11 @@ package com.aliothmoon.maameow.presentation.view.panel.roguelike
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -22,10 +14,9 @@ import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
+import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.ITextField
-import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
-import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants.Roguelike as RoguelikeUi
 
@@ -97,44 +88,56 @@ fun AdvancedRoguelikeSettings(
             fontWeight = FontWeight.Medium
         )
 
-        var supportTipExpanded by remember { mutableStateOf(false) }
-        // WPF: IsEnabled="{c:Binding 'RoguelikeCoreChar != \"\"'}" (line 305)
-        val supportEnabled = config.coreChar.isNotEmpty()
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                CheckBoxWithLabel(
-                    checked = config.useSupport,
-                    onCheckedChange = { checked ->
-                        val squadIsProfessional = RoguelikeUi.isSquadProfessional(
-                            config.squad, config.mode, config.theme
-                        )
-                        var newConfig = config.copy(useSupport = checked)
-                        // WPF: UseSupportUnit setter (line 656-666)
-                        if (checked && config.startWithEliteTwo && squadIsProfessional) {
-                            newConfig = newConfig.copy(startWithEliteTwo = false)
-                        }
-                        onConfigChange(newConfig)
-                    },
-                    label = stringResource(R.string.panel_roguelike_use_support),
-                    enabled = supportEnabled
+        // WPF: EnableAdditionalStartingCoreChar (xaml:341)
+        CheckBoxWithExpandableTip(
+            checked = config.useAdditionalStartingOpers,
+            onCheckedChange = { onConfigChange(config.copy(useAdditionalStartingOpers = it)) },
+            label = stringResource(R.string.panel_roguelike_additional_core_chars),
+            tipText = stringResource(R.string.panel_roguelike_additional_core_chars_tip)
+        )
+
+        CheckBoxWithExpandableTip(
+            checked = config.startingOperUseSupport(0),
+            onCheckedChange = { checked ->
+                val squadIsProfessional = RoguelikeUi.isSquadProfessional(
+                    config.squad, config.mode, config.theme
                 )
-                Spacer(modifier = Modifier.width(4.dp))
-                ExpandableTipIcon(
-                    expanded = supportTipExpanded,
-                    onExpandedChange = { supportTipExpanded = it })
+                var newConfig = config.withStartingOper(0) { it.copy(useSupport = checked) }
+                // WPF: UseSupportUnit setter (line 656-666)
+                if (checked && config.startWithEliteTwo && squadIsProfessional) {
+                    newConfig = newConfig.copy(startWithEliteTwo = false)
+                }
+                onConfigChange(newConfig)
+            },
+            label = useSupportLabel(config, 0),
+            tipText = stringResource(R.string.panel_roguelike_use_support_tip),
+            enabled = config.isStartingOperFilled(0)
+        )
+
+        MaaAnimatedVisibility(visible = config.useAdditionalStartingOpers) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                for (index in 1 until RoguelikeConfig.MAX_STARTING_OPERS) {
+                    CheckBoxWithLabel(
+                        checked = config.startingOperUseSupport(index),
+                        onCheckedChange = { checked ->
+                            onConfigChange(
+                                config.withStartingOper(index) { it.copy(useSupport = checked) }
+                            )
+                        },
+                        label = useSupportLabel(config, index),
+                        enabled = config.isStartingOperFilled(index)
+                    )
+                }
             }
-            ExpandableTipContent(
-                visible = supportTipExpanded,
-                tipText = stringResource(R.string.panel_roguelike_use_support_tip)
-            )
         }
 
-        // WPF: Visibility="RoguelikeUseSupportUnit AND RoguelikeCoreChar != ''" (line 321)
-        MaaAnimatedVisibility(visible = config.useSupport && supportEnabled) {
+        // WPF: Visibility 为任一顺位勾了助战（2/3 顺位要开关开启才计入）(xaml:390)
+        MaaAnimatedVisibility(visible = config.anyStartingOperUsesSupport) {
             CheckBoxWithLabel(
                 checked = config.enableNonfriendSupport,
                 onCheckedChange = { onConfigChange(config.copy(enableNonfriendSupport = it)) },
-                label = stringResource(R.string.panel_roguelike_nonfriend_support)
+                label = stringResource(R.string.panel_roguelike_nonfriend_support),
+                enabled = config.isStartingOperFilled(0)
             )
         }
 
@@ -160,4 +163,13 @@ fun AdvancedRoguelikeSettings(
         // 模式特殊设置
         ModeSpecificSettings(config, onConfigChange)
     }
+}
+
+/** WPF RoguelikeUseSupportUnitFormat —— 干员名为空时退回「第 N 位干员」 */
+@Composable
+private fun useSupportLabel(config: RoguelikeConfig, index: Int): String {
+    val who = config.startingOperName(index).ifBlank {
+        stringResource(R.string.panel_roguelike_starting_oper_position, index + 1)
+    }
+    return stringResource(R.string.panel_roguelike_use_support_format, who)
 }

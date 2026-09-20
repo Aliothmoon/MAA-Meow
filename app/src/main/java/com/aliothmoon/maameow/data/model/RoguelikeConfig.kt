@@ -3,9 +3,13 @@ package com.aliothmoon.maameow.data.model
 import com.aliothmoon.maameow.domain.enums.RoguelikeBlackFlowCultivationTarget
 import com.aliothmoon.maameow.domain.enums.RoguelikeBoskySubNodeType
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
+import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
@@ -16,6 +20,7 @@ import kotlinx.serialization.json.put
  * 自动肉鸽配置 - 迁移自 WPF RoguelikeSettingsUserControlModel
  * 默认值对齐 WPF RoguelikeTask.cs
  */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class RoguelikeConfig(
     // 基础设置
@@ -24,7 +29,8 @@ data class RoguelikeConfig(
     val mode: RoguelikeMode = RoguelikeMode.Exp,  // 策略模式
     val squad: String = "",  // 起始分队
     val roles: String = "稳扎稳打",  // 起始阵容
-    val coreChar: String = "",  // 开局干员
+    val startingOpers: List<RoguelikeStartingOper> = emptyList(),  // 开局干员顺位，最多 3 位
+    val useAdditionalStartingOpers: Boolean = false,  // 启用第 2、3 位开局干员
 
     // 开局次数 - WPF: Maximum="99999"
     val startsCount: Int = 999999,  // 开局次数限制
@@ -36,7 +42,6 @@ data class RoguelikeConfig(
     val investmentWithMoreScore: Boolean = false,  // 投资模式刷更多分数
 
     // 助战相关
-    val useSupport: Boolean = false,  // 使用助战
     val enableNonfriendSupport: Boolean = false,  // 允许非好友助战
 
     // 刷开局相关
@@ -81,8 +86,73 @@ data class RoguelikeConfig(
     //  用途是避免肉鸽战斗中途硬停——那样游戏卡在战斗里，本次探索基本就废了
     //  实现前要先搬家：上游放在全局 RuntimeSettings，这里却在每节点的 RoguelikeConfig 上，
     //  两个肉鸽节点各有一份时回调侧无从取值，应挪到 AppSettingsManager
-    val delayAbortUntilCombatComplete: Boolean = false  // 战斗结束前延迟停止
+    val delayAbortUntilCombatComplete: Boolean = false,  // 战斗结束前延迟停止
+
+    // 旧档字段，仅用于读旧配置时并入 [startingOpers]，迁移后置空不再写盘
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    @SerialName("coreChar")
+    val legacyCoreChar: String? = null,
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    @SerialName("useSupport")
+    val legacyUseSupport: Boolean? = null,
 ) : TaskParamProvider {
+
+    fun startingOperName(index: Int): String = startingOpers.getOrNull(index)?.name.orEmpty()
+
+    fun startingOperUseSupport(index: Int): Boolean =
+        startingOpers.getOrNull(index)?.useSupport == true
+
+    /** 写第 [index] 顺位，不足处补空项，对齐 WPF EnsureStartingOper */
+    fun withStartingOper(
+        index: Int,
+        transform: (RoguelikeStartingOper) -> RoguelikeStartingOper
+    ): RoguelikeConfig {
+        val opers = startingOpers.toMutableList()
+        while (opers.size <= index) opers += RoguelikeStartingOper()
+        opers[index] = transform(opers[index])
+        return copy(startingOpers = opers)
+    }
+
+    /** 参与调度的顺位数：开关关只认第 1 位 */
+    private val activeStartingOperCount: Int
+        get() = if (useAdditionalStartingOpers) MAX_STARTING_OPERS else 1
+
+    /** 从头连续填了名字的顺位数，链条在首个空名处断掉 */
+    val filledStartingOperCount: Int
+        get() = startingOpers.take(activeStartingOperCount).takeWhile { it.name.isNotBlank() }.size
+
+    /** 第 [index] 顺位是否可编辑：前面的顺位都填了才轮得到它 */
+    fun isStartingOperEditable(index: Int): Boolean = filledStartingOperCount >= index
+
+    /** 第 [index] 顺位是否已填好名字，助战之类的附属开关得等它 */
+    fun isStartingOperFilled(index: Int): Boolean = filledStartingOperCount > index
+
+    /** 是否有顺位要用助战，决定「非好友助战」是否有意义 */
+    val anyStartingOperUsesSupport: Boolean
+        get() = (0 until activeStartingOperCount).any { startingOperUseSupport(it) }
+
+    /** 实际下发的顺位，对齐 WPF RoguelikeSettings:1470；只过滤不改配置本体，重开开关即恢复 */
+    val effectiveStartingOpers: List<RoguelikeStartingOper>
+        get() = startingOpers.take(filledStartingOperCount)
+
+    fun normalizedStartingOperNames(resourceDataManager: ResourceDataManager): List<String> =
+        effectiveStartingOpers.map { resourceDataManager.normalizeCharacterName(it.name) }
+
+    /**
+     * 旧档迁移：beta.2 前的 coreChar/useSupport 并入第 1 顺位
+     * 对齐 WPF RoguelikeStartingOpersConverter —— 仅在 [startingOpers] 为空时合成
+     */
+    override fun migrate(): RoguelikeConfig {
+        if (legacyCoreChar == null && legacyUseSupport == null) return this
+        val merged = startingOpers.ifEmpty {
+            listOfNotNull(
+                RoguelikeStartingOper(legacyCoreChar.orEmpty(), legacyUseSupport == true)
+                    .takeIf { it.name.isNotBlank() || it.useSupport }
+            )
+        }
+        return copy(startingOpers = merged, legacyCoreChar = null, legacyUseSupport = null)
+    }
+
     override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
         // WPF 条件变量
         val squadIsProfessional = mode == RoguelikeMode.Collectible && theme != "Phantom" &&
@@ -97,12 +167,16 @@ data class RoguelikeConfig(
             put("mode", mode.value)  // MaaCore 期望整数值
             if (squad.isNotBlank()) put("squad", squad)
             if (roles.isNotBlank()) put("roles", roles)
-            if (coreChar.isNotBlank()) {
-                // MaaCore 的 core_char 仅认简中名（BattleDataConfig::find_oper 只匹配 name 字段，
-                // 繁中/英文名会使 get_role 返回 Unknown 导致开局干员选择失败）
-                val normalized = ctx.resourceDataManager
-                    .getCharacterByNameOrAlias(coreChar)?.name ?: coreChar
-                put("core_char", normalized)
+            // MaaCore 只认简中名（BattleDataConfig::find_oper 只匹配 name 字段，
+            // 繁中/英文名会使 get_role 返回 Unknown 导致开局干员选择失败）
+            val startOperNames = normalizedStartingOperNames(ctx.resourceDataManager)
+            if (startOperNames.isNotEmpty()) {
+                put("core_char_list", JsonArray(startOperNames.mapIndexed { index, name ->
+                    buildJsonObject {
+                        put("name", name)
+                        put("use_support", startingOperUseSupport(index))
+                    }
+                }))
             }
             put("starts_count", startsCount)
 
@@ -217,7 +291,6 @@ data class RoguelikeConfig(
             }
 
             //  通用设置（始终发送） 
-            put("use_support", useSupport)
             put("use_nonfriend_support", enableNonfriendSupport)
             put("refresh_trader_with_dice", theme == "Mizuki" && refreshTraderWithDice)
             if (startWithSeed && seed.isNotBlank()) {
@@ -228,9 +301,19 @@ data class RoguelikeConfig(
     }
 
     companion object {
+        /** 开局免费招募次数，上游同为 3 */
+        const val MAX_STARTING_OPERS = 3
+
         // WPF RoguelikeSettingsUserControlModel:1117-1128 的 reward key 全集(与主题无关)
         private val ALL_COLLECTIBLE_AWARD_KEYS = listOf(
             "hot_water", "shield", "ingot", "hope", "random", "key", "dice", "ideas", "ticket"
         )
     }
 }
+
+/** 开局干员顺位项，按列表顺序对应开局第 1/2/3 次免费招募 */
+@Serializable
+data class RoguelikeStartingOper(
+    val name: String = "",
+    val useSupport: Boolean = false,
+)
