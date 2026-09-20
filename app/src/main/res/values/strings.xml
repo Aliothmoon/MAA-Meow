@@ -2354,7 +2354,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="achievement_RealGacha_condition">使用一次牛牛抽卡</string>
     <string name="settings_pallas_burping">呃……咳嗯</string>
     <string name="settings_pallas_drunk_hint">呀，博士。你今天走起路来，怎么看着摇摇晃晃的？</string>
-    <!-- 对齐 WPF Hangover：再点头像退出 Debug 时弹出 -->
+    <!-- 对齐 WPF Hangover：醒酒时弹出；上次没醒就退了的，下次启动补弹 -->
     <string name="settings_pallas_hangover">下次不能喝、喝这么多了……</string>
     <string name="achievement_SlackingOff_title">不务正业</string>
     <string name="achievement_SlackingOff_desc">正事做累了，玩点别的。</string>

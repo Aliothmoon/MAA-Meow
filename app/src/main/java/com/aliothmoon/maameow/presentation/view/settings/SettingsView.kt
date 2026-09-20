@@ -28,8 +28,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -38,7 +38,6 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -86,16 +85,15 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.R
-import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.MaaApi
 import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
 import com.aliothmoon.maameow.constant.Routes
+import com.aliothmoon.maameow.data.achievement.PallasDrunkState
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
@@ -106,6 +104,7 @@ import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
+import com.aliothmoon.maameow.presentation.StaySober
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ChangelogDialog
 import com.aliothmoon.maameow.presentation.components.CollapsibleSection
@@ -130,6 +129,7 @@ import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.UiScale
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
+import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.utils.i18n.resolve
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -153,6 +153,7 @@ fun SettingsView(
     achievementViewModel: AchievementViewModel = koinViewModel(),
     resourceInitService: ResourceInitService = koinInject(),
     achievementReporter: AchievementReporter = koinInject(),
+    pallasDrunkState: PallasDrunkState = koinInject(),
 ) {
     val resourceInitState by resourceInitService.state.collectAsStateWithLifecycle()
     val showChangelog by viewModel.showChangelog.collectAsStateWithLifecycle()
@@ -198,8 +199,6 @@ fun SettingsView(
     val settingsMessage by viewModel.settingsMessage.collectAsStateWithLifecycle()
     val showRestartDialog by viewModel.showRestartDialog.collectAsStateWithLifecycle()
     val achievementUiState by achievementViewModel.uiState.collectAsStateWithLifecycle()
-    // 对齐 WPF：进入 Debug 弹 DrunkAndStaggering，再点退出弹 Hangover
-    var pallasFlavorDialog by remember { mutableStateOf<PallasFlavorDialog?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -225,12 +224,6 @@ fun SettingsView(
     LaunchedEffect(achievementViewModel) {
         achievementViewModel.effects.collect { effect ->
             when (effect) {
-                AchievementEffect.PallasEnteredDebug ->
-                    pallasFlavorDialog = PallasFlavorDialog.Drunk
-
-                AchievementEffect.PallasExitedDebug ->
-                    pallasFlavorDialog = PallasFlavorDialog.Hangover
-
                 AchievementEffect.UnlockedAll -> Toast.makeText(
                     context,
                     R.string.achievement_debug_unlock_all_done,
@@ -277,28 +270,6 @@ fun SettingsView(
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             viewModel.clearGestureRecordState()
         }
-    }
-
-    pallasFlavorDialog?.let { flavor ->
-        // 禁止点外部/返回立刻关掉：连点与弹窗同帧时容易穿透 dismiss
-        val bodyRes = when (flavor) {
-            PallasFlavorDialog.Drunk -> R.string.settings_pallas_drunk_hint
-            PallasFlavorDialog.Hangover -> R.string.settings_pallas_hangover
-        }
-        AlertDialog(
-            onDismissRequest = { /* 仅允许确认按钮关闭，避免点击穿透 */ },
-            title = { Text(stringResource(R.string.settings_pallas_burping)) },
-            text = { Text(stringResource(bodyRes)) },
-            confirmButton = {
-                TextButton(onClick = { pallasFlavorDialog = null }) {
-                    Text(stringResource(android.R.string.ok))
-                }
-            },
-            properties = DialogProperties(
-                dismissOnBackPress = false,
-                dismissOnClickOutside = false,
-            ),
-        )
     }
 
     val backgroundCrop = rememberBackgroundCropController(viewModel)
@@ -1054,6 +1025,13 @@ fun SettingsView(
                                     achievementViewModel.onEvent(AchievementEvent.PallasAvatarClicked)
                                 },
                             )
+                            val pallasTip by pallasDrunkState.tip.collectAsStateWithLifecycle()
+                            if (pallasTip.isNotEmpty()) {
+                                Text(
+                                    text = pallasTip,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
                             MaaAnimatedVisibility(
                                 visible = achievementUiState.pallasDebugActive,
                                 enter = fadeIn() + expandVertically(),
@@ -1066,19 +1044,23 @@ fun SettingsView(
                                         Alignment.CenterHorizontally,
                                     ),
                                 ) {
-                                    Button(
-                                        onClick = {
-                                            achievementViewModel.onEvent(AchievementEvent.UnlockAll)
-                                        },
-                                    ) {
-                                        Text(stringResource(R.string.achievement_debug_unlock_all))
-                                    }
-                                    OutlinedButton(
-                                        onClick = {
-                                            achievementViewModel.onEvent(AchievementEvent.ClearAllRecords)
-                                        },
-                                    ) {
-                                        Text(stringResource(R.string.achievement_debug_clear_all))
+                                    StaySober {
+                                        Button(
+                                            onClick = {
+                                                achievementViewModel.onEvent(AchievementEvent.UnlockAll)
+                                            },
+                                            shape = MaterialTheme.shapes.small,
+                                        ) {
+                                            Text(stringResource(R.string.achievement_debug_unlock_all))
+                                        }
+                                        OutlinedButton(
+                                            onClick = {
+                                                achievementViewModel.onEvent(AchievementEvent.ClearAllRecords)
+                                            },
+                                            shape = MaterialTheme.shapes.small,
+                                        ) {
+                                            Text(stringResource(R.string.achievement_debug_clear_all))
+                                        }
                                     }
                                 }
                             }
@@ -2261,12 +2243,6 @@ private fun <T> SettingRadioItem(
 private fun CoreDataLocation.labelRes(): Int = when (this) {
     CoreDataLocation.APP_DIR -> R.string.settings_core_data_location_app_dir
     CoreDataLocation.LOCAL_TMP -> R.string.settings_core_data_location_local_tmp
-}
-
-/** 帕拉斯彩蛋弹窗：进入 Debug = Drunk，再点退出 = Hangover（对齐 WPF）。 */
-private enum class PallasFlavorDialog {
-    Drunk,
-    Hangover,
 }
 
 private data class ShizukuLaunchAppOption(

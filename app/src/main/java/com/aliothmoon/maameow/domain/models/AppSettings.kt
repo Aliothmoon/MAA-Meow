@@ -201,4 +201,8 @@ data class AppSettings(
     @PrefKey(default = "false")
     val operBoxUseYituliuApi: String = "false",
 
+    /** 喝醉过但还没醒酒，下次启动提示 */
+    @PrefKey(default = "false")
+    val pallasHangover: String = "false",
+
     )

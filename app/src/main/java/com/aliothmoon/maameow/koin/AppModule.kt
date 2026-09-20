@@ -5,13 +5,14 @@ import android.content.Context
 import android.os.PowerManager
 import com.aliothmoon.maameow.announcement.AnnouncementManager
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
+import com.aliothmoon.maameow.data.achievement.PallasDrunkState
 import com.aliothmoon.maameow.data.api.CopilotApiService
 import com.aliothmoon.maameow.data.api.ETagCacheManager
 import com.aliothmoon.maameow.data.api.GameDataReportService
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.api.MaaApiService
-import com.aliothmoon.maameow.data.api.YituliuApiService
 import com.aliothmoon.maameow.data.api.MirrorChyanApiClient
+import com.aliothmoon.maameow.data.api.YituliuApiService
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.datasource.AppDownloader
 import com.aliothmoon.maameow.data.datasource.AssetExtractor
@@ -61,7 +62,6 @@ import com.aliothmoon.maameow.domain.launch.PlanSideTaskRunner
 import com.aliothmoon.maameow.domain.launch.StartTaskChainUseCase
 import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
-import com.aliothmoon.maameow.domain.service.OperBoxYituliuSync
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.AppAliveChecker
 import com.aliothmoon.maameow.domain.service.AppWatchdog
@@ -79,6 +79,7 @@ import com.aliothmoon.maameow.domain.service.MaaEventNotifier
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
+import com.aliothmoon.maameow.domain.service.OperBoxYituliuSync
 import com.aliothmoon.maameow.domain.service.RemoteAppAliveChecker
 import com.aliothmoon.maameow.domain.service.RemoteGameFpsReader
 import com.aliothmoon.maameow.domain.service.ResourceInitService
@@ -168,6 +169,7 @@ val appModule = module {
     singleOf(::BackgroundImageStore)
     singleOf(::AchievementRepository)
     singleOf(::AchievementReporter)
+    single { PallasDrunkState(get()) }
     single { ScheduleStrategyRepository(androidContext()) }
     singleOf(::ScheduleTriggerLogger)
     singleOf(::ScheduleFailureReporter)
