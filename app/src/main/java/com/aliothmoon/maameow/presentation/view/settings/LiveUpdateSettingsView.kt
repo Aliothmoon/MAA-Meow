@@ -56,15 +56,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.notification.live.TrackerIconDecoder
+import com.aliothmoon.maameow.data.notification.live.TrackerIconStore
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.notification.LiveBackend
 import com.aliothmoon.maameow.domain.notification.LiveCapability
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
+import com.aliothmoon.maameow.presentation.LocalToaster
 import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
 import com.aliothmoon.maameow.presentation.components.SettingsGroupCard
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.theme.MaaDesignTokens
+import com.dokar.sonner.ToastType
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -115,6 +118,8 @@ private val ColorSwatches = listOf(
 fun LiveUpdateSettingsView(navController: NavController) {
     val appSettingsManager: AppSettingsManager = koinInject()
     val livePublisher: LiveUpdatePublisher = koinInject()
+    val trackerIconStore: TrackerIconStore = koinInject()
+    val enabled by appSettingsManager.liveUpdateEnabled.collectAsStateWithLifecycle()
     val chipContent by appSettingsManager.liveUpdateChipContent.collectAsStateWithLifecycle()
     val colorScheme by appSettingsManager.liveUpdateColorScheme.collectAsStateWithLifecycle()
     val customColor by appSettingsManager.liveUpdateCustomColor.collectAsStateWithLifecycle()
@@ -123,6 +128,8 @@ fun LiveUpdateSettingsView(navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
     val contentColor = MaterialTheme.colorScheme.onSurface
     val context = LocalContext.current
+    val toaster = LocalToaster.current
+    val pickFailedMessage = stringResource(R.string.live_update_icon_pick_failed)
 
     // 同一设置在不同系统作用面不同：超级岛设备作用于岛，原生设备作用于状态栏/进度条，
     // 文案随实际生效的展示方式变化，避免误导。
@@ -144,7 +151,10 @@ fun LiveUpdateSettingsView(navController: NavController) {
     ) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
         coroutineScope.launch {
-            pickCustomIcon(context, uri, appSettingsManager)
+            // 选图失败（复制失败/不是有效图片）给出反馈，避免静默不生效
+            if (!pickCustomIcon(context, uri, appSettingsManager, trackerIconStore)) {
+                toaster.show(pickFailedMessage, type = ToastType.Error)
+            }
         }
     }
 
@@ -165,6 +175,25 @@ fun LiveUpdateSettingsView(navController: NavController) {
                 vertical = MaaDesignTokens.Spacing.sm
             )
         ) {
+            // 功能被关掉时先说明白：这一页的样式都不会生效，避免误导
+            if (!enabled) {
+                item {
+                    SettingsGroupCard {
+                        Text(
+                            text = stringResource(R.string.live_update_disabled_notice),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(
+                                start = MaaDesignTokens.Spacing.lg,
+                                top = MaaDesignTokens.Spacing.md,
+                                end = MaaDesignTokens.Spacing.lg,
+                                bottom = MaaDesignTokens.Spacing.md,
+                            )
+                        )
+                    }
+                }
+            }
+
             // ── 显示内容 ──
             item {
                 SectionHeader(stringResource(chipLabelRes))
@@ -182,11 +211,13 @@ fun LiveUpdateSettingsView(navController: NavController) {
                                 }
                             }
                         },
-                        modifier = Modifier.padding(
-                            start = MaaDesignTokens.Spacing.lg,
-                            top = MaaDesignTokens.Spacing.lg,
-                            end = MaaDesignTokens.Spacing.lg,
-                            bottom = MaaDesignTokens.Spacing.md,
+                        modifier = Modifier
+                            .selectableGroup()
+                            .padding(
+                                start = MaaDesignTokens.Spacing.lg,
+                                top = MaaDesignTokens.Spacing.lg,
+                                end = MaaDesignTokens.Spacing.lg,
+                                bottom = MaaDesignTokens.Spacing.md,
                         )
                     )
                 }
@@ -509,18 +540,34 @@ fun LiveUpdateSettingsView(navController: NavController) {
  * 文件操作与设置写入放在同一临界区内按顺序完成，避免连续选图时后一次清理删掉前一次
  * 刚写入的路径；复制失败或产物为空时删掉半成品，不留下失效路径。
  */
+/**
+ * 选图入库：复制到应用内部存储、校验可解码、写设置、清理旧图。返回是否成功。
+ *
+ * 先校验再写设置：非图片或损坏文件直接丢弃，不把无效路径落盘；
+ * 成功时顺带预热通知侧的解码缓存，结果/测试通知也能立刻用上自定义图标。
+ */
 private suspend fun pickCustomIcon(
     context: Context,
     uri: Uri,
     settings: AppSettingsManager,
-) {
+    iconStore: TrackerIconStore,
+): Boolean {
     iconFileMutex.withLock {
-        val path = copyIconToFiles(context, uri) ?: return@withLock
+        val path = copyIconToFiles(context, uri) ?: return false
+        if (!isDecodableIcon(path)) {
+            deleteIconFile(context, path)
+            return false
+        }
         // 先让新路径生效再清理旧图：即便设置写入失败，也只是残留旧文件，不会让设置指向已删除的图标
         settings.setLiveUpdateCustomTrackerPath(path)
         deleteOtherIcons(context, path)
+        iconStore.warmUp()
+        return true
     }
 }
+
+private suspend fun isDecodableIcon(path: String): Boolean =
+    withContext(Dispatchers.IO) { TrackerIconDecoder.decode(path) != null }
 
 /** 清除自定义图标：删掉已复制的图片，并清空设置（同一临界区，避免与选图交错） */
 private suspend fun clearCustomIcon(

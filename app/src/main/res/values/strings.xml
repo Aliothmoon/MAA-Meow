@@ -2672,5 +2672,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="live_update_icon_pick">选择图片</string>
     <string name="live_update_icon_clear">清除</string>
     <string name="live_update_hint">提示：Live Updates 需要 Android 16+ 且系统支持；内容过长时系统会按空间截断。\"最新日志\"将显示当前执行的最新日志行。</string>
+    <string name="live_update_disabled_notice">提示：Live Updates 当前已关闭，下面的样式不会生效。可在「通知设置 → 实况通知」里重新开启。</string>
+    <string name="live_update_icon_pick_failed">图片不可用，图标未更改</string>
     <string name="live_update_hint_island">提示：本机以小米超级岛实况展示，上述内容与图标会应用到超级岛与状态栏；岛内文本过长时系统会按空间截断。\"最新日志\"将显示当前执行的最新日志行。</string>
 </resources>
