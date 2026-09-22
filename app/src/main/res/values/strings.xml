@@ -22,6 +22,8 @@
     <string name="maa_complete_task">完成任务: </string>
     <string name="maa_task_stopped">任务已停止</string>
     <string name="maa_all_tasks_complete">任务已全部完成！</string>
+    <string name="maa_task_completed_with_errors">任务已全部完成，但出现错误！</string>
+    <string name="maa_task_error_summary_title">本轮任务出现以下错误：</string>
     <string name="maa_routing_restart_too_many_battles">前方战斗数：%1$s，重开路线</string>
     <string name="maa_ends_with_script">结束后脚本</string>
 

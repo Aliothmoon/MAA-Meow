@@ -562,6 +562,8 @@
     <string name="maa_complete_task">Complete task: </string>
     <string name="maa_task_stopped">Has stopped</string>
     <string name="maa_all_tasks_complete">All task(s) completed!</string>
+    <string name="maa_task_completed_with_errors">All task(s) completed, but errors occurred!</string>
+    <string name="maa_task_error_summary_title">The following tasks failed this run:</string>
     <string name="maa_routing_restart_too_many_battles">Too many battles ahead: %1$s, restarting route</string>
     <string name="maa_ends_with_script">Ends with Script</string>
     <string name="maa_fight">Combat</string>
