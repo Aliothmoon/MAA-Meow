@@ -9,6 +9,7 @@ import com.aliothmoon.maameow.data.model.toolbox.RecruitCalcResult
 import com.aliothmoon.maameow.data.model.toolbox.RecruitOperator
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.OperBoxRepository
+import com.aliothmoon.maameow.data.resource.CanonicalOperId
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -128,10 +129,20 @@ class ToolboxResultCollector(
     }
 
     /** 落库 + 成就，Core 识别与一图流拉取共用 */
-    fun applyOperBoxResult(ownOpers: List<OperBoxOperator>) {
+    fun applyOperBoxResult(rawOwnOpers: List<OperBoxOperator>) {
+        val roster = resourceDataManager.operators.value
+        // 升变形态先归一到基础形态，拥有去重、未拥有差集与落盘统一用同一 ID
+        // 归一后同名重复只留首条（对齐 WPF _tempOperHaveSet），并换成基础形态的花名册名字
+        val ownOpers = rawOwnOpers
+            .map { oper ->
+                val canonicalId = CanonicalOperId.of(oper.id)
+                if (canonicalId == oper.id) oper
+                else oper.copy(id = canonicalId, name = roster[canonicalId]?.name ?: oper.name)
+            }
+            .distinctBy { it.id }
         val ownedIds = ownOpers.map { it.id }.toSet()
 
-        val notOwned = resourceDataManager.operators.value
+        val notOwned = roster
             .filter { (id, _) -> id !in ownedIds }
             .map { (id, info) ->
                 OperBoxOperator(
