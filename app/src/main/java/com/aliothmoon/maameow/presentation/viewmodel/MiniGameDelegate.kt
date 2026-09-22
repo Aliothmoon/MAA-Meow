@@ -39,10 +39,14 @@ private val PIXEL_PAINT_VALUES = setOf("MiniGame@PixelPaint", "MiniGame@PixelPai
 private const val PIXEL_PAINT_TASK = "MiniGame@PixelPaint@Begin"
 private const val DEFAULT_TASK_NAME = "SS@Store@Begin"
 
+/** 自动提升潜能，勾选后带 params.auto_raise_potential.use_normal_token */
+private const val AUTO_RAISE_POTENTIAL_VALUE = "MiniGame@AutoRaisePotential@Begin"
+
 data class MiniGameUiState(
     val selectedTaskName: String = DEFAULT_TASK_NAME,
     val selectedEnding: String = "A",
     val selectedEvent: String = "",
+    val useNormalToken: Boolean = false,
     val statusMessage: UiText = UiText.Empty,
 )
 
@@ -67,6 +71,9 @@ class MiniGameDelegate(
     fun isPixelPaint(selectedTaskName: String): Boolean =
         selectedTaskName in PIXEL_PAINT_VALUES
 
+    fun isAutoRaisePotential(selectedTaskName: String): Boolean =
+        selectedTaskName == AUTO_RAISE_POTENTIAL_VALUE
+
     fun onTaskSelected(value: String) {
         _state.update { it.copy(selectedTaskName = value) }
         logCurrentSelection("onTaskSelected")
@@ -78,6 +85,10 @@ class MiniGameDelegate(
 
     fun onEventSelected(event: String) {
         _state.update { it.copy(selectedEvent = event) }
+    }
+
+    fun onUseNormalTokenChanged(useNormalToken: Boolean) {
+        _state.update { it.copy(useNormalToken = useNormalToken) }
     }
 
     fun findGame(selectedTaskName: String): MiniGame? =
@@ -100,6 +111,14 @@ class MiniGameDelegate(
         val pixelArtState = pixelArt.state.value
         val params = buildJsonObject {
             putJsonArray("task_names") { add(JsonPrimitive(taskName)) }
+            // 不勾选时整个 params 不下发，Core 默认点 × 放弃本次提升
+            if (isAutoRaisePotential(_state.value.selectedTaskName) && _state.value.useNormalToken) {
+                putJsonObject("params") {
+                    putJsonObject("auto_raise_potential") {
+                        put("use_normal_token", true)
+                    }
+                }
+            }
             // 像素画额外带 params.pixel_paint.groups，由 Core 的 PixelPaintTaskPlugin 消费
             if (isPixelPaint(_state.value.selectedTaskName)) {
                 pixelArtState.plan?.let { plan ->

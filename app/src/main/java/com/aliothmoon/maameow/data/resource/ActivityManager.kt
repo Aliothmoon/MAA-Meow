@@ -628,7 +628,8 @@ class ActivityManager(
                     value = entry.value,
                     utcStartTime = 0L,
                     utcExpireTime = Long.MAX_VALUE,
-                    tip = uiTextOf(entry.tipRes)
+                    tip = uiTextOf(entry.tipRes),
+                    category = uiTextOf(entry.categoryRes)
                 )
             }
     }

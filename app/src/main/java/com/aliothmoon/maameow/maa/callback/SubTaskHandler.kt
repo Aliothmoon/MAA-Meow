@@ -538,6 +538,24 @@ class SubTaskHandler(
                 toolboxResultCollector.onPixelPaintProgress(subDetails)
             )
 
+            "AutoRaisePotentialTotal" ->
+                append(str("AutoRaisePotentialTotalLog", subDetails?.getIntValue("total") ?: 0), LogLevel.INFO)
+
+            "AutoRaisePotentialProgress" -> {
+                val current = subDetails?.getIntValue("current") ?: 0
+                val total = subDetails?.getIntValue("total") ?: 0
+                val hasPotential = subDetails?.getBooleanValue("has_potential") ?: false
+                append(
+                    str(
+                        if (hasPotential) "AutoRaisePotentialPotentialFoundLog"
+                        else "AutoRaisePotentialNoPotentialLog",
+                        current,
+                        total,
+                    ),
+                    if (hasPotential) LogLevel.SUCCESS else LogLevel.TRACE,
+                )
+            }
+
             "FightTimes" -> {
                 pendingFight = pendingFight.copy(
                     timesFinished = subDetails?.getIntValue("times_finished"),

@@ -19,6 +19,8 @@ object MiniGameTextRegistry {
         "MiniGameNameYellowTicketStore" -> R.string.mini_game_name_yellow_ticket_store
         "MiniGameNameRAStore" -> R.string.mini_game_name_ra_store
         "MiniGame@SecretFront" -> R.string.mini_game_name_secret_front
+        "MiniGame@AutoRaisePotential" -> R.string.mini_game_name_auto_raise_potential
+        "MiniGame@MaterialSynthesis" -> R.string.mini_game_name_material_synthesis
         "MiniGame@PV" -> R.string.mini_game_name_pv
         "MiniGame@SPA" -> R.string.mini_game_name_spa
         "MiniGame@OS" -> R.string.mini_game_name_os
@@ -40,6 +42,8 @@ object MiniGameTextRegistry {
         "MiniGameNameYellowTicketStoreTip" -> R.string.mini_game_tip_yellow_ticket_store
         "MiniGameNameRAStoreTip" -> R.string.mini_game_tip_ra_store
         "MiniGame@SecretFrontTip" -> R.string.mini_game_tip_secret_front
+        "MiniGame@AutoRaisePotentialTip" -> R.string.mini_game_tip_auto_raise_potential
+        "MiniGame@MaterialSynthesisTip" -> R.string.mini_game_tip_material_synthesis
         "MiniGame@PixelPaintTip" -> R.string.mini_game_tip_pixel_paint
         "MiniGame@PVTip" -> R.string.mini_game_tip_pv
         "MiniGame@SPATip" -> R.string.mini_game_tip_spa
@@ -62,6 +66,12 @@ object MiniGameTextRegistry {
         "YellowTicket@Store@Begin" -> R.string.mini_game_name_yellow_ticket_store
         "RA@Store@Begin" -> R.string.mini_game_name_ra_store
         "MiniGame@SecretFront" -> R.string.mini_game_name_secret_front
+        "MiniGame@AutoRaisePotential", "MiniGame@AutoRaisePotential@Begin" ->
+            R.string.mini_game_name_auto_raise_potential
+
+        "MiniGame@MaterialSynthesis", "MiniGame@MaterialSynthesis@Begin" ->
+            R.string.mini_game_name_material_synthesis
+
         "MiniGame@PV" -> R.string.mini_game_name_pv
         "MiniGame@SPA" -> R.string.mini_game_name_spa
         "MiniGame@OS" -> R.string.mini_game_name_os
@@ -85,6 +95,12 @@ object MiniGameTextRegistry {
         "YellowTicket@Store@Begin" -> R.string.mini_game_tip_yellow_ticket_store
         "RA@Store@Begin" -> R.string.mini_game_tip_ra_store
         "MiniGame@SecretFront" -> R.string.mini_game_tip_secret_front
+        "MiniGame@AutoRaisePotential", "MiniGame@AutoRaisePotential@Begin" ->
+            R.string.mini_game_tip_auto_raise_potential
+
+        "MiniGame@MaterialSynthesis", "MiniGame@MaterialSynthesis@Begin" ->
+            R.string.mini_game_tip_material_synthesis
+
         "MiniGame@PV" -> R.string.mini_game_tip_pv
         "MiniGame@SPA" -> R.string.mini_game_tip_spa
         "MiniGame@OS" -> R.string.mini_game_tip_os
@@ -99,6 +115,26 @@ object MiniGameTextRegistry {
             R.string.mini_game_tip_interactive_exhibition
 
         else -> null
+    }
+
+    @StringRes
+    private fun categoryResByKey(key: String): Int? = when (key) {
+        "MiniGameCategoryPermanentFeature" -> R.string.mini_game_category_permanent_feature
+        "MiniGameCategoryPermanent" -> R.string.mini_game_category_permanent
+        "MiniGameCategoryCurrentEvent" -> R.string.mini_game_category_current_event
+        else -> null
+    }
+
+    /**
+     * 分组文案：CategoryKey 本地化 > API 内联 Category > 「当前活动」
+     * 仅用于热更下发的条目，它们都带起止时间，未指定分组即归当前活动（对齐 WPF isCurrentEvent）
+     */
+    fun resolveCategory(category: String?, categoryKey: String?): UiText {
+        if (!categoryKey.isNullOrBlank()) {
+            categoryResByKey(categoryKey)?.let { return uiTextOf(it) }
+        }
+        return category?.takeIf { it.isNotBlank() }?.let { UiText.Dynamic(it) }
+            ?: uiTextOf(R.string.mini_game_category_current_event)
     }
 
     /**

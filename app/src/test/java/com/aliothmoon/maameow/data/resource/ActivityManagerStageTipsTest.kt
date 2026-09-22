@@ -94,6 +94,7 @@ class ActivityManagerStageTipsTest {
         val open = MiniGame(
             display = UiText.Dynamic("测试小游戏"), value = "MiniGame@Test",
             utcStartTime = 0L, utcExpireTime = Long.MAX_VALUE, activity = "测试活动",
+            category = UiText.Empty,
         )
         val closed = open.copy(display = UiText.Dynamic("已结束"), utcStartTime = 1L, utcExpireTime = 2L)
         val other = open.copy(display = UiText.Dynamic("别的活动"), activity = "别的活动")

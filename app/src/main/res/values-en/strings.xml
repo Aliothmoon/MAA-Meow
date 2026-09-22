@@ -1117,6 +1117,7 @@
     <string name="panel_mini_game_title">Useful Tasks</string>
     <string name="panel_mini_game_name">Mini Game Name</string>
     <string name="panel_mini_game_ending">Ending</string>
+    <string name="panel_mini_game_use_normal_token">Use regular tokens when mid-tier tokens run out</string>
     <string name="panel_mini_game_preferred_events">Priority for Series of Events</string>
 
     <!-- mini game: data texts (names / tips, mirrors MaaWpfGui localization keys) -->
@@ -1136,6 +1137,13 @@
     <string name="mini_game_tip_ra_store">Please start from the event shop page.</string>
     <string name="mini_game_name_secret_front">Hidden Front</string>
     <string name="mini_game_tip_secret_front">Start from the squad selection screen;\nIf there is a saved game, please delete it manually.\nClose the tutorial after playing it for the first time.\nRecommended to enable in-game ｢Inherit previous squad\'s data｣.</string>
+    <string name="mini_game_name_auto_raise_potential">Auto raise potential</string>
+    <string name="mini_game_tip_auto_raise_potential">Enter the operator list screen before starting. Raises the potential of every operator with a notice badge.\nStops on the profile of the last processed operator; stays on the operator list when there is nothing to raise.</string>
+    <string name="mini_game_name_material_synthesis">Missing material synthesis</string>
+    <string name="mini_game_tip_material_synthesis">Open the missing-material popup from a training page (elite promotion, mastery, module upgrade) and jump to the workshop synthesis page before starting.\nRecursively synthesizes craftable sub-materials and stops when materials run out.</string>
+    <string name="mini_game_category_permanent_feature">Permanent features</string>
+    <string name="mini_game_category_permanent">Permanent activities</string>
+    <string name="mini_game_category_current_event">Current event</string>
     <string name="mini_game_tip_pixel_paint">Pick an image and tune it below, then stay on the in-game pixel art editor before starting</string>
     <string name="mini_game_name_pv">PV - Fireworks Organizing Committee</string>
     <string name="mini_game_tip_pv">Automatically clear from the selected stage. If you choose the first stage, start from the leftmost side of the event page; for other stages, enter the previous stage and then return to calibrate the position.</string>

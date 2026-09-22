@@ -1171,6 +1171,7 @@
     <string name="panel_mini_game_title">牛杂</string>
     <string name="panel_mini_game_name">小游戏名称</string>
     <string name="panel_mini_game_ending">结局</string>
+    <string name="panel_mini_game_use_normal_token">中间信物不足时使用普通信物</string>
     <string name="panel_mini_game_preferred_events">优先系列事件</string>
 
     <!-- mini game: data texts (names / tips, mirrors MaaWpfGui localization keys) -->
@@ -1190,6 +1191,13 @@
     <string name="mini_game_tip_ra_store">请在活动商店页面开始。</string>
     <string name="mini_game_name_secret_front">隐秘战线</string>
     <string name="mini_game_tip_secret_front">在选小队界面开始，如有存档须手动删除。\n第一次打自己看完把教程关了。\n推荐勾选游戏内 ｢继承上一支队伍发回的数据｣</string>
+    <string name="mini_game_name_auto_raise_potential">自动提升潜能</string>
+    <string name="mini_game_tip_auto_raise_potential">请先进入干员列表界面，再开始任务。自动提升所有带提示标记干员的潜能。\n完成后停留在最后一名干员档案；没有可提升目标时停留在干员列表</string>
+    <string name="mini_game_name_material_synthesis">缺口材料合成</string>
+    <string name="mini_game_tip_material_synthesis">请先手动从培养页面(如精英化、专精、模组升级)缺少的材料弹窗跳转到加工站合成页，再开始任务。\n会递归合成可加工的下级材料，材料不足时停止</string>
+    <string name="mini_game_category_permanent_feature">常驻功能</string>
+    <string name="mini_game_category_permanent">常驻活动</string>
+    <string name="mini_game_category_current_event">当前活动</string>
     <string name="mini_game_tip_pixel_paint">先在下方选好图片并调参，然后停在游戏的像素画编辑页再开始</string>
     <string name="mini_game_name_pv">PV-烟花筹委会</string>
     <string name="mini_game_tip_pv">从所选关卡开始并自动通关。若选择第一关，则从活动页最左侧开始；若选择其他关卡，请先进入上一关再返回以校准位置。</string>

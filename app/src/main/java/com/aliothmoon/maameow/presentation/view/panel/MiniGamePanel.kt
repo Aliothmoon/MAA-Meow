@@ -20,18 +20,25 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.model.activity.MiniGame
 import com.aliothmoon.maameow.data.resource.MiniGameTextRegistry
+import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.SelectableCardButton
 import com.aliothmoon.maameow.presentation.viewmodel.MiniGameDelegate
 import com.aliothmoon.maameow.presentation.viewmodel.PixelArtDelegate
 import com.aliothmoon.maameow.utils.i18n.asString
+import com.aliothmoon.maameow.utils.i18n.resolve
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -66,35 +73,34 @@ fun MiniGamePanel(
             )
         }
 
-        // 任务选择 - 卡片网格
+        // 任务选择 - 按分组的卡片网格，组内顺序与组的先后都保持列表原序
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            val context = LocalContext.current
+            val configuration = LocalConfiguration.current
+            // 分组按渲染后的文案：热更内联分组与已知 CategoryKey 文案相同时应合并成一组
+            val grouped = remember(miniGames, configuration) {
+                miniGames.groupBy { it.category.resolve(context) }
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     text = stringResource(R.string.panel_mini_game_name),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                miniGames.chunked(3).forEach { rowGames ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        rowGames.forEach { game ->
-                            SelectableCardButton(
-                                text = game.display.asString(),
-                                selected = state.selectedTaskName == game.value,
-                                isError = game.isUnsupported,
-                                onClick = { delegate.onTaskSelected(game.value) },
-                                textStyle = tabTitleTextStyle,
-                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .heightIn(min = 36.dp),
-                            )
-                        }
-                        repeat(3 - rowGames.size) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
+                grouped.forEach { (category, games) ->
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = category,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        MiniGameGrid(
+                            games = games,
+                            selectedTaskName = state.selectedTaskName,
+                            textStyle = tabTitleTextStyle,
+                            onSelect = delegate::onTaskSelected,
+                        )
                     }
                 }
             }
@@ -142,6 +148,18 @@ fun MiniGamePanel(
                         )
                     }
                 }
+            }
+        }
+
+        // 自动提升潜能：中间信物不足时是否消耗普通信物
+        if (delegate.isAutoRaisePotential(state.selectedTaskName)) {
+            item { HorizontalDivider() }
+            item {
+                CheckBoxWithLabel(
+                    checked = state.useNormalToken,
+                    onCheckedChange = delegate::onUseNormalTokenChanged,
+                    label = stringResource(R.string.panel_mini_game_use_normal_token),
+                )
             }
         }
 
@@ -206,5 +224,40 @@ fun MiniGamePanel(
             }
         }
 
+    }
+}
+
+/** 小游戏卡片网格，每行 3 个，不足补占位保持等宽 */
+@Composable
+private fun MiniGameGrid(
+    games: List<MiniGame>,
+    selectedTaskName: String,
+    textStyle: TextStyle,
+    onSelect: (String) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        games.chunked(3).forEach { rowGames ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                rowGames.forEach { game ->
+                    SelectableCardButton(
+                        text = game.display.asString(),
+                        selected = selectedTaskName == game.value,
+                        isError = game.isUnsupported,
+                        onClick = { onSelect(game.value) },
+                        textStyle = textStyle,
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 36.dp),
+                    )
+                }
+                repeat(3 - rowGames.size) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
     }
 }
