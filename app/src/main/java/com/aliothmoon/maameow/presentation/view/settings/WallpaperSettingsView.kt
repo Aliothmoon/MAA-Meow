@@ -62,6 +62,7 @@ fun WallpaperSettingsView(
     val customBackgroundScrim by viewModel.customBackgroundScrim.collectAsStateWithLifecycle()
     val customBackgroundBlur by viewModel.customBackgroundBlur.collectAsStateWithLifecycle()
     val backgroundImage by viewModel.backgroundImage.collectAsStateWithLifecycle()
+    val customBackgroundMonet by viewModel.customBackgroundMonet.collectAsStateWithLifecycle()
 
     val backgroundCrop = rememberBackgroundCropController(viewModel)
     val pickBackgroundLauncher = rememberLauncherForActivityResult(
@@ -96,6 +97,7 @@ fun WallpaperSettingsView(
                         imageAlpha = customBackgroundImageAlpha,
                         scrim = customBackgroundScrim,
                         blur = customBackgroundBlur,
+                        monet = customBackgroundMonet,
                         onEnabledChange = { viewModel.setCustomBackgroundEnabled(it) },
                         onPickImage = {
                             pickBackgroundLauncher.launch(
@@ -106,6 +108,7 @@ fun WallpaperSettingsView(
                         onImageAlphaChange = { viewModel.setCustomBackgroundImageAlpha(it) },
                         onScrimChange = { viewModel.setCustomBackgroundScrim(it) },
                         onBlurChange = { viewModel.setCustomBackgroundBlur(it) },
+                        onMonetChange = { viewModel.setCustomBackgroundMonet(it) },
                     )
                 }
             }
@@ -132,12 +135,14 @@ private fun SettingCustomBackgroundSection(
     imageAlpha: Int,
     scrim: Int,
     blur: Int,
+    monet: Boolean,
     onEnabledChange: (Boolean) -> Unit,
     onPickImage: () -> Unit,
     onRemoveImage: () -> Unit,
     onImageAlphaChange: (Int) -> Unit,
     onScrimChange: (Int) -> Unit,
     onBlurChange: (Int) -> Unit,
+    onMonetChange: (Boolean) -> Unit,
 ) {
     val hasImage = previewImage != null
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -213,6 +218,13 @@ private fun SettingCustomBackgroundSection(
                             onValueChange = onBlurChange
                         )
                     }
+                    SettingSwitchItem(
+                        title = stringResource(R.string.settings_background_monet),
+                        description = stringResource(R.string.settings_background_monet_desc),
+                        contentColor = contentColor,
+                        checked = monet,
+                        onCheckedChange = onMonetChange,
+                    )
                 }
             }
         }

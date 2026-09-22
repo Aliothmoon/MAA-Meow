@@ -4,16 +4,25 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** 模糊滑块 100% 对应的最大模糊半径。 */
 val MaxBackgroundBlur: Dp = 24.dp
@@ -61,7 +70,7 @@ fun MaaBackgroundHost(
  * 应用级背景包装：有背景图时套用玻璃配色并在内容之下绘制背景，无图时透传内容。
  *
  * 挂到导航根层（[com.aliothmoon.maameow.presentation.navigation.AppNavigation]），
- * 让主界面与所有子页面共用同一背景与玻璃配色。
+ * 让主界面与所有子页面共用同一背景与玻璃配色；[monetFromWallpaper] 为真时用背景图做原生莫奈取色。
  */
 @Composable
 fun AppBackgroundHost(
@@ -69,6 +78,7 @@ fun AppBackgroundHost(
     imageAlpha: Float,
     scrimAlpha: Float,
     blurRadius: Dp,
+    monetFromWallpaper: Boolean,
     content: @Composable () -> Unit,
 ) {
     if (image == null) {
@@ -76,15 +86,31 @@ fun AppBackgroundHost(
         return
     }
     val baseScheme = MaterialTheme.colorScheme
-    val glassScheme = remember(baseScheme) { baseScheme.toGlass() }
-    ProvideColorScheme(glassScheme) {
-        MaaBackgroundHost(
-            image = image,
-            imageAlpha = imageAlpha,
-            scrimColor = baseScheme.background,
-            scrimAlpha = scrimAlpha,
-            blurRadius = blurRadius,
-            content = content,
-        )
+    val isDark = baseScheme.background.luminance() < 0.5f
+    // 取色（含缩放与大图取样）较重，放后台线程算；算完前先用原配色，避免组合期阻塞主线程。
+    var monetScheme by remember(image, isDark, monetFromWallpaper) {
+        mutableStateOf<ColorScheme?>(null)
+    }
+    LaunchedEffect(image, isDark, monetFromWallpaper) {
+        monetScheme = if (monetFromWallpaper) {
+            withContext(Dispatchers.Default) { monetColorScheme(image, isDark) }
+        } else {
+            null
+        }
+    }
+    val effectiveBase = monetScheme ?: baseScheme
+    val glassScheme = remember(effectiveBase) { effectiveBase.toGlass() }
+    // 让 OpaqueTheme 复用当前配色（含莫奈取色结果），而不是外层 MaaMeowTheme 的原配色。
+    CompositionLocalProvider(LocalOpaqueColorScheme provides effectiveBase) {
+        ProvideColorScheme(glassScheme) {
+            MaaBackgroundHost(
+                image = image,
+                imageAlpha = imageAlpha,
+                scrimColor = effectiveBase.background,
+                scrimAlpha = scrimAlpha,
+                blurRadius = blurRadius,
+                content = content,
+            )
+        }
     }
 }

@@ -143,6 +143,7 @@ fun AppNavigation(
     val backgroundImageAlpha by appSettings.customBackgroundImageAlpha.collectAsStateWithLifecycle()
     val backgroundScrim by appSettings.customBackgroundScrim.collectAsStateWithLifecycle()
     val backgroundBlur by appSettings.customBackgroundBlur.collectAsStateWithLifecycle()
+    val backgroundMonet by appSettings.customBackgroundMonet.collectAsStateWithLifecycle()
 
     LaunchedEffect(backgroundTaskViewModel) {
         backgroundTaskViewModel.launchEffects.collect { effect ->
@@ -203,6 +204,7 @@ fun AppNavigation(
                 imageAlpha = backgroundImageAlpha / 100f,
                 scrimAlpha = backgroundScrim / 100f,
                 blurRadius = MaxBackgroundBlur * (backgroundBlur / 100f),
+                monetFromWallpaper = backgroundMonet,
             ) {
                 MainScreen(
                     navController = navController,

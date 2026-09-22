@@ -301,6 +301,8 @@
     <string name="settings_background_image_alpha">图片不透明度</string>
     <string name="settings_background_scrim">遮罩强度</string>
     <string name="settings_background_blur">模糊</string>
+    <string name="settings_background_monet">从壁纸取色</string>
+    <string name="settings_background_monet_desc">用背景图生成主题配色</string>
     <string name="settings_background_import_failed">背景图片导入失败</string>
     <string name="settings_background_crop_reset">复位</string>
     <string name="settings_background_crop_rotate">旋转 90°</string>
