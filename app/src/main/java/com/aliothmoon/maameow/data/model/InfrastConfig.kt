@@ -173,14 +173,6 @@ data class InfrastConfig(
      */
     val receptionSendClue: Boolean = true,
 
-    /**
-     * 继续专精
-     * 对应 WPF: ContinueTraining (bool)
-     *
-     * 启用后，技能专精完成后会继续进行下一个专精任务
-     */
-    val continueTraining: Boolean = false,
-
     // ============ 常规模式效率算法（仅 Normal 模式生效） ============
 
     /**
@@ -241,7 +233,6 @@ data class InfrastConfig(
                     }
             })
             put("drones", usesOfDrones)
-            put("continue_training", continueTraining)
             put("threshold", threshold)
             put("dorm_notstationed_enabled", dormFilterNotStationedEnabled)
             put("dorm_trust_enabled", dormTrustEnabled)

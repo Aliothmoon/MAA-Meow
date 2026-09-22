@@ -953,7 +953,6 @@
     <string name="panel_infrast_reception_message_board">Credit collection from message board in Reception Room</string>
     <string name="panel_infrast_reception_clue_exchange">Conduct Clue Exchange</string>
     <string name="panel_infrast_reception_send_clue">Send clues</string>
-    <string name="panel_infrast_continue_training">After training is complete, try to continue mastering the current Skill</string>
     <string name="panel_infrast_fiammetta_recovery">Enable Fiammetta morale recovery</string>
     <string name="panel_infrast_fiammetta_recovery_tip">When enabled, the recovery target and a full-mood Fiammetta swap moods in a dormitory at the start of each shift, after which Fiammetta stays in the dormitory to recover.\nWhen disabled, the shift skips the dormitory preparation step.</string>
     <string name="panel_infrast_fiammetta_targets_title">Fiammetta recovery targets</string>
