@@ -215,17 +215,20 @@ fun NotificationSettingsView(
                         }
                     }
                     ListItemDivider()
-                    Button(
-                        onClick = {
-                            viewModel.sendLiveTest(liveTestTitle, liveTestText)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-                        shape = MaterialTheme.shapes.small,
-                        contentPadding = ButtonDefaults.ContentPadding,
-                    ) {
-                        Text(stringResource(R.string.notification_live_send_test))
+                    // 16 以下没有实况通知，测试入口一并隐藏
+                    if (liveUpdateSupported) {
+                        Button(
+                            onClick = {
+                                viewModel.sendLiveTest(liveTestTitle, liveTestText)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
+                            shape = MaterialTheme.shapes.small,
+                            contentPadding = ButtonDefaults.ContentPadding,
+                        ) {
+                            Text(stringResource(R.string.notification_live_send_test))
+                        }
                     }
                 }
             }

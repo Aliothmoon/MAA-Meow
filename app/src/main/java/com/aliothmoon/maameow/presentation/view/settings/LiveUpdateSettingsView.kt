@@ -120,6 +120,7 @@ fun LiveUpdateSettingsView(navController: NavController) {
     val livePublisher: LiveUpdatePublisher = koinInject()
     val trackerIconStore: TrackerIconStore = koinInject()
     val useHyperIsland by appSettingsManager.liveUpdateUseHyperIsland.collectAsStateWithLifecycle()
+    val bypassEnabled by appSettingsManager.liveIslandXmsfBypass.collectAsStateWithLifecycle()
     val chipContent by appSettingsManager.liveUpdateChipContent.collectAsStateWithLifecycle()
     val colorScheme by appSettingsManager.liveUpdateColorScheme.collectAsStateWithLifecycle()
     val customColor by appSettingsManager.liveUpdateCustomColor.collectAsStateWithLifecycle()
@@ -139,9 +140,13 @@ fun LiveUpdateSettingsView(navController: NavController) {
             runCatching { livePublisher.capability }.getOrNull()
         }
     }
-    // 文案绑「使用小米超级岛」开关：小米设备（且 Android 16+）开了岛才用岛的口径，
-    // 其余情况一律按原生显示，避免误导
-    val onIsland = Build.VERSION.SDK_INT >= 36 && capability?.focusLikely == true && useHyperIsland
+    // 文案绑「使用小米超级岛」开关，但只有岛真的会生效时才用岛的口径：
+    // 关掉兼容模式或缺焦点通知权限时路由会退到原生，这里跟着按原生显示，避免误导
+    val onIsland = Build.VERSION.SDK_INT >= 36 &&
+        capability?.focusLikely == true &&
+        capability?.focusGranted == true &&
+        useHyperIsland &&
+        bypassEnabled
     val chipLabelRes =
         if (onIsland) R.string.live_update_chip_label_island else R.string.live_update_chip_label
     val iconLabelRes =
