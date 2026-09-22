@@ -49,14 +49,15 @@ fun MainScreen(
     val reduceMotion = LocalReduceMotion.current
     val chromeHidden = fullscreen || LocalIsInPip.current
 
-    // 把分页偏移实时上报给背景层做视差；减弱动效时归零。
-    LaunchedEffect(pagerState, reduceMotion) {
-        if (reduceMotion) {
-            parallax.floatValue = 0f
-            return@LaunchedEffect
-        }
-        snapshotFlow { pagerState.currentPageOffsetFraction }
-            .collect { parallax.floatValue = it }
+    // 把分页位置实时上报给背景层做视差，归一化到 -1~1。
+    // 不能只用 currentPageOffsetFraction：它在滑过中点时随 currentPage 进位翻符号，背景会瞬移。
+    // 减弱动效由背景层统一忽略，这里照常上报。
+    LaunchedEffect(pagerState) {
+        val lastIndex = (BottomNavTab.all.size - 1).coerceAtLeast(1)
+        snapshotFlow { pagerState.currentPage + pagerState.currentPageOffsetFraction }
+            .collect { position ->
+                parallax.floatValue = (position / lastIndex * 2f - 1f).coerceIn(-1f, 1f)
+            }
     }
 
     // targetPage：点击/滑动一旦确定目标即生效，停稳后等于 currentPage。

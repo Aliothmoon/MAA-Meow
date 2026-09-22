@@ -8,8 +8,8 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
@@ -26,19 +26,25 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlin.math.abs
 
 /** 模糊滑块 100% 对应的最大模糊半径。 */
 val MaxBackgroundBlur: Dp = 24.dp
 
+/** 视差单侧最大横移，占屏宽比例 */
+private const val PARALLAX_SHIFT = 0.04f
+
+/** 视差恒定放大：两侧各溢出 5%，大于 [PARALLAX_SHIFT] 才不会横移到露边 */
+private const val PARALLAX_ZOOM = 1.1f
+
 /**
  * 主界面自定义背景绘制层：全屏铺满背景图 → 遮罩 → 内容。
  *
- * 纯 UI，不含状态获取；由 MainScreen 注入位图与参数并包裹四个 Tab 的 Scaffold。
+ * 纯 UI，不含状态获取；由 [AppBackgroundHost] 注入位图与参数并包裹整棵导航树。
  *
  * @param scrimColor 遮罩基色（一般取原始不透明 background），配合 [scrimAlpha] 提升前景可读性。
  * @param blurRadius 模糊半径；仅 API 31+ 实际生效，低版本自动忽略。
- * @param parallax 分页归一化偏移（-0.5~0.5），用于切 Tab 时的视差位移。
+ * @param parallax 读取跨 Tab 归一化位置（-1~1）的取值函数，在 graphicsLayer 内延迟读取，
+ *   滑动时只刷新图层不触发重组；传 null 表示关闭视差（连恒定放大一并跳过）。
  */
 @Composable
 fun MaaBackgroundHost(
@@ -47,10 +53,18 @@ fun MaaBackgroundHost(
     scrimColor: Color,
     scrimAlpha: Float,
     blurRadius: Dp,
-    parallax: Float = 0f,
+    parallax: (() -> Float)? = null,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
+    // 先恒定放大留出溢出量，再随 Tab 位置连续横移，静止时每个 Tab 停在不同位置
+    val parallaxLayer = parallax?.let { readPosition ->
+        Modifier.graphicsLayer {
+            scaleX = PARALLAX_ZOOM
+            scaleY = PARALLAX_ZOOM
+            translationX = readPosition().coerceIn(-1f, 1f) * size.width * PARALLAX_SHIFT
+        }
+    } ?: Modifier
     Box(modifier = modifier.fillMaxSize()) {
         Image(
             bitmap = image,
@@ -59,14 +73,7 @@ fun MaaBackgroundHost(
             alpha = imageAlpha.coerceIn(0f, 1f),
             modifier = Modifier
                 .matchParentSize()
-                .graphicsLayer {
-                    // 切 Tab 时随分页偏移轻微横移并放大，避免露出边缘。
-                    val fraction = abs(parallax)
-                    val zoom = 1f + fraction * 0.2f
-                    scaleX = zoom
-                    scaleY = zoom
-                    translationX = parallax * size.width * 0.08f
-                }
+                .then(parallaxLayer)
                 .then(if (blurRadius > 0.dp) Modifier.blur(blurRadius) else Modifier),
         )
         if (scrimAlpha > 0f) {
@@ -85,6 +92,8 @@ fun MaaBackgroundHost(
  *
  * 挂到导航根层（[com.aliothmoon.maameow.presentation.navigation.AppNavigation]），
  * 让主界面与所有子页面共用同一背景与玻璃配色；[monetFromWallpaper] 为真时用背景图做原生莫奈取色。
+ *
+ * @param parallax 主界面分页位置（-1~1），由 MainScreen 上报；减弱动效时不启用视差。
  */
 @Composable
 fun AppBackgroundHost(
@@ -93,7 +102,7 @@ fun AppBackgroundHost(
     scrimAlpha: Float,
     blurRadius: Dp,
     monetFromWallpaper: Boolean,
-    parallax: MutableFloatState,
+    parallax: FloatState,
     content: @Composable () -> Unit,
 ) {
     // 有图与无图分属两个组合位置，各调一次 content 会让 Compose 整棵拆掉重建：
@@ -119,6 +128,9 @@ fun AppBackgroundHost(
     }
     val effectiveBase = monetScheme ?: baseScheme
     val glassScheme = remember(effectiveBase) { effectiveBase.toGlass() }
+    // 取值函数保持同一实例，免得每次重组都重建 modifier 链
+    val readParallax = remember(parallax) { { parallax.floatValue } }
+    val reduceMotion = LocalReduceMotion.current
     // 让 OpaqueTheme 复用当前配色（含莫奈取色结果），而不是外层 MaaMeowTheme 的原配色。
     CompositionLocalProvider(LocalOpaqueColorScheme provides effectiveBase) {
         ProvideColorScheme(glassScheme) {
@@ -128,7 +140,7 @@ fun AppBackgroundHost(
                 scrimColor = effectiveBase.background,
                 scrimAlpha = scrimAlpha,
                 blurRadius = blurRadius,
-                parallax = parallax.floatValue,
+                parallax = if (reduceMotion) null else readParallax,
                 content = hostedContent,
             )
         }
