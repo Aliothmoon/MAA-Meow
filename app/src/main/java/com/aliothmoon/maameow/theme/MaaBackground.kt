@@ -4,7 +4,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
@@ -52,5 +54,37 @@ fun MaaBackgroundHost(
             )
         }
         content()
+    }
+}
+
+/**
+ * 应用级背景包装：有背景图时套用玻璃配色并在内容之下绘制背景，无图时透传内容。
+ *
+ * 挂到导航根层（[com.aliothmoon.maameow.presentation.navigation.AppNavigation]），
+ * 让主界面与所有子页面共用同一背景与玻璃配色。
+ */
+@Composable
+fun AppBackgroundHost(
+    image: ImageBitmap?,
+    imageAlpha: Float,
+    scrimAlpha: Float,
+    blurRadius: Dp,
+    content: @Composable () -> Unit,
+) {
+    if (image == null) {
+        content()
+        return
+    }
+    val baseScheme = MaterialTheme.colorScheme
+    val glassScheme = remember(baseScheme) { baseScheme.toGlass() }
+    ProvideColorScheme(glassScheme) {
+        MaaBackgroundHost(
+            image = image,
+            imageAlpha = imageAlpha,
+            scrimColor = baseScheme.background,
+            scrimAlpha = scrimAlpha,
+            blurRadius = blurRadius,
+            content = content,
+        )
     }
 }
