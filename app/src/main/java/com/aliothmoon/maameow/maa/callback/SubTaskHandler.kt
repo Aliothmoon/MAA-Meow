@@ -340,6 +340,10 @@ class SubTaskHandler(
             // 上游移除掉线重连后 core 检测到掉线弹窗即 Stop 当前任务链，
             // 队列剩余任务要在这里一起中止
             "OfflineConfirm", "OfflineConfirmAfterBattle" -> {
+                // 开始唤醒自己会点确认重连，属正常启动流程，不按掉线停机
+                // core 回调已剥掉 @ 前缀，StartUp@OfflineConfirm 同样报 OfflineConfirm，只能按任务链区分
+                if (details.getString("taskchain") == "StartUp") return
+
                 val message = str("GameDrop")
                 append(message, LogLevel.ERROR)
                 notificationCenter.notifySubTaskFailure(message, sendExternal = true)
