@@ -119,7 +119,6 @@ fun LiveUpdateSettingsView(navController: NavController) {
     val appSettingsManager: AppSettingsManager = koinInject()
     val livePublisher: LiveUpdatePublisher = koinInject()
     val trackerIconStore: TrackerIconStore = koinInject()
-    val enabled by appSettingsManager.liveUpdateEnabled.collectAsStateWithLifecycle()
     val useHyperIsland by appSettingsManager.liveUpdateUseHyperIsland.collectAsStateWithLifecycle()
     val chipContent by appSettingsManager.liveUpdateChipContent.collectAsStateWithLifecycle()
     val colorScheme by appSettingsManager.liveUpdateColorScheme.collectAsStateWithLifecycle()
@@ -178,25 +177,6 @@ fun LiveUpdateSettingsView(navController: NavController) {
                 vertical = MaaDesignTokens.Spacing.sm
             )
         ) {
-            // 功能被关掉时先说明白：这一页的样式都不会生效，避免误导
-            if (!enabled) {
-                item {
-                    SettingsGroupCard {
-                        Text(
-                            text = stringResource(R.string.live_update_disabled_notice),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(
-                                start = MaaDesignTokens.Spacing.lg,
-                                top = MaaDesignTokens.Spacing.md,
-                                end = MaaDesignTokens.Spacing.lg,
-                                bottom = MaaDesignTokens.Spacing.md,
-                            )
-                        )
-                    }
-                }
-            }
-
             // ── 显示内容 ──
             item {
                 SectionHeader(stringResource(chipLabelRes))

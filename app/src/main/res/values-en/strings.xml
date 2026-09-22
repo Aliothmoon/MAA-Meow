@@ -2615,7 +2615,6 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="live_update_icon_pick">Pick image</string>
     <string name="live_update_icon_clear">Clear</string>
     <string name="live_update_hint">Note: Live Updates require Android 16+ with system support; long text may be truncated by the system. \"Latest log\" shows the current execution log line.</string>
-    <string name="live_update_disabled_notice">Note: Live Updates is currently off, so the styles below have no effect. Turn it back on in Notifications → Live updates.</string>
     <string name="live_update_icon_pick_failed">Image unavailable, icon unchanged</string>
     <string name="live_update_hint_island">Note: this device shows live updates as a Dynamic Island; the content and icon above apply to the island and the status bar. Long island text may be truncated by the system. \"Latest log\" shows the current execution log line.</string>
 </resources>
