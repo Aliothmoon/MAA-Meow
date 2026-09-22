@@ -11,6 +11,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -95,8 +96,12 @@ fun AppBackgroundHost(
     parallax: MutableFloatState,
     content: @Composable () -> Unit,
 ) {
+    // 有图与无图分属两个组合位置，各调一次 content 会让 Compose 整棵拆掉重建：
+    // pager 页码、子树里所有 remember 全丢。movableContent 让子树带着状态原样搬过去
+    val hostedContent = remember(content) { movableContentOf { content() } }
+
     if (image == null) {
-        content()
+        hostedContent()
         return
     }
     val baseScheme = MaterialTheme.colorScheme
@@ -124,7 +129,7 @@ fun AppBackgroundHost(
                 scrimAlpha = scrimAlpha,
                 blurRadius = blurRadius,
                 parallax = parallax.floatValue,
-                content = content,
+                content = hostedContent,
             )
         }
     }
