@@ -694,6 +694,14 @@ class SubTaskHandler(
                 append(str(if (cont) "ContinueRefresh" else "NoRecruitmentPermit"), LogLevel.TRACE)
             }
 
+            "RecruitPermitReserved" -> {
+                val current = subDetails?.getIntValue("current") ?: 0
+                append(str("RecruitPermitReserved", current), LogLevel.INFO)
+            }
+
+            "RecruitPermitCountRecognitionFailed" ->
+                append(str("RecruitPermitCountRecognitionFailed"), LogLevel.WARNING)
+
             "NotEnoughStaff" -> append(str("NotEnoughStaff"), LogLevel.ERROR)
             "CreditFullOnlyBuyDiscount" -> {
                 val credit = subDetails?.getString("credit") ?: ""

@@ -129,6 +129,11 @@
     <string name="maa_not_enough_staff">可用干员不足</string>
     <string name="maa_infrast_facility_layout_recognition_failed">基建布局识别失败，常规模式换班已中止；请确认停留在基建主界面且未遮挡后重试</string>
     <string name="maa_recruit_support_operator">编入助战干员：%1$s</string>
+    <string name="maa_recruit_permit_reserved">招聘许可剩余 %1$d，小于等于保留数量，跳过当前 3 星招募</string>
+    <string name="maa_recruit_permit_count_recognition_failed">招聘许可数量识别失败，为避免消耗保留许可，已跳过当前 3 星招募</string>
+    <string name="maa_auto_raise_potential_total_log">自动提升潜能：识别到 %1$d 位待处理干员</string>
+    <string name="maa_auto_raise_potential_potential_found_log">第 %1$d/%2$d 位干员：有待提升的潜能</string>
+    <string name="maa_auto_raise_potential_no_potential_log">第 %1$d/%2$d 位干员：无可提升的潜能</string>
 
     <!-- subtask_extra_credit -->
     <string name="maa_credit_full_only_buy_discount">博士！\n只购买折扣商品让信用点数溢出了！\n小心信用点数浪费哦！\n剩余信用点数：</string>
@@ -1340,6 +1345,8 @@
     <string name="panel_recruit_preserve_tag_enabled">保留指定词条</string>
     <string name="panel_recruit_preserve_tag_enabled_tip">识别到任一已选词条时跳过该次招募并保留该栏位；留空时不保留任何词条。</string>
     <string name="panel_recruit_choose_level3">自动确认 3 星</string>
+    <string name="panel_recruit_level3_permit_reserve">3 星保留招聘许可</string>
+    <string name="panel_recruit_level3_permit_reserve_tip">当剩余招聘许可小于等于该值时跳过 3 星招聘</string>
     <string name="panel_recruit_choose_level4">自动确认 4 星</string>
     <string name="panel_recruit_choose_level5">自动确认 5 星</string>
 

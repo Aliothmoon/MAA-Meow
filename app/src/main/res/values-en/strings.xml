@@ -655,6 +655,11 @@
     <string name="maa_not_enough_staff">Insufficient Operators</string>
     <string name="maa_infrast_facility_layout_recognition_failed">Base layout recognition failed; Normal-mode shift change aborted. Make sure the base overview is shown and unobstructed, then retry</string>
     <string name="maa_recruit_support_operator">Add support unit: %1$s</string>
+    <string name="maa_recruit_permit_reserved">%1$d recruitment permits left, at or below the reserve, skipping this 3★ recruitment</string>
+    <string name="maa_recruit_permit_count_recognition_failed">Failed to recognize the recruitment permit count; skipped this 3★ recruitment to avoid spending reserved permits</string>
+    <string name="maa_auto_raise_potential_total_log">Auto raise potential: %1$d operators pending</string>
+    <string name="maa_auto_raise_potential_potential_found_log">Operator %1$d/%2$d: potential available to raise</string>
+    <string name="maa_auto_raise_potential_no_potential_log">Operator %1$d/%2$d: no potential to raise</string>
     <string name="maa_credit_full_only_buy_discount">Doctor! \nPurchasing only discounted items has caused an overflow in credits! \nBe cautious of wasting credits!\nRemaining credits: </string>
     <string name="maa_start_combat">Start combat: </string>
     <string name="maa_medicine_used">Medicine used</string>
@@ -1285,6 +1290,8 @@
     <string name="panel_recruit_preserve_tag_enabled">Preserve selected tags</string>
     <string name="panel_recruit_preserve_tag_enabled_tip">Skip the recruitment and keep the slot when any selected tag is identified. Leave it empty to preserve none.</string>
     <string name="panel_recruit_choose_level3">Auto confirm 3★</string>
+    <string name="panel_recruit_level3_permit_reserve">Reserve permits for 3★</string>
+    <string name="panel_recruit_level3_permit_reserve_tip">Skip 3★ recruitment when the remaining recruitment permits are at or below this value</string>
     <string name="panel_recruit_choose_level4">Auto confirm 4★</string>
     <string name="panel_recruit_choose_level5">Auto confirm 5★</string>
 

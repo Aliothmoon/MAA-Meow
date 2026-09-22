@@ -113,6 +113,20 @@ data class RecruitConfig(
     val chooseLevel3Min: Int = 0,
 
     /**
+     * 3 星保留招聘许可开关
+     * 对应 WPF: Level3RecruitmentPermitReserveEnabled (v6.18.0-beta.3)
+     */
+    val level3PermitReserveEnabled: Boolean = false,
+
+    /**
+     * 3 星保留的招聘许可数量
+     * 对应 WPF: Level3RecruitmentPermitReserve
+     * 剩余许可小于等于该值时跳过 3 星招募，4 星及以上不受影响
+     * 范围: 1-999，默认 8
+     */
+    val level3PermitReserve: Int = 8,
+
+    /**
      * 自动选择四星
      * 对应 WPF: ChooseLevel4
      */
@@ -260,6 +274,11 @@ data class RecruitConfig(
                     preserveTagList.forEach { add(JsonPrimitive(it)) }
                 }
             })
+            // 0 即禁用；关闭开关时显式下发 0，避免 core 沿用上一次任务的值
+            put(
+                "level3_recruitment_permit_reserve",
+                if (level3PermitReserveEnabled) level3PermitReserve.coerceIn(LEVEL3_PERMIT_RESERVE_MIN, LEVEL3_PERMIT_RESERVE_MAX) else 0,
+            )
             put("extra_tags_mode", selectExtraTags.toIntOrNull() ?: 0)
             if (autoRecruitFirstList.isNotEmpty()) {
                 put("first_tags", buildJsonArray {
@@ -279,4 +298,11 @@ data class RecruitConfig(
 
         return listOf(MaaTaskParams(MaaTaskType.RECRUIT, paramsJson.toString()))
     }
+
+    companion object {
+        /** 3 星保留招聘许可数量范围，对齐上游 Math.Clamp(value, 1, 999) */
+        const val LEVEL3_PERMIT_RESERVE_MIN = 1
+        const val LEVEL3_PERMIT_RESERVE_MAX = 999
+    }
+
 }
