@@ -4,6 +4,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,35 +21,36 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
@@ -63,6 +65,8 @@ import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.utils.i18n.asString
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @Composable
 fun MallConfigPanel(config: MallConfig, onConfigChange: (MallConfig) -> Unit) {
@@ -71,7 +75,6 @@ fun MallConfigPanel(config: MallConfig, onConfigChange: (MallConfig) -> Unit) {
         pageCount = { 2 }
     )
     val coroutineScope = rememberCoroutineScope()
-    var isReorderMode by remember { mutableStateOf(false) }
     var isDraggingPriority by remember { mutableStateOf(false) }
 
     Column(
@@ -116,61 +119,16 @@ fun MallConfigPanel(config: MallConfig, onConfigChange: (MallConfig) -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            userScrollEnabled = !isReorderMode && !isDraggingPriority
+            userScrollEnabled = !isDraggingPriority
         ) { page ->
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(end = 12.dp, bottom = 8.dp),
-                userScrollEnabled = !isDraggingPriority
-            ) {
-                when (page) {
-                    // 常规设置 Tab
-                    0 -> {
-                        // 基础设置：访问好友、购物开关、借助战
-                        item {
-                            BasicMallSettings(config, onConfigChange)
-                        }
-                        item {
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outlineVariant,
-                                thickness = 0.5.dp
-                            )
-                        }
-                        // 优先购买物品列表（可拖拽排序）
-                        item {
-                            PriorityItemsSection(
-                                config = config,
-                                onConfigChange = onConfigChange,
-                                isReorderMode = isReorderMode,
-                                onReorderModeChange = { isReorderMode = it },
-                                onDraggingChanged = { isDraggingPriority = it }
-                            )
-                        }
-                        // 提示信息
-                        item {
-                            MallInfoText()
-                        }
-                    }
+            when (page) {
+                0 -> MallGeneralTab(
+                    config = config,
+                    onConfigChange = onConfigChange,
+                    onDraggingChanged = { isDraggingPriority = it }
+                )
 
-                    // 高级设置 Tab
-                    1 -> {
-                        // 黑名单管理
-                        item {
-                            BlacklistSection(config, onConfigChange)
-                        }
-                        item {
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outlineVariant,
-                                thickness = 0.5.dp
-                            )
-                        }
-                        // 高级选项：溢出时无视黑名单、只买打折商品、预留信用点
-                        item {
-                            AdvancedOptionsSection(config, onConfigChange)
-                        }
-                    }
-                }
+                1 -> MallAdvancedTab(config = config, onConfigChange = onConfigChange)
             }
         }
     }
@@ -324,145 +282,223 @@ private fun FormationSelector(selectedFormation: Int, onFormationChange: (Int) -
     }
 }
 
+// 加前缀跟区段 key 错开，物品名是用户输入的
+private fun priorityItemKey(item: String) = "buy:$item"
+
+/** 优先购买列表直接铺在 LazyColumn 里，拖到边缘才能自动滚动 */
 @Composable
-private fun PriorityItemsSection(
+private fun MallGeneralTab(
     config: MallConfig,
     onConfigChange: (MallConfig) -> Unit,
-    isReorderMode: Boolean,
-    onReorderModeChange: (Boolean) -> Unit,
     onDraggingChanged: (Boolean) -> Unit
 ) {
-    var priorityItems by remember(config.buyFirst) {
-        mutableStateOf(config.buyFirst)
-    }
+    val listState = rememberLazyListState()
+    val haptic = LocalHapticFeedback.current
+    // 拖拽中先改本地顺序，松手再落盘
+    // 不能带 key：拖拽回调被 pointerInput 长期持有，重建会写到旧 state
+    // distinct 不能省，LazyColumn 重复 key 会抛异常
+    var priorityItems by remember { mutableStateOf(config.buyFirst.distinct()) }
     var showAddPanel by remember { mutableStateOf(false) }
     var tipExpanded by remember { mutableStateOf(false) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    stringResource(R.string.panel_mall_priority_title),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(1f)
-                )
+    // 同理，落盘回调要取最新值；其余回调随重组更新，用不着
+    val currentConfig by rememberUpdatedState(config)
+    val currentOnConfigChange by rememberUpdatedState(onConfigChange)
 
-                if (config.shopping && priorityItems.isNotEmpty()) {
-                    IconButton(
-                        onClick = { onReorderModeChange(!isReorderMode) },
-                        modifier = Modifier.size(32.dp),
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = if (isReorderMode) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                            contentColor = if (isReorderMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    ) {
-                        Icon(
-                            if (isReorderMode) Icons.Default.Done else Icons.Default.SwapVert,
-                            contentDescription = if (isReorderMode) {
-                                stringResource(R.string.common_done)
-                            } else {
-                                stringResource(R.string.common_sort)
-                            },
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
+    LaunchedEffect(config.buyFirst) {
+        priorityItems = config.buyFirst.distinct()
+    }
 
-                ExpandableTipIcon(
-                    expanded = tipExpanded,
-                    onExpandedChange = { tipExpanded = it })
-            }
-            ExpandableTipContent(
-                visible = tipExpanded,
-                tipText = stringResource(R.string.panel_mall_priority_reorder_tip)
+    val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
+        val list = priorityItems.toMutableList()
+        val fromIndex = list.indexOfFirst { priorityItemKey(it) == from.key }
+        val toIndex = list.indexOfFirst { priorityItemKey(it) == to.key }
+        // 表头、按钮这些非列表项取不到下标
+        if (fromIndex < 0 || toIndex < 0 || fromIndex == toIndex) {
+            return@rememberReorderableLazyListState
+        }
+        list.add(toIndex, list.removeAt(fromIndex))
+        priorityItems = list
+    }
+
+    LazyColumn(
+        state = listState,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(end = 12.dp, bottom = 8.dp)
+    ) {
+        item(key = "mall_basic") {
+            BasicMallSettings(config, onConfigChange)
+        }
+        item(key = "mall_basic_divider") {
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                thickness = 0.5.dp
             )
         }
-        Text(
-            if (isReorderMode) {
-                stringResource(R.string.panel_mall_priority_mode_active)
-            } else {
-                stringResource(R.string.panel_mall_priority_mode_inactive)
-            },
-            style = MaterialTheme.typography.bodySmall,
-            color = if (isReorderMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        if (!config.shopping) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.tertiaryContainer,
-                shape = RoundedCornerShape(4.dp)
-            ) {
+        item(key = "mall_priority_header") {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.panel_mall_priority_title),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    ExpandableTipIcon(
+                        expanded = tipExpanded,
+                        onExpandedChange = { tipExpanded = it })
+                }
+                ExpandableTipContent(
+                    visible = tipExpanded,
+                    tipText = stringResource(R.string.panel_mall_priority_reorder_tip)
+                )
                 Text(
-                    stringResource(R.string.panel_mall_enable_shopping_first),
+                    stringResource(R.string.panel_mall_priority_drag_hint),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer,
-                    modifier = Modifier.padding(8.dp)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
-
-        ReorderablePriorityList(
-            items = priorityItems,
-            enabled = config.shopping,
-            isReorderMode = isReorderMode,
-            onItemsReordered = { newList ->
-                priorityItems = newList.toMutableList()
-            },
-            onItemRemoved = { index ->
-                val newList = priorityItems.filterIndexed { i, _ -> i != index }
-                priorityItems = newList.toMutableList()
-                onConfigChange(config.copy(buyFirst = newList))
-            },
-            onDraggingChanged = { dragging ->
-                onDraggingChanged(dragging)
-                if (!dragging) {
-                    onConfigChange(config.copy(buyFirst = priorityItems))
+        if (!config.shopping) {
+            item(key = "mall_priority_shopping_hint") {
+                ShoppingDisabledHint()
+            }
+        }
+        if (priorityItems.isEmpty()) {
+            item(key = "mall_priority_empty") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surface,
+                            shape = MaterialTheme.shapes.extraSmall
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            shape = MaterialTheme.shapes.extraSmall
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        stringResource(R.string.panel_mall_priority_empty),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
-        )
-
-        // 添加按钮
-        MaaAnimatedVisibility(visible = !isReorderMode) {
-            Button(
-                onClick = { showAddPanel = !showAddPanel },
-                enabled = config.shopping,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                ),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text(
-                    if (showAddPanel) {
-                        stringResource(R.string.common_collapse)
-                    } else {
-                        stringResource(R.string.panel_mall_add_item)
+        }
+        items(priorityItems, key = { priorityItemKey(it) }) { item ->
+            ReorderableItem(reorderableState, key = priorityItemKey(item)) { isDragging ->
+                PriorityItemRow(
+                    item = item,
+                    isDragging = isDragging,
+                    enabled = config.shopping,
+                    onDragStarted = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onDraggingChanged(true)
+                    },
+                    onDragStopped = {
+                        onDraggingChanged(false)
+                        // 没换位就别写盘，一次落盘是全量 profile JSON 重写
+                        if (priorityItems != currentConfig.buyFirst) {
+                            currentOnConfigChange(currentConfig.copy(buyFirst = priorityItems))
+                        }
+                    },
+                    onRemove = {
+                        val newList = priorityItems.filterNot { it == item }
+                        priorityItems = newList
+                        onConfigChange(config.copy(buyFirst = newList))
                     }
                 )
             }
         }
+        item(key = "mall_priority_add") {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { showAddPanel = !showAddPanel },
+                    enabled = config.shopping,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        if (showAddPanel) {
+                            stringResource(R.string.common_collapse)
+                        } else {
+                            stringResource(R.string.panel_mall_add_item)
+                        }
+                    )
+                }
+                MaaAnimatedVisibility(
+                    visible = showAddPanel,
+                    enter = expandVertically(),
+                    exit = shrinkVertically()
+                ) {
+                    InlineAddItemPanel(
+                        onItemAdded = { newItem ->
+                            val trimmed = newItem.trim()
+                            if (trimmed.isNotEmpty() && trimmed !in priorityItems) {
+                                val newList = priorityItems + trimmed
+                                priorityItems = newList
+                                onConfigChange(config.copy(buyFirst = newList))
+                            }
+                            showAddPanel = false
+                        },
+                        onCancel = { showAddPanel = false }
+                    )
+                }
+            }
+        }
+        item(key = "mall_info") {
+            MallInfoText()
+        }
+    }
+}
 
-        // 内联添加面板（输入框形式）
-        MaaAnimatedVisibility(
-            visible = showAddPanel,
-            enter = expandVertically(),
-            exit = shrinkVertically()
-        ) {
-            InlineAddItemPanel(
-                onItemAdded = { newItem ->
-                    if (newItem.isNotBlank() && newItem !in priorityItems) {
-                        priorityItems = (priorityItems + newItem.trim()).toMutableList()
-                        onConfigChange(config.copy(buyFirst = priorityItems))
-                    }
-                    showAddPanel = false
-                },
-                onCancel = { showAddPanel = false }
+@Composable
+private fun MallAdvancedTab(config: MallConfig, onConfigChange: (MallConfig) -> Unit) {
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(end = 12.dp, bottom = 8.dp)
+    ) {
+        item(key = "mall_blacklist") {
+            BlacklistSection(config, onConfigChange)
+        }
+        item(key = "mall_advanced_divider") {
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                thickness = 0.5.dp
             )
         }
+        item(key = "mall_advanced_options") {
+            AdvancedOptionsSection(config, onConfigChange)
+        }
+    }
+}
+
+@Composable
+private fun ShoppingDisabledHint() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        shape = RoundedCornerShape(4.dp)
+    ) {
+        Text(
+            stringResource(R.string.panel_mall_enable_shopping_first),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onTertiaryContainer,
+            modifier = Modifier.padding(8.dp)
+        )
     }
 }
 
@@ -521,18 +557,7 @@ private fun BlacklistSection(config: MallConfig, onConfigChange: (MallConfig) ->
         )
 
         if (!config.shopping) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.tertiaryContainer,
-                shape = RoundedCornerShape(4.dp)
-            ) {
-                Text(
-                    stringResource(R.string.panel_mall_enable_shopping_first),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer,
-                    modifier = Modifier.padding(8.dp)
-                )
-            }
+            ShoppingDisabledHint()
         }
 
         // 黑名单列表

@@ -1,18 +1,14 @@
 package com.aliothmoon.maameow.presentation.view.panel.mall
 
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -25,33 +21,33 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
+import sh.calvin.reorderable.ReorderableCollectionItemScope
 
 @Composable
-fun PriorityItemRow(
+fun ReorderableCollectionItemScope.PriorityItemRow(
     item: String,
     isDragging: Boolean,
-    isReorderMode: Boolean,
     enabled: Boolean,
+    onDragStarted: () -> Unit,
+    onDragStopped: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = when {
-                isDragging -> MaterialTheme.colorScheme.surfaceVariant
-                isReorderMode -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
-                enabled -> MaterialTheme.colorScheme.surface
-                else -> MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (isDragging || !enabled) {
+                MaterialTheme.colorScheme.surfaceVariant
+            } else {
+                MaterialTheme.colorScheme.surface
             }
         ),
         border = BorderStroke(
             width = 1.dp,
-            color = when {
-                isDragging -> MaterialTheme.colorScheme.primary
-                isReorderMode -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                else -> MaterialTheme.colorScheme.outlineVariant
+            color = if (isDragging) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.outlineVariant
             }
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = if (isDragging) 8.dp else 0.dp),
@@ -60,26 +56,28 @@ fun PriorityItemRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(start = 2.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            MaaAnimatedVisibility(
-                visible = isReorderMode,
-                enter = fadeIn(),
-                exit = fadeOut() + shrinkHorizontally()
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Menu,
-                        stringResource(R.string.panel_mall_drag_reorder),
-                        modifier = Modifier
-                            .size(28.dp)
-                            .padding(5.dp),
-                        tint = MaterialTheme.colorScheme.primary
+            // 只有把手能拖，行的其余区域保持滚动语义
+            Icon(
+                Icons.Default.DragIndicator,
+                contentDescription = stringResource(R.string.panel_mall_drag_reorder),
+                tint = if (enabled) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.outlineVariant
+                },
+                modifier = Modifier
+                    .size(32.dp)
+                    .draggableHandle(
+                        enabled = enabled,
+                        onDragStarted = { onDragStarted() },
+                        onDragStopped = onDragStopped
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-            }
+                    .padding(6.dp)
+            )
 
             Text(
                 item,
@@ -88,19 +86,17 @@ fun PriorityItemRow(
                 modifier = Modifier.weight(1f)
             )
 
-            MaaAnimatedVisibility(visible = !isReorderMode) {
-                IconButton(
-                    onClick = onRemove,
-                    enabled = enabled && !isDragging,
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = stringResource(R.string.common_delete),
-                        modifier = Modifier.size(16.dp),
-                        tint = if (enabled) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant
-                    )
-                }
+            IconButton(
+                onClick = onRemove,
+                enabled = enabled && !isDragging,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = stringResource(R.string.common_delete),
+                    modifier = Modifier.size(16.dp),
+                    tint = if (enabled) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant
+                )
             }
         }
     }

@@ -760,7 +760,6 @@
     <string name="common_tab_general">常规设置</string>
     <string name="common_tab_advanced">高级设置</string>
     <string name="common_done">完成</string>
-    <string name="common_sort">排序</string>
     <string name="common_rename">重命名</string>
     <string name="common_copy">复制</string>
     <string name="common_warning">警告</string>
@@ -874,8 +873,7 @@
     <string name="panel_mall_credit_fight_notice">借助战需要好友支援，确保好友列表有可用支援干员</string>
     <string name="panel_mall_priority_title">优先购买物品</string>
     <string name="panel_mall_priority_reorder_tip">拖动调整购买优先级，越靠上优先级越高</string>
-    <string name="panel_mall_priority_mode_active">当前处于排序模式，长按列表项可调整优先级，完成后点击勾选按钮退出</string>
-    <string name="panel_mall_priority_mode_inactive">开启排序模式可调整优先级顺序，点击×删除</string>
+    <string name="panel_mall_priority_drag_hint">拖动左侧把手调整顺序，点击 × 删除</string>
     <string name="panel_mall_enable_shopping_first">请先启用「购买信用商店物品」功能</string>
     <string name="panel_mall_add_item">添加物品</string>
     <string name="panel_mall_info_line_priority">* 优先购买列表中的物品会按顺序优先购买</string>

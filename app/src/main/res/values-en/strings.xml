@@ -706,7 +706,6 @@
     <string name="common_tab_general">General</string>
     <string name="common_tab_advanced">Advanced</string>
     <string name="common_done">Done</string>
-    <string name="common_sort">Sort</string>
     <string name="common_rename">Rename</string>
     <string name="common_copy">Copy</string>
     <string name="common_warning">Warning</string>
@@ -820,8 +819,7 @@
     <string name="panel_mall_credit_fight_notice">Support combat requires an available support unit in your friend list.</string>
     <string name="panel_mall_priority_title">Priority Items</string>
     <string name="panel_mall_priority_reorder_tip">Drag to adjust purchase priority. Items closer to the top are bought first.</string>
-    <string name="panel_mall_priority_mode_active">Reorder mode is enabled. Long-press list items to change priority, then tap the check button to exit.</string>
-    <string name="panel_mall_priority_mode_inactive">Enable reorder mode to change priority order. Tap × to remove an item.</string>
+    <string name="panel_mall_priority_drag_hint">Drag the handle to reorder. Tap × to remove.</string>
     <string name="panel_mall_enable_shopping_first">Please enable \"Credit shopping\" first.</string>
     <string name="panel_mall_add_item">Add Item</string>
     <string name="panel_mall_info_line_priority">* Items in the priority list are purchased in order.</string>
