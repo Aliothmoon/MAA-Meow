@@ -603,6 +603,7 @@ class SettingsViewModel(
     val customBackgroundScrim: StateFlow<Int> = appSettingsManager.customBackgroundScrim
     val customBackgroundBlur: StateFlow<Int> = appSettingsManager.customBackgroundBlur
     val backgroundImage: StateFlow<ImageBitmap?> = backgroundImageStore.imageBitmap
+    val customBackgroundMonet: StateFlow<Boolean> = appSettingsManager.customBackgroundMonet
 
     fun setCustomBackgroundEnabled(enabled: Boolean) {
         viewModelScope.launch {
@@ -648,6 +649,12 @@ class SettingsViewModel(
     fun setCustomBackgroundBlur(value: Int) {
         viewModelScope.launch {
             appSettingsManager.setCustomBackgroundBlur(value)
+        }
+    }
+
+    fun setCustomBackgroundMonet(enabled: Boolean) {
+        viewModelScope.launch {
+            appSettingsManager.setCustomBackgroundMonet(enabled)
         }
     }
 

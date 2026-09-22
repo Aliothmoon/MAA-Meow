@@ -607,6 +607,15 @@ class AppSettingsManager internal constructor(
         }
     }
 
+    val customBackgroundMonet: StateFlow<Boolean> =
+        setting { it.customBackgroundMonet.toBooleanStrictOrNull() ?: false }
+
+    suspend fun setCustomBackgroundMonet(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[customBackgroundMonet] = enabled.toString() }
+        }
+    }
+
     // ───────────────── 唤醒 + 解锁 ─────────────────
 
     val wakeUnlockType: StateFlow<String> = setting {

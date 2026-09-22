@@ -80,6 +80,7 @@ import com.aliothmoon.maameow.schedule.model.ScheduleType
 import com.aliothmoon.maameow.schedule.service.ExactAlarmSettings
 import com.aliothmoon.maameow.schedule.service.OemPowerHints
 import com.aliothmoon.maameow.theme.MaaDesignTokens
+import com.aliothmoon.maameow.theme.OpaqueTheme
 import com.aliothmoon.maameow.utils.i18n.asString
 import com.dokar.sonner.ToastType
 import kotlinx.coroutines.launch
@@ -382,24 +383,26 @@ fun ScheduleEditView(
                                 initialSelectedDateMillis = state.startTimeMs
                                     ?: System.currentTimeMillis()
                             )
-                            DatePickerDialog(
-                                onDismissRequest = { showDatePicker = false },
-                                confirmButton = {
-                                    TextButton(onClick = {
-                                        pendingDateMs = datePickerState.selectedDateMillis
-                                        showDatePicker = false
-                                        showStartTimePicker = true
-                                    }) { Text(stringResource(R.string.schedule_next_step)) }
-                                },
-                                dismissButton = {
-                                    TextButton(onClick = { showDatePicker = false }) {
-                                        Text(
-                                            stringResource(R.string.common_cancel)
-                                        )
+                            OpaqueTheme {
+                                DatePickerDialog(
+                                    onDismissRequest = { showDatePicker = false },
+                                    confirmButton = {
+                                        TextButton(onClick = {
+                                            pendingDateMs = datePickerState.selectedDateMillis
+                                            showDatePicker = false
+                                            showStartTimePicker = true
+                                        }) { Text(stringResource(R.string.schedule_next_step)) }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showDatePicker = false }) {
+                                            Text(
+                                                stringResource(R.string.common_cancel)
+                                            )
+                                        }
                                     }
+                                ) {
+                                    DatePicker(state = datePickerState)
                                 }
-                            ) {
-                                DatePicker(state = datePickerState)
                             }
                         }
 
@@ -743,31 +746,33 @@ private fun PermissionWizardDialog(
     onLater: () -> Unit,
 ) {
     val (tip, desc) = schedulePermissionActionText(current)
-    AlertDialog(
-        onDismissRequest = onLater,
-        title = { Text(stringResource(R.string.schedule_permission_title)) },
-        text = {
-            Column {
-                Text(tip, style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(4.dp))
-                Text(desc, style = MaterialTheme.typography.bodySmall)
-                if (oemHint != null) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        oemHint,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.tertiary,
-                    )
+    OpaqueTheme {
+        AlertDialog(
+            onDismissRequest = onLater,
+            title = { Text(stringResource(R.string.schedule_permission_title)) },
+            text = {
+                Column {
+                    Text(tip, style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.height(4.dp))
+                    Text(desc, style = MaterialTheme.typography.bodySmall)
+                    if (oemHint != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            oemHint,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                        )
+                    }
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onGo) { Text(stringResource(R.string.schedule_go_to_settings)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onLater) { Text(stringResource(R.string.common_later)) }
-        },
-    )
+            },
+            confirmButton = {
+                TextButton(onClick = onGo) { Text(stringResource(R.string.schedule_go_to_settings)) }
+            },
+            dismissButton = {
+                TextButton(onClick = onLater) { Text(stringResource(R.string.common_later)) }
+            },
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -788,47 +793,49 @@ private fun TimePickerDialog(
     // 横屏等矮屏只留三行，保证对话框放得下
     val rows = if (configuration.screenHeightDp >= 400) 5 else 3
 
-    BasicAlertDialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = MaterialTheme.shapes.extraLarge,
-            tonalElevation = 6.dp
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+    OpaqueTheme {
+        BasicAlertDialog(onDismissRequest = onDismiss) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = MaaDesignTokens.Spacing.lg),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = stringResource(R.string.schedule_time_picker_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = MaaDesignTokens.Spacing.lg),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.schedule_time_picker_title),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                        WheelTimeFormatToggle(
+                            is24Hour = is24Hour,
+                            onFormatChange = onFormatChange
+                        )
+                    }
+                    WheelTimePicker(
+                        state = pickerState,
+                        rows = rows,
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    WheelTimeFormatToggle(
-                        is24Hour = is24Hour,
-                        onFormatChange = onFormatChange
-                    )
-                }
-                WheelTimePicker(
-                    state = pickerState,
-                    rows = rows,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(MaaDesignTokens.Spacing.md))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
-                    TextButton(onClick = {
-                        onConfirm(LocalTime.of(pickerState.hour, pickerState.minute))
-                    }) { Text(stringResource(R.string.common_confirm)) }
+                    Spacer(Modifier.height(MaaDesignTokens.Spacing.md))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+                        TextButton(onClick = {
+                            onConfirm(LocalTime.of(pickerState.hour, pickerState.minute))
+                        }) { Text(stringResource(R.string.common_confirm)) }
+                    }
                 }
             }
         }

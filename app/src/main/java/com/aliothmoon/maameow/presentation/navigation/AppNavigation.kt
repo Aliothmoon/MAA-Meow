@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -30,6 +31,7 @@ import com.aliothmoon.maameow.announcement.AnnouncementContent
 import com.aliothmoon.maameow.announcement.AnnouncementManager
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.domain.launch.LaunchEffect
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.AchievementReporter
@@ -53,14 +55,17 @@ import com.aliothmoon.maameow.presentation.view.settings.AchievementView
 import com.aliothmoon.maameow.presentation.view.settings.ErrorLogView
 import com.aliothmoon.maameow.presentation.view.settings.LogHistoryView
 import com.aliothmoon.maameow.presentation.view.settings.TaskOverrideEditorView
+import com.aliothmoon.maameow.presentation.view.settings.WallpaperSettingsView
 import com.aliothmoon.maameow.presentation.viewmodel.AppEventsViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.model.CountdownState
 import com.aliothmoon.maameow.schedule.ui.CountdownDialog
 import com.aliothmoon.maameow.schedule.ui.ScheduleEditView
 import com.aliothmoon.maameow.schedule.ui.ScheduleTriggerLogView
+import com.aliothmoon.maameow.theme.AppBackgroundHost
 import com.aliothmoon.maameow.theme.LocalReduceMotion
 import com.aliothmoon.maameow.theme.MaaMotion
+import com.aliothmoon.maameow.theme.MaxBackgroundBlur
 import com.aliothmoon.maameow.utils.i18n.resolve
 import com.dokar.sonner.ToastType
 import com.dokar.sonner.Toaster
@@ -133,6 +138,17 @@ fun AppNavigation(
     // 判断是否处于主 Tab 页面
     val isOnMainTab = currentNavRoute == null || currentNavRoute in MAIN_TAB_ROUTES
 
+    // 自定义背景：上提到导航根层，让主界面与所有子页面共用同一背景与玻璃配色
+    val backgroundStore: BackgroundImageStore = koinInject()
+    val backgroundImage by backgroundStore.imageBitmap.collectAsStateWithLifecycle()
+    val backgroundImageAlpha by appSettings.customBackgroundImageAlpha.collectAsStateWithLifecycle()
+    val backgroundScrim by appSettings.customBackgroundScrim.collectAsStateWithLifecycle()
+    val backgroundBlur by appSettings.customBackgroundBlur.collectAsStateWithLifecycle()
+    val backgroundMonet by appSettings.customBackgroundMonet.collectAsStateWithLifecycle()
+
+    // 主界面分页偏移，供背景层做切 Tab 视差
+    val backgroundParallax = remember { mutableFloatStateOf(0f) }
+
     LaunchedEffect(backgroundTaskViewModel) {
         backgroundTaskViewModel.launchEffects.collect { effect ->
             when (effect) {
@@ -187,52 +203,65 @@ fun AppNavigation(
         Box(modifier = Modifier
             .fillMaxSize()
             .clearFocusOnBlankTap()) {
-            MainScreen(
-                navController = navController,
-                backgroundTaskViewModel = backgroundTaskViewModel,
-                onViewAnnouncement = { forceShowAnnouncement = true },
-                onViewOnboarding = { onboardingState.start() },
-                visible = isOnMainTab,
-                fullscreen = isFullscreen,
-            )
-
-            // NavHost 只承载子页面；主 Tab 切换完全由 MainScreen 的 HorizontalPager 处理
-            NavHost(
-                navController = navController,
-                startDestination = Routes.HOME,
-                enterTransition = { MaaMotion.pageEnter(forward = true, reduceMotion) },
-                exitTransition = { MaaMotion.pageExit(forward = true, reduceMotion) },
-                popEnterTransition = { MaaMotion.pageEnter(forward = false, reduceMotion) },
-                popExitTransition = { MaaMotion.pageExit(forward = false, reduceMotion) },
+            AppBackgroundHost(
+                image = backgroundImage,
+                imageAlpha = backgroundImageAlpha / 100f,
+                scrimAlpha = backgroundScrim / 100f,
+                blurRadius = MaxBackgroundBlur * (backgroundBlur / 100f),
+                monetFromWallpaper = backgroundMonet,
+                parallax = backgroundParallax,
             ) {
-                // 主 Tab 路由仅作占位，真实内容由 MainScreen 的 HorizontalPager 渲染
-                BottomNavTab.all.forEach { tab -> composable(tab.route) {} }
+                MainScreen(
+                    navController = navController,
+                    backgroundTaskViewModel = backgroundTaskViewModel,
+                    onViewAnnouncement = { forceShowAnnouncement = true },
+                    onViewOnboarding = { onboardingState.start() },
+                    visible = isOnMainTab,
+                    fullscreen = isFullscreen,
+                    parallax = backgroundParallax,
+                )
 
-                composable(Routes.NOTIFICATION) {
-                    NotificationSettingsView(navController = navController)
-                }
-                composable(Routes.ACHIEVEMENT) {
-                    AchievementView(navController = navController)
-                }
-                composable(Routes.ACHIEVEMENT_DEBUG) {
-                    AchievementDebugView(navController = navController)
-                }
-                composable(Routes.LOG_HISTORY) {
-                    LogHistoryView(navController = navController)
-                }
-                composable(Routes.ERROR_LOG) {
-                    ErrorLogView(navController = navController)
-                }
-                composable(Routes.SCHEDULE_EDIT) { backStackEntry ->
-                    val strategyId = backStackEntry.arguments?.getString("strategyId")
-                        .let { if (it == "new") null else it }
-                    ScheduleEditView(navController = navController, strategyId = strategyId)
-                }
-                composable(Routes.SCHEDULE_TRIGGER_LOG) {
-                    ScheduleTriggerLogView(navController = navController)
-                }
-                composable(Routes.TASK_OVERRIDE_EDITOR) {
-                    TaskOverrideEditorView(navController = navController)
+                // NavHost 只承载子页面；主 Tab 切换完全由 MainScreen 的 HorizontalPager 处理
+                NavHost(
+                    navController = navController,
+                    startDestination = Routes.HOME,
+                    enterTransition = { MaaMotion.pageEnter(forward = true, reduceMotion) },
+                    exitTransition = { MaaMotion.pageExit(forward = true, reduceMotion) },
+                    popEnterTransition = { MaaMotion.pageEnter(forward = false, reduceMotion) },
+                    popExitTransition = { MaaMotion.pageExit(forward = false, reduceMotion) },
+                ) {
+                    // 主 Tab 路由仅作占位，真实内容由 MainScreen 的 HorizontalPager 渲染
+                    BottomNavTab.all.forEach { tab -> composable(tab.route) {} }
+
+                    composable(Routes.NOTIFICATION) {
+                        NotificationSettingsView(navController = navController)
+                    }
+                    composable(Routes.WALLPAPER) {
+                        WallpaperSettingsView(navController = navController)
+                    }
+                    composable(Routes.ACHIEVEMENT) {
+                        AchievementView(navController = navController)
+                    }
+                    composable(Routes.ACHIEVEMENT_DEBUG) {
+                        AchievementDebugView(navController = navController)
+                    }
+                    composable(Routes.LOG_HISTORY) {
+                        LogHistoryView(navController = navController)
+                    }
+                    composable(Routes.ERROR_LOG) {
+                        ErrorLogView(navController = navController)
+                    }
+                    composable(Routes.SCHEDULE_EDIT) { backStackEntry ->
+                        val strategyId = backStackEntry.arguments?.getString("strategyId")
+                            .let { if (it == "new") null else it }
+                        ScheduleEditView(navController = navController, strategyId = strategyId)
+                    }
+                    composable(Routes.SCHEDULE_TRIGGER_LOG) {
+                        ScheduleTriggerLogView(navController = navController)
+                    }
+                    composable(Routes.TASK_OVERRIDE_EDITOR) {
+                        TaskOverrideEditorView(navController = navController)
+                    }
                 }
             }
             // 画中画只留预览画面

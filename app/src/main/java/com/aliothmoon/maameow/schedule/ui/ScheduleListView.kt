@@ -67,6 +67,7 @@ import com.aliothmoon.maameow.schedule.service.AutoStartHelper
 import com.aliothmoon.maameow.schedule.service.AutoStartTarget
 import com.aliothmoon.maameow.schedule.service.ExactAlarmSettings
 import com.aliothmoon.maameow.theme.MaaDesignTokens
+import com.aliothmoon.maameow.theme.OpaqueTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -227,65 +228,69 @@ fun ScheduleListView(
         }
 
         if (deleteConfirmId != null) {
-            AlertDialog(
-                onDismissRequest = { deleteConfirmId = null },
-                title = { Text(stringResource(R.string.schedule_delete_strategy_title)) },
-                text = { Text(stringResource(R.string.schedule_delete_strategy_message)) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        viewModel.onDeleteStrategy(deleteConfirmId!!)
-                        deleteConfirmId = null
-                    }) {
-                        Text(
-                            stringResource(R.string.common_delete),
-                            color = MaterialTheme.colorScheme.error
-                        )
+            OpaqueTheme {
+                AlertDialog(
+                    onDismissRequest = { deleteConfirmId = null },
+                    title = { Text(stringResource(R.string.schedule_delete_strategy_title)) },
+                    text = { Text(stringResource(R.string.schedule_delete_strategy_message)) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            viewModel.onDeleteStrategy(deleteConfirmId!!)
+                            deleteConfirmId = null
+                        }) {
+                            Text(
+                                stringResource(R.string.common_delete),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            deleteConfirmId = null
+                        }) { Text(stringResource(R.string.common_cancel)) }
                     }
-                },
-                dismissButton = {
-                    TextButton(onClick = {
-                        deleteConfirmId = null
-                    }) { Text(stringResource(R.string.common_cancel)) }
-                }
-            )
+                )
+            }
         }
 
         autoStartTarget?.let { target ->
-            AlertDialog(
-                onDismissRequest = { autoStartTarget = null },
-                title = { Text(stringResource(R.string.schedule_auto_start_permission_title)) },
-                text = {
-                    Text(
-                        stringResource(
-                            if (target is AutoStartTarget.AppDetails) {
-                                R.string.schedule_auto_start_permission_message_fallback
-                            } else {
-                                R.string.schedule_auto_start_permission_message
-                            }
+            OpaqueTheme {
+                AlertDialog(
+                    onDismissRequest = { autoStartTarget = null },
+                    title = { Text(stringResource(R.string.schedule_auto_start_permission_title)) },
+                    text = {
+                        Text(
+                            stringResource(
+                                if (target is AutoStartTarget.AppDetails) {
+                                    R.string.schedule_auto_start_permission_message_fallback
+                                } else {
+                                    R.string.schedule_auto_start_permission_message
+                                }
+                            )
                         )
-                    )
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        AutoStartHelper.intentFor(context, target)?.let {
-                            runCatching { context.startActivity(it) }
-                        }
-                        autoStartTarget = null
-                    }) { Text(stringResource(R.string.schedule_go_to_settings)) }
-                },
-                dismissButton = {
-                    // 已配好的用户不该每次重启都挨一遍，给个永久出口
-                    Row {
+                    },
+                    confirmButton = {
                         TextButton(onClick = {
-                            AutoStartHelper.markNeverRemind(schedulePrefs)
+                            AutoStartHelper.intentFor(context, target)?.let {
+                                runCatching { context.startActivity(it) }
+                            }
                             autoStartTarget = null
-                        }) { Text(stringResource(R.string.schedule_auto_start_dont_remind)) }
-                        TextButton(onClick = { autoStartTarget = null }) {
-                            Text(stringResource(R.string.common_later))
+                        }) { Text(stringResource(R.string.schedule_go_to_settings)) }
+                    },
+                    dismissButton = {
+                        // 已配好的用户不该每次重启都挨一遍，给个永久出口
+                        Row {
+                            TextButton(onClick = {
+                                AutoStartHelper.markNeverRemind(schedulePrefs)
+                                autoStartTarget = null
+                            }) { Text(stringResource(R.string.schedule_auto_start_dont_remind)) }
+                            TextButton(onClick = { autoStartTarget = null }) {
+                                Text(stringResource(R.string.common_later))
+                            }
                         }
                     }
-                }
-            )
+                )
+            }
         }
     }
 }
