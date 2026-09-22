@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -145,6 +146,9 @@ fun AppNavigation(
     val backgroundBlur by appSettings.customBackgroundBlur.collectAsStateWithLifecycle()
     val backgroundMonet by appSettings.customBackgroundMonet.collectAsStateWithLifecycle()
 
+    // 主界面分页偏移，供背景层做切 Tab 视差
+    val backgroundParallax = remember { mutableFloatStateOf(0f) }
+
     LaunchedEffect(backgroundTaskViewModel) {
         backgroundTaskViewModel.launchEffects.collect { effect ->
             when (effect) {
@@ -205,6 +209,7 @@ fun AppNavigation(
                 scrimAlpha = backgroundScrim / 100f,
                 blurRadius = MaxBackgroundBlur * (backgroundBlur / 100f),
                 monetFromWallpaper = backgroundMonet,
+                parallax = backgroundParallax,
             ) {
                 MainScreen(
                     navController = navController,
@@ -213,6 +218,7 @@ fun AppNavigation(
                     onViewOnboarding = { onboardingState.start() },
                     visible = isOnMainTab,
                     fullscreen = isFullscreen,
+                    parallax = backgroundParallax,
                 )
 
                 // NavHost 只承载子页面；主 Tab 切换完全由 MainScreen 的 HorizontalPager 处理

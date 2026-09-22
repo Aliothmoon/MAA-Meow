@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -17,12 +18,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 
 /** 模糊滑块 100% 对应的最大模糊半径。 */
 val MaxBackgroundBlur: Dp = 24.dp
@@ -34,6 +37,7 @@ val MaxBackgroundBlur: Dp = 24.dp
  *
  * @param scrimColor 遮罩基色（一般取原始不透明 background），配合 [scrimAlpha] 提升前景可读性。
  * @param blurRadius 模糊半径；仅 API 31+ 实际生效，低版本自动忽略。
+ * @param parallax 分页归一化偏移（-0.5~0.5），用于切 Tab 时的视差位移。
  */
 @Composable
 fun MaaBackgroundHost(
@@ -42,6 +46,7 @@ fun MaaBackgroundHost(
     scrimColor: Color,
     scrimAlpha: Float,
     blurRadius: Dp,
+    parallax: Float = 0f,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -53,6 +58,14 @@ fun MaaBackgroundHost(
             alpha = imageAlpha.coerceIn(0f, 1f),
             modifier = Modifier
                 .matchParentSize()
+                .graphicsLayer {
+                    // 切 Tab 时随分页偏移轻微横移并放大，避免露出边缘。
+                    val fraction = abs(parallax)
+                    val zoom = 1f + fraction * 0.2f
+                    scaleX = zoom
+                    scaleY = zoom
+                    translationX = parallax * size.width * 0.08f
+                }
                 .then(if (blurRadius > 0.dp) Modifier.blur(blurRadius) else Modifier),
         )
         if (scrimAlpha > 0f) {
@@ -79,6 +92,7 @@ fun AppBackgroundHost(
     scrimAlpha: Float,
     blurRadius: Dp,
     monetFromWallpaper: Boolean,
+    parallax: MutableFloatState,
     content: @Composable () -> Unit,
 ) {
     if (image == null) {
@@ -109,6 +123,7 @@ fun AppBackgroundHost(
                 scrimColor = effectiveBase.background,
                 scrimAlpha = scrimAlpha,
                 blurRadius = blurRadius,
+                parallax = parallax.floatValue,
                 content = content,
             )
         }
