@@ -664,7 +664,7 @@
     <string name="maa_start_combat">Start combat: </string>
     <string name="maa_medicine_used">Medicine used</string>
     <string name="maa_expiring_medicine_used">Expiring medicine used</string>
-    <string name="maa_expiring_medicine_used_hours">Expiring medicine (in %1$d hours) used</string>
+    <string name="maa_expiring_medicine_used_days">Expiring medicine (within %1$d days) used</string>
     <string name="maa_use_medicine_medicine_info">Medicine: %1$d, Inventory: %2$d</string>
     <string name="maa_fight_times_unused">Completed %1$s battles, will execute %2$s multiplier proxy next time, will complete %3$s battles after entering, exceeds %4$s limit, will not enter battle</string>
     <string name="maa_algorithm_finish">Algorithm Finish</string>
@@ -847,9 +847,10 @@
     <string name="panel_fight_custom_stage_code_tip">Support manual stage code entry and common aliases (for example, Lungmen Dollars → CE-6).</string>
     <string name="panel_fight_use_alternate_stage">Use alternative stage</string>
     <string name="panel_fight_use_alternate_stage_tip">Automatically use an alternative stage when the primary stage is unavailable.</string>
-    <string name="panel_fight_use_expiring_medicine">Unlimited use of expiring (&lt;N hours) sanity potion</string>
+    <string name="panel_fight_use_expiring_medicine">Unlimited use of expiring (&lt;N days) sanity potion</string>
     <string name="panel_fight_use_expiring_medicine_tip">Prioritize sanity potions expiring within the configured time.</string>
-    <string name="panel_fight_medicine_expire_days">Expire time</string>
+    <string name="panel_fight_medicine_expire_days">Expire days</string>
+    <string name="panel_fight_medicine_expire_days_tip">Only use potions shown in game as expiring in under N days; those showing N days or more are left alone</string>
     <string name="panel_fight_use_expire_medicine_for_activity">Use sanity potions that expire this week within 48 hours before the activity ends</string>
     <string name="panel_fight_use_expire_medicine_for_activity_tip">When an activity is about to end within 2 days, automatically use sanity potions expiring this week.</string>
     <string name="panel_fight_activity_days_left_open">Days left open: </string>

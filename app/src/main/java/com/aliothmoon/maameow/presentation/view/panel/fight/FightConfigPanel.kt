@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -53,7 +54,7 @@ import com.aliothmoon.maameow.data.resource.StageGroup
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
-import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
+import com.aliothmoon.maameow.presentation.components.INumericField
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.presentation.view.panel.common.GroupedStageButtonGroup
@@ -64,11 +65,6 @@ import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
-
-private val MEDICINE_EXPIRE_DAY_OPTIONS = listOf(
-    1 to "24h x 1", 2 to "24h x 2", 3 to "24h x 3", 4 to "24h x 4",
-    5 to "24h x 5", 6 to "24h x 6", 7 to "24h x 7"
-)
 
 @Composable
 fun FightConfigPanel(
@@ -287,18 +283,25 @@ fun FightConfigPanel(
                                     exit = shrinkVertically()
                                 ) {
                                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        SelectableChipGroup(
-                                            label = stringResource(R.string.panel_fight_medicine_expire_days),
-                                            selectedValue = config.medicineExpireDays,
-                                            options = MEDICINE_EXPIRE_DAY_OPTIONS,
-                                            onSelected = {
-                                                onConfigChange(
-                                                    config.copy(
-                                                        medicineExpireDays = it
-                                                    )
-                                                )
-                                            }
-                                        )
+                                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            INumericField(
+                                                value = config.medicineExpireDays,
+                                                onValueChange = {
+                                                    onConfigChange(config.copy(medicineExpireDays = it))
+                                                },
+                                                label = stringResource(R.string.panel_fight_medicine_expire_days),
+                                                minimum = FightConfig.MEDICINE_EXPIRE_DAYS_MIN,
+                                                maximum = FightConfig.MEDICINE_EXPIRE_DAYS_MAX,
+                                                modifier = Modifier
+                                                    .fillMaxWidth(0.5f)
+                                                    .height(56.dp)
+                                            )
+                                            Text(
+                                                text = stringResource(R.string.panel_fight_medicine_expire_days_tip),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                         CheckBoxWithExpandableTip(
                                             checked = config.useExpireMedicineForActivity,
                                             onCheckedChange = {

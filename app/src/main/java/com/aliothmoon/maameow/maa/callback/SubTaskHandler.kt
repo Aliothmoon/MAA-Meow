@@ -893,10 +893,10 @@ class SubTaskHandler(
 
         val baseLog = if (isExpiring) {
             if (count > 0) expiringMedicineUsedTotal += count
-            // 上游 dev-v2 925ff331a: 回调不带 expire_days, 反查当前 active fight config 计算小时数
-            val hours = computeExpireHoursFromActiveConfig()
-            val prefix = if (hours > 0) {
-                str("ExpiringMedicineUsedHours", hours)
+            // 上游 dev-v2 925ff331a: 回调不带 expire_days, 反查当前 active fight config 计算天数
+            val days = computeExpireDaysFromActiveConfig()
+            val prefix = if (days > 0) {
+                str("ExpiringMedicineUsedDays", days)
             } else {
                 str("ExpiringMedicineUsed")
             }
@@ -936,23 +936,17 @@ class SubTaskHandler(
     }
 
     /**
-     * 反查当前任务链中第一个启用过期药的 FightConfig, 计算最终过期小时数
-     * 算法对齐上游 WPF: max(用户配置天数, 活动结束前两天时距本周末天数) * 24
+     * 反查当前任务链中第一个启用过期药的 FightConfig, 计算最终过期天数
+     * 算法对齐上游 WPF: max(用户配置天数, 活动结束前两天时距本周末天数)
      * 同一时刻通常只有一个 fight 在执行, 此简化是安全的
      */
-    private fun computeExpireHoursFromActiveConfig(): Int {
+    private fun computeExpireDaysFromActiveConfig(): Int {
         val fight = chainState.chain.value
             .mapNotNull { it.config as? FightConfig }
             .firstOrNull { it.useExpiringMedicine }
             ?: return 0
 
-        val userDays = fight.medicineExpireDays.coerceIn(1, 7)
-        val activityDays = if (fight.useExpireMedicineForActivity) {
-            activityManager.getActivityAwareExpireDays()
-        } else {
-            0
-        }
-        return maxOf(userDays, activityDays) * 24
+        return fight.effectiveExpireDays(activityManager.getActivityAwareExpireDays())
     }
 
     private fun currentRoguelikeConfig(): RoguelikeConfig? =
