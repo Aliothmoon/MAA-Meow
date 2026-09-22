@@ -66,11 +66,23 @@ class NotificationSettingsViewModel(
     val liveCapability: StateFlow<LiveCapability> = _liveCapability.asStateFlow()
 
     val liveIslandXmsfBypass: StateFlow<Boolean> = appSettingsManager.liveIslandXmsfBypass
+    val liveUpdateEnabled: StateFlow<Boolean> = appSettingsManager.liveUpdateEnabled
+    val liveUpdateUseHyperIsland: StateFlow<Boolean> = appSettingsManager.liveUpdateUseHyperIsland
 
     init {
-        // 旁路开关会改变后端选择，展示方式得跟着落盘值走，不能等下次 onResume
+        // 这些开关都会改变后端选择，展示方式得跟着落盘值走，不能等下次 onResume
         viewModelScope.launch {
             appSettingsManager.liveIslandXmsfBypass.drop(1).collect {
+                _liveCapability.value = livePublisher.capability
+            }
+        }
+        viewModelScope.launch {
+            appSettingsManager.liveUpdateEnabled.drop(1).collect {
+                _liveCapability.value = livePublisher.capability
+            }
+        }
+        viewModelScope.launch {
+            appSettingsManager.liveUpdateUseHyperIsland.drop(1).collect {
                 _liveCapability.value = livePublisher.capability
             }
         }
@@ -83,6 +95,14 @@ class NotificationSettingsViewModel(
 
     fun setLiveIslandXmsfBypass(enabled: Boolean) {
         viewModelScope.launch { appSettingsManager.setLiveIslandXmsfBypass(enabled) }
+    }
+
+    fun setLiveUpdateEnabled(enabled: Boolean) {
+        viewModelScope.launch { appSettingsManager.setLiveUpdateEnabled(enabled) }
+    }
+
+    fun setLiveUpdateUseHyperIsland(enabled: Boolean) {
+        viewModelScope.launch { appSettingsManager.setLiveUpdateUseHyperIsland(enabled) }
     }
 
     fun requestPostNotifications(context: Context) {

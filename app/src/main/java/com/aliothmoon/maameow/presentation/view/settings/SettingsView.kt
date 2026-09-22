@@ -166,6 +166,7 @@ fun SettingsView(
     val skipShizukuCheck by viewModel.skipShizukuCheck.collectAsStateWithLifecycle()
     val shizukuShortcutEnabled by viewModel.shizukuShortcutEnabled.collectAsStateWithLifecycle()
     val shizukuLaunchPackage by viewModel.shizukuLaunchPackage.collectAsStateWithLifecycle()
+    val liveUpdateEnabled by viewModel.liveUpdateEnabled.collectAsStateWithLifecycle()
     val deployWithPause by viewModel.deployWithPause.collectAsStateWithLifecycle()
     val reportToPenguin by viewModel.reportToPenguin.collectAsStateWithLifecycle()
     val reportToYituliu by viewModel.reportToYituliu.collectAsStateWithLifecycle()
@@ -998,6 +999,17 @@ fun SettingsView(
                             contentColor = contentColor
                         ) {
                             navController.navigate(Routes.NOTIFICATION)
+                        }
+                        // 只在 16+ 且已开启实况通知时给出入口：关掉后这一页没有能生效的项
+                        if (Build.VERSION.SDK_INT >= 36 && liveUpdateEnabled) {
+                            ListItemDivider()
+                            SettingClickItem(
+                                title = stringResource(R.string.settings_live_update_title),
+                                description = stringResource(R.string.settings_live_update_desc),
+                                contentColor = contentColor
+                            ) {
+                                navController.navigate(Routes.LIVE_UPDATE)
+                            }
                         }
                     }
                 }

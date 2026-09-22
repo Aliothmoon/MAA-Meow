@@ -21,6 +21,8 @@ object AppSettingsSnapshot {
     private val OMITTED = setOf(
         "pendingChangelogContent",
         "currentChangelogContent",
+        // 设备本地图标路径：跨设备无意义，导出日志里只是噪音
+        "liveUpdateCustomTrackerPath",
     )
 
     fun format(settings: AppSettings): String {

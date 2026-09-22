@@ -171,6 +171,8 @@
     <string name="settings_section_notification">Notifications</string>
     <string name="settings_notification_title">Notification Settings</string>
     <string name="settings_notification_desc">Manage internal and external notification channels</string>
+    <string name="settings_live_update_title">Live Updates Customization</string>
+    <string name="settings_live_update_desc">Customize the task progress Live Update style</string>
 
     <string name="settings_section_data">Data Management</string>
     <string name="settings_export_config_title">Export Configuration</string>
@@ -1498,6 +1500,10 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <!-- i18n: notifications -->
     <string name="notification_settings_title">Notifications</string>
     <string name="notification_section_live">Live updates</string>
+    <string name="notification_live_enable">Enable Live Updates</string>
+    <string name="notification_live_enable_desc">Show task progress as live updates on supported devices</string>
+    <string name="notification_live_use_island">Use Dynamic Island</string>
+    <string name="notification_live_use_island_desc">On: show as Dynamic Island / focus notification. Off: use the native live-update style</string>
     <string name="notification_live_style">Presentation</string>
     <string name="notification_live_style_hyperos">Dynamic Island</string>
     <string name="notification_live_style_aosp">Live Updates</string>
@@ -2575,4 +2581,42 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="panel_switch_theme_candidate">Theme candidate %1$d</string>
     <string name="panel_switch_theme_add">Add theme candidate</string>
     <string name="panel_switch_theme_remove">Remove theme candidate %1$d</string>
+
+    <!-- Live Updates customization -->
+    <string name="live_update_settings_title">Live Updates Customization</string>
+    <string name="live_update_chip_label">Status bar content</string>
+    <string name="live_update_chip_label_island">Dynamic Island content</string>
+    <string name="live_update_chip_both">Task + progress</string>
+    <string name="live_update_chip_progress">Progress only</string>
+    <string name="live_update_chip_task">Task only</string>
+    <string name="live_update_chip_log">Latest log</string>
+    <string name="live_update_chip_none">None</string>
+    <string name="live_update_color_label">Progress bar color</string>
+    <string name="live_update_color_default">Default (semantic)</string>
+    <string name="live_update_color_blue">Blue</string>
+    <string name="live_update_color_green">Green</string>
+    <string name="live_update_color_orange">Orange</string>
+    <string name="live_update_color_purple">Purple</string>
+    <string name="live_update_color_pink">Pink</string>
+    <string name="live_update_color_teal">Teal</string>
+    <string name="live_update_color_custom">Custom</string>
+    <string name="live_update_color_custom_hint">Pick a color</string>
+    <string name="live_update_color_swatch_red">Red</string>
+    <string name="live_update_color_swatch_light_green">Light green</string>
+    <string name="live_update_color_swatch_cyan">Cyan</string>
+    <string name="live_update_color_swatch_amber">Amber</string>
+    <string name="live_update_color_swatch_brown">Brown</string>
+    <string name="live_update_color_swatch_blue_grey">Blue grey</string>
+    <string name="live_update_icon_label">Progress icon</string>
+    <string name="live_update_icon_label_island">Status bar icon</string>
+    <string name="live_update_icon_default">Orundum</string>
+    <string name="live_update_icon_logo">MAA logo</string>
+    <string name="live_update_icon_dot">Dot</string>
+    <string name="live_update_icon_custom">Custom image</string>
+    <string name="live_update_icon_custom_hint">Select an image: PNG / JPG / WebP / GIF supported</string>
+    <string name="live_update_icon_pick">Pick image</string>
+    <string name="live_update_icon_clear">Clear</string>
+    <string name="live_update_hint">Note: Live Updates require Android 16+ with system support; long text may be truncated by the system. \"Latest log\" shows the current execution log line.</string>
+    <string name="live_update_icon_pick_failed">Image unavailable, icon unchanged</string>
+    <string name="live_update_hint_island">Note: this device shows live updates as a Dynamic Island; the content and icon above apply to the island and the status bar. Long island text may be truncated by the system. \"Latest log\" shows the current execution log line.</string>
 </resources>

@@ -167,6 +167,13 @@ class SettingsViewModel(
         }
     }
 
+    val liveUpdateEnabled: StateFlow<Boolean> = appSettingsManager.liveUpdateEnabled
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            appSettingsManager.liveUpdateEnabled.value,
+        )
+
     val startupBackend: StateFlow<RemoteBackend> = appSettingsManager.startupBackend
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), RemoteBackend.SHIZUKU)
 
