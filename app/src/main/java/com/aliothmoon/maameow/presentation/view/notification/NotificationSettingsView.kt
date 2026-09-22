@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -78,6 +79,8 @@ fun NotificationSettingsView(
     val liveIslandXmsfBypass by viewModel.liveIslandXmsfBypass.collectAsStateWithLifecycle()
     val liveUpdateEnabled by viewModel.liveUpdateEnabled.collectAsStateWithLifecycle()
     val liveUpdateUseHyperIsland by viewModel.liveUpdateUseHyperIsland.collectAsStateWithLifecycle()
+    // Android 16 起才有实况通知，更早版本不暴露开关与自定义入口
+    val liveUpdateSupported = Build.VERSION.SDK_INT >= 36
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -134,19 +137,22 @@ fun NotificationSettingsView(
                         description = styleLabel,
                         titleColor = contentColor,
                     )
-                    ListItemDivider()
-                    // 是否启用与展示后端统一在这里管，样式页只负责样式
-                    SettingRow(
-                        title = stringResource(R.string.notification_live_enable),
-                        description = stringResource(R.string.notification_live_enable_desc),
-                        titleColor = contentColor,
-                        trailing = {
-                            Switch(
-                                checked = liveUpdateEnabled,
-                                onCheckedChange = viewModel::setLiveUpdateEnabled,
-                            )
-                        },
-                    )
+                    // Android 16 以下没有实况通知，开关与岛相关项一并隐藏
+                    if (liveUpdateSupported) {
+                        ListItemDivider()
+                        // 是否启用与展示后端统一在这里管，样式页只负责样式
+                        SettingRow(
+                            title = stringResource(R.string.notification_live_enable),
+                            description = stringResource(R.string.notification_live_enable_desc),
+                            titleColor = contentColor,
+                            trailing = {
+                                Switch(
+                                    checked = liveUpdateEnabled,
+                                    onCheckedChange = viewModel::setLiveUpdateEnabled,
+                                )
+                            },
+                        )
+                    }
                     // 授权行只在缺权限时出现，已授权时没有可操作性
                     if (!liveCapability.postNotifications) {
                         ListItemDivider()
@@ -158,7 +164,7 @@ fun NotificationSettingsView(
                             viewModel.requestPostNotifications(context)
                         }
                     }
-                    if (liveCapability.focusLikely) {
+                    if (liveUpdateSupported && liveCapability.focusLikely) {
                         ListItemDivider()
                         // 原生实时更新与超级岛二选一，受权限与兼容模式影响
                         SettingRow(
@@ -172,26 +178,29 @@ fun NotificationSettingsView(
                                 )
                             },
                         )
-                        ListItemDivider()
-                        // 断网旁路会波及全机小米推送，给用户留个开关
-                        SettingRow(
-                            title = stringResource(R.string.notification_live_xmsf_bypass),
-                            titleColor = contentColor,
-                            trailing = {
-                                Switch(
-                                    checked = liveIslandXmsfBypass,
-                                    onCheckedChange = viewModel::setLiveIslandXmsfBypass,
-                                )
-                            },
-                        )
-                        if (!liveCapability.focusGranted) {
+                        // 兼容模式与焦点通知权限只在用岛时才有意义，跟随岛开关显示
+                        if (liveUpdateUseHyperIsland) {
                             ListItemDivider()
-                            PermissionFixRow(
-                                title = stringResource(R.string.notification_live_step_focus),
-                                hint = stringResource(R.string.notification_live_step_focus_missing),
+                            // 断网旁路会波及全机小米推送，给用户留个开关
+                            SettingRow(
+                                title = stringResource(R.string.notification_live_xmsf_bypass),
                                 titleColor = contentColor,
-                            ) {
-                                viewModel.openAppNotificationSettings(context)
+                                trailing = {
+                                    Switch(
+                                        checked = liveIslandXmsfBypass,
+                                        onCheckedChange = viewModel::setLiveIslandXmsfBypass,
+                                    )
+                                },
+                            )
+                            if (!liveCapability.focusGranted) {
+                                ListItemDivider()
+                                PermissionFixRow(
+                                    title = stringResource(R.string.notification_live_step_focus),
+                                    hint = stringResource(R.string.notification_live_step_focus_missing),
+                                    titleColor = contentColor,
+                                ) {
+                                    viewModel.openAppNotificationSettings(context)
+                                }
                             }
                         }
                     }

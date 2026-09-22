@@ -1030,13 +1030,16 @@ fun SettingsView(
                         ) {
                             navController.navigate(Routes.NOTIFICATION)
                         }
-                        ListItemDivider()
-                        SettingClickItem(
-                            title = stringResource(R.string.settings_live_update_title),
-                            description = stringResource(R.string.settings_live_update_desc),
-                            contentColor = contentColor
-                        ) {
-                            navController.navigate(Routes.LIVE_UPDATE)
+                        // 16 以下没有实况通知，自定义入口一并隐藏
+                        if (Build.VERSION.SDK_INT >= 36) {
+                            ListItemDivider()
+                            SettingClickItem(
+                                title = stringResource(R.string.settings_live_update_title),
+                                description = stringResource(R.string.settings_live_update_desc),
+                                contentColor = contentColor
+                            ) {
+                                navController.navigate(Routes.LIVE_UPDATE)
+                            }
                         }
                     }
                 }

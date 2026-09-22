@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.presentation.view.settings
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
@@ -58,7 +59,6 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.notification.live.TrackerIconDecoder
 import com.aliothmoon.maameow.data.notification.live.TrackerIconStore
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
-import com.aliothmoon.maameow.domain.notification.LiveBackend
 import com.aliothmoon.maameow.domain.notification.LiveCapability
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
 import com.aliothmoon.maameow.presentation.LocalToaster
@@ -120,6 +120,7 @@ fun LiveUpdateSettingsView(navController: NavController) {
     val livePublisher: LiveUpdatePublisher = koinInject()
     val trackerIconStore: TrackerIconStore = koinInject()
     val enabled by appSettingsManager.liveUpdateEnabled.collectAsStateWithLifecycle()
+    val useHyperIsland by appSettingsManager.liveUpdateUseHyperIsland.collectAsStateWithLifecycle()
     val chipContent by appSettingsManager.liveUpdateChipContent.collectAsStateWithLifecycle()
     val colorScheme by appSettingsManager.liveUpdateColorScheme.collectAsStateWithLifecycle()
     val customColor by appSettingsManager.liveUpdateCustomColor.collectAsStateWithLifecycle()
@@ -139,7 +140,9 @@ fun LiveUpdateSettingsView(navController: NavController) {
             runCatching { livePublisher.capability }.getOrNull()
         }
     }
-    val onIsland = capability?.backend == LiveBackend.HYPER_OS_FOCUS
+    // 文案绑「使用小米超级岛」开关：小米设备（且 Android 16+）开了岛才用岛的口径，
+    // 其余情况一律按原生显示，避免误导
+    val onIsland = Build.VERSION.SDK_INT >= 36 && capability?.focusLikely == true && useHyperIsland
     val chipLabelRes =
         if (onIsland) R.string.live_update_chip_label_island else R.string.live_update_chip_label
     val iconLabelRes =
