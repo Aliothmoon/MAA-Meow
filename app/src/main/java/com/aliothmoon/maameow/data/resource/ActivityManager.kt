@@ -364,7 +364,8 @@ class ActivityManager(
                     displayName = stage.displayName,
                     openDays = stage.openDays,
                     activity = activity,
-                    tip = stage.tip
+                    tip = stage.tip,
+                    dropGroups = stage.dropGroups
                 )
             }
         }
@@ -572,6 +573,14 @@ class ActivityManager(
             // 4. 常规关卡提示
             if (stageInfo.tip.isNotEmpty()) {
                 lines.add(stageInfo.tip)
+            }
+
+            // 5. 分组库存（技能书、芯片等），与 WPF DropGroups 提示保持一致
+            if (stageInfo.dropGroups.any { group -> group.any { (inventory[it] ?: -1) >= 0 } }) {
+                val groups = stageInfo.dropGroups.joinToString(" / ") { group ->
+                    group.joinToString(" & ") { itemId -> inventory[itemId]?.toString() ?: "--" }
+                }
+                lines.add(" ($inventoryLabel $groups)")
             }
         }
 
