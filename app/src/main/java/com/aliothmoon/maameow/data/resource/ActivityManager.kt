@@ -519,17 +519,21 @@ class ActivityManager(
      * 迁移自 WPF StageManager.GetStageTips
      *
      * @param dayOfWeek 星期几
-     * @param inventory 仓库识别结果 itemId → 数量，未识别的物品不带库存
+     * @param inventory 仓库缓存 itemId → 数量
+     * @param hasSyncedInventory 是否完成过全量仓库识别；识别后缺失项按 0 处理，否则视为未知
      * @return 提示文本行列表
      */
     fun getStageTips(
         dayOfWeek: DayOfWeek = getYjDayOfWeek(),
-        inventory: Map<String, Int> = emptyMap()
+        inventory: Map<String, Int> = emptyMap(),
+        hasSyncedInventory: Boolean = false
     ): List<String> {
         val lines = mutableListOf<String>()
         val shownSideStories = mutableSetOf<String>()
         var resourceTipShown = false
         val inventoryLabel = context.getString(R.string.panel_fight_stage_tip_inventory)
+        fun inventoryCount(itemId: String): Int? =
+            inventory[itemId] ?: if (hasSyncedInventory) 0 else null
 
         for ((_, stageInfo) in _stages.value) {
             if (!stageInfo.isStageOpen(dayOfWeek)) continue
@@ -576,9 +580,9 @@ class ActivityManager(
             }
 
             // 5. 分组库存（技能书、芯片等），与 WPF DropGroups 提示保持一致
-            if (stageInfo.dropGroups.any { group -> group.any { (inventory[it] ?: -1) >= 0 } }) {
+            if (stageInfo.dropGroups.any { group -> group.any { (inventoryCount(it) ?: -1) >= 0 } }) {
                 val groups = stageInfo.dropGroups.joinToString(" / ") { group ->
-                    group.joinToString(" & ") { itemId -> inventory[itemId]?.toString() ?: "--" }
+                    group.joinToString(" & ") { itemId -> inventoryCount(itemId)?.toString() ?: "--" }
                 }
                 lines.add(" ($inventoryLabel $groups)")
             }

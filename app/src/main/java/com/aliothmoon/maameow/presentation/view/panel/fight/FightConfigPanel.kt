@@ -84,7 +84,10 @@ fun FightConfigPanel(
     val activityStages by activityManager.activityStages.collectAsStateWithLifecycle()
     val depotSnapshot by depotRepository.snapshot.collectAsStateWithLifecycle()
     val stageTips = remember(activityStages, depotSnapshot) {
-        activityManager.getStageTips(inventory = depotSnapshot.items)
+        activityManager.getStageTips(
+            inventory = depotSnapshot.items,
+            hasSyncedInventory = depotSnapshot.syncTimeMillis > 0L
+        )
     }
     val todayName = remember(activityStages) { activityManager.getYjDayOfWeekName() }
 
