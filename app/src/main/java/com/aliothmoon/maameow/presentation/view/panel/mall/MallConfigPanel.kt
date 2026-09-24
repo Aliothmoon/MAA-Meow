@@ -161,6 +161,15 @@ private fun BasicMallSettings(config: MallConfig, onConfigChange: (MallConfig) -
             }
         }
 
+        if (config.visitFriends) {
+            CheckBoxWithLabel(
+                checked = config.visitFriendsOnceADay,
+                onCheckedChange = { onConfigChange(config.copy(visitFriendsOnceADay = it)) },
+                label = stringResource(R.string.panel_mall_only_once_a_day),
+                modifier = Modifier.padding(start = 24.dp)
+            )
+        }
+
         // 购物开关
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(
@@ -224,6 +233,12 @@ private fun BasicMallSettings(config: MallConfig, onConfigChange: (MallConfig) -
 
         // 借助战编队选择
         if (config.creditFight) {
+            CheckBoxWithLabel(
+                checked = config.creditFightOnceADay,
+                onCheckedChange = { onConfigChange(config.copy(creditFightOnceADay = it)) },
+                label = stringResource(R.string.panel_mall_only_once_a_day),
+                modifier = Modifier.padding(start = 24.dp)
+            )
             FormationSelector(
                 selectedFormation = config.creditFightFormation,
                 onFormationChange = { onConfigChange(config.copy(creditFightFormation = it)) }

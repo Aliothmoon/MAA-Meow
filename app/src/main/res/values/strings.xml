@@ -883,6 +883,7 @@
     <string name="panel_mall_shopping">信用交易所自动购物</string>
     <string name="panel_mall_shopping_tip">自动使用信用点购买商店中的物品</string>
     <string name="panel_mall_credit_fight">借助战打 OF-1 赚信用</string>
+    <string name="panel_mall_only_once_a_day">一日只执行一次</string>
     <string name="panel_mall_credit_fight_tip">访问好友后借助战打一把 OF-1 赚 30 信用。\n关卡选择为 ｢当前/上次｣ 时此功能无效。\n别传 ｢火蓝之心｣ 关卡 OF-1 未解锁时请勿勾选。</string>
     <string name="panel_mall_credit_fight_unavailable">当前存在无法解析有效关卡的理智作战任务，本次不会借助战打一把 OF-1。</string>
     <!-- %1$s 任务名, %2$d 任务序号(1-based), %3$d 关卡列表中的序号(1-based) -->
