@@ -392,6 +392,8 @@
     <string name="copilot_unsupported_skill">%1$s does not support skill %2$d, skill selection disabled</string>
     <string name="copilot_elite_filled">%1$s has no elite requirement, but other requirements need E%2$d; filled in automatically</string>
     <string name="copilot_elite_raised">%1$s requires E%2$d, but other requirements need E%3$d; adjusted automatically</string>
+    <string name="copilot_location_over_oper">%1$s has both location and operator set; the location will be used</string>
+    <string name="copilot_rect_over_location">%1$s has both rect and location set; the rect will be used</string>
     <string name="copilot_invalid_operator">Invalid operator: %1$s</string>
     <string name="copilot_status_completed">Completed: %1$s</string>
     <string name="copilot_rate_failed">An error occurred, the like failed: &lt;</string>

@@ -594,7 +594,7 @@ class CopilotViewModel(
     )
 
     /**
-     * 落盘前统一做一次干员需求校正
+     * 落盘前统一做一次干员需求与动作字段校正
      * 改动过的作业不再带原作业 id，免得把改后的跑法算到原作者头上
      */
     private fun correctRequirements(
@@ -630,18 +630,24 @@ class CopilotViewModel(
     private fun describeCorrection(correction: CopilotRequirementCorrector.Correction): UiText =
         when (correction.kind) {
             CopilotRequirementCorrector.Kind.UNSUPPORTED_SKILL ->
-                text(R.string.copilot_unsupported_skill, correction.operatorName, correction.from)
+                text(R.string.copilot_unsupported_skill, correction.target, correction.from)
 
             CopilotRequirementCorrector.Kind.ELITE_FILLED ->
-                text(R.string.copilot_elite_filled, correction.operatorName, correction.to)
+                text(R.string.copilot_elite_filled, correction.target, correction.to)
 
             CopilotRequirementCorrector.Kind.ELITE_RAISED ->
                 text(
                     R.string.copilot_elite_raised,
-                    correction.operatorName,
+                    correction.target,
                     correction.from,
                     correction.to
                 )
+
+            CopilotRequirementCorrector.Kind.LOCATION_OVER_OPER ->
+                text(R.string.copilot_location_over_oper, correction.target)
+
+            CopilotRequirementCorrector.Kind.RECT_OVER_LOCATION ->
+                text(R.string.copilot_rect_over_location, correction.target)
         }
 
     private fun applyLoadedCopilot(

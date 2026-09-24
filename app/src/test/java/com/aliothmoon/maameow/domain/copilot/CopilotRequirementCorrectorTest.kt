@@ -15,8 +15,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 对齐 MaaWpfGui CopilotViewModel 的技能/精英化校验
- * 关键约束：只改 requirements.elite 和 skill，作业里其他字段一律原样保留
+ * 对齐 MaaWpfGui CopilotViewModel 的技能/精英化校验与动作冗余字段清理
+ * 关键约束：只改 requirements.elite、skill 和动作里被覆盖的字段，作业里其他字段一律原样保留
  */
 class CopilotRequirementCorrectorTest {
 
@@ -185,6 +185,84 @@ class CopilotRequirementCorrectorTest {
         assertEquals(3, opers(result.json)[0].int("skill"))
         assertEquals(2, opers(result.json)[0].elite())
         assertEquals(false, result.altered)
+    }
+
+    private fun actions(json: String) =
+        Json.parseToJsonElement(json).jsonObject["actions"]!!.jsonArray.map { it.jsonObject }
+
+    @Test
+    fun `同填干员与坐标时去掉干员和职业`() {
+        val json = """
+            {"actions":[
+              {"type":"Skill","name":"银灰","role":"Warrior","location":[3,4],"kills":5},
+              {"type":"Retreat","name":"银灰","location":[3,4]},
+              {"type":"BulletTime","name":"银灰","location":[3,4]},
+              {"type":"SkillUsage","name":"银灰","location":[3,4],"skill_usage":2}
+            ]}
+        """.trimIndent()
+        val result = correct(json)
+        assertEquals(4, result.corrections.size)
+        assertTrue(result.corrections.all { it.kind == Kind.LOCATION_OVER_OPER })
+        assertEquals("Skill[3,4]", result.corrections[0].target)
+        // 改过作业，不再回传原作业 id
+        assertTrue(result.altered)
+
+        actions(result.json).forEach { action ->
+            assertNull(action["name"])
+            assertNull(action["role"])
+            assertEquals(listOf(3, 4), action["location"]!!.jsonArray.map { it.jsonPrimitive.int })
+        }
+        // 其他字段原样保留
+        assertEquals(5, actions(result.json)[0].int("kills"))
+        assertEquals(2, actions(result.json)[3].int("skill_usage"))
+    }
+
+    @Test
+    fun `点击同填区域与坐标时去掉坐标`() {
+        val json = """{"actions":[{"type":"Click","rect":[100,200,50,60],"location":[3,4]}]}"""
+        val result = correct(json)
+        val correction = result.corrections.single()
+        assertEquals(Kind.RECT_OVER_LOCATION, correction.kind)
+        assertEquals("Click[100,200,50,60]", correction.target)
+        assertTrue(result.altered)
+
+        val action = actions(result.json).single()
+        assertNull(action["location"])
+        assertEquals(4, action["rect"]!!.jsonArray.size)
+    }
+
+    @Test
+    fun `动作类型只认上游写法且其余动作不动`() {
+        // 上游按字符串精确匹配：别名、部署、单填都不校正；显式 null 当没写
+        val json = """
+            {"actions":[
+              {"type":"技能","name":"银灰","location":[3,4]},
+              {"type":"skill","name":"银灰","location":[3,4]},
+              {"type":"Deploy","name":"银灰","location":[3,4],"direction":"Left"},
+              {"type":"Skill","name":"银灰"},
+              {"type":"Skill","location":[3,4]},
+              {"type":"Retreat","name":null,"location":[3,4]},
+              {"type":"Click","rect":[1,2,3,4]},
+              {"type":"Click","rect":null,"location":[3,4]}
+            ]}
+        """.trimIndent()
+        val result = correct(json)
+        assertTrue(result.corrections.isEmpty())
+        assertSame(json, result.json)
+    }
+
+    @Test
+    fun `提示先干员后动作`() {
+        // 键序把 actions 放前面，提示顺序也不能跟着变
+        val json = """
+            {"actions":[{"type":"Skill","name":"白面鸮","location":[1,1]}],
+             "opers":[{"name":"白面鸮","skill":3}]}
+        """.trimIndent()
+        val result = correct(json)
+        assertEquals(
+            listOf(Kind.UNSUPPORTED_SKILL, Kind.LOCATION_OVER_OPER),
+            result.corrections.map { it.kind }
+        )
     }
 
     @Test
