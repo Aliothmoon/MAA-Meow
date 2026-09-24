@@ -1017,6 +1017,7 @@
     <string name="panel_infrast_reception_message_board">会客室信息板收取信用</string>
     <string name="panel_infrast_reception_clue_exchange">进行线索交流</string>
     <string name="panel_infrast_reception_send_clue">赠送线索</string>
+    <string name="panel_infrast_continue_training">训练完成后继续尝试专精当前技能</string>
     <string name="panel_infrast_fiammetta_recovery">启用菲亚梅塔心情恢复</string>
     <string name="panel_infrast_fiammetta_recovery_tip">开启后，换班开始时会将恢复目标与满心情的菲亚梅塔放入宿舍互换心情，菲亚梅塔随后留在宿舍恢复心情\n关闭时换班跳过宿舍准备步骤</string>
     <string name="panel_infrast_fiammetta_targets_title">菲亚梅塔恢复目标</string>

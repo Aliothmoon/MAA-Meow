@@ -229,6 +229,10 @@ fun InfrastConfigPanel(
                             ReceptionSendClueSection(config, onConfigChange)
                         }
                         item {
+                            // 继续专精
+                            ContinueTrainingSection(config, onConfigChange)
+                        }
+                        item {
                             // 菲亚梅塔心情恢复 + 恢复目标 (仅 Normal 模式显示)
                             // 合并成一个 item：拆开时隐藏的那个仍占槽位，会多吃一份间距
                             MaaAnimatedVisibility(
@@ -1211,6 +1215,30 @@ private fun ReceptionSendClueSection(
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = stringResource(R.string.panel_infrast_reception_send_clue),
+            style = MaterialTheme.typography.bodyMedium,
+            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
+        )
+    }
+}
+
+/**
+ * 继续专精
+ */
+@Composable
+private fun ContinueTrainingSection(
+    config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top
+    ) {
+        Checkbox(
+            checked = config.continueTraining,
+            onCheckedChange = { onConfigChange(config.copy(continueTraining = it)) },
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = stringResource(R.string.panel_infrast_continue_training),
             style = MaterialTheme.typography.bodyMedium,
             lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
         )
