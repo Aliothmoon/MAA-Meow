@@ -21,6 +21,7 @@ object MiniGameTextRegistry {
         "MiniGame@SecretFront" -> R.string.mini_game_name_secret_front
         "MiniGame@AutoRaisePotential" -> R.string.mini_game_name_auto_raise_potential
         "MiniGame@MaterialSynthesis" -> R.string.mini_game_name_material_synthesis
+        "MiniGame@CursedRelic" -> R.string.mini_game_name_cursed_relic
         "MiniGame@PV" -> R.string.mini_game_name_pv
         "MiniGame@SPA" -> R.string.mini_game_name_spa
         "MiniGame@OS" -> R.string.mini_game_name_os
@@ -44,6 +45,7 @@ object MiniGameTextRegistry {
         "MiniGame@SecretFrontTip" -> R.string.mini_game_tip_secret_front
         "MiniGame@AutoRaisePotentialTip" -> R.string.mini_game_tip_auto_raise_potential
         "MiniGame@MaterialSynthesisTip" -> R.string.mini_game_tip_material_synthesis
+        "MiniGame@CursedRelicTip" -> R.string.mini_game_tip_cursed_relic
         "MiniGame@PixelPaintTip" -> R.string.mini_game_tip_pixel_paint
         "MiniGame@PVTip" -> R.string.mini_game_tip_pv
         "MiniGame@SPATip" -> R.string.mini_game_tip_spa
@@ -71,6 +73,9 @@ object MiniGameTextRegistry {
 
         "MiniGame@MaterialSynthesis", "MiniGame@MaterialSynthesis@Begin" ->
             R.string.mini_game_name_material_synthesis
+
+        "MiniGame@CursedRelic", "MiniGame@CursedRelic@Begin" ->
+            R.string.mini_game_name_cursed_relic
 
         "MiniGame@PV" -> R.string.mini_game_name_pv
         "MiniGame@SPA" -> R.string.mini_game_name_spa
@@ -100,6 +105,9 @@ object MiniGameTextRegistry {
 
         "MiniGame@MaterialSynthesis", "MiniGame@MaterialSynthesis@Begin" ->
             R.string.mini_game_tip_material_synthesis
+
+        "MiniGame@CursedRelic", "MiniGame@CursedRelic@Begin" ->
+            R.string.mini_game_tip_cursed_relic
 
         "MiniGame@PV" -> R.string.mini_game_tip_pv
         "MiniGame@SPA" -> R.string.mini_game_tip_spa

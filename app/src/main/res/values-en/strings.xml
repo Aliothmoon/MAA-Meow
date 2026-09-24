@@ -1147,6 +1147,8 @@
     <string name="mini_game_tip_auto_raise_potential">Enter the operator list screen before starting. Raises the potential of every operator with a notice badge.\nStops on the profile of the last processed operator; stays on the operator list when there is nothing to raise.</string>
     <string name="mini_game_name_material_synthesis">Missing material synthesis</string>
     <string name="mini_game_tip_material_synthesis">Open the missing-material popup from a training page (elite promotion, mastery, module upgrade) and jump to the workshop synthesis page before starting.\nRecursively synthesizes craftable sub-materials and stops when materials run out.</string>
+    <string name="mini_game_name_cursed_relic">Phantom Victoria Crown reroll</string>
+    <string name="mini_game_tip_cursed_relic">Please start from the Phantom roguelike main menu where the EXPLORE button is visible.\nRepeatedly starts an exploration and checks the starting relic; abandons and waits for the cooldown until the Victoria Crown shows up, then stops.</string>
     <string name="mini_game_category_permanent_feature">Permanent features</string>
     <string name="mini_game_category_permanent">Permanent activities</string>
     <string name="mini_game_category_current_event">Current event</string>

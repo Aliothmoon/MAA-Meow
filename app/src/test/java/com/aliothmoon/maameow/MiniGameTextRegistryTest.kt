@@ -103,6 +103,27 @@ class MiniGameTextRegistryTest {
     }
 
     @Test
+    fun resolveCursedRelic_usesLocalizedText() {
+        // 上游 v6.18.0 新增的刷傀影维多利亚皇冠
+        val display = MiniGameTextRegistry.resolveDisplay(
+            display = "刷傀影维多利亚皇冠",
+            displayKey = "MiniGame@CursedRelic",
+            value = "MiniGame@CursedRelic@Begin"
+        )
+        assertEquals(UiText.Resource(R.string.mini_game_name_cursed_relic), display)
+        assertEquals(
+            UiText.Resource(R.string.mini_game_tip_cursed_relic),
+            MiniGameTextRegistry.resolveTip(
+                tip = null,
+                tipKey = "MiniGame@CursedRelicTip",
+                display = display,
+                displayKey = "MiniGame@CursedRelic",
+                value = "MiniGame@CursedRelic@Begin"
+            )
+        )
+    }
+
+    @Test
     fun resolveTip_allEmpty_returnsEmptyTip() {
         val result = MiniGameTextRegistry.resolveTip(
             tip = null,

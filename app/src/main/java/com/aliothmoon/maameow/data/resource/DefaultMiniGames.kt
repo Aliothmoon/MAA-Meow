@@ -51,6 +51,11 @@ object DefaultMiniGames {
             R.string.mini_game_name_material_synthesis,
             "MiniGame@MaterialSynthesis@Begin",
             R.string.mini_game_tip_material_synthesis
+        ),
+        DefaultMiniGameEntry(
+            R.string.mini_game_name_cursed_relic,
+            "MiniGame@CursedRelic@Begin",
+            R.string.mini_game_tip_cursed_relic
         )
     )
 }
