@@ -23,6 +23,7 @@ class SubTaskHandlerSwitchThemeTest {
     private val logger = mockk<MaaSessionLogger>(relaxed = true)
     private val handler = SubTaskHandler(
         applicationContext = context,
+        statusTracker = mockk(relaxed = true),
         sessionLogger = logger,
         copilotRuntimeStateStore = mockk(relaxed = true),
         resourceDataManager = mockk(relaxed = true),
