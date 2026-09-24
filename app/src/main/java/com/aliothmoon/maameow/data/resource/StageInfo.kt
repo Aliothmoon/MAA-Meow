@@ -81,14 +81,11 @@ data class StageInfo(
             "CA-5" to "CA-5: 技能",
             "LS-6" to "LS-6: 经验",
             "SK-5" to "SK-5: 碳",
+            // PR-X-2 不单独出提示，同上游，免得与 PR-X-1 重复
             "PR-A-1" to "PR-A-1/2: 奶&盾芯片",
-            "PR-A-2" to "PR-A-1/2: 奶&盾芯片",
             "PR-B-1" to "PR-B-1/2: 术&狙芯片",
-            "PR-B-2" to "PR-B-1/2: 术&狙芯片",
             "PR-C-1" to "PR-C-1/2: 先&辅芯片",
-            "PR-C-2" to "PR-C-1/2: 先&辅芯片",
-            "PR-D-1" to "PR-D-1/2: 近&特芯片",
-            "PR-D-2" to "PR-D-1/2: 近&特芯片"
+            "PR-D-1" to "PR-D-1/2: 近&特芯片"
         )
     }
 }
