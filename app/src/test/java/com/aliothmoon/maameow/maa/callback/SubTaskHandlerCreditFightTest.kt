@@ -45,22 +45,29 @@ class SubTaskHandlerCreditFightTest {
         JSONObject.of("subtask", "ProcessTask", "taskchain", chain, "taskid", taskId,
             "details", JSONObject.of("task", task))
 
+    /** 前后各取一次，恰好跨过服务器凌晨 4 点时两天都算对 */
+    private fun serverDatesAround(block: () -> Unit): Set<String> {
+        val before = ServerTimezone.getYjDate("Official").toString()
+        block()
+        return setOf(before, ServerTimezone.getYjDate("Official").toString())
+    }
+
     @Test
     fun successfulCreditFightRecordsItsNodeAndServerDate() {
-        val date = ServerTimezone.getYjDate("Official").toString()
-        handler.onSubTaskCompleted(completed("StageDrops-Stars-3"))
+        val dates = serverDatesAround { handler.onSubTaskCompleted(completed("StageDrops-Stars-3")) }
         coVerify(timeout = 3000, exactly = 1) {
-            chainState.recordCreditFightCompleted("mall-node-114514", date)
+            chainState.recordCreditFightCompleted("mall-node-114514", match { it in dates })
         }
     }
 
     @Test
     fun visitCompletionCallbacksRecordServerDate() {
-        val date = ServerTimezone.getYjDate("Official").toString()
-        handler.onSubTaskCompleted(completed("VisitLimited"))
-        handler.onSubTaskCompleted(completed("VisitNextBlack"))
+        val dates = serverDatesAround {
+            handler.onSubTaskCompleted(completed("VisitLimited"))
+            handler.onSubTaskCompleted(completed("VisitNextBlack"))
+        }
         coVerify(timeout = 3000, exactly = 2) {
-            chainState.recordVisitFriendsCompleted("mall-node-114514", date)
+            chainState.recordVisitFriendsCompleted("mall-node-114514", match { it in dates })
         }
         coVerify(exactly = 0) { chainState.recordCreditFightCompleted(any(), any()) }
     }

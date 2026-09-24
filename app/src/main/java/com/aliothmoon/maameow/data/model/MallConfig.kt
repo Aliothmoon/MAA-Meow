@@ -1,14 +1,14 @@
 package com.aliothmoon.maameow.data.model
 
+import com.aliothmoon.maameow.data.resource.ServerTimezone
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
-import com.aliothmoon.maameow.data.resource.ServerTimezone
-import java.time.LocalDate
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import java.time.LocalDate
 
 /**
  * 获取信用及购物配置
@@ -43,7 +43,7 @@ data class MallConfig(
      */
     val visitFriends: Boolean = true,
 
-    /** 与 WPF 一致默认关闭，按服务器凌晨 4 点换日。 */
+    /** 与 WPF 一致默认关闭，按服务器凌晨 4 点换日 */
     val visitFriendsOnceADay: Boolean = false,
     val visitFriendsLastDate: String = "",
 
@@ -56,7 +56,7 @@ data class MallConfig(
      */
     val creditFight: Boolean = false,
 
-    /** 与 WPF 一致，按服务器凌晨 4 点换日，仅在成功后记录。 */
+    /** 与 WPF 一致，按服务器凌晨 4 点换日，仅在成功后记录 */
     val creditFightOnceADay: Boolean = true,
     val creditFightLastDate: String = "",
 
@@ -182,16 +182,22 @@ data class MallConfig(
         return listOf(MaaTaskParams(MaaTaskType.MALL, paramsJson.toString()))
     }
 
-    fun isCreditFightAvailable(today: LocalDate): Boolean {
-        if (!creditFight || !creditFightOnceADay) return creditFight
-        val lastDate = runCatching { LocalDate.parse(creditFightLastDate) }.getOrNull()
-        return lastDate == null || today.isAfter(lastDate)
-    }
+    fun isCreditFightAvailable(today: LocalDate): Boolean =
+        onceADayAllows(creditFight, creditFightOnceADay, creditFightLastDate, today)
 
-    fun isVisitFriendsAvailable(today: LocalDate): Boolean {
-        if (!visitFriends || !visitFriendsOnceADay) return visitFriends
-        val lastDate = runCatching { LocalDate.parse(visitFriendsLastDate) }.getOrNull()
-        return lastDate == null || today.isAfter(lastDate)
+    fun isVisitFriendsAvailable(today: LocalDate): Boolean =
+        onceADayAllows(visitFriends, visitFriendsOnceADay, visitFriendsLastDate, today)
+
+    /** 记录的日期解析失败时放行，同 WPF */
+    private fun onceADayAllows(
+        enabled: Boolean,
+        onceADay: Boolean,
+        lastDate: String,
+        today: LocalDate,
+    ): Boolean {
+        if (!enabled || !onceADay) return enabled
+        val last = runCatching { LocalDate.parse(lastDate) }.getOrNull() ?: return true
+        return today.isAfter(last)
     }
 
     private fun mergeFixedBlacklist(clientType: String): List<String> {

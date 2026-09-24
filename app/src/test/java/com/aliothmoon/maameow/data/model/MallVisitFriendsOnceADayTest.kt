@@ -7,6 +7,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.time.LocalDate
 
@@ -41,10 +42,13 @@ class MallVisitFriendsOnceADayTest {
 
     @Test
     fun completedVisitDoesNotDisableCreditFightOrShopping() {
+        val serverToday = ServerTimezone.getYjDate("Official")
         val config = MallConfig(visitFriendsOnceADay = true, creditFight = true,
-            visitFriendsLastDate = ServerTimezone.getYjDate("Official").toString())
+            visitFriendsLastDate = serverToday.toString())
         val ctx = testTaskParamContext(chainAllowsCreditFight = true)
         val params = Json.parseToJsonElement(config.toTaskParams(ctx).single().params).jsonObject
+        // 恰好跨过服务器凌晨 4 点就换日了，本次结果不作数
+        assumeTrue(ServerTimezone.getYjDate("Official") == serverToday)
         assertEquals("false", params.getValue("visit_friends").jsonPrimitive.content)
         assertEquals("true", params.getValue("credit_fight").jsonPrimitive.content)
         assertEquals("true", params.getValue("shopping").jsonPrimitive.content)
