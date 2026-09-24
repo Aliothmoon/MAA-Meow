@@ -151,7 +151,7 @@ fun MiniGamePanel(
             }
         }
 
-        // 自动提升潜能：中间信物不足时是否消耗普通信物
+        // 自动提升潜能：中坚信物不足时是否消耗普通信物
         if (delegate.isAutoRaisePotential(state.selectedTaskName)) {
             item { HorizontalDivider() }
             item {

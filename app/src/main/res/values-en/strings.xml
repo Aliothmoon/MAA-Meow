@@ -1130,7 +1130,7 @@
     <string name="panel_mini_game_title">Useful Tasks</string>
     <string name="panel_mini_game_name">Mini Game Name</string>
     <string name="panel_mini_game_ending">Ending</string>
-    <string name="panel_mini_game_use_normal_token">Use regular tokens when mid-tier tokens run out</string>
+    <string name="panel_mini_game_use_normal_token">Use regular tokens when Kernel Tokens run out</string>
     <string name="panel_mini_game_preferred_events">Priority for Series of Events</string>
 
     <!-- mini game: data texts (names / tips, mirrors MaaWpfGui localization keys) -->
