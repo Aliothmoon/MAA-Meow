@@ -10,6 +10,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.InfrastConfig
+import com.aliothmoon.maameow.data.model.MallConfig
 import com.aliothmoon.maameow.data.model.RecruitConfig
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskParamProvider
@@ -284,6 +285,30 @@ class TaskChainState(
                 Timber.w("updateNodeConfig: node %s not found", nodeId)
             }
         }
+    }
+
+    /** 以回调的节点 ID 定位，切换配置后也不会写到另一个信用任务。 */
+    suspend fun recordCreditFightCompleted(nodeId: String, date: String) {
+        updateMallCompletion(nodeId) { it.copy(creditFightLastDate = date) }
+    }
+
+    suspend fun recordVisitFriendsCompleted(nodeId: String, date: String) {
+        updateMallCompletion(nodeId) { it.copy(visitFriendsLastDate = date) }
+    }
+
+    private suspend fun updateMallCompletion(nodeId: String, transform: (MallConfig) -> MallConfig) {
+        _isLoaded.first { it }
+        fun update(nodes: List<TaskChainNode>) = nodes.map { node ->
+            val config = node.config
+            if (node.id == nodeId && config is MallConfig) {
+                node.copy(config = transform(config))
+            } else node
+        }
+        _chain.value = update(_chain.value)
+        _profiles.value = _profiles.value.map { profile ->
+            profile.copy(chain = if (profile.id == _profileId.value) _chain.value else update(profile.chain))
+        }
+        doSync()
     }
 
     suspend fun reorderNodes(fromIndex: Int, toIndex: Int) {
