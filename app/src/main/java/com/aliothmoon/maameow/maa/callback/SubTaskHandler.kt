@@ -16,6 +16,7 @@ import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.data.resource.ServerTimezone
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import kotlinx.coroutines.CoroutineScope
@@ -42,6 +43,7 @@ class SubTaskHandler(
     private val activityManager: ActivityManager,
     private val achievementRepository: AchievementRepository,
     private val depotRepository: DepotRepository,
+    private val statusTracker: TaskChainStatusTracker,
 ) {
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val resources = applicationContext.resources
@@ -481,7 +483,12 @@ class SubTaskHandler(
                 // OF-1 信用战完成现在会触发 Copilot@StageDrops-Stars-3
                 "Mall" if task == "StageDrops-Stars-3" -> {
                     append("${str("CompleteTask")}${str("CreditFight")}", LogLevel.TRACE)
+                    val nodeId = statusTracker.getNodeId(details.getIntValue("taskid", 0))
+                    val date = runningYjDate()
                     ioScope.launch {
+                        if (nodeId != null) {
+                            chainState.recordCreditFightCompleted(nodeId, date)
+                        }
                         achievementRepository.report {
                             event = AchievementEvents.PROCESS_TASK_COMPLETED
                             "taskchain" to taskchain
@@ -492,10 +499,21 @@ class SubTaskHandler(
 
                 "Mall" if (task == "VisitLimited" || task == "VisitNextBlack") -> {
                     append("${str("CompleteTask")}${str("Visiting")}", LogLevel.TRACE)
+                    val nodeId = statusTracker.getNodeId(details.getIntValue("taskid", 0))
+                    val date = runningYjDate()
+                    if (nodeId != null) {
+                        ioScope.launch {
+                            chainState.recordVisitFriendsCompleted(nodeId, date)
+                        }
+                    }
                 }
             }
         }
     }
+
+    /** 按本次会话的服务器换日，运行中切到别的服务器的 Profile 也不受影响 */
+    private fun runningYjDate(): String =
+        ServerTimezone.getYjDate(chainState.lastUsedClientType ?: chainState.clientType).toString()
 
     // ==================== SubTaskExtraInfo (20003) ====================
 
