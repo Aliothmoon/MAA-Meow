@@ -104,4 +104,45 @@ class ActivityManagerStageTipsTest {
         ).getStageTips(DayOfWeek.MONDAY)
         assertEquals(listOf("｢测试活动｣ 剩余天数: 3", "小工具→牛杂→测试小游戏"), tips)
     }
+
+    /** CA-5 / PR-x-1 这类带分组库存的常驻关（openDays 为空 = 每天开放） */
+    private fun groupedStage(
+        code: String = "CA-5",
+        groups: List<List<String>> = listOf(listOf("3301", "3302", "3303")),
+    ) = MergedStageInfo(code = code, displayName = code, dropGroups = groups)
+
+    @Test
+    fun dropGroupLine_unsyncedShowsDashesForUnknownItems() {
+        assertEquals(
+            emptyList<String>(),
+            manager(mapOf("CA-5" to groupedStage())).getStageTips(DayOfWeek.MONDAY),
+        )
+        assertEquals(
+            listOf(" (库存 -- & -- & 7)"),
+            manager(mapOf("CA-5" to groupedStage()))
+                .getStageTips(DayOfWeek.MONDAY, inventory = mapOf("3303" to 7)),
+        )
+    }
+
+    @Test
+    fun dropGroupLine_fillsMissingItemsWithZeroAfterSync() {
+        val tips = manager(mapOf("CA-5" to groupedStage()))
+            .getStageTips(DayOfWeek.MONDAY, inventory = mapOf("3303" to 7), hasSyncedInventory = true)
+        assertEquals(listOf(" (库存 0 & 0 & 7)"), tips)
+    }
+
+    @Test
+    fun dropGroupLine_staysVisibleWhenEveryItemIsZeroAfterSync() {
+        val tips = manager(mapOf("CA-5" to groupedStage()))
+            .getStageTips(DayOfWeek.MONDAY, hasSyncedInventory = true)
+        assertEquals(listOf(" (库存 0 & 0 & 0)"), tips)
+    }
+
+    @Test
+    fun dropGroupLine_joinsItemsWithAmpersandAndGroupsWithSlash() {
+        val tips = manager(
+            mapOf("PR-A-1" to groupedStage("PR-A-1", listOf(listOf("3261", "3231"), listOf("3262", "3232"))))
+        ).getStageTips(DayOfWeek.MONDAY, inventory = mapOf("3261" to 3), hasSyncedInventory = true)
+        assertEquals(listOf(" (库存 3 & 0 / 0 & 0)"), tips)
+    }
 }
