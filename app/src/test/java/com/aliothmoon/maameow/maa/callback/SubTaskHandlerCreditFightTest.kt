@@ -8,8 +8,12 @@ import com.aliothmoon.maameow.data.resource.ServerTimezone
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
 
 class SubTaskHandlerCreditFightTest {
     private val resources = mockk<Resources>(relaxed = true)
@@ -19,7 +23,10 @@ class SubTaskHandlerCreditFightTest {
     }
     private val chainState = mockk<TaskChainState>(relaxed = true) {
         every { clientType } returns "Official"
+        every { lastUsedClientType } returns null
     }
+    private val officialDate = LocalDate.of(2077, 1, 2)
+    private val enDate = LocalDate.of(2077, 1, 1)
     private val tracker = mockk<TaskChainStatusTracker> {
         every { getNodeId(325) } returns "mall-node-114514"
         every { getNodeId(799) } returns null
@@ -39,37 +46,49 @@ class SubTaskHandlerCreditFightTest {
     )
 
     @Before
-    fun clearStrings() = MaaStringRes.clearCacheForTest()
+    fun setUp() {
+        MaaStringRes.clearCacheForTest()
+        // 固定各服务器日期，断言不受真实时钟跨日影响
+        mockkObject(ServerTimezone)
+        every { ServerTimezone.getYjDate("Official") } returns officialDate
+        every { ServerTimezone.getYjDate("YoStarEN") } returns enDate
+    }
+
+    @After
+    fun tearDown() = unmockkObject(ServerTimezone)
 
     private fun completed(task: String, taskId: Int = 325, chain: String = "Mall") =
         JSONObject.of("subtask", "ProcessTask", "taskchain", chain, "taskid", taskId,
             "details", JSONObject.of("task", task))
 
-    /** 前后各取一次，恰好跨过服务器凌晨 4 点时两天都算对 */
-    private fun serverDatesAround(block: () -> Unit): Set<String> {
-        val before = ServerTimezone.getYjDate("Official").toString()
-        block()
-        return setOf(before, ServerTimezone.getYjDate("Official").toString())
-    }
-
     @Test
     fun successfulCreditFightRecordsItsNodeAndServerDate() {
-        val dates = serverDatesAround { handler.onSubTaskCompleted(completed("StageDrops-Stars-3")) }
+        handler.onSubTaskCompleted(completed("StageDrops-Stars-3"))
         coVerify(timeout = 3000, exactly = 1) {
-            chainState.recordCreditFightCompleted("mall-node-114514", match { it in dates })
+            chainState.recordCreditFightCompleted("mall-node-114514", officialDate.toString())
         }
     }
 
     @Test
     fun visitCompletionCallbacksRecordServerDate() {
-        val dates = serverDatesAround {
-            handler.onSubTaskCompleted(completed("VisitLimited"))
-            handler.onSubTaskCompleted(completed("VisitNextBlack"))
-        }
+        handler.onSubTaskCompleted(completed("VisitLimited"))
+        handler.onSubTaskCompleted(completed("VisitNextBlack"))
         coVerify(timeout = 3000, exactly = 2) {
-            chainState.recordVisitFriendsCompleted("mall-node-114514", match { it in dates })
+            chainState.recordVisitFriendsCompleted("mall-node-114514", officialDate.toString())
         }
         coVerify(exactly = 0) { chainState.recordCreditFightCompleted(any(), any()) }
+    }
+
+    @Test
+    fun completionDateFollowsRunningSessionNotCurrentProfile() {
+        // 美服会话运行中切到了国服 Profile：会话是 YoStarEN，当前 Profile 是 Official
+        every { chainState.lastUsedClientType } returns "YoStarEN"
+        handler.onSubTaskCompleted(completed("StageDrops-Stars-3"))
+        handler.onSubTaskCompleted(completed("VisitLimited"))
+        coVerify(timeout = 3000, exactly = 1) {
+            chainState.recordCreditFightCompleted("mall-node-114514", enDate.toString())
+            chainState.recordVisitFriendsCompleted("mall-node-114514", enDate.toString())
+        }
     }
 
     @Test

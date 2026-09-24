@@ -89,6 +89,10 @@ class TaskChainState(
     val clientType: String
         get() = getClientTypeOrNull() ?: "Official"
 
+    /** 最近一次成功启动的会话所用客户端；运行中即本次会话的服务器，不随切换 Profile 变 */
+    val lastUsedClientType: String?
+        get() = _lastUsedClientType.value
+
     private fun doSync() {
         persistOps.trySend(PersistOp.Sync)
     }
