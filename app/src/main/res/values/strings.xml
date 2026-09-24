@@ -178,12 +178,19 @@
     <!-- copilot_actions -->
     <string name="maa_deploy">部署</string>
     <string name="maa_retreat">撤退</string>
-    <string name="maa_skill">技能</string>
+    <string name="maa_use_skill">使用技能</string>
     <string name="maa_skill_usage">切换技能用法</string>
-    <string name="maa_speed_up">二倍速</string>
+    <string name="maa_switch_speed">切换倍速</string>
     <string name="maa_bullet_time">进入子弹时间</string>
     <string name="maa_output">打印描述内容</string>
     <string name="maa_skill_daemon">开始挂机</string>
+    <string name="maa_move_camera">移动相机</string>
+    <string name="maa_draw_card">调配干员</string>
+    <string name="maa_check_if_start_over">检查是否重开</string>
+    <string name="maa_reset_stopwatch">重置全局计时器</string>
+    <string name="maa_click">点击</string>
+    <string name="maa_swipe">滑动</string>
+    <string name="maa_set_unit_location">设置单位坐标</string>
 
     <!-- common -->
     <string name="maa_sanity">理智</string>
