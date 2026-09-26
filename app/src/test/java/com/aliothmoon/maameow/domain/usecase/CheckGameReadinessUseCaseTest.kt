@@ -17,9 +17,11 @@ class CheckGameReadinessUseCaseTest {
 
     private val achievementReporter = mockk<AchievementReporter>(relaxed = true)
 
-    private fun appSettings(mode: RunMode) = mockk<AppSettingsManager> {
-        every { runMode } returns MutableStateFlow(mode)
-    }
+    private fun appSettings(mode: RunMode, eyeProtectionSuppressed: Boolean = false) =
+        mockk<AppSettingsManager> {
+            every { runMode } returns MutableStateFlow(mode)
+            every { eyeProtectionWarningSuppressed } returns MutableStateFlow(eyeProtectionSuppressed)
+        }
 
     private fun useCase(
         aliveStatus: Int = AppAliveStatus.ALIVE,
@@ -27,9 +29,10 @@ class CheckGameReadinessUseCaseTest {
         runMode: RunMode = RunMode.BACKGROUND,
         isPackageInstalled: suspend (String) -> Boolean = { true },
         isEyeProtectionEnabled: () -> Boolean = { false },
+        eyeProtectionSuppressed: Boolean = false,
     ) = CheckGameReadinessUseCase(
         appAliveChecker = FakeAppAliveChecker(aliveStatus, onBackgroundDisplay),
-        appSettings = appSettings(runMode),
+        appSettings = appSettings(runMode, eyeProtectionSuppressed),
         achievementReporter = achievementReporter,
         isPackageInstalled = isPackageInstalled,
         isEyeProtectionEnabled = isEyeProtectionEnabled,
@@ -200,6 +203,17 @@ class CheckGameReadinessUseCaseTest {
             false,
             context(acks = setOf(TaskStartAcknowledgement.EYE_PROTECTION_ENABLED))
         )
+
+        assertEquals(GameReadiness.Ready(gameAliveBeforeStart = true), result)
+    }
+
+    @Test
+    fun eyeProtectionEnabled_suppressed_returnsReady() = runBlocking {
+        // 用户勾选过「不再提示」后，同一警告不再弹出
+        val result = useCase(
+            isEyeProtectionEnabled = { true },
+            eyeProtectionSuppressed = true,
+        )("Official", false, context())
 
         assertEquals(GameReadiness.Ready(gameAliveBeforeStart = true), result)
     }

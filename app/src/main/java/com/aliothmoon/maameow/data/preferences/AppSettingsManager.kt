@@ -243,6 +243,16 @@ class AppSettingsManager internal constructor(
         }
     }
 
+    // 护眼模式启动警告「不再提示」
+    val eyeProtectionWarningSuppressed: StateFlow<Boolean> =
+        setting { it.eyeProtectionWarningSuppressed.toBooleanStrictOrNull() ?: false }
+
+    suspend fun setEyeProtectionWarningSuppressed(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[eyeProtectionWarningSuppressed] = enabled.toString() }
+        }
+    }
+
     // Shizuku 管理器快捷入口是否启用
     val shizukuShortcutEnabled: StateFlow<Boolean> =
         setting { it.shizukuShortcutEnabled.toBooleanStrictOrNull() ?: false }

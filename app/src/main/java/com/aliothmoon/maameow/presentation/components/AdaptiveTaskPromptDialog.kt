@@ -24,11 +24,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -44,6 +46,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -98,6 +101,9 @@ fun AdaptiveTaskPromptDialog(
     buttonLayout: TaskPromptButtonLayout = TaskPromptButtonLayout.HORIZONTAL,
     dismissOnOutsideClick: Boolean = true,
     landscapeAdaptive: Boolean = false,
+    showDontShowAgain: Boolean = false,
+    dontShowAgainChecked: Boolean = false,
+    onDontShowAgainCheckedChange: (Boolean) -> Unit = {},
     content: @Composable (() -> Unit)? = null
 ) {
     if (!visible) return
@@ -125,6 +131,9 @@ fun AdaptiveTaskPromptDialog(
                 buttonLayout = buttonLayout,
                 dismissOnOutsideClick = dismissOnOutsideClick,
                 landscapeAdaptive = landscapeAdaptive,
+                showDontShowAgain = showDontShowAgain,
+                dontShowAgainChecked = dontShowAgainChecked,
+                onDontShowAgainCheckedChange = onDontShowAgainCheckedChange,
                 content = content
             )
         } else {
@@ -143,6 +152,9 @@ fun AdaptiveTaskPromptDialog(
                 buttonLayout = buttonLayout,
                 dismissOnOutsideClick = dismissOnOutsideClick,
                 landscapeAdaptive = landscapeAdaptive,
+                showDontShowAgain = showDontShowAgain,
+                dontShowAgainChecked = dontShowAgainChecked,
+                onDontShowAgainCheckedChange = onDontShowAgainCheckedChange,
                 content = content
             )
         }
@@ -165,6 +177,9 @@ private fun FloatingTaskPromptDialog(
     buttonLayout: TaskPromptButtonLayout,
     dismissOnOutsideClick: Boolean,
     landscapeAdaptive: Boolean,
+    showDontShowAgain: Boolean,
+    dontShowAgainChecked: Boolean,
+    onDontShowAgainCheckedChange: (Boolean) -> Unit,
     content: @Composable (() -> Unit)?
 ) {
     val overlayInteractionSource = remember { MutableInteractionSource() }
@@ -218,6 +233,9 @@ private fun FloatingTaskPromptDialog(
                             interactionSource = cardInteractionSource,
                             onClick = {},
                         ),
+                    showDontShowAgain = showDontShowAgain,
+                    dontShowAgainChecked = dontShowAgainChecked,
+                    onDontShowAgainCheckedChange = onDontShowAgainCheckedChange,
                     content = content
                 )
             }
@@ -241,6 +259,9 @@ private fun MaterialTaskPromptDialog(
     buttonLayout: TaskPromptButtonLayout,
     dismissOnOutsideClick: Boolean,
     landscapeAdaptive: Boolean,
+    showDontShowAgain: Boolean,
+    dontShowAgainChecked: Boolean,
+    onDontShowAgainCheckedChange: (Boolean) -> Unit,
     content: @Composable (() -> Unit)?
 ) {
     Dialog(
@@ -290,6 +311,9 @@ private fun MaterialTaskPromptDialog(
                         horizontal = maxHorizontalInset + 16.dp,
                         vertical = maxVerticalInset,
                     ),
+                showDontShowAgain = showDontShowAgain,
+                dontShowAgainChecked = dontShowAgainChecked,
+                onDontShowAgainCheckedChange = onDontShowAgainCheckedChange,
                 content = content
             )
         }
@@ -312,6 +336,9 @@ private fun TaskPromptCard(
     buttonLayout: TaskPromptButtonLayout,
     landscapeAdaptive: Boolean,
     modifier: Modifier = Modifier,
+    showDontShowAgain: Boolean = false,
+    dontShowAgainChecked: Boolean = false,
+    onDontShowAgainCheckedChange: (Boolean) -> Unit = {},
     content: @Composable (() -> Unit)?
 ) {
     val inLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -405,6 +432,14 @@ private fun TaskPromptCard(
                 }
             }
 
+            if (showDontShowAgain) {
+                Spacer(modifier = Modifier.height(12.dp))
+                TaskPromptDontShowAgainRow(
+                    checked = dontShowAgainChecked,
+                    onCheckedChange = onDontShowAgainCheckedChange,
+                )
+            }
+
             if (inLandscape && landscapeAdaptive) {
                 Spacer(modifier = Modifier.height(12.dp))
                 TaskPromptLandscapeActions(
@@ -430,6 +465,34 @@ private fun TaskPromptCard(
                 )
             }
         }
+    }
+}
+
+/** 「不再提示」勾选行：整行可点，确认按钮（如「仍然启动」）始终在其下方 */
+@Composable
+private fun TaskPromptDontShowAgainRow(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(
+                value = checked,
+                role = Role.Checkbox,
+                onValueChange = onCheckedChange,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = null,
+        )
+        Text(
+            text = stringResource(R.string.task_start_warning_dont_show_again),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

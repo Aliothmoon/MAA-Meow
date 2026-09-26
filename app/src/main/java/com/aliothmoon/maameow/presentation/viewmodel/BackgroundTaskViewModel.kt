@@ -498,9 +498,8 @@ class BackgroundTaskViewModel(
 
             is TaskStartDecision.RequiresConfirmation -> {
                 pendingStart = PendingStart(context.acknowledged(decision.acknowledgement))
-                val message = decision.message
-                showDialog(application.createStartWarningDialog(message))
-                return message
+                showDialog(application.createStartWarningDialog(decision.acknowledgement))
+                return decision.message
             }
         }
 
@@ -600,6 +599,12 @@ class BackgroundTaskViewModel(
         _state.update { it.copy(dialog = null) }
     }
 
+    fun onDialogDontShowAgainChanged(checked: Boolean) {
+        _state.update { s ->
+            s.dialog?.let { s.copy(dialog = it.copy(dontShowAgainChecked = checked)) } ?: s
+        }
+    }
+
     fun onDialogConfirm() {
         when (state.value.dialog?.confirmAction) {
             PanelDialogConfirmAction.DISMISS_ONLY -> {
@@ -607,6 +612,13 @@ class BackgroundTaskViewModel(
             }
 
             PanelDialogConfirmAction.CONFIRM_PENDING_START -> {
+                state.value.dialog
+                    ?.takeIf { it.showDontShowAgain && it.dontShowAgainChecked }
+                    ?.let {
+                        viewModelScope.launch {
+                            appSettingsManager.setEyeProtectionWarningSuppressed(true)
+                        }
+                    }
                 val pending = pendingStart
                 _state.update { it.copy(dialog = null) }
                 pendingStart = null

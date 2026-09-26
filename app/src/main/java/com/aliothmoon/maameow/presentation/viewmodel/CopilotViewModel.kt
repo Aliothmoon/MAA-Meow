@@ -12,6 +12,7 @@ import com.aliothmoon.maameow.data.model.CopilotConfig
 import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
 import com.aliothmoon.maameow.data.model.copilot.CopilotTaskData
 import com.aliothmoon.maameow.data.model.copilot.DifficultyFlags
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.repository.CopilotRepository
 import com.aliothmoon.maameow.data.resource.CopilotResourceProvider
@@ -131,6 +132,7 @@ class CopilotViewModel(
     private val runtimeStateStore: CopilotRuntimeStateStore,
     private val checkGameReadiness: CheckGameReadinessUseCase,
     private val chainState: TaskChainState,
+    private val appSettingsManager: AppSettingsManager,
     private val achievementRepository: AchievementRepository,
 ) : ViewModel() {
 
@@ -1100,6 +1102,13 @@ class CopilotViewModel(
     fun onDialogConfirm() {
         when (_dialog.value?.confirmAction) {
             PanelDialogConfirmAction.CONFIRM_PENDING_START -> {
+                _dialog.value
+                    ?.takeIf { it.showDontShowAgain && it.dontShowAgainChecked }
+                    ?.let {
+                        viewModelScope.launch {
+                            appSettingsManager.setEyeProtectionWarningSuppressed(true)
+                        }
+                    }
                 val pending = pendingStartContext
                 _dialog.value = null
                 pendingStartContext = null
@@ -1115,6 +1124,10 @@ class CopilotViewModel(
     fun onDialogDismiss() {
         _dialog.value = null
         clearPendingStart()
+    }
+
+    fun onDialogDontShowAgainChanged(checked: Boolean) {
+        _dialog.value = _dialog.value?.copy(dontShowAgainChecked = checked)
     }
 
     private fun clearPendingStart() {
@@ -1149,7 +1162,7 @@ class CopilotViewModel(
             )) {
                 is GameReadiness.RequiresConfirmation -> {
                     pendingStartContext = context.acknowledged(readiness.acknowledgement)
-                    _dialog.value = appContext.createStartWarningDialog(readiness.acknowledgement.message)
+                    _dialog.value = appContext.createStartWarningDialog(readiness.acknowledgement)
                     return@launch
                 }
 

@@ -1693,6 +1693,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="task_start_warning_game_not_running">The game is not running. Continuing may fail immediately. Start anyway?</string>
     <string name="task_start_warning_game_not_installed">The game package for the current client type was not detected. Check the client type in Wake Up. Start anyway?</string>
     <string name="task_start_warning_eye_protection_enabled">Eye comfort / night mode is enabled, which may affect color recognition accuracy. Start anyway?</string>
+    <string name="task_start_warning_dont_show_again">Don\'t show again</string>
     <string name="task_start_error_no_task_selected">Please select the tasks to run first</string>
     <string name="task_start_error_conflicting_client_types">The task chain contains different client types. Please keep them consistent</string>
     <string name="task_start_error_no_executable_tasks">There are no executable tasks in the current task chain</string>

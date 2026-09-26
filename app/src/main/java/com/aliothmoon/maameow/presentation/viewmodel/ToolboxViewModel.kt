@@ -206,7 +206,7 @@ class ToolboxViewModel(
             )) {
                 is GameReadiness.RequiresConfirmation -> {
                     pendingStartContext = context.acknowledged(readiness.acknowledgement)
-                    _dialog.value = appContext.createStartWarningDialog(readiness.acknowledgement.message)
+                    _dialog.value = appContext.createStartWarningDialog(readiness.acknowledgement)
                     return@launch
                 }
 
@@ -298,6 +298,13 @@ class ToolboxViewModel(
     fun onDialogConfirm() {
         when (_dialog.value?.confirmAction) {
             PanelDialogConfirmAction.CONFIRM_PENDING_START -> {
+                _dialog.value
+                    ?.takeIf { it.showDontShowAgain && it.dontShowAgainChecked }
+                    ?.let {
+                        viewModelScope.launch {
+                            appSettingsManager.setEyeProtectionWarningSuppressed(true)
+                        }
+                    }
                 val pending = pendingStartContext
                 _dialog.value = null
                 pendingStartContext = null
@@ -312,6 +319,10 @@ class ToolboxViewModel(
         pendingStartContext = null
         pendingGachaOnce = null
         _dialog.value = null
+    }
+
+    fun onDialogDontShowAgainChanged(checked: Boolean) {
+        _dialog.value = _dialog.value?.copy(dontShowAgainChecked = checked)
     }
 
     fun onStop() {

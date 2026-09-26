@@ -39,6 +39,10 @@ data class AppSettings(
     @PrefKey(default = "false")
     val skipShizukuCheck: String = "false",
 
+    /** 护眼模式启动警告勾选「不再提示」后置位，之后启动不再弹该警告（其余警告不受影响） */
+    @PrefKey(default = "false")
+    val eyeProtectionWarningSuppressed: String = "false",
+
     /**
      * Shizuku 管理器快捷入口是否启用。
      * 入口包名默认官方 Shizuku，可由用户选择自定义应用。
