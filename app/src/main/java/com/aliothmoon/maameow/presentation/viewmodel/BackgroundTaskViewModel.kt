@@ -612,18 +612,16 @@ class BackgroundTaskViewModel(
             }
 
             PanelDialogConfirmAction.CONFIRM_PENDING_START -> {
-                state.value.dialog
-                    ?.takeIf { it.showDontShowAgain && it.dontShowAgainChecked }
-                    ?.let {
-                        viewModelScope.launch {
-                            appSettingsManager.setEyeProtectionWarningSuppressed(true)
-                        }
-                    }
+                val dialog = state.value.dialog
                 val pending = pendingStart
                 _state.update { it.copy(dialog = null) }
                 pendingStart = null
-                if (pending != null) {
-                    viewModelScope.launch {
+                viewModelScope.launch {
+                    // 先落盘「不再提示」再启动，避免就绪闸门读到旧值
+                    if (dialog != null && dialog.showDontShowAgain && dialog.dontShowAgainChecked) {
+                        appSettingsManager.setEyeProtectionWarningSuppressed(true)
+                    }
+                    if (pending != null) {
                         val message = startTasksInternal(context = pending.context)
                         if (message != null && state.value.dialog == null) {
                             showStartFailedDialog(message)

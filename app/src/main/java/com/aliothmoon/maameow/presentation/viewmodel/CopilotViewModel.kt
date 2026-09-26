@@ -1102,17 +1102,17 @@ class CopilotViewModel(
     fun onDialogConfirm() {
         when (_dialog.value?.confirmAction) {
             PanelDialogConfirmAction.CONFIRM_PENDING_START -> {
-                _dialog.value
-                    ?.takeIf { it.showDontShowAgain && it.dontShowAgainChecked }
-                    ?.let {
-                        viewModelScope.launch {
-                            appSettingsManager.setEyeProtectionWarningSuppressed(true)
-                        }
-                    }
+                val dialog = _dialog.value
                 val pending = pendingStartContext
                 _dialog.value = null
                 pendingStartContext = null
-                if (pending != null) onStart(pending)
+                viewModelScope.launch {
+                    // 先落盘「不再提示」再启动，避免就绪闸门读到旧值
+                    if (dialog != null && dialog.showDontShowAgain && dialog.dontShowAgainChecked) {
+                        appSettingsManager.setEyeProtectionWarningSuppressed(true)
+                    }
+                    if (pending != null) onStart(pending)
+                }
             }
 
             else -> {
