@@ -105,6 +105,7 @@ class CheckGameReadinessUseCase(
         if (context.mode == TaskStartMode.MANUAL
             && !context.acknowledgements.contains(TaskStartAcknowledgement.EYE_PROTECTION_ENABLED)
             && isEyeProtectionEnabled()
+            && !appSettings.eyeProtectionWarningSuppressed.value
         ) {
             return GameReadiness.RequiresConfirmation(TaskStartAcknowledgement.EYE_PROTECTION_ENABLED)
         }

@@ -971,13 +971,25 @@ fun BackgroundTaskView(
 
         val activeDialog = state.dialog ?: copilotDialog ?: toolboxDialog
         val activeDialogCallbacks = when {
-            state.dialog != null -> viewModel::onDialogDismiss to viewModel::onDialogConfirm
-            copilotDialog != null -> copilotViewModel::onDialogDismiss to copilotViewModel::onDialogConfirm
-            toolboxDialog != null -> toolboxViewModel::onDialogDismiss to toolboxViewModel::onDialogConfirm
+            state.dialog != null -> PanelDialogCallbacks(
+                onDismiss = viewModel::onDialogDismiss,
+                onConfirm = viewModel::onDialogConfirm,
+                onDontShowAgainChange = viewModel::onDialogDontShowAgainChanged,
+            )
+            copilotDialog != null -> PanelDialogCallbacks(
+                onDismiss = copilotViewModel::onDialogDismiss,
+                onConfirm = copilotViewModel::onDialogConfirm,
+                onDontShowAgainChange = copilotViewModel::onDialogDontShowAgainChanged,
+            )
+            toolboxDialog != null -> PanelDialogCallbacks(
+                onDismiss = toolboxViewModel::onDialogDismiss,
+                onConfirm = toolboxViewModel::onDialogConfirm,
+                onDontShowAgainChange = toolboxViewModel::onDialogDontShowAgainChanged,
+            )
             else -> null
         }
         activeDialog?.let { dialog ->
-            val (onDismiss, onConfirm) = activeDialogCallbacks!!
+            val callbacks = activeDialogCallbacks!!
             val confirmColor = when (dialog.type) {
                 PanelDialogType.SUCCESS -> MaterialTheme.colorScheme.primary
                 PanelDialogType.WARNING -> MaterialTheme.colorScheme.tertiary
@@ -991,8 +1003,8 @@ fun BackgroundTaskView(
                 visible = true,
                 title = dialogTitle,
                 message = AnnotatedString(dialogMessage),
-                onDismissRequest = onDismiss,
-                onConfirm = onConfirm,
+                onDismissRequest = callbacks.onDismiss,
+                onConfirm = callbacks.onConfirm,
                 confirmText = dialogConfirmText.ifBlank {
                     stringResource(R.string.common_confirm)
                 },
@@ -1005,6 +1017,9 @@ fun BackgroundTaskView(
                 },
                 iconTint = confirmColor,
                 confirmColor = confirmColor,
+                showDontShowAgain = dialog.showDontShowAgain,
+                dontShowAgainChecked = dialog.dontShowAgainChecked,
+                onDontShowAgainCheckedChange = callbacks.onDontShowAgainChange,
             )
         }
 
@@ -1031,6 +1046,13 @@ fun BackgroundTaskView(
 
 /** offset 已钳到边缘，inside 取原始落点 */
 private class DisplayPoint(val offset: IntOffset, val inside: Boolean)
+
+/** 面板弹窗回调按来源 ViewModel 分发（任务链 / 自动战斗 / 工具箱），勾选框回调仅在弹窗带「不再提示」时用到 */
+private class PanelDialogCallbacks(
+    val onDismiss: () -> Unit,
+    val onConfirm: () -> Unit,
+    val onDontShowAgainChange: (Boolean) -> Unit,
+)
 
 private fun viewToVirtualDisplay(
     view: Offset,

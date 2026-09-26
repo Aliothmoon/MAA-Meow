@@ -5,6 +5,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.resolveStartResultMessage
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
+import com.aliothmoon.maameow.domain.usecase.TaskStartAcknowledgement
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogConfirmAction
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogUiState
@@ -42,7 +43,18 @@ internal fun Context.createStartBlockedDialog(message: UiText): PanelDialogUiSta
     )
 }
 
-internal fun Context.createStartWarningDialog(message: UiText): PanelDialogUiState {
+/** 就绪性警告：仅护眼模式警告支持「不再提示」，其余警告每次启动都弹 */
+internal fun Context.createStartWarningDialog(ack: TaskStartAcknowledgement): PanelDialogUiState {
+    return createStartWarningDialog(
+        message = ack.message,
+        showDontShowAgain = ack == TaskStartAcknowledgement.EYE_PROTECTION_ENABLED,
+    )
+}
+
+internal fun Context.createStartWarningDialog(
+    message: UiText,
+    showDontShowAgain: Boolean = false,
+): PanelDialogUiState {
     return PanelDialogUiState(
         type = PanelDialogType.WARNING,
         title = uiTextOf(R.string.toolbox_dialog_start_warning_title),
@@ -50,6 +62,7 @@ internal fun Context.createStartWarningDialog(message: UiText): PanelDialogUiSta
         confirmText = uiTextOf(R.string.toolbox_dialog_start_anyway),
         dismissText = uiTextOf(R.string.common_cancel),
         confirmAction = PanelDialogConfirmAction.CONFIRM_PENDING_START,
+        showDontShowAgain = showDontShowAgain,
     )
 }
 

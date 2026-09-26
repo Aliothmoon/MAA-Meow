@@ -259,6 +259,9 @@ fun ExpandedControlPanel(
             dismissText = dialogDismissText.takeIf { it.isNotBlank() }
                 ?: stringResource(R.string.common_close),
             onConfirm = viewModel::onDialogConfirm,
+            showDontShowAgain = dialog?.showDontShowAgain == true,
+            dontShowAgainChecked = dialog?.dontShowAgainChecked == true,
+            onDontShowAgainCheckedChange = viewModel::onDialogDontShowAgainChanged,
         )
     }
 }

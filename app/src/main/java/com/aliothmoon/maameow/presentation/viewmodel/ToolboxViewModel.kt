@@ -206,7 +206,7 @@ class ToolboxViewModel(
             )) {
                 is GameReadiness.RequiresConfirmation -> {
                     pendingStartContext = context.acknowledged(readiness.acknowledgement)
-                    _dialog.value = appContext.createStartWarningDialog(readiness.acknowledgement.message)
+                    _dialog.value = appContext.createStartWarningDialog(readiness.acknowledgement)
                     return@launch
                 }
 
@@ -298,10 +298,17 @@ class ToolboxViewModel(
     fun onDialogConfirm() {
         when (_dialog.value?.confirmAction) {
             PanelDialogConfirmAction.CONFIRM_PENDING_START -> {
+                val dialog = _dialog.value
                 val pending = pendingStartContext
                 _dialog.value = null
                 pendingStartContext = null
-                if (pending != null) onStart(pending)
+                viewModelScope.launch {
+                    // 先落盘「不再提示」再启动，避免就绪闸门读到旧值
+                    if (dialog != null && dialog.showDontShowAgain && dialog.dontShowAgainChecked) {
+                        appSettingsManager.setEyeProtectionWarningSuppressed(true)
+                    }
+                    if (pending != null) onStart(pending)
+                }
             }
 
             else -> _dialog.value = null
@@ -312,6 +319,10 @@ class ToolboxViewModel(
         pendingStartContext = null
         pendingGachaOnce = null
         _dialog.value = null
+    }
+
+    fun onDialogDontShowAgainChanged(checked: Boolean) {
+        _dialog.value = _dialog.value?.copy(dontShowAgainChecked = checked)
     }
 
     fun onStop() {

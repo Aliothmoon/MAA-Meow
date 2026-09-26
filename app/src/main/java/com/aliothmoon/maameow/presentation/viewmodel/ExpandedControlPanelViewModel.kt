@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.LogItem
 import com.aliothmoon.maameow.data.model.TaskParamProvider
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.launch.PlanSideTaskRunner
 import com.aliothmoon.maameow.domain.service.AchievementReporter
@@ -40,6 +41,7 @@ class ExpandedControlPanelViewModel(
     private val application: Context,
     private val prepareTaskStart: PrepareTaskStartUseCase,
     private val compositionService: MaaCompositionService,
+    private val appSettingsManager: AppSettingsManager,
     private val overlayController: OverlayController,
     private val sessionLogger: MaaSessionLogger,
     private val achievementReporter: AchievementReporter,
@@ -236,6 +238,12 @@ class ExpandedControlPanelViewModel(
         _state.update { it.copy(dialog = null) }
     }
 
+    fun onDialogDontShowAgainChanged(checked: Boolean) {
+        _state.update { s ->
+            s.dialog?.let { s.copy(dialog = it.copy(dontShowAgainChecked = checked)) } ?: s
+        }
+    }
+
     fun onDialogConfirm() {
         when (state.value.dialog?.confirmAction) {
             PanelDialogConfirmAction.DISMISS_ONLY -> {
@@ -243,11 +251,18 @@ class ExpandedControlPanelViewModel(
             }
 
             PanelDialogConfirmAction.CONFIRM_PENDING_START -> {
+                val dialog = state.value.dialog
                 val pending = pendingStartContext
                 _state.update { it.copy(dialog = null) }
                 pendingStartContext = null
-                if (pending != null) {
-                    launchManualStart(pending)
+                viewModelScope.launch {
+                    // 先落盘「不再提示」再启动，避免就绪闸门读到旧值
+                    if (dialog != null && dialog.showDontShowAgain && dialog.dontShowAgainChecked) {
+                        appSettingsManager.setEyeProtectionWarningSuppressed(true)
+                    }
+                    if (pending != null) {
+                        launchManualStart(pending)
+                    }
                 }
             }
 
@@ -300,7 +315,7 @@ class ExpandedControlPanelViewModel(
                 is TaskStartDecision.RequiresConfirmation -> {
                     pendingStartContext = context.acknowledged(decision.acknowledgement)
                     showDialog(
-                        application.createStartWarningDialog(decision.message)
+                        application.createStartWarningDialog(decision.acknowledgement)
                     )
                     return@launch
                 }

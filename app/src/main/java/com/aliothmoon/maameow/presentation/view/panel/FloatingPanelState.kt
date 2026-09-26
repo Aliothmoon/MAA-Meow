@@ -52,5 +52,8 @@ data class PanelDialogUiState(
     val message: UiText,
     val confirmText: UiText = UiText.Empty,
     val dismissText: UiText? = null,
-    val confirmAction: PanelDialogConfirmAction = PanelDialogConfirmAction.DISMISS_ONLY
+    val confirmAction: PanelDialogConfirmAction = PanelDialogConfirmAction.DISMISS_ONLY,
+    /** 确认按钮上方显示「不再提示」勾选框（当前仅护眼模式启动警告启用） */
+    val showDontShowAgain: Boolean = false,
+    val dontShowAgainChecked: Boolean = false,
 )

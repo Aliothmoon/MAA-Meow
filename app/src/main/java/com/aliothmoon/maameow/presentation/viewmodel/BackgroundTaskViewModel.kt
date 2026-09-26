@@ -498,9 +498,8 @@ class BackgroundTaskViewModel(
 
             is TaskStartDecision.RequiresConfirmation -> {
                 pendingStart = PendingStart(context.acknowledged(decision.acknowledgement))
-                val message = decision.message
-                showDialog(application.createStartWarningDialog(message))
-                return message
+                showDialog(application.createStartWarningDialog(decision.acknowledgement))
+                return decision.message
             }
         }
 
@@ -600,6 +599,12 @@ class BackgroundTaskViewModel(
         _state.update { it.copy(dialog = null) }
     }
 
+    fun onDialogDontShowAgainChanged(checked: Boolean) {
+        _state.update { s ->
+            s.dialog?.let { s.copy(dialog = it.copy(dontShowAgainChecked = checked)) } ?: s
+        }
+    }
+
     fun onDialogConfirm() {
         when (state.value.dialog?.confirmAction) {
             PanelDialogConfirmAction.DISMISS_ONLY -> {
@@ -607,11 +612,16 @@ class BackgroundTaskViewModel(
             }
 
             PanelDialogConfirmAction.CONFIRM_PENDING_START -> {
+                val dialog = state.value.dialog
                 val pending = pendingStart
                 _state.update { it.copy(dialog = null) }
                 pendingStart = null
-                if (pending != null) {
-                    viewModelScope.launch {
+                viewModelScope.launch {
+                    // 先落盘「不再提示」再启动，避免就绪闸门读到旧值
+                    if (dialog != null && dialog.showDontShowAgain && dialog.dontShowAgainChecked) {
+                        appSettingsManager.setEyeProtectionWarningSuppressed(true)
+                    }
+                    if (pending != null) {
                         val message = startTasksInternal(context = pending.context)
                         if (message != null && state.value.dialog == null) {
                             showStartFailedDialog(message)
