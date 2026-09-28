@@ -246,6 +246,8 @@ class MaaCompositionService(
                     context.getString(R.string.runlog_game_process_gone, packageName),
                     LogLevel.WARNING
                 )
+                // 游戏进程消失是异常中止，不是用户手动停止；迟到事件由 stop 内部去重。
+                stop(StopOrigin.CALLBACK)
             }
         }
 
@@ -583,9 +585,7 @@ class MaaCompositionService(
     }
 
     private suspend fun stopByRunDurationLimit(limitMinutes: Int) {
-        // 检查与切 STOPPING 须原子，被抢先则交给原流程
-        if (!_state.compareAndSet(MaaExecutionState.RUNNING, MaaExecutionState.STOPPING)) return
-        lastStopOrigin = StopOrigin.RUN_DURATION_LIMIT
+        if (!beginStop(StopOrigin.RUN_DURATION_LIMIT)) return
         try {
             Timber.i("Run duration limit reached: %d min, stopping", limitMinutes)
             sessionLogger.appendAndWait(
@@ -603,6 +603,9 @@ class MaaCompositionService(
 
     /** 启动互斥：前置检查耗时，双入口/双击可能同时穿过 AlreadyRunning 窗口 */
     private val startMutex = Mutex()
+
+    /** 串行化并发用户停止；已有停止流程由状态 CAS 去重 */
+    private val stopMutex = Mutex()
 
     private suspend fun executeStart(
         tasks: List<MaaTaskParams>,
@@ -751,40 +754,60 @@ class MaaCompositionService(
     }
 
     suspend fun stop(origin: StopOrigin = StopOrigin.USER): StopResult {
-        // 先记来源再切状态，TaskEndRegistry 在 STOPPING→IDLE 边沿读取
-        lastStopOrigin = origin
-        setRunState(MaaExecutionState.STOPPING)
-        return performStop()
+        return stopMutex.withLock {
+            // 已在 STARTING/RUNNING 才能发起停止；并发停止或迟到事件直接复用当前流程
+            if (!beginStop(origin)) return@withLock StopResult.Success
+            performStop()
+        }
     }
 
     private suspend fun performStop(): StopResult {
-        sessionLogger.appendAndWait(context.getString(R.string.runlog_task_stopping), LogLevel.INFO)
+        try {
+            sessionLogger.appendAndWait(context.getString(R.string.runlog_task_stopping), LogLevel.INFO)
 
-        return withContext(Dispatchers.IO) {
-            useRemoteService { service ->
-                val maa = service.maaCoreService
-                if (!maa.Running()) {
-                    return@useRemoteService finishStop(StopResult.Success)
-                }
+            return withContext(Dispatchers.IO) {
+                useRemoteService { service ->
+                    val maa = service.maaCoreService
+                    if (!maa.Running()) {
+                        return@useRemoteService finishStop(StopResult.Success)
+                    }
 
-                if (!maa.Stop()) {
-                    return@useRemoteService finishStop(StopResult.Failed)
-                }
+                    if (!maa.Stop()) {
+                        return@useRemoteService finishStop(StopResult.Failed)
+                    }
 
-                // 轮询等待 Core 真正停止，60 秒超时
-                var elapsed = 0
-                while (maa.Running() && elapsed < 60_000) {
-                    delay(100)
-                    elapsed += 100
-                }
+                    // 轮询等待 Core 真正停止，60 秒超时
+                    var elapsed = 0
+                    while (maa.Running() && elapsed < 60_000) {
+                        delay(100)
+                        elapsed += 100
+                    }
 
-                if (maa.Running()) {
-                    finishStop(StopResult.Failed)
-                } else {
-                    finishStop(StopResult.Success)
+                    if (maa.Running()) {
+                        finishStop(StopResult.Failed)
+                    } else {
+                        finishStop(StopResult.Success)
+                    }
                 }
             }
+        } catch (e: CancellationException) {
+            finishStop(StopResult.Failed)
+            throw e
+        } catch (e: Exception) {
+            Timber.e(e, "Stop task failed")
+            return finishStop(StopResult.Failed)
         }
+    }
+
+    /** 原子占用停止流程；只有抢到的调用方允许写入本次停止来源 */
+    private fun beginStop(origin: StopOrigin): Boolean {
+        val started = _state.compareAndSet(MaaExecutionState.RUNNING, MaaExecutionState.STOPPING) ||
+                _state.compareAndSet(MaaExecutionState.STARTING, MaaExecutionState.STOPPING)
+        if (started) {
+            // TaskEndRegistry 只在 STOPPING 的终边读取；收尾前先发布本次来源
+            lastStopOrigin = origin
+        }
+        return started
     }
 
     // 后台模式随会话启停的监视器：游戏存活/漂移看门狗、帧率
