@@ -3,13 +3,12 @@ package com.aliothmoon.maameow.data.resource
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Matrix
 import android.net.Uri
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.exifinterface.media.ExifInterface
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.utils.Misc
+import com.aliothmoon.maameow.utils.orientByExif
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -84,13 +83,6 @@ class BackgroundImageStore(
      */
     suspend fun decodeSource(path: String): Bitmap? = withContext(Dispatchers.IO) {
         runCatching {
-            val orientation = runCatching {
-                ExifInterface(path).getAttributeInt(
-                    ExifInterface.TAG_ORIENTATION,
-                    ExifInterface.ORIENTATION_NORMAL,
-                )
-            }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
-
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeFile(path, bounds)
             if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching null
@@ -103,36 +95,7 @@ class BackgroundImageStore(
                 path,
                 BitmapFactory.Options().apply { inSampleSize = sample },
             ) ?: return@runCatching null
-
-            if (orientation == ExifInterface.ORIENTATION_NORMAL ||
-                orientation == ExifInterface.ORIENTATION_UNDEFINED
-            ) {
-                return@runCatching decoded
-            }
-            val matrix = Matrix().apply {
-                when (orientation) {
-                    ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> postScale(-1f, 1f)
-                    ExifInterface.ORIENTATION_ROTATE_180 -> postRotate(180f)
-                    ExifInterface.ORIENTATION_FLIP_VERTICAL -> postScale(1f, -1f)
-                    ExifInterface.ORIENTATION_TRANSPOSE -> {
-                        postRotate(90f)
-                        postScale(-1f, 1f)
-                    }
-
-                    ExifInterface.ORIENTATION_ROTATE_90 -> postRotate(90f)
-                    ExifInterface.ORIENTATION_TRANSVERSE -> {
-                        postRotate(-90f)
-                        postScale(-1f, 1f)
-                    }
-
-                    ExifInterface.ORIENTATION_ROTATE_270 -> postRotate(270f)
-                }
-            }
-            try {
-                Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
-            } finally {
-                decoded.recycle()
-            }
+            orientByExif(path, decoded)
         }.onFailure { Timber.e(it, "decodeSource failed") }.getOrNull()
     }
 

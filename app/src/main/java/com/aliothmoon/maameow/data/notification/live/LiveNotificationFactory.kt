@@ -115,8 +115,6 @@ class LiveNotificationFactory(
         hyperIsland: Boolean = false,
     ): Notification {
         ensureChannels()
-        // 结果/测试通知不经过进度会话，没有解码触发点：构建时预热一次自定义图标
-        trackerIcons.warmUp()
         // 岛进度走 HIGH 无声专属通道；通知级 setSilent 会压掉浮出
         val channelId = when {
             hyperIsland && session.category == LiveCategory.PROGRESS -> LiveNotifyIds.CHANNEL_ISLAND
@@ -146,8 +144,8 @@ class LiveNotificationFactory(
         if (hyperIsland) {
             builder.setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             builder.setCategory(categoryOf(session))
-            // 岛上状态栏图标跟随用户设置（原生 Live Updates 保持应用默认图标不变）
-            trackerIcons.bitmapOrNull()?.let { builder.setSmallIcon(IconCompat.createWithBitmap(it)) }
+            // 岛上状态栏图标跟随设置，原生保持应用图标
+            customIconCompat()?.let(builder::setSmallIcon)
             if (session.category == LiveCategory.PROGRESS) {
                 val percent = session.progressPercent()
                 if (percent == null) {
@@ -159,11 +157,7 @@ class LiveNotificationFactory(
                 builder.setStyle(NotificationCompat.BigTextStyle().bigText(session.text))
             }
         } else {
-            if (session.capsuleText.isNotBlank()) {
-                builder.setShortCriticalText(session.capsuleText)
-            } else if (session.capsuleHidden) {
-                builder.setShortCriticalText("")
-            }
+            style.capsuleText(session)?.let(builder::setShortCriticalText)
             builder.setCategory(categoryOf(session))
             builder.setStyle(
                 if (session.category == LiveCategory.PROGRESS) {
@@ -217,7 +211,9 @@ class LiveNotificationFactory(
         return progressStyle
     }
 
+    private fun customIconCompat(): IconCompat? =
+        trackerIcons.bitmapOrNull()?.let(IconCompat::createWithBitmap)
+
     private fun trackerIconCompat(): IconCompat =
-        trackerIcons.bitmapOrNull()?.let { IconCompat.createWithBitmap(it) }
-            ?: IconCompat.createWithResource(appContext, R.drawable.ic_progress_tracker)
+        customIconCompat() ?: IconCompat.createWithResource(appContext, R.drawable.ic_progress_tracker)
 }

@@ -1,8 +1,10 @@
 package com.aliothmoon.maameow.data.preferences
 
 import android.content.Context
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.datastore.core.DataStore
+import com.aliothmoon.maameow.data.notification.live.LiveUpdateStyle
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
@@ -415,22 +417,26 @@ class AppSettingsManager internal constructor(
         NONE(R.string.live_update_chip_none),
     }
 
-    enum class LiveUpdateColorScheme(@param:StringRes val labelRes: Int) {
-        DEFAULT(R.string.live_update_color_default),
-        BLUE(R.string.live_update_color_blue),
-        GREEN(R.string.live_update_color_green),
-        ORANGE(R.string.live_update_color_orange),
-        PURPLE(R.string.live_update_color_purple),
-        PINK(R.string.live_update_color_pink),
-        TEAL(R.string.live_update_color_teal),
-        CUSTOM(R.string.live_update_color_custom),
+    // argb 为 null 的由 LiveUpdateStyle 另行解析
+    enum class LiveUpdateColorScheme(@param:StringRes val labelRes: Int, val argb: Int?) {
+        DEFAULT(R.string.live_update_color_default, null),
+        BLUE(R.string.live_update_color_blue, LiveUpdateStyle.COLOR_ACTIVE),
+        GREEN(R.string.live_update_color_green, LiveUpdateStyle.COLOR_COMPLETED),
+        ORANGE(R.string.live_update_color_orange, 0xFFFF9800.toInt()),
+        PURPLE(R.string.live_update_color_purple, 0xFF9C27B0.toInt()),
+        PINK(R.string.live_update_color_pink, 0xFFE91E63.toInt()),
+        TEAL(R.string.live_update_color_teal, 0xFF009688.toInt()),
+        CUSTOM(R.string.live_update_color_custom, null),
     }
 
-    enum class LiveUpdateTrackerIcon(@param:StringRes val labelRes: Int) {
-        DEFAULT(R.string.live_update_icon_default),
-        LOGO(R.string.live_update_icon_logo),
-        DOT(R.string.live_update_icon_dot),
-        CUSTOM(R.string.live_update_icon_custom),
+    enum class LiveUpdateTrackerIcon(
+        @param:StringRes val labelRes: Int,
+        @param:DrawableRes val iconRes: Int?,
+    ) {
+        DEFAULT(R.string.live_update_icon_default, R.drawable.ic_progress_tracker),
+        LOGO(R.string.live_update_icon_logo, R.drawable.ic_maa_logo),
+        DOT(R.string.live_update_icon_dot, R.drawable.ic_tracker_dot),
+        CUSTOM(R.string.live_update_icon_custom, null),
     }
 
     // 实况通知总开关，关闭即退回普通通知

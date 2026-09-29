@@ -84,27 +84,27 @@ data class AppSettings(
     @PrefKey(default = "true")
     val liveIslandXmsfBypass: String = "true",
 
-    /** Live Updates 通知是否启用（Android 16+ promoted ongoing / ProgressStyle 展示）。 */
+    /** 实况通知总开关 */
     @PrefKey(default = "true")
     val liveUpdateEnabled: String = "true",
 
-    /** Live Updates 状态栏 chip 短关键文本内容：BOTH=进度+任务名 / PROGRESS=仅进度 / TASK=仅任务名 / LOG=最新日志 / NONE=不显示。 */
+    /** 实况短文本内容，取值见 LiveUpdateChipContent */
     @PrefKey(default = "BOTH")
     val liveUpdateChipContent: String = "BOTH",
 
-    /** Live Updates 进度条颜色方案：DEFAULT/BLUE/GREEN/ORANGE/PURPLE/PINK/TEAL/CUSTOM。 */
+    /** 实况进度条配色，取值见 LiveUpdateColorScheme */
     @PrefKey(default = "DEFAULT")
     val liveUpdateColorScheme: String = "DEFAULT",
 
-    /** Live Updates 自定义主色 HEX（如 "#2196F3"），仅 liveUpdateColorScheme=CUSTOM 时使用。 */
+    /** 自定义主色 HEX，仅 CUSTOM 配色生效 */
     @PrefKey(default = "")
     val liveUpdateCustomColor: String = "",
 
-    /** Live Updates 追踪图标：DEFAULT=合成玉 / LOGO=MAA 图标 / DOT=圆点 / CUSTOM=自定义图片。 */
+    /** 实况图标，取值见 LiveUpdateTrackerIcon */
     @PrefKey(default = "DEFAULT")
     val liveUpdateTrackerIcon: String = "DEFAULT",
 
-    /** Live Updates 自定义追踪图标文件路径，仅 liveUpdateTrackerIcon=CUSTOM 时使用。 */
+    /** 自定义图标文件路径，仅 CUSTOM 图标生效 */
     @PrefKey(default = "")
     val liveUpdateCustomTrackerPath: String = "",
 

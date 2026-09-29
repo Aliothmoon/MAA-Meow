@@ -7,10 +7,10 @@ import android.graphics.drawable.Icon
 import android.os.Bundle
 import androidx.core.graphics.drawable.toBitmap
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager.LiveUpdateChipContent
 import com.aliothmoon.maameow.domain.notification.LiveBackend
 import com.aliothmoon.maameow.domain.notification.LiveCapability
 import com.aliothmoon.maameow.domain.notification.LiveCategory
-import com.aliothmoon.maameow.domain.notification.LiveChipMode
 import com.aliothmoon.maameow.domain.notification.LiveNotifyIds
 import com.aliothmoon.maameow.domain.notification.LiveSession
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
@@ -104,8 +104,9 @@ class HyperOsFocusPublisher(
         xmsfGate.acquire()
     }
 
-    /** 释放进度期间攥着的断网闸门；后端切走时由 Router 调用 */
-    fun releaseProgress() {
+    override fun onDeactivated() = releaseProgress()
+
+    private fun releaseProgress() {
         val held = synchronized(holdLock) {
             val previous = progressHeld
             progressHeld = false
@@ -142,8 +143,6 @@ class HyperOsFocusPublisher(
             .take(16)
         val headline = session.title.take(40)
         val body = session.text.take(80)
-        // 岛左栏是 title + content 两行、另有 AOD 短文案，与原生胶囊的单行字符串结构不同，
-        // 因此按「状态栏显示内容」各自组合，避免照搬原生文案造成重复/误导
         val island = islandTexts(session, percent)
         val aod = if (session.category == LiveCategory.RESULT) {
             session.capsuleText.take(8)
@@ -203,7 +202,7 @@ class HyperOsFocusPublisher(
                             pic = appPic
                         }
                         textInfo {
-                            // 左栏=场景与进度：进度会话按「状态栏显示内容」的两行结构填，不再照搬单行胶囊文案
+                            // 左栏=场景与进度
                             this.title = (if (isProgress) island.leftTitle else appLabel).take(16)
                             content = (if (isProgress) island.leftContent else session.progressLabel)
                                 .orEmpty()
@@ -213,9 +212,7 @@ class HyperOsFocusPublisher(
                     }
                     textInfo = TextInfo().apply {
                         title =
-                            (if (isProgress) stripProgressPrefix(session, body) else headline).take(
-                                18
-                            )
+                            (if (isProgress) session.statusLine() else headline).take(18)
                         content = body.take(32)
                         showHighlightColor = true
                         narrowFont = true
@@ -252,39 +249,28 @@ class HyperOsFocusPublisher(
         return Icon.createWithBitmap(bitmap)
     }
 
-    /** n/m 已在左栏，右栏标题剥掉 "n/m · " 前缀避免重复 */
-    private fun stripProgressPrefix(session: LiveSession, body: String): String {
-        val label = session.progressLabel ?: return body
-        return body.removePrefix("$label · ")
-    }
-
     private data class IslandTexts(
         val leftTitle: String,
         val leftContent: String,
         val aod: String,
     )
 
-    /**
-     * 按「状态栏显示内容」组合岛上的短文本。
-     *
-     * 原生胶囊是一条字符串，岛左栏是 title + content 两行、另有 AOD，两者布局不同：
-     * 这里按岛的结构重新分配，BOTH 保持「任务名 + 进度」的原有两行，避免任务名重复出现。
-     */
+    // 岛左栏两行 + AOD，与原生单行胶囊结构不同，按显示内容各自组合
     private fun islandTexts(session: LiveSession, percent: Int?): IslandTexts {
         val taskName = session.title.take(16)
         val progressText = session.progressLabel.orEmpty().take(8)
         val percentText = percent?.let { "$it%" } ?: "…"
-        val logText = stripProgressPrefix(session, session.text).take(8)
-        return when (session.chipMode) {
-            LiveChipMode.BOTH -> IslandTexts(taskName, progressText, percentText)
-            LiveChipMode.PROGRESS -> IslandTexts(progressText, "", percentText)
-            LiveChipMode.TASK -> IslandTexts(taskName, "", taskName)
-            LiveChipMode.LOG -> IslandTexts(taskName, logText, logText)
-            LiveChipMode.NONE -> IslandTexts("", "", "")
+        val logText = session.statusLine().take(8)
+        return when (style.chipContent) {
+            LiveUpdateChipContent.BOTH -> IslandTexts(taskName, progressText, percentText)
+            LiveUpdateChipContent.PROGRESS -> IslandTexts(progressText, "", percentText)
+            LiveUpdateChipContent.TASK -> IslandTexts(taskName, "", taskName)
+            LiveUpdateChipContent.LOG -> IslandTexts(taskName, logText, logText)
+            LiveUpdateChipContent.NONE -> IslandTexts("", "", "")
         }
     }
 
-    /** 用户在设置里选的图标；默认方案返回 null，岛沿用应用图标 */
+    // DEFAULT 返回 null，岛沿用应用图标
     private fun trackerIcon(): Icon? =
         trackerIcons.bitmapOrNull()?.let { Icon.createWithBitmap(it) }
 

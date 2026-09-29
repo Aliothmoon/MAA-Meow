@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.presentation.viewmodel
 import android.app.Application
 import android.graphics.Bitmap
 import android.net.Uri
-import android.os.Build
 import android.os.SystemClock
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.graphics.ImageBitmap
@@ -16,6 +15,7 @@ import com.aliothmoon.maameow.data.api.message
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
+import com.aliothmoon.maameow.data.notification.live.AospPromotedDetector
 import com.aliothmoon.maameow.data.notification.live.HyperOsFocusDetector
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
@@ -80,6 +80,7 @@ class SettingsViewModel(
     private val switchCoreDataLocation: SwitchCoreDataLocationUseCase,
     private val compositionService: MaaCompositionService,
     private val yituliuApiService: YituliuApiService,
+    private val aospPromotedDetector: AospPromotedDetector,
     private val hyperOsFocusDetector: HyperOsFocusDetector,
 ) : ViewModel() {
 
@@ -171,9 +172,9 @@ class SettingsViewModel(
         }
     }
 
-    // 原生实时更新要 16+，超级岛不看系统版本
+    // 同 LiveCapability.liveSupported，这里不走 capability 的跨进程查询
     private val liveUpdateSupported =
-        Build.VERSION.SDK_INT >= 36 || hyperOsFocusDetector.isLikelyDevice()
+        aospPromotedDetector.isApiSupported() || hyperOsFocusDetector.isLikelyDevice()
 
     /** 样式页入口：设备支持且已开启实况通知 */
     val liveUpdateEntryVisible: StateFlow<Boolean> = appSettingsManager.liveUpdateEnabled

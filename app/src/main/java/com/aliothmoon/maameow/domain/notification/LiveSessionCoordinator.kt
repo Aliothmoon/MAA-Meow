@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager.EventNotificationLevel
+import kotlinx.coroutines.flow.Flow
 
 class LiveSessionCoordinator(
     private val publisher: LiveUpdatePublisher,
@@ -21,6 +22,9 @@ class LiveSessionCoordinator(
 
     val progressNotifyId: Int
         get() = LiveNotifyIds.PROGRESS
+
+    val renderChanges: Flow<Unit>
+        get() = publisher.renderChanges
 
     fun beginRun(): Long = synchronized(lock) {
         cancelAllResultTimeoutsLocked()
@@ -67,6 +71,14 @@ class LiveSessionCoordinator(
             }
             val next = slot.updateProgress(session) ?: return
             publisher.publish(next)
+        }
+    }
+
+    /** 渲染配置变了，原样重发当前进度；内容没变，故绕过指纹去重 */
+    fun republishProgress(runToken: Long) {
+        synchronized(lock) {
+            if (!gate.isCurrent(runToken)) return
+            slot.currentProgress()?.let(publisher::publish)
         }
     }
 

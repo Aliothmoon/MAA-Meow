@@ -8,6 +8,9 @@ import com.aliothmoon.maameow.domain.notification.LiveBackend
 import com.aliothmoon.maameow.domain.notification.LiveCapability
 import com.aliothmoon.maameow.domain.notification.LiveSession
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.drop
 
 class LivePublisherRouter(
     context: Context,
@@ -29,9 +32,20 @@ class LivePublisherRouter(
     private val aosp = AospPromotedPublisher(appContext, factory, promotedDetector)
     private val plain = PlainNotificationPublisher(appContext, factory, promotedDetector)
 
-    /** 上次使用的后端，切换时释放旧后端资源 */
     @Volatile
-    private var lastBackend: LiveBackend? = null
+    private var active: LiveUpdatePublisher? = null
+
+    override val renderChanges: Flow<Unit> =
+        combine(
+            listOf(
+                appSettings.liveUpdateEnabled,
+                appSettings.liveIslandXmsfBypass,
+                appSettings.liveUpdateChipContent,
+                appSettings.liveUpdateColorScheme,
+                appSettings.liveUpdateCustomColor,
+                trackerIcons.icon,
+            )
+        ) { }.drop(1)
 
     override val capability: LiveCapability
         get() = snapshot()
@@ -81,17 +95,14 @@ class LivePublisherRouter(
     }
 
     private fun current(): LiveUpdatePublisher {
-        val backend = snapshot().backend
-        val previous = lastBackend
-        // 从岛切走时释放断网闸门，否则小米推送会被压到任务结束；通知本身由新后端同 id 覆盖
-        if (previous == LiveBackend.HYPER_OS_FOCUS && backend != LiveBackend.HYPER_OS_FOCUS) {
-            hyper.releaseProgress()
-        }
-        lastBackend = backend
-        return when (backend) {
+        val next = when (snapshot().backend) {
             LiveBackend.HYPER_OS_FOCUS -> hyper
             LiveBackend.AOSP_PROMOTED -> aosp
             LiveBackend.PLAIN -> plain
         }
+        // 切走时让旧后端释放资源（岛的断网闸门），通知由新后端同 id 覆盖
+        active?.takeIf { it !== next }?.onDeactivated()
+        active = next
+        return next
     }
 }

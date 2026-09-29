@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -71,12 +72,10 @@ class NotificationSettingsViewModel(
     init {
         // 这些开关都会改变后端选择，展示方式得跟着落盘值走，不能等下次 onResume
         viewModelScope.launch {
-            appSettingsManager.liveIslandXmsfBypass.drop(1).collect {
-                _liveCapability.value = livePublisher.capability
-            }
-        }
-        viewModelScope.launch {
-            appSettingsManager.liveUpdateEnabled.drop(1).collect {
+            merge(
+                appSettingsManager.liveIslandXmsfBypass.drop(1),
+                appSettingsManager.liveUpdateEnabled.drop(1),
+            ).collect {
                 _liveCapability.value = livePublisher.capability
             }
         }

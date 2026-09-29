@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.presentation.view.notification
 
-import android.os.Build
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -78,8 +77,6 @@ fun NotificationSettingsView(
     val liveCapability by viewModel.liveCapability.collectAsStateWithLifecycle()
     val liveIslandXmsfBypass by viewModel.liveIslandXmsfBypass.collectAsStateWithLifecycle()
     val liveUpdateEnabled by viewModel.liveUpdateEnabled.collectAsStateWithLifecycle()
-    // 原生实时更新要 16+，超级岛不看系统版本
-    val liveUpdateSupported = Build.VERSION.SDK_INT >= 36 || liveCapability.focusLikely
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -136,7 +133,7 @@ fun NotificationSettingsView(
                         description = styleLabel,
                         titleColor = contentColor,
                     )
-                    if (liveUpdateSupported) {
+                    if (liveCapability.liveSupported) {
                         ListItemDivider()
                         SettingRow(
                             title = stringResource(R.string.notification_live_enable),

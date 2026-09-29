@@ -8,10 +8,7 @@ import android.content.Intent
 import android.os.IBinder
 import android.os.SystemClock
 import com.aliothmoon.maameow.R
-import com.aliothmoon.maameow.data.notification.live.TrackerIconStore
-import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.notification.LiveCategory
-import com.aliothmoon.maameow.domain.notification.LiveChipMode
 import com.aliothmoon.maameow.domain.notification.LiveNotifyIds
 import com.aliothmoon.maameow.domain.notification.LiveSession
 import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
@@ -25,10 +22,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
@@ -71,30 +66,20 @@ class TaskExecutionService : Service() {
     private val sessionLogger: MaaSessionLogger by inject()
     private val taskChainStatusTracker: TaskChainStatusTracker by inject()
     private val liveCoordinator: LiveSessionCoordinator by inject()
-    private val appSettingsManager: AppSettingsManager by inject()
-    private val trackerIconStore: TrackerIconStore by inject()
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var progressJob: Job? = null
-    private var styleJob: Job? = null
+    private var renderJob: Job? = null
     private var boundToken: Long = 0L
     private var observeToken: Long = 0L
 
     /** startForeground 被系统拒绝后本实例已 stopSelf，排队中的 start 不再重试 */
     private var foregroundDenied = false
 
-    /**
-     * 本实例是否仍存活。图标解码在独立 scope 上完成，任务结束/服务销毁后回调仍可能到达，
-     * 需据此拦截，避免把已收尾的进度会话重新打开、在 stopSelf 之后又发出一版进度通知。
-     */
-    @Volatile
-    private var serviceAlive = false
-
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
-        serviceAlive = true
         bindToken()
         // 必须先 startForeground，再做任何可能读到 IDLE/ERROR 并 stop 的逻辑，
         // 避免与 Composition 快速失败/stopService 竞态触发
@@ -107,7 +92,7 @@ class TaskExecutionService : Service() {
             return
         }
         ensureObserveProgress()
-        ensureObserveStyleChanges()
+        ensureObserveRenderChanges()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -123,7 +108,7 @@ class TaskExecutionService : Service() {
             handleTerminalState(boundToken, snapshot)
         } else {
             ensureObserveProgress()
-            ensureObserveStyleChanges()
+            ensureObserveRenderChanges()
         }
         return START_NOT_STICKY
     }
@@ -131,7 +116,6 @@ class TaskExecutionService : Service() {
     override fun onDestroy() {
         // 系统侧终止与 StateFlow 收集存在竞态；此处兜底确保 Live Update 通知被清除。
         // observeProgress 的 collector 由 serviceScope.cancel() 结构化取消
-        serviceAlive = false
         progressJob = null
         removeActiveNotification(boundToken)
         serviceScope.cancel()
@@ -276,22 +260,16 @@ class TaskExecutionService : Service() {
         val title = activeName ?: getString(R.string.notification_task_running_title)
         val label = progress.label
         val contentText = if (label != null) "$label · $statusText" else statusText
-        // 自定义图标未缓存时先发默认图标，解码完成后回来刷新
-        trackerIconStore.ensureDecoded { refreshActiveNotification() }
         // AOSP 胶囊只有一个字符串：任务名在前，系统从尾部截断时先保住它
-        // 不预截断（8 字上限只是超级岛摘要态的要求）
-        val chipContent = appSettingsManager.liveUpdateChipContent.value
-        val capsule = buildCapsuleText(chipContent, statusText, label, activeName)
+        // 不预截断（8 字上限只是超级岛摘要态的要求）；任务链未登记时留空，由下游决定不设胶囊
+        val capsule = listOfNotNull(activeName, label).joinToString(" ")
         return LiveSession(
             sessionId = LiveNotifyIds.PROGRESS_SESSION,
             category = LiveCategory.PROGRESS,
             title = title,
             text = contentText,
             capsuleText = capsule,
-            // 仅用户明确选择「不显示」时显式清空 chip，其余留空交给下游决定不设胶囊
-            capsuleHidden = chipContent == AppSettingsManager.LiveUpdateChipContent.NONE,
-            chipMode = chipContent.toLiveChipMode(),
-            styleRevision = currentStyleRevision(),
+            taskName = activeName,
             progressCurrent = progress.current,
             progressMax = progress.max,
             progressLabel = progress.label,
@@ -302,73 +280,12 @@ class TaskExecutionService : Service() {
         )
     }
 
-    private fun buildCapsuleText(
-        chipContent: AppSettingsManager.LiveUpdateChipContent,
-        statusText: String,
-        progressLabel: String?,
-        activeTaskName: String?,
-    ): String = when (chipContent) {
-        AppSettingsManager.LiveUpdateChipContent.BOTH -> when {
-            progressLabel != null && activeTaskName != null -> "$activeTaskName $progressLabel"
-            progressLabel != null -> progressLabel
-            activeTaskName != null -> activeTaskName
-            else -> ""
+    /** 样式或后端设置变化时重发当前进度，不等下一次任务事件 */
+    private fun ensureObserveRenderChanges() {
+        if (renderJob?.isActive == true) return
+        renderJob = serviceScope.launch {
+            liveCoordinator.renderChanges.collect { liveCoordinator.republishProgress(boundToken) }
         }
-
-        AppSettingsManager.LiveUpdateChipContent.PROGRESS -> progressLabel ?: ""
-        AppSettingsManager.LiveUpdateChipContent.TASK -> activeTaskName ?: ""
-        AppSettingsManager.LiveUpdateChipContent.LOG -> statusText
-        AppSettingsManager.LiveUpdateChipContent.NONE -> ""
-    }
-
-    /** 自定义图标解码完成后刷新当前活动通知，让新图标立即生效 */
-    private fun refreshActiveNotification() {
-        // 令牌只代表「本轮的」，收尾后仍可能为当前令牌：还要确认服务存活且任务未进终态，
-        // 否则会把已 cancel 的进度会话重新打开
-        if (!serviceAlive) return
-        if (!liveCoordinator.isCurrent(boundToken)) return
-        if (isTerminal(compositionService.state.value)) return
-        updateNotification(boundToken, currentSnapshot())
-    }
-
-    /**
-     * 影响通知外观或后端选择的设置项；与图标缓存版本一起合成 styleRevision 参与指纹，
-     * 否则改样式后指纹不变，刷新会被协调器去重丢掉
-     */
-    private val styleSettings: List<StateFlow<Any>> by lazy {
-        with(appSettingsManager) {
-            listOf(
-                liveUpdateEnabled,
-                liveIslandXmsfBypass,
-                liveUpdateChipContent,
-                liveUpdateColorScheme,
-                liveUpdateCustomColor,
-                liveUpdateTrackerIcon,
-                liveUpdateCustomTrackerPath,
-            )
-        }
-    }
-
-    private fun currentStyleRevision(): Int =
-        (styleSettings.map { it.value } + trackerIconStore.revision()).hashCode()
-
-    /** 样式变化即刷新进行中的通知；直接监听这些 StateFlow，保证刷新时读到的是新值 */
-    private fun ensureObserveStyleChanges() {
-        if (styleJob?.isActive == true) return
-        styleJob = serviceScope.launch {
-            combine(styleSettings) { it.toList() }
-                .drop(1)
-                .collect { refreshActiveNotification() }
-        }
-    }
-
-    /** 设置层的短文本模式转成领域枚举，供原生与超级岛各自渲染 */
-    private fun AppSettingsManager.LiveUpdateChipContent.toLiveChipMode(): LiveChipMode = when (this) {
-        AppSettingsManager.LiveUpdateChipContent.BOTH -> LiveChipMode.BOTH
-        AppSettingsManager.LiveUpdateChipContent.PROGRESS -> LiveChipMode.PROGRESS
-        AppSettingsManager.LiveUpdateChipContent.TASK -> LiveChipMode.TASK
-        AppSettingsManager.LiveUpdateChipContent.LOG -> LiveChipMode.LOG
-        AppSettingsManager.LiveUpdateChipContent.NONE -> LiveChipMode.NONE
     }
 
     private fun defaultStatusText(state: MaaExecutionState): String = when (state) {

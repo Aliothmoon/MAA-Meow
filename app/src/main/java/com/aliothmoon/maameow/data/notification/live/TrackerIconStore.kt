@@ -2,137 +2,103 @@ package com.aliothmoon.maameow.data.notification.live
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.net.Uri
 import androidx.annotation.DrawableRes
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.graphics.drawable.toBitmap
-import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicReference
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager.LiveUpdateTrackerIcon
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 
-/**
- * 用户自定义的通知图标来源，统一输出位图。
- *
- * 通知每秒刷新，不能每次都做文件 IO / 位图解码，命中缓存即同步返回；
- * 内置图标也在这里转成位图（状态栏与超级岛焦点负载对位图支持最稳）。
- * 自定义图片由 [ensureDecoded] 在 IO 线程解码，完成后回调刷新当前通知。
- *
- * [ConcurrentHashMap] 不允许 null，故成功位图与失败/无效标记分开存，
- * 避免解码失败时写入 null 抛异常，也避免每次刷新都重试解析。
- */
+/** 实况通知图标：按设置产出位图，并管理自定义图片文件 */
 class TrackerIconStore(
     context: Context,
     private val appSettings: AppSettingsManager,
 ) {
     private val appContext = context.applicationContext
-    private val cache = ConcurrentHashMap<String, Bitmap>()
-    private val unavailable = ConcurrentHashMap.newKeySet<String>()
-    private val iconRevision = AtomicInteger(0)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val decodeJob = AtomicReference<Job?>(null)
+    private val fileMutex = Mutex()
 
-    /** 当前设置下的自定义图标位图；DEFAULT 返回 null，由调用方沿用各自默认图标 */
-    fun bitmapOrNull(): Bitmap? = when (appSettings.liveUpdateTrackerIcon.value) {
-        AppSettingsManager.LiveUpdateTrackerIcon.DEFAULT -> null
-        AppSettingsManager.LiveUpdateTrackerIcon.LOGO -> presetBitmap(R.drawable.ic_maa_logo)
-        AppSettingsManager.LiveUpdateTrackerIcon.DOT -> presetBitmap(R.drawable.ic_tracker_dot)
-        AppSettingsManager.LiveUpdateTrackerIcon.CUSTOM -> customBitmap()
-    }
+    private val iconDir: File
+        get() = File(appContext.filesDir, ICON_DIR)
 
-    /**
-     * 图标状态版本号：解码完成、缓存清理等会改变实际图标的变化时递增。
-     * 供通知侧判断「外观变了」——图标解码不改 LiveSession 其它字段，只看指纹会被去重丢掉。
-     */
-    fun revision(): Int = iconRevision.get()
+    /** 当前图标；DEFAULT 或解码失败为 null，由调用方用各自默认图标。mapLatest 丢弃过期解码 */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val icon: StateFlow<Bitmap?> =
+        combine(
+            appSettings.liveUpdateTrackerIcon,
+            appSettings.liveUpdateCustomTrackerPath,
+        ) { type, path -> type to path }
+            .mapLatest { (type, path) -> load(type, path) }
+            .stateIn(scope, SharingStarted.Eagerly, null)
 
-    /**
-     * 预热解码：结果/测试通知不经过进度会话（toSession 才有解码触发点），
-     * 在通知构建时调用一次，缓存未命中就排一次后台解码。
-     */
-    fun warmUp() = ensureDecoded {}
+    fun bitmapOrNull(): Bitmap? = icon.value
 
-    /** 自定义图标是否还没按当前设置解码完成 */
-    fun needsDecode(): Boolean {
-        if (appSettings.liveUpdateTrackerIcon.value != AppSettingsManager.LiveUpdateTrackerIcon.CUSTOM) {
-            return false
+    /** 导入选中的图片；不是图片或复制失败返回 false，设置不变 */
+    suspend fun importCustom(uri: Uri): Boolean = withContext(Dispatchers.IO) {
+        fileMutex.withLock {
+            val file = copyToIconDir(uri) ?: return@withLock false
+            if (!TrackerIconDecoder.isImage(file.path)) {
+                file.delete()
+                return@withLock false
+            }
+            // 先切新路径再删旧图，设置不会指向已删文件；文件名带时间戳，同图重选也会换路径
+            appSettings.setLiveUpdateCustomTrackerPath(file.absolutePath)
+            iconDir.listFiles()?.forEach { if (it != file) it.delete() }
+            true
         }
-        val path = appSettings.liveUpdateCustomTrackerPath.value
-        if (path.isEmpty()) return false
-        val key = keyOf(path)
-        return !cache.containsKey(key) && !unavailable.contains(key)
     }
 
-    /**
-     * 自定义图标未缓存时在 IO 解码，成功后回调（主线程）。
-     * 同一时刻只允许一个解码任务；切换路径产生的过期结果直接丢弃，不覆盖新路径。
-     */
-    fun ensureDecoded(onReady: () -> Unit) {
-        if (!needsDecode()) return
-        if (decodeJob.get()?.isActive == true) return
-        val path = appSettings.liveUpdateCustomTrackerPath.value
-        val key = keyOf(path)
-        pruneStaleCustomEntries(key)
-        val job = scope.launch(start = CoroutineStart.LAZY) {
-            decodeToCache(key, path)
-            // 先清引用再回调：路径在解码途中改变时，回调里的新解码请求才不会被这个
-            // 仍在收尾的任务挡掉（否则新路径会停在回退图标）
-            decodeJob.set(null)
-            withContext(Dispatchers.Main) { onReady() }
+    /** 清除自定义图片并回落默认图标 */
+    suspend fun clearCustom() = withContext(Dispatchers.IO) {
+        fileMutex.withLock {
+            appSettings.setLiveUpdateTrackerIcon(LiveUpdateTrackerIcon.DEFAULT)
+            appSettings.setLiveUpdateCustomTrackerPath("")
+            iconDir.listFiles()?.forEach { it.delete() }
         }
-        decodeJob.set(job)
-        job.start()
     }
 
-    private fun presetBitmap(@DrawableRes id: Int): Bitmap? {
-        val key = "res|$id"
-        cache[key]?.let { return it }
-        if (unavailable.contains(key)) return null
-        val bitmap = runCatching {
-            AppCompatResources.getDrawable(appContext, id)?.toBitmap()
-        }.getOrNull()
-        if (bitmap == null) unavailable.add(key) else cache[key] = bitmap
-        return bitmap
+    private fun load(type: LiveUpdateTrackerIcon, path: String): Bitmap? = when (type) {
+        LiveUpdateTrackerIcon.DEFAULT -> null
+        LiveUpdateTrackerIcon.CUSTOM -> TrackerIconDecoder.decode(path)
+        else -> type.iconRes?.let(::rasterize)
     }
 
-    private fun decodeToCache(key: String, path: String) {
-        val decoded = TrackerIconDecoder.decode(path)
-        // 解码期间用户可能已切换路径，过期结果丢弃，避免覆盖新路径
-        if (keyOf(appSettings.liveUpdateCustomTrackerPath.value) != key) {
-            decoded?.recycle()
-            return
+    // 内置图标按通知尺寸栅格化，原图尺寸的位图每次 notify 都要跨进程传
+    private fun rasterize(@DrawableRes id: Int): Bitmap? = runCatching {
+        AppCompatResources.getDrawable(appContext, id)
+            ?.toBitmap(TrackerIconDecoder.TARGET_SIZE, TrackerIconDecoder.TARGET_SIZE)
+    }.getOrNull()
+
+    private fun copyToIconDir(uri: Uri): File? {
+        val target = File(iconDir.apply { mkdirs() }, "$ICON_PREFIX${System.currentTimeMillis()}")
+        val copied = runCatching {
+            appContext.contentResolver.openInputStream(uri)?.use { input ->
+                target.outputStream().use { input.copyTo(it) }
+            }
+        }.onFailure { Timber.e(it, "copy custom icon failed") }.getOrNull()
+        if (copied == null || copied == 0L) {
+            target.delete()
+            return null
         }
-        if (decoded == null) unavailable.add(key) else cache[key] = decoded
-        iconRevision.incrementAndGet()
+        return target
     }
-
-    private fun customBitmap(): Bitmap? {
-        val path = appSettings.liveUpdateCustomTrackerPath.value
-        if (path.isEmpty()) return null
-        return cache[keyOf(path)]
-    }
-
-    /**
-     * 清理旧路径的缓存条目：换图会换路径，不清理会随换图次数无上限增长。
-     * 不主动 recycle——旧位图可能仍被已构建的通知引用，交给 GC 回收。
-     */
-    private fun pruneStaleCustomEntries(currentKey: String) {
-        val removed = cache.keys.filter { it.startsWith(CUSTOM_PREFIX) && it != currentKey }
-        removed.forEach { cache.remove(it) }
-        val removedFlags = unavailable.removeIf { it.startsWith(CUSTOM_PREFIX) && it != currentKey }
-        if (removed.isNotEmpty() || removedFlags) iconRevision.incrementAndGet()
-    }
-
-    private fun keyOf(path: String): String = "$CUSTOM_PREFIX$path"
 
     private companion object {
-        const val CUSTOM_PREFIX = "custom|"
+        const val ICON_DIR = "live_update"
+        const val ICON_PREFIX = "tracker_icon_"
     }
 }
