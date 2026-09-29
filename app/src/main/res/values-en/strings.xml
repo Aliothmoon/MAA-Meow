@@ -1532,8 +1532,6 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="notification_section_live">Live updates</string>
     <string name="notification_live_enable">Enable Live Updates</string>
     <string name="notification_live_enable_desc">Show task progress as live updates on supported devices</string>
-    <string name="notification_live_use_island">Use Dynamic Island</string>
-    <string name="notification_live_use_island_desc">On: show as Dynamic Island / focus notification. Off: use the native live-update style</string>
     <string name="notification_live_style">Presentation</string>
     <string name="notification_live_style_hyperos">Dynamic Island</string>
     <string name="notification_live_style_aosp">Live Updates</string>

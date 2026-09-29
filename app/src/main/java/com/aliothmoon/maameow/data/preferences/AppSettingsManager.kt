@@ -433,7 +433,7 @@ class AppSettingsManager internal constructor(
         CUSTOM(R.string.live_update_icon_custom),
     }
 
-    /// Live Updates 通知是否启用（Android 16+ promoted ongoing / ProgressStyle 展示）。
+    // 实况通知总开关，关闭即退回普通通知
     val liveUpdateEnabled: StateFlow<Boolean> = setting { it.liveUpdateEnabled.toBooleanStrictOrNull() ?: true }
 
     suspend fun setLiveUpdateEnabled(enabled: Boolean) {
@@ -442,17 +442,7 @@ class AppSettingsManager internal constructor(
         }
     }
 
-    /// 小米设备上是否用超级岛（焦点通知）展示：关闭则回退原生实时更新样式。
-    val liveUpdateUseHyperIsland: StateFlow<Boolean> =
-        setting { it.liveUpdateUseHyperIsland.toBooleanStrictOrNull() ?: true }
-
-    suspend fun setLiveUpdateUseHyperIsland(enabled: Boolean) {
-        with(AppSettingsSchema) {
-            context.dataStore.edit { it[liveUpdateUseHyperIsland] = enabled.toString() }
-        }
-    }
-
-    /// Live Updates 状态栏 chip 短关键文本内容（both=进度+任务名 / progress=仅进度 / task=仅任务名 / log=最新日志 / none=不显示）。
+    // 实况通知短文本内容
     val liveUpdateChipContent: StateFlow<LiveUpdateChipContent> = setting {
         runCatching { LiveUpdateChipContent.valueOf(it.liveUpdateChipContent) }
             .getOrDefault(LiveUpdateChipContent.BOTH)
@@ -464,7 +454,7 @@ class AppSettingsManager internal constructor(
         }
     }
 
-    /// Live Updates 进度条颜色方案（default/blue/green/orange/purple/pink/teal/custom）。
+    // 实况通知进度条配色
     val liveUpdateColorScheme: StateFlow<LiveUpdateColorScheme> = setting {
         runCatching { LiveUpdateColorScheme.valueOf(it.liveUpdateColorScheme) }
             .getOrDefault(LiveUpdateColorScheme.DEFAULT)
@@ -476,7 +466,7 @@ class AppSettingsManager internal constructor(
         }
     }
 
-    /// Live Updates 自定义主色 HEX（如 "#2196F3"），仅 liveUpdateColorScheme=custom 时使用。
+    // 自定义主色 HEX，仅 CUSTOM 配色生效
     val liveUpdateCustomColor: StateFlow<String> = setting { it.liveUpdateCustomColor }
 
     suspend fun setLiveUpdateCustomColor(color: String) {
@@ -485,7 +475,7 @@ class AppSettingsManager internal constructor(
         }
     }
 
-    /// Live Updates 进度条追踪图标（default=合成玉 / logo=MAA 图标 / dot=圆点 / custom=自定义图片）。
+    // 实况通知图标
     val liveUpdateTrackerIcon: StateFlow<LiveUpdateTrackerIcon> = setting {
         runCatching { LiveUpdateTrackerIcon.valueOf(it.liveUpdateTrackerIcon) }
             .getOrDefault(LiveUpdateTrackerIcon.DEFAULT)
@@ -497,7 +487,7 @@ class AppSettingsManager internal constructor(
         }
     }
 
-    /// Live Updates 自定义追踪图标文件路径，仅 liveUpdateTrackerIcon=custom 时使用。
+    // 自定义图标文件路径，仅 CUSTOM 图标生效
     val liveUpdateCustomTrackerPath: StateFlow<String> = setting { it.liveUpdateCustomTrackerPath }
 
     suspend fun setLiveUpdateCustomTrackerPath(path: String) {

@@ -1588,8 +1588,6 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="notification_section_live">实况通知</string>
     <string name="notification_live_enable">启用 Live Updates</string>
     <string name="notification_live_enable_desc">在支持的设备上以实时动态样式展示任务进度</string>
-    <string name="notification_live_use_island">使用小米超级岛</string>
-    <string name="notification_live_use_island_desc">开启后以超级岛（焦点通知）展示；关闭则回退原生实时更新样式</string>
     <string name="notification_live_style">展示方式</string>
     <string name="notification_live_style_hyperos">超级岛</string>
     <string name="notification_live_style_aosp">实时更新</string>

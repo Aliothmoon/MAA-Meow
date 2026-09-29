@@ -25,6 +25,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -331,28 +332,31 @@ class TaskExecutionService : Service() {
     }
 
     /**
-     * 样式版本号：影响通知外观的设置与图标缓存状态合成一个整数，参与 LiveSession 去重。
-     * 不做这层，改配色/图标后快照指纹不变，协调器会直接丢弃刷新（图标解码本身不改任何字段）。
+     * 影响通知外观或后端选择的设置项；与图标缓存版本一起合成 styleRevision 参与指纹，
+     * 否则改样式后指纹不变，刷新会被协调器去重丢掉
      */
-    private fun currentStyleRevision(): Int = listOf(
-        // 后端选择类开关也要进版本号：关闭实时更新/切换后端时快照其它字段不变，
-        // 否则刷新会被协调器按指纹去重丢掉，通知会维持原样式直到下一次任务事件
-        appSettingsManager.liveUpdateEnabled.value,
-        appSettingsManager.liveUpdateUseHyperIsland.value,
-        appSettingsManager.liveIslandXmsfBypass.value,
-        appSettingsManager.liveUpdateChipContent.value,
-        appSettingsManager.liveUpdateColorScheme.value,
-        appSettingsManager.liveUpdateCustomColor.value,
-        appSettingsManager.liveUpdateTrackerIcon.value,
-        appSettingsManager.liveUpdateCustomTrackerPath.value,
-        trackerIconStore.revision(),
-    ).hashCode()
+    private val styleSettings: List<StateFlow<Any>> by lazy {
+        with(appSettingsManager) {
+            listOf(
+                liveUpdateEnabled,
+                liveIslandXmsfBypass,
+                liveUpdateChipContent,
+                liveUpdateColorScheme,
+                liveUpdateCustomColor,
+                liveUpdateTrackerIcon,
+                liveUpdateCustomTrackerPath,
+            )
+        }
+    }
 
-    /** 样式设置变化时立即刷新进行中的通知，不必等下一次任务或日志事件 */
+    private fun currentStyleRevision(): Int =
+        (styleSettings.map { it.value } + trackerIconStore.revision()).hashCode()
+
+    /** 样式变化即刷新进行中的通知；直接监听这些 StateFlow，保证刷新时读到的是新值 */
     private fun ensureObserveStyleChanges() {
         if (styleJob?.isActive == true) return
         styleJob = serviceScope.launch {
-            appSettingsManager.settings
+            combine(styleSettings) { it.toList() }
                 .drop(1)
                 .collect { refreshActiveNotification() }
         }

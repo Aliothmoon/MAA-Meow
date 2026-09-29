@@ -88,10 +88,6 @@ data class AppSettings(
     @PrefKey(default = "true")
     val liveUpdateEnabled: String = "true",
 
-    /** 小米设备上是否用超级岛（焦点通知）展示：关闭则回退原生实时更新样式。 */
-    @PrefKey(default = "true")
-    val liveUpdateUseHyperIsland: String = "true",
-
     /** Live Updates 状态栏 chip 短关键文本内容：BOTH=进度+任务名 / PROGRESS=仅进度 / TASK=仅任务名 / LOG=最新日志 / NONE=不显示。 */
     @PrefKey(default = "BOTH")
     val liveUpdateChipContent: String = "BOTH",

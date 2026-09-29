@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.notification
 
+import android.os.Build
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -16,7 +17,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -78,9 +78,8 @@ fun NotificationSettingsView(
     val liveCapability by viewModel.liveCapability.collectAsStateWithLifecycle()
     val liveIslandXmsfBypass by viewModel.liveIslandXmsfBypass.collectAsStateWithLifecycle()
     val liveUpdateEnabled by viewModel.liveUpdateEnabled.collectAsStateWithLifecycle()
-    val liveUpdateUseHyperIsland by viewModel.liveUpdateUseHyperIsland.collectAsStateWithLifecycle()
-    // Android 16 起才有实况通知，更早版本不暴露开关与自定义入口
-    val liveUpdateSupported = Build.VERSION.SDK_INT >= 36
+    // 原生实时更新要 16+，超级岛不看系统版本
+    val liveUpdateSupported = Build.VERSION.SDK_INT >= 36 || liveCapability.focusLikely
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -137,10 +136,8 @@ fun NotificationSettingsView(
                         description = styleLabel,
                         titleColor = contentColor,
                     )
-                    // Android 16 以下没有实况通知，开关与岛相关项一并隐藏
                     if (liveUpdateSupported) {
                         ListItemDivider()
-                        // 是否启用与展示后端统一在这里管，样式页只负责样式
                         SettingRow(
                             title = stringResource(R.string.notification_live_enable),
                             description = stringResource(R.string.notification_live_enable_desc),
@@ -164,43 +161,27 @@ fun NotificationSettingsView(
                             viewModel.requestPostNotifications(context)
                         }
                     }
-                    if (liveUpdateSupported && liveCapability.focusLikely) {
+                    if (liveCapability.focusLikely) {
                         ListItemDivider()
-                        // 原生实时更新与超级岛二选一，受权限与兼容模式影响
+                        // 断网旁路会波及全机小米推送，给用户留个开关
                         SettingRow(
-                            title = stringResource(R.string.notification_live_use_island),
-                            description = stringResource(R.string.notification_live_use_island_desc),
+                            title = stringResource(R.string.notification_live_xmsf_bypass),
                             titleColor = contentColor,
                             trailing = {
                                 Switch(
-                                    checked = liveUpdateUseHyperIsland,
-                                    onCheckedChange = viewModel::setLiveUpdateUseHyperIsland,
+                                    checked = liveIslandXmsfBypass,
+                                    onCheckedChange = viewModel::setLiveIslandXmsfBypass,
                                 )
                             },
                         )
-                        // 兼容模式与焦点通知权限只在用岛时才有意义，跟随岛开关显示
-                        if (liveUpdateUseHyperIsland) {
+                        if (!liveCapability.focusGranted) {
                             ListItemDivider()
-                            // 断网旁路会波及全机小米推送，给用户留个开关
-                            SettingRow(
-                                title = stringResource(R.string.notification_live_xmsf_bypass),
+                            PermissionFixRow(
+                                title = stringResource(R.string.notification_live_step_focus),
+                                hint = stringResource(R.string.notification_live_step_focus_missing),
                                 titleColor = contentColor,
-                                trailing = {
-                                    Switch(
-                                        checked = liveIslandXmsfBypass,
-                                        onCheckedChange = viewModel::setLiveIslandXmsfBypass,
-                                    )
-                                },
-                            )
-                            if (!liveCapability.focusGranted) {
-                                ListItemDivider()
-                                PermissionFixRow(
-                                    title = stringResource(R.string.notification_live_step_focus),
-                                    hint = stringResource(R.string.notification_live_step_focus_missing),
-                                    titleColor = contentColor,
-                                ) {
-                                    viewModel.openAppNotificationSettings(context)
-                                }
+                            ) {
+                                viewModel.openAppNotificationSettings(context)
                             }
                         }
                     }
@@ -215,20 +196,17 @@ fun NotificationSettingsView(
                         }
                     }
                     ListItemDivider()
-                    // 16 以下没有实况通知，测试入口一并隐藏
-                    if (liveUpdateSupported) {
-                        Button(
-                            onClick = {
-                                viewModel.sendLiveTest(liveTestTitle, liveTestText)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-                            shape = MaterialTheme.shapes.small,
-                            contentPadding = ButtonDefaults.ContentPadding,
-                        ) {
-                            Text(stringResource(R.string.notification_live_send_test))
-                        }
+                    Button(
+                        onClick = {
+                            viewModel.sendLiveTest(liveTestTitle, liveTestText)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
+                        shape = MaterialTheme.shapes.small,
+                        contentPadding = ButtonDefaults.ContentPadding,
+                    ) {
+                        Text(stringResource(R.string.notification_live_send_test))
                     }
                 }
             }

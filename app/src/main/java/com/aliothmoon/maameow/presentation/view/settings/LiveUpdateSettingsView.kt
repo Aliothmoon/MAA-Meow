@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.presentation.view.settings
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
@@ -119,7 +118,6 @@ fun LiveUpdateSettingsView(navController: NavController) {
     val appSettingsManager: AppSettingsManager = koinInject()
     val livePublisher: LiveUpdatePublisher = koinInject()
     val trackerIconStore: TrackerIconStore = koinInject()
-    val useHyperIsland by appSettingsManager.liveUpdateUseHyperIsland.collectAsStateWithLifecycle()
     val bypassEnabled by appSettingsManager.liveIslandXmsfBypass.collectAsStateWithLifecycle()
     val chipContent by appSettingsManager.liveUpdateChipContent.collectAsStateWithLifecycle()
     val colorScheme by appSettingsManager.liveUpdateColorScheme.collectAsStateWithLifecycle()
@@ -132,20 +130,15 @@ fun LiveUpdateSettingsView(navController: NavController) {
     val toaster = LocalToaster.current
     val pickFailedMessage = stringResource(R.string.live_update_icon_pick_failed)
 
-    // 同一设置在不同系统作用面不同：超级岛设备作用于岛，原生设备作用于状态栏/进度条，
-    // 文案随实际生效的展示方式变化，避免误导。
-    // capability 查询含跨进程权限检查，放 IO，避免组合期在主线程做 IPC
+    // 文案跟随实际生效的后端；capability 含跨进程查询，放 IO
     val capability by produceState<LiveCapability?>(initialValue = null) {
         value = withContext(Dispatchers.IO) {
             runCatching { livePublisher.capability }.getOrNull()
         }
     }
-    // 文案绑「使用小米超级岛」开关，但只有岛真的会生效时才用岛的口径：
-    // 关掉兼容模式或缺焦点通知权限时路由会退到原生，这里跟着按原生显示，避免误导
-    val onIsland = Build.VERSION.SDK_INT >= 36 &&
-        capability?.focusLikely == true &&
+    // 缺权限或关兼容模式时路由会退到原生
+    val onIsland = capability?.focusLikely == true &&
         capability?.focusGranted == true &&
-        useHyperIsland &&
         bypassEnabled
     val chipLabelRes =
         if (onIsland) R.string.live_update_chip_label_island else R.string.live_update_chip_label
@@ -521,13 +514,6 @@ fun LiveUpdateSettingsView(navController: NavController) {
     }
 }
 
-/**
- * 把选中的图片复制到应用内部存储，返回文件路径。
- *
- * 文件名带时间戳：路径变化才能让缓存与预览解码重新执行，避免同路径重选不生效。
- * 文件操作与设置写入放在同一临界区内按顺序完成，避免连续选图时后一次清理删掉前一次
- * 刚写入的路径；复制失败或产物为空时删掉半成品，不留下失效路径。
- */
 /**
  * 选图入库：复制到应用内部存储、校验可解码、写设置、清理旧图。返回是否成功。
  *

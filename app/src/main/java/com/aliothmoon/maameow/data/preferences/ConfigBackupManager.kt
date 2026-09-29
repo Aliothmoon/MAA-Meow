@@ -6,7 +6,6 @@ import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.data.notification.NotificationSettings
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
 import com.aliothmoon.maameow.data.notification.reapplyWebhookPresetIfBlank
-import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.enums.InfrastMode
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.domain.models.AppSettings

@@ -104,7 +104,8 @@ class HyperOsFocusPublisher(
         xmsfGate.acquire()
     }
 
-    private fun releaseProgress() {
+    /** 释放进度期间攥着的断网闸门；后端切走时由 Router 调用 */
+    fun releaseProgress() {
         val held = synchronized(holdLock) {
             val previous = progressHeld
             progressHeld = false

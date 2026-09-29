@@ -6,7 +6,6 @@ import androidx.core.app.NotificationManagerCompat
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.notification.LiveBackend
 import com.aliothmoon.maameow.domain.notification.LiveCapability
-import com.aliothmoon.maameow.domain.notification.LiveNotifyIds
 import com.aliothmoon.maameow.domain.notification.LiveSession
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
 
@@ -30,7 +29,7 @@ class LivePublisherRouter(
     private val aosp = AospPromotedPublisher(appContext, factory, promotedDetector)
     private val plain = PlainNotificationPublisher(appContext, factory, promotedDetector)
 
-    /** 上一次实际使用的后端，用于在后端切换时释放旧后端占用的资源 */
+    /** 上次使用的后端，切换时释放旧后端资源 */
     @Volatile
     private var lastBackend: LiveBackend? = null
 
@@ -63,12 +62,10 @@ class LivePublisherRouter(
         val focusGranted = hyperDetector.hasFocusPermission()
         val promoted = promotedDetector.isGranted()
         // 关掉旁路后岛会被云端鉴权摘掉，继续发焦点负载只是白构建，直接退到下一档
-        // 用户关闭 Live Updates 时整体退化为普通通知
         val backend = when {
             !appSettings.liveUpdateEnabled.value -> LiveBackend.PLAIN
-            appSettings.liveUpdateUseHyperIsland.value &&
-                hyperDetector.isAvailable() &&
-                appSettings.liveIslandXmsfBypass.value -> LiveBackend.HYPER_OS_FOCUS
+            hyperDetector.isAvailable() && appSettings.liveIslandXmsfBypass.value ->
+                LiveBackend.HYPER_OS_FOCUS
 
             promoted -> LiveBackend.AOSP_PROMOTED
             else -> LiveBackend.PLAIN
@@ -86,12 +83,9 @@ class LivePublisherRouter(
     private fun current(): LiveUpdatePublisher {
         val backend = snapshot().backend
         val previous = lastBackend
-        if (previous != null && previous != backend) {
-            // 后端切换：旧后端可能还攥着断网闸门或在途发布，先释放再由新后端接管，
-            // 否则关掉超级岛后小米推送的网络压制会一直持续到任务结束
-            if (previous == LiveBackend.HYPER_OS_FOCUS) {
-                hyper.cancel(LiveNotifyIds.PROGRESS_SESSION)
-            }
+        // 从岛切走时释放断网闸门，否则小米推送会被压到任务结束；通知本身由新后端同 id 覆盖
+        if (previous == LiveBackend.HYPER_OS_FOCUS && backend != LiveBackend.HYPER_OS_FOCUS) {
+            hyper.releaseProgress()
         }
         lastBackend = backend
         return when (backend) {

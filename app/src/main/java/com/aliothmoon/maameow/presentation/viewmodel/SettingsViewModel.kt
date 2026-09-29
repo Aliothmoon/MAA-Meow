@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.presentation.viewmodel
 import android.app.Application
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Build
 import android.os.SystemClock
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.graphics.ImageBitmap
@@ -15,6 +16,7 @@ import com.aliothmoon.maameow.data.api.message
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
+import com.aliothmoon.maameow.data.notification.live.HyperOsFocusDetector
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
@@ -48,6 +50,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -77,6 +80,7 @@ class SettingsViewModel(
     private val switchCoreDataLocation: SwitchCoreDataLocationUseCase,
     private val compositionService: MaaCompositionService,
     private val yituliuApiService: YituliuApiService,
+    private val hyperOsFocusDetector: HyperOsFocusDetector,
 ) : ViewModel() {
 
     // ========== 导入导出 ==========
@@ -167,11 +171,17 @@ class SettingsViewModel(
         }
     }
 
-    val liveUpdateEnabled: StateFlow<Boolean> = appSettingsManager.liveUpdateEnabled
+    // 原生实时更新要 16+，超级岛不看系统版本
+    private val liveUpdateSupported =
+        Build.VERSION.SDK_INT >= 36 || hyperOsFocusDetector.isLikelyDevice()
+
+    /** 样式页入口：设备支持且已开启实况通知 */
+    val liveUpdateEntryVisible: StateFlow<Boolean> = appSettingsManager.liveUpdateEnabled
+        .map { liveUpdateSupported && it }
         .stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
-            appSettingsManager.liveUpdateEnabled.value,
+            liveUpdateSupported && appSettingsManager.liveUpdateEnabled.value,
         )
 
     val startupBackend: StateFlow<RemoteBackend> = appSettingsManager.startupBackend
