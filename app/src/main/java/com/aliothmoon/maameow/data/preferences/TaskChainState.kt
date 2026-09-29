@@ -10,6 +10,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.InfrastConfig
+import com.aliothmoon.maameow.data.model.MallConfig
 import com.aliothmoon.maameow.data.model.RecruitConfig
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskParamProvider
@@ -87,6 +88,10 @@ class TaskChainState(
 
     val clientType: String
         get() = getClientTypeOrNull() ?: "Official"
+
+    /** 最近一次成功启动的会话所用客户端；运行中即本次会话的服务器，不随切换 Profile 变 */
+    val lastUsedClientType: String?
+        get() = _lastUsedClientType.value
 
     private fun doSync() {
         persistOps.trySend(PersistOp.Sync)
@@ -284,6 +289,26 @@ class TaskChainState(
                 Timber.w("updateNodeConfig: node %s not found", nodeId)
             }
         }
+    }
+
+    /** 以回调的节点 ID 定位，切换配置后也不会写到另一个信用任务 */
+    suspend fun recordCreditFightCompleted(nodeId: String, date: String) {
+        updateMallCompletion(nodeId) { it.copy(creditFightLastDate = date) }
+    }
+
+    suspend fun recordVisitFriendsCompleted(nodeId: String, date: String) {
+        updateMallCompletion(nodeId) { it.copy(visitFriendsLastDate = date) }
+    }
+
+    private suspend fun updateMallCompletion(nodeId: String, transform: (MallConfig) -> MallConfig) {
+        val update = { node: TaskChainNode ->
+            val config = node.config
+            if (node.id == nodeId && config is MallConfig) {
+                node.copy(config = transform(config))
+            } else node
+        }
+        // 运行中可能已切走 Profile，非当前 Profile 的链也要找
+        mutate(others = { chain -> chain.map(update) }) { current -> current.replaceAll { update(it) } }
     }
 
     suspend fun reorderNodes(fromIndex: Int, toIndex: Int) {
@@ -497,7 +522,9 @@ class TaskChainState(
 
     // ========== 内部工具方法 ==========
 
+    /** 改链统一走这里；[others] 非空时顺带改非当前 Profile 的链 */
     private suspend inline fun <T> mutate(
+        noinline others: ((List<TaskChainNode>) -> List<TaskChainNode>)? = null,
         crossinline block: (MutableList<TaskChainNode>) -> T
     ): T {
         _isLoaded.first { it }
@@ -507,7 +534,11 @@ class TaskChainState(
         val snapshot = current.toList()
         _chain.value = snapshot
         _profiles.value = _profiles.value.map { p ->
-            if (p.id == _profileId.value) p.copy(chain = snapshot) else p
+            when {
+                p.id == _profileId.value -> p.copy(chain = snapshot)
+                others != null -> p.copy(chain = others(p.chain))
+                else -> p
+            }
         }
         doSync()
         return ret

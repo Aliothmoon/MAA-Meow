@@ -46,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.RecruitConfig
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.INumericField
 import com.aliothmoon.maameow.presentation.components.RecruitTimeSelector
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
@@ -632,6 +633,42 @@ private fun ChooseLevel3Section(
                 )
             }
         )
+
+        Level3PermitReserveSection(config, onConfigChange)
+    }
+}
+
+/**
+ * 3 星保留招聘许可
+ * 对应 WPF: Level3RecruitmentPermitReserveEnabled / Level3RecruitmentPermitReserve
+ * 整组跟随「自动选择三星」启用，数量框勾选后才出现
+ */
+@Composable
+private fun Level3PermitReserveSection(
+    config: RecruitConfig,
+    onConfigChange: (RecruitConfig) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        CheckBoxWithLabel(
+            checked = config.level3PermitReserveEnabled,
+            onCheckedChange = { onConfigChange(config.copy(level3PermitReserveEnabled = it)) },
+            label = stringResource(R.string.panel_recruit_level3_permit_reserve),
+            enabled = config.chooseLevel3,
+            subtitle = stringResource(R.string.panel_recruit_level3_permit_reserve_tip),
+        )
+
+        if (config.level3PermitReserveEnabled) {
+            INumericField(
+                value = config.level3PermitReserve,
+                onValueChange = { onConfigChange(config.copy(level3PermitReserve = it)) },
+                minimum = RecruitConfig.LEVEL3_PERMIT_RESERVE_MIN,
+                maximum = RecruitConfig.LEVEL3_PERMIT_RESERVE_MAX,
+                enabled = config.chooseLevel3,
+                modifier = Modifier
+                    .fillMaxWidth(0.5f)
+                    .height(56.dp)
+            )
+        }
     }
 }
 

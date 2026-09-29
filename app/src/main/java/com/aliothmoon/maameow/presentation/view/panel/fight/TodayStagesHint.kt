@@ -139,13 +139,14 @@ fun TodayStagesHint(
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         regularTips.forEach { tip ->
-                            val color = when {
-                                tip.trimStart()
-                                    .startsWith("(") -> MaterialTheme.colorScheme.onSurfaceVariant // 仓库信息用灰色
-                                else -> MaterialTheme.colorScheme.onSecondaryContainer // 资源提示用绿色
+                            val isInventoryTip = tip.trimStart().startsWith("(")
+                            val color = if (isInventoryTip) {
+                                MaterialTheme.colorScheme.onSurfaceVariant // 仓库信息用灰色
+                            } else {
+                                MaterialTheme.colorScheme.onSecondaryContainer // 资源提示用绿色
                             }
                             Text(
-                                text = "· $tip",
+                                text = if (isInventoryTip) " $tip" else "· $tip",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = color
                             )

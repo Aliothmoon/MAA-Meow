@@ -516,7 +516,7 @@ class OverlayController(
     }
 
     fun registerVolumeKeyListener() {
-        AccessibilityHelperService.onVolumeUpDownPressed.set {
+        AccessibilityHelperService.setVolumeComboListener {
             scope.launch {
                 toggleMainPanel()
                 if (compositionService.state.value == MaaExecutionState.RUNNING) {
@@ -527,7 +527,7 @@ class OverlayController(
     }
 
     fun unregisterVolumeKeyListener() {
-        AccessibilityHelperService.onVolumeUpDownPressed.set(null)
+        AccessibilityHelperService.setVolumeComboListener(null)
     }
 
 }

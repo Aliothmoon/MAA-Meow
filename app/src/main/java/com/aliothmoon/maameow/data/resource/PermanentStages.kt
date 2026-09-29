@@ -29,7 +29,8 @@ object PermanentStages {
             createStage(
                 code = "CA-5",
                 openDays = StageOpenDays.RESOURCE_OPEN_DAYS["CA"]!!,
-                tip = StageInfo.STAGE_TIPS["CA-5"] ?: ""
+                tip = StageInfo.STAGE_TIPS["CA-5"] ?: "",
+                dropGroups = listOf(listOf("3301", "3302", "3303"))
             ),
 
             // 作战记录 LS: 每天开放
@@ -58,8 +59,7 @@ object PermanentStages {
             ),
             createStage(
                 code = "PR-A-2",
-                openDays = StageOpenDays.CHIP_OPEN_DAYS["PR-A"]!!,
-                tip = StageInfo.STAGE_TIPS["PR-A-2"] ?: ""
+                openDays = StageOpenDays.CHIP_OPEN_DAYS["PR-A"]!!
             ),
 
             // PR-B: 狙击/术师 - 周一、二、五、六
@@ -71,8 +71,7 @@ object PermanentStages {
             ),
             createStage(
                 code = "PR-B-2",
-                openDays = StageOpenDays.CHIP_OPEN_DAYS["PR-B"]!!,
-                tip = StageInfo.STAGE_TIPS["PR-B-2"] ?: ""
+                openDays = StageOpenDays.CHIP_OPEN_DAYS["PR-B"]!!
             ),
 
             // PR-C: 先锋/辅助 - 周三、四、六、日
@@ -84,8 +83,7 @@ object PermanentStages {
             ),
             createStage(
                 code = "PR-C-2",
-                openDays = StageOpenDays.CHIP_OPEN_DAYS["PR-C"]!!,
-                tip = StageInfo.STAGE_TIPS["PR-C-2"] ?: ""
+                openDays = StageOpenDays.CHIP_OPEN_DAYS["PR-C"]!!
             ),
 
             // PR-D: 近卫/特种 - 周二、三、六、日
@@ -97,8 +95,7 @@ object PermanentStages {
             ),
             createStage(
                 code = "PR-D-2",
-                openDays = StageOpenDays.CHIP_OPEN_DAYS["PR-D"]!!,
-                tip = StageInfo.STAGE_TIPS["PR-D-2"] ?: ""
+                openDays = StageOpenDays.CHIP_OPEN_DAYS["PR-D"]!!
             )
         )
     }

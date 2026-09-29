@@ -22,6 +22,8 @@
     <string name="maa_complete_task">完成任务: </string>
     <string name="maa_task_stopped">任务已停止</string>
     <string name="maa_all_tasks_complete">任务已全部完成！</string>
+    <string name="maa_task_completed_with_errors">任务已全部完成，但出现错误！</string>
+    <string name="maa_task_error_summary_title">本轮任务出现以下错误：</string>
     <string name="maa_routing_restart_too_many_battles">前方战斗数：%1$s，重开路线</string>
     <string name="maa_ends_with_script">结束后脚本</string>
 
@@ -129,6 +131,11 @@
     <string name="maa_not_enough_staff">可用干员不足</string>
     <string name="maa_infrast_facility_layout_recognition_failed">基建布局识别失败，常规模式换班已中止；请确认停留在基建主界面且未遮挡后重试</string>
     <string name="maa_recruit_support_operator">编入助战干员：%1$s</string>
+    <string name="maa_recruit_permit_reserved">招聘许可剩余 %1$d，小于等于保留数量，跳过当前 3 星招募</string>
+    <string name="maa_recruit_permit_count_recognition_failed">招聘许可数量识别失败，为避免消耗保留许可，已跳过当前 3 星招募</string>
+    <string name="maa_auto_raise_potential_total_log">自动提升潜能：识别到 %1$d 位待处理干员</string>
+    <string name="maa_auto_raise_potential_potential_found_log">第 %1$d/%2$d 位干员：有待提升的潜能</string>
+    <string name="maa_auto_raise_potential_no_potential_log">第 %1$d/%2$d 位干员：无可提升的潜能</string>
 
     <!-- subtask_extra_credit -->
     <string name="maa_credit_full_only_buy_discount">博士！\n只购买折扣商品让信用点数溢出了！\n小心信用点数浪费哦！\n剩余信用点数：</string>
@@ -137,7 +144,7 @@
     <string name="maa_start_combat">开始战斗: </string>
     <string name="maa_medicine_used">已使用理智药</string>
     <string name="maa_expiring_medicine_used">已使用过期的理智药</string>
-    <string name="maa_expiring_medicine_used_hours">已使用 %1$d H内过期理智药</string>
+    <string name="maa_expiring_medicine_used_days">已使用 %1$d 天内过期理智药</string>
     <string name="maa_use_medicine_medicine_info">药: %1$d, 库存: %2$d</string>
     <string name="maa_fight_times_unused">已完成 %1$s 次战斗, 下次将执行 %2$s 倍率代理, 进入后将完成 %3$s 次战斗, 超过 %4$s 次限制, 不进入战斗</string>
 
@@ -171,12 +178,19 @@
     <!-- copilot_actions -->
     <string name="maa_deploy">部署</string>
     <string name="maa_retreat">撤退</string>
-    <string name="maa_skill">技能</string>
+    <string name="maa_use_skill">使用技能</string>
     <string name="maa_skill_usage">切换技能用法</string>
-    <string name="maa_speed_up">二倍速</string>
+    <string name="maa_switch_speed">切换倍速</string>
     <string name="maa_bullet_time">进入子弹时间</string>
     <string name="maa_output">打印描述内容</string>
     <string name="maa_skill_daemon">开始挂机</string>
+    <string name="maa_move_camera">移动相机</string>
+    <string name="maa_draw_card">调配干员</string>
+    <string name="maa_check_if_start_over">检查是否重开</string>
+    <string name="maa_reset_stopwatch">重置全局计时器</string>
+    <string name="maa_click">点击</string>
+    <string name="maa_swipe">滑动</string>
+    <string name="maa_set_unit_location">设置单位坐标</string>
 
     <!-- common -->
     <string name="maa_sanity">理智</string>
@@ -301,6 +315,8 @@
     <string name="settings_background_image_alpha">图片不透明度</string>
     <string name="settings_background_scrim">遮罩强度</string>
     <string name="settings_background_blur">模糊</string>
+    <string name="settings_background_monet">从壁纸取色</string>
+    <string name="settings_background_monet_desc">用背景图生成主题配色</string>
     <string name="settings_background_import_failed">背景图片导入失败</string>
     <string name="settings_background_crop_reset">复位</string>
     <string name="settings_background_crop_rotate">旋转 90°</string>
@@ -606,6 +622,8 @@
     <string name="copilot_unsupported_skill">%1$s 不支持技能 %2$d，已改为不选择技能</string>
     <string name="copilot_elite_filled">%1$s 未设置精英化要求，但其他要求需要 精%2$d，已自动补全</string>
     <string name="copilot_elite_raised">%1$s 要求 精%2$d，但其他要求需要 精%3$d，已自动调整</string>
+    <string name="copilot_location_over_oper">%1$s 同时设置了位置和干员，将按位置执行</string>
+    <string name="copilot_rect_over_location">%1$s 同时设置了像素区域和位置，将按像素区域执行</string>
     <string name="copilot_invalid_operator">错误的干员: %1$s</string>
     <string name="copilot_status_completed">已完成: %1$s</string>
     <string name="copilot_rate_failed">出现错误，评价失败 : &lt;</string>
@@ -762,7 +780,6 @@
     <string name="common_tab_general">常规设置</string>
     <string name="common_tab_advanced">高级设置</string>
     <string name="common_done">完成</string>
-    <string name="common_sort">排序</string>
     <string name="common_rename">重命名</string>
     <string name="common_copy">复制</string>
     <string name="common_warning">警告</string>
@@ -868,6 +885,7 @@
     <string name="panel_mall_shopping">信用交易所自动购物</string>
     <string name="panel_mall_shopping_tip">自动使用信用点购买商店中的物品</string>
     <string name="panel_mall_credit_fight">借助战打 OF-1 赚信用</string>
+    <string name="panel_mall_only_once_a_day">一日只执行一次</string>
     <string name="panel_mall_credit_fight_tip">访问好友后借助战打一把 OF-1 赚 30 信用。\n关卡选择为 ｢当前/上次｣ 时此功能无效。\n别传 ｢火蓝之心｣ 关卡 OF-1 未解锁时请勿勾选。</string>
     <string name="panel_mall_credit_fight_unavailable">当前存在无法解析有效关卡的理智作战任务，本次不会借助战打一把 OF-1。</string>
     <!-- %1$s 任务名, %2$d 任务序号(1-based), %3$d 关卡列表中的序号(1-based) -->
@@ -876,8 +894,7 @@
     <string name="panel_mall_credit_fight_notice">借助战需要好友支援，确保好友列表有可用支援干员</string>
     <string name="panel_mall_priority_title">优先购买物品</string>
     <string name="panel_mall_priority_reorder_tip">拖动调整购买优先级，越靠上优先级越高</string>
-    <string name="panel_mall_priority_mode_active">当前处于排序模式，长按列表项可调整优先级，完成后点击勾选按钮退出</string>
-    <string name="panel_mall_priority_mode_inactive">开启排序模式可调整优先级顺序，点击×删除</string>
+    <string name="panel_mall_priority_drag_hint">拖动左侧把手调整顺序，点击 × 删除</string>
     <string name="panel_mall_enable_shopping_first">请先启用「购买信用商店物品」功能</string>
     <string name="panel_mall_add_item">添加物品</string>
     <string name="panel_mall_info_line_priority">* 优先购买列表中的物品会按顺序优先购买</string>
@@ -900,9 +917,10 @@
     <string name="panel_fight_custom_stage_code_tip">启用后可手动输入关卡代码，支持简写（如「龙门币」→「CE-6」）</string>
     <string name="panel_fight_use_alternate_stage">使用备选关卡</string>
     <string name="panel_fight_use_alternate_stage_tip">首选关卡不可用时自动使用备选关卡</string>
-    <string name="panel_fight_use_expiring_medicine">无限吃 N 小时内过期的理智药</string>
+    <string name="panel_fight_use_expiring_medicine">无限吃 N 天内过期的理智药</string>
     <string name="panel_fight_use_expiring_medicine_tip">优先使用指定时间内过期的理智药</string>
-    <string name="panel_fight_medicine_expire_days">过期时间</string>
+    <string name="panel_fight_medicine_expire_days">过期天数</string>
+    <string name="panel_fight_medicine_expire_days_tip">只吃游戏内显示不足 N 天的理智药，显示 N 天及以上的不吃</string>
     <string name="panel_fight_use_expire_medicine_for_activity">活动结束前 48H 吃当周过期理智药</string>
     <string name="panel_fight_use_expire_medicine_for_activity_tip">当活动即将在 2 天内结束时，自动使用本周内到期的理智药</string>
     <string name="panel_fight_activity_days_left_open">剩余天数: </string>
@@ -1171,6 +1189,7 @@
     <string name="panel_mini_game_title">牛杂</string>
     <string name="panel_mini_game_name">小游戏名称</string>
     <string name="panel_mini_game_ending">结局</string>
+    <string name="panel_mini_game_use_normal_token">中坚信物不足时使用普通信物</string>
     <string name="panel_mini_game_preferred_events">优先系列事件</string>
 
     <!-- mini game: data texts (names / tips, mirrors MaaWpfGui localization keys) -->
@@ -1190,6 +1209,15 @@
     <string name="mini_game_tip_ra_store">请在活动商店页面开始。</string>
     <string name="mini_game_name_secret_front">隐秘战线</string>
     <string name="mini_game_tip_secret_front">在选小队界面开始，如有存档须手动删除。\n第一次打自己看完把教程关了。\n推荐勾选游戏内 ｢继承上一支队伍发回的数据｣</string>
+    <string name="mini_game_name_auto_raise_potential">自动提升潜能</string>
+    <string name="mini_game_tip_auto_raise_potential">请先进入干员列表界面，再开始任务。自动提升所有带提示标记干员的潜能。\n完成后停留在最后一名干员档案；没有可提升目标时停留在干员列表</string>
+    <string name="mini_game_name_material_synthesis">缺口材料合成</string>
+    <string name="mini_game_tip_material_synthesis">请先手动从培养页面(如精英化、专精、模组升级)缺少的材料弹窗跳转到加工站合成页，再开始任务。\n会递归合成可加工的下级材料，材料不足时停止</string>
+    <string name="mini_game_name_cursed_relic">刷傀影维多利亚皇冠</string>
+    <string name="mini_game_tip_cursed_relic">请从傀影肉鸽主菜单中「探索」按钮可见的状态开始。\n反复开始探索并检查开局收藏品，未刷到「维多利亚王冠」时放弃重开并等待冷却，刷到后自动停止</string>
+    <string name="mini_game_category_permanent_feature">常驻功能</string>
+    <string name="mini_game_category_permanent">常驻活动</string>
+    <string name="mini_game_category_current_event">当前活动</string>
     <string name="mini_game_tip_pixel_paint">先在下方选好图片并调参，然后停在游戏的像素画编辑页再开始</string>
     <string name="mini_game_name_pv">PV-烟花筹委会</string>
     <string name="mini_game_tip_pv">从所选关卡开始并自动通关。若选择第一关，则从活动页最左侧开始；若选择其他关卡，请先进入上一关再返回以校准位置。</string>
@@ -1301,7 +1329,7 @@
     <string name="panel_depot_enable_use_medicine">启用「使用理智药」勾选框</string>
     <string name="panel_depot_enable_use_stone">启用「使用源石」勾选框</string>
     <string name="panel_depot_use_expiring_medicine">使用 48 小时内过期的理智药</string>
-    <string name="panel_depot_use_expiring_medicine_tip">对全部计划生效，阈值固定 48 小时；与「理智作战」里可调小时数的同名开关互不影响</string>
+    <string name="panel_depot_use_expiring_medicine_tip">对全部计划生效，阈值固定 48 小时；与「理智作战」里可调天数的同名开关互不影响</string>
     <string name="panel_depot_summary_title">计划概览</string>
     <string name="panel_depot_summary_runnable">本次可执行 %1$d / %2$d</string>
     <string name="panel_depot_summary_no_item">未选材料</string>
@@ -1345,6 +1373,8 @@
     <string name="panel_recruit_preserve_tag_enabled">保留指定词条</string>
     <string name="panel_recruit_preserve_tag_enabled_tip">识别到任一已选词条时跳过该次招募并保留该栏位；留空时不保留任何词条。</string>
     <string name="panel_recruit_choose_level3">自动确认 3 星</string>
+    <string name="panel_recruit_level3_permit_reserve">3 星保留招聘许可</string>
+    <string name="panel_recruit_level3_permit_reserve_tip">当剩余招聘许可小于等于该值时跳过 3 星招聘</string>
     <string name="panel_recruit_choose_level4">自动确认 4 星</string>
     <string name="panel_recruit_choose_level5">自动确认 5 星</string>
 
@@ -1859,6 +1889,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_time_picker_title">选择时间</string>
     <string name="time_picker_am">AM</string>
     <string name="time_picker_pm">PM</string>
+    <string name="time_picker_format_12h">12h</string>
+    <string name="time_picker_format_24h">24h</string>
     <string name="schedule_default_name">定时任务-%1$d</string>
     <string name="schedule_error_name_required">请输入策略名称</string>
     <string name="schedule_error_profile_required">请选择任务配置</string>
@@ -2360,7 +2392,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="achievement_RealGacha_condition">使用一次牛牛抽卡</string>
     <string name="settings_pallas_burping">呃……咳嗯</string>
     <string name="settings_pallas_drunk_hint">呀，博士。你今天走起路来，怎么看着摇摇晃晃的？</string>
-    <!-- 对齐 WPF Hangover：再点头像退出 Debug 时弹出 -->
+    <!-- 对齐 WPF Hangover：醒酒时弹出；上次没醒就退了的，下次启动补弹 -->
     <string name="settings_pallas_hangover">下次不能喝、喝这么多了……</string>
     <string name="achievement_SlackingOff_title">不务正业</string>
     <string name="achievement_SlackingOff_desc">正事做累了，玩点别的。</string>

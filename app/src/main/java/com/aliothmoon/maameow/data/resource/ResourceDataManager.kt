@@ -104,10 +104,7 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
             "char_615_acspec", // Misery 6★
             "char_616_pithst", // 盟约·辅助干员
             "char_617_sharp2", // 领主·Sharp
-
-            "char_1001_amiya2", // 阿米娅-WARRIOR
-            "char_1037_amiya3", // 阿米娅-MEDIC
-        )
+        ) + CanonicalOperId.promotedIds  // 阿米娅升变形态，与归一表共用一份清单
 
         // 语言代码 → 资源子目录
         val CLIENT_DIRECTORY_MAPPER = mapOf(
@@ -167,6 +164,12 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
     fun isValidCharacterName(name: String): Boolean {
         if (name.isBlank()) return true
         return getCharacterByNameOrAlias(name) != null
+    }
+
+    /** 开局干员等选择场景仅接受 char_ 单位，保留肉鸽临时干员及多语言名称 */
+    fun isValidOperatorName(name: String): Boolean {
+        if (name.isBlank()) return true
+        return getCharacterByNameOrAlias(name)?.id?.startsWith("char_") == true
     }
 
     fun getCharacterByNameOrAlias(name: String): CharacterInfo? {
@@ -258,6 +261,17 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
 
     fun getRoguelikeCoreCharList(theme: String): List<String> {
         return _roguelikeCoreCharacters.value[theme] ?: emptyList()
+    }
+
+    /** 复用 WPF CharacterNames 对应集合，仅搜索当前界面和客户端语言的干员名 */
+    fun searchOperatorNames(query: String, limit: Int = 20): List<String> {
+        if (query.isBlank() || limit <= 0) return emptyList()
+
+        return _characterNames.value.asSequence()
+            .filter { it.contains(query, ignoreCase = true) }
+            .sortedBy { !it.equals(query, ignoreCase = true) }
+            .take(limit)
+            .toList()
     }
 
     /**

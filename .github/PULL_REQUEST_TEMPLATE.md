@@ -1,6 +1,6 @@
 # Pull Request
 
-提交前请阅读 [PR 规范](../docs/PULL_REQUEST_GUIDELINES.md) / [PR Guidelines](../docs/PULL_REQUEST_GUIDELINES_EN.md)。
+提交前请阅读 [PR 规范](/Aliothmoon/MAA-Meow/blob/main/docs/zh-cn/develop/PULL_REQUEST_GUIDELINES.md) / [PR Guidelines](/Aliothmoon/MAA-Meow/blob/main/docs/en-us/develop/PULL_REQUEST_GUIDELINES.md)。
 
 ## 关联 Issue
 
@@ -20,4 +20,4 @@
 
 ## Checklist
 
-- [ ] 我已阅读并遵守 [PR 规范](../docs/PULL_REQUEST_GUIDELINES.md) / [PR Guidelines](../docs/PULL_REQUEST_GUIDELINES_EN.md)
+- [ ] 我已阅读并遵守 [PR 规范](/Aliothmoon/MAA-Meow/blob/main/docs/zh-cn/develop/PULL_REQUEST_GUIDELINES.md) / [PR Guidelines](/Aliothmoon/MAA-Meow/blob/main/docs/en-us/develop/PULL_REQUEST_GUIDELINES.md)

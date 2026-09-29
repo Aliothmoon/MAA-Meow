@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.schedule.ui
 
 import android.os.Build
+import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,6 +70,7 @@ import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.presentation.LocalToaster
 import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.components.TopAppBar
+import com.aliothmoon.maameow.presentation.components.WheelTimeFormatToggle
 import com.aliothmoon.maameow.presentation.components.WheelTimePicker
 import com.aliothmoon.maameow.presentation.components.rememberWheelTimePickerState
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
@@ -77,6 +80,7 @@ import com.aliothmoon.maameow.schedule.model.ScheduleType
 import com.aliothmoon.maameow.schedule.service.ExactAlarmSettings
 import com.aliothmoon.maameow.schedule.service.OemPowerHints
 import com.aliothmoon.maameow.theme.MaaDesignTokens
+import com.aliothmoon.maameow.theme.OpaqueTheme
 import com.aliothmoon.maameow.utils.i18n.asString
 import com.dokar.sonner.ToastType
 import kotlinx.coroutines.launch
@@ -102,6 +106,8 @@ fun ScheduleEditView(
     var showTimePicker by remember { mutableStateOf(false) }
     var editingTime by remember { mutableStateOf<LocalTime?>(null) }
     val context = LocalContext.current
+
+    var use24HourPicker by rememberSaveable { mutableStateOf(DateFormat.is24HourFormat(context)) }
 
     LaunchedEffect(strategyId) {
         viewModel.loadStrategy(context, strategyId)
@@ -377,24 +383,26 @@ fun ScheduleEditView(
                                 initialSelectedDateMillis = state.startTimeMs
                                     ?: System.currentTimeMillis()
                             )
-                            DatePickerDialog(
-                                onDismissRequest = { showDatePicker = false },
-                                confirmButton = {
-                                    TextButton(onClick = {
-                                        pendingDateMs = datePickerState.selectedDateMillis
-                                        showDatePicker = false
-                                        showStartTimePicker = true
-                                    }) { Text(stringResource(R.string.schedule_next_step)) }
-                                },
-                                dismissButton = {
-                                    TextButton(onClick = { showDatePicker = false }) {
-                                        Text(
-                                            stringResource(R.string.common_cancel)
-                                        )
+                            OpaqueTheme {
+                                DatePickerDialog(
+                                    onDismissRequest = { showDatePicker = false },
+                                    confirmButton = {
+                                        TextButton(onClick = {
+                                            pendingDateMs = datePickerState.selectedDateMillis
+                                            showDatePicker = false
+                                            showStartTimePicker = true
+                                        }) { Text(stringResource(R.string.schedule_next_step)) }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showDatePicker = false }) {
+                                            Text(
+                                                stringResource(R.string.common_cancel)
+                                            )
+                                        }
                                     }
+                                ) {
+                                    DatePicker(state = datePickerState)
                                 }
-                            ) {
-                                DatePicker(state = datePickerState)
                             }
                         }
 
@@ -405,6 +413,8 @@ fun ScheduleEditView(
                             }
                             TimePickerDialog(
                                 initialTime = existingTime,
+                                is24Hour = use24HourPicker,
+                                onFormatChange = { use24HourPicker = it },
                                 onDismiss = { showStartTimePicker = false },
                                 onConfirm = { time ->
                                     val dateMs = pendingDateMs ?: return@TimePickerDialog
@@ -697,6 +707,8 @@ fun ScheduleEditView(
     if (showTimePicker) {
         TimePickerDialog(
             initialTime = editingTime,
+            is24Hour = use24HourPicker,
+            onFormatChange = { use24HourPicker = it },
             onDismiss = { showTimePicker = false },
             onConfirm = { time ->
                 val old = editingTime
@@ -734,80 +746,96 @@ private fun PermissionWizardDialog(
     onLater: () -> Unit,
 ) {
     val (tip, desc) = schedulePermissionActionText(current)
-    AlertDialog(
-        onDismissRequest = onLater,
-        title = { Text(stringResource(R.string.schedule_permission_title)) },
-        text = {
-            Column {
-                Text(tip, style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(4.dp))
-                Text(desc, style = MaterialTheme.typography.bodySmall)
-                if (oemHint != null) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        oemHint,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.tertiary,
-                    )
+    OpaqueTheme {
+        AlertDialog(
+            onDismissRequest = onLater,
+            title = { Text(stringResource(R.string.schedule_permission_title)) },
+            text = {
+                Column {
+                    Text(tip, style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.height(4.dp))
+                    Text(desc, style = MaterialTheme.typography.bodySmall)
+                    if (oemHint != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            oemHint,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                        )
+                    }
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onGo) { Text(stringResource(R.string.schedule_go_to_settings)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onLater) { Text(stringResource(R.string.common_later)) }
-        },
-    )
+            },
+            confirmButton = {
+                TextButton(onClick = onGo) { Text(stringResource(R.string.schedule_go_to_settings)) }
+            },
+            dismissButton = {
+                TextButton(onClick = onLater) { Text(stringResource(R.string.common_later)) }
+            },
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TimePickerDialog(
     initialTime: LocalTime? = null,
+    is24Hour: Boolean,
+    onFormatChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
     onConfirm: (LocalTime) -> Unit
 ) {
     val pickerState = rememberWheelTimePickerState(
         initialHour = initialTime?.hour ?: 0,
-        initialMinute = initialTime?.minute ?: 0
+        initialMinute = initialTime?.minute ?: 0,
+        is24Hour = is24Hour
     )
     val configuration = LocalConfiguration.current
     // 横屏等矮屏只留三行，保证对话框放得下
     val rows = if (configuration.screenHeightDp >= 400) 5 else 3
 
-    BasicAlertDialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = MaterialTheme.shapes.extraLarge,
-            tonalElevation = 6.dp
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+    OpaqueTheme {
+        BasicAlertDialog(onDismissRequest = onDismiss) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp
             ) {
-                Text(
-                    text = stringResource(R.string.schedule_time_picker_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = MaaDesignTokens.Spacing.lg)
-                )
-                WheelTimePicker(
-                    state = pickerState,
-                    rows = rows,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(MaaDesignTokens.Spacing.md))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
-                    TextButton(onClick = {
-                        onConfirm(LocalTime.of(pickerState.hour, pickerState.minute))
-                    }) { Text(stringResource(R.string.common_confirm)) }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = MaaDesignTokens.Spacing.lg),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.schedule_time_picker_title),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                        WheelTimeFormatToggle(
+                            is24Hour = is24Hour,
+                            onFormatChange = onFormatChange
+                        )
+                    }
+                    WheelTimePicker(
+                        state = pickerState,
+                        rows = rows,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(MaaDesignTokens.Spacing.md))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+                        TextButton(onClick = {
+                            onConfirm(LocalTime.of(pickerState.hour, pickerState.minute))
+                        }) { Text(stringResource(R.string.common_confirm)) }
+                    }
                 }
             }
         }

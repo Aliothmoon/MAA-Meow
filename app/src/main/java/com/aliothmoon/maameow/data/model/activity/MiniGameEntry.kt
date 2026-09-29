@@ -27,6 +27,12 @@ data class MiniGameEntry(
     @SerialName("TipKey")
     val tipKey: String? = null,
 
+    @SerialName("Category")
+    val category: String? = null,
+
+    @SerialName("CategoryKey")
+    val categoryKey: String? = null,
+
     @SerialName("UtcStartTime")
     val utcStartTime: String? = null,
 

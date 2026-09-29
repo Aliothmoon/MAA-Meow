@@ -201,6 +201,10 @@ data class AppSettings(
     @PrefKey(default = "0")
     val customBackgroundBlur: String = "0",
 
+    /** 是否用背景图做原生莫奈取色（生成的配色覆盖主题） */
+    @PrefKey(default = "false")
+    val customBackgroundMonet: String = "false",
+
     // ───────────────── 定时唤醒 + 解锁 ─────────────────
 
     /** 解锁方式：swipe / pin，默认滑动（无密码） */
@@ -228,5 +232,9 @@ data class AppSettings(
     /** 干员识别从一图流拉取，不再进游戏截图识别 */
     @PrefKey(default = "false")
     val operBoxUseYituliuApi: String = "false",
+
+    /** 喝醉过但还没醒酒，下次启动提示 */
+    @PrefKey(default = "false")
+    val pallasHangover: String = "false",
 
     )

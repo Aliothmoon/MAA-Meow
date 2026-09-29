@@ -61,6 +61,15 @@ class TaskChainHandler(
         dropsRefresher.clear()
     }
 
+    /**
+     * 本轮主任务队列出错的任务名，与 resolveTaskName 同源；statusTracker 已按 taskId 记过，不另起登记
+     * slot 由 Analyze 注入，链外路径（工具箱 / 作业 / 牛杂）为 null，各有独立归属，不计入
+     */
+    private fun failedTaskNames(): List<String> =
+        statusTracker.tasks.value
+            .filter { it.slot != null && it.status == TaskRunStatus.ERROR }
+            .map { it.logName?.resolve(appContext) ?: str(it.taskChain) }
+
     private fun resolveTaskName(details: JSONObject): String =
         statusTracker.getLogName(details.getIntValue("taskid", 0))?.resolve(appContext)
             ?: str(details.getString("taskchain") ?: "Unknown")
@@ -221,9 +230,15 @@ class TaskChainHandler(
      * 附带任务总耗时和理智恢复时间信息
      */
     fun onAllTasksCompleted(asStopped: Boolean = false) {
+        // 名单挂在 statusTracker 上，clearSessionScopedState 会清掉，先取快照
+        val failedTaskNames = failedTaskNames()
         clearSessionScopedState()
 
-        val sb = StringBuilder(str("AllTasksComplete", ""))
+        // 手动停止本就不是「全部完成」，标题不跟着改，但出错清单仍然给出
+        val hasTaskErrors = failedTaskNames.isNotEmpty()
+        val sb = StringBuilder(
+            str(if (hasTaskErrors && !asStopped) "TaskCompletedWithErrors" else "AllTasksComplete", "")
+        )
 
         // 任务总耗时
         val startMillis = sessionLogger.sessionStartTimeMillis
@@ -277,9 +292,25 @@ class TaskChainHandler(
         }
 
         val message = sb.toString()
-        sessionLogger.append(message, if (asStopped) LogLevel.INFO else LogLevel.SUCCESS)
+        if (hasTaskErrors && !asStopped) {
+            // 只标红标题行，理智报告留在下一段默认色（对齐上游 SplitTaskCompletionLog）
+            sessionLogger.append(message.substringBefore('\n'), LogLevel.ERROR)
+            message.substringAfter('\n', "")
+                .takeIf { it.isNotBlank() }
+                ?.let { sessionLogger.append(it, LogLevel.MESSAGE) }
+        } else {
+            sessionLogger.append(message, if (asStopped) LogLevel.INFO else LogLevel.SUCCESS)
+        }
+
+        val errorSummary = failedTaskNames
+            .takeIf { it.isNotEmpty() }
+            ?.joinToString("\n", prefix = str("TaskErrorSummaryTitle") + "\n")
+        errorSummary?.let { sessionLogger.append(it, LogLevel.ERROR) }
         if (!asStopped) {
-            notificationCenter.notifyAllTasksCompleted(message)
+            // 出错时保留完成上下文（用时/理智）再附清单，避免通知正文只剩清单
+            notificationCenter.notifyAllTasksCompleted(
+                errorSummary?.let { "$message\n$it" } ?: message
+            )
         }
 
         callbackScope.launch {

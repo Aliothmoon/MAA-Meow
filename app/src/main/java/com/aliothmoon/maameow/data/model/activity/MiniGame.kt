@@ -17,7 +17,8 @@ data class MiniGame(
     val tip: UiText = UiText.Empty,      // 提示信息（版本过低时显示警告）
     val tipKey: String? = null,          // 提示本地化键
     val isUnsupported: Boolean = false,  // 版本不支持标记
-    val activity: String? = null         // 所属活动名，关卡提示里挂在同名活动下
+    val activity: String? = null,        // 所属活动名，关卡提示里挂在同名活动下
+    val category: UiText                 // 列表分组标题
 ) {
     val isOpen: Boolean
         get() {
@@ -72,7 +73,8 @@ data class MiniGame(
                 tip = tip,
                 tipKey = tipKey,
                 isUnsupported = unsupported,
-                activity = entry.activity?.takeIf { it.isNotBlank() }
+                activity = entry.activity?.takeIf { it.isNotBlank() },
+                category = MiniGameTextRegistry.resolveCategory(entry.category, entry.categoryKey)
             )
         }
     }

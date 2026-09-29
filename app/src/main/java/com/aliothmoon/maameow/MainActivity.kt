@@ -25,10 +25,12 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.withStarted
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
+import com.aliothmoon.maameow.data.achievement.PallasDrunkState
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
+import com.aliothmoon.maameow.presentation.PallasDrunkHost
 import com.aliothmoon.maameow.presentation.ProvideInputFocusManager
 import com.aliothmoon.maameow.presentation.navigation.AppNavigation
 import com.aliothmoon.maameow.presentation.pip.LocalIsInPip
@@ -39,7 +41,6 @@ import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.LaunchIntentMapper
 import com.aliothmoon.maameow.theme.MaaMeowTheme
 import com.aliothmoon.maameow.utils.EyeProtectionDetector
-import timber.log.Timber
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,6 +49,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
+import timber.log.Timber
 
 class MainActivity : AppCompatActivity(), PipHost {
 
@@ -73,6 +75,7 @@ class MainActivity : AppCompatActivity(), PipHost {
     private val achievementRepository: AchievementRepository by inject()
     private val compositionService: MaaCompositionService by inject()
     private val screenSaverManager: ScreenSaverOverlayManager by inject()
+    private val pallasDrunkState: PallasDrunkState by inject()
     private val backgroundTaskViewModel: BackgroundTaskViewModel by viewModel()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -131,8 +134,10 @@ class MainActivity : AppCompatActivity(), PipHost {
                         fontScale = baseDensity.fontScale,
                     )
                 ) {
-                    ProvideInputFocusManager {
-                        AppNavigation(backgroundTaskViewModel = backgroundTaskViewModel)
+                    PallasDrunkHost(pallasDrunkState) {
+                        ProvideInputFocusManager {
+                            AppNavigation(backgroundTaskViewModel = backgroundTaskViewModel)
+                        }
                     }
                 }
             }

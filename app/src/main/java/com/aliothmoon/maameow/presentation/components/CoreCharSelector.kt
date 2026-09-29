@@ -109,15 +109,15 @@ fun CoreCharSelector(
             isValidating = true
             Timber.d("[CoreCharSelector] 开始校验: '$newValue'")
             coroutineScope.launch {
-                Timber.d("[CoreCharSelector] 开始校验: isValidCharacterName")
-                val validationResult = resourceDataManager.isValidCharacterName(newValue)
+                Timber.d("[CoreCharSelector] 开始校验: isValidOperatorName")
+                val validationResult = resourceDataManager.isValidOperatorName(newValue)
                 Timber.d("[CoreCharSelector] 校验结果: validationResult=$validationResult, newValue='$newValue'")
 
-                // 先在推荐列表里找，没命中再全量搜索
+                // 先在推荐列表里找，没命中再搜索当前语言与客户端的干员名
                 // 否则输入「有效但非该主题推荐」的干员时列表会空掉
                 val newSuggestions = recommendedChars
                     .filter { it.contains(newValue, ignoreCase = true) }
-                    .ifEmpty { resourceDataManager.search(newValue, 15) }
+                    .ifEmpty { resourceDataManager.searchOperatorNames(newValue, 15) }
                 Timber.d("[CoreCharSelector] 建议列表计算完成: ${newSuggestions.size} 个结果")
 
                 // 检查输入值是否仍然 match（防止竞态条件）

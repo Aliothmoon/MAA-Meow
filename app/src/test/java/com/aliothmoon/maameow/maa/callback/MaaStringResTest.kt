@@ -1,11 +1,13 @@
 package com.aliothmoon.maameow.maa.callback
 
 import android.content.res.Resources
+import com.aliothmoon.maameow.R
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
@@ -49,6 +51,21 @@ class MaaStringResTest {
         assertEquals("start_button2", MaaStringRes.camelToSnake("StartButton2"))
         assertEquals("stage2_foo", MaaStringRes.camelToSnake("Stage2Foo"))
         assertEquals("stage_dreadful_foe_5", MaaStringRes.camelToSnake("StageDreadfulFoe_5"))
+    }
+
+    @Test
+    fun copilotActionNames_allHaveStringResource() {
+        // Core BattleProcessTask::notify_action 下发的动作名，缺资源会把英文原键打到日志里
+        val actions = listOf(
+            "Deploy", "UseSkill", "Retreat", "SkillDaemon", "SwitchSpeed", "SkillUsage",
+            "BulletTime", "Output", "MoveCamera", "DrawCard", "CheckIfStartOver",
+            "ResetStopwatch", "Click", "Swipe", "SetUnitLocation",
+        )
+        actions.forEach { action ->
+            val name = "maa_${MaaStringRes.camelToSnake(action)}"
+            runCatching { R.string::class.java.getField(name) }
+                .onFailure { fail("动作 $action 缺少字符串资源 $name") }
+        }
     }
 
     // ==================== 正向缓存 ====================

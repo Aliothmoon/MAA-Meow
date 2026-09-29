@@ -57,6 +57,7 @@ import com.aliothmoon.maameow.schedule.model.ScheduleFixAction
 import com.aliothmoon.maameow.schedule.model.TriggerLogEntry
 import com.aliothmoon.maameow.schedule.service.ScheduleTriggerLogger.TriggerLogSummary
 import com.aliothmoon.maameow.theme.MaaDesignTokens
+import com.aliothmoon.maameow.theme.OpaqueTheme
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import org.koin.androidx.compose.koinViewModel
@@ -191,51 +192,55 @@ fun ScheduleTriggerLogView(
         }
 
         if (showClearConfirm) {
-            AlertDialog(
-                onDismissRequest = { showClearConfirm = false },
-                title = { Text(stringResource(R.string.schedule_log_clear_title)) },
-                text = { Text(stringResource(R.string.schedule_log_clear_message)) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        viewModel.onClearAll()
-                        showClearConfirm = false
-                    }) {
-                        Text(
-                            stringResource(R.string.schedule_log_clear_title),
-                            color = MaterialTheme.colorScheme.error
-                        )
+            OpaqueTheme {
+                AlertDialog(
+                    onDismissRequest = { showClearConfirm = false },
+                    title = { Text(stringResource(R.string.schedule_log_clear_title)) },
+                    text = { Text(stringResource(R.string.schedule_log_clear_message)) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            viewModel.onClearAll()
+                            showClearConfirm = false
+                        }) {
+                            Text(
+                                stringResource(R.string.schedule_log_clear_title),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            showClearConfirm = false
+                        }) { Text(stringResource(R.string.common_cancel)) }
                     }
-                },
-                dismissButton = {
-                    TextButton(onClick = {
-                        showClearConfirm = false
-                    }) { Text(stringResource(R.string.common_cancel)) }
-                }
-            )
+                )
+            }
         }
 
         if (deleteConfirmFileName != null) {
-            AlertDialog(
-                onDismissRequest = { deleteConfirmFileName = null },
-                title = { Text(stringResource(R.string.schedule_log_delete_title)) },
-                text = { Text(stringResource(R.string.schedule_log_delete_message)) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        viewModel.onDeleteLog(deleteConfirmFileName!!)
-                        deleteConfirmFileName = null
-                    }) {
-                        Text(
-                            stringResource(R.string.common_delete),
-                            color = MaterialTheme.colorScheme.error
-                        )
+            OpaqueTheme {
+                AlertDialog(
+                    onDismissRequest = { deleteConfirmFileName = null },
+                    title = { Text(stringResource(R.string.schedule_log_delete_title)) },
+                    text = { Text(stringResource(R.string.schedule_log_delete_message)) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            viewModel.onDeleteLog(deleteConfirmFileName!!)
+                            deleteConfirmFileName = null
+                        }) {
+                            Text(
+                                stringResource(R.string.common_delete),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            deleteConfirmFileName = null
+                        }) { Text(stringResource(R.string.common_cancel)) }
                     }
-                },
-                dismissButton = {
-                    TextButton(onClick = {
-                        deleteConfirmFileName = null
-                    }) { Text(stringResource(R.string.common_cancel)) }
-                }
-            )
+                )
+            }
         }
     }
 }

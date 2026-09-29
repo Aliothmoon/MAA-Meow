@@ -1,5 +1,12 @@
 package com.aliothmoon.maameow.presentation.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,13 +18,24 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -66,20 +84,21 @@ fun ResourceInitDialog(
 
                             Spacer(modifier = Modifier.height(24.dp))
 
-                            // 进度条
-                            LinearProgressIndicator(
-                                progress = { state.progress / 100f },
+                            ExtractProgressBar(
+                                state = state,
                                 modifier = Modifier.fillMaxWidth()
                             )
 
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            // 进度文本
-                            Text(
-                                text = "${state.extractedCount} / ${state.totalCount} (${state.progress}%)",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            // 总数未知时（准备、清理旧资源）不显示 0 / 0
+                            if (state.totalCount > 0) {
+                                Text(
+                                    text = "${state.extractedCount} / ${state.totalCount} (${state.progress}%)",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
 
                             if (state.currentFile.isNotEmpty()) {
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -127,6 +146,68 @@ fun ResourceInitDialog(
             // 其他状态不显示弹窗
         }
     }
+}
+
+/**
+ * 解压进度条
+ * 总数未知时走不定进度动画；已知时平滑过渡，并有一道光扫过整条，进度一时不动也看得出在跑
+ */
+@Composable
+private fun ExtractProgressBar(
+    state: ResourceInitState.Extracting,
+    modifier: Modifier = Modifier
+) {
+    if (state.totalCount <= 0) {
+        LinearProgressIndicator(modifier = modifier)
+        return
+    }
+
+    // 按文件数取小数进度，不用整数百分比，免得每满 1% 才跳一格
+    val progress by animateFloatAsState(
+        targetValue = state.extractedCount.toFloat() / state.totalCount,
+        animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
+        label = "extractProgress"
+    )
+    val shimmerTransition = rememberInfiniteTransition(label = "extractShimmer")
+    val shimmerPos by shimmerTransition.animateFloat(
+        initialValue = -0.3f,
+        targetValue = 1.3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1600, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "extractShimmerPos"
+    )
+    // 已完成段是主色，轨道是浅色，同一种高光总有一边看不见，分开取色
+    val filledShimmer = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.45f)
+    val trackShimmer = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+
+    LinearProgressIndicator(
+        progress = { progress },
+        modifier = modifier.drawWithContent {
+            drawContent()
+            val rtl = layoutDirection == LayoutDirection.Rtl
+            val sweepWidth = size.width * 0.2f
+            val center = size.width * if (rtl) 1f - shimmerPos else shimmerPos
+            fun sweep(color: Color) = Brush.horizontalGradient(
+                colors = listOf(Color.Transparent, color, Color.Transparent),
+                startX = center - sweepWidth,
+                endX = center + sweepWidth
+            )
+            // RTL 下已完成段在右侧
+            val filled = size.width * progress
+            val split = if (rtl) size.width - filled else filled
+            val bar = Path().apply {
+                addRoundRect(
+                    RoundRect(0f, 0f, size.width, size.height, CornerRadius(size.height / 2))
+                )
+            }
+            clipPath(bar) {
+                clipRect(right = split) { drawRect(sweep(if (rtl) trackShimmer else filledShimmer)) }
+                clipRect(left = split) { drawRect(sweep(if (rtl) filledShimmer else trackShimmer)) }
+            }
+        }
+    )
 }
 
 /**

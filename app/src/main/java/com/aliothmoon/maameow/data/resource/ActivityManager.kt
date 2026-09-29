@@ -364,7 +364,8 @@ class ActivityManager(
                     displayName = stage.displayName,
                     openDays = stage.openDays,
                     activity = activity,
-                    tip = stage.tip
+                    tip = stage.tip,
+                    dropGroups = stage.dropGroups
                 )
             }
         }
@@ -518,17 +519,23 @@ class ActivityManager(
      * 迁移自 WPF StageManager.GetStageTips
      *
      * @param dayOfWeek 星期几
-     * @param inventory 仓库识别结果 itemId → 数量，未识别的物品不带库存
+     * @param inventory 仓库缓存 itemId → 数量
+     * @param hasSyncedInventory 是否完成过全量仓库识别；识别后缺失项按 0 处理，否则视为未知
+     * 有意偏离 WPF：上游缺失项显示 --，一项都没有时整行隐藏；
+     * 缺失也可能是识别漏掉（core 丢弃数量识别为 0 的格子），但真没有的情况远更常见，显示 0 更有用
      * @return 提示文本行列表
      */
     fun getStageTips(
         dayOfWeek: DayOfWeek = getYjDayOfWeek(),
-        inventory: Map<String, Int> = emptyMap()
+        inventory: Map<String, Int> = emptyMap(),
+        hasSyncedInventory: Boolean = false
     ): List<String> {
         val lines = mutableListOf<String>()
         val shownSideStories = mutableSetOf<String>()
         var resourceTipShown = false
         val inventoryLabel = context.getString(R.string.panel_fight_stage_tip_inventory)
+        fun inventoryCount(itemId: String): Int? =
+            inventory[itemId] ?: if (hasSyncedInventory) 0 else null
 
         for ((_, stageInfo) in _stages.value) {
             if (!stageInfo.isStageOpen(dayOfWeek)) continue
@@ -572,6 +579,14 @@ class ActivityManager(
             // 4. 常规关卡提示
             if (stageInfo.tip.isNotEmpty()) {
                 lines.add(stageInfo.tip)
+            }
+
+            // 5. 分组库存（技能书、芯片等），格式同 WPF DropGroups，缺失项口径见 hasSyncedInventory
+            if (stageInfo.dropGroups.any { group -> group.any { inventoryCount(it) != null } }) {
+                val groups = stageInfo.dropGroups.joinToString(" / ") { group ->
+                    group.joinToString(" & ") { itemId -> inventoryCount(itemId)?.toString() ?: "--" }
+                }
+                lines.add(" ($inventoryLabel $groups)")
             }
         }
 
@@ -628,7 +643,8 @@ class ActivityManager(
                     value = entry.value,
                     utcStartTime = 0L,
                     utcExpireTime = Long.MAX_VALUE,
-                    tip = uiTextOf(entry.tipRes)
+                    tip = uiTextOf(entry.tipRes),
+                    category = uiTextOf(entry.categoryRes)
                 )
             }
     }

@@ -30,6 +30,7 @@ class SubTaskHandlerWhyLocalizationTest {
 
     private val handler = SubTaskHandler(
         applicationContext = context,
+        statusTracker = mockk(relaxed = true),
         sessionLogger = sessionLogger,
         copilotRuntimeStateStore = mockk(relaxed = true),
         resourceDataManager = mockk<ResourceDataManager>(relaxed = true),

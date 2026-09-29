@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.achievement.AchievementField
+import com.aliothmoon.maameow.presentation.StaySober
 import com.aliothmoon.maameow.presentation.components.InfoCard
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.viewmodel.AchievementEffect
@@ -68,9 +69,6 @@ fun AchievementDebugView(
                 AchievementEffect.Unlocked -> R.string.achievement_debug_unlock_done
                 AchievementEffect.UnlockedAll -> R.string.achievement_debug_unlock_all_done
                 AchievementEffect.Cleared -> R.string.achievement_debug_clear_done
-                AchievementEffect.PallasEnteredDebug,
-                AchievementEffect.PallasExitedDebug,
-                    -> return@collect
             }
             Toast.makeText(context, resId, Toast.LENGTH_SHORT).show()
         }
@@ -152,21 +150,26 @@ fun AchievementDebugView(
                             modifier = Modifier.fillMaxWidth(),
                             enabled = selectedId.isNotBlank(),
                             onClick = { viewModel.onEvent(AchievementEvent.Unlock(selectedId)) },
+                            shape = MaterialTheme.shapes.small,
                         ) {
                             Text(stringResource(R.string.achievement_debug_unlock))
                         }
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = achievements.any { !it.unlocked },
-                            onClick = { viewModel.onEvent(AchievementEvent.UnlockAll) },
-                        ) {
-                            Text(stringResource(R.string.achievement_debug_unlock_all))
-                        }
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { viewModel.onEvent(AchievementEvent.ClearAllRecords) },
-                        ) {
-                            Text(stringResource(R.string.achievement_debug_clear_all))
+                        StaySober {
+                            Button(
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = achievements.any { !it.unlocked },
+                                onClick = { viewModel.onEvent(AchievementEvent.UnlockAll) },
+                                shape = MaterialTheme.shapes.small,
+                            ) {
+                                Text(stringResource(R.string.achievement_debug_unlock_all))
+                            }
+                            Button(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { viewModel.onEvent(AchievementEvent.ClearAllRecords) },
+                                shape = MaterialTheme.shapes.small,
+                            ) {
+                                Text(stringResource(R.string.achievement_debug_clear_all))
+                            }
                         }
                     }
                 }

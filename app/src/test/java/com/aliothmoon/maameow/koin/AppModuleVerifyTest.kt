@@ -2,6 +2,8 @@ package com.aliothmoon.maameow.koin
 
 import android.app.Application
 import android.content.Context
+import com.aliothmoon.maameow.data.achievement.PallasDebugEasterEgg
+import com.aliothmoon.maameow.data.achievement.PallasDrunkState
 import com.aliothmoon.maameow.domain.launch.LaunchPipeline
 import org.junit.Test
 import org.koin.dsl.module
@@ -27,6 +29,8 @@ class AppModuleVerifyTest {
             // 构造器里的 lambda 参数由模块内联提供，静态校验需显式放行
             injections = injectedParameters(
                 definition<LaunchPipeline>(Function0::class, Function2::class),
+                // 彩蛋触发参数按构建类型内联，不进依赖图
+                definition<PallasDrunkState>(PallasDebugEasterEgg::class),
             ),
         )
     }

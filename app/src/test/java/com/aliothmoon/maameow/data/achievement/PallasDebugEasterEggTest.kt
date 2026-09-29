@@ -87,6 +87,26 @@ class PallasDebugEasterEggTest {
         assertTrue(e.onClick() is PallasClickResult.Counting)
     }
 
+    /** dev 构建注入的那组参数：首点即中，不用连点也不抽奖 */
+    @Test
+    fun debugBuildParams_firstClickEnters() {
+        var t = 0L
+        val e = PallasDebugEasterEgg(
+            random = { 0.99 },
+            clicksRequired = 1,
+            triggerChance = 1.0,
+            nowMs = { t },
+            clickDebounceMs = 0L,
+            exitCooldownMs = 0L,
+        )
+        t += 300
+        assertEquals(PallasClickResult.EnteredDebug, e.onClick())
+        assertTrue(e.isTriggered)
+        t += 300
+        assertEquals(PallasClickResult.ExitedDebug, e.onClick())
+        assertFalse(e.isTriggered)
+    }
+
     @Test
     fun afterMiss_canRetryAndEnter() {
         var t = 0L

@@ -13,6 +13,7 @@ import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager.Companion.FONT_SIZE_SCALE_AUTO
+import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.AppSettings
 import com.aliothmoon.maameow.domain.models.AppSettingsSchema
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
@@ -20,7 +21,6 @@ import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunDurationLimit
 import com.aliothmoon.maameow.domain.models.RunMode
-import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.UnlockCredential
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap
 import kotlinx.coroutines.CompletableDeferred
@@ -184,6 +184,15 @@ class AppSettingsManager internal constructor(
     suspend fun setDebugMode(enabled: Boolean) {
         with(AppSettingsSchema) {
             context.dataStore.edit { it[debugMode] = enabled.toString() }
+        }
+    }
+
+    val pallasHangover: StateFlow<Boolean> =
+        setting { it.pallasHangover.toBooleanStrictOrNull() ?: false }
+
+    suspend fun setPallasHangover(pending: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[pallasHangover] = pending.toString() }
         }
     }
 
@@ -696,6 +705,15 @@ class AppSettingsManager internal constructor(
     suspend fun setCustomBackgroundBlur(value: Int) {
         with(AppSettingsSchema) {
             context.dataStore.edit { it[customBackgroundBlur] = value.coerceIn(0, 100).toString() }
+        }
+    }
+
+    val customBackgroundMonet: StateFlow<Boolean> =
+        setting { it.customBackgroundMonet.toBooleanStrictOrNull() ?: false }
+
+    suspend fun setCustomBackgroundMonet(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[customBackgroundMonet] = enabled.toString() }
         }
     }
 

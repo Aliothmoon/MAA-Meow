@@ -10,8 +10,7 @@ import com.aliothmoon.maameow.data.achievement.AchievementField
 import com.aliothmoon.maameow.data.achievement.AchievementIds
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.achievement.AchievementState
-import com.aliothmoon.maameow.data.achievement.PallasClickResult
-import com.aliothmoon.maameow.data.achievement.PallasDebugEasterEgg
+import com.aliothmoon.maameow.data.achievement.PallasDrunkState
 import com.aliothmoon.maameow.data.achievement.achievementText
 import com.aliothmoon.maameow.data.achievement.buildAchievementStates
 
@@ -33,22 +32,21 @@ data class AchievementUiState(
     val achievements: List<AchievementState> = emptyList(),
     /** 全部可见成就(含未解锁),供调试页下拉选择等需要完整列表的场景使用。 */
     val allAchievements: List<AchievementState> = emptyList(),
-    /** 帕拉斯头像彩蛋：会话内 Debug 态（金色 + Unlock All）。 */
+    /** 帕拉斯彩蛋 Debug 态 */
     val pallasDebugActive: Boolean = false,
 )
 
 class AchievementViewModel(
     private val repository: AchievementRepository,
     private val application: Context,
+    private val pallas: PallasDrunkState,
 ) : ViewModel() {
     private val _query = MutableStateFlow("")
-    private val pallasEgg = PallasDebugEasterEgg()
-    private val _pallasDebugActive = MutableStateFlow(false)
 
     val uiState: StateFlow<AchievementUiState> = combine(
         repository.records,
         _query,
-        _pallasDebugActive,
+        pallas.debugActive,
     ) { records, query, pallasDebug ->
         val all = buildAchievementStates(records, AchievementDefinitions.all)
         val normalized = query.trim()
@@ -101,21 +99,9 @@ class AchievementViewModel(
             }
 
             AchievementEvent.PallasAvatarClicked -> viewModelScope.launch {
-                when (pallasEgg.onClick()) {
-                    PallasClickResult.Ignored -> return@launch
-                    PallasClickResult.EnteredDebug -> {
-                        _pallasDebugActive.value = true
-                        _effects.send(AchievementEffect.PallasEnteredDebug)
-                    }
-
-                    PallasClickResult.ExitedDebug -> {
-                        _pallasDebugActive.value = false
-                        _effects.send(AchievementEffect.PallasExitedDebug)
-                    }
-
-                    is PallasClickResult.Counting, PallasClickResult.MissedRoll -> Unit
-                }
+                // WPF OnDebugClick 的第一句就是解锁，不看有没有触发
                 repository.unlock(AchievementIds.PALLAS_CHEERS)
+                pallas.onMedalClick()
             }
         }
     }
@@ -129,7 +115,7 @@ sealed interface AchievementEvent {
     data object ClearAllRecords : AchievementEvent
     data object ScreenOpened : AchievementEvent
 
-    /** 设置成就区帕拉斯头像点击。 */
+    /** 设置成就区帕拉斯头像点击 */
     data object PallasAvatarClicked : AchievementEvent
 }
 
@@ -138,6 +124,4 @@ sealed interface AchievementEffect {
     data object Unlocked : AchievementEffect
     data object UnlockedAll : AchievementEffect
     data object Cleared : AchievementEffect
-    data object PallasEnteredDebug : AchievementEffect
-    data object PallasExitedDebug : AchievementEffect
 }

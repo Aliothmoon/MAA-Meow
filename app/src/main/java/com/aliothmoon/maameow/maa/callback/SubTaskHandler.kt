@@ -16,6 +16,7 @@ import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.data.resource.ServerTimezone
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import kotlinx.coroutines.CoroutineScope
@@ -42,6 +43,7 @@ class SubTaskHandler(
     private val activityManager: ActivityManager,
     private val achievementRepository: AchievementRepository,
     private val depotRepository: DepotRepository,
+    private val statusTracker: TaskChainStatusTracker,
 ) {
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val resources = applicationContext.resources
@@ -340,6 +342,10 @@ class SubTaskHandler(
             // 上游移除掉线重连后 core 检测到掉线弹窗即 Stop 当前任务链，
             // 队列剩余任务要在这里一起中止
             "OfflineConfirm", "OfflineConfirmAfterBattle" -> {
+                // 开始唤醒自己会点确认重连，属正常启动流程，不按掉线停机
+                // core 回调已剥掉 @ 前缀，StartUp@OfflineConfirm 同样报 OfflineConfirm，只能按任务链区分
+                if (details.getString("taskchain") == "StartUp") return
+
                 val message = str("GameDrop")
                 append(message, LogLevel.ERROR)
                 notificationCenter.notifySubTaskFailure(message, sendExternal = true)
@@ -477,7 +483,12 @@ class SubTaskHandler(
                 // OF-1 信用战完成现在会触发 Copilot@StageDrops-Stars-3
                 "Mall" if task == "StageDrops-Stars-3" -> {
                     append("${str("CompleteTask")}${str("CreditFight")}", LogLevel.TRACE)
+                    val nodeId = statusTracker.getNodeId(details.getIntValue("taskid", 0))
+                    val date = runningYjDate()
                     ioScope.launch {
+                        if (nodeId != null) {
+                            chainState.recordCreditFightCompleted(nodeId, date)
+                        }
                         achievementRepository.report {
                             event = AchievementEvents.PROCESS_TASK_COMPLETED
                             "taskchain" to taskchain
@@ -488,10 +499,21 @@ class SubTaskHandler(
 
                 "Mall" if (task == "VisitLimited" || task == "VisitNextBlack") -> {
                     append("${str("CompleteTask")}${str("Visiting")}", LogLevel.TRACE)
+                    val nodeId = statusTracker.getNodeId(details.getIntValue("taskid", 0))
+                    val date = runningYjDate()
+                    if (nodeId != null) {
+                        ioScope.launch {
+                            chainState.recordVisitFriendsCompleted(nodeId, date)
+                        }
+                    }
                 }
             }
         }
     }
+
+    /** 按本次会话的服务器换日，运行中切到别的服务器的 Profile 也不受影响 */
+    private fun runningYjDate(): String =
+        ServerTimezone.getYjDate(chainState.lastUsedClientType ?: chainState.clientType).toString()
 
     // ==================== SubTaskExtraInfo (20003) ====================
 
@@ -533,6 +555,24 @@ class SubTaskHandler(
             "PixelPaintProgress" -> logPixelPaintProgress(
                 toolboxResultCollector.onPixelPaintProgress(subDetails)
             )
+
+            "AutoRaisePotentialTotal" ->
+                append(str("AutoRaisePotentialTotalLog", subDetails?.getIntValue("total") ?: 0), LogLevel.INFO)
+
+            "AutoRaisePotentialProgress" -> {
+                val current = subDetails?.getIntValue("current") ?: 0
+                val total = subDetails?.getIntValue("total") ?: 0
+                val hasPotential = subDetails?.getBooleanValue("has_potential") ?: false
+                append(
+                    str(
+                        if (hasPotential) "AutoRaisePotentialPotentialFoundLog"
+                        else "AutoRaisePotentialNoPotentialLog",
+                        current,
+                        total,
+                    ),
+                    if (hasPotential) LogLevel.SUCCESS else LogLevel.TRACE,
+                )
+            }
 
             "FightTimes" -> {
                 pendingFight = pendingFight.copy(
@@ -689,6 +729,14 @@ class SubTaskHandler(
                 val cont = subDetails?.getBooleanValue("continue") ?: false
                 append(str(if (cont) "ContinueRefresh" else "NoRecruitmentPermit"), LogLevel.TRACE)
             }
+
+            "RecruitPermitReserved" -> {
+                val current = subDetails?.getIntValue("current") ?: 0
+                append(str("RecruitPermitReserved", current), LogLevel.INFO)
+            }
+
+            "RecruitPermitCountRecognitionFailed" ->
+                append(str("RecruitPermitCountRecognitionFailed"), LogLevel.WARNING)
 
             "NotEnoughStaff" -> append(str("NotEnoughStaff"), LogLevel.ERROR)
             "CreditFullOnlyBuyDiscount" -> {
@@ -863,10 +911,10 @@ class SubTaskHandler(
 
         val baseLog = if (isExpiring) {
             if (count > 0) expiringMedicineUsedTotal += count
-            // 上游 dev-v2 925ff331a: 回调不带 expire_days, 反查当前 active fight config 计算小时数
-            val hours = computeExpireHoursFromActiveConfig()
-            val prefix = if (hours > 0) {
-                str("ExpiringMedicineUsedHours", hours)
+            // 上游 dev-v2 925ff331a: 回调不带 expire_days, 反查当前 active fight config 计算天数
+            val days = computeExpireDaysFromActiveConfig()
+            val prefix = if (days > 0) {
+                str("ExpiringMedicineUsedDays", days)
             } else {
                 str("ExpiringMedicineUsed")
             }
@@ -906,23 +954,17 @@ class SubTaskHandler(
     }
 
     /**
-     * 反查当前任务链中第一个启用过期药的 FightConfig, 计算最终过期小时数
-     * 算法对齐上游 WPF: max(用户配置天数, 活动结束前两天时距本周末天数) * 24
+     * 反查当前任务链中第一个启用过期药的 FightConfig, 计算最终过期天数
+     * 算法对齐上游 WPF: max(用户配置天数, 活动结束前两天时距本周末天数)
      * 同一时刻通常只有一个 fight 在执行, 此简化是安全的
      */
-    private fun computeExpireHoursFromActiveConfig(): Int {
+    private fun computeExpireDaysFromActiveConfig(): Int {
         val fight = chainState.chain.value
             .mapNotNull { it.config as? FightConfig }
             .firstOrNull { it.useExpiringMedicine }
             ?: return 0
 
-        val userDays = fight.medicineExpireDays.coerceIn(1, 7)
-        val activityDays = if (fight.useExpireMedicineForActivity) {
-            activityManager.getActivityAwareExpireDays()
-        } else {
-            0
-        }
-        return maxOf(userDays, activityDays) * 24
+        return fight.effectiveExpireDays(activityManager.getActivityAwareExpireDays())
     }
 
     private fun currentRoguelikeConfig(): RoguelikeConfig? =

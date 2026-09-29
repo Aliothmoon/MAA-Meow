@@ -7,20 +7,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.constant.Routes
-import com.aliothmoon.maameow.data.preferences.AppSettingsManager
-import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.presentation.components.consumeAllPointerEvents
 import com.aliothmoon.maameow.presentation.pip.LocalIsInPip
 import com.aliothmoon.maameow.presentation.view.background.BackgroundTaskView
@@ -29,11 +27,7 @@ import com.aliothmoon.maameow.presentation.view.settings.SettingsView
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.ui.ScheduleListView
 import com.aliothmoon.maameow.theme.LocalReduceMotion
-import com.aliothmoon.maameow.theme.MaaBackgroundHost
 import com.aliothmoon.maameow.theme.MaaMotion
-import com.aliothmoon.maameow.theme.MaxBackgroundBlur
-import com.aliothmoon.maameow.theme.ProvideColorScheme
-import com.aliothmoon.maameow.theme.toGlass
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import kotlin.math.abs
@@ -48,11 +42,23 @@ fun MainScreen(
     onViewOnboarding: () -> Unit = {},
     visible: Boolean = true,
     fullscreen: Boolean = false,
+    parallax: MutableFloatState,
 ) {
     val pagerState = rememberPagerState(pageCount = { BottomNavTab.all.size })
     val scope = rememberCoroutineScope()
     val reduceMotion = LocalReduceMotion.current
     val chromeHidden = fullscreen || LocalIsInPip.current
+
+    // 把分页位置实时上报给背景层做视差，归一化到 -1~1。
+    // 不能只用 currentPageOffsetFraction：它在滑过中点时随 currentPage 进位翻符号，背景会瞬移。
+    // 减弱动效由背景层统一忽略，这里照常上报。
+    LaunchedEffect(pagerState) {
+        val lastIndex = (BottomNavTab.all.size - 1).coerceAtLeast(1)
+        snapshotFlow { pagerState.currentPage + pagerState.currentPageOffsetFraction }
+            .collect { position ->
+                parallax.floatValue = (position / lastIndex * 2f - 1f).coerceIn(-1f, 1f)
+            }
+    }
 
     // targetPage：点击/滑动一旦确定目标即生效，停稳后等于 currentPage。
     // animateScrollToPage 内部走 MutatorMutex，连续调用时后者自动接管，无需手动取消。
@@ -104,14 +110,6 @@ fun MainScreen(
             mainTabNavigator.consume()
         }
     }
-
-    // 自定义图片背景（仅四个主 Tab 生效）：启用时切换玻璃配色并在 Scaffold 之下绘制背景图。
-    val backgroundStore: BackgroundImageStore = koinInject()
-    val appSettings: AppSettingsManager = koinInject()
-    val backgroundImage by backgroundStore.imageBitmap.collectAsStateWithLifecycle()
-    val backgroundImageAlpha by appSettings.customBackgroundImageAlpha.collectAsStateWithLifecycle()
-    val backgroundScrim by appSettings.customBackgroundScrim.collectAsStateWithLifecycle()
-    val backgroundBlur by appSettings.customBackgroundBlur.collectAsStateWithLifecycle()
 
     val scaffoldContent: @Composable () -> Unit = {
         Scaffold(
@@ -166,21 +164,5 @@ fun MainScreen(
         }
     }
 
-    val image = backgroundImage
-    if (image != null) {
-        val baseScheme = MaterialTheme.colorScheme
-        val glassScheme = remember(baseScheme) { baseScheme.toGlass() }
-        ProvideColorScheme(glassScheme) {
-            MaaBackgroundHost(
-                image = image,
-                imageAlpha = backgroundImageAlpha / 100f,
-                scrimColor = baseScheme.background,
-                scrimAlpha = backgroundScrim / 100f,
-                blurRadius = MaxBackgroundBlur * (backgroundBlur / 100f),
-                content = scaffoldContent,
-            )
-        }
-    } else {
-        scaffoldContent()
-    }
+    scaffoldContent()
 }

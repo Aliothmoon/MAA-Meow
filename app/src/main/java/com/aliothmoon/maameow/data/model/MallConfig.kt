@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.data.model
 
+import com.aliothmoon.maameow.data.resource.ServerTimezone
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import kotlinx.serialization.Serializable
@@ -7,6 +8,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import java.time.LocalDate
 
 /**
  * 获取信用及购物配置
@@ -41,6 +43,10 @@ data class MallConfig(
      */
     val visitFriends: Boolean = true,
 
+    /** 与 WPF 一致默认关闭，按服务器凌晨 4 点换日 */
+    val visitFriendsOnceADay: Boolean = false,
+    val visitFriendsLastDate: String = "",
+
     // ============ 借助战 ============
 
     /**
@@ -49,6 +55,10 @@ data class MallConfig(
      * MaaCore JSON: credit_fight
      */
     val creditFight: Boolean = false,
+
+    /** 与 WPF 一致，按服务器凌晨 4 点换日，仅在成功后记录 */
+    val creditFightOnceADay: Boolean = true,
+    val creditFightLastDate: String = "",
 
     /**
      * 借助战编队选择
@@ -141,11 +151,13 @@ data class MallConfig(
 
     override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
         val mergedBlacklist = mergeFixedBlacklist(ctx.clientType)
+        val today = ServerTimezone.getYjDate(ctx.clientType)
         // 本任务自身开启，且整条链的前提也成立时才借助战
-        val creditFightEnabled = creditFight && ctx.chainAllowsCreditFight
+        val creditFightEnabled = isCreditFightAvailable(today) &&
+                ctx.chainAllowsCreditFight
         val paramsJson = buildJsonObject {
             // 访问好友
-            put("visit_friends", visitFriends)
+            put("visit_friends", isVisitFriendsAvailable(today))
 
             // 借助战
             put("credit_fight", creditFightEnabled)
@@ -168,6 +180,24 @@ data class MallConfig(
             put("reserve_max_credit", reserveMaxCredit)
         }
         return listOf(MaaTaskParams(MaaTaskType.MALL, paramsJson.toString()))
+    }
+
+    fun isCreditFightAvailable(today: LocalDate): Boolean =
+        onceADayAllows(creditFight, creditFightOnceADay, creditFightLastDate, today)
+
+    fun isVisitFriendsAvailable(today: LocalDate): Boolean =
+        onceADayAllows(visitFriends, visitFriendsOnceADay, visitFriendsLastDate, today)
+
+    /** 记录的日期解析失败时放行，同 WPF */
+    private fun onceADayAllows(
+        enabled: Boolean,
+        onceADay: Boolean,
+        lastDate: String,
+        today: LocalDate,
+    ): Boolean {
+        if (!enabled || !onceADay) return enabled
+        val last = runCatching { LocalDate.parse(lastDate) }.getOrNull() ?: return true
+        return today.isAfter(last)
     }
 
     private fun mergeFixedBlacklist(clientType: String): List<String> {

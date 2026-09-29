@@ -189,7 +189,8 @@ data class FightConfig(
     val useExpiringMedicine: Boolean = false,
 
     /**
-     * 吃药临期天数 (1-7)
+     * 吃药临期天数 (1-30)
+     * 对齐上游 v6.18.0-beta.3：下拉 24h×N 改为手输天数，上限放宽到 30
      */
     val medicineExpireDays: Int = 2,
 
@@ -329,14 +330,7 @@ data class FightConfig(
         val actualTimes = if (hasTimesLimited) maxTimes else Int.MAX_VALUE
 
         val expireDays = if (useExpiringMedicine) {
-            var days = medicineExpireDays.coerceIn(1, 7)
-            if (useExpireMedicineForActivity) {
-                val activityExpireDays = ctx.activityManager.getActivityAwareExpireDays()
-                if (activityExpireDays > 0) {
-                    days = maxOf(days, activityExpireDays)
-                }
-            }
-            days
+            effectiveExpireDays(ctx.activityManager.getActivityAwareExpireDays())
         } else {
             null
         }
@@ -427,5 +421,20 @@ data class FightConfig(
                 params = paramsJson.toString(),
             ),
         )
+    }
+
+    /**
+     * 有效临期天数：用户配置天数与活动结束前的当周过期天数取大
+     * 下发参数与日志展示共用，避免两处各算一遍
+     */
+    fun effectiveExpireDays(activityAwareExpireDays: Int): Int = maxOf(
+        medicineExpireDays.coerceIn(MEDICINE_EXPIRE_DAYS_MIN, MEDICINE_EXPIRE_DAYS_MAX),
+        if (useExpireMedicineForActivity) activityAwareExpireDays else 0,
+    )
+
+    companion object {
+        /** 吃药临期天数范围，对齐上游 v6.18.0-beta.3 的 NumericUpDown Minimum=1 Maximum=30 */
+        const val MEDICINE_EXPIRE_DAYS_MIN = 1
+        const val MEDICINE_EXPIRE_DAYS_MAX = 30
     }
 }

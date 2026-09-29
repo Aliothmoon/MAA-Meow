@@ -13,5 +13,6 @@ object Routes {
     const val SCHEDULE_TRIGGER_LOG = "schedule_trigger_log"
     const val NOTIFICATION = "notification"
     const val LIVE_UPDATE = "live_update"
+    const val WALLPAPER = "wallpaper"
     const val TASK_OVERRIDE_EDITOR = "task_override_editor"
 }

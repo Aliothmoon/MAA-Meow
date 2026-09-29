@@ -93,6 +93,8 @@
     <string name="settings_background_image_alpha">Image Opacity</string>
     <string name="settings_background_scrim">Scrim</string>
     <string name="settings_background_blur">Blur</string>
+    <string name="settings_background_monet">Colors from wallpaper</string>
+    <string name="settings_background_monet_desc">Derive theme colors from the image</string>
     <string name="settings_background_import_failed">Failed to import background image</string>
     <string name="settings_background_crop_reset">Reset</string>
     <string name="settings_background_crop_rotate">Rotate 90°</string>
@@ -392,6 +394,8 @@
     <string name="copilot_unsupported_skill">%1$s does not support skill %2$d, skill selection disabled</string>
     <string name="copilot_elite_filled">%1$s has no elite requirement, but other requirements need E%2$d; filled in automatically</string>
     <string name="copilot_elite_raised">%1$s requires E%2$d, but other requirements need E%3$d; adjusted automatically</string>
+    <string name="copilot_location_over_oper">%1$s has both location and operator set; the location will be used</string>
+    <string name="copilot_rect_over_location">%1$s has both rect and location set; the rect will be used</string>
     <string name="copilot_invalid_operator">Invalid operator: %1$s</string>
     <string name="copilot_status_completed">Completed: %1$s</string>
     <string name="copilot_rate_failed">An error occurred, the like failed: &lt;</string>
@@ -564,6 +568,8 @@
     <string name="maa_complete_task">Complete task: </string>
     <string name="maa_task_stopped">Has stopped</string>
     <string name="maa_all_tasks_complete">All task(s) completed!</string>
+    <string name="maa_task_completed_with_errors">All task(s) completed, but errors occurred!</string>
+    <string name="maa_task_error_summary_title">The following tasks failed this run:</string>
     <string name="maa_routing_restart_too_many_battles">Too many battles ahead: %1$s, restarting route</string>
     <string name="maa_ends_with_script">Ends with Script</string>
     <string name="maa_fight">Combat</string>
@@ -657,11 +663,16 @@
     <string name="maa_not_enough_staff">Insufficient Operators</string>
     <string name="maa_infrast_facility_layout_recognition_failed">Base layout recognition failed; Normal-mode shift change aborted. Make sure the base overview is shown and unobstructed, then retry</string>
     <string name="maa_recruit_support_operator">Add support unit: %1$s</string>
+    <string name="maa_recruit_permit_reserved">%1$d recruitment permits left, at or below the reserve, skipping this 3★ recruitment</string>
+    <string name="maa_recruit_permit_count_recognition_failed">Failed to recognize the recruitment permit count; skipped this 3★ recruitment to avoid spending reserved permits</string>
+    <string name="maa_auto_raise_potential_total_log">Auto raise potential: %1$d operators pending</string>
+    <string name="maa_auto_raise_potential_potential_found_log">Operator %1$d/%2$d: potential available to raise</string>
+    <string name="maa_auto_raise_potential_no_potential_log">Operator %1$d/%2$d: no potential to raise</string>
     <string name="maa_credit_full_only_buy_discount">Doctor! \nPurchasing only discounted items has caused an overflow in credits! \nBe cautious of wasting credits!\nRemaining credits: </string>
     <string name="maa_start_combat">Start combat: </string>
     <string name="maa_medicine_used">Medicine used</string>
     <string name="maa_expiring_medicine_used">Expiring medicine used</string>
-    <string name="maa_expiring_medicine_used_hours">Expiring medicine (in %1$d hours) used</string>
+    <string name="maa_expiring_medicine_used_days">Expiring medicine (within %1$d days) used</string>
     <string name="maa_use_medicine_medicine_info">Medicine: %1$d, Inventory: %2$d</string>
     <string name="maa_fight_times_unused">Completed %1$s battles, will execute %2$s multiplier proxy next time, will complete %3$s battles after entering, exceeds %4$s limit, will not enter battle</string>
     <string name="maa_algorithm_finish">Algorithm Finish</string>
@@ -687,12 +698,19 @@
     <string name="maa_training">Training Room</string>
     <string name="maa_deploy">Deploy</string>
     <string name="maa_retreat">Retreat</string>
-    <string name="maa_skill">Use Skill</string>
+    <string name="maa_use_skill">Use Skill</string>
     <string name="maa_skill_usage">Switch Skill Usage</string>
-    <string name="maa_speed_up">Switch Speed</string>
+    <string name="maa_switch_speed">Switch Speed</string>
     <string name="maa_bullet_time">Enter Bullet Time</string>
     <string name="maa_output">Print Description</string>
     <string name="maa_skill_daemon">Start Auto</string>
+    <string name="maa_move_camera">Move Camera</string>
+    <string name="maa_draw_card">Deploy Operator</string>
+    <string name="maa_check_if_start_over">Check If Restart</string>
+    <string name="maa_reset_stopwatch">Reset Stopwatch</string>
+    <string name="maa_click">Click</string>
+    <string name="maa_swipe">Swipe</string>
+    <string name="maa_set_unit_location">Set Unit Location</string>
     <string name="maa_sanity">Sanity</string>
     <string name="maa_unit_time">times</string>
     <string name="maa_operator">Operator</string>
@@ -708,7 +726,6 @@
     <string name="common_tab_general">General</string>
     <string name="common_tab_advanced">Advanced</string>
     <string name="common_done">Done</string>
-    <string name="common_sort">Sort</string>
     <string name="common_rename">Rename</string>
     <string name="common_copy">Copy</string>
     <string name="common_warning">Warning</string>
@@ -815,6 +832,7 @@
     <string name="panel_mall_shopping_tip">Automatically spend credits on items in the Credit Store.</string>
     <string name="panel_mall_credit_fight">Combat with Support to earn Credits</string>
     <string name="panel_mall_credit_fight_tip">Combat with Support Unit in OF-1 after Visit Friends to earn 30 credits.\nThis function is invalid when the stage is selected as \"Cur/Last\".\nDo not enable it if OF-1 from Heart of Surging Flame is not unlocked.</string>
+    <string name="panel_mall_only_once_a_day">Only once a day</string>
     <string name="panel_mall_credit_fight_unavailable">No valid combat stage could be resolved from the current combat task. Support OF-1 will be skipped this time.</string>
     <!-- %1$s task name, %2$d task order (1-based), %3$d stage list index (1-based) -->
     <string name="mall_credit_fight_blocked_by_stage">A Fight task has \"Cur/Last\" in its stage list, so Credit shopping will not run Support OF-1. Task: %1$s (order %2$d), stage index %3$d</string>
@@ -822,8 +840,7 @@
     <string name="panel_mall_credit_fight_notice">Support combat requires an available support unit in your friend list.</string>
     <string name="panel_mall_priority_title">Priority Items</string>
     <string name="panel_mall_priority_reorder_tip">Drag to adjust purchase priority. Items closer to the top are bought first.</string>
-    <string name="panel_mall_priority_mode_active">Reorder mode is enabled. Long-press list items to change priority, then tap the check button to exit.</string>
-    <string name="panel_mall_priority_mode_inactive">Enable reorder mode to change priority order. Tap × to remove an item.</string>
+    <string name="panel_mall_priority_drag_hint">Drag the handle to reorder. Tap × to remove.</string>
     <string name="panel_mall_enable_shopping_first">Please enable \"Credit shopping\" first.</string>
     <string name="panel_mall_add_item">Add Item</string>
     <string name="panel_mall_info_line_priority">* Items in the priority list are purchased in order.</string>
@@ -846,9 +863,10 @@
     <string name="panel_fight_custom_stage_code_tip">Support manual stage code entry and common aliases (for example, Lungmen Dollars → CE-6).</string>
     <string name="panel_fight_use_alternate_stage">Use alternative stage</string>
     <string name="panel_fight_use_alternate_stage_tip">Automatically use an alternative stage when the primary stage is unavailable.</string>
-    <string name="panel_fight_use_expiring_medicine">Unlimited use of expiring (&lt;N hours) sanity potion</string>
+    <string name="panel_fight_use_expiring_medicine">Unlimited use of expiring (&lt;N days) sanity potion</string>
     <string name="panel_fight_use_expiring_medicine_tip">Prioritize sanity potions expiring within the configured time.</string>
-    <string name="panel_fight_medicine_expire_days">Expire time</string>
+    <string name="panel_fight_medicine_expire_days">Expire days</string>
+    <string name="panel_fight_medicine_expire_days_tip">Only use potions shown in game as expiring in under N days; those showing N days or more are left alone</string>
     <string name="panel_fight_use_expire_medicine_for_activity">Use sanity potions that expire this week within 48 hours before the activity ends</string>
     <string name="panel_fight_use_expire_medicine_for_activity_tip">When an activity is about to end within 2 days, automatically use sanity potions expiring this week.</string>
     <string name="panel_fight_activity_days_left_open">Days left open: </string>
@@ -1117,6 +1135,7 @@
     <string name="panel_mini_game_title">Useful Tasks</string>
     <string name="panel_mini_game_name">Mini Game Name</string>
     <string name="panel_mini_game_ending">Ending</string>
+    <string name="panel_mini_game_use_normal_token">Use regular tokens when Kernel Tokens run out</string>
     <string name="panel_mini_game_preferred_events">Priority for Series of Events</string>
 
     <!-- mini game: data texts (names / tips, mirrors MaaWpfGui localization keys) -->
@@ -1136,6 +1155,15 @@
     <string name="mini_game_tip_ra_store">Please start from the event shop page.</string>
     <string name="mini_game_name_secret_front">Hidden Front</string>
     <string name="mini_game_tip_secret_front">Start from the squad selection screen;\nIf there is a saved game, please delete it manually.\nClose the tutorial after playing it for the first time.\nRecommended to enable in-game ｢Inherit previous squad\'s data｣.</string>
+    <string name="mini_game_name_auto_raise_potential">Auto raise potential</string>
+    <string name="mini_game_tip_auto_raise_potential">Enter the operator list screen before starting. Raises the potential of every operator with a notice badge.\nStops on the profile of the last processed operator; stays on the operator list when there is nothing to raise.</string>
+    <string name="mini_game_name_material_synthesis">Missing material synthesis</string>
+    <string name="mini_game_tip_material_synthesis">Open the missing-material popup from a training page (elite promotion, mastery, module upgrade) and jump to the workshop synthesis page before starting.\nRecursively synthesizes craftable sub-materials and stops when materials run out.</string>
+    <string name="mini_game_name_cursed_relic">Phantom Victoria Crown reroll</string>
+    <string name="mini_game_tip_cursed_relic">Please start from the Phantom roguelike main menu where the EXPLORE button is visible.\nRepeatedly starts an exploration and checks the starting relic; abandons and waits for the cooldown until the Victoria Crown shows up, then stops.</string>
+    <string name="mini_game_category_permanent_feature">Permanent features</string>
+    <string name="mini_game_category_permanent">Permanent activities</string>
+    <string name="mini_game_category_current_event">Current event</string>
     <string name="mini_game_tip_pixel_paint">Pick an image and tune it below, then stay on the in-game pixel art editor before starting</string>
     <string name="mini_game_name_pv">PV - Fireworks Organizing Committee</string>
     <string name="mini_game_tip_pv">Automatically clear from the selected stage. If you choose the first stage, start from the leftmost side of the event page; for other stages, enter the previous stage and then return to calibrate the position.</string>
@@ -1290,6 +1318,8 @@
     <string name="panel_recruit_preserve_tag_enabled">Preserve selected tags</string>
     <string name="panel_recruit_preserve_tag_enabled_tip">Skip the recruitment and keep the slot when any selected tag is identified. Leave it empty to preserve none.</string>
     <string name="panel_recruit_choose_level3">Auto confirm 3★</string>
+    <string name="panel_recruit_level3_permit_reserve">Reserve permits for 3★</string>
+    <string name="panel_recruit_level3_permit_reserve_tip">Skip 3★ recruitment when the remaining recruitment permits are at or below this value</string>
     <string name="panel_recruit_choose_level4">Auto confirm 4★</string>
     <string name="panel_recruit_choose_level5">Auto confirm 5★</string>
 
@@ -1803,6 +1833,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_time_picker_title">Choose time</string>
     <string name="time_picker_am">AM</string>
     <string name="time_picker_pm">PM</string>
+    <string name="time_picker_format_12h">12h</string>
+    <string name="time_picker_format_24h">24h</string>
     <string name="schedule_default_name">Schedule-%1$d</string>
     <string name="schedule_error_name_required">Enter a schedule name</string>
     <string name="schedule_error_profile_required">Select a task profile</string>
