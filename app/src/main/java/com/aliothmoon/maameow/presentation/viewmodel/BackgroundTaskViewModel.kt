@@ -506,6 +506,8 @@ class BackgroundTaskViewModel(
 
         if (plan.params.isEmpty()) {
             // 只有旁路任务，不起 Core；界面上没运行态，靠 Toast 报开始与结果
+            // 旁路任务跑完才返回，先切页才能边跑边看日志
+            onTabChange(PanelTab.LOG)
             sideTaskRunner.runWithoutCore(plan.sideTasks) { _effects.send(UiEffect.toast(it)) }
             return null
         }
@@ -540,6 +542,7 @@ class BackgroundTaskViewModel(
             Timber.w("Start failed: %s", message.resolve(application))
             return message
         }
+        onTabChange(PanelTab.LOG)
         return null
     }
 
@@ -611,12 +614,7 @@ class BackgroundTaskViewModel(
                 _state.update { it.copy(dialog = null) }
                 pendingStart = null
                 if (pending != null) {
-                    viewModelScope.launch {
-                        val message = startTasksInternal(context = pending.context)
-                        if (message != null && state.value.dialog == null) {
-                            showStartFailedDialog(message)
-                        }
-                    }
+                    launchManualStart(pending.context)
                 }
             }
 

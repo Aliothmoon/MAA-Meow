@@ -308,6 +308,8 @@ class ExpandedControlPanelViewModel(
 
             if (plan.params.isEmpty()) {
                 // 只有旁路任务，不起 Core；界面上没运行态，靠 Toast 报开始与结果
+                // 旁路任务跑完才返回，先切页才能边跑边看日志
+                onTabChange(PanelTab.LOG)
                 sideTaskRunner.runWithoutCore(plan.sideTasks) { _effects.send(UiEffect.toast(it)) }
                 return@launch
             }
@@ -336,6 +338,7 @@ class ExpandedControlPanelViewModel(
                 )
                 // 成功时用 Toast 简短提示
                 _effects.send(UiEffect.toast(message))
+                onTabChange(PanelTab.LOG)
             } else {
                 // 失败时通过 StateFlow 通知 UI 展示 OverlayDialog
                 Timber.w("Start failed: %s", message.resolve(application))
