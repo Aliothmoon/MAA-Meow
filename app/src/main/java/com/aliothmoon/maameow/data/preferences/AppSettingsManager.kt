@@ -5,6 +5,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.datastore.core.DataStore
 import com.aliothmoon.maameow.data.notification.live.LiveUpdateStyle
+import com.aliothmoon.maameow.domain.notification.LiveBackend
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
@@ -399,14 +400,6 @@ class AppSettingsManager internal constructor(
         }
     }
 
-    // 超级岛断网旁路
-    val liveIslandXmsfBypass: StateFlow<Boolean> = setting { it.liveIslandXmsfBypass.toBooleanStrictOrNull() ?: true }
-
-    suspend fun setLiveIslandXmsfBypass(enabled: Boolean) {
-        with(AppSettingsSchema) {
-            context.dataStore.edit { it[liveIslandXmsfBypass] = enabled.toString() }
-        }
-    }
 
     // Live Updates 通知自定义
     enum class LiveUpdateChipContent(@param:StringRes val labelRes: Int) {
@@ -439,14 +432,21 @@ class AppSettingsManager internal constructor(
         CUSTOM(R.string.live_update_icon_custom, null),
     }
 
-    // 实况通知总开关，关闭即退回普通通知
-    val liveUpdateEnabled: StateFlow<Boolean> = setting { it.liveUpdateEnabled.toBooleanStrictOrNull() ?: true }
+    // 实况展示方式；null 为自动，取可用的最高一档
+    val liveBackendPreference: StateFlow<LiveBackend?> = setting {
+        it.liveBackend.takeIf(String::isNotEmpty)
+            ?.let { name -> runCatching { LiveBackend.valueOf(name) }.getOrNull() }
+    }
 
-    suspend fun setLiveUpdateEnabled(enabled: Boolean) {
+    suspend fun setLiveBackendPreference(backend: LiveBackend?) {
         with(AppSettingsSchema) {
-            context.dataStore.edit { it[liveUpdateEnabled] = enabled.toString() }
+            context.dataStore.edit { it[liveBackend] = backend?.name.orEmpty() }
         }
     }
+
+    // 旧版超级岛兼容模式，只读
+    val liveIslandXmsfBypass: StateFlow<Boolean> =
+        setting { it.liveIslandXmsfBypass.toBooleanStrictOrNull() ?: true }
 
     // 实况通知短文本内容
     val liveUpdateChipContent: StateFlow<LiveUpdateChipContent> = setting {

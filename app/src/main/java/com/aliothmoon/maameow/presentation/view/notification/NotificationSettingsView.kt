@@ -64,6 +64,12 @@ private val PROVIDERS: List<Pair<String, Int>> = listOf(
     "CustomWebhook" to R.string.notification_provider_custom_webhook,
 )
 
+private fun LiveBackend.labelRes(): Int = when (this) {
+    LiveBackend.HYPER_OS_FOCUS -> R.string.notification_live_style_hyperos
+    LiveBackend.AOSP_PROMOTED -> R.string.notification_live_style_aosp
+    LiveBackend.PLAIN -> R.string.notification_live_style_plain
+}
+
 @Composable
 fun NotificationSettingsView(
     navController: NavController, viewModel: NotificationSettingsViewModel = koinViewModel()
@@ -75,8 +81,7 @@ fun NotificationSettingsView(
     val sendOnServiceDied by viewModel.sendOnServiceDied.collectAsStateWithLifecycle()
     val includeLogDetails by viewModel.includeLogDetails.collectAsStateWithLifecycle()
     val liveCapability by viewModel.liveCapability.collectAsStateWithLifecycle()
-    val liveIslandXmsfBypass by viewModel.liveIslandXmsfBypass.collectAsStateWithLifecycle()
-    val liveUpdateEnabled by viewModel.liveUpdateEnabled.collectAsStateWithLifecycle()
+    val liveBackendPreference by viewModel.liveBackendPreference.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -118,34 +123,37 @@ fun NotificationSettingsView(
             item {
                 SectionHeader(stringResource(R.string.notification_section_live))
                 SettingsGroupCard {
-                    val styleLabel = when (liveCapability.backend) {
-                        LiveBackend.HYPER_OS_FOCUS ->
-                            stringResource(R.string.notification_live_style_hyperos)
-
-                        LiveBackend.AOSP_PROMOTED ->
-                            stringResource(R.string.notification_live_style_aosp)
-
-                        LiveBackend.PLAIN ->
-                            stringResource(R.string.notification_live_style_plain)
-                    }
+                    // 描述显示实际生效的一档：首选缺权限时会往下退
                     SettingRow(
                         title = stringResource(R.string.notification_live_style),
-                        description = styleLabel,
+                        description = stringResource(liveCapability.backend.labelRes()),
                         titleColor = contentColor,
                     )
-                    if (liveCapability.liveSupported) {
-                        ListItemDivider()
-                        SettingRow(
-                            title = stringResource(R.string.notification_live_enable),
-                            description = stringResource(R.string.notification_live_enable_desc),
-                            titleColor = contentColor,
-                            trailing = {
-                                Switch(
-                                    checked = liveUpdateEnabled,
-                                    onCheckedChange = viewModel::setLiveUpdateEnabled,
-                                )
+                    val liveOptions = buildList {
+                        if (liveCapability.focusLikely) add(LiveBackend.HYPER_OS_FOCUS)
+                        if (liveCapability.promotedAvailable) add(LiveBackend.AOSP_PROMOTED)
+                        add(LiveBackend.PLAIN)
+                    }
+                    if (liveOptions.size > 1) {
+                        val selected = liveBackendPreference ?: liveCapability.backend
+                        SelectableChipGroup(
+                            label = "",
+                            selectedValue = selected,
+                            options = liveOptions.map { it to stringResource(it.labelRes()) },
+                            onSelected = {
+                                if (it != liveBackendPreference) viewModel.setLiveBackendPreference(it)
                             },
+                            modifier = Modifier.padding(bottom = MaaDesignTokens.Spacing.sm),
                         )
+                        // 岛要借断网旁路躲云端鉴权，会波及小米推送
+                        if (selected == LiveBackend.HYPER_OS_FOCUS) {
+                            Text(
+                                text = stringResource(R.string.notification_live_island_note),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = MaaDesignTokens.Spacing.sm),
+                            )
+                        }
                     }
                     // 授权行只在缺权限时出现，已授权时没有可操作性
                     if (!liveCapability.postNotifications) {
@@ -158,28 +166,14 @@ fun NotificationSettingsView(
                             viewModel.requestPostNotifications(context)
                         }
                     }
-                    if (liveCapability.focusLikely) {
+                    if (liveCapability.focusLikely && !liveCapability.focusGranted) {
                         ListItemDivider()
-                        // 断网旁路会波及全机小米推送，给用户留个开关
-                        SettingRow(
-                            title = stringResource(R.string.notification_live_xmsf_bypass),
+                        PermissionFixRow(
+                            title = stringResource(R.string.notification_live_step_focus),
+                            hint = stringResource(R.string.notification_live_step_focus_missing),
                             titleColor = contentColor,
-                            trailing = {
-                                Switch(
-                                    checked = liveIslandXmsfBypass,
-                                    onCheckedChange = viewModel::setLiveIslandXmsfBypass,
-                                )
-                            },
-                        )
-                        if (!liveCapability.focusGranted) {
-                            ListItemDivider()
-                            PermissionFixRow(
-                                title = stringResource(R.string.notification_live_step_focus),
-                                hint = stringResource(R.string.notification_live_step_focus_missing),
-                                titleColor = contentColor,
-                            ) {
-                                viewModel.openAppNotificationSettings(context)
-                            }
+                        ) {
+                            viewModel.openAppNotificationSettings(context)
                         }
                     }
                     if (liveCapability.promotedAvailable && !liveCapability.promotedGranted) {

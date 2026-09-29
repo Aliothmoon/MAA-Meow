@@ -26,7 +26,7 @@ class LivePublisherRouter(
 
     private val appContext = context.applicationContext
     private val hyper = HyperOsFocusPublisher(
-        appContext, factory, sequenceStore, xmsfGate, appSettings, promotedDetector,
+        appContext, factory, sequenceStore, xmsfGate, promotedDetector,
         style, trackerIcons,
     )
     private val aosp = AospPromotedPublisher(appContext, factory, promotedDetector)
@@ -38,8 +38,7 @@ class LivePublisherRouter(
     override val renderChanges: Flow<Unit> =
         combine(
             listOf(
-                appSettings.liveUpdateEnabled,
-                appSettings.liveIslandXmsfBypass,
+                appSettings.liveBackendPreference,
                 appSettings.liveUpdateChipContent,
                 appSettings.liveUpdateColorScheme,
                 appSettings.liveUpdateCustomColor,
@@ -75,13 +74,15 @@ class LivePublisherRouter(
         val focusLikely = hyperDetector.isLikelyDevice()
         val focusGranted = hyperDetector.hasFocusPermission()
         val promoted = promotedDetector.isGranted()
-        // 关掉旁路后岛会被云端鉴权摘掉，继续发焦点负载只是白构建，直接退到下一档
+        // 从首选档往下取第一档可用的：超级岛 > 实时更新 > 普通通知
+        val preferred = appSettings.liveBackendPreference.value
+            ?: if (appSettings.liveIslandXmsfBypass.value) LiveBackend.HYPER_OS_FOCUS
+            else LiveBackend.AOSP_PROMOTED
         val backend = when {
-            !appSettings.liveUpdateEnabled.value -> LiveBackend.PLAIN
-            hyperDetector.isAvailable() && appSettings.liveIslandXmsfBypass.value ->
+            preferred == LiveBackend.HYPER_OS_FOCUS && hyperDetector.isAvailable() ->
                 LiveBackend.HYPER_OS_FOCUS
 
-            promoted -> LiveBackend.AOSP_PROMOTED
+            preferred != LiveBackend.PLAIN && promoted -> LiveBackend.AOSP_PROMOTED
             else -> LiveBackend.PLAIN
         }
         return LiveCapability(

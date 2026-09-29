@@ -1586,13 +1586,11 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <!-- i18n: notifications -->
     <string name="notification_settings_title">通知设置</string>
     <string name="notification_section_live">实况通知</string>
-    <string name="notification_live_enable">启用 Live Updates</string>
-    <string name="notification_live_enable_desc">在支持的设备上以实时动态样式展示任务进度</string>
     <string name="notification_live_style">展示方式</string>
     <string name="notification_live_style_hyperos">超级岛</string>
     <string name="notification_live_style_aosp">实时更新</string>
     <string name="notification_live_style_plain">标准通知栏</string>
-    <string name="notification_live_xmsf_bypass">超级岛兼容模式</string>
+    <string name="notification_live_island_note">超级岛运行期间会临时限制小米推送联网</string>
     <string name="notification_live_step_post">通知发送权限</string>
     <string name="notification_live_step_post_missing">未授权，点此申请</string>
     <string name="notification_live_step_focus">焦点通知</string>

@@ -1530,13 +1530,11 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <!-- i18n: notifications -->
     <string name="notification_settings_title">Notifications</string>
     <string name="notification_section_live">Live updates</string>
-    <string name="notification_live_enable">Enable Live Updates</string>
-    <string name="notification_live_enable_desc">Show task progress as live updates on supported devices</string>
     <string name="notification_live_style">Presentation</string>
     <string name="notification_live_style_hyperos">Dynamic Island</string>
     <string name="notification_live_style_aosp">Live Updates</string>
     <string name="notification_live_style_plain">Notification shade</string>
-    <string name="notification_live_xmsf_bypass">Dynamic Island compatibility</string>
+    <string name="notification_live_island_note">Xiaomi push networking is briefly restricted while the Dynamic Island is active</string>
     <string name="notification_live_step_post">Post notifications</string>
     <string name="notification_live_step_post_missing">Not granted. Tap to request</string>
     <string name="notification_live_step_focus">Focus notifications</string>

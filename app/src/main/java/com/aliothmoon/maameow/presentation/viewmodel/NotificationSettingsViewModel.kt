@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.data.notification.NotificationSettings
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.notification.LiveBackend
 import com.aliothmoon.maameow.domain.notification.LiveCapability
 import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
@@ -20,7 +21,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -66,16 +66,12 @@ class NotificationSettingsViewModel(
     private val _liveCapability = MutableStateFlow(livePublisher.capability)
     val liveCapability: StateFlow<LiveCapability> = _liveCapability.asStateFlow()
 
-    val liveIslandXmsfBypass: StateFlow<Boolean> = appSettingsManager.liveIslandXmsfBypass
-    val liveUpdateEnabled: StateFlow<Boolean> = appSettingsManager.liveUpdateEnabled
+    val liveBackendPreference: StateFlow<LiveBackend?> = appSettingsManager.liveBackendPreference
 
     init {
-        // 这些开关都会改变后端选择，展示方式得跟着落盘值走，不能等下次 onResume
+        // 展示方式得跟着落盘值走，不能等下次 onResume
         viewModelScope.launch {
-            merge(
-                appSettingsManager.liveIslandXmsfBypass.drop(1),
-                appSettingsManager.liveUpdateEnabled.drop(1),
-            ).collect {
+            appSettingsManager.liveBackendPreference.drop(1).collect {
                 _liveCapability.value = livePublisher.capability
             }
         }
@@ -86,12 +82,8 @@ class NotificationSettingsViewModel(
         _liveCapability.value = livePublisher.refreshCapability()
     }
 
-    fun setLiveIslandXmsfBypass(enabled: Boolean) {
-        viewModelScope.launch { appSettingsManager.setLiveIslandXmsfBypass(enabled) }
-    }
-
-    fun setLiveUpdateEnabled(enabled: Boolean) {
-        viewModelScope.launch { appSettingsManager.setLiveUpdateEnabled(enabled) }
+    fun setLiveBackendPreference(backend: LiveBackend) {
+        viewModelScope.launch { appSettingsManager.setLiveBackendPreference(backend) }
     }
 
     fun requestPostNotifications(context: Context) {

@@ -27,6 +27,7 @@ import com.aliothmoon.maameow.domain.models.GestureRecordResult
 import com.aliothmoon.maameow.domain.models.GestureRecordStatus
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
 import com.aliothmoon.maameow.domain.models.RemoteBackend
+import com.aliothmoon.maameow.domain.notification.LiveBackend
 import com.aliothmoon.maameow.domain.models.UnlockCredential
 import com.aliothmoon.maameow.domain.models.UnlockGesture
 import com.aliothmoon.maameow.domain.service.AchievementReporter
@@ -176,13 +177,13 @@ class SettingsViewModel(
     private val liveUpdateSupported =
         aospPromotedDetector.isApiSupported() || hyperOsFocusDetector.isLikelyDevice()
 
-    /** 样式页入口：设备支持且已开启实况通知 */
-    val liveUpdateEntryVisible: StateFlow<Boolean> = appSettingsManager.liveUpdateEnabled
-        .map { liveUpdateSupported && it }
+    /** 样式页入口：设备支持且没选普通通知 */
+    val liveUpdateEntryVisible: StateFlow<Boolean> = appSettingsManager.liveBackendPreference
+        .map { liveUpdateSupported && it != LiveBackend.PLAIN }
         .stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
-            liveUpdateSupported && appSettingsManager.liveUpdateEnabled.value,
+            liveUpdateSupported && appSettingsManager.liveBackendPreference.value != LiveBackend.PLAIN,
         )
 
     val startupBackend: StateFlow<RemoteBackend> = appSettingsManager.startupBackend

@@ -6,7 +6,6 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Icon
 import android.os.Bundle
 import androidx.core.graphics.drawable.toBitmap
-import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager.LiveUpdateChipContent
 import com.aliothmoon.maameow.domain.notification.LiveBackend
 import com.aliothmoon.maameow.domain.notification.LiveCapability
@@ -24,7 +23,6 @@ class HyperOsFocusPublisher(
     private val factory: LiveNotificationFactory,
     private val sequenceStore: FocusSequenceStore,
     private val xmsfGate: XmsfNetworkGate,
-    private val appSettings: AppSettingsManager,
     promotedDetector: AospPromotedDetector,
     private val style: LiveUpdateStyle,
     private val trackerIcons: TrackerIconStore,
@@ -82,7 +80,7 @@ class HyperOsFocusPublisher(
         val firstResultFloat = session.category == LiveCategory.RESULT &&
                 session.firstFloat &&
                 !isHeld()
-        if (firstResultFloat && bypassEnabled()) {
+        if (firstResultFloat) {
             xmsfGate.pulse { plain.notifyOrSkip(session.sessionId, notification) }
         } else {
             plain.notifyOrSkip(session.sessionId, notification)
@@ -95,7 +93,6 @@ class HyperOsFocusPublisher(
     private fun isHeld(): Boolean = synchronized(holdLock) { progressHeld }
 
     private fun holdProgress() {
-        if (!bypassEnabled()) return
         // 先置位再 acquire，保证 acquire/release 严格配对
         synchronized(holdLock) {
             if (progressHeld) return
@@ -114,9 +111,6 @@ class HyperOsFocusPublisher(
         }
         if (held) xmsfGate.release()
     }
-
-    /** 用户可关：关掉后小米设备上岛会被云端鉴权摘除，退化为普通通知 */
-    private fun bypassEnabled(): Boolean = appSettings.liveIslandXmsfBypass.value
 
     private fun assemble(session: LiveSession): Notification {
         val extras = runCatching { buildFocusExtras(session) }

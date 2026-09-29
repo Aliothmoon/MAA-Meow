@@ -81,12 +81,13 @@ data class AppSettings(
     @PrefKey(default = "DEFAULT")
     val eventNotificationLevel: String = "DEFAULT",
 
+    /** 旧版「超级岛兼容模式」，只读：关过的老用户自动档跳过超级岛 */
     @PrefKey(default = "true")
     val liveIslandXmsfBypass: String = "true",
 
-    /** 实况通知总开关 */
-    @PrefKey(default = "true")
-    val liveUpdateEnabled: String = "true",
+    /** 实况展示方式：空为自动，否则为 LiveBackend 名 */
+    @PrefKey(default = "")
+    val liveBackend: String = "",
 
     /** 实况短文本内容，取值见 LiveUpdateChipContent */
     @PrefKey(default = "BOTH")
