@@ -27,7 +27,6 @@ import com.aliothmoon.maameow.domain.models.GestureRecordResult
 import com.aliothmoon.maameow.domain.models.GestureRecordStatus
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
 import com.aliothmoon.maameow.domain.models.RemoteBackend
-import com.aliothmoon.maameow.domain.notification.LiveBackend
 import com.aliothmoon.maameow.domain.models.UnlockCredential
 import com.aliothmoon.maameow.domain.models.UnlockGesture
 import com.aliothmoon.maameow.domain.service.AchievementReporter
@@ -51,7 +50,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -173,18 +171,9 @@ class SettingsViewModel(
         }
     }
 
-    // 同 LiveCapability.liveSupported，这里不走 capability 的跨进程查询
-    private val liveUpdateSupported =
+    /** 样式页入口：同 LiveCapability.liveSupported，这里不走 capability 的跨进程查询 */
+    val liveUpdateEntryVisible: Boolean =
         aospPromotedDetector.isApiSupported() || hyperOsFocusDetector.isLikelyDevice()
-
-    /** 样式页入口：设备支持且没选普通通知 */
-    val liveUpdateEntryVisible: StateFlow<Boolean> = appSettingsManager.liveBackendPreference
-        .map { liveUpdateSupported && it != LiveBackend.PLAIN }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            liveUpdateSupported && appSettingsManager.liveBackendPreference.value != LiveBackend.PLAIN,
-        )
 
     val startupBackend: StateFlow<RemoteBackend> = appSettingsManager.startupBackend
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), RemoteBackend.SHIZUKU)

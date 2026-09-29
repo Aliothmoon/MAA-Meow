@@ -59,6 +59,7 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager.LiveUpdateColorScheme
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager.LiveUpdateTrackerIcon
 import com.aliothmoon.maameow.domain.notification.LiveBackend
+import com.aliothmoon.maameow.domain.notification.LiveCapability
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
 import com.aliothmoon.maameow.presentation.LocalToaster
 import com.aliothmoon.maameow.presentation.components.SectionHeader
@@ -107,18 +108,26 @@ fun LiveUpdateSettingsView(navController: NavController) {
     val toaster = LocalToaster.current
     val pickFailedMessage = stringResource(R.string.live_update_icon_pick_failed)
 
-    // 文案跟随实际生效的后端；capability 含跨进程查询，放 IO
-    val onIsland by produceState(initialValue = false) {
+    // 按实际生效的展示方式决定显示哪些项；capability 含跨进程查询，放 IO
+    val capability by produceState<LiveCapability?>(initialValue = null) {
         value = withContext(Dispatchers.IO) {
-            runCatching { livePublisher.capability.backend == LiveBackend.HYPER_OS_FOCUS }
-                .getOrDefault(false)
+            runCatching { livePublisher.capability }.getOrNull()
         }
     }
+    val backend = capability?.backend
+    val onIsland = backend == LiveBackend.HYPER_OS_FOCUS
+    // 标准通知栏不显示短文本；16 以下也没有 ProgressStyle 图标
+    val showChip = backend != null && backend != LiveBackend.PLAIN
+    val showIcon = backend != null && (backend != LiveBackend.PLAIN || capability?.promotedAvailable == true)
     val chipLabelRes =
         if (onIsland) R.string.live_update_chip_label_island else R.string.live_update_chip_label
     val iconLabelRes =
         if (onIsland) R.string.live_update_icon_label_island else R.string.live_update_icon_label
-    val hintRes = if (onIsland) R.string.live_update_hint_island else R.string.live_update_hint
+    val hintRes = when (backend) {
+        LiveBackend.HYPER_OS_FOCUS -> R.string.live_update_hint_island
+        LiveBackend.PLAIN -> R.string.live_update_hint_plain
+        else -> R.string.live_update_hint
+    }
 
     val customTrackerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -149,7 +158,7 @@ fun LiveUpdateSettingsView(navController: NavController) {
             )
         ) {
             // ── 显示内容 ──
-            item {
+            if (showChip) item {
                 SectionHeader(stringResource(chipLabelRes))
                 SettingsGroupCard {
                     SelectableChipGroup(
@@ -178,7 +187,7 @@ fun LiveUpdateSettingsView(navController: NavController) {
             }
 
             // ── 进度条颜色 ──
-            item {
+            if (backend != null) item {
                 SectionHeader(stringResource(R.string.live_update_color_label))
                 SettingsGroupCard {
                     val expanded = colorScheme == LiveUpdateColorScheme.CUSTOM
@@ -254,7 +263,7 @@ fun LiveUpdateSettingsView(navController: NavController) {
             }
 
             // ── 图标 ──
-            item {
+            if (showIcon) item {
                 SectionHeader(stringResource(iconLabelRes))
                 SettingsGroupCard {
                     val expanded = trackerIcon == LiveUpdateTrackerIcon.CUSTOM
@@ -330,7 +339,7 @@ fun LiveUpdateSettingsView(navController: NavController) {
             }
 
             // ── 提示 ──
-            item {
+            if (backend != null) item {
                 Text(
                     text = stringResource(hintRes),
                     style = MaterialTheme.typography.bodySmall,

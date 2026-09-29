@@ -162,7 +162,6 @@ fun SettingsView(
     val skipShizukuCheck by viewModel.skipShizukuCheck.collectAsStateWithLifecycle()
     val shizukuShortcutEnabled by viewModel.shizukuShortcutEnabled.collectAsStateWithLifecycle()
     val shizukuLaunchPackage by viewModel.shizukuLaunchPackage.collectAsStateWithLifecycle()
-    val liveUpdateEntryVisible by viewModel.liveUpdateEntryVisible.collectAsStateWithLifecycle()
     val deployWithPause by viewModel.deployWithPause.collectAsStateWithLifecycle()
     val reportToPenguin by viewModel.reportToPenguin.collectAsStateWithLifecycle()
     val reportToYituliu by viewModel.reportToYituliu.collectAsStateWithLifecycle()
@@ -964,7 +963,7 @@ fun SettingsView(
                         ) {
                             navController.navigate(Routes.NOTIFICATION)
                         }
-                        if (liveUpdateEntryVisible) {
+                        if (viewModel.liveUpdateEntryVisible) {
                             ListItemDivider()
                             SettingClickItem(
                                 title = stringResource(R.string.settings_live_update_title),
