@@ -173,8 +173,8 @@
     <string name="settings_section_notification">Notifications</string>
     <string name="settings_notification_title">Notification Settings</string>
     <string name="settings_notification_desc">Manage internal and external notification channels</string>
-    <string name="settings_live_update_title">Live Updates Customization</string>
-    <string name="settings_live_update_desc">Customize the task progress Live Update style</string>
+    <string name="settings_live_update_title">Running Notification Style</string>
+    <string name="settings_live_update_desc">Adjust content, color and icon for the current presentation</string>
 
     <string name="settings_section_data">Data Management</string>
     <string name="settings_export_config_title">Export Configuration</string>
@@ -2609,7 +2609,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="panel_switch_theme_remove">Remove theme candidate %1$d</string>
 
     <!-- Live Updates customization -->
-    <string name="live_update_settings_title">Live Updates Customization</string>
+    <string name="live_update_settings_title">Running Notification Style</string>
     <string name="live_update_chip_label">Status bar content</string>
     <string name="live_update_chip_label_island">Dynamic Island content</string>
     <string name="live_update_chip_both">Task + progress</string>

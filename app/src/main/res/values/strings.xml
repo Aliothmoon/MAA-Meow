@@ -396,8 +396,8 @@
     <string name="settings_section_notification">通知</string>
     <string name="settings_notification_title">通知设置</string>
     <string name="settings_notification_desc">管理内部和外部通知渠道</string>
-    <string name="settings_live_update_title">Live Updates 自定义</string>
-    <string name="settings_live_update_desc">自定义任务进度实时通知的显示样式</string>
+    <string name="settings_live_update_title">运行通知样式</string>
+    <string name="settings_live_update_desc">按当前展示方式调整显示内容、颜色与图标</string>
 
     <!-- settings: data section -->
     <string name="settings_section_data">数据管理</string>
@@ -2666,7 +2666,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="panel_switch_theme_remove">移除候选主题 %1$d</string>
 
     <!-- Live Updates 自定义 -->
-    <string name="live_update_settings_title">Live Updates 自定义</string>
+    <string name="live_update_settings_title">运行通知样式</string>
     <string name="live_update_chip_label">状态栏显示内容</string>
     <string name="live_update_chip_label_island">超级岛显示内容</string>
     <string name="live_update_chip_both">任务名 + 进度</string>
