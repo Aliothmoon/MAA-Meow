@@ -116,9 +116,9 @@ fun LiveUpdateSettingsView(navController: NavController) {
     }
     val backend = capability?.backend
     val onIsland = backend == LiveBackend.HYPER_OS_FOCUS
-    // 标准通知栏不显示短文本；16 以下也没有 ProgressStyle 图标
+    // 标准通知栏不显示短文本；颜色与图标另见 styleConfigurable
     val showChip = backend != null && backend != LiveBackend.PLAIN
-    val showIcon = backend != null && (backend != LiveBackend.PLAIN || capability?.promotedAvailable == true)
+    val showStyle = capability?.styleConfigurable == true
     val chipLabelRes =
         if (onIsland) R.string.live_update_chip_label_island else R.string.live_update_chip_label
     val iconLabelRes =
@@ -187,7 +187,7 @@ fun LiveUpdateSettingsView(navController: NavController) {
             }
 
             // ── 进度条颜色 ──
-            if (backend != null) item {
+            if (showStyle) item {
                 SectionHeader(stringResource(R.string.live_update_color_label))
                 SettingsGroupCard {
                     val expanded = colorScheme == LiveUpdateColorScheme.CUSTOM
@@ -263,7 +263,7 @@ fun LiveUpdateSettingsView(navController: NavController) {
             }
 
             // ── 图标 ──
-            if (showIcon) item {
+            if (showStyle) item {
                 SectionHeader(stringResource(iconLabelRes))
                 SettingsGroupCard {
                     val expanded = trackerIcon == LiveUpdateTrackerIcon.CUSTOM
@@ -339,7 +339,7 @@ fun LiveUpdateSettingsView(navController: NavController) {
             }
 
             // ── 提示 ──
-            if (backend != null) item {
+            if (showStyle) item {
                 Text(
                     text = stringResource(hintRes),
                     style = MaterialTheme.typography.bodySmall,

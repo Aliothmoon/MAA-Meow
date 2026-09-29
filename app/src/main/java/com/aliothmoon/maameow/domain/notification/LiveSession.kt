@@ -31,6 +31,10 @@ data class LiveCapability(
     /** 原生实时更新要 16+，超级岛不看系统版本 */
     val liveSupported: Boolean
         get() = promotedAvailable || focusLikely
+
+    /** 样式页有可生效的项：标准通知栏在 16 以下退化为系统进度条，颜色与图标都不生效 */
+    val styleConfigurable: Boolean
+        get() = backend != LiveBackend.PLAIN || promotedAvailable
 }
 
 data class LiveSession(
