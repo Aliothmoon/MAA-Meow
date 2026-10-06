@@ -862,7 +862,7 @@ fun BackgroundTaskView(
                     onToggleGameSound = viewModel::onToggleGameSound,
                     onScreenOff = viewModel::onScreenOff,
                     onShowScreenSaver = { coroutineScope.launch { screenSaverManager.show() } },
-                    onCaptureScreenshot = viewModel::onCaptureDebugScreenshot,
+                    onCaptureScreenshot = viewModel::onCaptureScreenshot,
                     onCloseApp = {
                         if (maaState == MaaExecutionState.RUNNING) {
                             showCloseConfirm = true
@@ -1085,7 +1085,6 @@ private fun BackgroundMoreActionsOverlay(
     val runDurationLimitMinutes by appSettingsManager.runDurationLimitMinutes.collectAsStateWithLifecycle()
     val useHardwareScreenOff by appSettingsManager.useHardwareScreenOff.collectAsStateWithLifecycle()
     val showTouchPreview by appSettingsManager.showTouchPreview.collectAsStateWithLifecycle()
-    val debugMode by appSettingsManager.debugMode.collectAsStateWithLifecycle()
     var showHardwareScreenOffConfirm by remember { mutableStateOf(false) }
     var showRunDurationInput by remember { mutableStateOf(false) }
     // 非空表示静音确认框待确认，确认后执行；仅静音方向弹，解除不弹
@@ -1172,22 +1171,20 @@ private fun BackgroundMoreActionsOverlay(
                         )
                     }
 
-                    // 调试模式：截图按钮，保存到 {rootDir}/debug/screenshots
-                    if (debugMode) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            ActionTile(
-                                icon = Icons.Filled.Screenshot,
-                                label = stringResource(R.string.bg_action_screenshot),
-                                onClick = onCaptureScreenshot,
-                                modifier = Modifier.weight(1f),
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
+                    // 截图按钮，保存到 {rootDir}/debug/screenshots
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        ActionTile(
+                            icon = Icons.Filled.Screenshot,
+                            label = stringResource(R.string.bg_action_screenshot),
+                            onClick = onCaptureScreenshot,
+                            modifier = Modifier.weight(1f),
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
