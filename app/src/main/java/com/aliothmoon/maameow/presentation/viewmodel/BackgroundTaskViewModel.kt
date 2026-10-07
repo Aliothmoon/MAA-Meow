@@ -551,19 +551,19 @@ class BackgroundTaskViewModel(
     }
 
     /**
-     * 调试用：请求远端进程抓取当前帧缓冲并保存 PNG 到 {coreRootDir}/debug/screenshots，
+     * 请求远端进程抓取当前帧缓冲并保存 PNG 到 {coreRootDir}/debug/screenshots，
      * 结果通过 [screenshotMessage] 反馈给 UI。
      *
      * 由远端（shell 进程）直接落盘——它对 userDir/debug 有写权限（同 logcat 抓取），
      * 避免跨进程读取 ashmem 被 SELinux 拒绝。
      */
-    fun onCaptureDebugScreenshot() {
+    fun onCaptureScreenshot() {
         viewModelScope.launch(Dispatchers.IO) {
             val savedName = runCatching {
                 RemoteServiceManager.getInstanceOrNull()
                     ?.captureFramePng(pathConfig.coreDebugScreenshotsDir)
                     ?.let { File(it).name }
-            }.onFailure { Timber.e(it, "captureDebugScreenshot failed") }
+            }.onFailure { Timber.e(it, "captureScreenshot failed") }
                 .getOrNull()
             val message = savedName
                 ?.let { application.getString(R.string.bg_toast_screenshot_saved, it) }
