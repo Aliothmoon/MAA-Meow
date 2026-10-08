@@ -3020,4 +3020,35 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="oper_progress_result_recognition">识别或操作失败</string>
     <string name="oper_progress_log_detail">%1$s：%2$s%3$s</string>
     <string name="oper_progress_log_summary">干员培养本轮处理结果：成功 %1$d，失败 %2$d，跳过 %3$d（专精启动也计入成功）</string>
+
+    <!-- 网页控制台 -->
+    <string name="webui_notification_channel">网页控制台</string>
+    <string name="webui_notification_title">网页控制台运行中</string>
+    <string name="webui_notification_text">浏览器访问 %1$s</string>
+    <string name="webui_notification_starting">正在启动</string>
+    <string name="webui_notification_no_lan">未连接局域网</string>
+    <string name="webui_notification_turn_off">关闭</string>
+    <string name="settings_webui_title">网页控制台</string>
+    <string name="settings_webui_desc">在局域网内用浏览器查看任务状态与日志</string>
+    <string name="search_keywords_webui">网页 浏览器 远程 局域网 WebUI</string>
+    <string name="webui_enable">启用网页控制台</string>
+    <string name="webui_status_running">运行中 · 端口 %1$d</string>
+    <string name="webui_status_failed">启动失败：%1$s</string>
+    <string name="webui_status_stopped">未启用</string>
+    <string name="webui_address_title">访问地址</string>
+    <string name="webui_address_empty">未获取到局域网地址，请连接 Wi-Fi 或开启热点</string>
+    <string name="webui_address_copied">已复制</string>
+    <string name="webui_pair_title">配对浏览器</string>
+    <string name="webui_pair_desc">在网页中输入配对码；配对后该浏览器长期有效，可随时移除</string>
+    <string name="webui_pair_generate">生成配对码</string>
+    <string name="webui_pair_expires">剩余 %1$d 秒</string>
+    <string name="webui_pair_cancel">作废</string>
+    <string name="webui_sessions_title">已配对的浏览器</string>
+    <string name="webui_sessions_empty">还没有配对的浏览器</string>
+    <string name="webui_session_meta">配对于 %1$s · 最近访问 %2$s</string>
+    <string name="webui_session_remove">移除</string>
+    <string name="webui_sessions_remove_all">全部移除</string>
+    <string name="webui_port_title">端口</string>
+    <string name="webui_port_invalid">端口范围 %1$d–%2$d</string>
+    <string name="webui_security_note">局域网内走明文 HTTP，请只在可信网络中开启；需要从外网访问时，请通过 Tailscale 等加密隧道。</string>
 </resources>

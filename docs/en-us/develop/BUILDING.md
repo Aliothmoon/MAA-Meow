@@ -18,6 +18,10 @@
   python scripts/setup_maa_core.py --maafw-tag v5.13.0-beta.5
   ```
 
+- Optional: install [Node.js 24](https://nodejs.org/) and [pnpm](https://pnpm.io/installation) to build the web console frontend (`webui/`). Without pnpm, a local build skips the frontend with a warning and the web console in the APK only shows a placeholder page; on CI the build fails instead.
+
+  To work on the frontend without reinstalling the app: turn on the web console on the phone, run `adb forward tcp:8686 tcp:8686`, then run `pnpm dev` in `webui/`; API calls are proxied to the phone. Add `?mock` to the URL to work on the UI with fake data and no device.
+
 ## Build Steps
 
 - Open this folder in Android Studio. Under Settings - Build, Execution, Deployment - Build Tools - Gradle - Gradle Projects - Gradle JDK, select the temurin-25 you installed earlier.

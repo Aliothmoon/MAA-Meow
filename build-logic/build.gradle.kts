@@ -12,5 +12,9 @@ gradlePlugin {
             id = "com.aliothmoon.maameow.i18n-verify"
             implementationClass = "com.aliothmoon.maameow.buildlogic.I18nVerifyPlugin"
         }
+        register("webUi") {
+            id = "com.aliothmoon.maameow.webui"
+            implementationClass = "com.aliothmoon.maameow.buildlogic.WebUiPlugin"
+        }
     }
 }
