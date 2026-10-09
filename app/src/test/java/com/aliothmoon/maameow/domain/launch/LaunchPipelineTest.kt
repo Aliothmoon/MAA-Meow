@@ -40,6 +40,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -75,6 +76,7 @@ class LaunchPipelineTest {
     private val stopCalls = AtomicInteger(0)
     private val uiLaunches = AtomicInteger(0)
     private val displayPowerCommands = CopyOnWriteArrayList<Boolean>()
+    private var displayPower: (Boolean) -> Unit = { displayPowerCommands.add(it) }
 
     @Volatile
     private var remoteBlocker: BackendBlock? = null
@@ -123,7 +125,7 @@ class LaunchPipelineTest {
         }
     }
 
-    /** 进入倒计时后挂起，直到 [release] 完成。 */
+    /** 与真实倒计时一样响应取消/立即开始；[release] 模拟自然到期。 */
     private fun gatedCountdown(entered: CompletableDeferred<Unit>, release: CompletableDeferred<Unit>) =
         object : CountdownUI {
             override suspend fun await(
@@ -133,7 +135,7 @@ class LaunchPipelineTest {
             ): Boolean {
                 onTick(1)
                 entered.complete(Unit)
-                release.await()
+                while (!release.isCompleted && !shouldAbort()) delay(10)
                 return false
             }
         }
@@ -146,6 +148,7 @@ class LaunchPipelineTest {
         stopCalls.set(0)
         uiLaunches.set(0)
         displayPowerCommands.clear()
+        displayPower = { displayPowerCommands.add(it) }
         useHardwareScreenOff.value = false
         remoteBlocker = null
         blacklist.value = emptySet()
@@ -282,7 +285,7 @@ class LaunchPipelineTest {
             foregroundPkg
         },
         appLabel = { "label:$it" },
-        setDisplayPower = { displayPowerCommands.add(it) },
+        setDisplayPower = { displayPower(it) },
     ).also { current = it }
 
     private fun givenWakeGate(
@@ -654,8 +657,8 @@ class LaunchPipelineTest {
         val job = p.execute(scheduleRequest(autoScreenSaver = true))
         withTimeout(5_000) { entered.await() }
         p.submit(LaunchUserEvent.Cancel)
-        release.complete(Unit)
-        job.join()
+        withTimeout(5_000) { job.join() }
+        assertFalse(release.isCompleted)
         assertEquals(listOf(ExecutionResult.CANCELLED), recorded.toList())
         assertTrue(displayPowerCommands.isEmpty())
         assertEquals(0, startCalls.get())
@@ -671,8 +674,8 @@ class LaunchPipelineTest {
         val job = p.execute(scheduleRequest(autoScreenSaver = true))
         withTimeout(5_000) { entered.await() }
         p.submit(LaunchUserEvent.StartNow)
-        release.complete(Unit)
-        job.join()
+        withTimeout(5_000) { job.join() }
+        assertFalse(release.isCompleted)
         assertEquals(listOf(false), displayPowerCommands.toList())
         assertEquals(1, startCalls.get())
     }
@@ -795,6 +798,68 @@ class LaunchPipelineTest {
         delay(100)
         assertTrue(displayPowerCommands.isEmpty())
         coVerify(exactly = 0) { screenSaver.hide() }
+    }
+
+    @Test
+    fun hardwareScreenOff_restoreSendFails_retriesUntilSent() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        useHardwareScreenOff.value = true
+        val restores = AtomicInteger(0)
+        val restored = CompletableDeferred<Unit>()
+        displayPower = { on ->
+            displayPowerCommands.add(on)
+            if (on) {
+                if (restores.incrementAndGet() < 3) error("service unavailable")
+                restored.complete(Unit)
+            }
+        }
+        pipeline().execute(scheduleRequest(autoScreenSaver = true)).join()
+        driveTaskToEnd()
+        withTimeout(5_000) { restored.await() }
+        assertEquals(listOf(false, true, true, true), displayPowerCommands.toList())
+    }
+
+    @Test
+    fun hardwareScreenOff_restoreExhausted_keepsOwnershipForNextTakeover() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        useHardwareScreenOff.value = true
+        var restoreAvailable = false
+        displayPower = { on ->
+            displayPowerCommands.add(on)
+            if (on && !restoreAvailable) error("service unavailable")
+        }
+        val p = pipeline()
+        p.execute(scheduleRequest("a", autoScreenSaver = true)).join()
+        p.execute(scheduleRequest("b", force = true)).join()
+        assertEquals(listOf(false, true, true, true), displayPowerCommands.toList())
+        restoreAvailable = true
+        p.execute(scheduleRequest("c", force = true)).join()
+        assertEquals(listOf(false, true, true, true, true), displayPowerCommands.toList())
+    }
+
+    @Test
+    fun hardwareScreenOff_oldRestoreRetry_doesNotRestoreNewRun() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        useHardwareScreenOff.value = true
+        val restoreFailed = CompletableDeferred<Unit>()
+        val restores = AtomicInteger(0)
+        displayPower = { on ->
+            displayPowerCommands.add(on)
+            if (on && restores.incrementAndGet() == 1) {
+                restoreFailed.complete(Unit)
+                error("service unavailable")
+            }
+        }
+        val p = pipeline()
+        p.execute(scheduleRequest("a", autoScreenSaver = true)).join()
+        driveTaskToEnd()
+        withTimeout(5_000) { restoreFailed.await() }
+        p.execute(scheduleRequest("b", autoScreenSaver = true)).join()
+        delay(500)
+        assertEquals(listOf(false, true, false), displayPowerCommands.toList())
+        driveTaskToEnd()
+        withTimeout(5_000) { while (displayPowerCommands.size < 4) delay(10) }
+        assertEquals(listOf(false, true, false, true), displayPowerCommands.toList())
     }
 
     /** force 须先 disarm，否则旧 autoSleep 会落在新一轮 */

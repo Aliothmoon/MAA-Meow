@@ -191,4 +191,11 @@ class ScheduleHealthLogicTest {
         )
         assertTrue(ScheduleHealthLogic.overlayNeeded(strategies))
     }
+
+    @Test
+    fun `overlayNeeded - hardware screen off needs no overlay`() {
+        val strategies = listOf(strategy(enabled = true, autoScreenSaver = true))
+        assertFalse(ScheduleHealthLogic.overlayNeeded(strategies, useHardwareScreenOff = true))
+        assertTrue(ScheduleHealthLogic.overlayNeeded(strategies, useHardwareScreenOff = false))
+    }
 }

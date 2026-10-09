@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -533,12 +534,24 @@ class LaunchPipeline(
         screenSaver.hide()
     }
 
-    /** 旧轮次的收尾不能恢复新轮次的屏幕；与发关屏指令串行。 */
+    /** 仅发送正常返回后清归属；失败重试前重新核对，避免恢复新轮次的屏幕。 */
     private suspend fun releaseHardwareScreenOff(requestId: String): Unit = withContext(Dispatchers.IO) {
-        synchronized(hardwareScreenOffOwner) {
-            if (!hardwareScreenOffOwner.compareAndSet(requestId, null)) return@synchronized
-            runCatching { setDisplayPower(true) }
-                .onFailure { Timber.e(it, "Failed to send screen power restore") }
+        repeat(SCREEN_POWER_RESTORE_ATTEMPTS) { attempt ->
+            val released = synchronized(hardwareScreenOffOwner) {
+                if (hardwareScreenOffOwner.get() != requestId) return@synchronized true
+                try {
+                    setDisplayPower(true)
+                    hardwareScreenOffOwner.set(null)
+                    true
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to send screen power restore, attempt=%s", attempt + 1)
+                    false
+                }
+            }
+            if (released) return@withContext
+            if (attempt < SCREEN_POWER_RESTORE_ATTEMPTS - 1) delay(SCREEN_POWER_RESTORE_RETRY_MS)
         }
     }
 
@@ -629,5 +642,7 @@ class LaunchPipeline(
 
     companion object {
         private const val PREEMPT_JOIN_TIMEOUT_MS = 15_000L
+        private const val SCREEN_POWER_RESTORE_ATTEMPTS = 3
+        private const val SCREEN_POWER_RESTORE_RETRY_MS = 150L
     }
 }

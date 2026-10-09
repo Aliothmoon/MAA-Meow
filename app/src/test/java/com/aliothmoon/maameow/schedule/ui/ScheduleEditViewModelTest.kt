@@ -11,6 +11,7 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
+import com.aliothmoon.maameow.schedule.model.ScheduleHealthIssue
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import com.aliothmoon.maameow.schedule.model.ScheduleType
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
@@ -122,6 +123,24 @@ class ScheduleEditViewModelTest {
         runMode.value = RunMode.FOREGROUND
         runCurrent()
         assertEquals(ScreenSaverEffect.ForegroundInactive, viewModel.screenSaverEffect.value)
+    }
+
+    @Test
+    fun permissionWizard_updatesOverlayRequirementWithScreenOffModeAndStrategy() = runTest(dispatcher) {
+        viewModel.onAutoScreenSaverChanged(true)
+        viewModel.refreshPermissionChecks()
+        runCurrent()
+        val overlayIssues = viewModel.state.value.wizardPending
+        assertTrue(ScheduleHealthIssue.OVERLAY in overlayIssues)
+        useHardwareScreenOff.value = true
+        runCurrent()
+        assertEquals(overlayIssues.filterNot { it == ScheduleHealthIssue.OVERLAY }, viewModel.state.value.wizardPending)
+        useHardwareScreenOff.value = false
+        runCurrent()
+        assertEquals(overlayIssues, viewModel.state.value.wizardPending)
+        viewModel.onAutoScreenSaverChanged(false)
+        runCurrent()
+        assertFalse(ScheduleHealthIssue.OVERLAY in viewModel.state.value.wizardPending)
     }
 
     @Test
