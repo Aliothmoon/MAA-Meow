@@ -1,4 +1,4 @@
-package com.aliothmoon.maameow.remote.internal
+package com.aliothmoon.maameow.remote.internal.display
 
 import android.graphics.Rect
 import android.hardware.display.VirtualDisplay

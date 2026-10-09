@@ -179,7 +179,7 @@ object ActivityUtils {
 
     /**
      * 启动后校验：等待 [packageName] 的任务出现在 [displayId] 上；若发现任务落在其它
-     * display（如 One UI / 部分 ROM 会把游戏从虚拟屏挪回主屏，B 服 U8 SDK 二段跳也可能
+     * display（部分系统会把游戏从虚拟屏挪回主屏，B 服 U8 SDK 二段跳也可能
      * 丢失 launchDisplayId），立即尝试拉回。仅在确认漂移且拉回失败时返回 false。
      */
     @JvmStatic

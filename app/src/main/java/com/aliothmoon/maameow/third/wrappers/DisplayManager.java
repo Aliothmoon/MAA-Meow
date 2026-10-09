@@ -124,6 +124,15 @@ public final class DisplayManager {
         }
     }
 
+    /** 返回 DisplayManagerService 实际分配的显示组，而不是调用方请求的标志。 */
+    public int getDisplayGroupId(int displayId) throws ReflectiveOperationException {
+        Object info = getGetDisplayInfoMethod().invoke(manager, displayId);
+        if (info == null) {
+            throw new IllegalStateException("Display " + displayId + " no longer exists");
+        }
+        return info.getClass().getDeclaredField("displayGroupId").getInt(info);
+    }
+
     public int[] getDisplayIds() {
         try {
             return (int[]) manager.getClass().getMethod("getDisplayIds").invoke(manager);

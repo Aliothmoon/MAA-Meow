@@ -23,14 +23,14 @@ import com.aliothmoon.maameow.remote.internal.GestureRecorder
 import com.aliothmoon.maameow.remote.internal.LogcatRetention
 import com.aliothmoon.maameow.remote.internal.PermissionGrantHelper
 import com.aliothmoon.maameow.remote.internal.PowerController
-import com.aliothmoon.maameow.remote.internal.PrimaryDisplayManager
+import com.aliothmoon.maameow.remote.internal.display.PrimaryDisplayManager
 import com.aliothmoon.maameow.remote.internal.ProcessLiveness
 import com.aliothmoon.maameow.remote.internal.RemoteUtils
 import com.aliothmoon.maameow.remote.internal.ScreenManager
 import com.aliothmoon.maameow.remote.internal.StaleFrameGuard
 import com.aliothmoon.maameow.remote.internal.SystemLogDump
 import com.aliothmoon.maameow.remote.internal.UserDirProbe
-import com.aliothmoon.maameow.remote.internal.VirtualDisplayManager
+import com.aliothmoon.maameow.remote.internal.display.VirtualDisplayManager
 import com.aliothmoon.maameow.remote.internal.WakeUnlockController
 import com.aliothmoon.maameow.remote.internal.XmsfFirewall
 import com.aliothmoon.maameow.third.Command
@@ -61,6 +61,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
             runCatching {
                 GameAudioMuteController.restoreAll()
                 XmsfFirewall.restoreIfNeeded()
+                VirtualDisplayManager.stop()
                 PowerController.destroy()
                 ScreenManager.destroy()
                 MaaCoreManager.destroy()
@@ -150,6 +151,10 @@ class RemoteServiceImpl : RemoteService.Stub() {
         runCatching { XmsfFirewall.ensureRestored() }
             .onFailure { Ln.w("XmsFw boot restore failed: ${it.message}") }
         RemoteBootTrace.mark("SETUP_XMSF_RESTORED")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            runCatching { VirtualDisplayManager.cleanupStaleState() }
+                .onFailure { Ln.w("VDM boot cleanup failed: ${it.message}") }
+        }
         // 不可访问的路径进 AsstSetUserDir 会 abort 整个进程（#227），这里只报告，换到哪由用户在设置里决定
         val dir = File(userDir.orEmpty())
         val probeFailure = UserDirProbe.probe(dir)
