@@ -1849,7 +1849,11 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_force_start">Force scheduled start</string>
     <string name="schedule_force_start_tip">Stop the current task, restart the game, and start the new tasks</string>
     <string name="schedule_auto_screen_saver">Enable screen saver while running</string>
-    <string name="schedule_auto_screen_saver_tip">Background mode only. Enables a dark screen saver at minimum brightness before the countdown starts, and turns it off when the task ends. It is skipped if you are already using the device (screen on and unlocked) at trigger time</string>
+    <string name="schedule_auto_screen_saver_tip">Background mode only. When this strategy is enabled, the global “Tasks → Quick options → Turn off display during screen-off farming” setting determines the behavior: when off, a screen saver at minimum brightness appears before the countdown; when on, the physical display is turned off after the countdown or Start now, while the task keeps running. When the task ends, this strategy releases its screen saver or display power control, then applies the auto-sleep settings. Skipped if you are already using the device (screen on and unlocked) at trigger time</string>
+    <string name="schedule_screen_saver_effect_foreground">Current effect: inactive in foreground mode</string>
+    <string name="schedule_screen_saver_effect_inactive">Current effect: this strategy is off; no automatic screen saver or display power-off</string>
+    <string name="schedule_screen_saver_effect_overlay">Current effect: if the device is idle at trigger time, a screen saver appears before the countdown</string>
+    <string name="schedule_screen_saver_effect_hardware">Current effect: if the device is idle at trigger time, the display is turned off after the countdown according to the global setting</string>
     <string name="schedule_silent_start">Silent start</string>
     <string name="schedule_silent_start_tip">Background mode only. If you are using the phone (screen on and unlocked) at trigger time, no window pops up and the countdown moves to the notification; when the device is idle the window still opens. MaaMeow cannot keep the screen on while it is not in the foreground, so an auto-lock mid-run will interrupt the task</string>
     <string name="schedule_silent_start_risk_title">Enable silent start?</string>
@@ -1996,6 +2000,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_log_auto_sleep_skipped_awake">Device was already unlocked at start, skipping sleep after task</string>
     <string name="schedule_log_auto_sleep_skipped_screensaver">Screen saver still on; skipped sleep after task</string>
     <string name="schedule_log_screen_saver_on">Screen saver enabled</string>
+    <string name="schedule_log_hardware_screen_off_sent">Physical display power-off command sent</string>
     <string name="schedule_log_screen_saver_kept">Keeping the screen saver already on</string>
     <string name="schedule_log_screen_saver_failed">Screen saver failed to start, the overlay permission may be missing</string>
     <string name="schedule_log_wake_failed">Wake and unlock failed: %1$s</string>

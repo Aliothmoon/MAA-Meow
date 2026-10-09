@@ -1905,7 +1905,11 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_force_start">强制启动</string>
     <string name="schedule_force_start_tip">强制启动任务，会中断正在运行的游戏和任务</string>
     <string name="schedule_auto_screen_saver">运行期间启用屏保</string>
-    <string name="schedule_auto_screen_saver_tip">仅后台模式生效。倒计时开始前就启用屏保遮住画面并把亮度压到最低，任务结束后自动关闭。触发时你正在用手机（已亮屏且已解锁）则不启用</string>
+    <string name="schedule_auto_screen_saver_tip">仅后台模式生效。开启本策略后，按「任务 → 快捷选项 → 熄屏挂机时关闭屏幕」选择方式：全局选项关闭时，倒计时前显示屏保并把亮度压到最低；全局选项开启时，倒计时结束或立即开始后关闭物理屏幕，保持任务运行。任务结束后释放本次屏保或关屏，再按自动熄屏设置执行。触发时你正在用手机（已亮屏且已解锁）则不启用</string>
+    <string name="schedule_screen_saver_effect_foreground">当前效果：运行模式为前台，本项不生效</string>
+    <string name="schedule_screen_saver_effect_inactive">当前效果：本策略未开启，不自动显示屏保或关闭屏幕</string>
+    <string name="schedule_screen_saver_effect_overlay">当前效果：触发时手机待机，将在倒计时前显示屏保</string>
+    <string name="schedule_screen_saver_effect_hardware">当前效果：触发时手机待机，将按全局设置在倒计时后关闭屏幕</string>
     <string name="schedule_silent_start">静默启动</string>
     <string name="schedule_silent_start_tip">仅后台模式生效。触发时你正在用手机（已亮屏且已解锁）则不弹出界面，改在通知栏倒计时；设备待机时仍照常拉起界面。MaaMeow 不在前台时无法保持亮屏，运行中自动锁屏会中断任务</string>
     <string name="schedule_silent_start_risk_title">开启静默启动？</string>
@@ -2052,6 +2056,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_log_auto_sleep_skipped_awake">启动时设备已解锁，跳过结束熄屏</string>
     <string name="schedule_log_auto_sleep_skipped_screensaver">熄屏挂机仍开启，跳过结束熄屏</string>
     <string name="schedule_log_screen_saver_on">已启用屏保</string>
+    <string name="schedule_log_hardware_screen_off_sent">已发送物理关屏指令</string>
     <string name="schedule_log_screen_saver_kept">沿用已开启的熄屏挂机</string>
     <string name="schedule_log_screen_saver_failed">屏保启用失败，可能缺少悬浮窗权限</string>
     <string name="schedule_log_wake_failed">唤醒解锁失败: %1$s</string>

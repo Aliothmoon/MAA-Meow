@@ -11,6 +11,7 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
+import com.aliothmoon.maameow.schedule.model.ScheduleHealthIssue
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import com.aliothmoon.maameow.schedule.model.ScheduleType
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
@@ -83,9 +84,12 @@ class ScheduleEditViewModelTest {
     private val permissions = mockk<PermissionManager>(relaxed = true) {
         every { permissions } returns PermissionState()
     }
+    private val runMode = MutableStateFlow(RunMode.BACKGROUND)
+    private val useHardwareScreenOff = MutableStateFlow(false)
     private val settings = mockk<AppSettingsManager> {
-        every { runMode } returns MutableStateFlow(RunMode.BACKGROUND)
+        every { runMode } returns this@ScheduleEditViewModelTest.runMode
         every { closeAppOnTaskEnd } returns MutableStateFlow(false)
+        every { useHardwareScreenOff } returns this@ScheduleEditViewModelTest.useHardwareScreenOff
     }
     private lateinit var viewModel: ScheduleEditViewModel
 
@@ -100,6 +104,43 @@ class ScheduleEditViewModelTest {
     fun tearDown() {
         viewModelStore.clear()
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun screenSaverEffect_tracksStrategyGlobalSettingAndRunMode() = runTest(dispatcher) {
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.screenSaverEffect.collect { }
+        }
+        useHardwareScreenOff.value = true
+        runCurrent()
+        assertEquals(ScreenSaverEffect.Inactive, viewModel.screenSaverEffect.value)
+        viewModel.onAutoScreenSaverChanged(true)
+        runCurrent()
+        assertEquals(ScreenSaverEffect.HardwareScreenOff, viewModel.screenSaverEffect.value)
+        useHardwareScreenOff.value = false
+        runCurrent()
+        assertEquals(ScreenSaverEffect.ScreenSaver, viewModel.screenSaverEffect.value)
+        runMode.value = RunMode.FOREGROUND
+        runCurrent()
+        assertEquals(ScreenSaverEffect.ForegroundInactive, viewModel.screenSaverEffect.value)
+    }
+
+    @Test
+    fun permissionWizard_updatesOverlayRequirementWithScreenOffModeAndStrategy() = runTest(dispatcher) {
+        viewModel.onAutoScreenSaverChanged(true)
+        viewModel.refreshPermissionChecks()
+        runCurrent()
+        val overlayIssues = viewModel.state.value.wizardPending
+        assertTrue(ScheduleHealthIssue.OVERLAY in overlayIssues)
+        useHardwareScreenOff.value = true
+        runCurrent()
+        assertEquals(overlayIssues.filterNot { it == ScheduleHealthIssue.OVERLAY }, viewModel.state.value.wizardPending)
+        useHardwareScreenOff.value = false
+        runCurrent()
+        assertEquals(overlayIssues, viewModel.state.value.wizardPending)
+        viewModel.onAutoScreenSaverChanged(false)
+        runCurrent()
+        assertFalse(ScheduleHealthIssue.OVERLAY in viewModel.state.value.wizardPending)
     }
 
     @Test

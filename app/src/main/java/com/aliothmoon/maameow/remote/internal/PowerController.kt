@@ -13,6 +13,8 @@ import java.util.concurrent.atomic.AtomicInteger
 object PowerController {
     private const val TAG = "PowerController"
     private const val USER_ACTIVITY_INTERVAL_MS = 4_000L
+    private const val RESTORE_ATTEMPTS = 3
+    private const val RESTORE_RETRY_MS = 150L
 
     // 不落盘：进程被杀后由用户唤醒时系统恢复面板
     private val poweredOff = AtomicBoolean(false)
@@ -20,9 +22,33 @@ object PowerController {
     private val keepAliveDisplayId = AtomicInteger(DefaultDisplayConfig.DISPLAY_NONE)
     private val keepAliveRunning = AtomicBoolean(false)
 
+    @Synchronized
     fun setDisplayPower(on: Boolean): Boolean {
-        poweredOff.set(!on)
-        return setDisplayPowerInternal(on)
+        if (!on) {
+            // 多屏设备可能只关掉部分面板，失败时也须保留恢复标记。
+            poweredOff.set(true)
+            return setDisplayPowerInternal(false)
+        }
+        // AIDL 是 oneway；底层返回值在提权进程内处理，不依赖客户端推断成功。
+        repeat(RESTORE_ATTEMPTS) { attempt ->
+            val restored = runCatching { setDisplayPowerInternal(true) }
+                .onFailure { Ln.e("$TAG: Failed to restore screen power", it) }
+                .getOrDefault(false)
+            if (restored) {
+                poweredOff.set(false)
+                return true
+            }
+            if (attempt < RESTORE_ATTEMPTS - 1) {
+                try {
+                    Thread.sleep(RESTORE_RETRY_MS)
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    return false
+                }
+            }
+        }
+        Ln.e("$TAG: Screen power restore failed; keeping emergency recovery pending")
+        return false
     }
 
     private fun setDisplayPowerInternal(on: Boolean): Boolean {

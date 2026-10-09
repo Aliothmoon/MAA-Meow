@@ -221,6 +221,12 @@ val appModule = module {
             startTaskChain = get(),
             countdownUI = get(),
             screenSaver = get(),
+            setDisplayPower = { on ->
+                val service = checkNotNull(RemoteServiceManager.getInstanceOrNull()) {
+                    "Elevated service unavailable for display power control"
+                }
+                service.setDisplayPower(on)
+            },
             taskEndRegistry = get(),
             notificationCenter = get(),
             keyguardLocked = {

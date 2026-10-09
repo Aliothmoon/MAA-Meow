@@ -23,7 +23,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -68,12 +70,19 @@ enum class CloseGameEffect {
     Inactive,
 }
 
+enum class ScreenSaverEffect {
+    ForegroundInactive,
+    Inactive,
+    ScreenSaver,
+    HardwareScreenOff,
+}
+
 class ScheduleEditViewModel(
     private val repository: ScheduleStrategyRepository,
     private val taskChainState: TaskChainState,
     private val scheduleAlarmManager: ScheduleAlarmManager,
     private val permissionManager: PermissionManager,
-    appSettings: AppSettingsManager,
+    private val appSettings: AppSettingsManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ScheduleEditUiState())
@@ -94,6 +103,33 @@ class ScheduleEditViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CloseGameEffect.Inactive)
 
     val runMode: StateFlow<RunMode> = appSettings.runMode
+
+    val screenSaverEffect: StateFlow<ScreenSaverEffect> = combine(
+        _state,
+        appSettings.runMode,
+        appSettings.useHardwareScreenOff,
+    ) { state, runMode, hardwareScreenOff ->
+        when {
+            runMode != RunMode.BACKGROUND -> ScreenSaverEffect.ForegroundInactive
+            !state.autoScreenSaver -> ScreenSaverEffect.Inactive
+            hardwareScreenOff -> ScreenSaverEffect.HardwareScreenOff
+            else -> ScreenSaverEffect.ScreenSaver
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ScreenSaverEffect.Inactive)
+
+    private var permissionChecksRequested = false
+
+    init {
+        viewModelScope.launch {
+            combine(
+                _state.map { it.autoScreenSaver }.distinctUntilChanged(),
+                appSettings.useHardwareScreenOff,
+            ) { saver, hardware -> saver to hardware }.collect {
+                // 设置从其他页面变化时，已展示的权限向导也要同步更新。
+                if (permissionChecksRequested) refreshPermissionChecks()
+            }
+        }
+    }
 
     private var strategyId: String? = null
     private var existingStrategy: ScheduleStrategy? = null
@@ -352,8 +388,9 @@ class ScheduleEditViewModel(
         }
     }
 
-    /** 悬浮窗仅在策略勾选屏保时纳入，免得向导走完又被健康卡 nag 一遍 */
+    /** 悬浮窗仅在策略实际显示屏保时纳入。 */
     fun refreshPermissionChecks() {
+        permissionChecksRequested = true
         // 先刷新，避免依赖 onResume 回调顺序
         permissionManager.refresh()
         val permissions = permissionManager.permissions
@@ -367,7 +404,7 @@ class ScheduleEditViewModel(
                         notification = permissions.notification,
                         exactAlarmAllowed = scheduleAlarmManager.canScheduleExact(),
                         overlayGranted = permissions.overlay,
-                        overlayNeeded = it.autoScreenSaver,
+                        overlayNeeded = it.autoScreenSaver && !appSettings.useHardwareScreenOff.value,
                     )
                 )
             )
