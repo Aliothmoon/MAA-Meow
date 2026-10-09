@@ -595,6 +595,22 @@ fun ScheduleEditView(
                         onCheckedChange = { viewModel.onAutoScreenSaverChanged(it) }
                     )
                 }
+                val saverEffect by viewModel.screenSaverEffect.collectAsStateWithLifecycle()
+                Text(
+                    text = stringResource(
+                        when (saverEffect) {
+                            ScreenSaverEffect.ForegroundInactive -> R.string.schedule_screen_saver_effect_foreground
+                            ScreenSaverEffect.Inactive -> R.string.schedule_screen_saver_effect_inactive
+                            ScreenSaverEffect.ScreenSaver -> R.string.schedule_screen_saver_effect_overlay
+                            ScreenSaverEffect.HardwareScreenOff -> R.string.schedule_screen_saver_effect_hardware
+                        }
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (saverEffect == ScreenSaverEffect.ScreenSaver
+                        || saverEffect == ScreenSaverEffect.HardwareScreenOff
+                    ) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = MaaDesignTokens.Spacing.sm),
+                )
                 ExpandableTipContent(
                     visible = saverExpanded,
                     tipText = stringResource(R.string.schedule_auto_screen_saver_tip),

@@ -74,6 +74,7 @@ class LaunchPipelineTest {
     private val recorded = CopyOnWriteArrayList<ExecutionResult>()
     private val stopCalls = AtomicInteger(0)
     private val uiLaunches = AtomicInteger(0)
+    private val displayPowerCommands = CopyOnWriteArrayList<Boolean>()
 
     @Volatile
     private var remoteBlocker: BackendBlock? = null
@@ -97,6 +98,7 @@ class LaunchPipelineTest {
     private val wakeCred = MutableStateFlow("")
     private val compositionState = MutableStateFlow(MaaExecutionState.IDLE)
     private val closeAppOnTaskEnd = MutableStateFlow(false)
+    private val useHardwareScreenOff = MutableStateFlow(false)
     @Volatile
     private var stopOrigin = MaaCompositionService.StopOrigin.USER
     private val profileId = MutableStateFlow("profile-1")
@@ -143,6 +145,8 @@ class LaunchPipelineTest {
         startCalls.set(0)
         stopCalls.set(0)
         uiLaunches.set(0)
+        displayPowerCommands.clear()
+        useHardwareScreenOff.value = false
         remoteBlocker = null
         blacklist.value = emptySet()
         foregroundPkg = null
@@ -162,6 +166,7 @@ class LaunchPipelineTest {
         settings = mockk(relaxed = true) {
             every { runMode } returns this@LaunchPipelineTest.runMode
             every { closeAppOnTaskEnd } returns this@LaunchPipelineTest.closeAppOnTaskEnd
+            every { useHardwareScreenOff } returns this@LaunchPipelineTest.useHardwareScreenOff
             every { wakeCredential } returns wakeCred
             every { wakeUnlockType } returns unlockType
             every { scheduleAppBlacklist } returns blacklist
@@ -277,6 +282,7 @@ class LaunchPipelineTest {
             foregroundPkg
         },
         appLabel = { "label:$it" },
+        setDisplayPower = { displayPowerCommands.add(it) },
     ).also { current = it }
 
     private fun givenWakeGate(
@@ -607,6 +613,187 @@ class LaunchPipelineTest {
         pipeline().execute(scheduleRequest(autoScreenSaver = true)).join()
         driveTaskToEnd()
         delay(500)
+        coVerify(exactly = 0) { screenSaver.hide() }
+    }
+
+    @Test
+    fun hardwareScreenOff_waitsForCountdown_thenRestoresOnTaskEnd() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        useHardwareScreenOff.value = true
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val p = pipeline(gatedCountdown(entered, release))
+        coEvery {
+            startTaskChain.invoke(chain = any(), context = any(), scheduleLabel = any())
+        } coAnswers {
+            assertEquals(listOf(false), displayPowerCommands.toList())
+            startCalls.incrementAndGet()
+            compositionState.value = MaaExecutionState.RUNNING
+            StartTaskChainUseCase.Result.Success
+        }
+        val job = p.execute(scheduleRequest(autoScreenSaver = true))
+        withTimeout(5_000) { entered.await() }
+        assertEquals(1, uiLaunches.get())
+        assertTrue(displayPowerCommands.isEmpty())
+        release.complete(Unit)
+        job.join()
+        assertEquals(1, startCalls.get())
+        coVerify(exactly = 0) { screenSaver.show() }
+        driveTaskToEnd()
+        withTimeout(5_000) { while (displayPowerCommands.size < 2) delay(10) }
+        assertEquals(listOf(false, true), displayPowerCommands.toList())
+    }
+
+    @Test
+    fun hardwareScreenOff_cancelDuringCountdown_neverSendsCommand() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        useHardwareScreenOff.value = true
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val p = pipeline(gatedCountdown(entered, release))
+        val job = p.execute(scheduleRequest(autoScreenSaver = true))
+        withTimeout(5_000) { entered.await() }
+        p.submit(LaunchUserEvent.Cancel)
+        release.complete(Unit)
+        job.join()
+        assertEquals(listOf(ExecutionResult.CANCELLED), recorded.toList())
+        assertTrue(displayPowerCommands.isEmpty())
+        assertEquals(0, startCalls.get())
+    }
+
+    @Test
+    fun hardwareScreenOff_startNow_closesDisplayAfterCountdown() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        useHardwareScreenOff.value = true
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val p = pipeline(gatedCountdown(entered, release))
+        val job = p.execute(scheduleRequest(autoScreenSaver = true))
+        withTimeout(5_000) { entered.await() }
+        p.submit(LaunchUserEvent.StartNow)
+        release.complete(Unit)
+        job.join()
+        assertEquals(listOf(false), displayPowerCommands.toList())
+        assertEquals(1, startCalls.get())
+    }
+
+    @Test
+    fun hardwareScreenOff_strategyDisabled_doesNotOverrideStrategy() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        useHardwareScreenOff.value = true
+        pipeline().execute(scheduleRequest()).join()
+        assertTrue(displayPowerCommands.isEmpty())
+        coVerify(exactly = 0) { screenSaver.show() }
+    }
+
+    @Test
+    fun hardwareScreenOff_inUseOrForeground_neverClosesDisplay() = runBlocking<Unit> {
+        useHardwareScreenOff.value = true
+        val p = pipeline()
+        p.execute(scheduleRequest("in-use", autoScreenSaver = true)).join()
+        compositionState.value = MaaExecutionState.IDLE
+        screenInteractive.set(false)
+        runMode.value = RunMode.FOREGROUND
+        p.execute(scheduleRequest("foreground", autoScreenSaver = true)).join()
+        assertEquals(2, startCalls.get())
+        assertTrue(displayPowerCommands.isEmpty())
+        coVerify(exactly = 0) { screenSaver.show() }
+    }
+
+    @Test
+    fun hardwareScreenOff_startFails_restoresDisplay() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        useHardwareScreenOff.value = true
+        coEvery {
+            startTaskChain.invoke(chain = any(), context = any(), scheduleLabel = any())
+        } returns StartTaskChainUseCase.Result.Failed(
+            executionResult = ExecutionResult.FAILED_START,
+            message = mockk(relaxed = true),
+        )
+        pipeline().execute(scheduleRequest(autoScreenSaver = true)).join()
+        assertEquals(listOf(ExecutionResult.FAILED_START), recorded.toList())
+        assertEquals(listOf(false, true), displayPowerCommands.toList())
+    }
+
+    @Test
+    fun hardwareScreenOff_sideTaskOnly_restoresWithoutCoreEndEvent() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        useHardwareScreenOff.value = true
+        coEvery {
+            startTaskChain.invoke(chain = any(), context = any(), scheduleLabel = any())
+        } returns StartTaskChainUseCase.Result.SuccessWithoutCore(null)
+        pipeline().execute(scheduleRequest(autoScreenSaver = true)).join()
+        withTimeout(5_000) { while (displayPowerCommands.size < 2) delay(10) }
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        assertEquals(listOf(false, true), displayPowerCommands.toList())
+    }
+
+    @Test
+    fun hardwareScreenOff_jobCancelledDuringStart_restoresDisplay() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        useHardwareScreenOff.value = true
+        val entered = CompletableDeferred<Unit>()
+        coEvery {
+            startTaskChain.invoke(chain = any(), context = any(), scheduleLabel = any())
+        } coAnswers {
+            entered.complete(Unit)
+            delay(60_000)
+            StartTaskChainUseCase.Result.Success
+        }
+        val job = pipeline().execute(scheduleRequest(autoScreenSaver = true))
+        withTimeout(5_000) { entered.await() }
+        job.cancel()
+        job.join()
+        assertEquals(listOf(false, true), displayPowerCommands.toList())
+    }
+
+    @Test
+    fun hardwareScreenOff_manualStop_restoresDisplay() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        useHardwareScreenOff.value = true
+        pipeline().execute(scheduleRequest(autoScreenSaver = true)).join()
+        composition.stop()
+        withTimeout(5_000) { while (displayPowerCommands.size < 2) delay(10) }
+        assertEquals(listOf(false, true), displayPowerCommands.toList())
+    }
+
+    @Test
+    fun hardwareScreenOff_withAutoSleep_releasesPowerBeforeSystemSleep() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        useHardwareScreenOff.value = true
+        val commandsAtSleep = CompletableDeferred<List<Boolean>>()
+        coEvery { wake.lockAndSleep() } coAnswers {
+            commandsAtSleep.complete(displayPowerCommands.toList())
+            WakeUnlockEngine.WakeResult.OK
+        }
+        pipeline().execute(scheduleRequest(autoScreenSaver = true, autoSleep = true)).join()
+        driveTaskToEnd()
+        assertEquals(listOf(false, true), withTimeout(5_000) { commandsAtSleep.await() })
+        coVerify(exactly = 1) { wake.lockAndSleep() }
+    }
+
+    @Test
+    fun hardwareScreenOff_forceStart_releasesOldCommandBeforeNewOne() = runBlocking<Unit> {
+        screenInteractive.set(false)
+        useHardwareScreenOff.value = true
+        val p = pipeline()
+        p.execute(scheduleRequest("a", autoSleep = true, autoScreenSaver = true)).join()
+        p.execute(scheduleRequest("b", force = true, autoScreenSaver = true)).join()
+        assertEquals(listOf(false, true, false), displayPowerCommands.toList())
+        coVerify(exactly = 0) { wake.lockAndSleep() }
+        driveTaskToEnd()
+        withTimeout(5_000) { while (displayPowerCommands.size < 4) delay(10) }
+        assertEquals(listOf(false, true, false, true), displayPowerCommands.toList())
+    }
+
+    @Test
+    fun hardwareScreenOff_existingUserScreenSaver_isKept() = runBlocking<Unit> {
+        givenWakeGate(interactive = false, saverShowing = true)
+        useHardwareScreenOff.value = true
+        pipeline().execute(scheduleRequest(autoScreenSaver = true)).join()
+        driveTaskToEnd()
+        delay(100)
+        assertTrue(displayPowerCommands.isEmpty())
         coVerify(exactly = 0) { screenSaver.hide() }
     }
 

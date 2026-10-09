@@ -68,6 +68,13 @@ enum class CloseGameEffect {
     Inactive,
 }
 
+enum class ScreenSaverEffect {
+    ForegroundInactive,
+    Inactive,
+    ScreenSaver,
+    HardwareScreenOff,
+}
+
 class ScheduleEditViewModel(
     private val repository: ScheduleStrategyRepository,
     private val taskChainState: TaskChainState,
@@ -94,6 +101,19 @@ class ScheduleEditViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CloseGameEffect.Inactive)
 
     val runMode: StateFlow<RunMode> = appSettings.runMode
+
+    val screenSaverEffect: StateFlow<ScreenSaverEffect> = combine(
+        _state,
+        appSettings.runMode,
+        appSettings.useHardwareScreenOff,
+    ) { state, runMode, hardwareScreenOff ->
+        when {
+            runMode != RunMode.BACKGROUND -> ScreenSaverEffect.ForegroundInactive
+            !state.autoScreenSaver -> ScreenSaverEffect.Inactive
+            hardwareScreenOff -> ScreenSaverEffect.HardwareScreenOff
+            else -> ScreenSaverEffect.ScreenSaver
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ScreenSaverEffect.Inactive)
 
     private var strategyId: String? = null
     private var existingStrategy: ScheduleStrategy? = null
