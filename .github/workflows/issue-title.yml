@@ -1,0 +1,60 @@
+# 按 Issue 表单选的模块补全标题：[Bug][模块] 摘要
+# 依赖表单里「功能模块 / Area」「建议类型 / Request type」两个字段的 label，改名需同步
+name: Issue Title
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  prefix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            const issue = context.payload.issue
+            const body = issue.body ?? ''
+            const escape = s => s.replace(/[.*+?^$()|[\]\\{}]/g, '\\$&')
+
+            // 表单正文渲染为 "### label\n\nvalue"
+            const field = (...labels) => {
+              for (const label of labels) {
+                const m = body.match(new RegExp(`^###\\s+${escape(label)}[ \\t]*\\r?\\n\\s*([^\\r\\n]+)`, 'm'))
+                if (m && m[1].trim() !== '_No response_') return m[1].trim()
+              }
+              return null
+            }
+
+            const area = field('功能模块', 'Area')
+            if (!area) {
+              core.info('非表单 Issue，跳过')
+              return
+            }
+            const type = field('建议类型', 'Request type') ? 'Feature' : 'Bug'
+
+            // 去掉用户手写的类型标签和与所选模块重复的标签，其余前缀保留
+            const tag = alts => new RegExp(`^\\s*[\\[【]\\s*(?:${alts})\\s*[\\]】]\\s*`, 'i')
+            const strip = [
+              tag('bug|feature|feat|功能建议|建议'),
+              tag(['模块', '实际模块', 'area', 'actual area', area].map(escape).join('|')),
+            ]
+            let summary = issue.title
+            let prev
+            do {
+              prev = summary
+              for (const re of strip) summary = summary.replace(re, '')
+            } while (summary !== prev)
+
+            const title = `[${type}][${area}] ${summary.trim()}`.trim()
+            if (title === issue.title) return
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              title,
+            })
+            core.info(`${issue.title} -> ${title}`)

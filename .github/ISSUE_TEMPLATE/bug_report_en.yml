@@ -1,6 +1,5 @@
 name: Bug Report (English)
 description: Report a reproducible problem in English
-title: "[Bug][Area] "
 labels: ["bug"]
 body:
   - type: markdown
@@ -8,44 +7,90 @@ body:
       value: |
         Thank you for reporting a bug. Please provide enough detail for maintainers to reproduce and diagnose it.
 
-        ## Title format
+        ## Title
 
-        First, change the title at the top of the page to: `[Bug][Actual Area] Concrete symptom`
+        Write only the **concrete symptom** as the title. After submission it is automatically prefixed with the area selected below, becoming `[Bug][Area] Concrete symptom`.
 
-        - Replace `[Area]` with the affected area, such as `[Background Mode]`, `[Scheduled Tasks]`, or `[Auto Battle]`
-        - State what actually happens so the scope is understandable from the title alone
-        - Recommended: `[Bug][Background Mode] App crashes after starting a task`
-        - Not recommended: `[Bug] Something is wrong` or `[Bug][Area] Does not work`
+        - Recommended: `App crashes after starting a task`, `Task stops right after the boss fight`
+        - Not recommended: `Something is wrong`, `Does not work`, `Help`
 
-        See the [Issue Guidelines](https://github.com/Aliothmoon/MAA-Meow/blob/main/docs/en-us/develop/ISSUE_GUIDELINES.md) for the complete convention and more examples.
+        See the [Issue Guidelines](https://github.com/Aliothmoon/MAA-Meow/blob/main/docs/en-us/develop/ISSUE_GUIDELINES.md) for the complete convention and area descriptions.
 
+  # label 与选项被 .github/workflows/issue-title.yml 用来补标题，改动需同步
   - type: dropdown
     id: area
     attributes:
-      label: Product area
-      description: "Select the closest area and use the same area in the title"
+      label: Area
+      description: "Pick where the failure first appears: for a task that misbehaves, pick that task; for Home, Settings, or overlay UI problems, pick UI & Settings"
       options:
-        - Home
-        - Task Config
+        - Login
+        - Combat
+        - Auto Recruit
+        - Base
+        - Credit Store
+        - Collect Rewards
+        - Auto I.S.
+        - Reclamation Algorithm
+        - Other Tasks
+        - Copilot
+        - Tools
+        - Schedule
         - Foreground Mode
         - Background Mode
-        - Scheduled Tasks
-        - Auto Battle
-        - Toolbox
-        - Settings
-        - Install Update
-        - Build
-        - Docs
+        - Permissions & Service
+        - Notifications
+        - Installation & Updates
+        - UI & Settings
         - Other
     validations:
       required: true
 
-  - type: textarea
-    id: environment
+  - type: input
+    id: android-version
     attributes:
-      label: Environment
-      description: "Provide the Android version, device model, MAA Meow version, and run mode in that order"
-      placeholder: "Android 14 / Google Pixel 8 / v0.1.1 / Background mode (virtual display)"
+      label: Android version
+      description: "The device's Android version, optionally with the ROM version"
+      placeholder: "Android 14 / One UI 6.1"
+    validations:
+      required: true
+
+  - type: input
+    id: device-model
+    attributes:
+      label: Device model
+      description: "Device brand and model"
+      placeholder: "Google Pixel 8 / Samsung Galaxy S24"
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: MAA Meow version
+      description: "Settings → About → Version"
+      placeholder: "v0.23.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Permission backend
+      description: "Settings → Runtime Environment → Startup Mode"
+      options:
+        - Shizuku
+        - Root
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Run mode
+      description: "The mode used when the problem occurred"
+      options:
+        - Foreground mode (floating panel)
+        - Background mode (virtual display)
     validations:
       required: true
 
@@ -114,10 +159,6 @@ body:
     attributes:
       label: Pre-submit checklist
       options:
-        - label: I changed the title to `[Bug][Actual Area] Concrete symptom`, and the scope is clear from the title alone
-          required: true
-        - label: I did not carefully read these instructions, checked [everything](https://github.com/Aliothmoon/MAA-Meow/issues) at once, and believe this will not affect how the issue is handled
-          required: false
         - label: I searched existing issues and confirmed this is not a duplicate
           required: true
         - label: I reproduced the problem with Debug mode enabled and uploaded the exported logs

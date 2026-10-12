@@ -1,6 +1,5 @@
 name: Bug 反馈（中文）
 description: 使用中文提交可复现的 Bug 报告
-title: "[Bug][模块] "
 labels: ["bug"]
 body:
   - type: markdown
@@ -8,44 +7,90 @@ body:
       value: |
         感谢您提交 Bug 反馈！请尽量详细地填写以下信息，以帮助我们快速定位和修复问题。
 
-        ## 标题格式
+        ## 标题
 
-        请先将页面顶部的标题改为：`[Bug][实际模块] 具体故障现象`
+        标题只需写清**具体故障现象**，提交后会按下方「功能模块」自动补成 `[Bug][模块] 具体故障现象`。
 
-        - 将 `[模块]` 替换为实际模块，例如 `[后台模式]`、`[定时任务]` 或 `[自动战斗]`
-        - “具体故障现象”应说明发生了什么；仅查看标题时，也应该能判断问题范围
-        - 推荐：`[Bug][后台模式] 启动任务后应用闪退`
-        - 不推荐：`[Bug] 有问题`、`[Bug][模块] 无法使用`
+        - 推荐：`启动任务后应用闪退`、`Boss 战结束后任务直接停止`
+        - 不推荐：`有问题`、`无法使用`、`求助`
 
-        完整规则与更多示例见 [Issue 规范](https://github.com/Aliothmoon/MAA-Meow/blob/main/docs/zh-cn/develop/ISSUE_GUIDELINES.md)。
+        完整规则与模块说明见 [Issue 规范](https://github.com/Aliothmoon/MAA-Meow/blob/main/docs/zh-cn/develop/ISSUE_GUIDELINES.md)。
 
+  # label 与选项被 .github/workflows/issue-title.yml 用来补标题，改动需同步
   - type: dropdown
     id: module
     attributes:
       label: 功能模块
-      description: "请选择最接近问题发生位置的模块，并将同一模块填写到标题中"
+      description: "选最先出现异常的位置：任务执行出错选对应任务；首页、设置、悬浮窗等界面问题选「界面与设置」"
       options:
-        - 首页
-        - 任务配置
+        - 开始唤醒
+        - 理智作战
+        - 自动公招
+        - 基建换班
+        - 信用收支
+        - 领取奖励
+        - 自动肉鸽
+        - 生息演算
+        - 其他长草任务
+        - 自动战斗
+        - 小工具
+        - 定时任务
         - 前台模式
         - 后台模式
-        - 定时任务
-        - 自动战斗
-        - 工具箱
-        - 设置
-        - 安装更新
-        - 构建
-        - 文档
+        - 权限与服务连接
+        - 通知
+        - 安装与更新
+        - 界面与设置
         - 其他
     validations:
       required: true
 
-  - type: textarea
-    id: environment
+  - type: input
+    id: android-version
     attributes:
-      label: 运行环境
-      description: "请依次填写 Android 版本、设备型号、MAA Meow 版本和运行模式"
-      placeholder: "Android 14 / 小米 14 / v0.1.1 / 后台模式（虚拟显示器）"
+      label: Android 版本
+      description: "设备的 Android 系统版本，可附 ROM 版本"
+      placeholder: "Android 14 / HyperOS 2"
+    validations:
+      required: true
+
+  - type: input
+    id: device-model
+    attributes:
+      label: 设备型号
+      description: "设备品牌和型号"
+      placeholder: "小米 14 / Samsung Galaxy S24"
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: MAA Meow 版本
+      description: "设置 → 关于 → 版本"
+      placeholder: "v0.23.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: backend
+    attributes:
+      label: 权限方案
+      description: "设置 → 运行环境 → 启动模式"
+      options:
+        - Shizuku
+        - Root
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: 运行模式
+      description: "出现问题时使用的运行模式"
+      options:
+        - 前台模式（悬浮窗）
+        - 后台模式（虚拟显示器）
     validations:
       required: true
 
@@ -114,10 +159,6 @@ body:
     attributes:
       label: 提交前检查
       options:
-        - label: 我已将标题改为 `[Bug][实际模块] 具体故障现象`，仅查看标题即可判断问题范围
-          required: true
-        - label: 我未仔细阅读这些内容，只是一键已读[所有内容](https://github.com/Aliothmoon/MAA-Meow/issues)，并相信这不会影响问题的处理
-          required: false
         - label: 我已搜索过现有 Issue，确认没有重复提交
           required: true
         - label: 我已上传在 Debug 模式下复现后导出的日志文件

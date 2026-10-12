@@ -1,23 +1,20 @@
 name: Feature Request (English)
 description: Suggest a new feature or an improvement in English
-title: "[Feature][Area] "
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thank you for suggesting an improvement to MAA Meow. Describe the concrete use case so maintainers can assess its value, scope, and completion criteria.
+        Thank you for suggesting an improvement to MAA Meow. Describe the concrete use case so maintainers can assess its value and scope.
 
-        ## Title format
+        ## Title
 
-        First, change the title at the top of the page to: `[Feature][Actual Area] Concrete request`
+        Write only the **concrete request** as the title. After submission it is automatically prefixed with the area selected below, becoming `[Feature][Area] Concrete request`.
 
-        - Replace `[Area]` with the affected area, such as `[Scheduled Tasks]`, `[Auto Battle]`, or `[Settings]`
-        - State the capability you want so the request is understandable from the title alone
-        - Recommended: `[Feature][Auto Battle] Support filtering by operator class`
-        - Not recommended: `[Feature] Please improve this` or `[Feature][Area] Add something`
+        - Recommended: `Filter copilot operations by operator class`, `Attach a result screenshot to the completion notification`
+        - Not recommended: `Please improve this`, `Add something`
 
-        See the [Issue Guidelines](https://github.com/Aliothmoon/MAA-Meow/blob/main/docs/en-us/develop/ISSUE_GUIDELINES.md) for the complete convention and more examples.
+        See the [Issue Guidelines](https://github.com/Aliothmoon/MAA-Meow/blob/main/docs/en-us/develop/ISSUE_GUIDELINES.md) for the complete convention and area descriptions.
 
   - type: dropdown
     id: request-type
@@ -33,23 +30,31 @@ body:
     validations:
       required: true
 
+  # label 与选项被 .github/workflows/issue-title.yml 用来补标题，改动需同步
   - type: dropdown
     id: area
     attributes:
-      label: Product area
-      description: "Select the primary affected area and use the same area in the title"
+      label: Area
+      description: "Pick the primary area: for a specific task, pick that task; for Home, Settings, or overlay UI, pick UI & Settings"
       options:
-        - Home
-        - Task Config
+        - Login
+        - Combat
+        - Auto Recruit
+        - Base
+        - Credit Store
+        - Collect Rewards
+        - Auto I.S.
+        - Reclamation Algorithm
+        - Other Tasks
+        - Copilot
+        - Tools
+        - Schedule
         - Foreground Mode
         - Background Mode
-        - Scheduled Tasks
-        - Auto Battle
-        - Toolbox
-        - Settings
-        - Install Update
-        - Build
-        - Docs
+        - Permissions & Service
+        - Notifications
+        - Installation & Updates
+        - UI & Settings
         - Other
     validations:
       required: true
@@ -58,7 +63,7 @@ body:
     id: problem
     attributes:
       label: Use case and current problem
-      description: "Explain who encounters the problem, under which conditions, and why the current workflow is insufficient"
+      description: "Explain under which conditions you run into the problem and why the current workflow is insufficient"
       placeholder: "When ..., I need to ...; currently I can only ..., which causes ..."
     validations:
       required: true
@@ -76,12 +81,12 @@ body:
     id: acceptance
     attributes:
       label: Acceptance criteria
-      description: "List verifiable outcomes instead of vague goals such as 'better usability'"
+      description: "Optional: what would count as this request being done"
       placeholder: |
         - Users can ...
         - After ..., the app ...
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: alternatives
@@ -104,12 +109,6 @@ body:
     attributes:
       label: Pre-submit checklist
       options:
-        - label: I changed the title to `[Feature][Actual Area] Concrete request`, and the request is clear from the title alone
-          required: true
-        - label: I did not carefully read these instructions, checked [everything](https://github.com/Aliothmoon/MAA-Meow/issues) at once, and believe this will not affect how the issue is handled
-          required: false
-        - label: I described a concrete use case, the current problem, and verifiable acceptance criteria
-          required: true
         - label: I searched existing issues and confirmed this is not a duplicate
           required: true
         - label: This issue contains one primary request and does not mix unrelated requirements
