@@ -17,7 +17,7 @@ body:
         - 推荐：`[Feature][自动战斗] 支持按干员职业筛选`
         - 不推荐：`[Feature] 建议优化`、`[Feature][模块] 加个功能`
 
-        完整规则与更多示例见 [Issue 规范](/Aliothmoon/MAA-Meow/blob/main/docs/zh-cn/develop/ISSUE_GUIDELINES.md)。
+        完整规则与更多示例见 [Issue 规范](https://github.com/Aliothmoon/MAA-Meow/blob/main/docs/zh-cn/develop/ISSUE_GUIDELINES.md)。
 
   - type: dropdown
     id: request-type
@@ -77,9 +77,9 @@ body:
     attributes:
       label: 完成标准
       description: "列出可用于判断建议是否实现的结果，避免只写“体验更好”"
-      value: |
-        - [ ] 验收项 1
-        - [ ] 验收项 2
+      placeholder: |
+        - 可以……
+        - 完成……后会……
     validations:
       required: true
 

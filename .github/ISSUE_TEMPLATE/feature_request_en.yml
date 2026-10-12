@@ -17,7 +17,7 @@ body:
         - Recommended: `[Feature][Auto Battle] Support filtering by operator class`
         - Not recommended: `[Feature] Please improve this` or `[Feature][Area] Add something`
 
-        See the [Issue Guidelines](/Aliothmoon/MAA-Meow/blob/main/docs/en-us/develop/ISSUE_GUIDELINES.md) for the complete convention and more examples.
+        See the [Issue Guidelines](https://github.com/Aliothmoon/MAA-Meow/blob/main/docs/en-us/develop/ISSUE_GUIDELINES.md) for the complete convention and more examples.
 
   - type: dropdown
     id: request-type
@@ -77,9 +77,9 @@ body:
     attributes:
       label: Acceptance criteria
       description: "List verifiable outcomes instead of vague goals such as 'better usability'"
-      value: |
-        - [ ] Acceptance criterion 1
-        - [ ] Acceptance criterion 2
+      placeholder: |
+        - Users can ...
+        - After ..., the app ...
     validations:
       required: true
 
