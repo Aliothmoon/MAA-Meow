@@ -106,6 +106,8 @@ body:
       options:
         - label: I changed the title to `[Feature][Actual Area] Concrete request`, and the request is clear from the title alone
           required: true
+        - label: I did not carefully read these instructions, checked [everything](https://github.com/Aliothmoon/MAA-Meow/issues) at once, and believe this will not affect how the issue is handled
+          required: false
         - label: I described a concrete use case, the current problem, and verifiable acceptance criteria
           required: true
         - label: I searched existing issues and confirmed this is not a duplicate

@@ -145,6 +145,8 @@ body:
       options:
         - label: I changed the title to `[Bug][Actual Area] Concrete symptom`, and the scope is clear from the title alone
           required: true
+        - label: I did not carefully read these instructions, checked [everything](https://github.com/Aliothmoon/MAA-Meow/issues) at once, and believe this will not affect how the issue is handled
+          required: false
         - label: I searched existing issues and confirmed this is not a duplicate
           required: true
         - label: I reproduced the problem with Debug mode enabled and uploaded the exported logs
