@@ -1,0 +1,114 @@
+name: 功能建议（中文）
+description: 使用中文建议新增功能或改进现有体验
+title: "[Feature][模块] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您为 MAA Meow 提出建议！为了便于判断需求价值、范围和完成标准，请填写具体使用场景，而不只是功能名称。
+
+        ## 标题格式
+
+        请先将页面顶部的标题改为：`[Feature][实际模块] 具体需求`
+
+        - 将 `[模块]` 替换为实际模块，例如 `[定时任务]`、`[自动战斗]` 或 `[设置]`
+        - “具体需求”应说明希望获得的能力；仅查看标题时，也应该能判断建议内容
+        - 推荐：`[Feature][自动战斗] 支持按干员职业筛选`
+        - 不推荐：`[Feature] 建议优化`、`[Feature][模块] 加个功能`
+
+        完整规则与更多示例见 [Issue 规范](/Aliothmoon/MAA-Meow/blob/main/docs/zh-cn/develop/ISSUE_GUIDELINES.md)。
+
+  - type: dropdown
+    id: request-type
+    attributes:
+      label: 建议类型
+      description: "请选择最接近的建议类型"
+      options:
+        - 新功能
+        - 现有功能改进
+        - 交互 / 体验优化
+        - 性能优化
+        - 其他
+    validations:
+      required: true
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: 功能模块
+      description: "请选择建议主要影响的模块，并将同一模块填写到标题中"
+      options:
+        - 首页
+        - 任务配置
+        - 前台模式
+        - 后台模式
+        - 定时任务
+        - 自动战斗
+        - 工具箱
+        - 设置
+        - 安装更新
+        - 构建
+        - 文档
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 使用场景与现有问题
+      description: "说明谁在什么场景下遇到了什么困难，以及现有方式为什么不足"
+      placeholder: "当……时，我需要……；目前只能……，这会导致……"
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: "描述期望的行为或交互；如涉及界面，可附草图或参考截图"
+      placeholder: "建议在……增加……；用户执行……后，应用应……"
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 完成标准
+      description: "列出可用于判断建议是否实现的结果，避免只写“体验更好”"
+      value: |
+        - [ ] 验收项 1
+        - [ ] 验收项 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 替代方案
+      description: "说明尝试过的替代方法、临时解决方式，或为什么这些方案不合适"
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 补充信息
+      description: "可附相关 Issue、产品参考、截图、录屏或其他上下文"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 提交前检查
+      options:
+        - label: 我已将标题改为 `[Feature][实际模块] 具体需求`，仅查看标题即可判断建议内容
+          required: true
+        - label: 我已说明具体使用场景、现有问题和可判断的完成标准
+          required: true
+        - label: 我已搜索过现有 Issue，确认没有重复建议
+          required: true
+        - label: 此 Issue 只包含一个主要建议，没有混入互不相关的需求
+          required: true

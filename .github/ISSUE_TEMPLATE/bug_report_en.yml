@@ -1,0 +1,151 @@
+name: Bug Report (English)
+description: Report a reproducible problem in English
+title: "[Bug][Area] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug. Please provide enough detail for maintainers to reproduce and diagnose it.
+
+        ## Title format
+
+        First, change the title at the top of the page to: `[Bug][Actual Area] Concrete symptom`
+
+        - Replace `[Area]` with the affected area, such as `[Background Mode]`, `[Scheduled Tasks]`, or `[Auto Battle]`
+        - State what actually happens so the scope is understandable from the title alone
+        - Recommended: `[Bug][Background Mode] App crashes after starting a task`
+        - Not recommended: `[Bug] Something is wrong` or `[Bug][Area] Does not work`
+
+        See the [Issue Guidelines](/Aliothmoon/MAA-Meow/blob/main/docs/en-us/develop/ISSUE_GUIDELINES.md) for the complete convention and more examples.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Product area
+      description: "Select the closest area and use the same area in the title"
+      options:
+        - Home
+        - Task Config
+        - Foreground Mode
+        - Background Mode
+        - Scheduled Tasks
+        - Auto Battle
+        - Toolbox
+        - Settings
+        - Install Update
+        - Build
+        - Docs
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: android-version
+    attributes:
+      label: Android version
+      description: "The device's Android version, for example Android 14 / API 34"
+      placeholder: "Android 14"
+    validations:
+      required: true
+
+  - type: input
+    id: device-model
+    attributes:
+      label: Device model
+      description: "Device brand and model"
+      placeholder: "Google Pixel 8 / Samsung Galaxy S24"
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: MAA Meow version
+      description: "The installed app version"
+      placeholder: "v0.1.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Run mode
+      description: "The mode used when the problem occurred"
+      options:
+        - Foreground mode (floating panel)
+        - Background mode (virtual display)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem description
+      description: "Add trigger conditions, actual behavior, and impact not already clear from the title"
+      placeholder: "Under which conditions did you perform which action, what happened, and what was the impact?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: "List the exact steps needed to reproduce the problem"
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: "Describe the result you expected"
+    validations:
+      required: false
+
+  - type: textarea
+    id: log-file
+    attributes:
+      label: Log file
+      description: |
+        Export logs using these steps:
+        1. Enable **Debug mode** in the app settings
+        2. Reproduce the problem
+        3. Export and upload the log archive
+
+        > Logs are essential for diagnosis. Please upload them.
+      placeholder: "Drag the exported .zip log file here"
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or screen recordings
+      description: "Upload relevant screenshots or recordings when available"
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: "Add anything else that may help diagnose the problem"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submit checklist
+      options:
+        - label: I changed the title to `[Bug][Actual Area] Concrete symptom`, and the scope is clear from the title alone
+          required: true
+        - label: I searched existing issues and confirmed this is not a duplicate
+          required: true
+        - label: I reproduced the problem with Debug mode enabled and uploaded the exported logs
+          required: true

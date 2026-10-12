@@ -1,0 +1,114 @@
+name: Feature Request (English)
+description: Suggest a new feature or an improvement in English
+title: "[Feature][Area] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an improvement to MAA Meow. Describe the concrete use case so maintainers can assess its value, scope, and completion criteria.
+
+        ## Title format
+
+        First, change the title at the top of the page to: `[Feature][Actual Area] Concrete request`
+
+        - Replace `[Area]` with the affected area, such as `[Scheduled Tasks]`, `[Auto Battle]`, or `[Settings]`
+        - State the capability you want so the request is understandable from the title alone
+        - Recommended: `[Feature][Auto Battle] Support filtering by operator class`
+        - Not recommended: `[Feature] Please improve this` or `[Feature][Area] Add something`
+
+        See the [Issue Guidelines](/Aliothmoon/MAA-Meow/blob/main/docs/en-us/develop/ISSUE_GUIDELINES.md) for the complete convention and more examples.
+
+  - type: dropdown
+    id: request-type
+    attributes:
+      label: Request type
+      description: "Select the closest request type"
+      options:
+        - New feature
+        - Improvement to an existing feature
+        - Interaction or usability improvement
+        - Performance improvement
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Product area
+      description: "Select the primary affected area and use the same area in the title"
+      options:
+        - Home
+        - Task Config
+        - Foreground Mode
+        - Background Mode
+        - Scheduled Tasks
+        - Auto Battle
+        - Toolbox
+        - Settings
+        - Install Update
+        - Build
+        - Docs
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Use case and current problem
+      description: "Explain who encounters the problem, under which conditions, and why the current workflow is insufficient"
+      placeholder: "When ..., I need to ...; currently I can only ..., which causes ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: "Describe the desired behavior or interaction; attach a sketch or reference screenshot when useful"
+      placeholder: "Add ... to ...; after the user does ..., the app should ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: "List verifiable outcomes instead of vague goals such as 'better usability'"
+      value: |
+        - [ ] Acceptance criterion 1
+        - [ ] Acceptance criterion 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: "Describe any workaround or alternative considered and why it is insufficient"
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: "Add related issues, product references, screenshots, recordings, or other context"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submit checklist
+      options:
+        - label: I changed the title to `[Feature][Actual Area] Concrete request`, and the request is clear from the title alone
+          required: true
+        - label: I described a concrete use case, the current problem, and verifiable acceptance criteria
+          required: true
+        - label: I searched existing issues and confirmed this is not a duplicate
+          required: true
+        - label: This issue contains one primary request and does not mix unrelated requirements
+          required: true
