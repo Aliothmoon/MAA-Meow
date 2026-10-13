@@ -59,11 +59,13 @@ object ScheduleHealthLogic {
         strategies: List<ScheduleStrategy>,
     ): Boolean = deviceSecure && !credentialReady && strategies.any { it.enabled }
 
-    /** 硬件关屏不使用悬浮窗；只有启用且实际显示屏保的策略才需要。 */
-    fun overlayNeeded(
-        strategies: List<ScheduleStrategy>,
-        useHardwareScreenOff: Boolean = false,
-    ): Boolean = !useHardwareScreenOff && strategies.any { it.enabled && it.autoScreenSaver }
+    /** 熄屏挂机走屏保才要悬浮窗，硬件熄屏不用 */
+    fun usesOverlay(autoScreenSaver: Boolean, hardwareScreenOff: Boolean): Boolean =
+        autoScreenSaver && !hardwareScreenOff
+
+    /** 是否需要悬浮窗：存在启用且用屏保的策略 */
+    fun overlayNeeded(strategies: List<ScheduleStrategy>): Boolean =
+        strategies.any { it.enabled && usesOverlay(it.autoScreenSaver, it.hardwareScreenOff) }
 
     /** 推导未通过项；空列表 = 全部通过（健康卡应隐藏、向导无需弹出） */
     fun failingIssues(snapshot: ScheduleHealthSnapshot): List<ScheduleHealthIssue> = buildList {

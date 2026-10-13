@@ -98,6 +98,7 @@ import com.aliothmoon.maameow.domain.service.RemoteFrameSnapshotter
 import com.aliothmoon.maameow.domain.service.RemoteGameFpsReader
 import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.service.RunTelemetry
+import com.aliothmoon.maameow.domain.service.ScreenPowerController
 import com.aliothmoon.maameow.domain.service.ScreenSaverController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.ToolboxExportService
@@ -120,6 +121,7 @@ import com.aliothmoon.maameow.maa.callback.ToolboxResultCollector
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.RemoteAccessCoordinator
 import com.aliothmoon.maameow.manager.RemoteGameAudioAdapter
+import com.aliothmoon.maameow.manager.RemoteScreenPowerController
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.ShizukuReadinessProvider
 import com.aliothmoon.maameow.overlay.OverlayController
@@ -227,12 +229,7 @@ val appModule = module {
             startTaskChain = get(),
             countdownUI = get(),
             screenSaver = get(),
-            setDisplayPower = { on ->
-                val service = checkNotNull(RemoteServiceManager.getInstanceOrNull()) {
-                    "Elevated service unavailable for display power control"
-                }
-                service.setDisplayPower(on)
-            },
+            screenPower = get(),
             taskEndRegistry = get(),
             notificationCenter = get(),
             keyguardLocked = {
@@ -392,6 +389,7 @@ val appModule = module {
 
     singleOf(::BorderOverlayManager)
     singleOf(::ScreenSaverOverlayManager) { bind<ScreenSaverController>() }
+    singleOf(::RemoteScreenPowerController) { bind<ScreenPowerController>() }
     singleOf(::OverlayViewModelOwner)
     singleOf(::OverlayController)
 

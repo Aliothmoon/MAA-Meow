@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.models.UnlockCredential
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
+import com.aliothmoon.maameow.domain.service.ScreenPowerController
 import com.aliothmoon.maameow.domain.service.ScreenSaverController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.UnlockGestureReader
@@ -21,11 +22,9 @@ import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,6 +55,7 @@ class LaunchPipeline(
     private val startTaskChain: StartTaskChainUseCase,
     private val countdownUI: CountdownUI,
     private val screenSaver: ScreenSaverController,
+    private val screenPower: ScreenPowerController,
     private val taskEndRegistry: TaskEndRegistry,
     private val notificationCenter: MaaNotificationCenter,
     private val keyguardLocked: () -> Boolean,
@@ -68,8 +68,6 @@ class LaunchPipeline(
     /** 主屏顶层应用包名，判不出为 null */
     private val foregroundPackage: suspend () -> String?,
     private val appLabel: (String) -> String,
-    /** 沿用手动熄屏挂机的异步指令；正常返回仅表示已发送。 */
-    private val setDisplayPower: (Boolean) -> Unit,
 ) {
     private val _session = MutableStateFlow<LaunchSession>(LaunchSession.Idle)
     val session: StateFlow<LaunchSession> = _session.asStateFlow()
@@ -80,7 +78,6 @@ class LaunchPipeline(
     private val lastCompletedRequestId = AtomicReference<String?>(null)
     private val cancelRequested = AtomicBoolean(false)
     private val startNowRequested = AtomicBoolean(false)
-    private val hardwareScreenOffOwner = AtomicReference<String?>(null)
 
     fun execute(request: LaunchRequest): Job {
         synchronized(executeLock) {
@@ -138,7 +135,7 @@ class LaunchPipeline(
                     return
                 }
                 // 命中黑名单也别抢占在途的
-                if (inUseBackgroundSchedule(request)) {
+                if (isBackgroundSchedule(request) && !deviceIdle()) {
                     (checkForeground() as? ForegroundCheck.Blacklisted)?.let {
                         finishWithoutHold(request, ExecutionResult.SKIPPED_BLACKLIST, it.message)
                         return
@@ -193,10 +190,10 @@ class LaunchPipeline(
                 return
             }
 
-            // 须在唤醒前采样；无锁屏时熄屏也不上锁，亮屏与 keyguard 都看
-            outcome.tookOverIdleDevice = !screenInteractive() || keyguardLocked()
+            // 须在唤醒前采样
+            outcome.tookOverIdleDevice = deviceIdle()
             val isForeground = appSettingsManager.runMode.value == RunMode.FOREGROUND
-            val inUseSchedule = inUseBackgroundSchedule(request)
+            val inUseSchedule = isBackgroundSchedule(request) && !outcome.tookOverIdleDevice
 
             // 先于强制启动的接管，命中就别把在跑的停了
             if (inUseSchedule) {
@@ -292,22 +289,23 @@ class LaunchPipeline(
             }
 
             // 后台 + 待机才盖；用户已开的熄屏挂机不收走，好连跑多轮
-            val hardwareScreenOff = appSettingsManager.useHardwareScreenOff.value
+            var screenOffPending = false
             if (request.autoScreenSaver && outcome.backgroundRun && outcome.tookOverIdleDevice) {
-                if (screenSaver.isShowing()) {
-                    log.append(uiTextOf(R.string.schedule_log_screen_saver_kept))
-                } else if (hardwareScreenOff) {
-                    // 物理关屏留到倒计时后，期间仍可取消或立即开始。
-                    outcome.hardwareScreenOffRequested = true
-                } else {
-                    outcome.screenSaverEngaged = screenSaver.show()
-                    log.append(
-                        if (outcome.screenSaverEngaged) {
-                            uiTextOf(R.string.schedule_log_screen_saver_on)
-                        } else {
-                            uiTextOf(R.string.schedule_log_screen_saver_failed)
-                        },
-                    )
+                when {
+                    screenSaver.isShowing() -> log.append(uiTextOf(R.string.schedule_log_screen_saver_kept))
+                    screenPower.poweredOff != null -> log.append(uiTextOf(R.string.schedule_log_screen_off_kept))
+                    // 倒计时后再关，期间还能取消或立即开始
+                    request.hardwareScreenOff -> screenOffPending = true
+                    else -> {
+                        outcome.screenSaverEngaged = screenSaver.show()
+                        log.append(
+                            if (outcome.screenSaverEngaged) {
+                                uiTextOf(R.string.schedule_log_screen_saver_on)
+                            } else {
+                                uiTextOf(R.string.schedule_log_screen_saver_failed)
+                            },
+                        )
+                    }
                 }
             }
 
@@ -348,16 +346,15 @@ class LaunchPipeline(
                 }
             }
 
-            if (outcome.hardwareScreenOffRequested) {
-                // 记录归属后再发指令，取消/失败也能释放；不推断底层是否真的关屏。
-                outcome.hardwareScreenOffEngaged = true
-                withContext(Dispatchers.IO) {
-                    synchronized(hardwareScreenOffOwner) {
-                        hardwareScreenOffOwner.set(request.requestId)
-                        setDisplayPower(false)
-                    }
-                }
-                log.append(uiTextOf(R.string.schedule_log_hardware_screen_off_sent))
+            // 只关不恢复，同手动熄屏挂机；倒计时里已休眠就不关
+            if (screenOffPending && screenInteractive()) {
+                log.append(
+                    if (screenPower.powerOff(ScreenPowerController.Origin.SCHEDULE)) {
+                        uiTextOf(R.string.schedule_log_hardware_screen_off_sent)
+                    } else {
+                        uiTextOf(R.string.schedule_log_hardware_screen_off_failed)
+                    },
+                )
             }
 
             setPhase(request, LaunchSession.Phase.Preparing, presentation)
@@ -421,6 +418,7 @@ class LaunchPipeline(
         val skipSleep = request.skipAutoSleepIfAwake && !outcome.tookOverIdleDevice
         // 用户熄屏挂机还在就别 lockAndSleep，否则拆掉后面几轮
         val userSaverHang = screenSaver.isShowing() && !outcome.screenSaverEngaged
+                || screenPower.poweredOff == ScreenPowerController.Origin.MANUAL
         val autoSleep = request.autoSleepAfterTask && !skipSleep && !userSaverHang
         try {
             if (result == ExecutionResult.STARTED && request.autoSleepAfterTask && skipSleep) {
@@ -462,11 +460,10 @@ class LaunchPipeline(
             val screenSaverEngaged = outcome.screenSaverEngaged
             // Core 未起时 armOnce 看到 IDLE 会当场补跑，不能整段跳过，否则息屏锁屏不执行
             if (result != ExecutionResult.STARTED) {
-                releaseHardwareScreenOff(request.requestId)
                 if (screenSaverEngaged) screenSaver.hide()
-            } else if (closeGame || autoSleep || screenSaverEngaged || outcome.hardwareScreenOffEngaged) {
+            } else if (closeGame || autoSleep || screenSaverEngaged) {
                 taskEndRegistry.armOnce { reason ->
-                    onTaskEnd(request.requestId, reason, closeGame, autoSleep, screenSaverEngaged)
+                    onTaskEnd(reason, closeGame, autoSleep, screenSaverEngaged)
                 }
             }
         }
@@ -491,10 +488,13 @@ class LaunchPipeline(
         Timber.i("LaunchPipeline: force preempt for %s", incoming.requestId)
     }
 
-    private fun inUseBackgroundSchedule(request: LaunchRequest): Boolean =
+    private fun isBackgroundSchedule(request: LaunchRequest): Boolean =
         request.source == LaunchSource.Schedule
                 && appSettingsManager.runMode.value != RunMode.FOREGROUND
-                && screenInteractive() && !keyguardLocked()
+
+    /** 熄屏、锁屏或被熄屏挂机关着屏；无锁屏时熄屏不上锁，两者都看 */
+    private fun deviceIdle(): Boolean =
+        !screenInteractive() || keyguardLocked() || screenPower.poweredOff != null
 
     private sealed interface ForegroundCheck {
         data object Clear : ForegroundCheck
@@ -530,29 +530,7 @@ class LaunchPipeline(
     /** 抢占前撤掉上一轮收尾与屏保，避免 stop 边沿触发旧 autoSleep */
     private suspend fun takeOverFromPreviousRun() {
         taskEndRegistry.disarmOnce()
-        hardwareScreenOffOwner.get()?.let { releaseHardwareScreenOff(it) }
         screenSaver.hide()
-    }
-
-    /** 仅发送正常返回后清归属；失败重试前重新核对，避免恢复新轮次的屏幕。 */
-    private suspend fun releaseHardwareScreenOff(requestId: String): Unit = withContext(Dispatchers.IO) {
-        repeat(SCREEN_POWER_RESTORE_ATTEMPTS) { attempt ->
-            val released = synchronized(hardwareScreenOffOwner) {
-                if (hardwareScreenOffOwner.get() != requestId) return@synchronized true
-                try {
-                    setDisplayPower(true)
-                    hardwareScreenOffOwner.set(null)
-                    true
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Timber.e(e, "Failed to send screen power restore, attempt=%s", attempt + 1)
-                    false
-                }
-            }
-            if (released) return@withContext
-            if (attempt < SCREEN_POWER_RESTORE_ATTEMPTS - 1) delay(SCREEN_POWER_RESTORE_RETRY_MS)
-        }
     }
 
     /** mutex 未拿到时的旁路结果，独立 writeClosed */
@@ -602,7 +580,6 @@ class LaunchPipeline(
     }
 
     private suspend fun onTaskEnd(
-        requestId: String,
         reason: TaskEndRegistry.Reason,
         closeGame: Boolean,
         autoSleep: Boolean,
@@ -613,19 +590,15 @@ class LaunchPipeline(
             reason, closeGame, autoSleep, releaseScreenSaver,
         )
         // 手动停止不关游戏，其余结束（自然完成 / 掉线中止 / 到达时长上限）都关
-        try {
-            if (closeGame && reason != TaskEndRegistry.Reason.MANUAL) {
-                compositionService.stopVirtualDisplay()
-            }
-        } finally {
-            // 先释放本次遮屏/关屏，再交给系统锁屏息屏，避免物理关屏状态残留。
-            releaseHardwareScreenOff(requestId)
-            if (releaseScreenSaver) {
-                screenSaver.hide()
-            }
-            if (autoSleep) {
-                wakeUnlockEngine.lockAndSleep()
-            }
+        if (closeGame && reason != TaskEndRegistry.Reason.MANUAL) {
+            compositionService.stopVirtualDisplay()
+        }
+        // 屏保有 KEEP_SCREEN_ON，须先关再熄屏
+        if (releaseScreenSaver) {
+            screenSaver.hide()
+        }
+        if (autoSleep) {
+            wakeUnlockEngine.lockAndSleep()
         }
     }
 
@@ -635,14 +608,10 @@ class LaunchPipeline(
         /** 启动采样：熄屏或锁屏 */
         var tookOverIdleDevice = false
         var screenSaverEngaged = false
-        var hardwareScreenOffRequested = false
-        var hardwareScreenOffEngaged = false
         var startFailureNotified = false
     }
 
     companion object {
         private const val PREEMPT_JOIN_TIMEOUT_MS = 15_000L
-        private const val SCREEN_POWER_RESTORE_ATTEMPTS = 3
-        private const val SCREEN_POWER_RESTORE_RETRY_MS = 150L
     }
 }

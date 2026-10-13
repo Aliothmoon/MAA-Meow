@@ -26,6 +26,7 @@ import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.achievement.PallasDrunkState
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.launch.LaunchSession
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
@@ -44,6 +45,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
@@ -195,14 +198,16 @@ class MainActivity : AppCompatActivity(), PipHost {
                     compositionService.state,
                     screenSaverManager.showing,
                     appSettingsManager.useHardwareScreenOff,
-                ) { taskState, saverShowing, hwFeatureEnabled ->
+                    backgroundTaskViewModel.launchSession.map { it is LaunchSession.InFlight },
+                ) { taskState, saverShowing, hwFeatureEnabled, launching ->
                     val taskActive = taskState == MaaExecutionState.STARTING
                             || taskState == MaaExecutionState.RUNNING
                             || taskState == MaaExecutionState.STOPPING
                     // 启用硬件熄屏功能后，前台时始终保持屏幕常亮、与任务状态解耦：
                     // 确保系统不会自动休眠/锁屏而中断正在运行的任务，硬件熄屏也无需再维护状态。
-                    hwFeatureEnabled || taskActive || saverShowing
-                }.collect { keepOn ->
+                    // 倒计时也常亮，免得待机触发后又锁屏
+                    hwFeatureEnabled || taskActive || saverShowing || launching
+                }.distinctUntilChanged().collect { keepOn ->
                     if (keepOn) {
                         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                     } else {

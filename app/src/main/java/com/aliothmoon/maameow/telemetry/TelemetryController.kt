@@ -16,6 +16,7 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.LaunchOutcome
 import com.aliothmoon.maameow.domain.service.RunKind
 import com.aliothmoon.maameow.domain.service.RunTelemetry
+import com.aliothmoon.maameow.domain.service.ScreenPowerController
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.maa.AsstMsg
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
@@ -56,6 +57,7 @@ class TelemetryController(
     private val notificationSettings: NotificationSettingsManager,
     private val pathConfig: MaaPathConfig,
     private val taskChainState: TaskChainState,
+    private val screenPower: ScreenPowerController,
 ) : RunTelemetry {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -387,7 +389,7 @@ class TelemetryController(
     }
 
     private fun refreshRunTags() {
-        TelemetryRunTags.collect(context, settings, taskChainState, pathConfig)
+        TelemetryRunTags.collect(context, settings, taskChainState, pathConfig, screenPower.poweredOff)
             .forEach { (key, value) -> setEnvTag(key, value) }
     }
 

@@ -6,6 +6,7 @@ import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.domain.service.ScreenPowerController
 import com.aliothmoon.maameow.manager.RemoteAccessCoordinator
 import com.aliothmoon.maameow.manager.ShizukuManager
 import rikka.shizuku.Shizuku
@@ -24,6 +25,7 @@ internal object TelemetryRunTags {
         settings: AppSettingsManager,
         taskChainState: TaskChainState,
         pathConfig: MaaPathConfig,
+        screenPowerOff: ScreenPowerController.Origin?,
     ): Map<String, String> = buildMap {
         val clientType = taskChainState.clientType
         put("client_type", clientType)
@@ -40,6 +42,8 @@ internal object TelemetryRunTags {
         put("force_fullscreen", settings.forceFullscreenOnVirtualDisplay.value.toString())
         put("deploy_with_pause", settings.deployWithPause.value.toString())
         put("hardware_screen_off", settings.useHardwareScreenOff.value.toString())
+        // 定时策略的硬件熄屏不看全局开关，另记开跑时屏是否被关着
+        put("screen_power_off", screenPowerOff?.name?.lowercase() ?: "none")
     }
 
     private fun gameVersion(context: Context, clientType: String): String {

@@ -24,6 +24,7 @@ import com.aliothmoon.maameow.domain.service.GameFpsWatcher
 import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
+import com.aliothmoon.maameow.domain.service.ScreenPowerController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
@@ -74,6 +75,7 @@ class BackgroundTaskViewModel(
     private val taskEndRegistry: TaskEndRegistry,
     private val application: Context,
     private val sideTaskRunner: PlanSideTaskRunner,
+    private val screenPower: ScreenPowerController,
 ) : ViewModel() {
 
     val launchSession: StateFlow<LaunchSession> = launchPipeline.session
@@ -282,16 +284,8 @@ class BackgroundTaskViewModel(
     }
 
     fun onScreenOff() {
-        // 硬件熄屏：仅下发一次关闭物理屏幕的指令，无状态、幂等（再点必发，不会卡死）。
-        // 启用该功能时 MainActivity 始终持有 FLAG_KEEP_SCREEN_ON 保持系统唤醒、不锁屏；
-        // 屏幕恢复由系统在用户唤醒时处理，会话结束/服务销毁时由 PowerController 兜底恢复
-        val service = RemoteServiceManager.getInstanceOrNull()
-        if (service == null) {
-            Timber.w("onScreenOff skipped: remote service unavailable")
-            return
-        }
-        runCatching { service.setDisplayPower(false) }
-            .onFailure { Timber.e(it, "onScreenOff failed") }
+        // 开关开启时 MainActivity 常亮，系统不会休眠
+        screenPower.powerOff(ScreenPowerController.Origin.MANUAL)
     }
 
     // ==================== Task Chain ====================

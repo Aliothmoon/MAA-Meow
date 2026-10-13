@@ -18,6 +18,8 @@ data class LaunchRequest(
     val forceStart: Boolean = false,
     /** 运行期间屏保；仅后台且待机接管时生效 */
     val autoScreenSaver: Boolean = false,
+    /** 熄屏挂机改为倒计时后关物理屏，结束不恢复 */
+    val hardwareScreenOff: Boolean = false,
     /** 在用手机时不拉界面，改通知倒计时；仅后台定时 */
     val silentStartWhenInUse: Boolean = false,
     val autoSleepAfterTask: Boolean = false,

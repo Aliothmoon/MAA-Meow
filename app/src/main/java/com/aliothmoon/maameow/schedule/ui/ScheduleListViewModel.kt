@@ -67,13 +67,6 @@ class ScheduleListViewModel(
         UnlockCredential.isReady(type, pin, hasGesture = gesture != null)
     }.distinctUntilChanged()
 
-    private val strategyHealth = combine(
-        repository.strategies,
-        appSettingsManager.useHardwareScreenOff,
-    ) { strategies, hardwareScreenOff ->
-        strategies to ScheduleHealthLogic.overlayNeeded(strategies, hardwareScreenOff)
-    }.distinctUntilChanged()
-
     private val _state = MutableStateFlow(
         ScheduleListUiState(
             exactAlarmAllowed = exactAlarmAllowed.value,
@@ -95,13 +88,12 @@ class ScheduleListViewModel(
         }
         viewModelScope.launch {
             combine(
-                strategyHealth,
+                repository.strategies,
                 permissionManager.state,
                 exactAlarmAllowed,
                 deviceSecure,
                 unlockCredentialReady,
-            ) { strategyState, permissions, exactAlarm, secure, credentialReady ->
-                val (strategies, needed) = strategyState
+            ) { strategies, permissions, exactAlarm, secure, credentialReady ->
                 ScheduleHealthLogic.failingIssues(
                     ScheduleHealthSnapshot(
                         backendGranted = permissions.remoteAccessGranted,
@@ -110,7 +102,7 @@ class ScheduleListViewModel(
                         notification = permissions.notification,
                         exactAlarmAllowed = exactAlarm,
                         overlayGranted = permissions.overlay,
-                        overlayNeeded = needed,
+                        overlayNeeded = ScheduleHealthLogic.overlayNeeded(strategies),
                         unlockCredentialMissing = ScheduleHealthLogic.unlockCredentialMissing(
                             deviceSecure = secure,
                             credentialReady = credentialReady,
