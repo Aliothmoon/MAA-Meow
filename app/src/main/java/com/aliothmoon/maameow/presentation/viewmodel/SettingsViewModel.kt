@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.presentation.viewmodel
 import android.app.Application
 import android.graphics.Bitmap
 import android.net.Uri
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,13 +15,12 @@ import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
-import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
-import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
 import com.aliothmoon.maameow.domain.service.AchievementReporter
+import com.aliothmoon.maameow.domain.service.CopilotOperBoxAssist
 import com.aliothmoon.maameow.domain.service.CoreDataPusher
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
@@ -31,8 +29,8 @@ import com.aliothmoon.maameow.domain.usecase.SwitchCoreDataLocationUseCase
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.utils.Misc
+import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
-import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.toLocaleList
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.Dispatchers
@@ -61,8 +59,6 @@ class SettingsViewModel(
     private val appSettingsManager: AppSettingsManager,
     private val permissionManager: PermissionManager,
     private val configBackupManager: ConfigBackupManager,
-    private val taskChainState: TaskChainState,
-    private val resourceDataManager: ResourceDataManager,
     private val resourceLoader: MaaResourceLoader,
     private val achievementReporter: AchievementReporter,
     private val backgroundImageStore: BackgroundImageStore,
@@ -71,6 +67,7 @@ class SettingsViewModel(
     private val compositionService: MaaCompositionService,
     private val yituliuApiService: YituliuApiService,
     private val livePublisher: LiveUpdatePublisher,
+    private val operBoxAssist: CopilotOperBoxAssist,
 ) : ViewModel() {
 
     // ========== 导入导出 ==========
@@ -317,6 +314,14 @@ class SettingsViewModel(
         viewModelScope.launch { appSettingsManager.setOperBoxUseYituliuApi(enabled) }
     }
 
+    /** 与自动战斗页同一个开关 */
+    val operBoxAssistState: StateFlow<CopilotOperBoxAssist.State> = operBoxAssist.state
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CopilotOperBoxAssist.State())
+
+    fun setOperBoxAssistEnabled(enabled: Boolean) {
+        viewModelScope.launch { operBoxAssist.setEnabled(enabled) }
+    }
+
     /** [ok] 决定提示用什么颜色 */
     data class TokenVerifyMessage(val text: UiText, val ok: Boolean)
 
@@ -425,11 +430,7 @@ class SettingsViewModel(
         viewModelScope.launch {
             val resolved = resolveSelectedLanguage(lang)
             appSettingsManager.setLanguage(resolved)
-            AppCompatDelegate.setApplicationLocales(resolved.toLocaleList())
-            resourceDataManager.refreshDisplayLanguage(
-                clientType = taskChainState.clientType,
-                displayLanguage = ResourceDataManager.displayLanguageCode(resolved)
-            )
+            LocaleBootstrap.applyLanguage(app, resolved)
         }
     }
 

@@ -23,6 +23,7 @@ import com.aliothmoon.maameow.maa.MaaInstanceOptions.DEPLOYMENT_WITH_PAUSE
 import com.aliothmoon.maameow.maa.MaaInstanceOptions.TOUCH_MODE
 import com.aliothmoon.maameow.maa.callback.MaaCallbackDispatcher
 import com.aliothmoon.maameow.maa.callback.MaaExecutionStateHolder
+import com.aliothmoon.maameow.maa.callback.SetParamsErrorSignal
 import com.aliothmoon.maameow.maa.callback.SubTaskHandler
 import com.aliothmoon.maameow.maa.callback.TaskChainStatusTracker
 import com.aliothmoon.maameow.maa.callback.ToolboxResultCollector
@@ -78,6 +79,7 @@ class MaaCompositionService(
     private val notificationCenter: MaaNotificationCenter,
     private val liveCoordinator: LiveSessionCoordinator,
     private val dropsRefresher: FightDropsRefresher,
+    private val setParamsErrors: SetParamsErrorSignal,
     private val toolboxResultCollector: ToolboxResultCollector,
     private val coreDataPusher: CoreDataPusher,
     private val telemetry: RunTelemetry,
@@ -584,6 +586,7 @@ class MaaCompositionService(
         }
         taskChainStatusTracker.clear()
         // 不清 dropsRefresher：stage 已在 Analyze 完成，会话结束/下次 Analyze 再清
+        val setParamsErrorsBefore = setParamsErrors.current
         tasks.forEach { t ->
             sessionLogger.appendToFileOnly("[TaskParams] ${t.type.value}: ${t.params}")
             val taskId = maa.AppendTask(t.type.value, t.params)
@@ -597,6 +600,16 @@ class MaaCompositionService(
             logAppendFailed(t.logName?.resolve(context) ?: t.type.value)
             val slot = t.slot ?: return@forEach
             fallbacks[slot]?.let { appendFallbacks(maa, slot, it) }
+        }
+        // 全被拒时不能空队列 Start：core 不发任何回调，状态会一直停在 RUNNING
+        if (taskChainStatusTracker.tasks.value.isEmpty()) {
+            // shortcut: 超过 1.5 秒仍可能丢日志，若出现再按会话保留迟到回调
+            setParamsErrors.awaitAfter(setParamsErrorsBefore, timeoutMs = 1500)
+            return failStart(
+                context.getString(R.string.runlog_no_task_appended),
+                "APPEND_ERROR",
+                StartResult.StartError
+            )
         }
         if (mode == RunMode.FOREGROUND) {
             screenGate.awaitClear()
@@ -682,6 +695,8 @@ class MaaCompositionService(
             MaaExecutionState.IDLE,
             MaaExecutionState.ERROR -> Unit
         }
+        // 辅助任务不继承启动失败或服务死亡留下的库存登记
+        if (kind == RunKind.AUX) dropsRefresher.clear()
         val mode = appSettings.runMode.value
         sessionLogger.startSession(tasks.map { it.type.value })
         // 凭这行能从会话日志找到遥测里的那一轮

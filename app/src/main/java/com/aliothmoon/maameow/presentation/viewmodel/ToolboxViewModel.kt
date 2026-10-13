@@ -388,10 +388,7 @@ class ToolboxViewModel(
         if (useYituliuOperBox()) {
             viewModelScope.launch {
                 _statusMessage.value = uiTextOf(R.string.oper_box_yituliu_fetching)
-                _statusMessage.value = when (val result = operBoxYituliuSync.sync()) {
-                    is OperBoxYituliuSync.Result.Success -> result.message
-                    is OperBoxYituliuSync.Result.Failed -> result.message
-                }
+                _statusMessage.value = operBoxYituliuSync.sync().message
             }
             return
         }

@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
@@ -24,6 +25,15 @@ class ResourceInitService(
 ) {
     private val _state = MutableStateFlow<ResourceInitState>(ResourceInitState.NotChecked)
     val state: StateFlow<ResourceInitState> = _state.asStateFlow()
+
+    // App 侧资源目录内容版本，重解或资源更新后自增
+    private val _revision = MutableStateFlow(0)
+    val revision: StateFlow<Int> = _revision.asStateFlow()
+
+    /** 资源更新包已解到 App 侧目录 */
+    fun onResourceUpdated() {
+        _revision.update { it + 1 }
+    }
 
     suspend fun checkAndInit() {
         val cur = _state.value
@@ -77,6 +87,7 @@ class ResourceInitService(
                     pathConfig.markAppVersion()
                     doForceSyncOverridesTemplate()
                     Timber.i("资源初始化完成")
+                    _revision.update { it + 1 }
                     _state.value = ResourceInitState.Ready
                 },
                 onFailure = { e ->

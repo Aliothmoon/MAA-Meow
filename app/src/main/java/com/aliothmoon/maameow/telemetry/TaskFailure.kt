@@ -28,6 +28,12 @@ internal data class FailureSignal(
         }
 }
 
+/** Core 给部分任务名带的实例地址前缀，如 SSS 的 `0xb4000074…@SSSBegin`，每次运行都不一样 */
+private val TASK_ADDRESS_PREFIX = Regex("0x[0-9a-fA-F]+@")
+
+/** 去掉实例地址，同一个任务跨运行才对得上 */
+internal fun stripTaskAddress(name: String): String = TASK_ADDRESS_PREFIX.replace(name, "")
+
 internal sealed interface Incident {
     val runId: String?
     val tags: Map<String, String>
@@ -66,23 +72,24 @@ internal data class TaskFailure(
     override val tags: Map<String, String>,
     /** 事件靠它的上下文挂回所在的 Trace */
     val span: ISpan,
+    /** 本轮在它之前第一条失败的任务链；有的话它多半是被连累的 */
+    val priorFailure: String? = null,
 ) : Incident {
 
     override val reason: String get() = "task_failure"
 
     private val subtask: String get() = terminal?.subtask ?: UNOBSERVED_SUBTASK
 
-    private val nodeLabel: String?
-        get() = node?.let { if (it.preTask.isNullOrBlank()) it.first else "${it.first}, after ${it.preTask}" }
-
-    /** Sentry 归组用的指纹；同一轮里也靠它认是不是同一个失败 */
+    /**
+     * Sentry 归组用的指纹；同一轮里也靠它认是不是同一个失败
+     * 不带 `pre_task`：卡住前走到哪一步每次都可能不同，带上会把同一个失败拆成一堆，它留在 tag 里筛
+     */
     val fingerprint: List<String>
         get() = listOf(
             TASK_FAILURE_FINGERPRINT,
             taskChain,
             subtask,
             node?.first.orEmpty(),
-            node?.preTask.orEmpty(),
             terminal?.what.orEmpty(),
             exception.orEmpty(),
         )
@@ -104,7 +111,8 @@ internal data class TaskFailure(
                 append("Maa task failed: ").append(taskChain)
                 // 异常没有子任务可指，不硬凑一个占位
                 if (terminal != null || exception == null) append(" at ").append(subtask)
-                (exception ?: nodeLabel ?: terminal?.what)?.let { append(" (").append(it).append(')') }
+                // 不带 pre_task，同组事件标题一致
+                (exception ?: node?.first ?: terminal?.what)?.let { append(" (").append(it).append(')') }
             }
         }
         event.fingerprints = fingerprint
@@ -117,8 +125,9 @@ internal data class TaskFailure(
                 "failure.pre_task" to node?.preTask.orEmpty(),
                 "failure.what" to terminal?.what.orEmpty(),
                 "failure.exception" to exception.orEmpty(),
+                PRIOR_FAILURE_KEY to (priorFailure ?: NO_PRIOR_FAILURE),
                 "result" to "failure",
-            )
+            ) + options.filterKeys { it in TAGGED_OPTIONS }.mapKeys { "option.${it.key}" }
         )
 
         event.setExtra("task.id", taskId)
@@ -337,6 +346,13 @@ private const val SHIZUKU_DOWN_FINGERPRINT = "maameow-shizuku-down"
 
 /** 任务链没报过子任务错误就失败时的占位，与 MaaFwApp 同名 */
 internal const val UNOBSERVED_SUBTASK = "terminal_failure"
+
+/** 本轮先失败的任务链，失败事件与任务 Span 上同名；筛 [NO_PRIOR_FAILURE] 只看根因 */
+internal const val PRIOR_FAILURE_KEY = "run.prior_failure"
+internal const val NO_PRIOR_FAILURE = "none"
+
+/** 决定走哪条流程的参数提成 tag，好在 Issues 里筛和看分布；全量参数仍在 extra */
+private val TAGGED_OPTIONS = setOf("stage", "theme", "mode")
 
 /** Sentry 对 tag 值的长度上限 */
 private const val MAX_TAG_VALUE_LENGTH = 200

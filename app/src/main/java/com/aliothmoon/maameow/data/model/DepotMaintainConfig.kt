@@ -3,8 +3,11 @@ package com.aliothmoon.maameow.data.model
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.DepotMaintainConfig.Companion.EXPIRING_MEDICINE_DAYS
 import com.aliothmoon.maameow.domain.models.DropTarget
+import com.aliothmoon.maameow.domain.models.SkippedDepotPlans
 import com.aliothmoon.maameow.domain.models.TaskCandidate
 import com.aliothmoon.maameow.domain.models.TaskFallbackChain
+import com.aliothmoon.maameow.domain.models.depotPlanOrder
+import com.aliothmoon.maameow.domain.models.depotPlanProgress
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.maa.task.TaskSlot
@@ -62,6 +65,8 @@ fun depotPlanOutcome(
 data class DepotMaintainConfig(
     val updateDepot: Boolean = true,
     val onlyFirstInsufficientPlan: Boolean = false,
+    /** 按库存达成率升序下发，只改执行顺序不动列表，对齐 WPF SortByProgress */
+    val sortByProgress: Boolean = false,
     val customStageCode: Boolean = false,
     /** false→series=1；true→series=0（AUTO）。对齐 WPF UseAutoSeries。 */
     val useAutoSeries: Boolean = false,
@@ -103,7 +108,7 @@ data class DepotMaintainConfig(
         }
 
         // 预先评估后备计划，暂不输出日志
-        val decisions = plans.mapIndexed { index, plan ->
+        val evaluated = plans.mapIndexed { index, plan ->
             val current = ctx.depotRepository.countOf(plan.dropId)
             PlanDecision(
                 index = index,
@@ -112,20 +117,31 @@ data class DepotMaintainConfig(
                 outcome = depotPlanOutcome(plan, current) { ctx.activityManager.isStageOpen(it) },
             )
         }
-        val runnable = decisions.filter { it.outcome == DepotPlanOutcome.Runnable }
-
-        // 仅首个模式的预检日志止于主计划
-        val logUpTo = if (onlyFirstInsufficientPlan) {
-            runnable.firstOrNull()?.index ?: decisions.lastIndex
-        } else {
-            decisions.lastIndex
+        // 以下按执行顺序处理，序号仍取原位置
+        val decisions = evaluated.sortedWith(depotPlanOrder<PlanDecision>(sortByProgress, { it.progress }, { it.no }))
+        if (sortByProgress && plans.size > 1) {
+            ctx.appendLog(uiTextOf(R.string.runlog_depot_sorted_by_progress), LogLevel.INFO)
         }
-        for (d in decisions) {
-            if (d.index > logUpTo) break
+
+        // 仅首个模式：预检日志止于主计划，其后作后备
+        val primaryAt = if (onlyFirstInsufficientPlan) {
+            decisions.indexOfFirst { it.outcome == DepotPlanOutcome.Runnable }
+        } else {
+            -1
+        }
+        val primary = decisions.getOrNull(primaryAt)
+        val logged = if (primary != null) decisions.take(primaryAt + 1) else decisions
+        for (d in logged) {
             ctx.appendLog(d.logText(ctx), d.logLevel())
         }
 
-        val chosen = if (onlyFirstInsufficientPlan) runnable.take(1) else runnable
+        // 登记不随日志截断
+        stageSkippedPlans(ctx, decisions, primary)
+        val chosen = if (onlyFirstInsufficientPlan) {
+            listOfNotNull(primary)
+        } else {
+            decisions.filter { it.outcome == DepotPlanOutcome.Runnable }
+        }
         for (d in chosen) {
             val listIndex = params.size
             val target = d.target(ctx)
@@ -135,24 +151,46 @@ data class DepotMaintainConfig(
                 params = target.toFightParamsJson(d.need),
                 logName = d.logName(ctx),
             )
-            if (onlyFirstInsufficientPlan) {
-                ctx.registerFallbacks(listIndex, buildFallbacks(ctx, decisions, after = d.index))
+            if (primary != null) {
+                ctx.registerFallbacks(listIndex, buildFallbacks(ctx, decisions.drop(primaryAt + 1)))
             }
         }
 
         return params
     }
 
+    private fun stageSkippedPlans(
+        ctx: TaskParamContext,
+        decisions: List<PlanDecision>,
+        primary: PlanDecision?,
+    ) {
+        val plans = decisions
+            .filter { d ->
+                d.outcome == DepotPlanOutcome.Enough &&
+                        // 当作库存为 0 再判一次，关卡缺失或今天不开放的不收
+                        depotPlanOutcome(d.plan, 0) { ctx.activityManager.isStageOpen(it) } ==
+                        DepotPlanOutcome.Runnable
+            }
+            .map { it.skippedPlan() }
+        ctx.dropsRefresher.stageSkipped(
+            SkippedDepotPlans(
+                taskName = ctx.node.name,
+                plans = plans,
+                firstOnly = onlyFirstInsufficientPlan,
+                sortByProgress = sortByProgress,
+                chosen = primary?.skippedPlan(),
+            )
+        )
+    }
+
     /** 后备候选携带其前方的跳过原因，尾部日志留到全部失败后输出 */
     private fun buildFallbacks(
         ctx: TaskParamContext,
-        decisions: List<PlanDecision>,
-        after: Int,
+        rest: List<PlanDecision>,
     ): TaskFallbackChain {
         val candidates = mutableListOf<TaskCandidate>()
         var pending = mutableListOf<Pair<UiText, LogLevel>>()
-        for (d in decisions) {
-            if (d.index <= after) continue
+        for (d in rest) {
             if (d.outcome != DepotPlanOutcome.Runnable) {
                 pending += d.logText(ctx) to d.logLevel()
                 continue
@@ -180,6 +218,15 @@ data class DepotMaintainConfig(
         val no: Int get() = index + 1
         val need: Int get() = plan.dropCount - current
 
+        /** 无效计划排最后 */
+        val progress: Double
+            get() = when (outcome) {
+                DepotPlanOutcome.NoItem, DepotPlanOutcome.ZeroTarget -> Double.MAX_VALUE
+                else -> depotPlanProgress(current, plan.dropCount)
+            }
+
+        fun skippedPlan() = SkippedDepotPlans.Plan(no = no, dropId = plan.dropId, dropCount = plan.dropCount)
+
         fun logName(ctx: TaskParamContext): UiText = UiText.Dynamic("${ctx.node.name} #$no")
 
         fun logLevel(): LogLevel = when (outcome) {
@@ -199,7 +246,11 @@ data class DepotMaintainConfig(
                 DepotPlanOutcome.ZeroTarget -> uiTextOf(R.string.runlog_depot_plan_zero_count, no)
                 DepotPlanOutcome.StageRequired -> uiTextOf(R.string.runlog_depot_plan_no_stage, no)
                 DepotPlanOutcome.StageClosed ->
-                    uiTextOf(R.string.runlog_depot_plan_stage_not_open, no, plan.stage)
+                    uiTextOf(
+                        R.string.runlog_depot_plan_stage_not_open,
+                        no,
+                        ctx.activityManager.getStageDisplayName(plan.stage),
+                    )
 
                 DepotPlanOutcome.Enough -> uiTextOf(
                     R.string.runlog_depot_plan_inventory_enough,

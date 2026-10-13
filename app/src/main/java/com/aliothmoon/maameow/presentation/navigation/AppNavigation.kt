@@ -43,6 +43,8 @@ import com.aliothmoon.maameow.presentation.components.AnnouncementDialog
 import com.aliothmoon.maameow.presentation.components.MaaWindowInsets
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
 import com.aliothmoon.maameow.presentation.components.clearFocusOnBlankTap
+import com.aliothmoon.maameow.presentation.components.LocalPagerPreloadState
+import com.aliothmoon.maameow.presentation.components.PagerPreloadState
 import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
 import com.aliothmoon.maameow.presentation.onboarding.OnboardingOverlay
 import com.aliothmoon.maameow.presentation.onboarding.OnboardingState
@@ -188,6 +190,7 @@ fun AppNavigation(
     CompositionLocalProvider(
         LocalToaster provides toaster,
         LocalOnboardingState provides onboardingState,
+        LocalPagerPreloadState provides remember { PagerPreloadState() },
     ) {
         Box(modifier = Modifier
             .fillMaxSize()

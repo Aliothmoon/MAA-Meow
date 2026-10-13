@@ -138,6 +138,20 @@ class ActivityManagerStageTipsTest {
         assertEquals(listOf(" (库存 0 & 0 & 0)"), tips)
     }
 
+    /** 常驻关卡提示走字符串资源，随界面语言切换（issue #281） */
+    @Test
+    fun permanentStageTip_isResolvedFromResources() {
+        every { context.getString(R.string.panel_fight_stage_tip_ce) } returns "CE-6: LMD"
+        val tips = manager(
+            mapOf(
+                "CE-6" to MergedStageInfo(
+                    code = "CE-6", displayName = "CE-6", tipRes = R.string.panel_fight_stage_tip_ce,
+                )
+            )
+        ).getStageTips(DayOfWeek.MONDAY)
+        assertEquals(listOf("CE-6: LMD"), tips)
+    }
+
     @Test
     fun dropGroupLine_joinsItemsWithAmpersandAndGroupsWithSlash() {
         val tips = manager(

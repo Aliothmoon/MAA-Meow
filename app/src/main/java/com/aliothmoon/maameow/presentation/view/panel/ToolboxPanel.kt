@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.LocalPageVisible
 import com.aliothmoon.maameow.presentation.components.rememberPageVisible
 import com.aliothmoon.maameow.presentation.components.rememberStagedBeyondViewportCount
@@ -49,6 +50,7 @@ fun ToolboxPanel(
 ) {
     val currentTab by viewModel.currentTab.collectAsStateWithLifecycle()
     val visibleTabs by viewModel.visibleTabs.collectAsStateWithLifecycle()
+    val inputFocus = LocalInputFocusManager.current
 
     Column(modifier = modifier.fillMaxSize()) {
         // 子 Tab：等分铺满；前台模式不展示牛牛抽卡
@@ -78,7 +80,10 @@ fun ToolboxPanel(
                         .weight(1f)
                         .height(36.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable { viewModel.onTabChange(tab) }
+                        .clickable {
+                            if (currentTab != tab) inputFocus.clear()
+                            viewModel.onTabChange(tab)
+                        }
                 ) {
                     // Box 铺满 Surface，文字水平+垂直居中
                     Box(

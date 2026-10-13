@@ -63,4 +63,21 @@ class CopilotManagerBuildListTaskTest {
         assertEquals(1, tasks.size)
         assertEquals(MaaTaskType.COPILOT, tasks.single().type)
     }
+
+    @Test
+    fun operBoxDataPath_isSentOnlyWhenGiven() {
+        fun params(path: String?) = JsonUtils.common.parseToJsonElement(
+            manager.buildListTask(tabIndex = 0, items = items, config = CopilotConfig(), operBoxDataPath = path)
+                .single().params
+        ).jsonObject
+        fun singleParams(path: String?) = JsonUtils.common.parseToJsonElement(
+            manager.buildSingleTask(MaaTaskType.COPILOT, "/c/1.json", CopilotConfig(), path).params
+        ).jsonObject
+
+        assertEquals("/m/operbox/OperBoxData.json", params("/m/operbox/OperBoxData.json").getValue("operbox_data_path").jsonPrimitive.content)
+        assertEquals("/m/operbox/OperBoxData.json", singleParams("/m/operbox/OperBoxData.json").getValue("operbox_data_path").jsonPrimitive.content)
+        // 不启用时不带该字段，core 缺省为空串
+        assertEquals(false, "operbox_data_path" in params(null))
+        assertEquals(false, "operbox_data_path" in singleParams(null))
+    }
 }

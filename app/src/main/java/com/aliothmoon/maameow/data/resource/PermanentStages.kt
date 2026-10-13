@@ -1,5 +1,7 @@
 package com.aliothmoon.maameow.data.resource
 
+import androidx.annotation.StringRes
+import com.aliothmoon.maameow.R
 import java.time.DayOfWeek
 
 object PermanentStages {
@@ -15,46 +17,47 @@ object PermanentStages {
             createStage(
                 code = "CE-6",
                 openDays = StageOpenDays.RESOURCE_OPEN_DAYS["CE"]!!,
-                tip = StageInfo.STAGE_TIPS["CE-6"] ?: ""
+                tipRes = R.string.panel_fight_stage_tip_ce
             ),
 
             // 采购凭证 AP: 周一、四、六、日
             createStage(
                 code = "AP-5",
                 openDays = StageOpenDays.RESOURCE_OPEN_DAYS["AP"]!!,
-                tip = StageInfo.STAGE_TIPS["AP-5"] ?: ""
+                tipRes = R.string.panel_fight_stage_tip_ap
             ),
 
             // 技巧概要 CA: 周二、三、五、日
             createStage(
                 code = "CA-5",
                 openDays = StageOpenDays.RESOURCE_OPEN_DAYS["CA"]!!,
-                tip = StageInfo.STAGE_TIPS["CA-5"] ?: "",
+                tipRes = R.string.panel_fight_stage_tip_ca,
                 dropGroups = listOf(listOf("3301", "3302", "3303"))
             ),
 
             // 作战记录 LS: 每天开放
             createStage(
                 code = "LS-6",
-                tip = StageInfo.STAGE_TIPS["LS-6"] ?: ""
+                tipRes = R.string.panel_fight_stage_tip_ls
             ),
 
             // 碳素 SK: 周一、三、五、六
             createStage(
                 code = "SK-5",
                 openDays = StageOpenDays.RESOURCE_OPEN_DAYS["SK"]!!,
-                tip = StageInfo.STAGE_TIPS["SK-5"] ?: ""
+                tipRes = R.string.panel_fight_stage_tip_sk
             ),
 
             // ==================== 剿灭模式 ====================
             createStage("Annihilation", category = StageCategory.ANNIHILATION),
 
             // ==================== 芯片本 ====================
+            // PR-X-2 不单独出提示，同上游，免得与 PR-X-1 重复
             // PR-A: 重装/医疗 - 周一、四、五、日
             createStage(
                 code = "PR-A-1",
                 openDays = StageOpenDays.CHIP_OPEN_DAYS["PR-A"]!!,
-                tip = StageInfo.STAGE_TIPS["PR-A-1"] ?: "",
+                tipRes = R.string.panel_fight_stage_tip_pr_a,
                 dropGroups = listOf(listOf("3261", "3231"), listOf("3262", "3232"))
             ),
             createStage(
@@ -66,7 +69,7 @@ object PermanentStages {
             createStage(
                 code = "PR-B-1",
                 openDays = StageOpenDays.CHIP_OPEN_DAYS["PR-B"]!!,
-                tip = StageInfo.STAGE_TIPS["PR-B-1"] ?: "",
+                tipRes = R.string.panel_fight_stage_tip_pr_b,
                 dropGroups = listOf(listOf("3251", "3241"), listOf("3252", "3242"))
             ),
             createStage(
@@ -78,7 +81,7 @@ object PermanentStages {
             createStage(
                 code = "PR-C-1",
                 openDays = StageOpenDays.CHIP_OPEN_DAYS["PR-C"]!!,
-                tip = StageInfo.STAGE_TIPS["PR-C-1"] ?: "",
+                tipRes = R.string.panel_fight_stage_tip_pr_c,
                 dropGroups = listOf(listOf("3211", "3271"), listOf("3212", "3272"))
             ),
             createStage(
@@ -90,7 +93,7 @@ object PermanentStages {
             createStage(
                 code = "PR-D-1",
                 openDays = StageOpenDays.CHIP_OPEN_DAYS["PR-D"]!!,
-                tip = StageInfo.STAGE_TIPS["PR-D-1"] ?: "",
+                tipRes = R.string.panel_fight_stage_tip_pr_d,
                 dropGroups = listOf(listOf("3221", "3281"), listOf("3222", "3282"))
             ),
             createStage(
@@ -104,7 +107,7 @@ object PermanentStages {
         code: String,
         openDays: List<DayOfWeek> = emptyList(),
         category: StageCategory = StageCategory.fromCode(code),
-        tip: String = "",
+        @StringRes tipRes: Int? = null,
         dropGroups: List<List<String>> = emptyList()
     ): StageInfo {
         return StageInfo(
@@ -112,7 +115,7 @@ object PermanentStages {
             code = code,
             openDays = openDays,
             category = category,
-            tip = tip,
+            tipRes = tipRes,
             dropGroups = dropGroups
         )
     }

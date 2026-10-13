@@ -16,8 +16,17 @@ data class OperBoxSnapshot(
     val owned: List<OperBoxOperator> = emptyList(),
     val notOwned: List<OperBoxOperator> = emptyList(),
     val syncTimeMillis: Long = 0L,
+    val version: Int = 0,
 ) {
     val hasSynced: Boolean get() = syncTimeMillis > 0L
+
+    /** 旧数据可能合并了升变形态，重新同步且有技能练度才可用 */
+    val canAssistFormation: Boolean
+        get() = version >= CURRENT_VERSION && owned.any { it.skills.isNotEmpty() }
+
+    companion object {
+        const val CURRENT_VERSION = 1
+    }
 }
 
 /** 干员箱分片：内存权威，set 同步写内存并排队落盘。 */
@@ -45,6 +54,7 @@ class OperBoxRepository(
                 owned = owned,
                 notOwned = notOwned,
                 syncTimeMillis = System.currentTimeMillis(),
+                version = OperBoxSnapshot.CURRENT_VERSION,
             )
         }
     }

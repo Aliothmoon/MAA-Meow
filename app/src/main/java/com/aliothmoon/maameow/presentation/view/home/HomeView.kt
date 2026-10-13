@@ -73,7 +73,6 @@ import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ChangelogDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
-import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
 import com.aliothmoon.maameow.presentation.components.UpdateCard
 import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
 import com.aliothmoon.maameow.presentation.onboarding.OnboardingTarget
@@ -378,9 +377,6 @@ fun HomeView(
             }
         }
 
-        if (!startupDialogsBlocked) {
-            ShizukuReadinessGate()
-        }
     }
 }
 

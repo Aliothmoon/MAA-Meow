@@ -7,7 +7,7 @@ import kotlin.math.roundToInt
  * 失败证据：开跑时记下各日志的长度与已有的出错截图，失败后只取这之后新写的部分
  *
  * 沿用 MaaFwApp `TaskEvidence`，区别是要看的文件已知，不用走目录
- * 截图是 Core 在任务链失败时自己存进 `interface/` 的那一张（`InterfaceTask::run`），早于失败回调
+ * 截图是 Core 在任务链失败或抛异常时用缓存帧存进 `interface/` 的那一张（`Assistant::working_proc`），早于失败回调
  */
 internal object TaskEvidence {
 

@@ -59,6 +59,8 @@ class TaskChainHandlerErrorTest {
         every { resources.getString(2, *anyVararg()) } answers {
             "${secondArg<Array<Any>>()[0]}任务因内存不足停止"
         }
+        every { resources.getIdentifier("maa_task_time", "string", pkg) } returns 3
+        every { resources.getString(3, *anyVararg()) } answers { "(${secondArg<Array<Any>>()[0]})" }
     }
 
     @Test
@@ -73,7 +75,7 @@ class TaskChainHandlerErrorTest {
         handler.onTaskChainError(details)
 
         assertEquals(
-            listOf("StartTask材料补货 #3", "CompleteTask材料补货 #3", "任务出错: 材料补货 #3"),
+            listOf("StartTask材料补货 #3", "CompleteTask材料补货 #3(0h 0m 0s)", "任务出错: 材料补货 #3"),
             messages,
         )
     }

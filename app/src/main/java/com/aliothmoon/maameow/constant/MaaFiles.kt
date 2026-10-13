@@ -22,4 +22,8 @@ object MaaFiles {
 
     /** overrides 内置模板在 assets 中的路径 */
     const val OVERRIDES_ASSET_TASKS = "overrides/resource/tasks/tasks.json"
+
+    /** 自动战斗辅助编队用的干员练度，core 经 operbox_data_path 读 */
+    const val OPER_BOX_DATA_DIR = "operbox"
+    const val OPER_BOX_DATA_FILE = "OperBoxData.json"
 }

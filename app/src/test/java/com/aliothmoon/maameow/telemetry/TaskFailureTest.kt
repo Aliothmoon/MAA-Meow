@@ -59,21 +59,41 @@ class TaskFailureTest {
         assertEquals(SentryLevel.ERROR, event.level)
         assertEquals(TASK_FAILURE_TRANSACTION, event.transaction)
         assertEquals(
-            listOf("maameow-task-failure", "Depot", "DepotRecognitionTask", "DepotBegin", "", "", ""),
+            listOf("maameow-task-failure", "Depot", "DepotRecognitionTask", "DepotBegin", "", ""),
             event.fingerprints,
         )
     }
 
     @Test
-    fun `节点卡在某个任务之后时标题带上它`() {
+    fun `卡在哪一步之后只进 tag，不拆组也不进标题`() {
         val stuck = node.copy(preTask = "DepotAllTab")
         val event = failure.copy(node = stuck).toSentryEvent()
 
-        assertEquals(
-            "Maa task failed: Depot at DepotRecognitionTask (DepotBegin, after DepotAllTab)",
-            event.message?.formatted,
-        )
+        assertEquals(failure.toSentryEvent().fingerprints, event.fingerprints)
+        assertEquals("Maa task failed: Depot at DepotRecognitionTask (DepotBegin)", event.message?.formatted)
         assertEquals("DepotAllTab", event.tags?.get("failure.pre_task"))
+    }
+
+    @Test
+    fun `连锁失败标出本轮先失败的任务链，决定流程的参数进 tag`() {
+        val event = failure.copy(
+            priorFailure = "StartUp",
+            options = mapOf("stage" to "1-7", "medicine" to "999"),
+        ).toSentryEvent()
+
+        assertEquals("StartUp", event.tags?.get("run.prior_failure"))
+        assertEquals("1-7", event.tags?.get("option.stage"))
+        assertNull(event.tags?.get("option.medicine"))
+        // 全量参数仍在 extra
+        assertEquals("1-7", event.extras?.get("option.stage"))
+        assertEquals("999", event.extras?.get("option.medicine"))
+    }
+
+    @Test
+    fun `任务名去掉实例地址，普通任务名不动`() {
+        assertEquals("SSSBegin", stripTaskAddress("0xb400007401ddbb10@SSSBegin"))
+        assertEquals("Sarkaz@Roguelike@Begin", stripTaskAddress("Sarkaz@Roguelike@Begin"))
+        assertEquals("", stripTaskAddress(""))
     }
 
     @Test
@@ -87,6 +107,7 @@ class TaskFailureTest {
                 "task.chain" to "Depot",
                 "failure.subtask" to "DepotRecognitionTask",
                 "failure.node" to "DepotBegin",
+                "run.prior_failure" to "none",
                 "result" to "failure",
             ),
             event.tags,

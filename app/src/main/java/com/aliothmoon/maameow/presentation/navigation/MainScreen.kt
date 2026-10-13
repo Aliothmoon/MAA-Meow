@@ -9,18 +9,26 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.constant.Routes
+import com.aliothmoon.maameow.presentation.LocalInputFocusManager
+import com.aliothmoon.maameow.presentation.components.LocalPageVisible
+import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
 import com.aliothmoon.maameow.presentation.components.consumeAllPointerEvents
+import com.aliothmoon.maameow.presentation.components.rememberPageVisible
+import com.aliothmoon.maameow.presentation.components.rememberStagedBeyondViewportCount
 import com.aliothmoon.maameow.presentation.pip.LocalIsInPip
+import com.aliothmoon.maameow.presentation.onboarding.onboardingBlocksStartupDialogs
 import com.aliothmoon.maameow.presentation.view.background.BackgroundTaskView
 import com.aliothmoon.maameow.presentation.view.home.HomeView
 import com.aliothmoon.maameow.presentation.view.settings.SettingsView
@@ -51,6 +59,8 @@ fun MainScreen(
     val scope = rememberCoroutineScope()
     val reduceMotion = LocalReduceMotion.current
     val chromeHidden = fullscreen || LocalIsInPip.current
+    val inputFocus = LocalInputFocusManager.current
+    val mainVisible = rememberUpdatedState(visible)
 
     // 把分页位置实时上报给背景层做视差，归一化到 -1~1。
     // 不能只用 currentPageOffsetFraction：它在滑过中点时随 currentPage 进位翻符号，背景会瞬移。
@@ -67,6 +77,7 @@ fun MainScreen(
     // animateScrollToPage 内部走 MutatorMutex，连续调用时后者自动接管，无需手动取消。
     fun goToPage(index: Int, animate: Boolean = true) {
         if (index !in BottomNavTab.all.indices || index == pagerState.targetPage) return
+        inputFocus.clear()
         scope.launch {
             if (!animate) {
                 pagerState.scrollToPage(index)
@@ -136,28 +147,41 @@ fun MainScreen(
                     },
             ) {
                 val pagerFling = rememberMaaPagerFling(pagerState)
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
-                    key = { BottomNavTab.all[it].route },
-                    userScrollEnabled = visible && !chromeHidden,
-                    pageSpacing = PagerPageSpacing,
-                    flingBehavior = pagerFling,
-                    pageNestedScrollConnection = rememberOuterPagerNestedScroll(pagerState, pagerFling),
-                ) { page ->
-                    when (BottomNavTab.all[page]) {
-                        BottomNavTab.HOME -> HomeView(navController = navController)
-                        BottomNavTab.BACKGROUND -> BackgroundTaskView(
-                            viewModel = backgroundTaskViewModel,
-                            isActivePage = visible && pagerState.targetPage == page,
-                        )
+                CompositionLocalProvider(LocalPageVisible provides mainVisible) {
+                    HorizontalPager(
+                        state = pagerState,
+                        beyondViewportPageCount = rememberStagedBeyondViewportCount(
+                            pagerState, BottomNavTab.all.lastIndex
+                        ),
+                        modifier = Modifier.fillMaxSize(),
+                        key = { BottomNavTab.all[it].route },
+                        userScrollEnabled = visible && !chromeHidden,
+                        pageSpacing = PagerPageSpacing,
+                        flingBehavior = pagerFling,
+                        pageNestedScrollConnection = rememberOuterPagerNestedScroll(pagerState, pagerFling),
+                    ) { page ->
+                        CompositionLocalProvider(LocalPageVisible provides rememberPageVisible(pagerState, page)) {
+                            when (BottomNavTab.all[page]) {
+                                BottomNavTab.HOME -> HomeView(navController = navController)
+                                BottomNavTab.BACKGROUND -> BackgroundTaskView(
+                                    viewModel = backgroundTaskViewModel,
+                                    isActivePage = { mainVisible.value && pagerState.targetPage == page },
+                                )
 
-                        BottomNavTab.SCHEDULE -> ScheduleListView(navController = navController)
-                        BottomNavTab.SETTINGS -> SettingsView(
-                            navController = navController,
-                            onViewAnnouncement = onViewAnnouncement,
-                            onViewOnboarding = onViewOnboarding,
-                        )
+                                BottomNavTab.SCHEDULE -> ScheduleListView(
+                                    navController = navController,
+                                    isActivePage = {
+                                        mainVisible.value && !pagerState.isScrollInProgress &&
+                                                pagerState.settledPage == page
+                                    },
+                                )
+                                BottomNavTab.SETTINGS -> SettingsView(
+                                    navController = navController,
+                                    onViewAnnouncement = onViewAnnouncement,
+                                    onViewOnboarding = onViewOnboarding,
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -172,4 +196,7 @@ fun MainScreen(
     }
 
     scaffoldContent()
+    if (visible && !LocalIsInPip.current && !onboardingBlocksStartupDialogs()) {
+        ShizukuReadinessGate()
+    }
 }

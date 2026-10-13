@@ -27,9 +27,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.ReclamationConfig
+import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
+import com.aliothmoon.maameow.presentation.components.rememberStagedBeyondViewportCount
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import kotlinx.coroutines.launch
 
@@ -37,6 +39,7 @@ import kotlinx.coroutines.launch
 fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (ReclamationConfig) -> Unit) {
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
     val coroutineScope = rememberCoroutineScope()
+    val inputFocus = LocalInputFocusManager.current
 
     // v6.10.3 起 RelaunchAnchor 主题 mode 改为 flags 编码(16/32),旧版本残留 0/1 时自愈为 RA-1
     val sanitized = config.sanitizedMode()
@@ -64,6 +67,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                 color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
                 modifier = Modifier.clickable(interactionSource = null, indication = null) {
+                    inputFocus.clear()
                     coroutineScope.launch { pagerState.animateScrollToPage(0) }
                 }
             )
@@ -73,6 +77,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                 color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
                 modifier = Modifier.clickable(interactionSource = null, indication = null) {
+                    inputFocus.clear()
                     coroutineScope.launch { pagerState.animateScrollToPage(1) }
                 }
             )
@@ -86,6 +91,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
         HorizontalPager(
             pageSize = PageSize.Fill,
             state = pagerState,
+            beyondViewportPageCount = rememberStagedBeyondViewportCount(pagerState, 1),
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),

@@ -17,17 +17,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 
-/**
- * 本地状态缓冲, 避免上游异步回写导致 TextField 光标跳转
- *
- * @see <a href="https://medium.com/androiddevelopers/effective-state-management-for-textfield-in-compose-d6e5b070fbe5">
- *   Effective state management for TextField in Compose</a>
- */
+/** 缓冲本地输入，避免异步回写导致光标跳转 */
 @Composable
 private fun rememberBufferedTextState(
     externalValue: String,
@@ -36,11 +33,10 @@ private fun rememberBufferedTextState(
     var localValue by remember { mutableStateOf(externalValue) }
     var dirty by remember { mutableStateOf(false) }
 
-    // 外部值变化且用户未在输入中 -> 同步（如初始加载、编程式重置）
+    // 等待上游确认，避免旧值覆盖本地草稿
     if (!dirty && localValue != externalValue) {
         localValue = externalValue
     }
-    // 上游值追上本地值 -> 清除 dirty，恢复外部同步能力
     if (dirty && externalValue == localValue) {
         dirty = false
     }
@@ -74,6 +70,7 @@ fun ITextField(
     supportingText: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
     outlineColor: Color? = null,
+    cursorToEndRequest: Int = 0,
     onImeAction: (() -> Unit)? = null
 ) {
     val isInFloatingWindow = LocalFloatingWindowContext.current
@@ -96,14 +93,31 @@ fun ITextField(
             shape = shape,
             outlineColor = outlineColor ?: MaterialTheme.colorScheme.outline,
             trailingIcon = trailingIcon,
+            cursorToEndRequest = cursorToEndRequest,
             onImeAction = handleImeDone,
             inputType = if (singleLine) InputType.TYPE_CLASS_TEXT else
                 InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
         )
     } else {
+        // 仅候选回填重置选区，保留日常输入的组合状态
+        var editingValue by remember(cursorToEndRequest) {
+            mutableStateOf(
+                TextFieldValue(
+                    text = bufferedValue,
+                    selection = if (cursorToEndRequest == 0) TextRange.Zero else TextRange(bufferedValue.length),
+                )
+            )
+        }
+        if (editingValue.text != bufferedValue) {
+            editingValue = editingValue.copy(text = bufferedValue)
+        }
         OutlinedTextField(
-            value = bufferedValue,
-            onValueChange = bufferedOnChange,
+            value = editingValue,
+            onValueChange = {
+                val textChanged = it.text != editingValue.text
+                editingValue = it
+                if (textChanged) bufferedOnChange(it.text)
+            },
             modifier = modifier.fillMaxWidth(),
             label = label?.let { { Text(it) } },
             placeholder = { Text(placeholder) },

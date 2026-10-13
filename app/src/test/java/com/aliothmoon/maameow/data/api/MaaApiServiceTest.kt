@@ -94,7 +94,7 @@ class MaaApiServiceTest {
     fun validatorIsKeyedByApiPathNotUrl() = runBlocking {
         responder = { url, _ -> ok(url, "V1", etag = "\"e1\"") }
 
-        assertEquals("V1", newService().getStageActivity())
+        assertEquals("V1", newService().getStageActivity().data)
         assertEquals(setOf(api), storedETags.keys)
     }
 
@@ -104,14 +104,14 @@ class MaaApiServiceTest {
 
         // 主源写入 V1
         responder = { url, _ -> ok(url, "V1", etag = "\"e1\"") }
-        assertEquals("V1", service.getStageActivity())
+        assertEquals("V1", service.getStageActivity().data)
 
         // 主源不可达，回落备源，备源滞后一版
         responder = { url, _ ->
             if (url.startsWith(primary)) throw IOException("primary down")
             ok(url, "V0", etag = "\"e0\"")
         }
-        assertEquals("V0", service.getStageActivity())
+        assertEquals("V0", service.getStageActivity().data)
 
         // 主源恢复：内容仍是 V1，只认自己的 e1
         calls.clear()
@@ -124,14 +124,14 @@ class MaaApiServiceTest {
         }
 
         // 带出去的必须是备源写入时留下的 e0，否则就是一个路径存了两份 validator
-        assertEquals("V1", service.getStageActivity())
+        assertEquals("V1", service.getStageActivity().data)
         assertEquals("\"e0\"", calls.first().second[ETagCacheManager.IF_NONE_MATCH])
     }
 
     @Test
     fun missingBodyOn304RefetchesImmediately() = runBlocking {
         responder = { url, _ -> ok(url, "V1", etag = "\"e1\"") }
-        assertEquals("V1", newService().getStageActivity())
+        assertEquals("V1", newService().getStageActivity().data)
 
         // 清理软件删掉外部缓存目录，validator 在 SharedPreferences 里活着
         cacheRoot.deleteRecursively()
@@ -144,7 +144,7 @@ class MaaApiServiceTest {
             }
         }
 
-        assertEquals("V2", newService().getStageActivity())
+        assertEquals("V2", newService().getStageActivity().data)
         // 重取必须由同一个源当场发出，而不是靠备源兜底
         assertEquals(listOf(primary, primary), calls.map { it.first.removeSuffix(api) })
         assertEquals(emptyMap<String, String>(), calls[1].second)
@@ -157,10 +157,24 @@ class MaaApiServiceTest {
         storedETags[api] = "\"stale\""
         responder = { url, _ -> notModified(url) }
 
-        assertNull(newService().getStageActivity())
+        assertNull(newService().getStageActivity().data)
         // 两个源各一次条件请求加一次无条件重取，到此为止
         assertEquals(4, calls.size)
         assertEquals(listOf(primary, primary, backup, backup), calls.map { it.first.removeSuffix(api) })
+    }
+
+    @Test
+    fun offlineFallbackIsNotFresh() = runBlocking {
+        val service = newService()
+        responder = { url, _ -> ok(url, "V1", etag = "\"e1\"") }
+        assertEquals(MaaApiService.CachedBody("V1", fresh = true), service.getStageActivity())
+
+        // 304 也算从网络确认过
+        responder = { url, _ -> notModified(url) }
+        assertEquals(MaaApiService.CachedBody("V1", fresh = true), service.getStageActivity())
+
+        responder = { _, _ -> throw IOException("offline") }
+        assertEquals(MaaApiService.CachedBody("V1", fresh = false), service.getStageActivity())
     }
 
     private fun ok(url: String, body: String, etag: String? = null): Response =

@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.StageAliasMapper
 import com.aliothmoon.maameow.data.resource.StageGroup
+import com.aliothmoon.maameow.data.resource.StageInfo
 import com.aliothmoon.maameow.presentation.components.ITextFieldWithFocus
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 
@@ -67,21 +68,18 @@ internal fun StageBadge(
 /**
  * 关卡代码 → 展示文案（选关徽章、计划摘要等唯一入口）：
  * - 空串 → [emptyLabel]（默认「当前/上次」）
- * - Annihilation 且提供了 [annihilationDisplayName] → 用该名
- * - 否则在 [stageGroups] 里查 displayName，查不到回退代码本身
+ * - 否则在 [stageGroups] 里查 displayName，再查常驻与剿灭映射（含不在列表里的自定义剿灭），都没有回退代码本身
  */
 @Composable
 fun stageDisplayName(
     code: String,
     stageGroups: List<StageGroup>,
     emptyLabel: String = stringResource(R.string.panel_fight_stage_reset_current),
-    annihilationDisplayName: String? = null,
 ): String = when {
     code.isEmpty() -> emptyLabel
-    code == "Annihilation" && annihilationDisplayName != null -> annihilationDisplayName
     else -> stageGroups.firstNotNullOfOrNull { group ->
         group.stages.firstOrNull { it.code == code }?.displayName
-    } ?: code
+    } ?: StageInfo.displayNameRes(code)?.let { stringResource(it) } ?: code
 }
 
 /**
@@ -97,15 +95,12 @@ internal fun GroupedStageButtonGroup(
     stageGroups: List<StageGroup>,
     onItemSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
-    annihilationDisplayName: String? = null,
+    /** 选关到实际下发关卡的转换（如自定义剿灭），按钮与徽章都显示转换后的关卡 */
+    resolveStage: (String) -> String = { it },
     onRemove: (() -> Unit)? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedDisplay = stageDisplayName(
-        code = selectedValue,
-        stageGroups = stageGroups,
-        annihilationDisplayName = annihilationDisplayName,
-    )
+    val selectedDisplay = stageDisplayName(resolveStage(selectedValue), stageGroups)
 
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -172,6 +167,7 @@ internal fun GroupedStageButtonGroup(
                         group.stages.forEach { stage ->
                             val isSelected = stage.code == selectedValue
                             val isOpen = stage.isOpenToday
+                            val resolved = resolveStage(stage.code)
                             Surface(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(16.dp))
@@ -184,10 +180,10 @@ internal fun GroupedStageButtonGroup(
                                 shape = RoundedCornerShape(16.dp)
                             ) {
                                 Text(
-                                    text = if (stage.code == "Annihilation" && annihilationDisplayName != null) {
-                                        annihilationDisplayName
-                                    } else {
+                                    text = if (resolved == stage.code) {
                                         stage.displayName
+                                    } else {
+                                        stageDisplayName(resolved, stageGroups)
                                     },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = when {

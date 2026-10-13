@@ -52,14 +52,16 @@ fun clearInputFocus(
     keyboardController: SoftwareKeyboardController? = null,
     force: Boolean = true,
 ) {
+    // Compose 输入会话期间整窗也自报 text editor
+    val focusedEditor = hostView.findFocus()?.takeIf { it !== hostView && it.onCheckIsTextEditor() }
     focusManager.clearFocus(force = force)
+    focusedEditor?.clearFocus()
 
-    val focused = hostView.findFocus()
-    if (focused != null && focused.onCheckIsTextEditor()) {
-        focused.clearFocus()
+    // 只走一条隐藏路径，避免重复 IPC
+    if (focusedEditor == null && keyboardController != null) {
+        keyboardController.hide()
+    } else {
+        val imm = hostView.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.hideSoftInputFromWindow(hostView.windowToken, InputMethodManager.HIDE_NOT_ALWAYS)
     }
-
-    keyboardController?.hide()
-    val imm = hostView.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-    imm?.hideSoftInputFromWindow(hostView.windowToken, InputMethodManager.HIDE_NOT_ALWAYS)
 }

@@ -8,8 +8,7 @@ import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.ActivityManager
-import com.aliothmoon.maameow.data.resource.ItemHelper
-import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.domain.models.ClientResourceProfile
 import com.aliothmoon.maameow.manager.LogcatServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
@@ -19,7 +18,6 @@ import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,8 +37,6 @@ class MaaResourceLoader(
     private val pathConfig: MaaPathConfig,
     private val appSettings: AppSettingsManager,
     private val chainState: TaskChainState,
-    private val itemHelper: ItemHelper,
-    private val resourceDataManager: ResourceDataManager,
     private val activityManager: ActivityManager,
     private val coreDataPusher: CoreDataPusher,
 ) {
@@ -97,9 +93,9 @@ class MaaResourceLoader(
         }
         Timber.i("MaaCore resources loading, client type=$clientType")
         try {
-            doLoadDepsInfo(clientType)
+            refreshHotUpdate(clientType)
         } catch (e: Exception) {
-            Timber.e(e, "doLoadDepsInfo error")
+            Timber.e(e, "refreshHotUpdate error")
         }
 
         return try {
@@ -141,7 +137,7 @@ class MaaResourceLoader(
                 }
 
                 val maa = srv.maaCoreService
-                val isGlobal = resourceProfileOf(clientType).isNotEmpty()
+                val isGlobal = ClientResourceProfile.of(clientType).isNotEmpty()
 
                 copyTasksJson(pathConfig.cacheResourceDir)
                 if (isGlobal) {
@@ -210,16 +206,10 @@ class MaaResourceLoader(
         delay(SERVICE_RESTART_SETTLE_MS.milliseconds)
     }
 
-    private suspend fun doLoadDepsInfo(clientType: String) {
-        val displayLanguage = appSettings.displayLanguage
+    /** 确保活动关卡与热更 tasks.json 就位，刚拉过会复用 */
+    private suspend fun refreshHotUpdate(clientType: String) {
         withTimeout(30_000.milliseconds) {
-            withContext(Dispatchers.IO) {
-                listOf(
-                    async { resourceDataManager.load(clientType, displayLanguage) },
-                    async { itemHelper.load() },
-                    async { activityManager.load(clientType) }
-                )
-            }.awaitAll()
+            withContext(Dispatchers.IO) { activityManager.load(clientType) }
         }
     }
 
@@ -267,7 +257,7 @@ class MaaResourceLoader(
 
     private suspend fun ensureProfile(clientType: String): Result<Unit> {
         val loaded = loadedClientType
-        if (loaded != null && resourceProfileOf(loaded) == resourceProfileOf(clientType)) {
+        if (loaded != null && ClientResourceProfile.of(loaded) == ClientResourceProfile.of(clientType)) {
             return Result.success(Unit)
         }
         Timber.i("Loaded client %s mismatches requested %s, reloading", loaded, clientType)
@@ -315,15 +305,8 @@ class MaaResourceLoader(
         private const val SERVICE_RESTART_TIMEOUT_MS = 5_000L
         private const val SERVICE_RESTART_SETTLE_MS = 500L
 
-        /** 只加载 base 资源的客户端 */
-        private val BASE_ONLY_CLIENT_TYPES = setOf("", "Official", "Bilibili")
-
-        /** 官服/B服/空共用 base 归一为空串，各 global 客户端各自一档 */
-        internal fun resourceProfileOf(clientType: String): String =
-            if (clientType in BASE_ONLY_CLIENT_TYPES) "" else clientType
-
         /** 换档必须换进程，global 之间互切也算 */
         internal fun requiresServiceRestart(loaded: String?, target: String): Boolean =
-            loaded != null && resourceProfileOf(loaded) != resourceProfileOf(target)
+            loaded != null && ClientResourceProfile.of(loaded) != ClientResourceProfile.of(target)
     }
 }

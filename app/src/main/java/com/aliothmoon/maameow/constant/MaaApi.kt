@@ -68,6 +68,9 @@ object MaaApi {
     // 一图流 OpenAPI：干员练度数据
     const val YITULIU_OPERATOR_INFO = "https://backend.yituliu.cn/open-api/operator/info"
 
+    // 一图流个人中心，在这里生成三方 Token
+    const val YITULIU_ACCOUNT_HOME = "https://ark.yituliu.cn/account/home"
+
     const val BASE_SCHEDULING_SCHEMA =
         "https://maa.plus/docs/zh-cn/protocol/base-scheduling-schema.html"
 

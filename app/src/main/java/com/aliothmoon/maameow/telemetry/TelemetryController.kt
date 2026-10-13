@@ -42,6 +42,7 @@ import timber.log.Timber
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Sentry 遥测，沿用 MaaFwApp `TelemetryController`，事件模型按 MaaCore 的回调重写
@@ -67,8 +68,12 @@ class TelemetryController(
     /** 一轮只报一次整轮级别的故障：连接层报错与随后的启动失败往往是同一件事 */
     private var runIncidentReported = false
 
+    /** 写到 Scope 上的环境 tag 留一份，任务 Span 开跑时抄过去 */
+    private val envTags = ConcurrentHashMap<String, String>()
+
     private val tracer = RunTracer(
         startTransaction = { name, op -> Sentry.startTransaction(name, op) },
+        environment = { envTags.toMap() },
         onTaskStarted = { reporter.onTaskStarted() },
         onTaskFailure = { reporter.report(it) },
     )
@@ -373,17 +378,22 @@ class TelemetryController(
             options.isEnableNetworkEventBreadcrumbs = false
         }
         Sentry.setUser(User().apply { id = TelemetryUserId.get(context) })
-        Sentry.setTag("build_type", BuildConfig.BUILD_TYPE)
-        Sentry.setTag("maacore.version", MaaCoreVersion.current.ifBlank { "unknown" })
-        Sentry.setTag("rom", rom.name)
-        if (rom.version.isNotBlank()) Sentry.setTag("rom.version", rom.version)
+        setEnvTag("build_type", BuildConfig.BUILD_TYPE)
+        setEnvTag("maacore.version", MaaCoreVersion.current.ifBlank { "unknown" })
+        setEnvTag("rom", rom.name)
+        if (rom.version.isNotBlank()) setEnvTag("rom.version", rom.version)
         Sentry.configureScope { it.setContexts("hardware", hardware) }
         refreshRunTags()
     }
 
     private fun refreshRunTags() {
         TelemetryRunTags.collect(context, settings, taskChainState, pathConfig)
-            .forEach { (key, value) -> Sentry.setTag(key, value) }
+            .forEach { (key, value) -> setEnvTag(key, value) }
+    }
+
+    private fun setEnvTag(key: String, value: String) {
+        Sentry.setTag(key, value)
+        envTags[key] = value
     }
 
     private suspend fun secrets(): Collection<String> = TelemetrySecrets.collect(

@@ -18,6 +18,7 @@ import com.aliothmoon.maameow.utils.i18n.uiTextDynamic
 import com.aliothmoon.maameow.utils.i18n.uiTextJoin
 import com.aliothmoon.maameow.utils.i18n.uiTextLines
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
@@ -57,6 +58,7 @@ class PrepareTaskStartUseCaseTest {
             every { penguinId } returns MutableStateFlow("")
             every { operBoxUseYituliuApi } returns operBoxViaYituliu
         },
+        metadataGate = mockk { coEvery { awaitCurrent(any()) } returns true },
     )
 
     private fun useCase(aliveStatus: Int) = PrepareTaskStartUseCase(

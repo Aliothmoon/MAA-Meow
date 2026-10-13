@@ -240,10 +240,12 @@ class CopilotManager(
 
     // ===== 任务参数构建 =====
 
+    /** [operBoxDataPath] 为 core 侧路径，非空即启用一图流数据辅助编队 */
     fun buildSingleTask(
         taskType: MaaTaskType,
         filePath: String,
-        config: CopilotConfig
+        config: CopilotConfig,
+        operBoxDataPath: String? = null,
     ): MaaTaskParams {
         if (taskType == MaaTaskType.PARADOX_COPILOT) {
             return MaaTaskParams(
@@ -267,6 +269,7 @@ class CopilotManager(
                     // 与 WPF 一致：1~4 直接透传，0 表示不指定
                     put("formation_index", config.formationIndex)
                 }
+                operBoxDataPath?.let { put("operbox_data_path", it) }
                 put("user_additional", parseUserAdditional(config))
             }.toString()
         )
@@ -275,7 +278,8 @@ class CopilotManager(
     fun buildListTask(
         tabIndex: Int,
         items: List<CopilotListItem>,
-        config: CopilotConfig
+        config: CopilotConfig,
+        operBoxDataPath: String? = null,
     ): List<MaaTaskParams> {
         // 上游 #16985: 每个作业项携带其在完整列表中的稳定下标 id(从0起), core 据此回传当前执行项,
         // 用于跳过失败作业后仍能把"成功"归属到正确项。坐标系须与 onCopilotTaskSuccess 对全列表取下标一致。
@@ -327,6 +331,7 @@ class CopilotManager(
                     if (config.useFormation) {
                         put("formation_index", config.formationIndex)
                     }
+                    operBoxDataPath?.let { put("operbox_data_path", it) }
                     put("user_additional", parseUserAdditional(config))
                 }.toString()
             )

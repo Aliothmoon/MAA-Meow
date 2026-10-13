@@ -23,7 +23,8 @@ MIRRORCHYAN_LINK = (
 
 # 文件名 MaaMeow-<tag>-<label>.apk 里的 label，与 build-release.yml 的 matrix.label 一致
 UNIVERSAL = "universal"
-UNIVERSAL_NOTE = "手机 / 平板 / 模拟器通用，不确定选这个"
+UNIVERSAL_TITLE = "通用版"
+UNIVERSAL_NOTE = "手机、平板、模拟器都能装，不确定选哪个就下这个"
 
 # 按架构拆分的包：(label, 表格里的名字, 适用设备)
 # 序即表格行序，也是没有 universal 包时主链接的回退顺序
@@ -61,7 +62,7 @@ def collect(artifacts: Path, tag: str):
     return found, unknown
 
 
-def build_block(found: dict[str, str], unknown: list[str], base_url: str) -> str:
+def build_block(found: dict[str, str], unknown: list[str], base_url: str, tag: str) -> str:
     def link(text: str, name: str) -> str:
         return f"[{text}]({base_url}/{quote(name)})"
 
@@ -70,16 +71,20 @@ def build_block(found: dict[str, str], unknown: list[str], base_url: str) -> str
     # 只给一个主链接：几个包并排时手机用户会按「64 位」点到装不上的 x64 包
     lines = []
     if universal := found.get(UNIVERSAL):
-        lines.append(f"**下载**：{link('下载 APK', universal)}（{UNIVERSAL_NOTE}）")
+        lines.append(f"**{link(f'下载 MaaMeow {tag}（{UNIVERSAL_TITLE}）', universal)}**：{UNIVERSAL_NOTE}")
     elif splits:
         _, title, note, name = splits.pop(0)
-        lines.append(f"**下载**：{link('下载 APK', name)}（{title}，{note}）")
+        lines.append(f"**{link(f'下载 MaaMeow {tag}（{title}）', name)}**：{note}")
 
+    # 次要包折叠，摘要列出包名便于查找
     if splits:
-        lines += ["", "| 其他安装包（一般不需要） | 适用设备 |", "| --- | --- |"]
+        summary = "其他安装包（一般不需要）：" + " · ".join(title for _, title, _, _ in splits)
+        lines += ["", "<details>", f"<summary>{summary}</summary>", ""]
+        lines += ["| 安装包 | 适用设备 |", "| --- | --- |"]
         lines += [f"| {link(title, name)} | {note} |" for _, title, note, name in splits]
         if any(label == COMPAT_LABEL for label, _, _, _ in splits):
             lines += ["", COMPAT_NOTE]
+        lines += ["", "</details>"]
     if unknown:
         lines += ["", "其他文件：" + " · ".join(link(name, name) for name in unknown)]
     lines += ["", MIRRORCHYAN_LINK]
@@ -103,7 +108,7 @@ def main() -> int:
         print(f"::warning::{args.artifacts} 下没有可识别的安装包，下载区没有主链接")
 
     base_url = f"https://github.com/{args.repo}/releases/download/{quote(args.tag)}"
-    block = build_block(found, unknown, base_url)
+    block = build_block(found, unknown, base_url, args.tag)
     changelog = args.changelog.read_text(encoding="utf-8").strip()
 
     body = f"{BLOCK_START}\n\n{block}\n\n{BLOCK_END}\n\n{changelog}\n"

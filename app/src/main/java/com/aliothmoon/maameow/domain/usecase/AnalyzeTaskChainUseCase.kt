@@ -1,12 +1,13 @@
 package com.aliothmoon.maameow.domain.usecase
 
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.model.CollectingPreflightLogSink
-import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskParamContext
 import com.aliothmoon.maameow.data.model.WakeUpConfig
+import com.aliothmoon.maameow.data.model.WeeklyScheduled
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.repository.DepotRepository
@@ -19,14 +20,14 @@ import com.aliothmoon.maameow.domain.models.MallCreditFightAvailability
 import com.aliothmoon.maameow.domain.models.PlanSideTask
 import com.aliothmoon.maameow.domain.models.ReportOptions
 import com.aliothmoon.maameow.domain.service.FightDropsRefresher
+import com.aliothmoon.maameow.domain.service.GameMetadataGate
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.domain.models.TaskFallbackChain
 import com.aliothmoon.maameow.maa.task.TaskSlot
 import com.aliothmoon.maameow.utils.i18n.UiText
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.first
-import timber.log.Timber
-import java.time.DayOfWeek
 
 class AnalyzeTaskChainUseCase(
     private val taskChainState: TaskChainState,
@@ -37,6 +38,7 @@ class AnalyzeTaskChainUseCase(
     private val itemHelper: ItemHelper,
     private val dropsRefresher: FightDropsRefresher,
     private val appSettingsManager: AppSettingsManager,
+    private val metadataGate: GameMetadataGate,
     private val relocatePath: (String) -> String = { it },
 ) {
     /**
@@ -73,6 +75,9 @@ class AnalyzeTaskChainUseCase(
 
         dropsRefresher.clear()
 
+        // 干员名归一与校验要用元数据，超时按缺数据降级
+        metadataGate.awaitCurrent()
+
         val clientType = taskChainState.clientType
         val report = ReportOptions.of(
             clientType = clientType,
@@ -86,7 +91,8 @@ class AnalyzeTaskChainUseCase(
 
         val serverDayOfWeek = ServerTimezone.getYjDayOfWeek(clientType)
         val expanded = runNodes.flatMap { node ->
-            if (isSkippedByWeeklySchedule(node, serverDayOfWeek)) {
+            if ((node.config as? WeeklyScheduled)?.isSkippedOn(serverDayOfWeek) == true) {
+                log.append(uiTextOf(R.string.runlog_weekly_schedule_skipped, node.name), LogLevel.INFO)
                 return@flatMap emptyList()
             }
             val ctx = TaskParamContext(
@@ -162,20 +168,6 @@ class AnalyzeTaskChainUseCase(
     private fun getWakeUpClientTypeList(nodes: List<TaskChainNode>): List<String> {
         return nodes.mapNotNull { (it.config as? WakeUpConfig)?.clientType }
             .distinct()
-    }
-
-    private fun isSkippedByWeeklySchedule(
-        node: TaskChainNode,
-        serverDayOfWeek: DayOfWeek
-    ): Boolean {
-        val config = node.config
-        if (config is FightConfig && config.useWeeklySchedule) {
-            if (config.weeklySchedule[serverDayOfWeek.name] == false) {
-                Timber.d("WeeklySchedule: skip node '%s' on %s", node.name, serverDayOfWeek)
-                return true
-            }
-        }
-        return false
     }
 
 

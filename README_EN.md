@@ -55,6 +55,7 @@ One-click automation for all daily tasks, powered by image recognition
 | [External Automation](docs/en-us/develop/AUTOMATION.md) | Launch profiles via Intent / am with MacroDroid or Tasker |
 | [Telemetry](docs/en-us/develop/TELEMETRY.md) | What is reported anonymously, what is not, and how to turn it off |
 | [Roadmap](docs/en-us/develop/ROADMAP.md) | Feature plans & progress |
+| [Issue Guidelines](docs/en-us/develop/ISSUE_GUIDELINES.md) | Issue title format, area naming, and examples |
 | [PR Guidelines](docs/en-us/develop/PULL_REQUEST_GUIDELINES.md) | Pull request title, description, verification, and review conventions |
 | [Third-Party Notices](docs/en-us/develop/THIRD_PARTY_NOTICES.md) | Open-source components & licenses |
 

@@ -76,20 +76,23 @@ class MaaApiService(
         }
     }
 
-    suspend fun requestWithCache(api: String, allowFallback: Boolean = true): String? {
+    /** [fresh] 为 false：所有源都没请求成功，正文来自本地缓存 */
+    data class CachedBody(val data: String?, val fresh: Boolean)
+
+    suspend fun requestWithCache(api: String, allowFallback: Boolean = true): CachedBody {
         API_URLS.forEach { base ->
             val result = withContext(Dispatchers.IO) {
                 fetchWithETag(base, api)
             }
             if (result != null) {
-                return result
+                return CachedBody(result, fresh = true)
             }
         }
         if (allowFallback) {
-            return internalCache.get(api)
+            return CachedBody(internalCache.get(api), fresh = false)
         }
         Timber.w("requestWithCache error no available api")
-        return null
+        return CachedBody(null, fresh = false)
     }
 
     /**
@@ -200,14 +203,14 @@ class MaaApiService(
     /**
      * 获取活动关卡数据
      */
-    suspend fun getStageActivity(): String? {
+    suspend fun getStageActivity(): CachedBody {
         return requestWithCache(MaaApi.STAGE_ACTIVITY_API)
     }
 
     /**
      * 获取任务配置数据
      */
-    suspend fun getTasksInfo(): String? {
+    suspend fun getTasksInfo(): CachedBody {
         return requestWithCache(MaaApi.TASKS_API)
     }
 
@@ -215,7 +218,7 @@ class MaaApiService(
      * 获取外服任务配置数据
      * @param clientType 客户端类型（如 YoStarEN、YoStarJP、YoStarKR、txwy）
      */
-    suspend fun getGlobalTasksInfo(clientType: String): String? {
+    suspend fun getGlobalTasksInfo(clientType: String): CachedBody {
         return requestWithCache(MaaApi.getGlobalTasksApi(clientType))
     }
 

@@ -18,8 +18,11 @@ import com.aliothmoon.maameow.data.resource.CopilotResourceProvider
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.CopilotCodeType
 import com.aliothmoon.maameow.domain.service.CopilotManager
+import com.aliothmoon.maameow.domain.service.CopilotOperBoxAssist
 import com.aliothmoon.maameow.domain.service.CopilotRequestException
+import com.aliothmoon.maameow.domain.service.GameMetadataGate
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.service.OperBoxYituliuSync
 import com.aliothmoon.maameow.domain.service.OperatorSummaryData
 import com.aliothmoon.maameow.domain.service.copilot.CopilotRequirementCorrector
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -111,6 +114,8 @@ data class CopilotUiState(
     val builtinLoaded: Boolean = false,
     val builtinTree: List<CopilotResourceProvider.Node> = emptyList(),
     val builtinExpandedFolders: Set<String> = emptySet(),
+    val operBoxAssist: CopilotOperBoxAssist.State = CopilotOperBoxAssist.State(),
+    val syncingOperBox: Boolean = false,
 ) {
     /** 用户偏好；是否生效看 listModeActive */
     val useCopilotList: Boolean get() = config.useCopilotList
@@ -131,6 +136,9 @@ class CopilotViewModel(
     private val checkGameReadiness: CheckGameReadinessUseCase,
     private val chainState: TaskChainState,
     private val achievementRepository: AchievementRepository,
+    private val operBoxAssist: CopilotOperBoxAssist,
+    private val operBoxYituliuSync: OperBoxYituliuSync,
+    private val metadataGate: GameMetadataGate,
 ) : ViewModel() {
 
     companion object {
@@ -191,7 +199,8 @@ class CopilotViewModel(
     private fun formatStartStatus(result: MaaCompositionService.StartResult): UiText {
         return when (result) {
             is MaaCompositionService.StartResult.Success -> text(R.string.copilot_status_started)
-            is MaaCompositionService.StartResult.StartError -> text(R.string.copilot_file_read_error)
+            // 具体原因由 core 回调写进日志，这里只给结论
+            is MaaCompositionService.StartResult.StartError -> text(R.string.copilot_start_failed)
             else -> appContext.resolveTaskStartFailureMessage(result)
                 ?: text(R.string.copilot_status_started)
         }
@@ -206,6 +215,11 @@ class CopilotViewModel(
     }
 
     private fun observeRuntimeState() {
+        viewModelScope.launch {
+            operBoxAssist.state.collect { assist ->
+                _state.update { it.copy(operBoxAssist = assist) }
+            }
+        }
         viewModelScope.launch {
             runtimeStateStore.hasRequirementIgnored.collect { ignored ->
                 _state.update { it.copy(hasRequirementIgnored = ignored) }
@@ -1178,15 +1192,22 @@ class CopilotViewModel(
             }
 
             val config = buildEffectiveConfig(snapshot)
+            // 只在自动编队时预检，非常规页签的自动编队已在 buildEffectiveConfig 关掉
+            val operBoxDataPath = if (config.formation && snapshot.operBoxAssist.active) {
+                operBoxAssist.writeCoreData() ?: run {
+                    _state.update { it.copy(statusMessage = text(R.string.copilot_operbox_assist_write_failed)) }
+                    return@launch
+                }
+            } else null
             val tasks = if (snapshot.listModeActive) {
                 val checked = snapshot.taskList.filter { it.isChecked }
                 pendingCopilotIds.clear()
                 pendingCopilotIds.addAll(checked.map { it.copilotId }.filter { it > 0 })
                 // 传完整列表: buildListTask 内部按全列表下标分配 id(与 onCopilotTaskSuccess 同坐标系)
-                copilotManager.buildListTask(snapshot.tabIndex, snapshot.taskList, config)
+                copilotManager.buildListTask(snapshot.tabIndex, snapshot.taskList, config, operBoxDataPath)
             } else {
                 val type = resolveSingleTaskType(snapshot)
-                listOf(copilotManager.buildSingleTask(type, snapshot.currentFilePath, config))
+                listOf(copilotManager.buildSingleTask(type, snapshot.currentFilePath, config, operBoxDataPath))
             }
 
             runtimeStateStore.resetRequirementIgnored()
@@ -1206,6 +1227,22 @@ class CopilotViewModel(
         }
     }
 
+    fun onToggleOperBoxAssist(enabled: Boolean) {
+        viewModelScope.launch { operBoxAssist.setEnabled(enabled) }
+    }
+
+    /** 拉一图流练度，不连提权服务；成功后 [CopilotOperBoxAssist.state] 随快照刷新 */
+    fun onSyncOperBox() {
+        if (_state.value.syncingOperBox) return
+        _state.update {
+            it.copy(syncingOperBox = true, statusMessage = text(R.string.oper_box_yituliu_fetching))
+        }
+        viewModelScope.launch {
+            val message = operBoxYituliuSync.sync().message
+            _state.update { it.copy(syncingOperBox = false, statusMessage = message) }
+        }
+    }
+
     fun onRate(isLike: Boolean) {
         val id = _state.value.copilotId
         if (id <= 0) return
@@ -1220,6 +1257,8 @@ class CopilotViewModel(
     }
 
     private suspend fun validateStart(snapshot: CopilotUiState): Boolean {
+        // 关卡与干员校验依赖元数据，冷启动可能还没装好
+        metadataGate.awaitCurrent()
         if (snapshot.listModeActive) {
             return validateTaskListStrict(snapshot.taskList)
         }

@@ -22,7 +22,7 @@ object CoreDataDir {
     private const val HOT_UPDATE_RESOURCE_DIR = "resource/"
 
     /** App 写、core 读，整体投递 */
-    val USER_DATA_DIRS = listOf(MaaFiles.OVERRIDES, "copilot", "custom_infrast")
+    val USER_DATA_DIRS = listOf(MaaFiles.OVERRIDES, "copilot", "custom_infrast", MaaFiles.OPER_BOX_DATA_DIR)
 
     /** 热更包 zip 条目 → cache/resource 下的相对路径；不属于资源的条目返回 null；App 侧解包同样用它 */
     fun hotUpdateEntryToRelPath(entryName: String): String? {

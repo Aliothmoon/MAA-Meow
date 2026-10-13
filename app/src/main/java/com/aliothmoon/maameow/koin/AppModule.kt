@@ -55,9 +55,11 @@ import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.data.resource.CopilotResourceProvider
+import com.aliothmoon.maameow.data.resource.GameMetadataLoader
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.data.resource.OperAvatarLoader
+import com.aliothmoon.maameow.data.resource.OperRoleIconLoader
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.data.resource.StageApCostHelper
 import com.aliothmoon.maameow.domain.launch.BackendBlock
@@ -73,6 +75,7 @@ import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.AppAliveChecker
 import com.aliothmoon.maameow.domain.service.AppWatchdog
 import com.aliothmoon.maameow.domain.service.CopilotManager
+import com.aliothmoon.maameow.domain.service.CopilotOperBoxAssist
 import com.aliothmoon.maameow.domain.service.CoreDataPusher
 import com.aliothmoon.maameow.domain.service.ExternalNotificationService
 import com.aliothmoon.maameow.domain.service.FightDropsRefresher
@@ -81,6 +84,7 @@ import com.aliothmoon.maameow.domain.service.FrameSnapshotter
 import com.aliothmoon.maameow.domain.service.GameDataReporter
 import com.aliothmoon.maameow.domain.service.GameFpsReader
 import com.aliothmoon.maameow.domain.service.GameFpsWatcher
+import com.aliothmoon.maameow.domain.service.GameMetadataGate
 import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
 import com.aliothmoon.maameow.domain.service.LogExportService
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
@@ -107,6 +111,8 @@ import com.aliothmoon.maameow.maa.callback.ConnectionInfoHandler
 import com.aliothmoon.maameow.maa.callback.CopilotRuntimeStateStore
 import com.aliothmoon.maameow.maa.callback.MaaCallbackDispatcher
 import com.aliothmoon.maameow.maa.callback.MaaExecutionStateHolder
+import com.aliothmoon.maameow.maa.callback.OperProgressHandler
+import com.aliothmoon.maameow.maa.callback.SetParamsErrorSignal
 import com.aliothmoon.maameow.maa.callback.SubTaskHandler
 import com.aliothmoon.maameow.maa.callback.TaskChainHandler
 import com.aliothmoon.maameow.maa.callback.TaskChainStatusTracker
@@ -304,6 +310,8 @@ val appModule = module {
 
     singleOf(::ResourceInitService)
     singleOf(::MaaResourceLoader)
+    // scope 走构造默认值
+    single { GameMetadataLoader(get(), get(), get(), get(), get(), get()) } bind GameMetadataGate::class
     singleOf(::MaaSessionLogger)
 
     // 外部通知
@@ -345,6 +353,7 @@ val appModule = module {
     singleOf(::CopilotRuntimeStateStore)
     singleOf(::ToolboxResultCollector)
     singleOf(::OperBoxYituliuSync)
+    singleOf(::CopilotOperBoxAssist)
     single { PlanSideTaskRunner(androidContext(), get(), get()) }
     singleOf(::TaskChainStatusTracker)
     singleOf(::FightDropsRefresher)
@@ -362,6 +371,8 @@ val appModule = module {
     single { GameMuteCoordinator(get(), RemoteGameAudioAdapter) }
     single<FrameSnapshotter> { RemoteFrameSnapshotter() }
     singleOf(::MaaCallbackDispatcher)
+    singleOf(::SetParamsErrorSignal)
+    single { OperProgressHandler(get(), get(), get(), get(), get(), get()) }
 
     // 定时唤醒 + 解锁
     singleOf(::WakeUnlockEngine)
@@ -389,6 +400,7 @@ val appModule = module {
     singleOf(::StageApCostHelper)
     singleOf(::ItemIconLoader)
     singleOf(::OperAvatarLoader)
+    singleOf(::OperRoleIconLoader)
     singleOf(::ActivityManager)
     singleOf(::ResourceDataManager)
     // Copilot (自动战斗)

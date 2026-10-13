@@ -29,6 +29,7 @@ import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.service.CoreDataPusher
+import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.service.update.checker.AppVersionChecker
 import com.aliothmoon.maameow.domain.service.update.checker.ResourceVersionChecker
 import com.aliothmoon.maameow.domain.service.update.resolver.AppDownloadUrlResolver
@@ -66,6 +67,7 @@ class UpdateService(
     private val extractor: ZipExtractor,
     private val achievementRepository: AchievementRepository,
     private val coreDataPusher: CoreDataPusher,
+    private val resourceInitService: ResourceInitService,
 ) {
     private val appDownloadResolvers: Map<UpdateSource, AppDownloadUrlResolver> = mapOf(
         UpdateSource.MIRROR_CHYAN to MirrorChyanAppDownloadUrlResolver(
@@ -382,6 +384,7 @@ class UpdateService(
             onSuccess = {
                 _resourceProcessState.value = UpdateProcessState.Success
                 Timber.i("Resource update completed")
+                resourceInitService.onResourceUpdated()
                 coreDataPusher.pushHotUpdateIfNeeded()
                 Result.success(Unit)
             },

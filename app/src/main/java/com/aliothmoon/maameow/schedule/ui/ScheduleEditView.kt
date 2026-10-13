@@ -75,6 +75,7 @@ import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.components.WheelTimeFormatToggle
 import com.aliothmoon.maameow.presentation.components.WheelTimePicker
+import com.aliothmoon.maameow.presentation.components.dayOfWeekLabel
 import com.aliothmoon.maameow.presentation.components.rememberWheelTimePickerState
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
@@ -293,7 +294,7 @@ fun ScheduleEditView(
                                 FilterChip(
                                     selected = day in state.daysOfWeek,
                                     onClick = { viewModel.onToggleDay(day) },
-                                    label = { Text(scheduleDayChipLabel(day)) },
+                                    label = { Text(dayOfWeekLabel(day)) },
                                     colors = chipColors
                                 )
                             }

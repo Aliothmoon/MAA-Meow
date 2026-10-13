@@ -21,6 +21,8 @@ import timber.log.Timber
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 
 /**
  * 处理 TaskChain 级别回调（msg 10000-10004 + AllTasksCompleted=3）
@@ -43,6 +45,9 @@ class TaskChainHandler(
     private val packageName = applicationContext.packageName
     private val appContext = applicationContext
 
+    /** taskId → 任务链开始的 nanoTime，完成时换算用时 */
+    private val chainStartNanos = ConcurrentHashMap<Int, Long>()
+
     /**
      * TaskChainStart (10001): 任务链开始
      */
@@ -50,6 +55,7 @@ class TaskChainHandler(
         val taskId = details.getIntValue("taskid", 0)
         subTaskHandler.clearThemeTarget(taskId)
         statusTracker.updateStatus(taskId, TaskRunStatus.IN_PROGRESS)
+        chainStartNanos[taskId] = System.nanoTime()
 
         refreshDropsIfNeeded(taskId)
 
@@ -58,6 +64,7 @@ class TaskChainHandler(
     }
 
     private fun clearSessionScopedState() {
+        chainStartNanos.clear()
         statusTracker.clear()
         dropsRefresher.clear()
     }
@@ -136,6 +143,7 @@ class TaskChainHandler(
         val taskId = details.getIntValue("taskid", 0)
         subTaskHandler.clearThemeTarget(taskId)
         statusTracker.updateStatus(taskId, TaskRunStatus.ERROR)
+        chainStartNanos.remove(taskId)
 
         val taskchain = details.getString("taskchain") ?: "Unknown"
         val taskName = resolveTaskName(details)
@@ -166,7 +174,24 @@ class TaskChainHandler(
 
         val taskchain = details.getString("taskchain") ?: "Unknown"
         val taskName = resolveTaskName(details)
-        sessionLogger.append("${str("CompleteTask")}$taskName", LogLevel.SUCCESS)
+        // 对齐上游 #18433：完成日志带上本任务链用时
+        val taskTime = chainStartNanos.remove(taskId)
+            ?.let { str("TaskTime", formatTaskDuration(System.nanoTime() - it)) }
+            .orEmpty()
+        sessionLogger.append("${str("CompleteTask")}$taskName$taskTime", LogLevel.SUCCESS)
+
+        // 任一仓库识别（库存保持自带的或独立的数据更新）都会纠正缓存，复查预检时跳过的计划
+        if (taskchain == "Depot") {
+            dropsRefresher.reviewSkippedPlans().forEach {
+                sessionLogger.append(
+                    appContext.getString(
+                        R.string.runlog_depot_plan_stale_skipped,
+                        it.taskName, it.no, it.dropName, it.current, it.target,
+                    ),
+                    LogLevel.WARNING,
+                )
+            }
+        }
 
         if (taskchain == "Infrast") {
             val nodeId = statusTracker.getNodeId(taskId)
@@ -336,4 +361,10 @@ class TaskChainHandler(
     private fun str(key: String, vararg args: Any): String {
         return MaaStringRes.getString(resources, packageName, key, *args)
     }
+}
+
+/** 格式同上游，如 0h 3m 25s；小时不按天折回 */
+internal fun formatTaskDuration(nanos: Long): String {
+    val total = TimeUnit.NANOSECONDS.toSeconds(nanos).coerceAtLeast(0)
+    return "${total / 3600}h ${total % 3600 / 60}m ${total % 60}s"
 }

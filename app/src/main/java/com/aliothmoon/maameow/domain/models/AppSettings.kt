@@ -234,6 +234,10 @@ data class AppSettings(
     @PrefKey(default = "false")
     val operBoxUseYituliuApi: String = "false",
 
+    /** 自动战斗用一图流练度辅助编队，自动战斗页与设置页共用 */
+    @PrefKey(default = "false")
+    val operBoxAssistEnabled: String = "false",
+
     /** 牛杂活动商店黑名单：勾选的常用商品物品 id，逗号分隔 */
     @PrefKey(default = "")
     val eventShopBlacklistPresets: String = "",

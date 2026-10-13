@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -25,6 +26,8 @@ import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.overlay.border.BorderOverlayManager
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import com.aliothmoon.maameow.presentation.ProvideInputFocusManager
+import com.aliothmoon.maameow.presentation.components.LocalPagerPreloadState
+import com.aliothmoon.maameow.presentation.components.PagerPreloadState
 import com.aliothmoon.maameow.presentation.view.panel.ExpandedControlPanel
 import com.aliothmoon.maameow.schedule.model.CountdownState
 import com.aliothmoon.maameow.service.AccessibilityHelperService
@@ -246,6 +249,7 @@ class OverlayController(
                     )
                     CompositionLocalProvider(
                         LocalFloatingWindowContext provides true,
+                        LocalPagerPreloadState provides remember { PagerPreloadState() },
                         LocalDensity provides Density(
                             density = baseDensity.density * effectiveScale / 100f,
                             fontScale = UiScale.clampOverlayFontScale(baseDensity.fontScale),

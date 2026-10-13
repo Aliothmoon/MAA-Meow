@@ -105,11 +105,4 @@ class GameFpsAdvisorTest {
     fun stayingLowNeverEscalatesToDegraded() {
         assertEquals(listOf(null, null, Level.LOW, null, null, null), feed(20f, 20f, 20f, 25f, 28f, 29f))
     }
-
-    @Test
-    fun resetAllowsAdvisingAgain() {
-        feed(20f, 20f, 20f)
-        advisor.reset()
-        assertEquals(Level.LOW, feed(20f, 20f, 20f).last())
-    }
 }

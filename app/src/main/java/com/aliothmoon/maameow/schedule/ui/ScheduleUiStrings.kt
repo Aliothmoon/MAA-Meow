@@ -18,17 +18,6 @@ private val scheduleTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val scheduleStartFormatter = DateTimeFormatter.ofPattern("MM-dd HH:mm")
 
 @Composable
-internal fun scheduleDayChipLabel(day: DayOfWeek): String = when (day) {
-    DayOfWeek.MONDAY -> stringResource(R.string.schedule_day_full_monday)
-    DayOfWeek.TUESDAY -> stringResource(R.string.schedule_day_full_tuesday)
-    DayOfWeek.WEDNESDAY -> stringResource(R.string.schedule_day_full_wednesday)
-    DayOfWeek.THURSDAY -> stringResource(R.string.schedule_day_full_thursday)
-    DayOfWeek.FRIDAY -> stringResource(R.string.schedule_day_full_friday)
-    DayOfWeek.SATURDAY -> stringResource(R.string.schedule_day_full_saturday)
-    DayOfWeek.SUNDAY -> stringResource(R.string.schedule_day_full_sunday)
-}
-
-@Composable
 internal fun scheduleDaySummaryLabel(day: DayOfWeek): String = when (day) {
     DayOfWeek.MONDAY -> stringResource(R.string.schedule_day_short_monday)
     DayOfWeek.TUESDAY -> stringResource(R.string.schedule_day_short_tuesday)

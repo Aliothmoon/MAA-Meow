@@ -1,15 +1,19 @@
 package com.aliothmoon.maameow.domain.usecase
 
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.model.AwardConfig
 import com.aliothmoon.maameow.data.model.DepotMaintainConfig
 import com.aliothmoon.maameow.data.model.FightConfig
+import com.aliothmoon.maameow.data.model.InfrastConfig
+import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.data.model.RoguelikeStartingOper
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.UserDataUpdateConfig
 import com.aliothmoon.maameow.domain.models.PlanSideTask
 import com.aliothmoon.maameow.data.model.WakeUpConfig
+import com.aliothmoon.maameow.data.model.WeeklyScheduled
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.repository.DepotRepository
@@ -18,6 +22,8 @@ import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.repository.OperBoxSnapshot
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.maa.task.MaaTaskType
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,6 +69,7 @@ class AnalyzeTaskChainUseCaseTest {
         itemHelper = mockk(relaxed = true),
         dropsRefresher = mockk(relaxed = true),
         appSettingsManager = appSettingsManager,
+        metadataGate = mockk { coEvery { awaitCurrent(any()) } returns true },
     )
 
     @Test
@@ -135,10 +142,37 @@ class AnalyzeTaskChainUseCaseTest {
         assertEquals(
             AnalyzeTaskChainResult.Blocked(
                 reason = AnalyzeTaskChainFailureReason.NO_EXECUTABLE_TASKS,
+                logs = listOf(uiTextOf(R.string.runlog_weekly_schedule_skipped, "理智作战") to LogLevel.INFO),
             ),
             result
         )
     }
+
+    @Test
+    fun infrastWeeklySchedule_skipsDisabledDaysAndKeepsEnabledDays() = runBlocking {
+        // 整周同值，避开 04:00 换日竞态
+        fun infrastNode(enabledEveryDay: Boolean) = TaskChainNode(
+            name = "基建换班",
+            config = InfrastConfig(
+                useWeeklySchedule = true,
+                weeklySchedule = WeeklyScheduled.ALL_DAYS.mapValues { enabledEveryDay },
+            ),
+        )
+
+        val skipped = useCase(listOf(infrastNode(enabledEveryDay = false), awardNode()))
+        val kept = useCase(listOf(infrastNode(enabledEveryDay = true), awardNode()))
+
+        val skippedPlan = (skipped as AnalyzeTaskChainResult.Ready).plan
+        assertEquals(listOf(MaaTaskType.AWARD), skippedPlan.params.map { it.type })
+        assertEquals(
+            listOf(uiTextOf(R.string.runlog_weekly_schedule_skipped, "基建换班") to LogLevel.INFO),
+            skippedPlan.logs,
+        )
+        val keptPlan = (kept as AnalyzeTaskChainResult.Ready).plan
+        assertEquals(listOf(MaaTaskType.INFRAST, MaaTaskType.AWARD), keptPlan.params.map { it.type })
+    }
+
+    private fun awardNode() = TaskChainNode(name = "领取奖励", order = 1, config = AwardConfig())
 
     @Test
     fun returnsReadyPlan_withClientTypePackageAndLaunchFlag() = runBlocking {

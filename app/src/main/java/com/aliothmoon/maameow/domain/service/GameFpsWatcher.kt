@@ -9,7 +9,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,8 +44,6 @@ class GameFpsWatcher(
         private const val POLL_INTERVAL_MS = 1_000L
     }
 
-    private val advisor = GameFpsAdvisor()
-
     /** null = 未监控 */
     private val _fps = MutableStateFlow<Float?>(null)
     val fps: StateFlow<Float?> = _fps.asStateFlow()
@@ -52,11 +52,12 @@ class GameFpsWatcher(
 
     fun start() {
         stop()
-        advisor.reset()
+        // 每轮自带判定器：stop 不等旧一轮退出，它可能还在判定，共用一个会被两轮同时改
+        val advisor = GameFpsAdvisor()
         job = scope.launch {
             while (isActive) {
                 delay(POLL_INTERVAL_MS)
-                pollOnce()
+                pollOnce(advisor)
             }
         }
     }
@@ -68,8 +69,10 @@ class GameFpsWatcher(
     }
 
     @VisibleForTesting
-    internal suspend fun pollOnce() {
+    internal suspend fun pollOnce(advisor: GameFpsAdvisor) {
         val value = reader.readGameFps()
+        // 读数取消不掉，已停的一轮读回来直接丢，不写旧帧率也不再判定
+        currentCoroutineContext().ensureActive()
         _fps.value = value
         advisor.onSample(value ?: 0f)?.let { advice ->
             val fps = advice.medianFps.roundToInt()

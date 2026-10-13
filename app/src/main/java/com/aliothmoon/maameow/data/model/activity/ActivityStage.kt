@@ -9,7 +9,8 @@ data class ActivityStage(
     val value: String,             // 关卡代码 (如 "ME-8")
     val drop: String? = null,      // 掉落物品 ID
     val activity: StageActivityInfo? = null,  // 所属活动信息
-    val activityKey: String = ""   // 活动标识
+    val activityKey: String = "",  // 活动标识
+    val groupActivity: StageActivityInfo? = null,  // 活动组级信息，不受关卡级覆盖
 ) {
     /**
      * 关卡是否可用（活动进行中）
@@ -24,14 +25,16 @@ data class ActivityStage(
         fun fromRaw(
             raw: ActivityStageRaw,
             activity: StageActivityInfo?,
-            activityKey: String
+            activityKey: String,
+            groupActivity: StageActivityInfo?,
         ): ActivityStage {
             return ActivityStage(
                 display = raw.display,
                 value = raw.value,
                 drop = raw.drop,
                 activity = activity,
-                activityKey = activityKey
+                activityKey = activityKey,
+                groupActivity = groupActivity,
             )
         }
     }

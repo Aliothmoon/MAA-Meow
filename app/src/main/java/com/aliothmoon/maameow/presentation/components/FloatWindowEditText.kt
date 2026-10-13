@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -59,6 +60,7 @@ fun FloatWindowEditText(
     focusedOutlineColor: Color = MaterialTheme.colorScheme.primary,
     trailingIcon: @Composable (() -> Unit)? = null,
     onImeAction: (() -> Unit)? = null,
+    cursorToEndRequest: Int = 0,
     onFocusChange: ((Boolean) -> Unit)? = null
 ) {
     val density = LocalDensity.current
@@ -71,6 +73,8 @@ fun FloatWindowEditText(
 
     var editTextRef by remember { mutableStateOf<ExtractModeEditText?>(null) }
     var isFocused by remember { mutableStateOf(false) }
+    // 初始值不算请求
+    var appliedCursorToEndRequest by remember { mutableIntStateOf(cursorToEndRequest) }
 
     val currentValue by rememberUpdatedState(value)
     val currentOnValueChange by rememberUpdatedState(onValueChange)
@@ -78,13 +82,17 @@ fun FloatWindowEditText(
     val currentOnFocusChange by rememberUpdatedState(onFocusChange)
     val currentSingleLine by rememberUpdatedState(singleLine)
 
-    LaunchedEffect(value) {
+    LaunchedEffect(value, cursorToEndRequest) {
         editTextRef?.let { et ->
+            val moveToEnd = cursorToEndRequest != appliedCursorToEndRequest
             if (et.text.toString() != value) {
-                val selectionStart = et.selectionStart.coerceIn(0, value.length)
+                val selectionStart = if (moveToEnd) value.length else et.selectionStart.coerceIn(0, value.length)
                 et.setText(value)
-                et.setSelection(selectionStart.coerceAtMost(value.length))
+                et.setSelection(selectionStart)
+            } else if (moveToEnd) {
+                et.setSelection(value.length)
             }
+            appliedCursorToEndRequest = cursorToEndRequest
         }
     }
 
@@ -255,7 +263,6 @@ private class ExtractModeEditText(context: Context) : AppCompatEditText(context)
         // 报告较小的可见区域，促使 IME 进入 Extract Mode
         val result = super.getGlobalVisibleRect(r, globalOffset)
         r?.let {
-            // 设置小一点，触发 Extract Mode
             it.bottom = it.top + 1
         }
         return result

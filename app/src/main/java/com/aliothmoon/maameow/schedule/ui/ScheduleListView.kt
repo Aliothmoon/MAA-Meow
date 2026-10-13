@@ -33,7 +33,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -79,11 +78,12 @@ import org.koin.compose.koinInject
 fun ScheduleListView(
     navController: NavController,
     viewModel: ScheduleListViewModel = koinViewModel(),
+    isActivePage: () -> Boolean = { true },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var deleteConfirmId by remember { mutableStateOf<String?>(null) }
-    var autoStartTarget by remember { mutableStateOf<AutoStartTarget?>(null) }
+    val pageActive = isActivePage()
 
     val permissionManager: PermissionManager = koinInject()
     val scope = rememberCoroutineScope()
@@ -102,23 +102,25 @@ fun ScheduleListView(
     val hasEnabledStrategy = state.strategies.any { it.enabled }
     // 引导期间不弹，也不标记本次开机已提醒
     val onboardingBlocking = onboardingBlocksStartupDialogs()
-    LaunchedEffect(hasEnabledStrategy, onboardingBlocking) {
-        if (!hasEnabledStrategy || onboardingBlocking) return@LaunchedEffect
-        // prefs 与 resolveActivity 都是跨进程，整段留在 IO 上
-        val target = withContext(Dispatchers.IO) {
-            if (!AutoStartHelper.shouldRemindThisBoot(
-                    context,
-                    schedulePrefs
-                )
-            ) return@withContext null
-            AutoStartHelper.resolveTarget(context)
-                ?.also { AutoStartHelper.markRemindedThisBoot(context, schedulePrefs) }
-        }
-        autoStartTarget = target
-    }
+    var autoStartTarget by rememberAutoStartReminder(
+        active = pageActive && !onboardingBlocking,
+        enabled = hasEnabledStrategy,
+        load = {
+            withContext(Dispatchers.IO) {
+                if (AutoStartHelper.shouldRemindThisBoot(context, schedulePrefs)) {
+                    AutoStartHelper.resolveTarget(context)
+                } else null
+            }
+        },
+        onShown = {
+            withContext(Dispatchers.IO) {
+                AutoStartHelper.markRemindedThisBoot(context, schedulePrefs)
+            }
+        },
+    )
 
     val backendFix = rememberBackendReadyFixState()
-    BackendReadyFixHost(backendFix)
+    if (pageActive) BackendReadyFixHost(backendFix)
 
     fun openExactAlarmSettings() {
         ExactAlarmSettings.open(context)
@@ -245,7 +247,7 @@ fun ScheduleListView(
             }
         }
 
-        if (deleteConfirmId != null) {
+        if (pageActive && deleteConfirmId != null) {
             OpaqueTheme {
                 AlertDialog(
                     onDismissRequest = { deleteConfirmId = null },
@@ -271,7 +273,7 @@ fun ScheduleListView(
             }
         }
 
-        autoStartTarget?.let { target ->
+        autoStartTarget?.takeIf { pageActive && hasEnabledStrategy && !onboardingBlocking }?.let { target ->
             OpaqueTheme {
                 AlertDialog(
                     onDismissRequest = { autoStartTarget = null },

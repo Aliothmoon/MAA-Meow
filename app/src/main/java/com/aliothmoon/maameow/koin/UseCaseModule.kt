@@ -27,6 +27,7 @@ val useCaseModule = module {
             itemHelper = get(),
             dropsRefresher = get(),
             appSettingsManager = get(),
+            metadataGate = get(),
             relocatePath = get<MaaPathConfig>()::toCorePath,
         )
     }

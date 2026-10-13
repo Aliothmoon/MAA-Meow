@@ -33,6 +33,11 @@ enum class TaskTypeInfo(
         R.string.task_type_switch_theme,
         { SwitchThemeConfig() },
         inDefaultChain = false,
+    ),
+    OPER_PROGRESS(
+        R.string.task_type_oper_progress,
+        { OperProgressConfig() },
+        inDefaultChain = false,
     );
 
     fun defaultName(context: Context): String = context.getString(nameRes)

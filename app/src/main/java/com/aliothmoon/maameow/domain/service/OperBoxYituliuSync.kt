@@ -7,7 +7,6 @@ import com.aliothmoon.maameow.data.model.toolbox.OperBoxEquip
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxSkill
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
-import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.maa.callback.ToolboxResultCollector
 import com.aliothmoon.maameow.utils.i18n.UiText
@@ -28,12 +27,14 @@ class OperBoxYituliuSync(
     private val resourceDataManager: ResourceDataManager,
     private val collector: ToolboxResultCollector,
     private val appSettings: AppSettingsManager,
-    private val chainState: TaskChainState,
+    private val metadataGate: GameMetadataGate,
 ) {
     sealed interface Result {
+        val message: UiText
+
         /** [skipped] 是本地干员表不认识、被跳过的数量 */
         data class Success(val synced: Int, val skipped: Int) : Result {
-            val message: UiText
+            override val message: UiText
                 get() = if (skipped == 0) {
                     uiTextOf(R.string.oper_box_yituliu_done, synced)
                 } else {
@@ -41,7 +42,7 @@ class OperBoxYituliuSync(
                 }
         }
 
-        data class Failed(val message: UiText) : Result
+        data class Failed(override val message: UiText) : Result
     }
 
     private val mutex = Mutex()
@@ -75,12 +76,9 @@ class OperBoxYituliuSync(
         return Result.Success(synced = owned.size, skipped = skipped)
     }
 
-    /** 工具箱走这条路时没连过提权服务，干员表可能还没装载，这里补一次 */
+    /** 冷启动后立刻同步时干员表可能还在装载 */
     private suspend fun ensureLocalOperators(): Boolean {
-        if (resourceDataManager.operators.value.isNotEmpty()) return true
-        runCatching {
-            resourceDataManager.load(chainState.clientType, appSettings.displayLanguage)
-        }.onFailure { Timber.w(it, "%s: local operator data load failed", TAG) }
+        metadataGate.awaitCurrent()
         return resourceDataManager.operators.value.isNotEmpty()
     }
 

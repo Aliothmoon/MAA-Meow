@@ -9,4 +9,6 @@ import com.aliothmoon.maameow.data.config.MaaPathConfig
  */
 class OperAvatarLoader(
     pathConfig: MaaPathConfig
-) : TemplateImageLoader(pathConfig, "template/avatar", cacheSize = 256)
+) : TemplateImageLoader(pathConfig, "template/avatar", cacheSize = 256) {
+    override fun fallbackOf(id: String): String? = PromotedOperIds.baseOf(id)
+}

@@ -37,8 +37,11 @@ abstract class TemplateImageLoader(
             cache.get(id)?.let { return@withContext it }
             if (id in missing) return@withContext null
 
-            val file = sequenceOf(pathConfig.cacheResourceDir, pathConfig.resourceDir)
-                .map { File(it, "$subDir/$id.png") }
+            val file = listOfNotNull(id, fallbackOf(id)).asSequence()
+                .flatMap { name ->
+                    sequenceOf(pathConfig.cacheResourceDir, pathConfig.resourceDir)
+                        .map { File(it, "$subDir/$name.png") }
+                }
                 .firstOrNull { it.isFile }
             val bitmap = try {
                 file?.let(::decode)
@@ -54,6 +57,8 @@ abstract class TemplateImageLoader(
             bitmap
         }
     }
+
+    protected open fun fallbackOf(id: String): String? = null
 
     protected open fun decode(file: File): ImageBitmap? {
         val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return null

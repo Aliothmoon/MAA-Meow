@@ -11,6 +11,8 @@ import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.InfrastConfig
 import com.aliothmoon.maameow.data.model.MallConfig
+import com.aliothmoon.maameow.data.model.OperProgressConfig
+import com.aliothmoon.maameow.data.model.OperProgressResult
 import com.aliothmoon.maameow.data.model.RecruitConfig
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskParamProvider
@@ -31,6 +33,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -87,11 +91,21 @@ class TaskChainState(
     private val persistOps = Channel<PersistOp>(Channel.UNLIMITED)
 
     val clientType: String
-        get() = getClientTypeOrNull() ?: "Official"
+        get() = resolveClientType(findFirstEnabledConfig<WakeUpConfig>()?.clientType, _lastUsedClientType.value)
 
     /** 最近一次成功启动的会话所用客户端；运行中即本次会话的服务器，不随切换 Profile 变 */
     val lastUsedClientType: String?
         get() = _lastUsedClientType.value
+
+    val clientTypeFlow: Flow<String>
+        get() = combine(
+            firstEnabledConfigFlow<WakeUpConfig>().map { it?.clientType },
+            _lastUsedClientType,
+        ) { wakeUp, lastUsed -> resolveClientType(wakeUp, lastUsed) }
+            .distinctUntilChanged()
+
+    private fun resolveClientType(wakeUp: String?, lastUsed: String?): String =
+        wakeUp ?: lastUsed ?: "Official"
 
     private fun doSync() {
         persistOps.trySend(PersistOp.Sync)
@@ -313,6 +327,21 @@ class TaskChainState(
         updateMallCompletion(nodeId) { it.copy(visitFriendsLastDate = date) }
     }
 
+    suspend fun recordOperProgress(
+        nodeId: String,
+        results: List<OperProgressResult>,
+        removeFinished: Boolean = false,
+    ) {
+        val update = { node: TaskChainNode ->
+            val config = node.config
+            if (node.id == nodeId && config is OperProgressConfig) {
+                node.copy(config = config.applyResults(results, removeFinished))
+            } else node
+        }
+        // 回调按原节点写回，切换配置也能保留培养进度
+        mutate(others = { chain -> chain.map(update) }) { current -> current.replaceAll { update(it) } }
+    }
+
     private suspend fun updateMallCompletion(nodeId: String, transform: (MallConfig) -> MallConfig) {
         val update = { node: TaskChainNode ->
             val config = node.config
@@ -381,10 +410,6 @@ class TaskChainState(
         val next = (cfg.customInfrastPlanSelect + 1) % count
         updateNodeConfig(nodeId, cfg.copy(customInfrastPlanSelect = next))
         return next to cfg.customPlanNames.getOrNull(next)
-    }
-
-    fun getClientTypeOrNull(): String? {
-        return findFirstEnabledConfig<WakeUpConfig>()?.clientType ?: _lastUsedClientType.value
     }
 
     fun saveLastUsedClientType(clientType: String) {

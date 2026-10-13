@@ -4,7 +4,6 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.YituliuApiService
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
-import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.CharacterInfo
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.maa.callback.ToolboxResultCollector
@@ -67,10 +66,10 @@ class OperBoxYituliuSyncTest {
             every { yituliuOpenApiToken } returns MutableStateFlow(apiToken)
             every { displayLanguage } returns language
         }
-        val chainState = mockk<TaskChainState> {
-            every { clientType } returns "Official"
+        val metadataGate = mockk<GameMetadataGate> {
+            coEvery { awaitCurrent(any()) } returns true
         }
-        return OperBoxYituliuSync(api, resource, collector, settings, chainState)
+        return OperBoxYituliuSync(api, resource, collector, settings, metadataGate)
     }
 
     private fun operator(id: String) = YituliuApiService.Operator(

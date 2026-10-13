@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,11 +30,15 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
+import com.aliothmoon.maameow.domain.enums.UiUsageConstants.Roguelike as RoguelikeUi
+import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.CoreCharSelector
+import com.aliothmoon.maameow.presentation.components.LocalPageVisible
+import com.aliothmoon.maameow.presentation.components.rememberPageVisible
+import com.aliothmoon.maameow.presentation.components.rememberStagedBeyondViewportCount
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
-import com.aliothmoon.maameow.domain.enums.UiUsageConstants.Roguelike as RoguelikeUi
 
 /**
  * 自动肉鸽配置面板 - 迁移自 WPF RoguelikeSettingsUserControl.xaml
@@ -49,6 +54,7 @@ fun RoguelikeConfigPanel(
 ) {
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
     val coroutineScope = rememberCoroutineScope()
+    val inputFocus = LocalInputFocusManager.current
 
     Column(
         modifier = Modifier
@@ -68,6 +74,7 @@ fun RoguelikeConfigPanel(
                 color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
                 modifier = Modifier.clickable(interactionSource = null, indication = null) {
+                    inputFocus.clear()
                     coroutineScope.launch { pagerState.animateScrollToPage(0) }
                 }
             )
@@ -77,6 +84,7 @@ fun RoguelikeConfigPanel(
                 color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
                 modifier = Modifier.clickable(interactionSource = null, indication = null) {
+                    inputFocus.clear()
                     coroutineScope.launch { pagerState.animateScrollToPage(1) }
                 }
             )
@@ -87,23 +95,26 @@ fun RoguelikeConfigPanel(
         HorizontalPager(
             pageSize = PageSize.Fill,
             state = pagerState,
+            beyondViewportPageCount = rememberStagedBeyondViewportCount(pagerState, 1),
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
             userScrollEnabled = true
         ) { page ->
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(end = 12.dp, bottom = 8.dp)
-            ) {
-                when (page) {
-                    0 -> {
-                        item { BasicRoguelikeSettings(config, onConfigChange) }
-                    }
+            CompositionLocalProvider(LocalPageVisible provides rememberPageVisible(pagerState, page)) {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(end = 12.dp, bottom = 8.dp)
+                ) {
+                    when (page) {
+                        0 -> {
+                            item { BasicRoguelikeSettings(config, onConfigChange) }
+                        }
 
-                    1 -> {
-                        item { AdvancedRoguelikeSettings(config, onConfigChange) }
+                        1 -> {
+                            item { AdvancedRoguelikeSettings(config, onConfigChange) }
+                        }
                     }
                 }
             }

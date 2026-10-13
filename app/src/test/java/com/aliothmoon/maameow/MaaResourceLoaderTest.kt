@@ -5,8 +5,8 @@ import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.ActivityManager
-import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.domain.models.ClientResourceProfile
 import com.aliothmoon.maameow.domain.service.CoreDataPusher
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.manager.RemoteServiceManager
@@ -38,14 +38,12 @@ class MaaResourceLoaderTest {
     }
 
     @Test
-    fun load_usesSelectedDisplayLanguage_forClientResources() = runBlocking {
+    fun load_refreshesHotUpdate_forClient() = runBlocking {
         withEnv(AppSettingsManager.AppLanguage.EN) { env ->
             val result = env.loader.load("YoStarEN")
 
             assertTrue(result.isSuccess)
-            coVerify(exactly = 1) { env.resourceDataManager.load("YoStarEN", "en-us") }
             coVerify(exactly = 1) { env.activityManager.load("YoStarEN") }
-            coVerify(exactly = 1) { env.itemHelper.load() }
         }
     }
 
@@ -110,12 +108,12 @@ class MaaResourceLoaderTest {
 
     @Test
     fun resourceProfile_groupsBaseOnlyClientsTogether() {
-        assertEquals("", MaaResourceLoader.resourceProfileOf(""))
-        assertEquals("", MaaResourceLoader.resourceProfileOf("Official"))
-        assertEquals("", MaaResourceLoader.resourceProfileOf("Bilibili"))
-        assertEquals("YoStarJP", MaaResourceLoader.resourceProfileOf("YoStarJP"))
-        assertEquals("YoStarEN", MaaResourceLoader.resourceProfileOf("YoStarEN"))
-        assertEquals("txwy", MaaResourceLoader.resourceProfileOf("txwy"))
+        assertEquals("", ClientResourceProfile.of(""))
+        assertEquals("", ClientResourceProfile.of("Official"))
+        assertEquals("", ClientResourceProfile.of("Bilibili"))
+        assertEquals("YoStarJP", ClientResourceProfile.of("YoStarJP"))
+        assertEquals("YoStarEN", ClientResourceProfile.of("YoStarEN"))
+        assertEquals("txwy", ClientResourceProfile.of("txwy"))
     }
 
     @Test
@@ -296,8 +294,6 @@ class MaaResourceLoaderTest {
     private class Env(
         val loader: MaaResourceLoader,
         val loadedDirs: MutableList<String>,
-        val resourceDataManager: ResourceDataManager,
-        val itemHelper: ItemHelper,
         val activityManager: ActivityManager,
         /** 置 true 模拟换进程后服务没能回来 */
         val rebindFails: AtomicBoolean,
@@ -344,8 +340,6 @@ class MaaResourceLoaderTest {
             val chainState = mockk<TaskChainState> {
                 every { clientType } returns "Official"
             }
-            val itemHelper = mockk<ItemHelper>()
-            val resourceDataManager = mockk<ResourceDataManager>()
             val activityManager = mockk<ActivityManager>()
             every { pathConfig.isCoreSeparated } returns coreSeparated
             every { pathConfig.coreRootDir } answers {
@@ -361,8 +355,6 @@ class MaaResourceLoaderTest {
             }
             val loadedDirs = mutableListOf<String>()
 
-            coEvery { resourceDataManager.load(any(), any()) } returns Unit
-            coEvery { itemHelper.load() } returns Unit
             coEvery { activityManager.load(any()) } returns Unit
             fun newService(): RemoteService {
                 val maaCore = mockk<MaaCoreService>()
@@ -405,14 +397,10 @@ class MaaResourceLoaderTest {
                         pathConfig = pathConfig,
                         appSettings = appSettings,
                         chainState = chainState,
-                        itemHelper = itemHelper,
-                        resourceDataManager = resourceDataManager,
                         activityManager = activityManager,
                         coreDataPusher = coreDataPusher,
                     ),
                     loadedDirs = loadedDirs,
-                    resourceDataManager = resourceDataManager,
-                    itemHelper = itemHelper,
                     activityManager = activityManager,
                     rebindFails = rebindFails,
                     coreDataPusher = coreDataPusher,

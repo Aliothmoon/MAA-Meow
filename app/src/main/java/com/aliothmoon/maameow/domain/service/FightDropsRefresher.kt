@@ -4,15 +4,19 @@ import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.StageApCostHelper
 import com.aliothmoon.maameow.domain.models.DropTarget
+import com.aliothmoon.maameow.domain.models.SkippedDepotPlans
+import com.aliothmoon.maameow.domain.models.StaleSkippedPlan
 import com.aliothmoon.maameow.maa.callback.SubTaskHandler
 import com.aliothmoon.maameow.maa.task.TaskSlot
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import timber.log.Timber
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.math.ceil
 
 /**
  * 目标库存运行时重算：stage(slot) → bind(taskId) → onTaskStarted SetTaskParams。
+ * 库存保持预检跳过的计划也在这里登记，仓库识别后由 [reviewSkippedPlans] 复查。
  * 直接走 [RemoteServiceManager] 改参，避免 Composition 构造环；回调线程同步执行。
  */
 class FightDropsRefresher(
@@ -23,6 +27,11 @@ class FightDropsRefresher(
 ) {
     private val targets = ConcurrentHashMap<TaskSlot, DropTarget>()
     private val registry = ConcurrentHashMap<Int, TaskSlot>()
+    private val skippedPlans = CopyOnWriteArrayList<SkippedDepotPlans>()
+
+    /** 有任务真正入队才复查，只做过分析没开跑的计划不该被工具箱的仓库识别触发 */
+    @Volatile
+    private var runBound = false
 
     /**
      * 已被证明「窗口内临期药已用完」的天数上限，本次会话内只增不减
@@ -37,9 +46,14 @@ class FightDropsRefresher(
         targets[slot] = target
     }
 
+    fun stageSkipped(plans: SkippedDepotPlans) {
+        if (plans.plans.isNotEmpty()) skippedPlans += plans
+    }
+
     /** 未 stage 的 slot（普通 FIGHT）直接 no-op。 */
     fun bind(slot: TaskSlot, taskId: Int) {
         if (taskId <= 0) return
+        runBound = true
         if (!targets.containsKey(slot)) return
         registry[taskId] = slot
     }
@@ -47,7 +61,27 @@ class FightDropsRefresher(
     fun clear() {
         targets.clear()
         registry.clear()
+        skippedPlans.clear()
+        runBound = false
         provenExhaustedMedicineDays = 0
+    }
+
+    /** 仓库识别完成后调用，每份只复查一次，对齐上游 ReviewSkippedPlansAfterDepotSync */
+    fun reviewSkippedPlans(): List<StaleSkippedPlan> {
+        if (!runBound || skippedPlans.isEmpty()) return emptyList()
+        val groups = skippedPlans.toList()
+        skippedPlans.removeAll(groups.toSet())
+        return groups.flatMap { group ->
+            group.stale(depotRepository::countOf).map { (plan, current) ->
+                StaleSkippedPlan(
+                    taskName = group.taskName,
+                    no = plan.no,
+                    dropName = itemHelper.getItemInfo(plan.dropId)?.name ?: plan.dropId,
+                    current = current,
+                    target = plan.dropCount,
+                )
+            }
+        }
     }
 
     /** 目标库存任务正常结束却没达标 → 记下它的临期药窗口已耗尽 */

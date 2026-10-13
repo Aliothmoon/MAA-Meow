@@ -120,6 +120,7 @@ import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.asString
+import com.aliothmoon.maameow.utils.i18n.formatToolboxSyncTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -544,6 +545,41 @@ fun AutoBattlePanel(
                                 },
                                 label = stringResource(R.string.panel_autobattle_add_trust)
                             )
+
+                            val assist = state.operBoxAssist
+                            CheckBoxWithExpandableTip(
+                                checked = assist.active,
+                                onCheckedChange = viewModel::onToggleOperBoxAssist,
+                                label = stringResource(R.string.panel_autobattle_operbox_assist),
+                                tipText = stringResource(R.string.panel_autobattle_operbox_assist_tip),
+                                enabled = assist.available,
+                            )
+                            // 数据不可用时也露出同步入口，免得勾不上又找不到去哪拉数据
+                            if (assist.yituliuEnabled && (assist.enabled || !assist.dataUsable)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = if (assist.syncTimeMillis > 0L) {
+                                            stringResource(
+                                                R.string.panel_toolbox_last_sync,
+                                                formatToolboxSyncTime(assist.syncTimeMillis),
+                                            )
+                                        } else {
+                                            stringResource(R.string.panel_toolbox_never_synced)
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    OutlinedButton(
+                                        onClick = viewModel::onSyncOperBox,
+                                        enabled = !state.syncingOperBox,
+                                        shape = compactButtonShape,
+                                        contentPadding = compactButtonPadding,
+                                    ) { Text(stringResource(R.string.panel_autobattle_operbox_sync)) }
+                                }
+                            }
                         }
                     }
                 }

@@ -77,4 +77,5 @@ fun stagedActivityManager(
     every { getMergedStageList(any()) } returns mergedStages.map {
         StageItem(code = it, displayName = it)
     }
+    every { getStageDisplayName(any()) } answers { firstArg() }
 }

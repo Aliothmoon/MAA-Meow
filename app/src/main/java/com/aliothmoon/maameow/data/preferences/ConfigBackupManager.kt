@@ -95,6 +95,7 @@ class ConfigBackupManager(
             wakeCredential = "",
             yituliuOpenApiToken = "",
             operBoxUseYituliuApi = "false",
+            operBoxAssistEnabled = "false",
             customBackgroundEnabled = "false",
             customBackgroundToken = "",
         ).withoutCustomTrackerIcon()

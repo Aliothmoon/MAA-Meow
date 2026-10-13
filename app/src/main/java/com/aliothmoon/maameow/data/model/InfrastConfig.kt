@@ -209,6 +209,10 @@ data class InfrastConfig(
     /** 深海猎人跨设施组合，不与红松骑士团同时参与排班 */
     val useAbyssalHunter: Boolean = false,
 
+    /** 周计划，迁移自 WPF InfrastTask.UseWeeklySchedule / WeeklySchedule */
+    override val useWeeklySchedule: Boolean = false,
+    override val weeklySchedule: Map<String, Boolean> = WeeklyScheduled.ALL_DAYS,
+
     /**
      * 自定义基建计划的时间段数据（不参与序列化）
      *
@@ -228,7 +232,7 @@ data class InfrastConfig(
      * 列表为空表示 UI 尚未成功解析配置文件，此时自动切换流程会跳过。
      */
     val customPlanNames: List<String> = emptyList()
-) : TaskParamProvider {
+) : TaskParamProvider, WeeklyScheduled {
 
     override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
         val threshold = dormThreshold / 100.0

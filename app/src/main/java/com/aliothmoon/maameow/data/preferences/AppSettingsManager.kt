@@ -36,6 +36,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -529,9 +531,13 @@ class AppSettingsManager internal constructor(
 
     /** 资源与干员名用的语言码，system 收敛成显式语言 */
     val displayLanguage: String
-        get() = ResourceDataManager.displayLanguageCode(
-            LocaleBootstrap.resolveSelectedLanguage(language.value)
-        )
+        get() = displayLanguageOf(language.value)
+
+    val displayLanguageFlow: Flow<String>
+        get() = language.map(::displayLanguageOf).distinctUntilChanged()
+
+    private fun displayLanguageOf(language: AppLanguage): String =
+        ResourceDataManager.displayLanguageCode(LocaleBootstrap.resolveSelectedLanguage(language))
 
     val language: StateFlow<AppLanguage> = setting {
         runCatching { AppLanguage.valueOf(it.language) }
@@ -794,6 +800,15 @@ class AppSettingsManager internal constructor(
     suspend fun setOperBoxUseYituliuApi(enabled: Boolean) {
         with(AppSettingsSchema) {
             context.dataStore.edit { it[operBoxUseYituliuApi] = enabled.toString() }
+        }
+    }
+
+    val operBoxAssistEnabled: StateFlow<Boolean> =
+        setting { it.operBoxAssistEnabled.toBooleanStrictOrNull() ?: false }
+
+    suspend fun setOperBoxAssistEnabled(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[operBoxAssistEnabled] = enabled.toString() }
         }
     }
 

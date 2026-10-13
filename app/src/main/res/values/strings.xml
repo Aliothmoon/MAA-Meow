@@ -20,6 +20,7 @@
     <string name="maa_combat_error">战斗出错</string>
     <string name="maa_start_task">开始任务: </string>
     <string name="maa_complete_task">完成任务: </string>
+    <string name="maa_task_time">\n(用时 %1$s)</string>
     <string name="maa_task_stopped">任务已停止</string>
     <string name="maa_all_tasks_complete">任务已全部完成！</string>
     <string name="maa_task_completed_with_errors">任务已结束，以下任务出现错误:\n%1$s</string>
@@ -61,6 +62,8 @@
     <string name="maa_penguin_upload_unknown_drops">未识别掉落物</string>
     <string name="maa_missing_operators">以下干员组中没有符合本次作业要求的干员（未拥有或属性未达标）：</string>
     <string name="maa_copilot_user_additional_name_invalid">追加自定干员名称无效: %1$s，请检查拼写</string>
+    <string name="maa_copilot_operbox_data_parse_failed">干员识别数据解析失败</string>
+    <string name="maa_depot_template_load_error">仓库识别模板加载失败（%1$s），已停止识别；资源文件可能已损坏，可在「设置 → 更新管理 → 重新初始化资源」修复后重试</string>
 
     <!-- subtask_start -->
     <string name="maa_mission_start">已开始行动</string>
@@ -166,6 +169,8 @@
     <string name="maa_battle_formation_parse_failed">编队解析失败</string>
     <string name="maa_battle_formation_selected">选择干员: </string>
     <string name="maa_battle_formation_oper_unavailable">干员不可用: %1$s, 原因: %2$s</string>
+    <string name="maa_battle_formation_operbox_matched">预匹配的干员（组）：</string>
+    <string name="maa_battle_formation_operbox1_unmatched">干员（组）%1$s 没有匹配的干员，需要借助战（预匹配建议 %2$s，实际按助战列表选择）</string>
     <string name="maa_current_steps">当前步骤: %1$s %2$s</string>
     <string name="maa_elapsed_time">当前计时器: %1$sms</string>
     <string name="maa_current_stage">当前关卡: %1$s</string>
@@ -388,11 +393,13 @@
     <string name="settings_yituliu_open_api_token">OpenAPI Token</string>
     <string name="settings_yituliu_open_api_token_hint">一图流个人中心生成，建议只给读取权限</string>
     <string name="settings_yituliu_token_verify">验证</string>
+    <string name="settings_yituliu_get_token">获取 Token</string>
     <string name="settings_yituliu_token_empty">请先填写 Token</string>
     <string name="settings_yituliu_token_valid">Token 有效，共 %1$d 名干员</string>
     <string name="settings_yituliu_token_valid_no_data">Token 有效，但账号暂无干员练度数据</string>
     <string name="settings_oper_box_yituliu_title">干员识别从一图流获取</string>
     <string name="settings_oper_box_yituliu_desc">开启后不再进游戏截图识别，改为拉取一图流数据；数据来自森空岛导入，仅国服有</string>
+    <string name="settings_oper_box_assist_desc">自动战斗编队前按一图流练度预匹配作业编队，与自动战斗页同名选项是同一个开关；需开启上一项并同步过一图流数据</string>
     <string name="oper_box_yituliu_fetching">正在从一图流获取干员数据…</string>
     <string name="oper_box_yituliu_done">已从一图流获取 %1$d 名干员</string>
     <string name="oper_box_yituliu_done_skipped">已从一图流获取 %1$d 名干员，%2$d 名在本地资源中不存在，已跳过</string>
@@ -636,6 +643,8 @@
     <string name="copilot_file_read_error">读取文件失败！</string>
     <string name="copilot_file_read_error_with_detail">读取文件失败：%1$s</string>
     <string name="copilot_status_started">自动战斗已启动</string>
+    <string name="copilot_start_failed">自动战斗启动失败</string>
+    <string name="copilot_operbox_assist_write_failed">干员练度数据写入失败，无法辅助编队</string>
     <string name="copilot_empty_load_first">作业为空，请先读取作业</string>
     <string name="copilot_type_mismatch">当前选择的作业与页签不匹配</string>
     <string name="copilot_empty_list">正在使用 ｢多作业模式｣, 但未添加任何作业</string>
@@ -842,13 +851,23 @@
     <string name="panel_operbox_tab_owned">已拥有 (%1$d)</string>
     <string name="panel_operbox_tab_not_owned">未拥有 (%1$d)</string>
     <string name="panel_operbox_copy_toast">已复制干员数据</string>
+    <string name="panel_operbox_card_detail">查看详情</string>
+    <string name="panel_operbox_elite_icon">精英化 %1$d</string>
+    <string name="panel_operbox_potential_icon">潜能 %1$d</string>
+    <string name="oper_role_caster">术师</string>
+    <string name="oper_role_medic">医疗</string>
+    <string name="oper_role_pioneer">先锋</string>
+    <string name="oper_role_sniper">狙击</string>
+    <string name="oper_role_special">特种</string>
+    <string name="oper_role_support">辅助</string>
+    <string name="oper_role_tank">重装</string>
+    <string name="oper_role_warrior">近卫</string>
     <string name="operbox_export_header_main_skill_level">技能等级</string>
     <string name="operbox_export_header_skills">技能专精</string>
     <string name="operbox_export_header_equips">模组</string>
     <string name="panel_operbox_title">干员识别</string>
     <string name="panel_operbox_hint_scan">点击下方「开始任务」扫描已拥有的干员信息。</string>
     <string name="panel_operbox_hint_results">识别完成后可查看已拥有 / 未拥有干员，支持导出。</string>
-    <string name="panel_operbox_owned_meta">E%1$d Lv%2$d 潜%3$d</string>
 
     <!-- 识别结果导出（通用） -->
     <string name="panel_export_copy">复制</string>
@@ -903,6 +922,9 @@
     <string name="panel_autobattle_support_fill_gaps">补漏</string>
     <string name="panel_autobattle_support_random">随机</string>
     <string name="panel_autobattle_add_trust">补充低信赖干员</string>
+    <string name="panel_autobattle_operbox_assist">使用一图流数据辅助编队</string>
+    <string name="panel_autobattle_operbox_assist_tip">自动编队前，按一图流干员练度（含技能与模组）预匹配作业编队，配不齐时不开打\n需先在「设置 → 三方服务」填写一图流 Token、开启「干员识别从一图流获取」，并同步一次数据</string>
+    <string name="panel_autobattle_operbox_sync">同步</string>
     <string name="panel_autobattle_battle_list">多作业模式</string>
     <string name="panel_autobattle_battle_list_tip">仅支持以下模式:\n  1. 主线: 同一章节内导航\n  2. SideStory: 当前页面内导航（普通/EX/S 不能互跳）\n  3. 故事集: 当前页面内导航\n  4. 悖论模拟: 从干员列表启动\n请在对应界面启动，不支持跨章节导航\n\n当 ｢多作业模式｣ 启用后, 选择单个作业时会自动添加到 ｢作业列表｣</string>
     <string name="panel_autobattle_copilot_list">作业列表</string>
@@ -989,21 +1011,36 @@
     <string name="panel_fight_add_alternate_stage">添加备选关卡</string>
     <string name="panel_fight_remove_stage">删除该备选关卡</string>
     <string name="panel_fight_stage_group_permanent">常驻关卡</string>
+    <string name="panel_fight_stage_name_ce_6">龙门币-6/5</string>
+    <string name="panel_fight_stage_name_ap_5">红票-5</string>
+    <string name="panel_fight_stage_name_ca_5">技能-5</string>
+    <string name="panel_fight_stage_name_ls_6">经验-6/5</string>
+    <string name="panel_fight_stage_name_sk_5">碳-5</string>
+    <string name="panel_fight_stage_name_pr_a_1">奶/盾芯片</string>
+    <string name="panel_fight_stage_name_pr_a_2">奶/盾芯片组</string>
+    <string name="panel_fight_stage_name_pr_b_1">术/狙芯片</string>
+    <string name="panel_fight_stage_name_pr_b_2">术/狙芯片组</string>
+    <string name="panel_fight_stage_name_pr_c_1">先/辅芯片</string>
+    <string name="panel_fight_stage_name_pr_c_2">先/辅芯片组</string>
+    <string name="panel_fight_stage_name_pr_d_1">近/特芯片</string>
+    <string name="panel_fight_stage_name_pr_d_2">近/特芯片组</string>
+    <string name="panel_fight_stage_tip_ce">CE-6: 龙门币</string>
+    <string name="panel_fight_stage_tip_ap">AP-5: 红票</string>
+    <string name="panel_fight_stage_tip_ca">CA-5: 技能</string>
+    <string name="panel_fight_stage_tip_ls">LS-6: 经验</string>
+    <string name="panel_fight_stage_tip_sk">SK-5: 碳</string>
+    <string name="panel_fight_stage_tip_pr_a">PR-A-1/2: 奶&amp;盾芯片</string>
+    <string name="panel_fight_stage_tip_pr_b">PR-B-1/2: 术&amp;狙芯片</string>
+    <string name="panel_fight_stage_tip_pr_c">PR-C-1/2: 先&amp;辅芯片</string>
+    <string name="panel_fight_stage_tip_pr_d">PR-D-1/2: 近&amp;特芯片</string>
     <string name="panel_fight_use_custom_annihilation">使用自定义剿灭</string>
     <string name="panel_fight_annihilation_title">剿灭关卡</string>
     <string name="panel_fight_annihilation_current">当期剿灭</string>
     <string name="panel_fight_annihilation_chernobog">切尔诺伯格</string>
     <string name="panel_fight_annihilation_outskirts">龙门外环</string>
     <string name="panel_fight_annihilation_downtown">龙门市区</string>
-    <string name="panel_fight_weekday_monday">周一</string>
-    <string name="panel_fight_weekday_tuesday">周二</string>
-    <string name="panel_fight_weekday_wednesday">周三</string>
-    <string name="panel_fight_weekday_thursday">周四</string>
-    <string name="panel_fight_weekday_friday">周五</string>
-    <string name="panel_fight_weekday_saturday">周六</string>
-    <string name="panel_fight_weekday_sunday">周日</string>
-    <string name="panel_fight_weekly_schedule">启用周计划</string>
-    <string name="panel_fight_weekly_schedule_tip">启用后仅在勾选的日期执行该任务（使用游戏服务器时间，04:00 换日）</string>
+    <string name="panel_weekly_schedule">启用周计划</string>
+    <string name="panel_weekly_schedule_tip">启用后仅在勾选的日期执行该任务（使用游戏服务器时间，04:00 换日）</string>
 
     <!-- panel: stone -->
     <string name="panel_stone_allow_save">允许保存源石使用</string>
@@ -1348,7 +1385,7 @@
 
     <!-- panel: depot maintain -->
     <string name="panel_depot_update_before_start">任务开始前更新库存数据</string>
-    <string name="panel_depot_update_before_start_tip">任务开始时先执行一次仓库识别刷新库存数据；每条计划开始时都会按最新库存重算缺口，本次识别结果立即生效</string>
+    <string name="panel_depot_update_before_start_tip">任务开始时先执行一次仓库识别刷新库存数据，已加入队列的计划开始时按最新库存重算缺口。开跑前就判定已充足的计划不会加入队列，识别后若实际不足只在日志提示，重新运行即可刷取</string>
     <string name="panel_depot_use_auto_series">AUTO 代理倍率</string>
     <string name="panel_depot_use_auto_series_tip">未勾选时以 1 倍代理；勾选后按当前理智允许的最大倍率代理，单次掉落可能超过目标库存上限。</string>
     <string name="panel_depot_skip_during_activity">活动期间跳过</string>
@@ -1363,6 +1400,8 @@
     <string name="panel_depot_preset_skill_summary">技巧概要·卷3</string>
     <string name="panel_depot_preset_plan_count">%1$d 条计划</string>
     <string name="panel_depot_preset_apply">添加</string>
+    <string name="panel_depot_preset_group_activity">当前活动</string>
+    <string name="panel_depot_preset_activity_skip_conflict">已开启「%1$s」，导入的计划在活动期间不会执行</string>
     <string name="panel_depot_clear_plans">清空</string>
     <string name="panel_depot_clear_plans_confirm">确认要清空全部 %1$d 条计划吗？此操作不可撤销</string>
     <string name="panel_depot_group_task_behavior">任务行为</string>
@@ -1799,7 +1838,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="virtual_display_idle">待机</string>
 
     <!-- i18n: task start -->
-    <string name="task_start_warning_game_not_running">检测到游戏未运行，且未启用「开始唤醒」任务，继续执行可能直接失败。请启用「开始唤醒」任务后再启动，是否仍然启动？</string>
+    <string name="task_start_warning_game_not_running">检测到游戏未运行，且本次任务不会自动启动游戏。请启用「开始唤醒」任务并勾选其中的「启动游戏」后再启动，否则任务可能失败。是否仍然启动？</string>
     <string name="task_start_warning_wake_up_skipped">检测到游戏未运行，且本次从中途开始、跳过了「开始唤醒」任务，继续执行可能直接失败。是否仍然启动？</string>
     <string name="task_start_warning_game_not_installed">未检测到当前客户端类型对应的游戏安装包，请检查「开始唤醒」中的客户端类型设置是否正确。是否仍要启动？</string>
     <string name="task_start_warning_eye_protection_enabled">检测到设备已开启护眼/夜光模式，可能会影响图像色彩识别准确度。是否仍然启动？</string>
@@ -2502,8 +2541,10 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="runlog_fight_stage_unavailable">%1$s：无今日开放的关卡（首选 %2$s），已跳过理智作战</string>
     <string name="runlog_depot_set_params_failed">%1$s：更新任务参数失败，将按原参数执行</string>
     <string name="runlog_depot_plan_sanity_insufficient">%1$s：理智不足（预估 %2$d，低于关卡消耗 %3$d），已跳过</string>
+    <string name="runlog_depot_plan_stale_skipped">%1$s #%2$d：%3$s 实际 %4$d/%5$d 不足，预检时已跳过的计划无法在运行中补上，重新运行即可刷取</string>
     <string name="runlog_depot_skipped_activity">当前有活动进行中，已跳过库存保持</string>
     <string name="runlog_depot_skipped_resource">当前处于资源收集限时全天开放期间，已跳过库存保持</string>
+    <string name="runlog_depot_sorted_by_progress">已按库存达成率从低到高排序执行</string>
     <string name="runlog_copilot_start">开始执行自动战斗</string>
     <string name="runlog_copilot_started">自动战斗开始运行</string>
     <string name="runlog_service_connecting">服务正在启动中，请稍后再试</string>
@@ -2744,7 +2785,11 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="blackflow_termination_unknown">如需反馈请前往「设置 → 关于 → 问题反馈」</string>
     <string name="panel_depot_only_first_insufficient_plan">仅执行第一个库存不足的计划</string>
     <string name="panel_depot_only_first_insufficient_plan_tip">按启动时已有库存，选择第一个库存不足且关卡开放的计划。本次只执行此计划，后续计划留到下次运行。</string>
+    <string name="panel_depot_sort_by_progress">按库存达成率排序执行</string>
+    <string name="panel_depot_sort_by_progress_tip">按启动时已有库存计算达成率（当前/目标），从低到高执行，缺口比例最大的计划优先获得理智；列表显示顺序不变。与「仅执行第一个库存不足的计划」同时开启时，只执行达成率最低且关卡开放的计划。</string>
     <string name="runlog_append_task_failed">任务加入队列失败：%1$s</string>
+    <string name="runlog_weekly_schedule_skipped">%1$s：周计划今日未勾选，已跳过</string>
+    <string name="runlog_no_task_appended">没有任务成功加入队列，已取消启动</string>
     <string name="runlog_task_with_detail">%1$s（%2$s）</string>
     <string name="task_type_switch_theme">更换主题</string>
     <string name="panel_task_type_switch_theme">更换主题</string>
@@ -2797,4 +2842,55 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="live_update_icon_pick_failed">图片不可用，图标未更改</string>
     <string name="live_update_hint_island">提示：本机以小米超级岛实况展示，上述内容与图标会应用到超级岛与状态栏；岛内文本过长时系统会按空间截断。\"最新日志\"将显示当前执行的最新日志行。</string>
     <string name="live_update_hint_plain">提示：标准通知栏不显示状态栏短文本，这里只列出会生效的项。</string>
+    <string name="task_type_oper_progress">干员培养</string>
+    <string name="panel_task_type_oper_progress">干员培养</string>
+    <string name="maa_oper_progress">干员培养</string>
+    <string name="oper_progress_tip">按计划顺序进行精英化、技能升级和专精，缺料时会尝试合成材料、制造双芯片并用红票补购芯片助剂。专精每次只启动下一级训练，下次运行再确认进度。可拖动卡片左侧手柄排序。</string>
+    <string name="oper_progress_online_editor">在明日方舟工具箱中编辑培养计划</string>
+    <string name="oper_progress_running">任务已加入队列，执行结束后可编辑计划</string>
+    <string name="oper_progress_collapse">全部折叠</string>
+    <string name="oper_progress_clear">清空计划</string>
+    <string name="oper_progress_clear_confirm">将删除本任务中的全部培养计划</string>
+    <string name="oper_progress_import">导入计划</string>
+    <string name="oper_progress_plans">培养计划 (%1$d)</string>
+    <string name="oper_progress_order">第 %1$d 项计划</string>
+    <string name="oper_progress_mastery_summary">专精 %1$s</string>
+    <string name="oper_progress_empty_title">添加第一位干员</string>
+    <string name="oper_progress_remove_plan">移除计划</string>
+    <string name="oper_progress_add">添加干员</string>
+    <string name="oper_progress_search">搜索干员名称</string>
+    <string name="oper_progress_no_operators">未找到可培养的干员，请检查名称或更新资源</string>
+    <string name="oper_progress_added">已添加</string>
+    <string name="oper_progress_reorder">拖动排序</string>
+    <string name="oper_progress_remove">移除 %1$s 的培养计划</string>
+    <string name="oper_progress_expand">展开或折叠培养计划</string>
+    <string name="oper_progress_no_targets">请选择至少一个培养目标</string>
+    <string name="oper_progress_not_set">不设置</string>
+    <string name="oper_progress_elite">精英化</string>
+    <string name="oper_progress_skill">基础技能等级</string>
+    <string name="oper_progress_mastery">技能 %1$d 专精</string>
+    <string name="oper_progress_elite_target">精英化 %1$d</string>
+    <string name="oper_progress_skill_target">技能等级 %1$d</string>
+    <string name="oper_progress_mastery_target">技能 %1$d 专精 %2$d</string>
+    <string name="oper_progress_training">上次已启动技能 %1$d 的专精 %2$d 训练，下次运行确认进度</string>
+    <string name="oper_progress_empty">培养计划为空，添加干员或导入计划后再运行</string>
+    <string name="oper_progress_duplicate">同一干员不能重复添加，请检查现有培养计划</string>
+    <string name="oper_progress_invalid_plan">%1$s 的培养目标无效，请检查精英化、技能等级和专精设置</string>
+    <string name="oper_progress_import_invalid">培养计划格式有误，请复制明日方舟工具箱（arkntools）导出的计划数组</string>
+    <string name="oper_progress_import_empty">剪贴板为空，请先复制培养计划</string>
+    <string name="oper_progress_import_unknown">无法确定或暂不支持干员 %1$s，请检查名称和职业</string>
+    <string name="oper_progress_result_training">已启动专精训练</string>
+    <string name="oper_progress_result_satisfied">已达到目标</string>
+    <string name="oper_progress_result_completed">培养完成</string>
+    <string name="oper_progress_result_resources">材料不足，无法补齐</string>
+    <string name="oper_progress_result_not_found">未找到干员</string>
+    <string name="oper_progress_result_prerequisite">精英化或技能等级未满足前置条件</string>
+    <string name="oper_progress_result_chip">所需芯片无法制造</string>
+    <string name="oper_progress_result_formula">材料配方未解锁</string>
+    <string name="oper_progress_result_busy">训练室已被占用，跳过专精</string>
+    <string name="oper_progress_result_interrupted">培养已中断</string>
+    <string name="oper_progress_result_skipped">本次跳过</string>
+    <string name="oper_progress_result_recognition">识别或操作失败</string>
+    <string name="oper_progress_log_detail">%1$s：%2$s%3$s</string>
+    <string name="oper_progress_log_summary">干员培养本轮处理结果：成功 %1$d，失败 %2$d，跳过 %3$d（专精启动也计入成功）</string>
 </resources>
