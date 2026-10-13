@@ -1311,7 +1311,7 @@ private fun BackgroundMoreActionsOverlay(
                 showHardwareScreenOffConfirm = false
                 coroutineScope.launch { appSettingsManager.setUseHardwareScreenOff(true) }
             },
-            confirmText = stringResource(R.string.common_confirm),
+            confirmText = stringResource(R.string.dialog_hardware_screen_off_confirm),
             dismissText = stringResource(R.string.common_cancel),
             icon = Icons.Filled.PowerSettingsNew,
             iconTint = MaterialTheme.colorScheme.primary,

@@ -110,6 +110,7 @@ fun ScheduleEditView(
     var showTimePicker by remember { mutableStateOf(false) }
     var editingTime by remember { mutableStateOf<LocalTime?>(null) }
     var showSilentStartRisk by remember { mutableStateOf(false) }
+    var showScreenPowerRisk by remember { mutableStateOf(false) }
     val runMode by viewModel.runMode.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -605,7 +606,10 @@ fun ScheduleEditView(
                         title = stringResource(R.string.schedule_hardware_screen_off),
                         tip = stringResource(R.string.schedule_hardware_screen_off_tip),
                         checked = state.hardwareScreenOff,
-                        onCheckedChange = { viewModel.onHardwareScreenOffChanged(it) },
+                        onCheckedChange = { checked ->
+                            if (checked) showScreenPowerRisk = true
+                            else viewModel.onHardwareScreenOffChanged(false)
+                        },
                     )
                 }
             }
@@ -774,6 +778,19 @@ fun ScheduleEditView(
         },
         onDismissRequest = { showSilentStartRisk = false },
         confirmText = stringResource(R.string.schedule_silent_start_risk_confirm),
+        icon = Icons.Rounded.Warning,
+    )
+
+    AdaptiveTaskPromptDialog(
+        visible = showScreenPowerRisk,
+        title = stringResource(R.string.dialog_hardware_screen_off_title),
+        message = stringResource(R.string.schedule_hardware_screen_off_confirm_body),
+        onConfirm = {
+            showScreenPowerRisk = false
+            viewModel.onHardwareScreenOffChanged(true)
+        },
+        onDismissRequest = { showScreenPowerRisk = false },
+        confirmText = stringResource(R.string.dialog_hardware_screen_off_confirm),
         icon = Icons.Rounded.Warning,
     )
 

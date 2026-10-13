@@ -711,15 +711,16 @@
     <string name="bg_auto_run_duration_limit_input_label">分钟</string>
     <string name="bg_auto_run_duration_limit_input_hint">范围 %1$d–%2$d 分钟</string>
     <string name="bg_toast_mute_failed">静音失败，建议直接用系统音量键调低媒体音量</string>
-    <string name="bg_auto_hardware_screen_off">熄屏挂机时关闭屏幕</string>
+    <string name="bg_auto_hardware_screen_off">熄屏挂机时关闭屏幕电源</string>
     <string name="bg_auto_show_touch_preview">显示触摸预览</string>
 
     <!-- dialog: hardware screen off -->
     <string name="dialog_mute_game_title">确认关闭游戏声音？</string>
     <string name="dialog_mute_game_message">该功能依赖系统接口，部分机型可能无效或无法自动恢复声音。\n更稳妥的做法是直接用音量键把媒体音量调到 0。</string>
     <string name="dialog_mute_game_confirm">仍要静音</string>
-    <string name="dialog_hardware_screen_off_title">确认开启硬件熄屏？</string>
-    <string name="dialog_hardware_screen_off_message">开启后，点击「熄屏挂机」将彻底关闭屏幕，进入极致省电状态。\n• 屏幕常亮：启用期间 MaaMeow 在前台时不会自动息屏，以防系统休眠中断任务。\n• 唤醒说明：需按两次电源键（先亮锁屏，再解锁定）。\n• 屏保模式：不开启则显示屏保时钟，可随时查看任务进度与电量。</string>
+    <string name="dialog_hardware_screen_off_title">开启「关闭屏幕电源」？</string>
+    <string name="dialog_hardware_screen_off_message">开启后，点击「熄屏挂机」将关闭屏幕电源，不再显示屏保。手机与任务照常运行，耗电更低\n\n开启前请了解：\n• 启用期间 MaaMeow 在前台时保持系统唤醒，避免自动锁屏中断任务\n• 屏幕关闭后需按两次电源键唤醒：先亮起锁屏，再解锁\n• 关闭此项则显示屏保时钟，可随时查看任务进度与电量\n• 部分设备因兼容性原因可能不生效，开启后请自行确认是否正常工作</string>
+    <string name="dialog_hardware_screen_off_confirm">我已了解，开启</string>
 
     <!-- update card -->
     <string name="update_card_title">更新管理</string>
@@ -1943,10 +1944,11 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_section_advanced">高级选项</string>
     <string name="schedule_force_start">强制启动</string>
     <string name="schedule_force_start_tip">强制启动任务，会中断正在运行的游戏和任务</string>
-    <string name="schedule_auto_screen_saver">运行期间启用熄屏挂机</string>
-    <string name="schedule_auto_screen_saver_tip">仅后台模式生效。倒计时开始前就盖上屏保并把亮度压到最低，任务结束后自动关闭；开启「使用硬件熄屏」则改为倒计时结束后关闭物理屏幕。触发时你正在用手机（已亮屏且已解锁）则不启用</string>
-    <string name="schedule_hardware_screen_off">使用硬件熄屏</string>
-    <string name="schedule_hardware_screen_off_tip">不显示屏保，倒计时结束后直接关闭物理屏幕，更省电且无需悬浮窗权限。任务结束后屏幕保持关闭，开了「任务结束后自动熄屏」则锁屏休眠。唤醒需按两次电源键（先亮锁屏，再解锁）</string>
+    <string name="schedule_auto_screen_saver">运行期间熄屏挂机</string>
+    <string name="schedule_auto_screen_saver_tip">仅后台模式生效，触发时设备处于待机状态才启用。默认在倒计时开始前显示屏保并将亮度降至最低，任务结束后自动关闭；开启「关闭屏幕电源」后，改为在倒计时结束后关闭屏幕电源。触发时设备正在使用（已亮屏且已解锁）则不启用</string>
+    <string name="schedule_hardware_screen_off">关闭屏幕电源</string>
+    <string name="schedule_hardware_screen_off_tip">倒计时结束后关闭屏幕电源，不显示屏保，无需悬浮窗权限。任务结束后屏幕保持关闭，已开启「任务结束后自动熄屏」时锁屏并休眠</string>
+    <string name="schedule_hardware_screen_off_confirm_body">开启后，本策略触发时不显示屏保，倒计时结束后关闭屏幕电源，手机与任务照常运行\n\n开启前请了解：\n• 屏幕关闭期间无法查看任务进度，需按两次电源键唤醒：先亮起锁屏，再解锁\n• 任务结束后屏幕保持关闭；已开启「任务结束后自动熄屏」时锁屏并休眠\n• 倒计时期间屏幕保持点亮，可取消或立即开始\n• 部分设备因兼容性原因可能不生效，开启后请自行确认是否正常工作</string>
     <string name="schedule_silent_start">静默启动</string>
     <string name="schedule_silent_start_tip">仅后台模式生效。触发时你正在用手机（已亮屏且已解锁）则不弹出界面，改在通知栏倒计时；设备待机时仍照常拉起界面。MaaMeow 不在前台时无法保持亮屏，运行中自动锁屏会中断任务</string>
     <string name="schedule_silent_start_risk_title">开启静默启动？</string>
@@ -2094,9 +2096,9 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_log_auto_sleep_skipped_screensaver">熄屏挂机仍开启，跳过结束熄屏</string>
     <string name="schedule_log_screen_saver_on">已启用屏保</string>
     <string name="schedule_log_screen_saver_kept">沿用已开启的熄屏挂机</string>
-    <string name="schedule_log_screen_off_kept">沿用已关闭的屏幕</string>
-    <string name="schedule_log_hardware_screen_off_sent">已发送物理关屏指令</string>
-    <string name="schedule_log_hardware_screen_off_failed">物理关屏指令发送失败</string>
+    <string name="schedule_log_screen_off_kept">沿用已关闭的屏幕电源</string>
+    <string name="schedule_log_hardware_screen_off_sent">已发送关闭屏幕电源指令</string>
+    <string name="schedule_log_hardware_screen_off_failed">关闭屏幕电源指令发送失败</string>
     <string name="schedule_log_screen_saver_failed">屏保启用失败，可能缺少悬浮窗权限</string>
     <string name="schedule_log_wake_failed">唤醒解锁失败: %1$s</string>
     <string name="schedule_log_wake_pin_required">系统有锁屏密码但未配置 PIN，已跳过</string>

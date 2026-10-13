@@ -28,7 +28,7 @@ Every record carries:
 - App version, MaaCore version, resource version and build type
 - Client type, game version, run mode, background resolution and data location
 - Elevation backend, whether Shizuku runs as root or adb, and whether the app is exempt from battery optimization
-- Whether each of four behavior-changing switches is on: MAA task override, force fullscreen on the virtual display, deploy-with-pause, and hardware screen-off
+- Whether each of four behavior-changing switches is on: MAA task override, force fullscreen on the virtual display, deploy-with-pause, and turning off display power for Screen Off
 - Whether the display was already turned off by Screen Off when the run started, and whether that was done manually or by a schedule
 - Device model, OS version, vendor ROM name and version, SoC, total memory and ABI
 - The device and OS information the Sentry SDK adds on its own: battery level, free memory and storage, screen size, language and time zone, connection type, whether the device is rooted, and similar

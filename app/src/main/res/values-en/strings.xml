@@ -471,15 +471,16 @@
     <string name="bg_auto_run_duration_limit_input_label">Minutes</string>
     <string name="bg_auto_run_duration_limit_input_hint">Range: %1$d–%2$d min</string>
     <string name="bg_toast_mute_failed">Mute failed. Use the volume keys to lower media volume instead</string>
-    <string name="bg_auto_hardware_screen_off">Turn off screen when AFK</string>
+    <string name="bg_auto_hardware_screen_off">Turn off display power for Screen Off</string>
     <string name="bg_auto_show_touch_preview">Show touch preview</string>
 
     <!-- dialog: hardware screen off -->
     <string name="dialog_mute_game_title">Mute the game?</string>
     <string name="dialog_mute_game_message">This relies on system APIs and may not work or may fail to restore audio on some devices.\nA more reliable option is to set media volume to 0 with the volume keys.</string>
     <string name="dialog_mute_game_confirm">Mute anyway</string>
-    <string name="dialog_hardware_screen_off_title">Enable hardware screen-off?</string>
-    <string name="dialog_hardware_screen_off_message">When enabled, tapping "Screen Off" fully turns off the screen for maximum power saving.\n• Stays awake: while enabled, the screen won\'t turn off automatically when MaaMeow is in the foreground, preventing the system from sleeping and interrupting tasks.\n• Wake-up: press the power button twice (the lock screen lights up first, then unlock).\n• Screen-saver mode: if disabled, a screen-saver clock is shown so you can monitor task progress and battery at any time.</string>
+    <string name="dialog_hardware_screen_off_title">Turn off display power?</string>
+    <string name="dialog_hardware_screen_off_message">When enabled, tapping “Screen Off” turns off the display power instead of showing the screen saver. The phone and tasks keep running with lower power use\n\nBefore enabling, note:\n• While enabled, MaaMeow keeps the system awake when it is in the foreground, so auto-lock does not interrupt tasks\n• After the display is off, press the power button twice to wake it: the lock screen lights up first, then unlock\n• With this off, a screen saver clock is shown so you can check task progress and battery at any time\n• It may not work on some devices due to compatibility issues. After enabling, check that it works as expected</string>
+    <string name="dialog_hardware_screen_off_confirm">Got it, enable</string>
 
     <!-- update card -->
     <string name="update_card_title">Updates</string>
@@ -1887,10 +1888,11 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_section_advanced">Advanced options</string>
     <string name="schedule_force_start">Force scheduled start</string>
     <string name="schedule_force_start_tip">Stop the current task, restart the game, and start the new tasks</string>
-    <string name="schedule_auto_screen_saver">Enable Screen Off while running</string>
-    <string name="schedule_auto_screen_saver_tip">Background mode only. Enables a dark screen saver at minimum brightness before the countdown starts, and turns it off when the task ends; with “Use hardware screen-off” on, the physical display is turned off after the countdown instead. It is skipped if you are already using the device (screen on and unlocked) at trigger time</string>
-    <string name="schedule_hardware_screen_off">Use hardware screen-off</string>
-    <string name="schedule_hardware_screen_off_tip">No screen saver: the physical display is turned off after the countdown, saving more power and needing no overlay permission. The display stays off after the task ends; with “Auto sleep after task” on, the device locks and sleeps. To wake the device, press the power button twice (the lock screen lights up first, then unlock)</string>
+    <string name="schedule_auto_screen_saver">Screen Off while running</string>
+    <string name="schedule_auto_screen_saver_tip">Background mode only, and only when the device is idle at trigger time. By default a screen saver at minimum brightness is shown before the countdown starts and removed when the task ends; with “Turn off display power” on, the display power is turned off after the countdown instead. Skipped if the device is in use (screen on and unlocked) at trigger time</string>
+    <string name="schedule_hardware_screen_off">Turn off display power</string>
+    <string name="schedule_hardware_screen_off_tip">Turns off the display power after the countdown instead of showing the screen saver; no overlay permission needed. The display stays off after the task ends; with “Auto sleep after task” on, the device locks and sleeps</string>
+    <string name="schedule_hardware_screen_off_confirm_body">When enabled, this schedule shows no screen saver and turns off the display power after the countdown. The phone and tasks keep running\n\nBefore enabling, note:\n• Task progress cannot be viewed while the display is off. Press the power button twice to wake it: the lock screen lights up first, then unlock\n• The display stays off after the task ends; with “Auto sleep after task” on, the device locks and sleeps\n• The screen stays on during the countdown, so you can still cancel or start right away\n• It may not work on some devices due to compatibility issues. After enabling, check that it works as expected</string>
     <string name="schedule_silent_start">Silent start</string>
     <string name="schedule_silent_start_tip">Background mode only. If you are using the phone (screen on and unlocked) at trigger time, no window pops up and the countdown moves to the notification; when the device is idle the window still opens. MaaMeow cannot keep the screen on while it is not in the foreground, so an auto-lock mid-run will interrupt the task</string>
     <string name="schedule_silent_start_risk_title">Enable silent start?</string>
@@ -2038,8 +2040,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_log_auto_sleep_skipped_screensaver">Screen Off still active; skipped sleep after task</string>
     <string name="schedule_log_screen_saver_on">Screen saver enabled</string>
     <string name="schedule_log_screen_saver_kept">Keeping the screen saver already on</string>
-    <string name="schedule_log_screen_off_kept">Keeping the display already turned off</string>
-    <string name="schedule_log_hardware_screen_off_sent">Physical display power-off command sent</string>
+    <string name="schedule_log_screen_off_kept">Keeping the display power already off</string>
+    <string name="schedule_log_hardware_screen_off_sent">Display power-off command sent</string>
     <string name="schedule_log_hardware_screen_off_failed">Failed to send the display power-off command</string>
     <string name="schedule_log_screen_saver_failed">Screen saver failed to start, the overlay permission may be missing</string>
     <string name="schedule_log_wake_failed">Wake and unlock failed: %1$s</string>
