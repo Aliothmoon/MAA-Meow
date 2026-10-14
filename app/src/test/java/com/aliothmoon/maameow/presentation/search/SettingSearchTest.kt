@@ -117,6 +117,15 @@ class SettingSearchTest {
     }
 
     @Test
+    fun `continue after task removal is searchable only on Android 14 or newer`() {
+        val entry = SettingSearchIndex.entries.single {
+            it.titleRes == R.string.settings_continue_task_after_task_removed
+        }
+        assertFalse(entry.isAvailable(33))
+        assertTrue(entry.isAvailable(34))
+    }
+
+    @Test
     fun `settings page section order matches SettingsSections ORDER`() {
         val view = source("src/main/java/com/aliothmoon/maameow/presentation/view/settings/SettingsView.kt")
         val inPage = Regex("""sectionKey = SettingsSections\.(\w+),""").findAll(view)

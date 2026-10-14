@@ -77,14 +77,14 @@ object RemoteServiceManager {
         override fun binderDied() = onBinderDied(this)
     }
 
-    private val connectorCallbacks = object : RemoteServiceConnectorBackend.Callbacks {
+    private fun connectorCallbacks(attempt: Int) = object : RemoteServiceConnectorBackend.Callbacks {
         override fun onConnected(backend: RemoteBackend, binder: IBinder) {
             val service: RemoteService
             synchronized(lock) {
-                if (boundBackend != backend) {
+                if (connectAttempt.get() != attempt || boundBackend != backend) {
                     ServiceBootLogger.event(
                         "CB_ON_CONNECTED_STALE",
-                        "backend=$backend bound=$boundBackend"
+                        "backend=$backend bound=$boundBackend attempt=$attempt current=${connectAttempt.get()}"
                     )
                     Timber.w("Ignoring stale %s connection", backend)
                     return
@@ -120,7 +120,7 @@ object RemoteServiceManager {
 
         override fun onDisconnected(backend: RemoteBackend) {
             synchronized(lock) {
-                if (boundBackend != backend) {
+                if (connectAttempt.get() != attempt || boundBackend != backend) {
                     return
                 }
                 ServiceBootLogger.event("CB_ON_DISCONNECTED", "backend=$backend")
@@ -141,7 +141,7 @@ object RemoteServiceManager {
 
         override fun onError(backend: RemoteBackend, throwable: Throwable) {
             synchronized(lock) {
-                if (boundBackend != backend) {
+                if (connectAttempt.get() != attempt || boundBackend != backend) {
                     return
                 }
                 ServiceBootLogger.event(
@@ -206,7 +206,11 @@ object RemoteServiceManager {
             ServiceBootLogger.event("BIND_DENIED", "backend=$backend not granted")
             Timber.w(exception)
             synchronized(lock) {
-                boundBackend = null
+                // 权限可能在旧 launch 尚未回投 binder 时被撤销。必须同时失效 manager
+                // attempt 并断开 connector，否则迟到的特权进程会成为无人持有的孤儿。
+                connectAttempt.incrementAndGet()
+                unbindLocked()
+                boundIdentity = null
                 _state.value = ServiceState.Error(exception)
             }
             return
@@ -240,7 +244,7 @@ object RemoteServiceManager {
             ServiceBootLogger.event("BIND", "backend=$backend attempt=$attempt")
             _state.value = ServiceState.Connecting
             ServiceBootLogger.event("CONNECTING", "backend=$backend attempt=$attempt")
-            connectors.getValue(backend).connect(connectorCallbacks)
+            connectors.getValue(backend).connect(connectorCallbacks(attempt))
         }
         startConnectTimeout(attempt, backend)
     }

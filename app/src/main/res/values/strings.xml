@@ -371,6 +371,8 @@
     <string name="settings_shizuku_launch_app_empty">未找到匹配应用</string>
     <string name="settings_deploy_with_pause">划火柴模式</string>
     <string name="settings_deploy_with_pause_desc">自动战斗相关，不稳定，暂不推荐开启</string>
+    <string name="settings_continue_task_after_task_removed">杀后台后继续任务（实验性）</string>
+    <string name="settings_continue_task_after_task_removed_desc">如果你不知道这是什么请不要修改，部分系统可能不兼容</string>
     <string name="settings_force_fullscreen_on_virtual_display">后台模式强制全屏模式</string>
     <string name="settings_force_fullscreen_on_virtual_display_desc">仅后台虚拟屏生效。效果因机型而异，不一定生效，也可能带来额外问题</string>
     <string name="settings_pip_on_home">后台运行时自动画中画</string>

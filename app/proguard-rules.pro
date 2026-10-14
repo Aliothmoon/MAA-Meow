@@ -27,9 +27,13 @@
 -keepclassmembers class * implements com.sun.jna.Callback { <methods>; }
 -dontwarn java.awt.**
 
-# Shizuku / Root 按类名拉起
--keep class com.aliothmoon.maameow.remote.RemoteServiceImpl { <init>(); }
--keep class com.aliothmoon.maameow.remote.LogcatCaptureServiceImpl { <init>(); }
+# Shizuku / Root 反射创建的 Binder 入口：类名可混淆，但构造器必须保留。
+# 接口本身也必须 pin，否则 R8 会把无成员 marker 接口从实现的类层级里删掉，运行期
+# RootUserService 的 isAssignableFrom 校验将失败。
+-keep,allowobfuscation interface com.aliothmoon.maameow.root.RootUserService$RemoteProcessServiceEntry
+-keep,allowobfuscation class * implements com.aliothmoon.maameow.root.RootUserService$RemoteProcessServiceEntry {
+    <init>(...);
+}
 -keep class com.aliothmoon.maameow.root.RemoteServiceStarter {
     public static void main(java.lang.String[]);
 }

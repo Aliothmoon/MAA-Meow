@@ -3,6 +3,8 @@ package com.aliothmoon.maameow.remote
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Build
+import android.os.Binder
+import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import android.os.Process
 import android.system.Os
@@ -23,16 +25,17 @@ import com.aliothmoon.maameow.remote.internal.GestureRecorder
 import com.aliothmoon.maameow.remote.internal.LogcatRetention
 import com.aliothmoon.maameow.remote.internal.PermissionGrantHelper
 import com.aliothmoon.maameow.remote.internal.PowerController
-import com.aliothmoon.maameow.remote.internal.PrimaryDisplayManager
+import com.aliothmoon.maameow.remote.internal.display.PrimaryDisplayManager
 import com.aliothmoon.maameow.remote.internal.ProcessLiveness
 import com.aliothmoon.maameow.remote.internal.RemoteUtils
 import com.aliothmoon.maameow.remote.internal.ScreenManager
 import com.aliothmoon.maameow.remote.internal.StaleFrameGuard
 import com.aliothmoon.maameow.remote.internal.SystemLogDump
 import com.aliothmoon.maameow.remote.internal.UserDirProbe
-import com.aliothmoon.maameow.remote.internal.VirtualDisplayManager
+import com.aliothmoon.maameow.remote.internal.display.VirtualDisplayManager
 import com.aliothmoon.maameow.remote.internal.WakeUnlockController
 import com.aliothmoon.maameow.remote.internal.XmsfFirewall
+import com.aliothmoon.maameow.root.RootUserService.RemoteProcessServiceEntry
 import com.aliothmoon.maameow.third.Command
 import com.aliothmoon.maameow.third.FakeContext
 import com.aliothmoon.maameow.third.Ln
@@ -47,13 +50,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.exitProcess
 
-class RemoteServiceImpl : RemoteService.Stub() {
+class RemoteServiceImpl : RemoteService.Stub(), RemoteProcessServiceEntry {
 
     companion object {
         private const val TAG = "RemoteService"
         private const val HEARTBEAT_INTERVAL_MS = 5_000L
         private const val JPEG_MAX_EDGE = 1280
         private const val PREVIEW_SHUTDOWN_TIMEOUT_MS = 1_000L
+        private const val DESTROY_HARD_EXIT_TIMEOUT_MS = 12_000L
 
         @JvmStatic
         fun performEmergencyCleanup() {
@@ -61,6 +65,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
             runCatching {
                 GameAudioMuteController.restoreAll()
                 XmsfFirewall.restoreIfNeeded()
+                VirtualDisplayManager.stop()
                 PowerController.destroy()
                 ScreenManager.destroy()
                 MaaCoreManager.destroy()
@@ -80,6 +85,16 @@ class RemoteServiceImpl : RemoteService.Stub() {
     private val virtualDisplayMode = AtomicInteger(DisplayMode.PRIMARY)
     private val appPid = AtomicInteger(0)
     private val destroyed = AtomicBoolean(false)
+    /** 只串行 attach；同步 Binder 调用期间不阻塞死亡回调更新已发布连接。 */
+    private val vdmShellAttachLock = Any()
+    private val vdmShellLock = Any()
+    private var vdmShellConnection: VdmShellConnection? = null
+    private var pendingVdmShellBinder: IBinder? = null
+    private var pendingVdmShellDied = false
+    private data class VdmShellConnection(
+        val binder: IBinder,
+        val deathRecipient: IBinder.DeathRecipient,
+    )
     /** 同一进程内 setup 幂等：成功后再调直接返回 OK，失败则下次重试 */
     private var setup = false
     private val coreData = CoreDataStore()
@@ -99,12 +114,42 @@ class RemoteServiceImpl : RemoteService.Stub() {
             return
         }
         Ln.i("$TAG: destroy()")
-        InputControlUtils.setTouchCallback(null)
-        GameFpsMonitor.stop()
-        StaleFrameGuard.stop()
-        shutdownPreview()
-        performEmergencyCleanup()
-        exitProcess(0)
+        Thread {
+            try {
+                Thread.sleep(DESTROY_HARD_EXIT_TIMEOUT_MS)
+                Ln.e("$TAG: destroy cleanup timed out, forcing process exit")
+                // System.exit/exitProcess 会等待可能同样卡死的 shutdown hook；这里必须走 SIGKILL。
+                Process.killProcess(Process.myPid())
+            } catch (_: InterruptedException) {
+                // 正常清理完成。
+            }
+        }.apply {
+            name = "remote-destroy-watchdog"
+            isDaemon = true
+            start()
+        }
+        try {
+            // 从这里开始，辅助进程退出属于正常清理流程，不能再按崩溃处理。
+            val shellConnection = synchronized(vdmShellLock) {
+                val current = vdmShellConnection
+                vdmShellConnection = null
+                current
+            }
+            shellConnection?.let { connection ->
+                runCatching { connection.binder.unlinkToDeath(connection.deathRecipient, 0) }
+            }
+            InputControlUtils.setTouchCallback(null)
+            GameFpsMonitor.stop()
+            StaleFrameGuard.stop()
+            shutdownPreview()
+            performEmergencyCleanup()
+        } catch (e: Exception) {
+            Ln.e("$TAG: destroy cleanup failed: ${e.message}")
+        } finally {
+            // destroyed=true 后看门狗不会再兜底；无论清理哪一步失败都必须结束提权进程。
+            // 保留 hardExitWatchdog：exitProcess 会等 shutdown hook，hook 再次清理卡住时仍需 SIGKILL。
+            exitProcess(0)
+        }
     }
 
     /**
@@ -145,11 +190,16 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun setup(userDir: String?, isDebug: Boolean): Int {
         if (setup) return SetupResult.OK
+        VirtualDisplayManager.configureAppUid(Binder.getCallingUid())
         RemoteBootTrace.mark("SETUP_BEGIN")
         // 清上一实例可能残留的断网规则，同步执行先于业务 AIDL
         runCatching { XmsfFirewall.ensureRestored() }
             .onFailure { Ln.w("XmsFw boot restore failed: ${it.message}") }
         RemoteBootTrace.mark("SETUP_XMSF_RESTORED")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            runCatching { VirtualDisplayManager.cleanupStaleState() }
+                .onFailure { Ln.e("VDM boot cleanup failed; stale association may remain", it) }
+        }
         // 不可访问的路径进 AsstSetUserDir 会 abort 整个进程（#227），这里只报告，换到哪由用户在设置里决定
         val dir = File(userDir.orEmpty())
         val probeFailure = UserDirProbe.probe(dir)
@@ -493,6 +543,74 @@ class RemoteServiceImpl : RemoteService.Stub() {
         // 空前缀行行命中，会把整份系统日志带出设备
         if (processPrefix.isNullOrEmpty()) return "# missing process prefix"
         return SystemLogDump.dump(sinceMs, untilMs, pid, processPrefix)
+    }
+
+    override fun attachVdmShellService(service: IBinder) {
+        val callerUid = Binder.getCallingUid()
+        synchronized(vdmShellAttachLock) {
+            if (synchronized(vdmShellLock) { vdmShellConnection?.binder === service }) return
+
+            // attachOwner 可能抛异常；先完成它，再注册 death recipient，避免失败的
+            // sidecar 日后死亡时误杀主服务。link 成功后才向 VDM 发布新连接。
+            val shellService = VirtualDisplayManager.prepareVdmShellService(
+                serviceBinder = service,
+                ownerBinder = asBinder(),
+            )
+            val deathRecipient = IBinder.DeathRecipient { onVdmShellDied(service) }
+            var linked = false
+            synchronized(vdmShellLock) {
+                pendingVdmShellBinder = service
+                pendingVdmShellDied = false
+            }
+            try {
+                service.linkToDeath(deathRecipient, 0)
+                linked = true
+                val old = synchronized(vdmShellLock) {
+                    check(pendingVdmShellBinder === service && !pendingVdmShellDied) {
+                        "VDM shell sidecar died while being attached"
+                    }
+                    VirtualDisplayManager.commitVdmShellService(service, shellService, callerUid)
+                    val previous = vdmShellConnection
+                    vdmShellConnection = VdmShellConnection(service, deathRecipient)
+                    pendingVdmShellBinder = null
+                    previous
+                }
+                old?.let { connection ->
+                    runCatching { connection.binder.unlinkToDeath(connection.deathRecipient, 0) }
+                }
+            } catch (failure: Throwable) {
+                synchronized(vdmShellLock) {
+                    if (pendingVdmShellBinder === service) {
+                        pendingVdmShellBinder = null
+                        pendingVdmShellDied = false
+                    }
+                }
+                if (linked) runCatching { service.unlinkToDeath(deathRecipient, 0) }
+                throw failure
+            }
+        }
+    }
+
+    private fun onVdmShellDied(deadBinder: IBinder) {
+        Thread {
+            val isCurrent = synchronized(vdmShellLock) {
+                val current = vdmShellConnection
+                if (current?.binder !== deadBinder) {
+                    if (pendingVdmShellBinder === deadBinder) {
+                        pendingVdmShellDied = true
+                    }
+                    false
+                } else {
+                    vdmShellConnection = null
+                    true
+                }
+            }
+            if (!isCurrent) return@Thread
+
+            Ln.e("$TAG: VDM shell sidecar died; falling back to legacy virtual display")
+            runCatching { VirtualDisplayManager.onVdmShellServiceDied(deadBinder) }
+                .onFailure { Ln.e("$TAG: Failed to fall back after VDM sidecar death", it) }
+        }.apply { name = "vdm-shell-death" }.start()
     }
 
     override fun isSmartResolutionEnabled(): Boolean {

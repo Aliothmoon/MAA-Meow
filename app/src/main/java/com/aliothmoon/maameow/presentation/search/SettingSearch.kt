@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.search
 
+import android.os.Build
 import android.os.SystemClock
 import androidx.annotation.StringRes
 import com.aliothmoon.maameow.R
@@ -56,7 +57,10 @@ data class SettingSearchEntry(
     @StringRes val descRes: Int? = null,
     @StringRes val keywordsRes: Int? = null,
     @StringRes val anchorRes: Int = titleRes,
-)
+    val minSdk: Int = Build.VERSION_CODES.BASE,
+) {
+    fun isAvailable(sdkInt: Int): Boolean = sdkInt >= minSdk
+}
 
 /** 只收常显项：依赖其它开关才出现的子项定位不到，交给父项 */
 object SettingSearchIndex {
@@ -130,6 +134,12 @@ object SettingSearchIndex {
         SettingSearchEntry(R.string.settings_oper_box_yituliu_title, thirdParty, R.string.settings_oper_box_yituliu_desc),
         SettingSearchEntry(R.string.panel_autobattle_operbox_assist, thirdParty, R.string.settings_oper_box_assist_desc),
 
+        SettingSearchEntry(
+            R.string.settings_continue_task_after_task_removed,
+            task,
+            R.string.settings_continue_task_after_task_removed_desc,
+            minSdk = Build.VERSION_CODES.UPSIDE_DOWN_CAKE,
+        ),
         SettingSearchEntry(R.string.settings_deploy_with_pause, task, R.string.settings_deploy_with_pause_desc),
         SettingSearchEntry(R.string.settings_tasks_override_title, task, R.string.settings_tasks_override_desc),
 

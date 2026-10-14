@@ -304,6 +304,15 @@ class AppSettingsManager internal constructor(
         }
     }
 
+    val continueTaskAfterTaskRemoved: StateFlow<Boolean> =
+        setting { it.continueTaskAfterTaskRemoved.toBooleanStrictOrNull() ?: false }
+
+    suspend fun setContinueTaskAfterTaskRemoved(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[continueTaskAfterTaskRemoved] = enabled.toString() }
+        }
+    }
+
     val runDurationLimitEnabled: StateFlow<Boolean> =
         setting { it.runDurationLimitEnabled.toBooleanStrictOrNull() ?: false }
 

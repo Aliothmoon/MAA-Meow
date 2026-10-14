@@ -355,10 +355,10 @@ class MaaCompositionService(
 
     /**
      * 启动前对齐资源档，必须早于 mute——换进程会让旧进程收尾时解除游戏静音
-     * 持 [startMutex] 挡住并发启动，加锁顺序与 [executeStart] 一致
+     * 持 [runMutex] 挡住并发启停，加锁顺序与 [executeStart] 一致
      * 失败交给 [checkPreconditions] 统一报错
      */
-    suspend fun prepareResources(clientType: String) = startMutex.withLock {
+    suspend fun prepareResources(clientType: String) = runMutex.withLock {
         // 换进程会杀掉虚拟显示器
         when (_state.value) {
             MaaExecutionState.IDLE, MaaExecutionState.ERROR -> Unit
@@ -634,10 +634,10 @@ class MaaCompositionService(
         return StartResult.Success(maa.GetVersion())
     }
 
-    private suspend fun stopByRunDurationLimit(limitMinutes: Int) {
-        // 检查与切 STOPPING 须原子，被抢先则交给原流程
-        if (!_state.compareAndSet(MaaExecutionState.RUNNING, MaaExecutionState.STOPPING)) return
+    private suspend fun stopByRunDurationLimit(limitMinutes: Int) = runMutex.withLock {
+        if (_state.value != MaaExecutionState.RUNNING) return@withLock
         lastStopOrigin = StopOrigin.RUN_DURATION_LIMIT
+        setRunState(MaaExecutionState.STOPPING)
         try {
             Timber.i("Run duration limit reached: %d min, stopping", limitMinutes)
             sessionLogger.appendAndWait(
@@ -653,8 +653,8 @@ class MaaCompositionService(
         }
     }
 
-    /** 启动互斥：前置检查耗时，双入口/双击可能同时穿过 AlreadyRunning 窗口 */
-    private val startMutex = Mutex()
+    /** 启停互斥：启动中的停止必须等启动收敛，避免 Stop 后启动链又把状态写回 RUNNING。 */
+    private val runMutex = Mutex()
 
     private suspend fun executeStart(
         kind: RunKind,
@@ -666,7 +666,7 @@ class MaaCompositionService(
         fallbacks: Map<TaskSlot, TaskFallbackChain> = emptyMap(),
         onSessionStarted: (suspend () -> Unit)? = null,
         limitRunDuration: Boolean = false,
-    ): StartResult = startMutex.withLock {
+    ): StartResult = runMutex.withLock {
         executeStartLocked(
             kind, tasks, clientType, startMessage, successMessage, preflightLogs, fallbacks, onSessionStarted,
             limitRunDuration,
@@ -818,11 +818,31 @@ class MaaCompositionService(
         }
     }
 
-    suspend fun stop(origin: StopOrigin = StopOrigin.USER): StopResult {
-        // 先记来源再切状态，TaskEndRegistry 在 STOPPING→IDLE 边沿读取
-        lastStopOrigin = origin
-        setRunState(MaaExecutionState.STOPPING)
-        return performStop()
+    suspend fun stop(origin: StopOrigin = StopOrigin.USER): StopResult = runMutex.withLock {
+        when (_state.value) {
+            MaaExecutionState.IDLE,
+            MaaExecutionState.ERROR -> StopResult.Success
+
+            MaaExecutionState.STARTING,
+            MaaExecutionState.RUNNING -> {
+                // 先记来源再切状态，TaskEndRegistry 在 STOPPING→IDLE 边沿读取
+                lastStopOrigin = origin
+                setRunState(MaaExecutionState.STOPPING)
+                performStop()
+            }
+
+            // 上一条停止协程若随 ViewModel 被取消，接手完成同一轮停止。
+            MaaExecutionState.STOPPING -> performStop()
+        }
+    }
+
+    /** 远程进程已被任务移除策略结束，强制把可能卡住的本地状态收敛到终态。 */
+    suspend fun completeStopAfterRemoteExit() = runMutex.withLock {
+        if (_state.value == MaaExecutionState.IDLE || _state.value == MaaExecutionState.ERROR) {
+            return@withLock
+        }
+        Timber.w("Force finishing local task state after remote process exit: %s", _state.value)
+        finishStop(StopResult.Success)
     }
 
     private suspend fun performStop(): StopResult {

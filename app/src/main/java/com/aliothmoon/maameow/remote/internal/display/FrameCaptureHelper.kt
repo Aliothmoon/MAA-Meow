@@ -1,10 +1,10 @@
-package com.aliothmoon.maameow.remote.internal
+package com.aliothmoon.maameow.remote.internal.display
 
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
 
-object FrameCaptureHelper {
+internal object FrameCaptureHelper {
 
     fun createCaptureHandler(name: String): Handler {
         val thread = object : HandlerThread(name, Process.THREAD_PRIORITY_URGENT_DISPLAY) {

@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.remote.internal
 
+import com.aliothmoon.maameow.remote.internal.display.VirtualDisplayManager
 import android.os.SystemClock
 import com.aliothmoon.maameow.bridge.NativeBridgeLib
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig

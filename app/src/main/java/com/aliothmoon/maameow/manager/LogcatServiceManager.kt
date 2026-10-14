@@ -5,6 +5,7 @@ import android.os.IBinder
 import com.aliothmoon.maameow.ILogcatService
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.remote.LogcatCaptureServiceImpl
+import com.aliothmoon.maameow.root.RootUserService.RemoteProcessServiceEntry
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeout
@@ -96,7 +97,8 @@ object LogcatServiceManager {
     ) : ProcessServiceConnectorBackend(spawner) {
         override val eventPrefix = "${backend.name}_LOGCAT"
         override val processNameSuffix = "${backend.name.lowercase()}_logcat"
-        override val serviceClass: Class<*> = LogcatCaptureServiceImpl::class.java
+        override val serviceClass: Class<out RemoteProcessServiceEntry> =
+            LogcatCaptureServiceImpl::class.java
         override val logFileName = "${processNameSuffix}_launch_debug.log"
 
         // logcat 无需输入注入，shell 身份自带 log 组权限

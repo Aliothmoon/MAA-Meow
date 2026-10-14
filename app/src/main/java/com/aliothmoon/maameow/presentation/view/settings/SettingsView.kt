@@ -172,6 +172,7 @@ fun SettingsView(
     val shizukuLaunchPackage by viewModel.shizukuLaunchPackage.collectAsStateWithLifecycle()
     val liveUpdateEntryVisible by viewModel.liveUpdateEntryVisible.collectAsStateWithLifecycle()
     val deployWithPause by viewModel.deployWithPause.collectAsStateWithLifecycle()
+    val continueTaskAfterTaskRemoved by viewModel.continueTaskAfterTaskRemoved.collectAsStateWithLifecycle()
     val telemetryEnabled by viewModel.telemetryEnabled.collectAsStateWithLifecycle()
     val reportToPenguin by viewModel.reportToPenguin.collectAsStateWithLifecycle()
     val reportToYituliu by viewModel.reportToYituliu.collectAsStateWithLifecycle()
@@ -944,6 +945,18 @@ fun SettingsView(
                         revealToken = revealToken(SettingsSections.TASK),
                     ) {
                         SettingsGroupCard {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                                SettingSearchTarget(R.string.settings_continue_task_after_task_removed) {
+                                    SettingSwitchItem(
+                                        title = stringResource(R.string.settings_continue_task_after_task_removed),
+                                        description = stringResource(R.string.settings_continue_task_after_task_removed_desc),
+                                        contentColor = contentColor,
+                                        checked = continueTaskAfterTaskRemoved,
+                                        onCheckedChange = { viewModel.setContinueTaskAfterTaskRemoved(it) }
+                                    )
+                                }
+                                ListItemDivider()
+                            }
                             SettingSearchTarget(R.string.settings_deploy_with_pause) {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.settings_deploy_with_pause),
@@ -1894,4 +1907,3 @@ private fun CoreDataLocation.labelRes(): Int = when (this) {
     CoreDataLocation.APP_DIR -> R.string.settings_core_data_location_app_dir
     CoreDataLocation.LOCAL_TMP -> R.string.settings_core_data_location_local_tmp
 }
-

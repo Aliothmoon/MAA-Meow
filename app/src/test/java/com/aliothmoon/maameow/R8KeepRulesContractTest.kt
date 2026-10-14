@@ -1,5 +1,10 @@
 package com.aliothmoon.maameow
 
+import android.content.Context
+import com.aliothmoon.maameow.remote.LogcatCaptureServiceImpl
+import com.aliothmoon.maameow.remote.RemoteServiceImpl
+import com.aliothmoon.maameow.remote.VdmShellServiceImpl
+import com.aliothmoon.maameow.root.RootUserService.RemoteProcessServiceEntry
 import java.io.File
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -30,8 +35,10 @@ class R8KeepRulesContractTest {
             "com.sun.jna.*",
             "com.sun.jna.Structure",
             "com.sun.jna.Callback",
-            "com.aliothmoon.maameow.remote.RemoteServiceImpl",
-            "com.aliothmoon.maameow.remote.LogcatCaptureServiceImpl",
+            "com.aliothmoon.maameow.root.RootUserService\$RemoteProcessServiceEntry",
+            "-keep,allowobfuscation interface com.aliothmoon.maameow.root.RootUserService\$RemoteProcessServiceEntry",
+            "-keep,allowobfuscation class * implements com.aliothmoon.maameow.root.RootUserService\$RemoteProcessServiceEntry",
+            "<init>(...)",
             "com.aliothmoon.maameow.root.RemoteServiceStarter",
             "touchDown",
             "startApp",
@@ -55,10 +62,33 @@ class R8KeepRulesContractTest {
         ).forEach { token ->
             assertTrue("missing keep token: $token", rules.contains(token))
         }
+        assertFalse(rules.contains("-keep class com.aliothmoon.maameow.remote.RemoteServiceImpl"))
+        assertFalse(rules.contains("-keep class com.aliothmoon.maameow.remote.LogcatCaptureServiceImpl"))
 
         val keepXml = resolve("src/main/res/raw/keep.xml").readText()
         assertTrue(keepXml.contains("@string/maa_*"))
         assertTrue(keepXml.contains("@string/achievement_*"))
+    }
+
+    @Test
+    fun reflectiveProcessServicesDeclareTheEntryContractAndSupportedConstructor() {
+        listOf(
+            RemoteServiceImpl::class.java,
+            LogcatCaptureServiceImpl::class.java,
+            VdmShellServiceImpl::class.java,
+        ).forEach { serviceClass ->
+            assertTrue(
+                "${serviceClass.name} must implement RemoteProcessServiceEntry",
+                RemoteProcessServiceEntry::class.java.isAssignableFrom(serviceClass),
+            )
+            assertTrue(
+                "${serviceClass.name} needs a no-arg or Context constructor",
+                serviceClass.declaredConstructors.any { constructor ->
+                    constructor.parameterTypes.isEmpty() ||
+                        constructor.parameterTypes.contentEquals(arrayOf(Context::class.java))
+                },
+            )
+        }
     }
 
     private fun resolve(relativePath: String): File {

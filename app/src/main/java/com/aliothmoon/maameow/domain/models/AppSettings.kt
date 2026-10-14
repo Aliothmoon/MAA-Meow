@@ -59,6 +59,10 @@ data class AppSettings(
     @PrefKey(default = "false")
     val closeAppOnTaskEnd: String = "false",
 
+    /** 从最近任务移除 MaaMeow 后，是否保留正在运行的任务。 */
+    @PrefKey(default = "false")
+    val continueTaskAfterTaskRemoved: String = "false",
+
     /** 主任务链运行时长上限，到点停止并视为自动结束 */
     @PrefKey(default = "false")
     val runDurationLimitEnabled: String = "false",

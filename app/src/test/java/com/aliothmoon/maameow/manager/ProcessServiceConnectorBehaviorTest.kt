@@ -4,7 +4,9 @@ import android.content.Context
 import android.os.IBinder
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.root.BootstrapRegistry
+import com.aliothmoon.maameow.root.RootUserService.RemoteProcessServiceEntry
 import io.mockk.CapturingSlot
+import io.mockk.every
 import io.mockk.justRun
 import io.mockk.mockk
 import io.mockk.slot
@@ -18,6 +20,7 @@ import org.junit.Test
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -27,6 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger
  * 进程连接器基座行为：IPC 状态机高变更区，失败 / 竞态路径必须有真行为测试兜底
  */
 class ProcessServiceConnectorBehaviorTest {
+
+    private class FakeServiceEntry : RemoteProcessServiceEntry
 
     private val logFile = File.createTempFile("connector", ".log").apply { delete() }
 
@@ -84,37 +89,71 @@ class ProcessServiceConnectorBehaviorTest {
         registry: BootstrapRegistry,
         private val logFile: File,
         timeoutMs: Long,
+        enableSidecar: Boolean = false,
     ) : ProcessServiceConnectorBackend(spawner, registry) {
         override val backend = RemoteBackend.ROOT
         override val eventPrefix = "FAKE"
         override val processNameSuffix = "fake"
-        override val serviceClass: Class<*> = Any::class.java
+        override val serviceClass: Class<out RemoteProcessServiceEntry> =
+            FakeServiceEntry::class.java
         override val logFileName = "fake.log"
         override val spawnTimeoutMs = timeoutMs
+        override val sidecarServiceClass: Class<out RemoteProcessServiceEntry>? =
+            FakeServiceEntry::class.java.takeIf { enableSidecar }
 
         private val tokens = LinkedBlockingQueue<String>()
+        val attachedSidecars = LinkedBlockingQueue<Pair<IBinder, IBinder>>()
+        val destroyedSidecars = AtomicInteger()
+        val destroyedSidecarBinders = LinkedBlockingQueue<IBinder>()
+        val destroyedRemotes = LinkedBlockingQueue<IBinder>()
+        var onAttachSidecar: () -> Unit = {}
+        var onDestroySidecar: () -> Unit = {}
 
         override fun buildStartCommand(token: String, logFile: File): String {
             tokens.add(token)
             return "fake-cmd"
         }
 
+        override fun buildSidecarStartCommand(
+            token: String,
+            logFile: File,
+            targetClass: Class<*>,
+        ): String {
+            tokens.add(token)
+            return "fake-sidecar-cmd"
+        }
+
+        override fun attachSidecar(primaryBinder: IBinder, sidecarBinder: IBinder) {
+            attachedSidecars.add(primaryBinder to sidecarBinder)
+            onAttachSidecar()
+        }
+
+        override fun destroySidecar(sidecarBinder: IBinder) {
+            destroyedSidecars.incrementAndGet()
+            destroyedSidecarBinders.add(sidecarBinder)
+            onDestroySidecar()
+        }
+
         override fun debugLogFile(): File = logFile
 
-        override fun destroyRemote(binder: IBinder) = Unit
+        override fun destroyRemote(binder: IBinder) {
+            destroyedRemotes.add(binder)
+        }
 
         fun awaitToken(): String = tokens.poll(5, TimeUnit.SECONDS) ?: error("token never assigned")
     }
 
     private class RecordingCallbacks : RemoteServiceConnectorBackend.Callbacks {
-        val connected = mutableListOf<IBinder>()
-        val errors = mutableListOf<Throwable>()
+        val connected = CopyOnWriteArrayList<IBinder>()
+        val errors = CopyOnWriteArrayList<Throwable>()
         val disconnected = AtomicInteger()
         private val connectedLatch = CountDownLatch(1)
         private val errorLatch = CountDownLatch(1)
+        var onConnectedHook: () -> Unit = {}
 
         override fun onConnected(backend: RemoteBackend, binder: IBinder) {
             connected += binder
+            onConnectedHook()
             connectedLatch.countDown()
         }
 
@@ -131,11 +170,11 @@ class ProcessServiceConnectorBehaviorTest {
         fun awaitError() = errorLatch.await(5, TimeUnit.SECONDS)
     }
 
-    private inner class Harness(timeoutMs: Long = 300L) {
+    private inner class Harness(timeoutMs: Long = 300L, enableSidecar: Boolean = false) {
         val spawner = FakeSpawner()
         val registry = FakeRegistry()
         val callbacks = RecordingCallbacks()
-        val connector = FakeConnector(spawner, registry, logFile, timeoutMs).apply {
+        val connector = FakeConnector(spawner, registry, logFile, timeoutMs, enableSidecar).apply {
             initialize(mockk<Context>(relaxed = true), logFile.parentFile!!)
         }
 
@@ -216,7 +255,7 @@ class ProcessServiceConnectorBehaviorTest {
 
         assertEquals(1, h.callbacks.connected.size)
         assertTrue(h.callbacks.errors.isEmpty())
-        assertFalse(h.connector.isConnecting)
+        assertTrue("成功回调后连接协程应及时结束", waitUntil { !h.connector.isConnecting })
         assertEquals("成功路径不得清进程", 0, h.spawner.killCount())
     }
 
@@ -270,5 +309,172 @@ class ProcessServiceConnectorBehaviorTest {
         assertNotNull("新 token 仍在等待", h.registry.pending[token2])
         assertTrue(h.callbacks.connected.isEmpty())
         h.connector.disconnect(null)
+    }
+
+    @Test
+    fun binderSupersededAfterInitialTokenCheck_isDestroyedBeforePublish() {
+        val h = Harness(timeoutMs = 5_000L)
+        val linkEntered = CountDownLatch(1)
+        val allowLinkToReturn = CountDownLatch(1)
+        val oldBinder = mockk<IBinder>(relaxed = true)
+        every { oldBinder.linkToDeath(any(), any()) } answers {
+            linkEntered.countDown()
+            allowLinkToReturn.await(5, TimeUnit.SECONDS)
+        }
+
+        h.connector.connect(h.callbacks)
+        val oldToken = h.connector.awaitToken()
+        assertTrue(h.registry.attach(oldToken, oldBinder))
+        assertTrue("旧 binder 应进入 linkToDeath", linkEntered.await(5, TimeUnit.SECONDS))
+
+        h.connector.connect(h.callbacks)
+        val replacementToken = h.registry.pending.keys.single()
+        allowLinkToReturn.countDown()
+
+        assertEquals(oldBinder, h.connector.destroyedRemotes.poll(5, TimeUnit.SECONDS))
+        assertTrue("被取代的 binder 不得发布", h.callbacks.connected.isEmpty())
+        assertNotNull(h.registry.pending[replacementToken])
+        h.connector.disconnect(null)
+    }
+
+    @Test
+    fun binderSupersededDuringConnectedCallback_isDestroyedAfterCallback() {
+        val h = Harness(timeoutMs = 5_000L)
+        val callbackEntered = CountDownLatch(1)
+        val allowCallbackToReturn = CountDownLatch(1)
+        val oldBinder = mockk<IBinder>(relaxed = true)
+        h.callbacks.onConnectedHook = {
+            callbackEntered.countDown()
+            allowCallbackToReturn.await(5, TimeUnit.SECONDS)
+        }
+
+        h.connector.connect(h.callbacks)
+        assertTrue(h.registry.attach(h.connector.awaitToken(), oldBinder))
+        assertTrue(callbackEntered.await(5, TimeUnit.SECONDS))
+
+        h.connector.connect(h.callbacks)
+        allowCallbackToReturn.countDown()
+
+        assertEquals(oldBinder, h.connector.destroyedRemotes.poll(5, TimeUnit.SECONDS))
+        assertNotNull(h.registry.pending[h.connector.awaitToken()])
+        h.connector.disconnect(null)
+    }
+
+    @Test
+    fun sidecar_isAttachedBeforePrimaryIsPublished() {
+        val h = Harness(timeoutMs = 5_000L, enableSidecar = true)
+        val primary = mockk<IBinder>(relaxed = true)
+        val sidecar = mockk<IBinder>(relaxed = true)
+
+        h.connector.connect(h.callbacks)
+        assertTrue(h.registry.attach(h.connector.awaitToken(), primary))
+        val sidecarToken = h.connector.awaitToken()
+
+        assertTrue("主服务必须等 sidecar attach 后才能发布", h.callbacks.connected.isEmpty())
+        assertTrue(h.registry.attach(sidecarToken, sidecar))
+        assertTrue(h.callbacks.awaitConnected())
+
+        assertEquals(primary to sidecar, h.connector.attachedSidecars.poll(1, TimeUnit.SECONDS))
+        assertEquals(2, h.spawner.spawnCalls.get())
+    }
+
+    @Test
+    fun sidecarTimeout_keepsPrimaryAndFallsBack() {
+        val h = Harness(timeoutMs = 300L, enableSidecar = true)
+        val primary = mockk<IBinder>(relaxed = true)
+
+        h.connector.connect(h.callbacks)
+        assertTrue(h.registry.attach(h.connector.awaitToken(), primary))
+        h.connector.awaitToken()
+
+        assertTrue("sidecar 失败不能拖死主服务", h.callbacks.awaitConnected())
+        assertEquals(listOf(primary), h.callbacks.connected)
+        assertTrue(h.callbacks.errors.isEmpty())
+        assertTrue("失败的 sidecar 必须清残留", h.spawner.awaitKill())
+        assertEquals(
+            "连接预算只覆盖 primary + sidecar spawn，不包含后续虚拟显示生命周期预算",
+            2 * (300L + 3_000L),
+            h.connector.worstCaseConnectMs,
+        )
+    }
+
+    @Test
+    fun sidecarFromSupersededLaunch_isDestroyedBeforePublish() {
+        val h = Harness(timeoutMs = 5_000L, enableSidecar = true)
+        val attachEntered = CountDownLatch(1)
+        val allowAttachToReturn = CountDownLatch(1)
+        h.connector.onAttachSidecar = {
+            attachEntered.countDown()
+            allowAttachToReturn.await(5, TimeUnit.SECONDS)
+        }
+
+        h.connector.connect(h.callbacks)
+        assertTrue(h.registry.attach(h.connector.awaitToken(), mockk(relaxed = true)))
+        assertTrue(h.registry.attach(h.connector.awaitToken(), mockk(relaxed = true)))
+        assertTrue("旧 sidecar 应进入同步 attach", attachEntered.await(5, TimeUnit.SECONDS))
+
+        // connect() 会立即换 token；新任务仍排在单线程队列里，旧 attach 返回后必须先
+        // 销毁自己的 sidecar，不能通过 getAndSet 发布并顶掉当前连接。
+        h.connector.connect(h.callbacks)
+        allowAttachToReturn.countDown()
+
+        val replacementPrimaryToken = h.connector.awaitToken()
+        assertTrue("被取代的 sidecar 必须被销毁", waitUntil { h.connector.destroyedSidecars.get() == 1 })
+        assertNotNull("新 launch 仍应等待自己的 primary binder", h.registry.pending[replacementPrimaryToken])
+        h.connector.disconnect(null)
+    }
+
+    @Test
+    fun primaryDeath_doesNotClearReplacementSidecar() {
+        val h = Harness(timeoutMs = 5_000L, enableSidecar = true)
+        val oldPrimary = mockk<IBinder>(relaxed = true)
+        val oldSidecar = mockk<IBinder>(relaxed = true)
+        val oldDeath = slot<IBinder.DeathRecipient>()
+        justRun { oldPrimary.linkToDeath(capture(oldDeath), any()) }
+
+        h.connector.connect(h.callbacks)
+        assertTrue(h.registry.attach(h.connector.awaitToken(), oldPrimary))
+        assertTrue(h.registry.attach(h.connector.awaitToken(), oldSidecar))
+        assertTrue(h.callbacks.awaitConnected())
+
+        val destroyEntered = CountDownLatch(1)
+        val allowDestroyToReturn = CountDownLatch(1)
+        val deathFinished = CountDownLatch(1)
+        h.connector.onDestroySidecar = {
+            destroyEntered.countDown()
+            allowDestroyToReturn.await(5, TimeUnit.SECONDS)
+        }
+        Thread {
+            oldDeath.captured.binderDied()
+            deathFinished.countDown()
+        }.start()
+        assertTrue("旧 death 必须先摘取并开始销毁自己的 sidecar", destroyEntered.await(5, TimeUnit.SECONDS))
+
+        val newPrimary = mockk<IBinder>(relaxed = true)
+        val newSidecar = mockk<IBinder>(relaxed = true)
+        h.connector.connect(h.callbacks)
+        assertTrue(h.registry.attach(h.connector.awaitToken(), newPrimary))
+        assertTrue(h.registry.attach(h.connector.awaitToken(), newSidecar))
+        assertTrue("替代 launch 应能发布新 sidecar", waitUntil { h.callbacks.connected.size == 2 })
+
+        allowDestroyToReturn.countDown()
+        assertTrue(deathFinished.await(5, TimeUnit.SECONDS))
+        assertEquals(oldSidecar, h.connector.destroyedSidecarBinders.poll(1, TimeUnit.SECONDS))
+
+        h.connector.disconnect(null)
+        assertEquals(
+            "旧 death 回调不得清除替代 launch 持有的 sidecar",
+            newSidecar,
+            h.connector.destroyedSidecarBinders.poll(1, TimeUnit.SECONDS),
+        )
+    }
+
+    private fun waitUntil(condition: () -> Boolean): Boolean {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (System.nanoTime() < deadline) {
+            if (condition()) return true
+            Thread.sleep(10)
+        }
+        return condition()
     }
 }

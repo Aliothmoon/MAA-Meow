@@ -4,6 +4,7 @@ import com.aliothmoon.maameow.ILogcatService
 import com.aliothmoon.maameow.constant.LogConfig
 import com.aliothmoon.maameow.remote.internal.LogcatNoiseFilter
 import com.aliothmoon.maameow.remote.internal.RollingLogFile
+import com.aliothmoon.maameow.root.RootUserService.RemoteProcessServiceEntry
 import com.aliothmoon.maameow.third.Ln
 import java.io.File
 import java.text.SimpleDateFormat
@@ -12,7 +13,7 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.system.exitProcess
 
-class LogcatCaptureServiceImpl : ILogcatService.Stub() {
+class LogcatCaptureServiceImpl : ILogcatService.Stub(), RemoteProcessServiceEntry {
 
     companion object {
         private const val TAG = "LogcatCapture"

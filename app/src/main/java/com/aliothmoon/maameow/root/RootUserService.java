@@ -15,8 +15,13 @@ import java.lang.reflect.Method;
 public final class RootUserService {
 
     private static final String TAG = "RootUserService";
+    private static final int ANDROID_UIDS_PER_USER = 100_000;
 
     private RootUserService() {
+    }
+
+    /** Marks Binder services instantiated reflectively by this launcher. */
+    public interface RemoteProcessServiceEntry {
     }
 
     public static CreatedService create(String[] args) {
@@ -25,7 +30,7 @@ public final class RootUserService {
             return null;
         }
 
-        int userId = parsed.uid / 100000;
+        int userId = userIdFromUid(parsed.uid);
         String appName = parsed.debugName != null ? parsed.debugName : parsed.packageName + ":root_service";
 
         Ln.i(String.format("%s: starting service %s/%s...", TAG, parsed.packageName, parsed.className));
@@ -56,6 +61,17 @@ public final class RootUserService {
         } catch (Throwable tr) {
             Ln.e(String.format("%s: unable to start service %s/%s", TAG, parsed.packageName, parsed.className), tr);
             return null;
+        }
+    }
+
+    /** 优先使用系统 UID 映射；命名常量兜底用于兼容旧系统和部分 OEM 实现。 */
+    public static int userIdFromUid(int uid) {
+        try {
+            Class<?> userHandleClass = Class.forName("android.os.UserHandle");
+            Method method = userHandleClass.getDeclaredMethod("getUserId", int.class);
+            return (int) method.invoke(null, uid);
+        } catch (Throwable ignored) {
+            return uid / ANDROID_UIDS_PER_USER;
         }
     }
 
@@ -129,6 +145,18 @@ public final class RootUserService {
     }
 
     private static IBinder instantiateService(Class<?> serviceClass, Context context) throws Exception {
+        // launcher 经系统 ClassLoader 加载 RootUserService，而服务类经 package Context 的
+        // ClassLoader 加载；同名接口在两个 ClassLoader 下是不同的 Class，直接用
+        // RemoteProcessServiceEntry.class.isAssignableFrom 会恒为 false。改用服务类自身的
+        // ClassLoader 解析同名接口，保证族谱判定一致（混淆后两侧名字相同）。
+        Class<?> entryContract = Class.forName(
+                RemoteProcessServiceEntry.class.getName(), false, serviceClass.getClassLoader());
+        if (!entryContract.isAssignableFrom(serviceClass)) {
+            throw new IllegalArgumentException(
+                    serviceClass.getName() + " must implement "
+                            + RemoteProcessServiceEntry.class.getName()
+            );
+        }
         try {
             Constructor<?> constructor = serviceClass.getConstructor(Context.class);
             return (IBinder) constructor.newInstance(context);
