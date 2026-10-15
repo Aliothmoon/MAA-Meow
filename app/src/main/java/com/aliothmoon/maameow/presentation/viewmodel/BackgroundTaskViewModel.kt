@@ -24,6 +24,7 @@ import com.aliothmoon.maameow.domain.service.GameFpsWatcher
 import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
+import com.aliothmoon.maameow.domain.service.RunKind
 import com.aliothmoon.maameow.domain.service.ScreenPowerController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -527,12 +528,17 @@ class BackgroundTaskViewModel(
         return null
     }
 
-    fun onStopTasks() {
+    fun onStopCurrentRun() {
         if (stopJob?.isActive == true || compositionService.state.value != MaaExecutionState.RUNNING) return
+        val runToken = compositionService.currentRunToken
         stopJob = viewModelScope.launch {
             // 点击到执行之间可能已经由回调停止，避免重复记事件和调用 Core。
-            if (compositionService.state.value != MaaExecutionState.RUNNING) return@launch
-            achievementReporter.reportTaskStopped()
+            if (compositionService.state.value != MaaExecutionState.RUNNING ||
+                compositionService.currentRunToken != runToken
+            ) return@launch
+            if (compositionService.currentRunKind == RunKind.CHAIN) {
+                achievementReporter.reportTaskStopped()
+            }
             compositionService.stop()
         }
     }

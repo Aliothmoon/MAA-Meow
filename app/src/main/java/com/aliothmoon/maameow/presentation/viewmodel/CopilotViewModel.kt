@@ -1218,6 +1218,7 @@ class CopilotViewModel(
             _state.update { it.copy(statusMessage = formatStartStatus(result)) }
             if (result is MaaCompositionService.StartResult.Success) {
                 stopObserver.track(
+                    runToken = result.runToken,
                     onStopping = { _state.update { it.copy(statusMessage = text(R.string.toolbox_status_stopping)) } },
                     onStopped = ::onSessionStopped,
                 )

@@ -6,10 +6,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -30,7 +33,10 @@ import com.aliothmoon.maameow.presentation.components.BottomBarOverlay
 import com.aliothmoon.maameow.presentation.components.LocalPageVisible
 import com.aliothmoon.maameow.presentation.components.collectWhilePageVisible
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -83,7 +89,11 @@ class LogPanelAutoScrollTest {
         val all = List(101) { LogItem(content = "resize-log-$it") }
         val logs = mutableStateOf(all.take(100))
         val height = mutableStateOf(460.dp)
+        lateinit var listState: LazyListState
+        lateinit var scope: CoroutineScope
         composeRule.setContent {
+            listState = rememberLazyListState()
+            scope = rememberCoroutineScope()
             BottomBarOverlay(
                 showBottomBar = true,
                 modifier = Modifier.width(320.dp).height(height.value),
@@ -93,11 +103,20 @@ class LogPanelAutoScrollTest {
                     modifier = Modifier.fillMaxSize().padding(bottom = bottom),
                     logs = logs.value,
                     onClearLogs = {},
+                    listState = listState,
                 )
             }
         }
         composeRule.onNodeWithText("resize-log-99").assertIsDisplayed()
+        // 模拟重新布局前保留了中间锚点；程序定位不关闭跟随。
+        // 不追加日志，确保只有视口变化能使末行重新出现。
+        composeRule.runOnIdle { scope.launch { listState.scrollToItem(50) } }
+        composeRule.runOnIdle {
+            assertEquals(50, listState.firstVisibleItemIndex)
+            assertTrue(listState.canScrollForward)
+        }
         composeRule.runOnIdle { height.value = 240.dp }
+        composeRule.runOnIdle { assertFalse(listState.canScrollForward) }
         val latest = composeRule.onNodeWithText("resize-log-99").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         val bar = composeRule.onNodeWithText("actions").fetchSemanticsNode().boundsInRoot
         assertTrue(latest.bottom <= bar.top)

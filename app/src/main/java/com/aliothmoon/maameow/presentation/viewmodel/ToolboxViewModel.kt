@@ -439,6 +439,7 @@ class ToolboxViewModel(
         if (result is MaaCompositionService.StartResult.Success) {
             val tipJob = gachaTipJob
             stopObserver.track(
+                runToken = result.runToken,
                 onStopping = { _statusMessage.value = uiTextOf(R.string.toolbox_status_stopping) },
                 onStopped = ::updateStopStatus,
                 onFinished = {

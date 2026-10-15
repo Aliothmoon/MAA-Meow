@@ -229,6 +229,7 @@ class MiniGameDelegate(
             }
             if (result is MaaCompositionService.StartResult.Success) {
                 stopObserver.track(
+                    runToken = result.runToken,
                     onStopping = { _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_stopping)) } },
                     onStopped = { stopped ->
                         val message = if (stopped is MaaCompositionService.StopResult.Success) {

@@ -16,12 +16,14 @@ internal class TaskStopObserver(
     private var observation: Job? = null
 
     fun track(
+        runToken: Long,
         onStopping: () -> Unit,
         onStopped: (MaaCompositionService.StopResult) -> Unit,
         onFinished: () -> Unit = {},
     ) {
+        // 启动结果到达调用方前可能已进入下一轮；不能取消该轮已经建立的观察。
+        if (service.currentRunToken != runToken) return
         observation?.cancel()
-        val runToken = service.currentRunToken
         // 同步建立订阅，避免启动返回后立即停止时漏过 STOPPING。
         observation = scope.launch(start = CoroutineStart.UNDISPATCHED) {
             var manuallyStopped = false

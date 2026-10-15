@@ -671,7 +671,7 @@ fun BackgroundTaskView(
                                                     visible = showStartBar,
                                                     onStop = {
                                                         when (state.current) {
-                                                            PanelTab.TASKS, PanelTab.LOG -> viewModel.onStopTasks()
+                                                            PanelTab.TASKS, PanelTab.LOG -> viewModel.onStopCurrentRun()
                                                             PanelTab.AUTO_BATTLE -> copilotViewModel.onStop()
                                                             PanelTab.TOOLS -> toolboxViewModel.onStop()
                                                         }

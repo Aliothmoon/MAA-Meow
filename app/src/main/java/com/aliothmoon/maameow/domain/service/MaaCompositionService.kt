@@ -93,6 +93,10 @@ class MaaCompositionService(
     val currentRunToken: Long
         get() = liveCoordinator.currentToken()
 
+    @Volatile
+    var currentRunKind: RunKind? = null
+        private set
+
     /** 停止发起方：用户操作 / 回调侧（掉线等）中止 / 到达运行时长上限 */
     enum class StopOrigin { USER, CALLBACK, RUN_DURATION_LIMIT }
 
@@ -139,9 +143,10 @@ class MaaCompositionService(
             Timber.d("回调侧停止请求已在处理中")
             return
         }
+        val runToken = currentRunToken
         scope.launch {
             try {
-                stop(StopOrigin.CALLBACK)
+                stopRun(StopOrigin.CALLBACK, runToken)
             } finally {
                 callbackStopRequested.set(false)
             }
@@ -188,7 +193,7 @@ class MaaCompositionService(
     private val callbackStopRequested = AtomicBoolean(false)
 
     sealed class StartResult {
-        data class Success(val version: String) : StartResult()
+        data class Success(val version: String, val runToken: Long) : StartResult()
 
         /** 资源加载失败（网络/IO/解压） */
         data class ResourceError(
@@ -587,6 +592,7 @@ class MaaCompositionService(
         successMessage: String,
         mode: RunMode,
         limitRunDuration: Boolean,
+        runToken: Long,
     ): StartResult {
         // 独立目录：先投递用户文件，送不过去 core 那边就是 file-not-found，直接报资源错误
         if (!coreDataPusher.pushUserData()) {
@@ -634,27 +640,26 @@ class MaaCompositionService(
         // 计时与后台监视都先于 RUNNING 起，秒完的回调置 IDLE 时才能撤掉
         if (limitRunDuration && appSettings.runDurationLimitEnabled.value) {
             val limitMinutes = appSettings.runDurationLimitMinutes.value
-            runDeadlineGuard.arm(limitMinutes) { stopByRunDurationLimit(limitMinutes) }
+            runDeadlineGuard.arm(limitMinutes) { stopByRunDurationLimit(limitMinutes, runToken) }
         }
         if (mode == RunMode.BACKGROUND) {
             startBackgroundMonitors()
         }
         setRunState(MaaExecutionState.RUNNING)
         sessionLogger.appendAndWait(successMessage, LogLevel.SUCCESS)
-        return StartResult.Success(maa.GetVersion())
+        return StartResult.Success(maa.GetVersion(), runToken)
     }
 
-    private suspend fun stopByRunDurationLimit(limitMinutes: Int) {
-        // 检查与切 STOPPING 须原子，被抢先则交给原流程
-        if (!_state.compareAndSet(MaaExecutionState.RUNNING, MaaExecutionState.STOPPING)) return
-        lastStopOrigin = StopOrigin.RUN_DURATION_LIMIT
+    private suspend fun stopByRunDurationLimit(limitMinutes: Int, runToken: Long) {
+        if (_state.value != MaaExecutionState.RUNNING || currentRunToken != runToken) return
         try {
-            Timber.i("Run duration limit reached: %d min, stopping", limitMinutes)
-            sessionLogger.appendAndWait(
-                context.getString(R.string.runlog_run_duration_limit_reached, limitMinutes),
-                LogLevel.WARNING,
-            )
-            performStop()
+            stopRun(StopOrigin.RUN_DURATION_LIMIT, runToken) {
+                Timber.i("Run duration limit reached: %d min, stopping", limitMinutes)
+                sessionLogger.appendAndWait(
+                    context.getString(R.string.runlog_run_duration_limit_reached, limitMinutes),
+                    LogLevel.WARNING,
+                )
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -732,7 +737,9 @@ class MaaCompositionService(
         return withContext(Dispatchers.IO) {
             checkPreconditions(mode, clientType)?.let { return@withContext it }
 
+            currentRunKind = kind
             setRunState(MaaExecutionState.STARTING)
+            val runToken = currentRunToken
 
             try {
                 useRemoteService { service ->
@@ -755,7 +762,7 @@ class MaaCompositionService(
                         clientType
                     )?.let { return@useRemoteService it }
                     val result = appendTasksAndStart(
-                        maa, tasks, fallbacks, successMessage, mode, limitRunDuration,
+                        maa, tasks, fallbacks, successMessage, mode, limitRunDuration, runToken,
                     )
                     if (result is StartResult.Success) {
                         taskChainState.saveLastUsedClientType(clientType)
@@ -828,11 +835,27 @@ class MaaCompositionService(
         }
     }
 
-    suspend fun stop(origin: StopOrigin = StopOrigin.USER): StopResult {
-        // 先记来源再切状态，TaskEndRegistry 在 STOPPING→IDLE 边沿读取
+    private val stopCoordinator = RunStopCoordinator()
+
+    suspend fun stop(origin: StopOrigin = StopOrigin.USER): StopResult =
+        stopRun(origin, currentRunToken)
+
+    private suspend fun stopRun(
+        origin: StopOrigin,
+        runToken: Long,
+        beforeStop: suspend () -> Unit = {},
+    ): StopResult = stopCoordinator.stop(
+        runToken = runToken,
+        canStop = {
+            currentRunToken == runToken &&
+                (_state.value == MaaExecutionState.RUNNING || _state.value == MaaExecutionState.STARTING)
+        },
+    ) {
+        // 仅获得执行权的请求写入来源；重复请求等待并复用这一轮的结果。
         lastStopOrigin = origin
         setRunState(MaaExecutionState.STOPPING)
-        return performStop()
+        beforeStop()
+        performStop()
     }
 
     private suspend fun performStop(): StopResult {

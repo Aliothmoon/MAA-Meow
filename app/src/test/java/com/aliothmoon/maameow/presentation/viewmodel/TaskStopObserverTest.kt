@@ -30,6 +30,7 @@ class TaskStopObserverTest {
     fun stopFromAnotherPageUpdatesOwnerWithoutStoppingAgain() = runTest {
         val events = mutableListOf<String>()
         TaskStopObserver(service, backgroundScope).track(
+            runToken = token,
             onStopping = { events.add("stopping") },
             onStopped = { assertSame(result, it); events.add("stopped") },
             onFinished = { events.add("finished") },
@@ -48,7 +49,7 @@ class TaskStopObserverTest {
     @Test
     fun fastFailedStopStillReportsResultWhenStoppingIsConflated() = runTest {
         val results = mutableListOf<MaaCompositionService.StopResult>()
-        TaskStopObserver(service, backgroundScope).track({}, { results.add(it) })
+        TaskStopObserver(service, backgroundScope).track(token, {}, { results.add(it) })
         state.value = MaaExecutionState.STOPPING
         result = MaaCompositionService.StopResult.Failed
         state.value = MaaExecutionState.IDLE
@@ -60,6 +61,7 @@ class TaskStopObserverTest {
     fun naturalCompletionCleansUpWithoutClaimingManualStop() = runTest {
         val events = mutableListOf<String>()
         TaskStopObserver(service, backgroundScope).track(
+            token,
             { events.add("stopping") },
             { events.add("stopped") },
             { events.add("finished") },
@@ -73,6 +75,7 @@ class TaskStopObserverTest {
     fun callbackStopDoesNotClaimUserStoppedTheTask() = runTest {
         val events = mutableListOf<String>()
         TaskStopObserver(service, backgroundScope).track(
+            token,
             { events.add("stopping") },
             { events.add("stopped") },
             { events.add("finished") },
@@ -90,6 +93,7 @@ class TaskStopObserverTest {
     fun delayedPreviousRunDoesNotResetNewRunStatus() = runTest {
         val events = mutableListOf<String>()
         TaskStopObserver(service, backgroundScope).track(
+            token,
             { events.add("stopping") },
             { events.add("stopped") },
             { events.add("finished") },
@@ -103,5 +107,38 @@ class TaskStopObserverTest {
         state.value = MaaExecutionState.STARTING
         runCurrent()
         assertEquals(listOf("stopping", "finished"), events)
+    }
+
+    @Test
+    fun registrationAfterNextRunStartsDoesNotBindOldCallbacksToIt() = runTest {
+        val successfulStart = MaaCompositionService.StartResult.Success("test", token)
+        token++
+        val events = mutableListOf<String>()
+        TaskStopObserver(service, backgroundScope).track(
+            successfulStart.runToken,
+            { events.add("stopping") },
+            { events.add("stopped") },
+            { events.add("finished") },
+        )
+        state.value = MaaExecutionState.STOPPING
+        runCurrent()
+        result = MaaCompositionService.StopResult.Success
+        state.value = MaaExecutionState.IDLE
+        runCurrent()
+        assertEquals(emptyList<String>(), events)
+    }
+
+    @Test
+    fun staleRegistrationDoesNotCancelObserverForCurrentRun() = runTest {
+        val observer = TaskStopObserver(service, backgroundScope)
+        val oldToken = token
+        token++
+        val events = mutableListOf<String>()
+        observer.track(token, {}, { events.add("current") })
+        observer.track(oldToken, {}, { events.add("old") })
+        result = MaaCompositionService.StopResult.Success
+        state.value = MaaExecutionState.IDLE
+        runCurrent()
+        assertEquals(listOf("current"), events)
     }
 }
