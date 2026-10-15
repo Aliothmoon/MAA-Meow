@@ -158,6 +158,7 @@ class CopilotViewModel(
     val maaState: StateFlow<MaaExecutionState> = compositionService.state
 
     private var pendingStartContext: TaskStartContext? = null
+    private val stopObserver = TaskStopObserver(compositionService, viewModelScope)
 
     /** 确认后重入 onStart 时跳过列表被忽略的检查 */
     private var listGuardAcknowledged = false
@@ -1215,16 +1216,30 @@ class CopilotViewModel(
             _state.update { it.copy(statusMessage = text(R.string.toolbox_status_starting)) }
             val result = compositionService.startCopilot(tasks)
             _state.update { it.copy(statusMessage = formatStartStatus(result)) }
+            if (result is MaaCompositionService.StartResult.Success) {
+                stopObserver.track(
+                    onStopping = { _state.update { it.copy(statusMessage = text(R.string.toolbox_status_stopping)) } },
+                    onStopped = ::onSessionStopped,
+                )
+            }
         }
     }
 
     fun onStop() {
         viewModelScope.launch {
             _state.update { it.copy(statusMessage = text(R.string.toolbox_status_stopping)) }
-            compositionService.stop()
-            runtimeStateStore.resetCurrentCopilotIndex()
-            _state.update { it.copy(statusMessage = text(R.string.toolbox_status_stopped)) }
+            onSessionStopped(compositionService.stop())
         }
+    }
+
+    private fun onSessionStopped(result: MaaCompositionService.StopResult) {
+        runtimeStateStore.resetCurrentCopilotIndex()
+        val message = if (result is MaaCompositionService.StopResult.Success) {
+            text(R.string.toolbox_status_stopped)
+        } else {
+            text(R.string.task_stop_failed)
+        }
+        _state.update { it.copy(statusMessage = message) }
     }
 
     fun onToggleOperBoxAssist(enabled: Boolean) {

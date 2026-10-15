@@ -131,6 +131,7 @@ class ToolboxViewModel(
     /** 牛牛抽卡：底部「开始任务」或面板按钮共用；null = 非 gacha 启动。 */
     private var pendingGachaOnce: Boolean? = null
     private var gachaTipJob: Job? = null
+    private val stopObserver = TaskStopObserver(compositionService, viewModelScope)
 
     // ==================== 牛牛抽卡（对齐 WPF Toolbox Gacha）====================
 
@@ -273,10 +274,10 @@ class ToolboxViewModel(
             val result = compositionService.startCopilot(
                 listOf(MaaTaskParams(MaaTaskType.CUSTOM, params)),
             )
-            handleStartResult(result, uiTextOf(R.string.toolbox_status_gacha_started))
             if (result is MaaCompositionService.StartResult.Success) {
                 startGachaTipRotation()
             }
+            handleStartResult(result, uiTextOf(R.string.toolbox_status_gacha_started))
         }
     }
 
@@ -321,16 +322,23 @@ class ToolboxViewModel(
             ToolboxTab.MINI_GAME -> miniGame.onStop()
             ToolboxTab.GACHA -> viewModelScope.launch {
                 _statusMessage.value = uiTextOf(R.string.toolbox_status_stopping)
-                compositionService.stop()
+                val result = compositionService.stop()
                 stopGachaTipRotation()
-                _statusMessage.value = uiTextOf(R.string.toolbox_status_stopped)
+                updateStopStatus(result)
             }
 
             else -> viewModelScope.launch {
                 _statusMessage.value = uiTextOf(R.string.toolbox_status_stopping)
-                compositionService.stop()
-                _statusMessage.value = uiTextOf(R.string.toolbox_status_stopped)
+                updateStopStatus(compositionService.stop())
             }
+        }
+    }
+
+    private fun updateStopStatus(result: MaaCompositionService.StopResult) {
+        _statusMessage.value = if (result is MaaCompositionService.StopResult.Success) {
+            uiTextOf(R.string.toolbox_status_stopped)
+        } else {
+            uiTextOf(R.string.task_stop_failed)
         }
     }
 
@@ -428,6 +436,17 @@ class ToolboxViewModel(
         successMessage: UiText = uiTextOf(R.string.toolbox_status_started),
     ) {
         _statusMessage.value = appContext.formatStartResult(result, successMessage)
+        if (result is MaaCompositionService.StartResult.Success) {
+            val tipJob = gachaTipJob
+            stopObserver.track(
+                onStopping = { _statusMessage.value = uiTextOf(R.string.toolbox_status_stopping) },
+                onStopped = ::updateStopStatus,
+                onFinished = {
+                    // 不取消下一轮新建的提示任务。
+                    if (gachaTipJob === tipJob) stopGachaTipRotation()
+                },
+            )
+        }
     }
 
     companion object {

@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -191,6 +192,36 @@ private fun StartBarProgress(visible: Boolean, color: Color) {
     }
 }
 
+/** 日志页保留停止按钮，启动中、停止中和空闲时均不可重复发起停止。 */
+@Composable
+internal fun TaskStopButton(
+    state: MaaExecutionState,
+    onStop: () -> Unit,
+    modifier: Modifier = Modifier,
+    visible: Boolean = true,
+) {
+    OutlinedButton(
+        onClick = onStop,
+        enabled = state == MaaExecutionState.RUNNING,
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = MaterialTheme.colorScheme.error,
+        ),
+    ) {
+        // 文字常驻，进度覆盖在其中心，避免宽度或高度随状态改变。
+        Box(modifier = Modifier.heightIn(min = 20.dp), contentAlignment = Alignment.Center) {
+            val busy = state == MaaExecutionState.STARTING || state == MaaExecutionState.STOPPING
+            Text(
+                text = stringResource(R.string.task_btn_stop),
+                maxLines = 1,
+                color = if (busy) Color.Transparent else Color.Unspecified,
+            )
+            if (busy) StartBarProgress(visible, MaterialTheme.colorScheme.error)
+        }
+    }
+}
+
 @Composable
 fun BackgroundTaskView(
     viewModel: BackgroundTaskViewModel,
@@ -236,7 +267,6 @@ fun BackgroundTaskView(
     val profileId by viewModel.chainState.profileId.collectAsStateWithLifecycle()
     val selectedNode = nodes.find { it.id == state.selectedNodeId }
     val clientType = remember(nodes) { viewModel.chainState.clientType }
-    val canShowTaskActions = PanelTab.canShowTaskActions(state.current)
 
     // 引导靶点在任务面板，重看时先切回去
     val onboarding = LocalOnboardingState.current
@@ -251,7 +281,7 @@ fun BackgroundTaskView(
         }
     }
 
-    // 浮层只在任务类面板可开，先切过去再展开
+    // 日志页也能直接展开快捷选项，无需切回一键长草。
     val searchNavigator: SettingSearchNavigator = koinInject()
     val pendingSearch by searchNavigator.pending.collectAsStateWithLifecycle()
     LaunchedEffect(pendingSearch) {
@@ -259,7 +289,6 @@ fun BackgroundTaskView(
         if (request.entry.location != SettingLocation.BackgroundActions || !request.isFresh()) {
             return@LaunchedEffect
         }
-        if (!PanelTab.canShowTaskActions(state.current)) viewModel.onTabChange(PanelTab.TASKS)
         showMoreActions = true
     }
 
@@ -307,7 +336,7 @@ fun BackgroundTaskView(
 
     val shouldHideMoreActions by remember {
         derivedStateOf {
-            !canShowTaskActions || showCloseConfirm || state.isFullscreenMonitor || state.dialog != null
+            showCloseConfirm || state.isFullscreenMonitor || state.dialog != null
         }
     }
     LaunchedEffect(shouldHideMoreActions) {
@@ -543,7 +572,7 @@ fun BackgroundTaskView(
                         toolboxViewModel.gachaDisclaimerAccepted.collectAsStateWithLifecycle()
                         val toolsHidesStartBar = toolboxTab == ToolboxTab.GACHA && !gachaDisclaimerOk
                         val hideStartBar = state.current == PanelTab.TOOLS && toolsHidesStartBar
-                        val showStartBar = canShowTaskActions && !hideStartBar
+                        val showStartBar = !hideStartBar
                         val isGachaActions = state.current == PanelTab.TOOLS &&
                                 toolboxTab == ToolboxTab.GACHA && gachaDisclaimerOk
                         BottomBarOverlay(
@@ -633,34 +662,22 @@ fun BackgroundTaskView(
                                         } else {
                                             // 运行中换成停止，空出的位置给「快捷选项」
                                             val taskRunning =
-                                                maaState == MaaExecutionState.RUNNING ||
+                                                state.current == PanelTab.LOG ||
+                                                        maaState == MaaExecutionState.RUNNING ||
                                                         maaState == MaaExecutionState.STOPPING
                                             if (taskRunning) {
-                                                OutlinedButton(
-                                                    onClick = {
+                                                TaskStopButton(
+                                                    state = maaState,
+                                                    visible = showStartBar,
+                                                    onStop = {
                                                         when (state.current) {
-                                                            PanelTab.TASKS -> viewModel.onStopTasks()
+                                                            PanelTab.TASKS, PanelTab.LOG -> viewModel.onStopTasks()
                                                             PanelTab.AUTO_BATTLE -> copilotViewModel.onStop()
                                                             PanelTab.TOOLS -> toolboxViewModel.onStop()
-                                                            else -> {}
                                                         }
                                                     },
-                                                    enabled = maaState == MaaExecutionState.RUNNING,
                                                     modifier = Modifier.weight(1f),
-                                                    shape = RoundedCornerShape(8.dp),
-                                                    colors = ButtonDefaults.outlinedButtonColors(
-                                                        contentColor = MaterialTheme.colorScheme.error
-                                                    )
-                                                ) {
-                                                    if (maaState == MaaExecutionState.STOPPING) {
-                                                        StartBarProgress(visible = showStartBar, color = MaterialTheme.colorScheme.error)
-                                                    } else {
-                                                        Text(
-                                                            text = stringResource(R.string.task_btn_stop),
-                                                            maxLines = 1,
-                                                        )
-                                                    }
-                                                }
+                                                )
                                             } else {
                                                 Button(
                                                     onClick = {
@@ -753,8 +770,7 @@ fun BackgroundTaskView(
                             ) { page ->
                                 CompositionLocalProvider(LocalPageVisible provides rememberPageVisible(pagerState, page)) {
                                     val pageTab = PanelTab.entries[page]
-                                    val reserveBar = PanelTab.canShowTaskActions(pageTab) &&
-                                            !(pageTab == PanelTab.TOOLS && toolsHidesStartBar)
+                                    val reserveBar = !(pageTab == PanelTab.TOOLS && toolsHidesStartBar)
                                     Box(Modifier.padding(bottom = if (reserveBar) actionBarHeight else 0.dp)) {
                                         when (page) {
                                             0 -> {

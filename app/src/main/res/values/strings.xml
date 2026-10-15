@@ -681,6 +681,7 @@
     <string name="task_btn_start">开始任务</string>
     <string name="task_btn_stop">停止任务</string>
     <string name="task_btn_quick_options">快捷选项</string>
+    <string name="task_stop_failed">停止失败，详细信息请查看日志</string>
     <string name="task_close_preview_cd">关闭预览</string>
 
     <!-- dialog: close app confirm -->

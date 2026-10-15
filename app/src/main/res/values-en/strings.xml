@@ -441,6 +441,7 @@
     <string name="task_btn_start">Start Task</string>
     <string name="task_btn_stop">Stop Task</string>
     <string name="task_btn_quick_options">Options</string>
+    <string name="task_stop_failed">Failed to stop. Check the logs for details</string>
     <string name="task_close_preview_cd">Close preview</string>
 
     <!-- dialog: close app confirm -->

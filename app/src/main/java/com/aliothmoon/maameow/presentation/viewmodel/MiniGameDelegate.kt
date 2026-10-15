@@ -70,6 +70,7 @@ class MiniGameDelegate(
 
     private val _state = MutableStateFlow(MiniGameUiState())
     val state: StateFlow<MiniGameUiState> = _state.asStateFlow()
+    private val stopObserver = TaskStopObserver(compositionService, scope)
 
     val miniGames: StateFlow<List<MiniGame>> = activityManager.miniGames
 
@@ -218,7 +219,26 @@ class MiniGameDelegate(
             val task = buildTaskParams()
             _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_starting)) }
             val result = compositionService.startCopilot(listOf(task))
+            _state.update {
+                it.copy(
+                    statusMessage = appContext.formatStartResult(
+                        result,
+                        uiTextOf(R.string.panel_mini_game_started),
+                    ),
+                )
+            }
             if (result is MaaCompositionService.StartResult.Success) {
+                stopObserver.track(
+                    onStopping = { _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_stopping)) } },
+                    onStopped = { stopped ->
+                        val message = if (stopped is MaaCompositionService.StopResult.Success) {
+                            uiTextOf(R.string.toolbox_status_stopped)
+                        } else {
+                            uiTextOf(R.string.task_stop_failed)
+                        }
+                        _state.update { it.copy(statusMessage = message) }
+                    },
+                )
                 achievementRepository.report {
                     event = AchievementEvents.MINI_GAME_STARTED
                     "task" to selectedTaskName
@@ -237,22 +257,19 @@ class MiniGameDelegate(
                     }
                 }
             }
-            _state.update {
-                it.copy(
-                    statusMessage = appContext.formatStartResult(
-                        result,
-                        uiTextOf(R.string.panel_mini_game_started),
-                    ),
-                )
-            }
         }
     }
 
     fun onStop() {
         scope.launch {
             _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_stopping)) }
-            compositionService.stop()
-            _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_stopped)) }
+            val result = compositionService.stop()
+            val message = if (result is MaaCompositionService.StopResult.Success) {
+                uiTextOf(R.string.toolbox_status_stopped)
+            } else {
+                uiTextOf(R.string.task_stop_failed)
+            }
+            _state.update { it.copy(statusMessage = message) }
         }
     }
 

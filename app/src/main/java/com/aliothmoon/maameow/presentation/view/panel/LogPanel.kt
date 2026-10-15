@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.presentation.view.panel
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,7 +45,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -54,6 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.LogColorRole
@@ -74,11 +81,25 @@ fun LogPanel(
 ) {
     val listState = rememberLazyListState()
     var isAutoScroll by remember { mutableStateOf(true) }
+    var viewportSize by remember { mutableStateOf(IntSize.Zero) }
+    val isDragged by listState.interactionSource.collectIsDraggedAsState()
     var selectedLog by remember { mutableStateOf<LogItem?>(null) }
+    val userScrollObserver = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                // 同时覆盖触摸和鼠标滚轮；水平切页不暂停日志跟随。
+                if (source == NestedScrollSource.UserInput && available.y != 0f) {
+                    isAutoScroll = false
+                }
+                return Offset.Zero
+            }
+        }
+    }
 
-    // 日志满上限后条数不再变，按末条 id 触发
-    LaunchedEffect(logs.lastOrNull()?.id, isAutoScroll) {
-        if (isAutoScroll && logs.isNotEmpty()) {
+    // 尺寸改变且没有新日志时也跟到末尾；拖动中的用户不会被拉回去。
+    // 日志满上限后条数不再变，仍按末条 id 触发。
+    LaunchedEffect(logs.lastOrNull()?.id, isAutoScroll, viewportSize, isDragged) {
+        if (isAutoScroll && !isDragged && logs.isNotEmpty() && viewportSize.height > 0) {
             listState.scrollToItem(logs.lastIndex)
         }
     }
@@ -86,8 +107,9 @@ fun LogPanel(
         derivedStateOf { !isAutoScroll && listState.canScrollForward }
     }
 
-    LaunchedEffect(listState.isScrollInProgress) {
-        if (listState.isScrollInProgress) {
+    // 只把用户拖动视为暂停跟随，不让程序性定位误关闭跟随。
+    LaunchedEffect(isDragged) {
+        if (isDragged) {
             isAutoScroll = false
         }
     }
@@ -137,7 +159,10 @@ fun LogPanel(
         Box(modifier = Modifier.weight(1f)) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onSizeChanged { viewportSize = it }
+                    .nestedScroll(userScrollObserver),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {

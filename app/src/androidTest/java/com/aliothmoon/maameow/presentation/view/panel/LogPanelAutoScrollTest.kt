@@ -1,18 +1,37 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.LogItem
+import com.aliothmoon.maameow.presentation.components.BottomBarOverlay
 import com.aliothmoon.maameow.presentation.components.LocalPageVisible
 import com.aliothmoon.maameow.presentation.components.collectWhilePageVisible
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -56,6 +75,67 @@ class LogPanelAutoScrollTest {
 
         composeRule.runOnIdle { visible.value = true }
         composeRule.onNodeWithText("value=1").assertExists()
+    }
+
+    /** 不追加日志也要在缩小视口后跟随；新增底栏不遮挡末行。 */
+    @Test
+    fun resizingWithBottomBarKeepsLatestLogVisibleAndFollowing() {
+        val all = List(101) { LogItem(content = "resize-log-$it") }
+        val logs = mutableStateOf(all.take(100))
+        val height = mutableStateOf(460.dp)
+        composeRule.setContent {
+            BottomBarOverlay(
+                showBottomBar = true,
+                modifier = Modifier.width(320.dp).height(height.value),
+                bottomBar = { Box(Modifier.fillMaxWidth().height(56.dp)) { Text("actions") } },
+            ) { bottom ->
+                LogPanel(
+                    modifier = Modifier.fillMaxSize().padding(bottom = bottom),
+                    logs = logs.value,
+                    onClearLogs = {},
+                )
+            }
+        }
+        composeRule.onNodeWithText("resize-log-99").assertIsDisplayed()
+        composeRule.runOnIdle { height.value = 240.dp }
+        val latest = composeRule.onNodeWithText("resize-log-99").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val bar = composeRule.onNodeWithText("actions").fetchSemanticsNode().boundsInRoot
+        assertTrue(latest.bottom <= bar.top)
+
+        // 尺寸调整的程序性定位不能把自动跟随关掉。
+        composeRule.runOnIdle { logs.value = all }
+        composeRule.onNodeWithText("resize-log-100").assertIsDisplayed()
+    }
+
+    @Test
+    fun manualReadingSurvivesResizeAndResumeButtonWorks() {
+        val height = mutableStateOf(460.dp)
+        val logs = mutableStateOf(List(100) { LogItem(content = "reading-log-$it") })
+        composeRule.setContent {
+            LogPanel(
+                modifier = Modifier.width(320.dp).height(height.value),
+                logs = logs.value,
+                onClearLogs = {},
+            )
+        }
+        val list = composeRule.onNode(hasScrollAction())
+        list.performTouchInput { swipeDown(durationMillis = 1500) }
+        composeRule.waitForIdle()
+        val listNode = list.fetchSemanticsNode()
+        val anchor = listNode.children.asSequence()
+            .filter { it.boundsInRoot.bottom > listNode.boundsInRoot.top && it.config.contains(SemanticsProperties.Text) }
+            .flatMap { it.config[SemanticsProperties.Text].asSequence() }
+            .first { it.text.startsWith("reading-log-") }.text
+        val before = composeRule.onNodeWithText(anchor).fetchSemanticsNode().boundsInRoot.top
+        composeRule.runOnIdle {
+            height.value = 240.dp
+            logs.value = logs.value + LogItem(content = "reading-newest")
+        }
+        val after = composeRule.onNodeWithText(anchor).fetchSemanticsNode().boundsInRoot.top
+        assertEquals(before, after, 1f)
+        val resumeLabel = InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.panel_log_resume_auto_scroll)
+        composeRule.onNodeWithContentDescription(resumeLabel).assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("reading-newest").assertIsDisplayed()
     }
 
     private companion object {

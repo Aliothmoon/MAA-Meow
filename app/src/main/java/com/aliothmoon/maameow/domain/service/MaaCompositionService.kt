@@ -89,6 +89,10 @@ class MaaCompositionService(
     private val _state = MutableStateFlow(MaaExecutionState.IDLE)
     val state: StateFlow<MaaExecutionState> = _state.asStateFlow()
 
+    /** 会话标识，供 UI 收尾排除上一轮的延迟通知。 */
+    val currentRunToken: Long
+        get() = liveCoordinator.currentToken()
+
     /** 停止发起方：用户操作 / 回调侧（掉线等）中止 / 到达运行时长上限 */
     enum class StopOrigin { USER, CALLBACK, RUN_DURATION_LIMIT }
 
@@ -100,6 +104,11 @@ class MaaCompositionService(
     /** 本轮 STOPPING 的发起方，STARTING 时复位；供 TaskEndRegistry 区分手动停止、异常中止与到达时长上限 */
     @Volatile
     var lastStopOrigin: StopOrigin = StopOrigin.USER
+        private set
+
+    /** 先于终态发布，UI 即使未收到短暂的 STOPPING 也能识别停止结果。 */
+    @Volatile
+    var lastStopResult: StopResult? = null
         private set
 
     private val defaultResolution = DefaultDisplayConfig.Resolution(
@@ -156,6 +165,7 @@ class MaaCompositionService(
         // specialUse 被系统拒绝时拉起 FGS 必崩，本轮降级为无进度通知运行
         val withFgs = !SpecialUseFgsGate.isDenied(context)
         lastStopOrigin = StopOrigin.USER
+        lastStopResult = null
         val runToken = liveCoordinator.beginRun()
         // 顺带提前拿断网闸门：这里在 IO 线程，留给 FGS 的 startForeground 拿会占主线程
         // 不起 FGS 就没人撤进度通知，闸门不能拿
@@ -878,6 +888,7 @@ class MaaCompositionService(
     }
 
     private fun finishStop(result: StopResult): StopResult {
+        lastStopResult = result
         setRunState(MaaExecutionState.IDLE)
         val status = if (result is StopResult.Success) "STOPPED" else "STOP_FAILED"
         sessionLogger.append(

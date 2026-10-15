@@ -26,6 +26,7 @@ import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.ScreenPowerController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
+import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
 import com.aliothmoon.maameow.domain.usecase.TaskStartDecision
@@ -41,6 +42,7 @@ import com.aliothmoon.maameow.schedule.model.CountdownState
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.resolve
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -128,6 +130,7 @@ class BackgroundTaskViewModel(
     private val touchPreviewController = TouchPreviewController(viewModelScope)
     val markers: StateFlow<List<PreviewTouchMarker>> = touchPreviewController.markers
     private var pendingStart: PendingStart? = null
+    private var stopJob: Job? = null
 
     private data class PendingStart(
         val context: TaskStartContext,
@@ -525,8 +528,11 @@ class BackgroundTaskViewModel(
     }
 
     fun onStopTasks() {
-        achievementReporter.reportTaskStopped()
-        viewModelScope.launch {
+        if (stopJob?.isActive == true || compositionService.state.value != MaaExecutionState.RUNNING) return
+        stopJob = viewModelScope.launch {
+            // 点击到执行之间可能已经由回调停止，避免重复记事件和调用 Core。
+            if (compositionService.state.value != MaaExecutionState.RUNNING) return@launch
+            achievementReporter.reportTaskStopped()
             compositionService.stop()
         }
     }
