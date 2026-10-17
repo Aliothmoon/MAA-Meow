@@ -10,8 +10,10 @@ import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
 import com.aliothmoon.maameow.domain.usecase.GameReadiness
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
 import com.aliothmoon.maameow.domain.usecase.TaskStartMode
+import com.aliothmoon.maameow.manager.RemoteGameAudioAdapter
+import com.aliothmoon.maameow.manager.RemoteServiceManager
+import com.aliothmoon.maameow.remote.RemoteServiceImpl
 import com.aliothmoon.maameow.remote.AppAliveStatus
-import com.aliothmoon.maameow.remote.internal.GameAudioMuteController
 import com.aliothmoon.maameow.remote.internal.RemoteUtils
 import java.io.File
 import com.aliothmoon.maameow.third.Ln
@@ -87,18 +89,34 @@ class GamePackageIntegrationTest {
         watchdog.stopWatching()
     }
 
-    @Test fun customPackageReachesRemoteUidLookup() {
+    @Test fun customPackageFlowsThroughMuteCoordinatorAdapterAndRemoteUidLookup() = runTest {
         writeConfig(SAMSUNG)
         Packages.initialize(GamePackageConfig(temporary.root))
-        mockkObject(RemoteUtils)
+        mockkObject(RemoteUtils, RemoteServiceManager)
         mockkStatic(Ln::class)
         try {
-            every { RemoteUtils.getAppUid(SAMSUNG) } returns -1
+            every { RemoteUtils.getAppUid(any()) } returns -1
             every { Ln.w(any()) } just Runs
-            assertFalse(GameAudioMuteController.setMuted(Packages["YoStarKR"]!!, true))
+            val remote = mockk<RemoteServiceImpl>()
+            every { remote.setPlayAudioOpAllowed(any(), any()) } answers { callOriginal() }
+            every { RemoteServiceManager.state } returns MutableStateFlow<RemoteServiceManager.ServiceState>(
+                RemoteServiceManager.ServiceState.Connected(remote)
+            )
+            every { RemoteServiceManager.getInstanceOrNull() } returns remote
+            val settings = mockk<AppSettingsManager> {
+                every { initialMutedGamePackage } returns ""
+                coEvery { setMutedGamePackage(any()) } just Runs
+            }
+            val coordinator = GameMuteCoordinator(settings, RemoteGameAudioAdapter, backgroundScope)
+
+            assertFalse(coordinator.mute("YoStarKR"))
+
+            coVerify(exactly = 1) { settings.setMutedGamePackage(SAMSUNG) }
+            verify(exactly = 1) { remote.setPlayAudioOpAllowed(SAMSUNG, false) }
             verify(exactly = 1) { RemoteUtils.getAppUid(SAMSUNG) }
+            verify(exactly = 0) { RemoteUtils.getAppUid("com.YoStarKR.Arknights") }
         } finally {
-            unmockkObject(RemoteUtils)
+            unmockkObject(RemoteUtils, RemoteServiceManager)
             unmockkStatic(Ln::class)
         }
     }
