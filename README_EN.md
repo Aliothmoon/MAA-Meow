@@ -39,6 +39,12 @@ One-click automation for all daily tasks, powered by image recognition
 | ⏱️ | **Scheduled Tasks** | Auto-start tasks at preset times — perfect for daily routines |
 | 🔄 | **Auto Update** | Automatically check and download app & resource updates on launch |
 
+## Custom package name
+
+Stop tasks, open the **Start Up** task settings, and tap **Custom package name** below the server selection. An installed text editor that supports Android file editing is required. The button opens `Maa/resource/config.json` with temporary read and write access.
+
+Edit the `packageName` value for the required server, save the original file, and restart MaaMeow. Reinitializing resources may overwrite manual changes.
+
 ## Requirements
 
 | Item | Requirement |

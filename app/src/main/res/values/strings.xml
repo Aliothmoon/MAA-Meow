@@ -2937,4 +2937,9 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="oper_progress_result_recognition">识别或操作失败</string>
     <string name="oper_progress_log_detail">%1$s：%2$s%3$s</string>
     <string name="oper_progress_log_summary">干员培养本轮处理结果：成功 %1$d，失败 %2$d，跳过 %3$d（专精启动也计入成功）</string>
+    <string name="game_package_edit">自定义包名</string>
+    <string name="game_package_edit_hint">修改包名后保存文件并重启 MaaMeow。</string>
+    <string name="game_package_config_missing">找不到 config.json，请先初始化资源。</string>
+    <string name="game_package_no_editor">未找到可编辑此文件的文本编辑器，请先安装支持文件编辑的应用。</string>
+    <string name="game_package_open_failed">无法打开 config.json，请检查文件权限后重试。</string>
 </resources>

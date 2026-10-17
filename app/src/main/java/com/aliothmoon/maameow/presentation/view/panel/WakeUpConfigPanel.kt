@@ -24,6 +24,7 @@ import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
+import com.aliothmoon.maameow.presentation.components.GamePackageConfigButton
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
 import com.aliothmoon.maameow.utils.i18n.wakeUpClientTypeDisplayName
@@ -63,6 +64,8 @@ fun WakeUpConfigPanel(
             enabled = !isTaskActive,
             labelFontWeight = FontWeight.Medium
         )
+
+        GamePackageConfigButton()
 
         if (showAccountSwitchInput) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

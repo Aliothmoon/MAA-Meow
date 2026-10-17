@@ -2880,4 +2880,9 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="oper_progress_result_recognition">Recognition or operation failed</string>
     <string name="oper_progress_log_detail">%1$s: %2$s%3$s</string>
     <string name="oper_progress_log_summary">Operator training results: %1$d successful, %2$d failed, %3$d skipped (starting mastery also counts as success).</string>
+    <string name="game_package_edit">Custom package name</string>
+    <string name="game_package_edit_hint">Edit the package name, save the file, then restart MaaMeow.</string>
+    <string name="game_package_config_missing">config.json was not found. Initialize resources first.</string>
+    <string name="game_package_no_editor">No text editor can edit this file. Install an app that supports file editing.</string>
+    <string name="game_package_open_failed">Could not open config.json. Check file permissions and retry.</string>
 </resources>
