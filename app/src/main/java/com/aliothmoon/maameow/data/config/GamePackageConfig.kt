@@ -1,6 +1,6 @@
 package com.aliothmoon.maameow.data.config
 
-import com.aliothmoon.maameow.constant.Packages
+import com.aliothmoon.maameow.constant.GamePackageDefaults
 import com.aliothmoon.maameow.domain.models.ClientResourceProfile
 import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.serialization.json.JsonObject
@@ -41,7 +41,7 @@ class GamePackageConfig(
     }
 
     private fun packageNames(configs: List<JsonObject>): Map<String, String> = buildMap {
-        putAll(Packages.defaults)
+        putAll(GamePackageDefaults.names)
         for (config in configs) {
             val names = config["packageName"] as? JsonObject ?: continue
             for ((client, value) in names) {

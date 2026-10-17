@@ -4,15 +4,6 @@ import com.aliothmoon.maameow.data.config.GamePackageConfig
 import java.io.File
 
 object Packages : Iterable<Map.Entry<String, String>> {
-    internal val defaults = mapOf(
-        "Official" to "com.hypergryph.arknights",
-        "Bilibili" to "com.hypergryph.arknights.bilibili",
-        "YoStarEN" to "com.YoStarEN.Arknights",
-        "YoStarJP" to "com.YoStarJP.Arknights",
-        "YoStarKR" to "com.YoStarKR.Arknights",
-        "txwy" to "tw.txwy.and.arknights"
-    )
-
     @Volatile
     private var config: GamePackageConfig? = null
 
@@ -25,7 +16,7 @@ object Packages : Iterable<Map.Entry<String, String>> {
     }
 
     operator fun get(type: String): String? =
-        loadedPackages[type] ?: config?.resolve(type) ?: defaults[type]
+        loadedPackages[type] ?: config?.resolve(type) ?: GamePackageDefaults.names[type]
 
     fun readPackageNames(root: File, clientType: String, overridesEnabled: Boolean = false): Map<String, String> =
         (config ?: GamePackageConfig(root)).snapshot(clientType, overridesEnabled)
@@ -39,5 +30,5 @@ object Packages : Iterable<Map.Entry<String, String>> {
     }
 
     override fun iterator(): Iterator<Map.Entry<String, String>> =
-        defaults.keys.mapNotNull { type -> get(type)?.let { type to it } }.toMap().iterator()
+        GamePackageDefaults.names.keys.mapNotNull { type -> get(type)?.let { type to it } }.toMap().iterator()
 }
