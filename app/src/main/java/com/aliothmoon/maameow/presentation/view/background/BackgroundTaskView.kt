@@ -249,7 +249,7 @@ fun BackgroundTaskView(
         }
     }
 
-    // 浮层只在任务类面板可开，先切过去再展开
+    // 搜索定位复用当前支持快捷选项的面板，包括日志页。
     val searchNavigator: SettingSearchNavigator = koinInject()
     val pendingSearch by searchNavigator.pending.collectAsStateWithLifecycle()
     LaunchedEffect(pendingSearch) {
@@ -633,14 +633,16 @@ fun BackgroundTaskView(
                                             val taskRunning =
                                                 maaState == MaaExecutionState.RUNNING ||
                                                         maaState == MaaExecutionState.STOPPING
-                                            if (taskRunning) {
+                                            // 日志页没有明确的启动目标，始终保留停止按钮；
+                                            // 非运行态沿用禁用样式，停止中仍显示进度且不可重复点击。
+                                            if (taskRunning || state.current == PanelTab.LOG) {
                                                 OutlinedButton(
                                                     onClick = {
                                                         when (state.current) {
-                                                            PanelTab.TASKS -> viewModel.onStopTasks()
+                                                            // 停止入口作用于当前 Core 任务，不受启动页面限制。
+                                                            PanelTab.TASKS, PanelTab.LOG -> viewModel.onStopTasks()
                                                             PanelTab.AUTO_BATTLE -> copilotViewModel.onStop()
                                                             PanelTab.TOOLS -> toolboxViewModel.onStop()
-                                                            else -> {}
                                                         }
                                                     },
                                                     enabled = maaState == MaaExecutionState.RUNNING,
@@ -751,6 +753,7 @@ fun BackgroundTaskView(
                             ) { page ->
                                 CompositionLocalProvider(LocalPageVisible provides rememberPageVisible(pagerState, page)) {
                                     val pageTab = PanelTab.entries[page]
+                                    // 各页独立预留底栏高度，日志末条也不能被按钮遮挡。
                                     val reserveBar = PanelTab.canShowTaskActions(pageTab) &&
                                             !(pageTab == PanelTab.TOOLS && toolsHidesStartBar)
                                     Box(Modifier.padding(bottom = if (reserveBar) actionBarHeight else 0.dp)) {
