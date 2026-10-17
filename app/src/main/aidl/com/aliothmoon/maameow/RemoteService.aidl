@@ -133,4 +133,6 @@ interface RemoteService {
 
     // 系统记下的进程退出（含被杀、崩溃），只返回不早于 sinceMs 的；查别的包靠 shell 自带的 DUMP 权限
     List<ProcessExitRecord> getProcessExitRecords(String packageName, long sinceMs, int maxNum) = 56;
+
+    boolean removeStaleCoreResourceConfigs(in List<String> retainedPaths) = 57;
 }
