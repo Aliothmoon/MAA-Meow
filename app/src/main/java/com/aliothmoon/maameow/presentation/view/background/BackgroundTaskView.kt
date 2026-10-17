@@ -80,6 +80,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -92,10 +93,12 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChangedIgnoreConsumed
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -108,7 +111,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
@@ -328,6 +330,39 @@ fun BackgroundTaskView(
     }
 
     var previewBounds by remember { mutableStateOf<Rect?>(null) }
+    // PiP 用外层窗口矩形；触控换算用卡片在容器内的真实位置，两者不要混
+    val embeddedCardBoundsState = remember { mutableStateOf<PreviewCardBounds?>(null) }
+    val fullscreenContainerCoords = remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val renderedContentCoords = remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val fullscreenCardBoundsState = remember { mutableStateOf<PreviewCardBounds?>(null) }
+    val fullscreenBoundsActive = remember { mutableStateOf(false) }
+    val publishFullscreenCardBounds = remember {
+        {
+            if (fullscreenBoundsActive.value) {
+                val container = fullscreenContainerCoords.value
+                val content = renderedContentCoords.value
+                if (
+                    container != null && content != null &&
+                    container.isAttached && content.isAttached &&
+                    content.size.width > 0 && content.size.height > 0
+                ) {
+                    val topLeft = runCatching {
+                        container.localPositionOf(content, Offset.Zero)
+                    }.getOrNull()
+                    if (topLeft != null) {
+                        fullscreenCardBoundsState.value = PreviewCardBounds(
+                            left = topLeft.x,
+                            top = topLeft.y,
+                            width = content.size.width.toFloat(),
+                            height = content.size.height.toFloat(),
+                        )
+                    }
+                }
+            }
+        }
+    }
+    val resolutionForPointer = rememberUpdatedState(displayResolution)
+    val fullscreenForPointer = rememberUpdatedState(state.isFullscreenMonitor)
 
     val previewContent = remember {
         movableContentOf {
@@ -335,7 +370,14 @@ fun BackgroundTaskView(
             Box(
                 modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
             ) {
-                Box(modifier = Modifier.aspectRatio(DefaultDisplayConfig.ASPECT_RATIO)) {
+                Box(
+                    modifier = Modifier
+                        .aspectRatio(DefaultDisplayConfig.ASPECT_RATIO)
+                        .onGloballyPositioned { coords ->
+                            renderedContentCoords.value = coords
+                            publishFullscreenCardBounds()
+                        }
+                ) {
                     // 特权进程换了一个：旧 Surface 还连着上一个进程，新进程接不上，重建 SurfaceView
                     val surfaceEpoch by viewModel.previewSurfaceEpoch.collectAsStateWithLifecycle()
                     key(surfaceEpoch) {
@@ -464,6 +506,20 @@ fun BackgroundTaskView(
                     .fillMaxWidth()
                     .weight(3f)
                     .onboardingTarget(OnboardingTarget.BG_PREVIEW)
+                    .pointerInput(Unit) {
+                        // 每次事件读最新边界：旋转 / inset 变化后不能沿用进入手势时的几何
+                        forwardVirtualDisplayPointers(
+                            cardBounds = {
+                                if (fullscreenForPointer.value) null else embeddedCardBoundsState.value
+                            },
+                            resolution = { resolutionForPointer.value },
+                            deferUntilDragSlop = true,
+                            onDown = viewModel::onTouchDown,
+                            onMove = viewModel::onTouchMove,
+                            onUp = viewModel::onTouchUp,
+                            onCancel = viewModel::onTouchCancel,
+                        )
+                    }
             ) {
                 if (!state.isFullscreenMonitor) {
                     VirtualDisplayPreview(
@@ -483,7 +539,13 @@ fun BackgroundTaskView(
                             },
                         isRunning = maaState == MaaExecutionState.RUNNING,
                         isSurfaceAvailable = isSurfaceAvailable,
-                        onClick = { viewModel.onToggleFullscreenMonitor() }) {
+                        onClick = { viewModel.onToggleFullscreenMonitor() },
+                        onRenderedCardBounds = { next ->
+                            if (embeddedCardBoundsState.value != next) {
+                                embeddedCardBoundsState.value = next
+                            }
+                        },
+                    ) {
                         previewContent()
                     }
                 } else {
@@ -898,57 +960,40 @@ fun BackgroundTaskView(
 
             BackHandler { viewModel.onToggleFullscreenMonitor() }
 
+            SideEffect { fullscreenBoundsActive.value = true }
+            DisposableEffect(Unit) {
+                onDispose {
+                    fullscreenBoundsActive.value = false
+                    fullscreenContainerCoords.value = null
+                    fullscreenCardBoundsState.value = null
+                }
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black)
+                    .onGloballyPositioned { coords ->
+                        fullscreenContainerCoords.value = coords
+                        publishFullscreenCardBounds()
+                    }
                     .pointerInput(Unit) {
-                        val slots = PreviewPointerSlots()
-                        try {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    for (change in event.changes) {
-                                        val pointerId = change.id.value
-                                        val down = change.changedToDownIgnoreConsumed()
-                                        val up = change.changedToUpIgnoreConsumed()
-                                        if (!down && !up && !change.positionChangedIgnoreConsumed()) continue
-
-                                        // 画面外按下忽略；拖出画面钳到边缘，保证抬起送达
-                                        val point = viewToVirtualDisplay(
-                                            change.position,
-                                            size,
-                                            displayResolution
-                                        )
-                                        val (x, y) = point.offset
-                                        when {
-                                            down -> {
-                                                if (!point.inside) continue
-                                                val contact = slots.acquire(pointerId)
-                                                if (contact < 0) continue
-                                                viewModel.onTouchDown(x, y, contact)
-                                            }
-
-                                            up -> {
-                                                val contact = slots.release(pointerId)
-                                                if (contact < 0) continue
-                                                viewModel.onTouchUp(x, y, contact)
-                                            }
-
-                                            else -> {
-                                                val contact = slots.indexOf(pointerId)
-                                                if (contact < 0) continue
-                                                viewModel.onTouchMove(x, y, contact)
-                                            }
-                                        }
-                                        change.consume()
-                                    }
-                                }
-                            }
-                        } finally {
-                            // 预览退出时仍按着的手指由远端整体 CANCEL
-                            viewModel.onTouchCancel()
-                        }
+                        forwardVirtualDisplayPointers(
+                            cardBounds = {
+                                fullscreenCardBoundsState.value ?: PreviewCardBounds(
+                                    left = 0f,
+                                    top = 0f,
+                                    width = size.width.toFloat(),
+                                    height = size.height.toFloat(),
+                                )
+                            },
+                            resolution = { resolutionForPointer.value },
+                            deferUntilDragSlop = false,
+                            onDown = viewModel::onTouchDown,
+                            onMove = viewModel::onTouchMove,
+                            onUp = viewModel::onTouchUp,
+                            onCancel = viewModel::onTouchCancel,
+                        )
                     }, contentAlignment = Alignment.Center
             ) {
                 previewContent()
@@ -1002,26 +1047,209 @@ fun BackgroundTaskView(
     }
 }
 
-/** offset 已钳到边缘，inside 取原始落点 */
-private class DisplayPoint(val offset: IntOffset, val inside: Boolean)
+/** 渲染卡片在触控容器内的位置和大小，像素。全屏且尚未测到内容时退化为容器本身。 */
+internal data class PreviewCardBounds(
+    val left: Float,
+    val top: Float,
+    val width: Float,
+    val height: Float,
+) {
+    val right: Float get() = left + width
+    val bottom: Float get() = top + height
+}
 
-private fun viewToVirtualDisplay(
+internal enum class PreviewPointerAction { Down, Move, Up }
+
+/** offset 已钳到虚拟屏内；inside 取原始落点是否在卡片画面上 */
+internal class DisplayPoint(
+    val offset: IntOffset,
+    val inside: Boolean,
+    val deliver: Boolean,
+)
+
+/**
+ * 按卡片真实左上角和等比缩放把容器坐标映射到虚拟屏。
+ * 不足 1px 的留白当成取整误差，避免右缘按下被判到画面外。
+ */
+internal fun viewToVirtualDisplay(
     view: Offset,
-    viewSize: IntSize,
+    cardBounds: PreviewCardBounds,
     display: DefaultDisplayConfig.Resolution,
+    action: PreviewPointerAction,
+    gestureActive: Boolean,
 ): DisplayPoint {
     val bufferW = display.width.toFloat()
     val bufferH = display.height.toFloat()
-    val scale = minOf(viewSize.width / bufferW, viewSize.height / bufferH)
-    val offsetX = (viewSize.width - bufferW * scale) / 2f
-    val offsetY = (viewSize.height - bufferH * scale) / 2f
+    if (bufferW < 1f || bufferH < 1f || cardBounds.width <= 0f || cardBounds.height <= 0f) {
+        return DisplayPoint(IntOffset.Zero, inside = false, deliver = false)
+    }
+    val scale = minOf(cardBounds.width / bufferW, cardBounds.height / bufferH)
+    if (scale <= 0f) {
+        return DisplayPoint(IntOffset.Zero, inside = false, deliver = false)
+    }
+    val contentW = bufferW * scale
+    val contentH = bufferH * scale
+    val slackX = cardBounds.width - contentW
+    val slackY = cardBounds.height - contentH
+    val insetX = if (slackX < 1f) 0f else slackX / 2f
+    val insetY = if (slackY < 1f) 0f else slackY / 2f
+    val offsetX = cardBounds.left + insetX
+    val offsetY = cardBounds.top + insetY
+    val contentRight = if (slackX < 1f) cardBounds.right else offsetX + contentW
+    val contentBottom = if (slackY < 1f) cardBounds.bottom else offsetY + contentH
     val vx = ((view.x - offsetX) / scale).toInt()
     val vy = ((view.y - offsetY) / scale).toInt()
-    val inside = vx in 0 until display.width && vy in 0 until display.height
-    return DisplayPoint(
-        IntOffset(vx.coerceIn(0, display.width - 1), vy.coerceIn(0, display.height - 1)),
+    val inside = view.x in offsetX..contentRight && view.y in offsetY..contentBottom
+    val mapped = IntOffset(
+        vx.coerceIn(0, display.width - 1),
+        vy.coerceIn(0, display.height - 1),
+    )
+    val deliver = when (action) {
+        PreviewPointerAction.Down -> inside
+        PreviewPointerAction.Move, PreviewPointerAction.Up -> gestureActive
+    }
+    Timber.v(
+        "viewToVirtualDisplay point=(%s, %s) bounds=(%s, %s, %s, %s) scale=%s mapped=(%s, %s) inside=%s",
+        view.x,
+        view.y,
+        cardBounds.left,
+        cardBounds.top,
+        cardBounds.width,
+        cardBounds.height,
+        scale,
+        mapped.x,
+        mapped.y,
         inside,
     )
+    return DisplayPoint(mapped, inside, deliver)
+}
+
+/**
+ * 小窗轻点仍交给卡片点击进入全屏，超过触控阈值才注入；
+ * 全屏直接注入。画面外按下忽略，拖出卡片时钳到边缘以便抬起送达。
+ */
+private suspend fun PointerInputScope.forwardVirtualDisplayPointers(
+    cardBounds: () -> PreviewCardBounds?,
+    resolution: () -> DefaultDisplayConfig.Resolution,
+    deferUntilDragSlop: Boolean,
+    onDown: (Int, Int, Int) -> Unit,
+    onMove: (Int, Int, Int) -> Unit,
+    onUp: (Int, Int, Int) -> Unit,
+    onCancel: () -> Unit,
+) {
+    val slots = PreviewPointerSlots()
+    val pendingDown = mutableMapOf<Long, Offset>()
+    var holding = 0
+    try {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent()
+                for (change in event.changes) {
+                    val pointerId = change.id.value
+                    val down = change.changedToDownIgnoreConsumed()
+                    val up = change.changedToUpIgnoreConsumed()
+                    if (!down && !up && !change.positionChangedIgnoreConsumed()) continue
+
+                    val bounds = cardBounds()
+                    val display = resolution()
+                    if (bounds == null || display.width < 1 || display.height < 1) {
+                        if (up) releasePreviewPointer(slots, pointerId, pendingDown) { contact ->
+                            holding--
+                            onUp(0, 0, contact)
+                        }
+                        continue
+                    }
+
+                    if (down) {
+                        val point = viewToVirtualDisplay(
+                            change.position,
+                            bounds,
+                            display,
+                            PreviewPointerAction.Down,
+                            gestureActive = false,
+                        )
+                        if (!point.deliver) continue
+                        if (deferUntilDragSlop) {
+                            pendingDown[pointerId] = change.position
+                        } else if (beginPreviewContact(slots, pointerId, point, onDown)) {
+                            holding++
+                            change.consume()
+                        }
+                        continue
+                    }
+
+                    val origin = pendingDown[pointerId]
+                    if (origin != null) {
+                        val dragged = (change.position - origin).getDistance() > viewConfiguration.touchSlop
+                        if (!dragged) {
+                            if (up) pendingDown.remove(pointerId)
+                            continue
+                        }
+                        val start = viewToVirtualDisplay(
+                            origin,
+                            bounds,
+                            display,
+                            PreviewPointerAction.Down,
+                            gestureActive = false,
+                        )
+                        pendingDown.remove(pointerId)
+                        if (start.deliver && beginPreviewContact(slots, pointerId, start, onDown)) {
+                            holding++
+                        }
+                    }
+
+                    val active = slots.indexOf(pointerId) >= 0
+                    val action = if (up) PreviewPointerAction.Up else PreviewPointerAction.Move
+                    val point = viewToVirtualDisplay(change.position, bounds, display, action, active)
+                    if (!point.deliver) {
+                        if (up) {
+                            pendingDown.remove(pointerId)
+                            slots.release(pointerId)
+                        }
+                        continue
+                    }
+                    if (up) {
+                        val contact = slots.release(pointerId)
+                        pendingDown.remove(pointerId)
+                        if (contact < 0) continue
+                        holding--
+                        onUp(point.offset.x, point.offset.y, contact)
+                    } else {
+                        val contact = slots.indexOf(pointerId)
+                        if (contact < 0) continue
+                        onMove(point.offset.x, point.offset.y, contact)
+                    }
+                    if (!deferUntilDragSlop || active) change.consume()
+                }
+            }
+        }
+    } finally {
+        // 全屏退出时无论是否还按着都 CANCEL，与原先一致；小窗只在本手势仍按着时取消，避免误伤自动化触控
+        if (holding > 0 || !deferUntilDragSlop) onCancel()
+    }
+}
+
+private fun beginPreviewContact(
+    slots: PreviewPointerSlots,
+    pointerId: Long,
+    point: DisplayPoint,
+    onDown: (Int, Int, Int) -> Unit,
+): Boolean {
+    val contact = slots.acquire(pointerId)
+    if (contact < 0) return false
+    onDown(point.offset.x, point.offset.y, contact)
+    return true
+}
+
+private fun releasePreviewPointer(
+    slots: PreviewPointerSlots,
+    pointerId: Long,
+    pendingDown: MutableMap<Long, Offset>,
+    onUp: (Int) -> Unit,
+) {
+    pendingDown.remove(pointerId)
+    val contact = slots.release(pointerId)
+    if (contact >= 0) onUp(contact)
 }
 
 

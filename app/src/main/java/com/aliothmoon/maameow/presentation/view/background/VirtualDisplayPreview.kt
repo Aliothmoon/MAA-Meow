@@ -18,10 +18,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -30,17 +35,39 @@ import com.aliothmoon.maameow.domain.service.AppWatchdog
 import org.koin.compose.koinInject
 
 @Composable
-fun VirtualDisplayPreview(
+internal fun VirtualDisplayPreview(
     modifier: Modifier = Modifier,
     isRunning: Boolean,
     isSurfaceAvailable: Boolean,
     onClick: () -> Unit,
+    onRenderedCardBounds: (PreviewCardBounds) -> Unit = {},
     appWatchdog: AppWatchdog = koinInject(),
     content: @Composable () -> Unit
 ) {
     val watchdogState by appWatchdog.state.collectAsStateWithLifecycle()
+    // 容器与卡片谁先完成布局不确定，两边都落一次再换算相对坐标
+    val containerCoordinates = remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val cardCoordinates = remember { mutableStateOf<LayoutCoordinates?>(null) }
+    fun reportCardBounds() {
+        val container = containerCoordinates.value
+        val card = cardCoordinates.value
+        if (container == null || card == null || !container.isAttached || !card.isAttached) return
+        if (card.size.width <= 0 || card.size.height <= 0) return
+        val topLeft = runCatching { container.localPositionOf(card, Offset.Zero) }.getOrNull() ?: return
+        onRenderedCardBounds(
+            PreviewCardBounds(
+                left = topLeft.x,
+                top = topLeft.y,
+                width = card.size.width.toFloat(),
+                height = card.size.height.toFloat(),
+            )
+        )
+    }
     BoxWithConstraints(
-        modifier = modifier,
+        modifier = modifier.onGloballyPositioned { coords ->
+            containerCoordinates.value = coords
+            reportCardBounds()
+        },
         contentAlignment = Alignment.Center
     ) {
         val maxWidth = maxWidth
@@ -60,7 +87,11 @@ fun VirtualDisplayPreview(
             onClick = onClick,
             modifier = Modifier
                 .width(cardWidth)
-                .height(cardHeight),
+                .height(cardHeight)
+                .onGloballyPositioned { coords ->
+                    cardCoordinates.value = coords
+                    reportCardBounds()
+                },
             shape = MaterialTheme.shapes.medium,
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
