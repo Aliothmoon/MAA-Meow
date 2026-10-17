@@ -318,6 +318,46 @@ class MaaResourceLoaderTest {
         }
     }
 
+    @Test
+    fun overrideConfigMatchesLastCoreLayerInBothStorageModes() = runBlocking {
+        for (separated in listOf(false, true)) {
+            withEnv(coreSeparated = separated, customPackages = true, overridesEnabled = true) { env ->
+                val override = File(env.rootDir, "overrides/resource/config.json")
+                override.writeText("""{"packageName":{"YoStarKR":"override.game"}}""")
+                assertTrue(env.loader.load("YoStarKR").isSuccess)
+                val expectedRoot = if (separated) "/data/local/tmp/maameow" else env.rootDir.absolutePath
+                assertEquals("$expectedRoot/overrides", env.loadedDirs.last())
+                assertEquals("override.game", Packages["YoStarKR"])
+                override.writeText("""{"packageName":{"YoStarKR":"changed.game"}}""")
+                assertEquals("override.game", Packages["YoStarKR"])
+            }
+            unmockkObject(RemoteServiceManager)
+        }
+    }
+
+    @Test
+    fun disabledOverrideDoesNotChangePackageOrCoreLoadPaths() = runBlocking {
+        withEnv(customPackages = true) { env ->
+            File(env.rootDir, "overrides/resource/config.json").apply {
+                parentFile!!.mkdirs()
+                writeText("""{"packageName":{"YoStarKR":"override.game"}}""")
+            }
+            assertTrue(env.loader.load("YoStarKR").isSuccess)
+            assertEquals("com.YoStarKR.Samsung.Arknights", Packages["YoStarKR"])
+            assertTrue(env.loadedDirs.none { it.endsWith("/overrides") })
+        }
+    }
+
+    @Test
+    fun rejectedOverrideResourcePreventsPublishingPackageSnapshot() = runBlocking {
+        withEnv(customPackages = true, overridesEnabled = true, rejectOverrideResource = true) { env ->
+            assertTrue(env.loader.load("YoStarKR").isFailure)
+            assertTrue(env.loader.state.value is MaaResourceLoader.State.Failed)
+            File(env.rootDir, "resource/config.json").writeText("""{"packageName":{"YoStarKR":"after.failure"}}""")
+            assertEquals("after.failure", Packages["YoStarKR"])
+        }
+    }
+
     private class Env(
         val rootDir: File,
         val loader: MaaResourceLoader,
@@ -336,6 +376,8 @@ class MaaResourceLoaderTest {
         coreSeparated: Boolean = false,
         customPackages: Boolean = false,
         rejectGlobalResource: Boolean = false,
+        overridesEnabled: Boolean = false,
+        rejectOverrideResource: Boolean = false,
         block: suspend (Env) -> Unit,
     ) {
         val rootDir = Files.createTempDirectory("maa-resource-loader-test").toFile()
@@ -348,6 +390,7 @@ class MaaResourceLoaderTest {
                 Packages.initialize(GamePackageConfig(rootDir))
             }
             File(rootDir, "cache/resource").mkdirs()
+            if (overridesEnabled) File(rootDir, "overrides/resource").mkdirs()
             listOf("YoStarJP", "YoStarEN", "YoStarKR").forEach {
                 File(rootDir, "resource/global/$it/resource").mkdirs()
                 File(rootDir, "cache/resource/global/$it/resource").mkdirs()
@@ -371,7 +414,7 @@ class MaaResourceLoaderTest {
                 every { language } returns MutableStateFlow(appLanguage)
                 every { displayLanguage } returns ResourceDataManager.displayLanguageCode(appLanguage)
                 every { forceFullscreenOnVirtualDisplay } returns MutableStateFlow(false)
-                every { tasksOverrideEnabled } returns MutableStateFlow(false)
+                every { tasksOverrideEnabled } returns MutableStateFlow(overridesEnabled)
             }
             val chainState = mockk<TaskChainState> {
                 every { clientType } returns "Official"
@@ -397,7 +440,8 @@ class MaaResourceLoaderTest {
                 every { maaCore.LoadResource(any()) } answers {
                     val path = firstArg<String>()
                     loadedDirs += path
-                    !(rejectGlobalResource && path.contains("global/YoStarKR"))
+                    !(rejectGlobalResource && path.contains("global/YoStarKR")) &&
+                            !(rejectOverrideResource && path.endsWith("/overrides"))
                 }
                 return mockk<RemoteService> {
                     every { asBinder() } returns mockk<IBinder>()

@@ -27,8 +27,8 @@ object Packages : Iterable<Map.Entry<String, String>> {
     operator fun get(type: String): String? =
         loadedPackages[type] ?: config?.resolve(type) ?: defaults[type]
 
-    fun readPackageNames(root: File, clientType: String): Map<String, String> =
-        (config ?: GamePackageConfig(root)).snapshot(clientType)
+    fun readPackageNames(root: File, clientType: String, overridesEnabled: Boolean = false): Map<String, String> =
+        (config ?: GamePackageConfig(root)).snapshot(clientType, overridesEnabled)
 
     fun onResourcesLoaded(clientType: String, names: Map<String, String>) {
         // Official and Bilibili share one resource profile and do not trigger a Core reload.
