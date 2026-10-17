@@ -5,6 +5,8 @@ import com.aliothmoon.preferences.PrefKey
 import com.aliothmoon.preferences.PrefSchema
 import kotlinx.serialization.Serializable
 
+enum class VirtualDisplayBackend { LEGACY, VDM }
+
 @Serializable
 @PrefSchema
 data class AppSettings(
@@ -111,6 +113,10 @@ data class AppSettings(
 
     @PrefKey(default = "P720")
     val backgroundResolution: String = "P720",
+
+    /** 后台虚拟屏创建方式；VDM 仅在 Android 14+ 设置页展示。 */
+    @PrefKey(default = "LEGACY")
+    val virtualDisplayBackend: String = "LEGACY",
 
     @PrefKey(default = "SYSTEM")
     val language: String = "SYSTEM",

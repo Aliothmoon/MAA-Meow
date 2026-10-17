@@ -31,6 +31,7 @@ import com.aliothmoon.maameow.remote.internal.ScreenManager
 import com.aliothmoon.maameow.remote.internal.StaleFrameGuard
 import com.aliothmoon.maameow.remote.internal.SystemLogDump
 import com.aliothmoon.maameow.remote.internal.UserDirProbe
+import com.aliothmoon.maameow.remote.internal.VdmDisplayController
 import com.aliothmoon.maameow.remote.internal.VirtualDisplayManager
 import com.aliothmoon.maameow.remote.internal.WakeUnlockController
 import com.aliothmoon.maameow.remote.internal.XmsfFirewall
@@ -45,6 +46,7 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 class RemoteServiceImpl : RemoteService.Stub() {
@@ -65,6 +67,11 @@ class RemoteServiceImpl : RemoteService.Stub() {
             cleanupStep("display power") { PowerController.destroy() }
             cleanupStep("game audio") { GameAudioMuteController.restoreAll() }
             cleanupStep("xmsf firewall") { XmsfFirewall.restoreIfNeeded() }
+            cleanupStep("virtual display") {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    VdmDisplayController.stop()
+                }
+            }
             cleanupStep("maa core") { MaaCoreManager.destroy() }
         }
 
@@ -82,6 +89,10 @@ class RemoteServiceImpl : RemoteService.Stub() {
     }
 
     private val virtualDisplayMode = AtomicInteger(DisplayMode.PRIMARY)
+    private val useVirtualDeviceDisplay = AtomicBoolean(false)
+    private val vdmUserId = AtomicInteger(0)
+    private val activeDisplayId = AtomicInteger(DefaultDisplayConfig.DISPLAY_NONE)
+    private val activeBackgroundIsVdm = AtomicBoolean(false)
     /** 同一进程内 setup 幂等：成功后再调直接返回 OK，失败则下次重试 */
     private var setup = false
     private val coreData = CoreDataStore()
@@ -347,7 +358,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun touchDown(x: Int, y: Int, contact: Int) {
         if (virtualDisplayMode.get() == DisplayMode.PRIMARY) return
-        val displayId = VirtualDisplayManager.getDisplayId()
+        val displayId = activeDisplayId.get()
         if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
             InputControlUtils.down(x, y, contact, displayId)
         }
@@ -355,7 +366,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun touchMove(x: Int, y: Int, contact: Int) {
         if (virtualDisplayMode.get() == DisplayMode.PRIMARY) return
-        val displayId = VirtualDisplayManager.getDisplayId()
+        val displayId = activeDisplayId.get()
         if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
             InputControlUtils.move(x, y, contact, displayId)
         }
@@ -363,7 +374,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun touchUp(x: Int, y: Int, contact: Int) {
         if (virtualDisplayMode.get() == DisplayMode.PRIMARY) return
-        val displayId = VirtualDisplayManager.getDisplayId()
+        val displayId = activeDisplayId.get()
         if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
             InputControlUtils.up(x, y, contact, displayId)
         }
@@ -371,7 +382,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun touchCancel() {
         if (virtualDisplayMode.get() == DisplayMode.PRIMARY) return
-        val displayId = VirtualDisplayManager.getDisplayId()
+        val displayId = activeDisplayId.get()
         if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
             InputControlUtils.cancel(displayId)
         }
@@ -379,20 +390,48 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun setDisplayPower(on: Boolean): Boolean = PowerController.setDisplayPower(on)
 
+    @Synchronized
     override fun startVirtualDisplay(): Int {
-        Ln.i("$TAG: startVirtualDisplay() ${virtualDisplayMode.get()}")
-        return when (virtualDisplayMode.get()) {
+        val mode = virtualDisplayMode.get()
+        Ln.i("$TAG: startVirtualDisplay() $mode")
+        val displayId = when (mode) {
             DisplayMode.PRIMARY -> PrimaryDisplayManager.start()
-            DisplayMode.BACKGROUND -> VirtualDisplayManager.start().also { displayId ->
-                if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
-                    PowerController.startUserActivityKeepAlive(displayId)
+            DisplayMode.BACKGROUND -> {
+                val useVdm = useVirtualDeviceDisplay.get()
+                val result = startBackgroundDisplay(
+                    useVdm = useVdm,
+                    sdkInt = Build.VERSION.SDK_INT,
+                    startVdm = { startVdmDisplay() },
+                    startLegacy = { VirtualDisplayManager.start() },
+                    onVdmFailure = { Ln.e("$TAG: VDM display start failed: ${it.message}") },
+                )
+                if (result != DefaultDisplayConfig.DISPLAY_NONE) {
+                    activeBackgroundIsVdm.set(useVdm)
+                    PowerController.startUserActivityKeepAlive(result)
                 }
+                result
             }
 
             else -> DefaultDisplayConfig.DISPLAY_NONE
         }
+        val backgroundDisplayId = if (mode == DisplayMode.BACKGROUND) {
+            displayId
+        } else {
+            DefaultDisplayConfig.DISPLAY_NONE
+        }
+        activeDisplayId.set(backgroundDisplayId)
+        StaleFrameGuard.setActiveDisplayId(backgroundDisplayId)
+        return displayId
     }
 
+    /** VDM 入口需要 API 34+；startBackgroundDisplay 的 sdkInt 守卫与这里同为运行时保护。 */
+    private fun startVdmDisplay(): Int = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        VdmDisplayController.start(vdmUserId.get())
+    } else {
+        DefaultDisplayConfig.DISPLAY_NONE
+    }
+
+    @Synchronized
     override fun stopVirtualDisplay() {
         Ln.i("$TAG: stopVirtualDisplay() ${virtualDisplayMode.get()}")
         when (virtualDisplayMode.get()) {
@@ -401,9 +440,18 @@ class RemoteServiceImpl : RemoteService.Stub() {
                 GameFpsMonitor.stop()
                 StaleFrameGuard.stop()
                 PowerController.stopUserActivityKeepAlive()
-                VirtualDisplayManager.stop()
+                if (activeBackgroundIsVdm.getAndSet(false)) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        VdmDisplayController.stop()
+                    }
+                    VirtualDisplayManager.setMonitorSurface(null)
+                } else {
+                    VirtualDisplayManager.stop()
+                }
             }
         }
+        activeDisplayId.set(DefaultDisplayConfig.DISPLAY_NONE)
+        StaleFrameGuard.setActiveDisplayId(DefaultDisplayConfig.DISPLAY_NONE)
         GameAudioMuteController.restoreAll()
     }
 
@@ -426,7 +474,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
     }
 
     override fun isAppOnVirtualDisplay(packageName: String): Boolean {
-        val targetDisplayId = VirtualDisplayManager.getDisplayId()
+        val targetDisplayId = activeDisplayId.get()
         if (targetDisplayId == DefaultDisplayConfig.DISPLAY_NONE) return true
         val onDisplay = ActivityUtils.isAppOnDisplay(packageName, targetDisplayId)
         // 游戏不是 MaaMeow 拉起的（未启用自动启动）时，这里是首次得知它在虚拟屏上
@@ -435,7 +483,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
     }
 
     override fun moveAppToVirtualDisplay(packageName: String): Boolean {
-        val targetDisplayId = VirtualDisplayManager.getDisplayId()
+        val targetDisplayId = activeDisplayId.get()
         if (targetDisplayId == DefaultDisplayConfig.DISPLAY_NONE) {
             Ln.w("$TAG: moveAppToVirtualDisplay: no active virtual display")
             return false
@@ -523,22 +571,86 @@ class RemoteServiceImpl : RemoteService.Stub() {
     override fun setVirtualDisplayResolution(width: Int, height: Int, dpi: Int) {
         Ln.i("$TAG: setVirtualDisplayResolution(${width}x${height}, dpi=$dpi)")
         VirtualDisplayManager.setResolution(width, height, dpi)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            VdmDisplayController.setResolution(width, height, dpi)
+        }
+    }
+
+    @Synchronized
+    override fun setUseVirtualDeviceDisplay(enabled: Boolean, userId: Int): Boolean {
+        if (enabled && Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
+        if (userId < 0) return false
+        val activeId = activeDisplayId.get()
+        if (activeId != DefaultDisplayConfig.DISPLAY_NONE && canReuseActiveDisplay(
+                activeId,
+                useVirtualDeviceDisplay.get(),
+                vdmUserId.get(),
+                enabled,
+                userId,
+            )
+        ) {
+            Ln.i("$TAG: reusing active displayId=$activeId with unchanged backend")
+            return true
+        }
+        if (activeId != DefaultDisplayConfig.DISPLAY_NONE) {
+            Ln.i("$TAG: releasing active displayId=$activeId before backend change")
+            stopVirtualDisplay()
+        }
+        useVirtualDeviceDisplay.set(enabled)
+        vdmUserId.set(userId)
+        Ln.i("$TAG: virtual display backend=${if (enabled) "VDM" else "LEGACY"}, userId=$userId")
+        return true
     }
 
     override fun setVirtualDisplayMode(mode: Int): Boolean {
         when (mode) {
             DisplayMode.PRIMARY -> {
                 VirtualDisplayManager.stop()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    VdmDisplayController.stop()
+                }
+                activeBackgroundIsVdm.set(false)
+                activeDisplayId.set(DefaultDisplayConfig.DISPLAY_NONE)
+                StaleFrameGuard.setActiveDisplayId(DefaultDisplayConfig.DISPLAY_NONE)
                 virtualDisplayMode.set(mode)
                 return true
             }
 
             DisplayMode.BACKGROUND -> {
                 PrimaryDisplayManager.stop()
+                activeDisplayId.set(DefaultDisplayConfig.DISPLAY_NONE)
+                StaleFrameGuard.setActiveDisplayId(DefaultDisplayConfig.DISPLAY_NONE)
                 virtualDisplayMode.set(mode)
                 return true
             }
         }
         return false
     }
+}
+
+internal fun canReuseActiveDisplay(
+    activeDisplayId: Int,
+    activeUsesVdm: Boolean,
+    activeVdmUserId: Int,
+    requestedUsesVdm: Boolean,
+    requestedUserId: Int,
+): Boolean = activeDisplayId != DefaultDisplayConfig.DISPLAY_NONE &&
+    activeUsesVdm == requestedUsesVdm &&
+    (!requestedUsesVdm || activeVdmUserId == requestedUserId)
+
+/**
+ * 后台虚拟屏启动的后端分流：仅 VDM 且 Android 14+ 才尝试 VDM。
+ * VDM 启动失败时返回 [DefaultDisplayConfig.DISPLAY_NONE]，不自动回退 Legacy。
+ */
+internal fun startBackgroundDisplay(
+    useVdm: Boolean,
+    sdkInt: Int,
+    startVdm: () -> Int,
+    startLegacy: () -> Int,
+    onVdmFailure: (Throwable) -> Unit,
+): Int {
+    if (!useVdm || sdkInt < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return startLegacy()
+    return runCatching(startVdm)
+        .onFailure(onVdmFailure)
+        .getOrDefault(DefaultDisplayConfig.DISPLAY_NONE)
 }

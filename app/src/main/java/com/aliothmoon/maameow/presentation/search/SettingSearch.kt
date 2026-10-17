@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.search
 
+import android.os.Build
 import android.os.SystemClock
 import androidx.annotation.StringRes
 import com.aliothmoon.maameow.R
@@ -56,7 +57,10 @@ data class SettingSearchEntry(
     @StringRes val descRes: Int? = null,
     @StringRes val keywordsRes: Int? = null,
     @StringRes val anchorRes: Int = titleRes,
-)
+    val minSdk: Int = Build.VERSION_CODES.BASE,
+) {
+    fun isAvailable(sdkInt: Int): Boolean = sdkInt >= minSdk
+}
 
 /** 只收常显项：依赖其它开关才出现的子项定位不到，交给父项 */
 object SettingSearchIndex {
@@ -117,6 +121,12 @@ object SettingSearchIndex {
         SettingSearchEntry(R.string.settings_core_data_clear_title, runtime),
         SettingSearchEntry(R.string.settings_skip_shizuku_check, runtime),
 
+        SettingSearchEntry(
+            R.string.settings_virtual_display_backend_title,
+            backgroundRun,
+            R.string.settings_virtual_display_backend_desc,
+            minSdk = Build.VERSION_CODES.UPSIDE_DOWN_CAKE,
+        ),
         SettingSearchEntry(R.string.settings_background_resolution_title, backgroundRun, keywordsRes = R.string.search_keywords_resolution),
         SettingSearchEntry(
             R.string.settings_force_fullscreen_on_virtual_display, backgroundRun,

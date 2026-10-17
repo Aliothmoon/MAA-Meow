@@ -133,4 +133,7 @@ interface RemoteService {
 
     // 系统记下的进程退出（含被杀、崩溃），只返回不早于 sinceMs 的；查别的包靠 shell 自带的 DUMP 权限
     List<ProcessExitRecord> getProcessExitRecords(String packageName, long sinceMs, int maxNum) = 56;
+
+    // 每轮启动前设置一次；false=Legacy，true=VirtualDevice。后端变化时先释放上一轮显示。
+    boolean setUseVirtualDeviceDisplay(boolean enabled, int userId) = 57;
 }

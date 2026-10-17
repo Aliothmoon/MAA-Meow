@@ -6,6 +6,7 @@ import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.remote.internal.ActivityUtils.DisplayOccupancy
 import com.aliothmoon.maameow.remote.internal.StaleFrameDetector.Observation
 import com.aliothmoon.maameow.third.Ln
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * 虚拟屏上没人画了，就把帧缓冲里那张残影换成黑帧，免得识别对着它空转
@@ -27,6 +28,11 @@ object StaleFrameGuard {
     private const val STOP_JOIN_MS = 1_000L
 
     private var worker: Thread? = null
+    private val activeDisplayId = AtomicInteger(DefaultDisplayConfig.DISPLAY_NONE)
+
+    fun setActiveDisplayId(displayId: Int) {
+        activeDisplayId.set(displayId)
+    }
 
     /** [isRunActive] 返回 false 后自己收摊：一轮自然跑完没有人来调 [stop] */
     @Synchronized
@@ -67,7 +73,7 @@ object StaleFrameGuard {
         }
 
         private fun tick() {
-            val displayId = VirtualDisplayManager.getDisplayId()
+            val displayId = activeDisplayId.get()
             if (displayId == DefaultDisplayConfig.DISPLAY_NONE) return
             // 还在出帧就不会去查：游戏运行期间这里不发任何 binder 调用
             val frameCount = NativeBridgeLib.getFrameCount()
@@ -98,7 +104,7 @@ object StaleFrameGuard {
 
     /** 一轮开始时屏上已经空着就直接换：上一轮收尾后退出的应用，轮询要 1.5s 才认得出来 */
     fun blankIfVacant() {
-        val displayId = VirtualDisplayManager.getDisplayId()
+        val displayId = activeDisplayId.get()
         if (displayId == DefaultDisplayConfig.DISPLAY_NONE) return
         val frameCount = NativeBridgeLib.getFrameCount()
         if (ActivityUtils.probeDisplay(displayId) != DisplayOccupancy.Empty) return
@@ -113,7 +119,7 @@ object StaleFrameGuard {
      */
     fun blankAfterKill(displayId: Int, killedPackage: String) {
         if (displayId == DefaultDisplayConfig.DISPLAY_NONE) return
-        if (displayId != VirtualDisplayManager.getDisplayId()) return
+        if (displayId != activeDisplayId.get()) return
         val startedMs = SystemClock.elapsedRealtime()
         val settledCount = awaitFramesSettled(startedMs) ?: return
         val occupancy = ActivityUtils.probeDisplay(displayId)

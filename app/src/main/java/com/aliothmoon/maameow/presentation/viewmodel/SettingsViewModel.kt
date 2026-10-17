@@ -18,6 +18,7 @@ import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
 import com.aliothmoon.maameow.domain.models.RemoteBackend
+import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.CopilotOperBoxAssist
@@ -417,6 +418,18 @@ class SettingsViewModel(
         viewModelScope.launch {
             appSettingsManager.setBackgroundResolution(pref)
         }
+    }
+
+    val virtualDisplayBackend: StateFlow<VirtualDisplayBackend> =
+        appSettingsManager.virtualDisplayBackend
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                VirtualDisplayBackend.LEGACY,
+            )
+
+    fun setVirtualDisplayBackend(backend: VirtualDisplayBackend) {
+        viewModelScope.launch { appSettingsManager.setVirtualDisplayBackend(backend) }
     }
 
     val language: StateFlow<AppSettingsManager.AppLanguage> = appSettingsManager.language

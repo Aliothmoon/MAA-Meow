@@ -90,6 +90,7 @@ import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
 import com.aliothmoon.maameow.domain.models.RemoteBackend
+import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.state.ResourceInitState
@@ -190,6 +191,7 @@ fun SettingsView(
     val fontSizeScale by viewModel.fontSizeScale.collectAsStateWithLifecycle()
     val showAchievementSnackbar by viewModel.showAchievementSnackbar.collectAsStateWithLifecycle()
     val backgroundResolution by viewModel.backgroundResolution.collectAsStateWithLifecycle()
+    val virtualDisplayBackend by viewModel.virtualDisplayBackend.collectAsStateWithLifecycle()
     val language by viewModel.language.collectAsStateWithLifecycle()
     val settingsMessage by viewModel.settingsMessage.collectAsStateWithLifecycle()
     val showRestartDialog by viewModel.showRestartDialog.collectAsStateWithLifecycle()
@@ -817,6 +819,27 @@ fun SettingsView(
                         revealToken = revealToken(SettingsSections.BACKGROUND_RUN),
                     ) {
                         SettingsGroupCard {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                                SettingSearchTarget(R.string.settings_virtual_display_backend_title) {
+                                    SettingRadioItem(
+                                        title = stringResource(R.string.settings_virtual_display_backend_title),
+                                        contentColor = contentColor,
+                                        entries = VirtualDisplayBackend.entries,
+                                        selected = virtualDisplayBackend,
+                                        label = { backend ->
+                                            stringResource(
+                                                if (backend == VirtualDisplayBackend.LEGACY) {
+                                                    R.string.settings_virtual_display_backend_legacy
+                                                } else {
+                                                    R.string.settings_virtual_display_backend_vdm
+                                                }
+                                            )
+                                        },
+                                        onSelected = viewModel::setVirtualDisplayBackend,
+                                    )
+                                }
+                                ListItemDivider()
+                            }
                             SettingSearchTarget(R.string.settings_background_resolution_title) {
                                 SettingBackgroundResolutionItem(
                                     contentColor = contentColor,
