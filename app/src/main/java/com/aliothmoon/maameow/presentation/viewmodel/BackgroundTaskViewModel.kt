@@ -201,9 +201,9 @@ class BackgroundTaskViewModel(
 
     private fun observeTaskEnd() {
         viewModelScope.launch {
-            taskEndRegistry.taskEnded.collect { event ->
+            taskEndRegistry.taskEnded.collect { reason ->
                 // 关游戏由 TaskEndRegistry 做，这里只提示
-                if (event.reason != TaskEndRegistry.Reason.MANUAL
+                if (reason != TaskEndRegistry.Reason.MANUAL
                     && appSettingsManager.closeAppOnTaskEnd.value
                 ) {
                     _effects.send(UiEffect.toast(R.string.bg_toast_auto_closed_on_end))
@@ -528,11 +528,6 @@ class BackgroundTaskViewModel(
 
     fun onStopTasks() {
         achievementReporter.reportTaskStopped()
-        onStopCurrentTask()
-    }
-
-    /** 日志页不代表某一类任务；保留 Core 回调原有的统计规则，不额外标记任务链停止。 */
-    fun onStopCurrentTask() {
         viewModelScope.launch {
             compositionService.stop()
         }

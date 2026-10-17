@@ -24,7 +24,6 @@ import com.aliothmoon.maameow.domain.service.GameMetadataGate
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.OperBoxYituliuSync
 import com.aliothmoon.maameow.domain.service.OperatorSummaryData
-import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.copilot.CopilotRequirementCorrector
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
@@ -42,7 +41,6 @@ import com.aliothmoon.maameow.utils.i18n.uiTextDynamic
 import com.aliothmoon.maameow.utils.i18n.uiTextJoin
 import com.aliothmoon.maameow.utils.i18n.uiTextLines
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -141,7 +139,6 @@ class CopilotViewModel(
     private val operBoxAssist: CopilotOperBoxAssist,
     private val operBoxYituliuSync: OperBoxYituliuSync,
     private val metadataGate: GameMetadataGate,
-    private val taskEndRegistry: TaskEndRegistry,
 ) : ViewModel() {
 
     companion object {
@@ -161,10 +158,6 @@ class CopilotViewModel(
     val maaState: StateFlow<MaaExecutionState> = compositionService.state
 
     private var pendingStartContext: TaskStartContext? = null
-    private var startJob: Job? = null
-    private var startRequest = 0L
-    private var activeRun: TaskEndRegistry.Run? = null
-    private var activeRunRequest = 0L
 
     /** 确认后重入 onStart 时跳过列表被忽略的检查 */
     private var listGuardAcknowledged = false
@@ -176,23 +169,6 @@ class CopilotViewModel(
         Timber.i("CopilotViewModel inited")
         restoreState()
         observeRuntimeState()
-        viewModelScope.launch {
-            taskEndRegistry.taskEnded.collect { event -> onTaskEnded(event) }
-        }
-    }
-
-    private fun onTaskEnded(event: TaskEndRegistry.EndEvent) {
-        if (activeRun !== event.run) return
-        activeRun = null
-        // 文案属于页面，作业索引却由 Core 共用；旧运行只能更新自己的文案。
-        if (event.reason == TaskEndRegistry.Reason.MANUAL) {
-            compositionService.withCurrentRun(event.run) {
-                runtimeStateStore.resetCurrentCopilotIndex()
-            }
-        }
-        if (activeRunRequest == startRequest) {
-            _state.update { it.copy(statusMessage = event.toStatusMessage()) }
-        }
     }
 
     private fun string(@StringRes resId: Int, vararg args: Any): String =
@@ -1178,11 +1154,7 @@ class CopilotViewModel(
     fun onStart() = onStart(TaskStartContext(TaskStartMode.MANUAL))
 
     private fun onStart(context: TaskStartContext) {
-        // 就绪检查与结果处理也是启动请求的一部分，重复点击不能抢走其运行归属。
-        if (startJob?.isActive == true) return
-        if (maaState.value != MaaExecutionState.IDLE && maaState.value != MaaExecutionState.ERROR) return
-        val request = ++startRequest
-        startJob = viewModelScope.launch {
+        viewModelScope.launch {
             val snapshot = _state.value
             if (!validateStart(snapshot)) return@launch
 
@@ -1238,32 +1210,19 @@ class CopilotViewModel(
                 listOf(copilotManager.buildSingleTask(type, snapshot.currentFilePath, config, operBoxDataPath))
             }
 
-            // 就绪检查会挂起，期间可能已由其他入口启动 Core，不能重置它的共享索引。
-            if (maaState.value != MaaExecutionState.IDLE && maaState.value != MaaExecutionState.ERROR) return@launch
             runtimeStateStore.resetRequirementIgnored()
             runtimeStateStore.resetCurrentCopilotIndex()
             _state.update { it.copy(statusMessage = text(R.string.toolbox_status_starting)) }
             val result = compositionService.startCopilot(tasks)
-            if (result is MaaCompositionService.StartResult.Success) {
-                activeRun = result.run
-                activeRunRequest = request
-                // 结束广播可能早于启动返回；结果保存在同一个运行对象中，不依赖重放或文案。
-                result.run.endEvent?.let { onTaskEnded(it) }
-                    ?: _state.update { it.copy(statusMessage = formatStartStatus(result)) }
-            } else {
-                _state.update { it.copy(statusMessage = formatStartStatus(result)) }
-            }
+            _state.update { it.copy(statusMessage = formatStartStatus(result)) }
         }
     }
 
     fun onStop() {
         viewModelScope.launch {
-            val request = startRequest
-            val run = compositionService.currentRun
             _state.update { it.copy(statusMessage = text(R.string.toolbox_status_stopping)) }
             compositionService.stop()
-            if (!compositionService.withCurrentRun(run) { runtimeStateStore.resetCurrentCopilotIndex() }) return@launch
-            if (request != startRequest) return@launch
+            runtimeStateStore.resetCurrentCopilotIndex()
             _state.update { it.copy(statusMessage = text(R.string.toolbox_status_stopped)) }
         }
     }

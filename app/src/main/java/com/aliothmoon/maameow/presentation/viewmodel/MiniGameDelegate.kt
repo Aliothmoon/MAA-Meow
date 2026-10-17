@@ -12,15 +12,12 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
-import com.aliothmoon.maameow.domain.service.TaskEndRegistry
-import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.resolve
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -73,19 +70,6 @@ class MiniGameDelegate(
 
     private val _state = MutableStateFlow(MiniGameUiState())
     val state: StateFlow<MiniGameUiState> = _state.asStateFlow()
-    private var startJob: Job? = null
-    private var startRequest = 0L
-    private var activeRun: TaskEndRegistry.Run? = null
-    private var activeRunRequest = 0L
-
-    /** 工具箱转发同一份结束事件，只收尾本小游戏启动的运行。 */
-    fun onTaskEnded(event: TaskEndRegistry.EndEvent) {
-        if (activeRun !== event.run) return
-        activeRun = null
-        if (activeRunRequest == startRequest) {
-            _state.update { it.copy(statusMessage = event.toStatusMessage()) }
-        }
-    }
 
     val miniGames: StateFlow<List<MiniGame>> = activityManager.miniGames
 
@@ -209,42 +193,32 @@ class MiniGameDelegate(
         }
     }
 
-    fun onStart(): Job? {
-        if (startJob?.isActive == true) return startJob
-        val serviceState = compositionService.state.value
-        if (serviceState != MaaExecutionState.IDLE && serviceState != MaaExecutionState.ERROR) return null
+    fun onStart() {
         val selectedTaskName = _state.value.selectedTaskName
         val pixelPaint = isPixelPaint(selectedTaskName)
         if (pixelPaint) {
             val plan = pixelArt.state.value.plan
             if (plan == null) {
                 _state.update { it.copy(statusMessage = uiTextOf(R.string.pixel_art_need_image)) }
-                return null
+                return
             }
             if (plan.groups.isEmpty()) {
                 _state.update { it.copy(statusMessage = uiTextOf(R.string.pixel_art_nothing_to_paint)) }
-                return null
+                return
             }
         }
         if (findGame(selectedTaskName)?.isUnsupported == true) {
             _state.update {
                 it.copy(statusMessage = uiTextOf(R.string.panel_mini_game_not_supported))
             }
-            return null
+            return
         }
 
-        val request = ++startRequest
-        startJob = scope.launch {
+        scope.launch {
             val task = buildTaskParams()
             _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_starting)) }
             val result = compositionService.startCopilot(listOf(task))
             if (result is MaaCompositionService.StartResult.Success) {
-                activeRun = result.run
-                activeRunRequest = request
-                result.run.endEvent?.let { onTaskEnded(it) } ?: _state.update {
-                    it.copy(statusMessage = uiTextOf(R.string.panel_mini_game_started))
-                }
-                // 先登记运行与文案再上报成就；挂起期间的停止不会被迟到的成功文案覆盖。
                 achievementRepository.report {
                     event = AchievementEvents.MINI_GAME_STARTED
                     "task" to selectedTaskName
@@ -262,20 +236,22 @@ class MiniGameDelegate(
                         )
                     }
                 }
-            } else {
-                _state.update { it.copy(statusMessage = appContext.formatStartResult(result)) }
+            }
+            _state.update {
+                it.copy(
+                    statusMessage = appContext.formatStartResult(
+                        result,
+                        uiTextOf(R.string.panel_mini_game_started),
+                    ),
+                )
             }
         }
-        return startJob
     }
 
     fun onStop() {
         scope.launch {
-            val request = startRequest
-            val run = compositionService.currentRun
             _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_stopping)) }
             compositionService.stop()
-            if (request != startRequest || compositionService.currentRun !== run) return@launch
             _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_stopped)) }
         }
     }
