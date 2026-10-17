@@ -13,10 +13,12 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -75,6 +77,17 @@ class ProcessServiceConnectorBehaviorTest {
             kills.add(processName)
         }
 
+        val findCalls = AtomicInteger()
+        var residual: (call: Int) -> List<ResidualProcess> = { emptyList() }
+        val forceKilled = CopyOnWriteArrayList<Int>()
+
+        override fun findProcesses(processName: String): List<ResidualProcess> =
+            residual(findCalls.incrementAndGet())
+
+        override fun forceKill(pids: List<Int>) {
+            forceKilled += pids
+        }
+
         fun awaitKill(): Boolean = kills.poll(2, TimeUnit.SECONDS) != null
         fun killCount(): Int = kills.size
     }
@@ -91,8 +104,10 @@ class ProcessServiceConnectorBehaviorTest {
         override val serviceClass: Class<*> = Any::class.java
         override val logFileName = "fake.log"
         override val spawnTimeoutMs = timeoutMs
+        override val residualGraceMs = 900L
 
         private val tokens = LinkedBlockingQueue<String>()
+        private val destroyed = LinkedBlockingQueue<IBinder>()
 
         override fun buildStartCommand(token: String, logFile: File): String {
             tokens.add(token)
@@ -101,9 +116,12 @@ class ProcessServiceConnectorBehaviorTest {
 
         override fun debugLogFile(): File = logFile
 
-        override fun destroyRemote(binder: IBinder) = Unit
+        override fun destroyRemote(binder: IBinder) {
+            destroyed.add(binder)
+        }
 
         fun awaitToken(): String = tokens.poll(5, TimeUnit.SECONDS) ?: error("token never assigned")
+        fun awaitDestroyed(): IBinder? = destroyed.poll(5, TimeUnit.SECONDS)
     }
 
     private class RecordingCallbacks : RemoteServiceConnectorBackend.Callbacks {
@@ -270,5 +288,46 @@ class ProcessServiceConnectorBehaviorTest {
         assertNotNull("新 token 仍在等待", h.registry.pending[token2])
         assertTrue(h.callbacks.connected.isEmpty())
         h.connector.disconnect(null)
+    }
+
+    @Test
+    fun binderArrivedThenSuperseded_isDestroyed() {
+        val h = Harness(timeoutMs = 5_000L)
+        val binder = mockk<IBinder>(relaxed = true)
+        h.spawner.onSpawn = {
+            h.spawner.onSpawn = {}
+            // 回投已到、连接器还没认领就被新一轮连接取代
+            h.registry.attach(h.connector.awaitToken(), binder)
+            h.connector.connect(h.callbacks)
+        }
+
+        h.connector.connect(h.callbacks)
+
+        assertSame("没人认领的回投必须收掉", binder, h.connector.awaitDestroyed())
+        assertTrue(h.callbacks.connected.isEmpty())
+        h.connector.disconnect(null)
+    }
+
+    @Test
+    fun residualExitingWithinGrace_isLeftAlone() {
+        val h = Harness(timeoutMs = 5_000L)
+        h.spawner.residual = { call -> if (call == 1) listOf(ResidualProcess(42, "00:03")) else emptyList() }
+
+        h.connectAndAttach()
+
+        assertTrue("宽限内自己退出的不得硬杀", h.spawner.forceKilled.isEmpty())
+        assertEquals(1, h.spawner.spawnCalls.get())
+    }
+
+    @Test
+    fun residualStuckPastGrace_isForceKilledBeforeSpawn() {
+        val h = Harness(timeoutMs = 5_000L)
+        h.spawner.residual = { listOf(ResidualProcess(42, "1-02:03:04")) }
+        var killedBeforeSpawn: List<Int>? = null
+        h.spawner.onSpawn = { killedBeforeSpawn = h.spawner.forceKilled.toList() }
+
+        h.connectAndAttach()
+
+        assertEquals("超期残留必须在拉起前硬杀", listOf(42), killedBeforeSpawn)
     }
 }

@@ -2061,8 +2061,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_log_screen_saver_on">Screen saver enabled</string>
     <string name="schedule_log_screen_saver_kept">Keeping the screen saver already on</string>
     <string name="schedule_log_screen_off_kept">Keeping the display power already off</string>
-    <string name="schedule_log_hardware_screen_off_sent">Display power-off command sent</string>
-    <string name="schedule_log_hardware_screen_off_failed">Failed to send the display power-off command</string>
+    <string name="schedule_log_hardware_screen_off_sent">Display power turned off</string>
+    <string name="schedule_log_hardware_screen_off_failed">Failed to turn off display power</string>
     <string name="schedule_log_screen_saver_failed">Screen saver failed to start, the overlay permission may be missing</string>
     <string name="schedule_log_wake_failed">Wake and unlock failed: %1$s</string>
     <string name="schedule_log_wake_config">Unlock setup: %1$s; password required: %2$s; before wake: %3$s, %4$s</string>

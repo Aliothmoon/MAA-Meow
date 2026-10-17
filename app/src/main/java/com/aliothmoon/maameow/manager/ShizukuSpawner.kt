@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.manager
 
+import android.os.ParcelFileDescriptor
 import moe.shizuku.server.IRemoteProcess
 import moe.shizuku.server.IShizukuService
 import rikka.shizuku.Shizuku
@@ -25,15 +26,30 @@ object ShizukuSpawner : ProcessSpawner {
         RemoteProcessHandle(requireServer().newProcess(arrayOf("sh", "-c", command), null, null))
 
     override fun killResidual(processName: String) {
-        runCatching {
-            val process = requireServer().newProcess(
-                arrayOf("sh", "-c", killByNameCommand(processName)), null, null
-            )
-            // 同步等 kill 完成，避免与下一次拉起交错
+        runCatching { run(killByNameCommand(processName)) }
+            .onFailure { Timber.w(it, "kill residual %s failed", processName) }
+    }
+
+    override fun findProcesses(processName: String): List<ResidualProcess> =
+        runCatching { parseProcesses(run(findProcessesCommand(processName))) }
+            .onFailure { Timber.w(it, "find %s failed", processName) }
+            .getOrDefault(emptyList())
+
+    override fun forceKill(pids: List<Int>) {
+        runCatching { run(forceKillCommand(pids)) }
+            .onFailure { Timber.w(it, "force kill %s failed", pids) }
+    }
+
+    /** 同步跑完再返回，避免与下一次拉起交错 */
+    private fun run(command: String): List<String> {
+        val process = requireServer().newProcess(arrayOf("sh", "-c", command), null, null)
+        try {
+            val out = ParcelFileDescriptor.AutoCloseInputStream(process.inputStream)
+                .bufferedReader().use { it.readLines() }
             runCatching { process.waitFor() }
+            return out
+        } finally {
             runCatching { process.destroy() }
-        }.onFailure {
-            Timber.w(it, "kill residual %s failed", processName)
         }
     }
 

@@ -6,6 +6,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -62,12 +63,13 @@ class ResourceDataManagerLoadTest {
     }
 
     @Test
-    fun missingBattleDataIsRetriedOnNextLoad() = runBlocking {
-        manager.load("Official", "zh-cn", revision = 0)
+    fun missingBattleDataFailsLoadAndIsRetried() = runBlocking {
+        val error = runCatching { manager.load("Official", "zh-cn", revision = 0) }.exceptionOrNull()
+        assertTrue("干员表读空必须让本次加载失败，否则同一 key 不再重试", error is IllegalStateException)
         assertEquals(emptyMap<String, CharacterInfo>(), manager.characters.value)
 
         writeBattleData("char_001_alpha" to "甲")
-        manager.load("Official", "en-us", revision = 0)
+        manager.load("Official", "zh-cn", revision = 0)
 
         assertEquals(setOf("char_001_alpha"), manager.characters.value.keys)
     }

@@ -20,14 +20,21 @@ object MiuiAdbInputEnabler {
     )
 
     suspend fun enable(): Boolean = withContext(Dispatchers.IO) {
+        // App 侧读错时别白跑：脚本末两行无条件执行，改 prop 会重置 USB、杀安全中心
+        if (readProp() == "1") {
+            Timber.i("MIUI adb input already enabled per root, skip")
+            return@withContext true
+        }
         val result = runCatching { Shell.cmd(*SCRIPT).exec() }
             .onFailure { Timber.w(it, "enable MIUI adb input failed") }
             .getOrNull() ?: return@withContext false
         // 默认 Builder 把 stderr 并进 out 且与 stdout 交错，读回单独跑
-        val enabled = runCatching {
-            Shell.cmd("getprop persist.security.adbinput").exec().out.firstOrNull()?.trim() == "1"
-        }.getOrDefault(false)
+        val enabled = readProp() == "1"
         Timber.i("enable MIUI adb input: enabled=%s code=%d out=%s", enabled, result.code, result.out)
         enabled
     }
+
+    private fun readProp(): String? = runCatching {
+        Shell.cmd("getprop persist.security.adbinput").exec().out.firstOrNull()?.trim()
+    }.getOrNull()
 }

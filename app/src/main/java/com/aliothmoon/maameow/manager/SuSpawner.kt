@@ -30,4 +30,14 @@ object SuSpawner : ProcessSpawner {
         runCatching { Shell.cmd(killByNameCommand(processName)).exec() }
             .onFailure { Timber.w(it, "kill residual %s failed", processName) }
     }
+
+    override fun findProcesses(processName: String): List<ResidualProcess> =
+        runCatching { parseProcesses(Shell.cmd(findProcessesCommand(processName)).exec().out) }
+            .onFailure { Timber.w(it, "find %s failed", processName) }
+            .getOrDefault(emptyList())
+
+    override fun forceKill(pids: List<Int>) {
+        runCatching { Shell.cmd(forceKillCommand(pids)).exec() }
+            .onFailure { Timber.w(it, "force kill %s failed", pids) }
+    }
 }

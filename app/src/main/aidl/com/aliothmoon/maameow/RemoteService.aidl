@@ -51,15 +51,14 @@ interface RemoteService {
     // 后台模式游戏实时帧率，未监控返回 -1
     float getGameFps() = 43;
 
-    oneway void setDisplayPower(boolean on) = 20;
+    // 同步返回远端实际结果，oneway 时失败了 App 还当已熄屏
+    boolean setDisplayPower(boolean on) = 20;
 
     boolean setPlayAudioOpAllowed(String packageName, boolean isAllowed) = 21;
 
     int pid() = 22;
 
     int isAppAlive(String packageName) = 23;
-
-    oneway void heartbeat(int pid) = 24;
 
     void setVirtualDisplayResolution(int width, int height, int dpi) = 25;
 

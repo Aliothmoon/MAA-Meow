@@ -38,10 +38,12 @@ class RemoteScreenPowerController(context: Context) : ScreenPowerController {
             Timber.w("powerOff skipped: remote service unavailable")
             return false
         }
-        return runCatching { service.setDisplayPower(false) }
-            .onSuccess { mark(Mark(origin, service)) }
+        val ok = runCatching { service.setDisplayPower(false) }
             .onFailure { Timber.e(it, "powerOff failed") }
-            .isSuccess
+            .getOrDefault(false)
+        // 远端没关成就不记，否则屏幕亮着也被当成已熄屏
+        if (ok) mark(Mark(origin, service)) else Timber.w("powerOff rejected by remote")
+        return ok
     }
 
     @Synchronized

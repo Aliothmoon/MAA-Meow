@@ -44,12 +44,16 @@ class ResourceInitService(
             return
         }
 
-        if (withContext(Dispatchers.IO) { pathConfig.isResourceReady }) {
-            _state.value = ResourceInitState.Ready
-            return
+        try {
+            if (withContext(Dispatchers.IO) { pathConfig.isResourceReady }) {
+                _state.value = ResourceInitState.Ready
+                return
+            }
+            doExtractFromAssets()
+        } finally {
+            // 调用方被取消时还停在 Checking，后续调用都会早退，放回去让下次重查
+            _state.compareAndSet(ResourceInitState.Checking, ResourceInitState.NotChecked)
         }
-
-        doExtractFromAssets()
     }
 
     suspend fun reInitialize() {

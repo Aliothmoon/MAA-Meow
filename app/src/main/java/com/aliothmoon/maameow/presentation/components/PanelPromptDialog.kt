@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * 面板弹窗统一渲染；带修复动作时按「修复 > 取消 > 仍然启动」排，仍然启动只是文字按钮
- * 点外面和返回键始终按取消处理
+ * 点外面始终按取消处理；返回键只有独立窗口的 Dialog 会响应，悬浮窗里不处理
  */
 @Composable
 fun PanelPromptDialog(

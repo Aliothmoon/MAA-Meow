@@ -284,8 +284,10 @@ class BackgroundTaskViewModel(
     }
 
     fun onScreenOff() {
-        // 开关开启时 MainActivity 常亮，系统不会休眠
-        screenPower.powerOff(ScreenPowerController.Origin.MANUAL)
+        // 开关开启时 MainActivity 常亮，系统不会休眠；同步 binder，首次还要加载 DisplayControl，不放主线程
+        viewModelScope.launch(Dispatchers.IO) {
+            screenPower.powerOff(ScreenPowerController.Origin.MANUAL)
+        }
     }
 
     // ==================== Task Chain ====================

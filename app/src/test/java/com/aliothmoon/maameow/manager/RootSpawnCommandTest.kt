@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.manager
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -19,6 +20,22 @@ class RootSpawnCommandTest {
     fun ownershipRepair_onlyRunsAsRoot_andQuotesPath() {
         val command = shellOwnershipRepairCommand("/data/local/tmp/it's")
         assertTrue(command.startsWith("[ \"$(id -u)\" = 0 ] && "))
-        assertTrue(command.contains("find '/data/local/tmp/it'\"'\"'s' ! -user 2000 -exec chown 2000:2000 {} +"))
+        assertTrue(command.contains("find '/data/local/tmp/it'\"'\"'s' ! -user 2000 -exec chown -h 2000:2000 {} +"))
+    }
+
+    @Test
+    fun findProcesses_leavesShellExpansionToShell() {
+        assertEquals(
+            "p=$(pidof 'pkg:svc') && ps -o PID,ETIME -p \${p// /,}",
+            findProcessesCommand("pkg:svc"),
+        )
+    }
+
+    @Test
+    fun parseProcesses_skipsHeaderAndKeepsElapsed() {
+        assertEquals(
+            listOf(ResidualProcess(42, "00:17"), ResidualProcess(7, "1-02:03:04")),
+            parseProcesses(listOf("  PID     ELAPSED", "   42       00:17", "    7  1-02:03:04", "")),
+        )
     }
 }

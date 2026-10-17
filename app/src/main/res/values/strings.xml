@@ -2117,8 +2117,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_log_screen_saver_on">已启用屏保</string>
     <string name="schedule_log_screen_saver_kept">沿用已开启的熄屏挂机</string>
     <string name="schedule_log_screen_off_kept">沿用已关闭的屏幕电源</string>
-    <string name="schedule_log_hardware_screen_off_sent">已发送关闭屏幕电源指令</string>
-    <string name="schedule_log_hardware_screen_off_failed">关闭屏幕电源指令发送失败</string>
+    <string name="schedule_log_hardware_screen_off_sent">已关闭屏幕电源</string>
+    <string name="schedule_log_hardware_screen_off_failed">关闭屏幕电源失败</string>
     <string name="schedule_log_screen_saver_failed">屏保启用失败，可能缺少悬浮窗权限</string>
     <string name="schedule_log_wake_failed">唤醒解锁失败: %1$s</string>
     <string name="schedule_log_wake_config">解锁配置: %1$s；需要密码: %2$s；唤醒前: %3$s、%4$s</string>

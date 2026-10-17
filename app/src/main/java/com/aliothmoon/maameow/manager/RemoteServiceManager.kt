@@ -2,7 +2,6 @@ package com.aliothmoon.maameow.manager
 
 import android.content.Context
 import android.os.IBinder
-import android.os.Process
 import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
@@ -87,6 +86,8 @@ object RemoteServiceManager {
                         "backend=$backend bound=$boundBackend"
                     )
                     Timber.w("Ignoring stale %s connection", backend)
+                    // 没人认领的进程不收就成了孤儿
+                    runCatching { RemoteService.Stub.asInterface(binder).destroy() }
                     return
                 }
                 ServiceBootLogger.event("CB_ON_CONNECTED", "backend=$backend")
@@ -108,8 +109,6 @@ object RemoteServiceManager {
                 _state.value = ServiceState.Connected(service)
                 ServiceBootLogger.event("BINDER_CONNECTED", "backend=$backend linkToDeath ok")
             }
-            runCatching { service.heartbeat(Process.myPid()) }
-                .onFailure { Timber.w(it, "heartbeat failed") }
             runCatching { service.pid() }
                 .onSuccess {
                     lastServicePid = it

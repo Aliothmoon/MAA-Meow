@@ -165,6 +165,8 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
                     cachedBase = base.takeIf { it.characters.isNotEmpty() }
                 }
             _snapshot.value = doProject(base, GameMetadataKey(clientType, displayLanguage, revision))
+            // 干员表读空多半是文件缺失或损坏：其余部分照常发布，但不能算就绪，否则进程内不再重试
+            check(base.characters.isNotEmpty()) { "$BATTLE_DATA_FILE missing or unparsable" }
         }
     }
 

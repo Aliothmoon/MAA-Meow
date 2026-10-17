@@ -29,7 +29,11 @@ object LogcatServiceManager {
 
     private val callbacks = object : RemoteServiceConnectorBackend.Callbacks {
         override fun onConnected(backend: RemoteBackend, binder: IBinder) {
-            if (boundBackend != backend) return
+            if (boundBackend != backend) {
+                // 没人认领的进程不收就成了孤儿
+                runCatching { ILogcatService.Stub.asInterface(binder).destroy() }
+                return
+            }
             Timber.i("LogcatService connected via %s", backend)
             _service.value = ILogcatService.Stub.asInterface(binder)
         }
