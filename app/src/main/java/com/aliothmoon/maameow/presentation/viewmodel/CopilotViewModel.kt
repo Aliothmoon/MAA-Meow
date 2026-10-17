@@ -24,6 +24,7 @@ import com.aliothmoon.maameow.domain.service.GameMetadataGate
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.OperBoxYituliuSync
 import com.aliothmoon.maameow.domain.service.OperatorSummaryData
+import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.copilot.CopilotRequirementCorrector
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
@@ -139,6 +140,7 @@ class CopilotViewModel(
     private val operBoxAssist: CopilotOperBoxAssist,
     private val operBoxYituliuSync: OperBoxYituliuSync,
     private val metadataGate: GameMetadataGate,
+    private val taskEndRegistry: TaskEndRegistry,
 ) : ViewModel() {
 
     companion object {
@@ -158,6 +160,7 @@ class CopilotViewModel(
     val maaState: StateFlow<MaaExecutionState> = compositionService.state
 
     private var pendingStartContext: TaskStartContext? = null
+    private var awaitingTaskEnd = false
 
     /** 确认后重入 onStart 时跳过列表被忽略的检查 */
     private var listGuardAcknowledged = false
@@ -169,6 +172,19 @@ class CopilotViewModel(
         Timber.i("CopilotViewModel inited")
         restoreState()
         observeRuntimeState()
+        viewModelScope.launch {
+            taskEndRegistry.taskEnded.collect { reason ->
+                // 结束广播可能晚于关游戏操作；新任务运行时不清理共享作业索引。
+                if (!awaitingTaskEnd || maaState.value !in setOf(MaaExecutionState.IDLE, MaaExecutionState.ERROR)) {
+                    return@collect
+                }
+                awaitingTaskEnd = false
+                if (reason == TaskEndRegistry.Reason.MANUAL) {
+                    runtimeStateStore.resetCurrentCopilotIndex()
+                    _state.update { it.copy(statusMessage = text(R.string.toolbox_status_stopped)) }
+                }
+            }
+        }
     }
 
     private fun string(@StringRes resId: Int, vararg args: Any): String =
@@ -1213,7 +1229,16 @@ class CopilotViewModel(
             runtimeStateStore.resetRequirementIgnored()
             runtimeStateStore.resetCurrentCopilotIndex()
             _state.update { it.copy(statusMessage = text(R.string.toolbox_status_starting)) }
+            // 启动前登记，覆盖任务在启动调用返回前就已停止的情况。
+            awaitingTaskEnd = true
             val result = compositionService.startCopilot(tasks)
+            if (result !is MaaCompositionService.StartResult.Success) {
+                awaitingTaskEnd = false
+            } else if (!awaitingTaskEnd &&
+                _state.value.statusMessage == text(R.string.toolbox_status_stopped)
+            ) {
+                return@launch
+            }
             _state.update { it.copy(statusMessage = formatStartStatus(result)) }
         }
     }

@@ -20,6 +20,7 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.OperBoxYituliuSync
+import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
 import com.aliothmoon.maameow.domain.usecase.GameReadiness
@@ -38,7 +39,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
@@ -94,6 +94,7 @@ class ToolboxViewModel(
     private val appSettingsManager: AppSettingsManager,
     private val sessionLogger: MaaSessionLogger,
     private val operBoxYituliuSync: OperBoxYituliuSync,
+    private val taskEndRegistry: TaskEndRegistry,
 ) : ViewModel() {
 
     val pixelArt = PixelArtDelegate(appContext, collector, compositionService.state, viewModelScope)
@@ -133,6 +134,7 @@ class ToolboxViewModel(
     /** 牛牛抽卡：底部「开始任务」或面板按钮共用；null = 非 gacha 启动。 */
     private var pendingGachaOnce: Boolean? = null
     private var gachaTipJob: Job? = null
+    private var runningTool: ToolboxTab? = null
 
     // ==================== 牛牛抽卡（对齐 WPF Toolbox Gacha）====================
 
@@ -143,6 +145,29 @@ class ToolboxViewModel(
     val gachaTip: StateFlow<UiText> = _gachaTip.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            taskEndRegistry.taskEnded.collect { reason ->
+                // 复用统一结束通知；延迟到达的广播不能覆盖正在运行的新工具任务。
+                if (compositionService.state.value !in setOf(MaaExecutionState.IDLE, MaaExecutionState.ERROR)) {
+                    return@collect
+                }
+                miniGame.onTaskEnded(reason)
+                val finishedTool = runningTool ?: return@collect
+                runningTool = null
+                stopGachaTipRotation()
+                if (reason == TaskEndRegistry.Reason.MANUAL) {
+                    _statusMessage.value = uiTextOf(R.string.toolbox_status_stopped)
+                } else if (finishedTool == ToolboxTab.GACHA) {
+                    // 自然完成和异常中止分别提示，不再一律显示“已停止”。
+                    val message = if (reason == TaskEndRegistry.Reason.ABORTED ||
+                        compositionService.state.value == MaaExecutionState.ERROR
+                    ) R.string.task_start_execution_aborted_message
+                    else R.string.task_start_execution_finished_message
+                    _statusMessage.value = uiTextOf(message)
+                }
+            }
+        }
+
         // 切到前台时若正停在抽卡 Tab，回退到牛杂
         viewModelScope.launch {
             appSettingsManager.runMode.collect { mode ->
@@ -228,6 +253,10 @@ class ToolboxViewModel(
     }
 
     private fun doStart() {
+        // 工具页共用状态文案；开始另一操作时立即撤掉旧抽卡轮播。
+        stopGachaTipRotation()
+        runningTool = _currentTab.value.takeUnless { it == ToolboxTab.MINI_GAME }
+
         when (_currentTab.value) {
             ToolboxTab.MINI_GAME -> {
                 pendingGachaOnce = null
@@ -236,6 +265,7 @@ class ToolboxViewModel(
 
             ToolboxTab.GACHA -> {
                 if (appSettingsManager.runMode.value == RunMode.FOREGROUND) {
+                    runningTool = null
                     pendingGachaOnce = null
                     return
                 }
@@ -264,6 +294,7 @@ class ToolboxViewModel(
     private fun doStartGacha(once: Boolean) {
         viewModelScope.launch {
             if (!_gachaDisclaimerAccepted.value) {
+                runningTool = null
                 _statusMessage.value = uiTextOf(R.string.gacha_need_disclaimer)
                 return@launch
             }
@@ -276,7 +307,7 @@ class ToolboxViewModel(
                 listOf(MaaTaskParams(MaaTaskType.CUSTOM, params)),
             )
             handleStartResult(result, uiTextOf(R.string.toolbox_status_gacha_started))
-            if (result is MaaCompositionService.StartResult.Success) {
+            if (result is MaaCompositionService.StartResult.Success && runningTool == ToolboxTab.GACHA) {
                 startGachaTipRotation()
             }
         }
@@ -285,22 +316,11 @@ class ToolboxViewModel(
     private fun startGachaTipRotation() {
         gachaTipJob?.cancel()
         gachaTipJob = viewModelScope.launch {
-            // 轮播作为子协程，切换运行模式或重新启动寻访时会随父任务一起取消。
-            val rotation = launch {
-                while (isActive) {
-                    val tipRes = GACHA_TIP_RES_IDS[Random.nextInt(GACHA_TIP_RES_IDS.size)]
-                    _gachaTip.value = uiTextOf(tipRes)
-                    delay(5_000)
-                }
+            while (isActive) {
+                val tipRes = GACHA_TIP_RES_IDS[Random.nextInt(GACHA_TIP_RES_IDS.size)]
+                _gachaTip.value = uiTextOf(tipRes)
+                delay(5_000)
             }
-            // 全局停止也可能来自日志页；监听最终状态，不能只在工具页按钮中收尾。
-            // first 会检查当前值，覆盖任务在启动轮播前就已经结束的情况。
-            compositionService.state.first {
-                it == MaaExecutionState.IDLE || it == MaaExecutionState.ERROR
-            }
-            rotation.cancel()
-            _gachaTip.value = uiTextOf(R.string.gacha_init_tip)
-            _statusMessage.value = uiTextOf(R.string.toolbox_status_stopped)
         }
     }
 
@@ -399,6 +419,9 @@ class ToolboxViewModel(
 
     private fun onStartOperBox() {
         if (useYituliuOperBox()) {
+            // 一图流请求不属于 Core，旧任务的结束广播不应改写它的结果。
+            runningTool = null
+            stopGachaTipRotation()
             viewModelScope.launch {
                 _statusMessage.value = uiTextOf(R.string.oper_box_yituliu_fetching)
                 _statusMessage.value = operBoxYituliuSync.sync().message
@@ -440,6 +463,15 @@ class ToolboxViewModel(
         result: MaaCompositionService.StartResult,
         successMessage: UiText = uiTextOf(R.string.toolbox_status_started),
     ) {
+        if (result !is MaaCompositionService.StartResult.Success) {
+            runningTool = null
+        } else if (runningTool == null &&
+            (_statusMessage.value == uiTextOf(R.string.toolbox_status_stopped) ||
+                successMessage == uiTextOf(R.string.toolbox_status_gacha_started))
+        ) {
+            // 已收尾的抽卡或手动停止不再被迟到的启动结果覆盖。
+            return
+        }
         _statusMessage.value = appContext.formatStartResult(result, successMessage)
     }
 

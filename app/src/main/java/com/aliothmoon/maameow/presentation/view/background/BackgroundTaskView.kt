@@ -640,7 +640,8 @@ fun BackgroundTaskView(
                                                     onClick = {
                                                         when (state.current) {
                                                             // 停止入口作用于当前 Core 任务，不受启动页面限制。
-                                                            PanelTab.TASKS, PanelTab.LOG -> viewModel.onStopTasks()
+                                                            PanelTab.TASKS -> viewModel.onStopTasks()
+                                                            PanelTab.LOG -> viewModel.onStopCurrentTask()
                                                             PanelTab.AUTO_BATTLE -> copilotViewModel.onStop()
                                                             PanelTab.TOOLS -> toolboxViewModel.onStop()
                                                         }

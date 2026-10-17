@@ -12,6 +12,7 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
+import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.utils.i18n.UiText
@@ -70,6 +71,16 @@ class MiniGameDelegate(
 
     private val _state = MutableStateFlow(MiniGameUiState())
     val state: StateFlow<MiniGameUiState> = _state.asStateFlow()
+    private var awaitingTaskEnd = false
+
+    /** 由工具箱转发全局结束通知，日志页停止也能清掉小游戏的运行提示。 */
+    fun onTaskEnded(reason: TaskEndRegistry.Reason) {
+        if (!awaitingTaskEnd) return
+        awaitingTaskEnd = false
+        if (reason == TaskEndRegistry.Reason.MANUAL) {
+            _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_stopped)) }
+        }
+    }
 
     val miniGames: StateFlow<List<MiniGame>> = activityManager.miniGames
 
@@ -217,6 +228,7 @@ class MiniGameDelegate(
         scope.launch {
             val task = buildTaskParams()
             _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_starting)) }
+            awaitingTaskEnd = true
             val result = compositionService.startCopilot(listOf(task))
             if (result is MaaCompositionService.StartResult.Success) {
                 achievementRepository.report {
@@ -236,6 +248,14 @@ class MiniGameDelegate(
                         )
                     }
                 }
+            }
+            // 成就上报会挂起；期间若已手动停止，不再写回“已启动”。
+            if (result !is MaaCompositionService.StartResult.Success) {
+                awaitingTaskEnd = false
+            } else if (!awaitingTaskEnd &&
+                _state.value.statusMessage == uiTextOf(R.string.toolbox_status_stopped)
+            ) {
+                return@launch
             }
             _state.update {
                 it.copy(
