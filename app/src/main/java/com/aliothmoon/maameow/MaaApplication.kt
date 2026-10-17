@@ -99,7 +99,9 @@ class MaaApplication : Application() {
     }
 
     private fun postCreateApplication() {
-        Packages.initialize(GamePackageConfig(File(pathConfig.rootDir)))
+        Packages.initialize(GamePackageConfig(File(pathConfig.rootDir)) {
+            appSettingsManager.tasksOverrideEnabled.value
+        })
         telemetry.setup()
         applicationScope.launch { get<ProcessExitRecorder>().recordSelf() }
         RemoteServiceManager.initialize(this, appSettingsManager, pathConfig)

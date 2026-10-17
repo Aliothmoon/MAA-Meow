@@ -62,6 +62,23 @@ class GamePackageConfigTest {
         assertEquals("updated.game", config.snapshot("YoStarKR")["YoStarKR"])
     }
 
+    @Test fun overridePackageIsLastOnlyWhenEnabled() {
+        write("resource/config.json", """{"packageName":{"YoStarKR":"base.game"}}""")
+        write("cache/resource/global/YoStarKR/resource/config.json", """{"packageName":{"YoStarKR":"global.cache.game"}}""")
+        val override = write("overrides/resource/config.json", """{"packageName":{"YoStarKR":"override.game"}}""")
+        var enabled = false
+        val config = GamePackageConfig(root) { enabled }
+        Packages.initialize(config)
+        assertEquals("global.cache.game", Packages["YoStarKR"])
+        enabled = true
+        assertEquals("override.game", Packages["YoStarKR"])
+        assertEquals("override.game", config.snapshot("YoStarKR")["YoStarKR"])
+        assertEquals("global.cache.game", config.snapshot("YoStarKR", includeOverrides = false)["YoStarKR"])
+        override.writeText("{broken")
+        assertTrue(runCatching { config.snapshot("YoStarKR") }.isFailure)
+        assertEquals("global.cache.game", config.snapshot("YoStarKR", includeOverrides = false)["YoStarKR"])
+    }
+
     @Test fun loadedPackageStaysStableUntilNextSuccessfulResourceLoad() {
         val file = write("resource/config.json", """{"packageName":{"YoStarKR":"$SAMSUNG"}}""")
         val config = GamePackageConfig(root)

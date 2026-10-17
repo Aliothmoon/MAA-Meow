@@ -9,25 +9,25 @@ import timber.log.Timber
 import java.io.File
 
 /** Read-only access to the resource config files passed to Core. */
-class GamePackageConfig(private val root: File) {
+class GamePackageConfig(
+    private val root: File,
+    private val overridesEnabled: () -> Boolean = { false },
+) {
     fun resolve(clientType: String): String? = packageNames(readConfigs(clientType))[clientType]
 
     /** A failed config read must be a resource error, not a guessed watchdog target. */
-    fun snapshot(clientType: String): Map<String, String> {
-        val configs = readConfigs(clientType, strict = true)
+    fun snapshot(clientType: String, includeOverrides: Boolean = overridesEnabled()): Map<String, String> {
+        val configs = readConfigs(clientType, includeOverrides, strict = true)
         check(configs.isNotEmpty()) { "Cannot read Core game package config" }
         return packageNames(configs)
     }
 
-    /** Same order as MaaResourceLoader. The built-in tasks override does not contain config.json. */
-    private fun readConfigs(clientType: String, strict: Boolean = false): List<JsonObject> = buildList {
-        add(File(root, "resource/config.json"))
-        add(File(root, "cache/resource/config.json"))
-        if (ClientResourceProfile.of(clientType).isNotEmpty()) {
-            add(File(root, "resource/global/$clientType/resource/config.json"))
-            add(File(root, "cache/resource/global/$clientType/resource/config.json"))
-        }
-    }.mapNotNull { file ->
+    private fun readConfigs(
+        clientType: String,
+        includeOverrides: Boolean = overridesEnabled(),
+        strict: Boolean = false,
+    ): List<JsonObject> = ClientResourceProfile.resourceParents(root, clientType, includeOverrides).mapNotNull { parent ->
+        val file = File(parent, "resource/config.json")
         try {
             if (file.exists()) {
                 JsonUtils.common.parseToJsonElement(file.readText()) as? JsonObject

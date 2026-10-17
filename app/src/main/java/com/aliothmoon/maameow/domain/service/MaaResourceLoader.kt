@@ -146,7 +146,10 @@ class MaaResourceLoader(
                 }
 
                 // Read the same configs that Core will load, without editing or generating resources.
-                val packageNames = Packages.readPackageNames(File(pathConfig.rootDir), clientType)
+                val overridesEnabled = appSettings.tasksOverrideEnabled.value
+                val root = File(pathConfig.rootDir)
+                val resourceParents = ClientResourceProfile.resourceParents(root, clientType, overridesEnabled)
+                val packageNames = Packages.readPackageNames(root, clientType, overridesEnabled)
 
                 // 独立目录：投递热更包与用户文件
                 if (!coreDataPusher.prepare(srv)) {
@@ -162,20 +165,8 @@ class MaaResourceLoader(
                     return@useRemoteService Result.failure(Exception("Failed to load main resource"))
                 }
 
-                val followUps = buildList {
-                    add(pathConfig.cacheDir)
-                    if (isGlobal) {
-                        pathConfig.globalResourceDir(clientType).parent?.let(::add)
-                        pathConfig.globalCacheResourceDir(clientType).parent?.let(::add)
-                    }
-                }
-
-                followUps.forEach { parent ->
-                    check(loadResIfExists(maa, parent)) { "Failed to load resource: $parent" }
-                }
-
-                if (appSettings.tasksOverrideEnabled.value) {
-                    loadResIfExists(maa, pathConfig.overridesDir)
+                resourceParents.drop(1).forEach { parent ->
+                    check(loadResIfExists(maa, parent.absolutePath)) { "Failed to load resource: $parent" }
                 }
 
                 Packages.onResourcesLoaded(clientType, packageNames)
