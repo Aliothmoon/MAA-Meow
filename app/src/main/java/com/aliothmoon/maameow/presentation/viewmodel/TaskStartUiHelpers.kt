@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.presentation.viewmodel
 import android.content.Context
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.resolveStartResultMessage
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -14,6 +15,16 @@ import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogUiState
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
+
+/** 使用本轮登记的终态，不读取可能已经属于下一轮的全局状态或界面文案。 */
+internal fun TaskEndRegistry.EndEvent.toStatusMessage(): UiText = uiTextOf(
+    when {
+        state == MaaExecutionState.ERROR || reason == TaskEndRegistry.Reason.ABORTED ->
+            R.string.task_start_execution_aborted_message
+        reason == TaskEndRegistry.Reason.MANUAL -> R.string.toolbox_status_stopped
+        else -> R.string.task_start_execution_finished_message
+    }
+)
 
 internal fun Context.resolveTaskStartFailureMessage(
     result: MaaCompositionService.StartResult,

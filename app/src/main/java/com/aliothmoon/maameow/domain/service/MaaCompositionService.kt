@@ -47,10 +47,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -89,6 +91,24 @@ class MaaCompositionService(
     private val _state = MutableStateFlow(MaaExecutionState.IDLE)
     val state: StateFlow<MaaExecutionState> = _state.asStateFlow()
 
+    private val runStateLock = Any()
+    private var nextRunId = 0L
+
+    @Volatile
+    var currentRun: TaskEndRegistry.Run? = null
+        private set
+
+    // Registry 是唯一消费者；同步回调不能挂起，排队保留快速结束的每一轮。
+    private val taskEndQueue = Channel<TaskEndRegistry.EndEvent>(Channel.UNLIMITED)
+    internal val taskEndEvents = taskEndQueue.receiveAsFlow()
+
+    /** 与新轮次登记互斥，只允许当前轮次执行共享运行状态的同步收尾。 */
+    fun withCurrentRun(run: TaskEndRegistry.Run?, action: () -> Unit): Boolean = synchronized(runStateLock) {
+        if (currentRun !== run) return@synchronized false
+        action()
+        true
+    }
+
     /** 停止发起方：用户操作 / 回调侧（掉线等）中止 / 到达运行时长上限 */
     enum class StopOrigin { USER, CALLBACK, RUN_DURATION_LIMIT }
 
@@ -111,12 +131,12 @@ class MaaCompositionService(
 
     override fun currentRunState(): MaaExecutionState = _state.value
 
-    override fun reportRunState(state: MaaExecutionState) {
+    override fun reportRunState(state: MaaExecutionState) = synchronized(runStateLock) {
         // STOPPING 期间，回调不主动设 IDLE — 由 finishStop() 统一处理
         if (_state.value == MaaExecutionState.STOPPING && state == MaaExecutionState.IDLE) {
-            return
+            return@synchronized
         }
-        setRunState(state)
+        setRunState(state, coreCompleted = state == MaaExecutionState.IDLE)
     }
 
     override fun requestStopFromCallback() {
@@ -139,22 +159,39 @@ class MaaCompositionService(
         }
     }
 
-    private fun setRunState(state: MaaExecutionState) {
+    private fun setRunState(
+        state: MaaExecutionState,
+        coreCompleted: Boolean = false,
+    ): Unit = synchronized(runStateLock) {
+        // Core 可能在 Start() 返回前就完成，迟到的 RUNNING 不能重新打开已结束的运行。
+        if (state == MaaExecutionState.RUNNING && currentRun?.endEvent != null) return@synchronized
         // 仅在 STARTING 拉起前台服务；终态不做外部 stopService —
         // 快速失败时 stopService 可能抢在服务创建之前到达，系统会因
         // startForeground 契约未履行直接杀进程（RemoteServiceException）。
         // 服务自身观察状态流，startForeground 后对 IDLE/ERROR 自行 stopSelf
         if (state != MaaExecutionState.STARTING) {
+            var ended: TaskEndRegistry.EndEvent? = null
             // 自然完成走回调直接置 IDLE，不经过 finishStop，统一在这里撤掉计时和后台监视
             if (state == MaaExecutionState.IDLE || state == MaaExecutionState.ERROR) {
                 runDeadlineGuard.disarm()
                 stopBackgroundMonitors()
+                currentRun?.takeIf { it.endEvent == null }?.let { run ->
+                    // 先保存结果再发布空闲态，启动结果与广播无论谁先到都能读取同一终态。
+                    val event = run.finish(state, _state.value, lastStopOrigin)
+                    // 预检/初始化失败沿用启动失败路径，不触发原本只在运行后执行的自动收尾。
+                    if (coreCompleted || _state.value == MaaExecutionState.RUNNING ||
+                        _state.value == MaaExecutionState.STOPPING
+                    ) ended = event
+                }
             }
             _state.value = state
-            return
+            ended?.let { taskEndQueue.trySend(it) }
+            return@synchronized
         }
         // specialUse 被系统拒绝时拉起 FGS 必崩，本轮降级为无进度通知运行
         val withFgs = !SpecialUseFgsGate.isDenied(context)
+        // 预检可能重建旧进程，只有正式进入 STARTING 才登记新一轮。
+        currentRun = TaskEndRegistry.Run(++nextRunId)
         lastStopOrigin = StopOrigin.USER
         val runToken = liveCoordinator.beginRun()
         // 顺带提前拿断网闸门：这里在 IO 线程，留给 FGS 的 startForeground 拿会占主线程
@@ -178,7 +215,7 @@ class MaaCompositionService(
     private val callbackStopRequested = AtomicBoolean(false)
 
     sealed class StartResult {
-        data class Success(val version: String) : StartResult()
+        data class Success(val version: String, val run: TaskEndRegistry.Run) : StartResult()
 
         /** 资源加载失败（网络/IO/解压） */
         data class ResourceError(
@@ -585,11 +622,13 @@ class MaaCompositionService(
         successMessage: String,
         mode: RunMode,
         limitRunDuration: Boolean,
+        run: TaskEndRegistry.Run,
     ): StartResult {
         // 独立目录：先投递用户文件，送不过去 core 那边就是 file-not-found，直接报资源错误
         if (!coreDataPusher.pushUserData()) {
             Timber.e("core user data push failed before start")
             telemetry.onStartFailed("CORE_DATA_PUSH_ERROR")
+            setRunState(MaaExecutionState.ERROR)
             return StartResult.ResourceError(IllegalStateException("core user data push failed"))
         }
         taskChainStatusTracker.clear()
@@ -630,29 +669,37 @@ class MaaCompositionService(
             )
         }
         // 计时与后台监视都先于 RUNNING 起，秒完的回调置 IDLE 时才能撤掉
-        if (limitRunDuration && appSettings.runDurationLimitEnabled.value) {
-            val limitMinutes = appSettings.runDurationLimitMinutes.value
-            runDeadlineGuard.arm(limitMinutes) { stopByRunDurationLimit(limitMinutes) }
+        synchronized(runStateLock) {
+            if (run.endEvent == null) {
+                if (limitRunDuration && appSettings.runDurationLimitEnabled.value) {
+                    val limitMinutes = appSettings.runDurationLimitMinutes.value
+                    runDeadlineGuard.arm(limitMinutes) { stopByRunDurationLimit(limitMinutes) }
+                }
+                if (mode == RunMode.BACKGROUND) {
+                    startBackgroundMonitors()
+                }
+                setRunState(MaaExecutionState.RUNNING)
+            }
         }
-        if (mode == RunMode.BACKGROUND) {
-            startBackgroundMonitors()
-        }
-        setRunState(MaaExecutionState.RUNNING)
         sessionLogger.appendAndWait(successMessage, LogLevel.SUCCESS)
-        return StartResult.Success(maa.GetVersion())
+        return StartResult.Success(maa.GetVersion(), run)
     }
 
     private suspend fun stopByRunDurationLimit(limitMinutes: Int) {
         // 检查与切 STOPPING 须原子，被抢先则交给原流程
-        if (!_state.compareAndSet(MaaExecutionState.RUNNING, MaaExecutionState.STOPPING)) return
-        lastStopOrigin = StopOrigin.RUN_DURATION_LIMIT
+        val run = synchronized(runStateLock) {
+            if (_state.value != MaaExecutionState.RUNNING) return
+            lastStopOrigin = StopOrigin.RUN_DURATION_LIMIT
+            setRunState(MaaExecutionState.STOPPING)
+            currentRun
+        }
         try {
             Timber.i("Run duration limit reached: %d min, stopping", limitMinutes)
             sessionLogger.appendAndWait(
                 context.getString(R.string.runlog_run_duration_limit_reached, limitMinutes),
                 LogLevel.WARNING,
             )
-            performStop()
+            performStop(run)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -738,6 +785,7 @@ class MaaCompositionService(
             checkPreconditions(mode, clientType)?.let { return@withContext it }
 
             setRunState(MaaExecutionState.STARTING)
+            val run = checkNotNull(currentRun)
 
             try {
                 useRemoteService { service ->
@@ -760,7 +808,7 @@ class MaaCompositionService(
                         clientType
                     )?.let { return@useRemoteService it }
                     val result = appendTasksAndStart(
-                        maa, tasks, fallbacks, successMessage, mode, limitRunDuration,
+                        maa, tasks, fallbacks, successMessage, mode, limitRunDuration, run,
                     )
                     if (result is StartResult.Success) {
                         taskChainState.saveLastUsedClientType(clientType)
@@ -834,13 +882,15 @@ class MaaCompositionService(
     }
 
     suspend fun stop(origin: StopOrigin = StopOrigin.USER): StopResult {
-        // 先记来源再切状态，TaskEndRegistry 在 STOPPING→IDLE 边沿读取
-        lastStopOrigin = origin
-        setRunState(MaaExecutionState.STOPPING)
-        return performStop()
+        val run = synchronized(runStateLock) {
+            lastStopOrigin = origin
+            setRunState(MaaExecutionState.STOPPING)
+            currentRun
+        }
+        return performStop(run)
     }
 
-    private suspend fun performStop(): StopResult {
+    private suspend fun performStop(run: TaskEndRegistry.Run?): StopResult {
         sessionLogger.appendAndWait(context.getString(R.string.runlog_task_stopping), LogLevel.INFO)
 
         return withContext(Dispatchers.IO) {
@@ -848,11 +898,11 @@ class MaaCompositionService(
                 useRemoteService { service ->
                     val maa = service.maaCoreService
                     if (!maa.Running()) {
-                        return@useRemoteService finishStop(StopResult.Success)
+                        return@useRemoteService finishStop(StopResult.Success, run)
                     }
 
                     if (!maa.Stop()) {
-                        return@useRemoteService finishStop(StopResult.Failed)
+                        return@useRemoteService finishStop(StopResult.Failed, run)
                     }
 
                     // 轮询等待 Core 真正停止，60 秒超时
@@ -863,20 +913,20 @@ class MaaCompositionService(
                     }
 
                     if (maa.Running()) {
-                        finishStop(StopResult.Failed)
+                        finishStop(StopResult.Failed, run)
                     } else {
-                        finishStop(StopResult.Success)
+                        finishStop(StopResult.Success, run)
                     }
                 }
             } catch (e: RemoteException) {
                 // 进程已死，Core 随之没了；不收尾会卡在 STOPPING
                 Timber.w(e, "performStop: elevated service gone")
-                finishStop(StopResult.Success)
+                finishStop(StopResult.Success, run)
             } catch (e: Exception) {
                 // 真取消照抛；等连接超时、未授权、连接出错时 Core 停没停不确定
                 if (e is CancellationException && e !is TimeoutCancellationException) throw e
                 Timber.w(e, "performStop: remote service unavailable")
-                finishStop(StopResult.Failed)
+                finishStop(StopResult.Failed, run)
             }
         }
     }
@@ -892,8 +942,12 @@ class MaaCompositionService(
         gameFpsWatcher.stop()
     }
 
-    private fun finishStop(result: StopResult): StopResult {
-        setRunState(MaaExecutionState.IDLE)
+    private fun finishStop(result: StopResult, run: TaskEndRegistry.Run?): StopResult {
+        synchronized(runStateLock) {
+            // 服务死亡等路径可能先结束本轮；旧停止流程不能把下一轮置为空闲。
+            if (currentRun !== run) return result
+            setRunState(MaaExecutionState.IDLE)
+        }
         val status = if (result is StopResult.Success) "STOPPED" else "STOP_FAILED"
         sessionLogger.append(
             context.getString(R.string.runlog_task_stopped, status),

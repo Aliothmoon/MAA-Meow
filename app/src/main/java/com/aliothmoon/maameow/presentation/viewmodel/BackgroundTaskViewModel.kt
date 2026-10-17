@@ -201,9 +201,9 @@ class BackgroundTaskViewModel(
 
     private fun observeTaskEnd() {
         viewModelScope.launch {
-            taskEndRegistry.taskEnded.collect { reason ->
+            taskEndRegistry.taskEnded.collect { event ->
                 // 关游戏由 TaskEndRegistry 做，这里只提示
-                if (reason != TaskEndRegistry.Reason.MANUAL
+                if (event.reason != TaskEndRegistry.Reason.MANUAL
                     && appSettingsManager.closeAppOnTaskEnd.value
                 ) {
                     _effects.send(UiEffect.toast(R.string.bg_toast_auto_closed_on_end))

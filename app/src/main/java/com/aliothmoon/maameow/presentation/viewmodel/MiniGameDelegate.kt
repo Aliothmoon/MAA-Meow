@@ -13,12 +13,14 @@ import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
+import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.resolve
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -71,14 +73,17 @@ class MiniGameDelegate(
 
     private val _state = MutableStateFlow(MiniGameUiState())
     val state: StateFlow<MiniGameUiState> = _state.asStateFlow()
-    private var awaitingTaskEnd = false
+    private var startJob: Job? = null
+    private var startRequest = 0L
+    private var activeRun: TaskEndRegistry.Run? = null
+    private var activeRunRequest = 0L
 
-    /** 由工具箱转发全局结束通知，日志页停止也能清掉小游戏的运行提示。 */
-    fun onTaskEnded(reason: TaskEndRegistry.Reason) {
-        if (!awaitingTaskEnd) return
-        awaitingTaskEnd = false
-        if (reason == TaskEndRegistry.Reason.MANUAL) {
-            _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_stopped)) }
+    /** 工具箱转发同一份结束事件，只收尾本小游戏启动的运行。 */
+    fun onTaskEnded(event: TaskEndRegistry.EndEvent) {
+        if (activeRun !== event.run) return
+        activeRun = null
+        if (activeRunRequest == startRequest) {
+            _state.update { it.copy(statusMessage = event.toStatusMessage()) }
         }
     }
 
@@ -204,33 +209,42 @@ class MiniGameDelegate(
         }
     }
 
-    fun onStart() {
+    fun onStart(): Job? {
+        if (startJob?.isActive == true) return startJob
+        val serviceState = compositionService.state.value
+        if (serviceState != MaaExecutionState.IDLE && serviceState != MaaExecutionState.ERROR) return null
         val selectedTaskName = _state.value.selectedTaskName
         val pixelPaint = isPixelPaint(selectedTaskName)
         if (pixelPaint) {
             val plan = pixelArt.state.value.plan
             if (plan == null) {
                 _state.update { it.copy(statusMessage = uiTextOf(R.string.pixel_art_need_image)) }
-                return
+                return null
             }
             if (plan.groups.isEmpty()) {
                 _state.update { it.copy(statusMessage = uiTextOf(R.string.pixel_art_nothing_to_paint)) }
-                return
+                return null
             }
         }
         if (findGame(selectedTaskName)?.isUnsupported == true) {
             _state.update {
                 it.copy(statusMessage = uiTextOf(R.string.panel_mini_game_not_supported))
             }
-            return
+            return null
         }
 
-        scope.launch {
+        val request = ++startRequest
+        startJob = scope.launch {
             val task = buildTaskParams()
             _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_starting)) }
-            awaitingTaskEnd = true
             val result = compositionService.startCopilot(listOf(task))
             if (result is MaaCompositionService.StartResult.Success) {
+                activeRun = result.run
+                activeRunRequest = request
+                result.run.endEvent?.let { onTaskEnded(it) } ?: _state.update {
+                    it.copy(statusMessage = uiTextOf(R.string.panel_mini_game_started))
+                }
+                // 先登记运行与文案再上报成就；挂起期间的停止不会被迟到的成功文案覆盖。
                 achievementRepository.report {
                     event = AchievementEvents.MINI_GAME_STARTED
                     "task" to selectedTaskName
@@ -248,30 +262,20 @@ class MiniGameDelegate(
                         )
                     }
                 }
-            }
-            // 成就上报会挂起；期间若已手动停止，不再写回“已启动”。
-            if (result !is MaaCompositionService.StartResult.Success) {
-                awaitingTaskEnd = false
-            } else if (!awaitingTaskEnd &&
-                _state.value.statusMessage == uiTextOf(R.string.toolbox_status_stopped)
-            ) {
-                return@launch
-            }
-            _state.update {
-                it.copy(
-                    statusMessage = appContext.formatStartResult(
-                        result,
-                        uiTextOf(R.string.panel_mini_game_started),
-                    ),
-                )
+            } else {
+                _state.update { it.copy(statusMessage = appContext.formatStartResult(result)) }
             }
         }
+        return startJob
     }
 
     fun onStop() {
         scope.launch {
+            val request = startRequest
+            val run = compositionService.currentRun
             _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_stopping)) }
             compositionService.stop()
+            if (request != startRequest || compositionService.currentRun !== run) return@launch
             _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_stopped)) }
         }
     }

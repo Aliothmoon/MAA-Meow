@@ -35,6 +35,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -116,6 +117,10 @@ class LaunchPipelineTest {
     private val unlockType = MutableStateFlow("swipe")
     private val wakeCred = MutableStateFlow("")
     private val compositionState = MutableStateFlow(MaaExecutionState.IDLE)
+    private val compositionEnds = MutableSharedFlow<TaskEndRegistry.EndEvent>(extraBufferCapacity = 16)
+    @Volatile
+    private var compositionRun: TaskEndRegistry.Run? = null
+    private var nextRunId = 0L
     private val closeAppOnTaskEnd = MutableStateFlow(false)
     @Volatile
     private var stopOrigin = MaaCompositionService.StopOrigin.USER
@@ -178,7 +183,7 @@ class LaunchPipelineTest {
         screenInteractive.set(true)
         unlockType.value = "swipe"
         runMode.value = RunMode.BACKGROUND
-        compositionState.value = MaaExecutionState.IDLE
+        setCompositionState(MaaExecutionState.IDLE)
         closeAppOnTaskEnd.value = false
         stopOrigin = MaaCompositionService.StopOrigin.USER
 
@@ -210,14 +215,15 @@ class LaunchPipelineTest {
         }
         composition = mockk(relaxed = true) {
             every { state } returns compositionState
-            every { lastStopOrigin } answers { stopOrigin }
+            every { taskEndEvents } returns compositionEnds
+            every { currentRun } answers { compositionRun }
             coEvery { stop(any()) } coAnswers {
                 stopCalls.incrementAndGet()
                 stopOrigin = firstArg()
-                // STOPPING → IDLE 须留窗口，否则 StateFlow 合并
-                compositionState.value = MaaExecutionState.STOPPING
+                // 保留停止的异步时序，终态由 setCompositionState 登记事件
+                setCompositionState(MaaExecutionState.STOPPING)
                 delay(100)
-                compositionState.value = MaaExecutionState.IDLE
+                setCompositionState(MaaExecutionState.IDLE)
                 delay(100)
                 mockk(relaxed = true)
             }
@@ -261,7 +267,7 @@ class LaunchPipelineTest {
             )
         } coAnswers {
             startCalls.incrementAndGet()
-            compositionState.value = MaaExecutionState.RUNNING
+            setCompositionState(MaaExecutionState.RUNNING)
             StartTaskChainUseCase.Result.Success
         }
     }
@@ -355,23 +361,38 @@ class LaunchPipelineTest {
         }
     }
 
-    /** StateFlow 合并，赋值间须留窗口 */
+    /** 模拟服务同时保存终态与发布结束事件，Registry 不再监听可合并的状态流。 */
+    private fun setCompositionState(state: MaaExecutionState) {
+        val previous = compositionState.value
+        if (state == MaaExecutionState.STARTING || (state == MaaExecutionState.RUNNING &&
+                (compositionRun == null || compositionRun?.endEvent != null))
+        ) compositionRun = TaskEndRegistry.Run(++nextRunId)
+        val event = if (state == MaaExecutionState.IDLE || state == MaaExecutionState.ERROR) {
+            compositionRun?.finish(state, previous, stopOrigin)
+        } else null
+        compositionState.value = state
+        if (event != null && (previous == MaaExecutionState.RUNNING || previous == MaaExecutionState.STOPPING)) {
+            compositionEnds.tryEmit(event)
+        }
+    }
+
+    /** 保留启动与结束之间的异步窗口，供流水线登记收尾。 */
     private suspend fun driveTaskToEnd() {
         delay(200)
-        compositionState.value = MaaExecutionState.RUNNING
+        setCompositionState(MaaExecutionState.RUNNING)
         delay(200)
-        compositionState.value = MaaExecutionState.IDLE
+        setCompositionState(MaaExecutionState.IDLE)
     }
 
     /** 模拟停止：STOPPING → IDLE，来源由 [origin] 决定 */
     private suspend fun driveTaskToStop(origin: MaaCompositionService.StopOrigin) {
         delay(200)
-        compositionState.value = MaaExecutionState.RUNNING
+        setCompositionState(MaaExecutionState.RUNNING)
         delay(200)
         stopOrigin = origin
-        compositionState.value = MaaExecutionState.STOPPING
+        setCompositionState(MaaExecutionState.STOPPING)
         delay(200)
-        compositionState.value = MaaExecutionState.IDLE
+        setCompositionState(MaaExecutionState.IDLE)
     }
 
     // Shizuku 没起来时解锁注入必失败，以前被报成锁屏 / 拉起界面失败
@@ -412,7 +433,7 @@ class LaunchPipelineTest {
     // 强制启动若先停在跑的再查后端，后端挂了就两头落空
     @Test
     fun forceStart_remoteUnavailable_keepsRunningTask() = runBlocking<Unit> {
-        compositionState.value = MaaExecutionState.RUNNING
+        setCompositionState(MaaExecutionState.RUNNING)
         remoteBlocker = BackendBlock(uiTextOf(R.string.runlog_backend_unavailable, "Shizuku"))
 
         pipeline().execute(scheduleRequest(force = true)).join()
@@ -655,7 +676,7 @@ class LaunchPipelineTest {
         } coAnswers {
             assertEquals(listOf(ScreenPowerController.Origin.SCHEDULE), powerOffCalls.toList())
             startCalls.incrementAndGet()
-            compositionState.value = MaaExecutionState.RUNNING
+            setCompositionState(MaaExecutionState.RUNNING)
             StartTaskChainUseCase.Result.Success
         }
         val job = p.execute(scheduleRequest(autoScreenSaver = true, hardwareScreenOff = true))
@@ -707,7 +728,7 @@ class LaunchPipelineTest {
     fun hardwareScreenOff_inUseOrForeground_neverPowersOff() = runBlocking<Unit> {
         val p = pipeline()
         p.execute(scheduleRequest("in-use", autoScreenSaver = true, hardwareScreenOff = true)).join()
-        compositionState.value = MaaExecutionState.IDLE
+        setCompositionState(MaaExecutionState.IDLE)
         screenInteractive.set(false)
         runMode.value = RunMode.FOREGROUND
         p.execute(scheduleRequest("foreground", autoScreenSaver = true, hardwareScreenOff = true)).join()
@@ -813,9 +834,9 @@ class LaunchPipelineTest {
             startTaskChain.invoke(chain = any(), context = any(), scheduleLabel = any())
         } coAnswers {
             startCalls.incrementAndGet()
-            compositionState.value = MaaExecutionState.RUNNING
+            setCompositionState(MaaExecutionState.RUNNING)
             delay(100)
-            compositionState.value = MaaExecutionState.IDLE
+            setCompositionState(MaaExecutionState.IDLE)
             delay(100)
             StartTaskChainUseCase.Result.Success
         }
@@ -867,7 +888,7 @@ class LaunchPipelineTest {
         givenWakeGate(keyguard = true, locked = true, saverShowing = true, type = "swipe")
         val p = pipeline()
         p.execute(scheduleRequest("r1")).join()
-        compositionState.value = MaaExecutionState.IDLE
+        setCompositionState(MaaExecutionState.IDLE)
         p.execute(scheduleRequest("r2")).join()
         assertEquals(
             listOf(ExecutionResult.STARTED, ExecutionResult.STARTED),
@@ -1136,7 +1157,7 @@ class LaunchPipelineTest {
 
     @Test
     fun forceStartStopsRunningTask() = runBlocking<Unit> {
-        compositionState.value = MaaExecutionState.RUNNING
+        setCompositionState(MaaExecutionState.RUNNING)
         pipeline().execute(scheduleRequest(force = true)).join()
         assertTrue(stopCalls.get() >= 1)
         coVerify { composition.stopVirtualDisplay() }
@@ -1145,7 +1166,7 @@ class LaunchPipelineTest {
 
     @Test
     fun runningWithoutForce_skippedBusy() = runBlocking<Unit> {
-        compositionState.value = MaaExecutionState.RUNNING
+        setCompositionState(MaaExecutionState.RUNNING)
         pipeline().execute(scheduleRequest(force = false)).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_BUSY), recorded.toList())
         assertEquals(0, startCalls.get())
@@ -1226,7 +1247,7 @@ class LaunchPipelineTest {
         p.execute(scheduleRequest()).join()
         assertNull(mutex.current)
         // 第一轮任务得先跑完，否则第二轮会被 busy 挡掉，测不到 mutex
-        compositionState.value = MaaExecutionState.IDLE
+        setCompositionState(MaaExecutionState.IDLE)
         p.execute(scheduleRequest("req-2")).join()
         assertEquals(2, startCalls.get())
         assertEquals(
@@ -1412,7 +1433,7 @@ class LaunchPipelineTest {
     // 命中就别把在跑的任务停了
     @Test
     fun blacklistHit_forceStart_keepsRunningTask() = runBlocking<Unit> {
-        compositionState.value = MaaExecutionState.RUNNING
+        setCompositionState(MaaExecutionState.RUNNING)
         blacklist.value = setOf("com.game")
         foregroundPkg = "com.game"
 

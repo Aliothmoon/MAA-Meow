@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -19,7 +20,7 @@ import org.junit.Test
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
- * 状态边沿 → [TaskEndRegistry.Reason] 的映射，重点是手动停止与回调侧中止的区分
+ * 使用服务捕获的结束事件检查原因映射与收尾，StateFlow 只提供当前界面状态。
  */
 class TaskEndRegistryTest {
 
@@ -28,6 +29,12 @@ class TaskEndRegistryTest {
     private lateinit var registry: TaskEndRegistry
 
     private val state = MutableStateFlow(MaaExecutionState.IDLE)
+    private val endEvents = MutableSharedFlow<TaskEndRegistry.EndEvent>(extraBufferCapacity = 16)
+    @Volatile
+    private var currentRun: TaskEndRegistry.Run? = null
+    private var nextRunId = 0L
+    @Volatile
+    private var closeGameOnEnd = false
 
     @Volatile
     private var stopOrigin = MaaCompositionService.StopOrigin.USER
@@ -43,10 +50,11 @@ class TaskEndRegistryTest {
         pendingSeen.clear()
         composition = mockk(relaxed = true) {
             every { state } returns this@TaskEndRegistryTest.state
-            every { lastStopOrigin } answers { stopOrigin }
+            every { taskEndEvents } returns endEvents
+            every { currentRun } answers { this@TaskEndRegistryTest.currentRun }
         }
-        registry = TaskEndRegistry(composition, scope).apply { start() }
-        scope.launch { registry.taskEnded.collect { emitted.add(it) } }
+        registry = TaskEndRegistry(composition, scope, closeGameOnEnd = { closeGameOnEnd }).apply { start() }
+        scope.launch { registry.taskEnded.collect { emitted.add(it.reason) } }
     }
 
     @After
@@ -54,11 +62,21 @@ class TaskEndRegistryTest {
         scope.cancel()
     }
 
-    /** StateFlow 合并，赋值间须留窗口 */
+    /** 模拟服务在终态入口登记事件；原因来自生产代码 Run.finish，不由 Registry 推断边沿。 */
     private suspend fun drive(vararg states: MaaExecutionState) {
         for (s in states) {
             delay(150)
+            val previous = state.value
+            if (s == MaaExecutionState.STARTING || (s == MaaExecutionState.RUNNING &&
+                    (currentRun == null || currentRun?.endEvent != null))
+            ) currentRun = TaskEndRegistry.Run(++nextRunId)
+            val event = if (s == MaaExecutionState.IDLE || s == MaaExecutionState.ERROR) {
+                currentRun?.finish(s, previous, stopOrigin)
+            } else null
             state.value = s
+            if (event != null && (previous == MaaExecutionState.RUNNING || previous == MaaExecutionState.STOPPING)) {
+                endEvents.emit(event)
+            }
         }
         delay(300)
     }
@@ -125,14 +143,14 @@ class TaskEndRegistryTest {
 
     @Test
     fun closeGameOn_naturalEnd_stopsVirtualDisplay() = runBlocking<Unit> {
-        TaskEndRegistry(composition, scope, closeGameOnEnd = { true }).start()
+        closeGameOnEnd = true
         drive(MaaExecutionState.RUNNING, MaaExecutionState.IDLE)
         coVerify(exactly = 1) { composition.stopVirtualDisplay() }
     }
 
     @Test
     fun closeGameOn_manualStop_keepsGame() = runBlocking<Unit> {
-        TaskEndRegistry(composition, scope, closeGameOnEnd = { true }).start()
+        closeGameOnEnd = true
         stopOrigin = MaaCompositionService.StopOrigin.USER
         drive(MaaExecutionState.RUNNING, MaaExecutionState.STOPPING, MaaExecutionState.IDLE)
         coVerify(exactly = 0) { composition.stopVirtualDisplay() }
