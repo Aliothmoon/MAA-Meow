@@ -47,7 +47,7 @@ class CoreDataPusher(
                 return@locked false
             }
             Timber.i("core resources ready (stamp=%s) in %dms", resourceStamp, System.currentTimeMillis() - start)
-            pushHotUpdateIfNeededLocked(srv) && pushUserDataLocked(srv)
+            pushHotUpdateIfNeededLocked(srv) && pushResourceConfigsLocked(srv) && pushUserDataLocked(srv)
         }
     }
 
@@ -92,6 +92,21 @@ class CoreDataPusher(
         val ok = sendFile(zip, "applyCoreHotUpdate") { srv.applyCoreHotUpdate(it) }
         Timber.i("core hot update push %s (%s) in %dms", if (ok) "done" else "FAILED", local, System.currentTimeMillis() - start)
         return ok
+    }
+
+    /** Manual config edits must reach separated Core storage even when resource versions match. */
+    private fun pushResourceConfigsLocked(srv: RemoteService): Boolean {
+        val root = File(pathConfig.rootDir)
+        for (resource in listOf(File(root, "resource"), File(root, "cache/resource"))) {
+            val configs = listOf(File(resource, "config.json")) +
+                    File(resource, "global").listFiles().orEmpty().map { File(it, "resource/config.json") }
+            for (file in configs) {
+                if (!file.exists()) continue
+                val rel = file.relativeTo(root).invariantSeparatorsPath
+                if (!sendFile(file, "putCoreFile") { srv.putCoreFile(rel, it) }) return false
+            }
+        }
+        return true
     }
 
     private fun pushUserDataLocked(srv: RemoteService): Boolean {

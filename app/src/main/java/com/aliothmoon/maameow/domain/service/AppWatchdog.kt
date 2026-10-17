@@ -25,6 +25,7 @@ import timber.log.Timber
 class AppWatchdog(
     private val chainState: TaskChainState,
     private val appAliveChecker: AppAliveChecker,
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
 ) {
     enum class WatchdogState {
         IDLE,
@@ -48,8 +49,6 @@ class AppWatchdog(
         @VisibleForTesting
         internal const val DEAD_CONFIRM_POLLS = 2
     }
-
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _state = MutableStateFlow(WatchdogState.IDLE)
     val state: StateFlow<WatchdogState> = _state.asStateFlow()
@@ -80,14 +79,14 @@ class AppWatchdog(
     @VisibleForTesting
     internal var clock: () -> Long = { SystemClock.elapsedRealtime() }
 
-    fun startWatching() {
+    fun startWatching(clientType: String = chainState.clientType) {
         stopWatching()
         driftNotified = false
         driftFirstSeenMs = 0L
         driftRepinAttempts = 0
         deadPolls = 0
 
-        val clientType = chainState.clientType
+        // Capture once, after Core resource loading, for this run (including explicit Copilot clients).
         val packageName = Packages[clientType]
         if (packageName == null) {
             Timber.w(

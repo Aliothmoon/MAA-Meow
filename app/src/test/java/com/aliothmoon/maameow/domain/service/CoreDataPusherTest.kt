@@ -135,6 +135,42 @@ class CoreDataPusherTest {
     }
 
     @Test
+    fun manualConfigsAreSentEvenWhenResourceVersionsMatch() = runBlocking {
+        val e = env(remoteVersion = "2026-09-05")
+        val paths = listOf(
+            "resource/config.json",
+            "cache/resource/config.json",
+            "resource/global/YoStarKR/resource/config.json",
+            "cache/resource/global/YoStarKR/resource/config.json",
+        )
+        paths.forEach { path ->
+            File(e.root, path).apply {
+                parentFile!!.mkdirs()
+                writeText("""{"packageName":{"YoStarKR":"com.YoStarKR.Samsung.Arknights"}}""")
+            }
+        }
+        try {
+            assertTrue(e.pusher.prepare(e.srv))
+            assertEquals(paths.sorted(), e.sent.sorted())
+            verify(exactly = 0) { e.srv.applyCoreHotUpdate(any()) }
+        } finally {
+            e.root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun manualConfigTransferFailurePreventsPreparingCore() = runBlocking {
+        val e = env(remoteVersion = "2026-09-05")
+        File(e.root, "resource/config.json").writeText("{}")
+        every { e.srv.putCoreFile("resource/config.json", any()) } returns false
+        try {
+            assertFalse(e.pusher.prepare(e.srv))
+        } finally {
+            e.root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun clearRemote_ignoresMode() = runBlocking {
         val e = env(separated = false)
         assertTrue(e.pusher.clearRemote())

@@ -2,6 +2,9 @@ package com.aliothmoon.maameow
 
 import android.app.Application
 import android.content.res.Configuration
+import com.aliothmoon.maameow.constant.Packages
+import com.aliothmoon.maameow.data.config.GamePackageConfig
+import java.io.File
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.datasource.AppDownloader
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
@@ -96,6 +99,7 @@ class MaaApplication : Application() {
     }
 
     private fun postCreateApplication() {
+        Packages.initialize(GamePackageConfig(File(pathConfig.rootDir)))
         telemetry.setup()
         applicationScope.launch { get<ProcessExitRecorder>().recordSelf() }
         RemoteServiceManager.initialize(this, appSettingsManager, pathConfig)

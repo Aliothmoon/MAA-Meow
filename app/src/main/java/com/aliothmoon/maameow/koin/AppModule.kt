@@ -359,7 +359,7 @@ val appModule = module {
     singleOf(::TaskChainHandler)
     singleOf(::SubTaskHandler)
     single<AppAliveChecker> { RemoteAppAliveChecker() }
-    singleOf(::AppWatchdog)
+    single { AppWatchdog(get(), get()) }
     single<GameFpsReader> { RemoteGameFpsReader() }
     single { GameFpsWatcher(reader = get(), sessionLogger = get(), context = androidApplication()) }
     singleOf(::TelemetryController) { bind<RunTelemetry>() }

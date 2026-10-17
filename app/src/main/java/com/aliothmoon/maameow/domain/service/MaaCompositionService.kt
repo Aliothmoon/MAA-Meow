@@ -588,6 +588,7 @@ class MaaCompositionService(
         successMessage: String,
         mode: RunMode,
         limitRunDuration: Boolean,
+        clientType: String,
     ): StartResult {
         // 独立目录：先投递用户文件，送不过去 core 那边就是 file-not-found，直接报资源错误
         if (!coreDataPusher.pushUserData()) {
@@ -638,7 +639,7 @@ class MaaCompositionService(
             runDeadlineGuard.arm(limitMinutes) { stopByRunDurationLimit(limitMinutes) }
         }
         if (mode == RunMode.BACKGROUND) {
-            startBackgroundMonitors()
+            startBackgroundMonitors(clientType)
         }
         setRunState(MaaExecutionState.RUNNING)
         sessionLogger.appendAndWait(successMessage, LogLevel.SUCCESS)
@@ -763,7 +764,7 @@ class MaaCompositionService(
                         clientType
                     )?.let { return@useRemoteService it }
                     val result = appendTasksAndStart(
-                        maa, tasks, fallbacks, successMessage, mode, limitRunDuration,
+                        maa, tasks, fallbacks, successMessage, mode, limitRunDuration, clientType,
                     )
                     if (result is StartResult.Success) {
                         taskChainState.saveLastUsedClientType(clientType)
@@ -885,8 +886,8 @@ class MaaCompositionService(
     }
 
     // 后台模式随会话启停的监视器：游戏存活/漂移看门狗、帧率
-    private fun startBackgroundMonitors() {
-        appWatchdog.startWatching()
+    private fun startBackgroundMonitors(clientType: String) {
+        appWatchdog.startWatching(clientType)
         gameFpsWatcher.start()
     }
 
