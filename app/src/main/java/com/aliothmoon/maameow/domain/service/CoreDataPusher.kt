@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.constant.MaaFiles
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.remote.CoreDataDir
+import com.aliothmoon.maameow.remote.CoreResourceConfigs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -47,7 +48,7 @@ class CoreDataPusher(
                 return@locked false
             }
             Timber.i("core resources ready (stamp=%s) in %dms", resourceStamp, System.currentTimeMillis() - start)
-            pushHotUpdateIfNeededLocked(srv) && pushUserDataLocked(srv)
+            pushHotUpdateIfNeededLocked(srv) && pushResourceConfigsLocked(srv) && pushUserDataLocked(srv)
         }
     }
 
@@ -92,6 +93,18 @@ class CoreDataPusher(
         val ok = sendFile(zip, "applyCoreHotUpdate") { srv.applyCoreHotUpdate(it) }
         Timber.i("core hot update push %s (%s) in %dms", if (ok) "done" else "FAILED", local, System.currentTimeMillis() - start)
         return ok
+    }
+
+    /** Manual config edits must reach separated Core storage even when resource versions match. */
+    private fun pushResourceConfigsLocked(srv: RemoteService): Boolean {
+        val root = File(pathConfig.rootDir)
+        return runCatching {
+            val paths = CoreResourceConfigs.paths(root)
+            for (rel in paths) {
+                if (!sendFile(File(root, rel), "putCoreFile") { srv.putCoreFile(rel, it) }) return false
+            }
+            srv.removeStaleCoreResourceConfigs(paths)
+        }.onFailure { Timber.w(it, "Core config sync failed") }.getOrDefault(false)
     }
 
     private fun pushUserDataLocked(srv: RemoteService): Boolean {

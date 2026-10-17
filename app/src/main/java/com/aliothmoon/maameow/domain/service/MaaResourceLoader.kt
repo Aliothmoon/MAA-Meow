@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.domain.service
 
 import android.os.IBinder
 import android.os.Process
+import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.MaaCoreService
 import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.data.config.MaaPathConfig
@@ -144,6 +145,12 @@ class MaaResourceLoader(
                     copyTasksJson(pathConfig.globalCacheResourceDir(clientType).absolutePath)
                 }
 
+                // Read the same configs that Core will load, without editing or generating resources.
+                val overridesEnabled = appSettings.tasksOverrideEnabled.value
+                val root = File(pathConfig.rootDir)
+                val resourceParents = ClientResourceProfile.resourceParents(root, clientType, overridesEnabled)
+                val packageNames = Packages.readPackageNames(root, clientType, overridesEnabled)
+
                 // 独立目录：投递热更包与用户文件
                 if (!coreDataPusher.prepare(srv)) {
                     val msg = "Core data prepare failed"
@@ -158,19 +165,11 @@ class MaaResourceLoader(
                     return@useRemoteService Result.failure(Exception("Failed to load main resource"))
                 }
 
-                val followUps = buildList {
-                    add(pathConfig.cacheDir)
-                    if (isGlobal) {
-                        pathConfig.globalResourceDir(clientType).parent?.let(::add)
-                        pathConfig.globalCacheResourceDir(clientType).parent?.let(::add)
-                    }
+                resourceParents.drop(1).forEach { parent ->
+                    check(loadResIfExists(maa, parent.absolutePath)) { "Failed to load resource: $parent" }
                 }
 
-                followUps.forEach { loadResIfExists(maa, it) }
-
-                if (appSettings.tasksOverrideEnabled.value) {
-                    loadResIfExists(maa, pathConfig.overridesDir)
-                }
+                Packages.onResourcesLoaded(clientType, packageNames)
 
                 loadedBinder = srv.asBinder()
                 _state.value = State.Ready

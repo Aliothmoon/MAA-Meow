@@ -214,6 +214,9 @@ class RemoteServiceImpl : RemoteService.Stub() {
             .also { if (!it) Ln.w("$TAG: putCoreFile rejected: $relPath") }
     }
 
+    override fun removeStaleCoreResourceConfigs(retainedPaths: MutableList<String>?): Boolean =
+        retainedPaths != null && coreData.removeStaleResourceConfigs(retainedPaths)
+
     override fun listCoreDebugFiles(): MutableList<String> = coreData.listDebugFiles().toMutableList()
 
     override fun openCoreDebugFile(relPath: String?): ParcelFileDescriptor? {

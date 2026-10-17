@@ -1,5 +1,7 @@
 package com.aliothmoon.maameow
 
+import com.aliothmoon.maameow.constant.Packages
+import com.aliothmoon.maameow.data.config.GamePackageConfig
 import android.os.IBinder
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
@@ -35,6 +37,7 @@ class MaaResourceLoaderTest {
     @After
     fun tearDown() {
         unmockkObject(RemoteServiceManager)
+        Packages.initialize(null)
     }
 
     @Test
@@ -291,7 +294,86 @@ class MaaResourceLoaderTest {
         }
     }
 
+    @Test
+    fun manualConfigUsesExistingLoadPaths_inBothStorageModes() = runBlocking {
+        for (separated in listOf(false, true)) {
+            withEnv(coreSeparated = separated, customPackages = true) { env ->
+                val original = File(env.rootDir, "resource/config.json").readText()
+                assertTrue(env.loader.load("YoStarKR").isSuccess)
+                val expectedRoot = if (separated) "/data/local/tmp/maameow" else env.rootDir.absolutePath
+                assertEquals(expectedRoot, env.loadedDirs.first())
+                assertTrue(env.loadedDirs.none { it.contains("game-package") })
+                assertEquals("com.YoStarKR.Samsung.Arknights", Packages["YoStarKR"])
+                assertEquals(original, File(env.rootDir, "resource/config.json").readText())
+                File(env.rootDir, "resource/config.json").writeText("""{"packageName":{"YoStarKR":"changed.after.load"}}""")
+                assertEquals("com.YoStarKR.Samsung.Arknights", Packages["YoStarKR"])
+            }
+            unmockkObject(RemoteServiceManager)
+        }
+    }
+
+    @Test
+    fun rejectedGlobalResourcePreventsPublishingPackageSnapshot() = runBlocking {
+        withEnv(customPackages = true, rejectGlobalResource = true) { env ->
+            assertTrue(env.loader.load("YoStarKR").isFailure)
+            assertTrue(env.loader.state.value is MaaResourceLoader.State.Failed)
+            File(env.rootDir, "resource/config.json").writeText("""{"packageName":{"YoStarKR":"changed.after.failure"}}""")
+            assertEquals("changed.after.failure", Packages["YoStarKR"])
+        }
+    }
+
+    @Test
+    fun rejectedResourcePreservesPreviouslyPublishedPackageSnapshot() = runBlocking {
+        withEnv(customPackages = true, rejectGlobalResource = true) { env ->
+            Packages.onResourcesLoaded("YoStarKR", mapOf("YoStarKR" to "previous.success"))
+            assertTrue(env.loader.load("YoStarKR").isFailure)
+            File(env.rootDir, "resource/config.json").writeText("""{"packageName":{"YoStarKR":"changed.after.failure"}}""")
+            assertEquals("previous.success", Packages["YoStarKR"])
+        }
+    }
+
+    @Test
+    fun overrideConfigMatchesLastCoreLayerInBothStorageModes() = runBlocking {
+        for (separated in listOf(false, true)) {
+            withEnv(coreSeparated = separated, customPackages = true, overridesEnabled = true) { env ->
+                val override = File(env.rootDir, "overrides/resource/config.json")
+                override.writeText("""{"packageName":{"YoStarKR":"override.game"}}""")
+                assertTrue(env.loader.load("YoStarKR").isSuccess)
+                val expectedRoot = if (separated) "/data/local/tmp/maameow" else env.rootDir.absolutePath
+                assertEquals("${expectedRoot.replace('\\', '/')}/overrides", env.loadedDirs.last().replace('\\', '/'))
+                assertEquals("override.game", Packages["YoStarKR"])
+                override.writeText("""{"packageName":{"YoStarKR":"changed.game"}}""")
+                assertEquals("override.game", Packages["YoStarKR"])
+            }
+            unmockkObject(RemoteServiceManager)
+        }
+    }
+
+    @Test
+    fun disabledOverrideDoesNotChangePackageOrCoreLoadPaths() = runBlocking {
+        withEnv(customPackages = true) { env ->
+            File(env.rootDir, "overrides/resource/config.json").apply {
+                parentFile!!.mkdirs()
+                writeText("""{"packageName":{"YoStarKR":"override.game"}}""")
+            }
+            assertTrue(env.loader.load("YoStarKR").isSuccess)
+            assertEquals("com.YoStarKR.Samsung.Arknights", Packages["YoStarKR"])
+            assertTrue(env.loadedDirs.none { it.replace('\\', '/').endsWith("/overrides") })
+        }
+    }
+
+    @Test
+    fun rejectedOverrideResourcePreventsPublishingPackageSnapshot() = runBlocking {
+        withEnv(customPackages = true, overridesEnabled = true, rejectOverrideResource = true) { env ->
+            assertTrue(env.loader.load("YoStarKR").isFailure)
+            assertTrue(env.loader.state.value is MaaResourceLoader.State.Failed)
+            File(env.rootDir, "resource/config.json").writeText("""{"packageName":{"YoStarKR":"after.failure"}}""")
+            assertEquals("after.failure", Packages["YoStarKR"])
+        }
+    }
+
     private class Env(
+        val rootDir: File,
         val loader: MaaResourceLoader,
         val loadedDirs: MutableList<String>,
         val activityManager: ActivityManager,
@@ -306,13 +388,24 @@ class MaaResourceLoaderTest {
         appLanguage: AppSettingsManager.AppLanguage = AppSettingsManager.AppLanguage.ZH,
         setupCode: Int = SetupResult.OK,
         coreSeparated: Boolean = false,
+        customPackages: Boolean = false,
+        rejectGlobalResource: Boolean = false,
+        overridesEnabled: Boolean = false,
+        rejectOverrideResource: Boolean = false,
         block: suspend (Env) -> Unit,
     ) {
         val rootDir = Files.createTempDirectory("maa-resource-loader-test").toFile()
         try {
             File(rootDir, "resource").mkdirs()
+            File(rootDir, "resource/config.json").writeText("""{"packageName":{}}""")
+            Packages.initialize(null)
+            if (customPackages) {
+                File(rootDir, "resource/config.json").writeText("""{"packageName":{"YoStarKR":"com.YoStarKR.Samsung.Arknights"}}""")
+                Packages.initialize(GamePackageConfig(rootDir))
+            }
             File(rootDir, "cache/resource").mkdirs()
-            listOf("YoStarJP", "YoStarEN").forEach {
+            if (overridesEnabled) File(rootDir, "overrides/resource").mkdirs()
+            listOf("YoStarJP", "YoStarEN", "YoStarKR").forEach {
                 File(rootDir, "resource/global/$it/resource").mkdirs()
                 File(rootDir, "cache/resource/global/$it/resource").mkdirs()
             }
@@ -335,7 +428,7 @@ class MaaResourceLoaderTest {
                 every { language } returns MutableStateFlow(appLanguage)
                 every { displayLanguage } returns ResourceDataManager.displayLanguageCode(appLanguage)
                 every { forceFullscreenOnVirtualDisplay } returns MutableStateFlow(false)
-                every { tasksOverrideEnabled } returns MutableStateFlow(false)
+                every { tasksOverrideEnabled } returns MutableStateFlow(overridesEnabled)
             }
             val chainState = mockk<TaskChainState> {
                 every { clientType } returns "Official"
@@ -359,8 +452,11 @@ class MaaResourceLoaderTest {
             fun newService(): RemoteService {
                 val maaCore = mockk<MaaCoreService>()
                 every { maaCore.LoadResource(any()) } answers {
-                    loadedDirs += firstArg<String>()
-                    true
+                    val path = firstArg<String>()
+                    loadedDirs += path
+                    val resourcePath = path.replace('\\', '/')
+                    !(rejectGlobalResource && resourcePath.contains("global/YoStarKR")) &&
+                            !(rejectOverrideResource && resourcePath.endsWith("/overrides"))
                 }
                 return mockk<RemoteService> {
                     every { asBinder() } returns mockk<IBinder>()
@@ -393,6 +489,7 @@ class MaaResourceLoaderTest {
 
             block(
                 Env(
+                    rootDir = rootDir,
                     loader = MaaResourceLoader(
                         pathConfig = pathConfig,
                         appSettings = appSettings,
@@ -412,6 +509,7 @@ class MaaResourceLoaderTest {
                 )
             )
         } finally {
+            Packages.initialize(null)
             rootDir.deleteRecursively()
         }
     }
