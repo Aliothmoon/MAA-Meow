@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.remote.internal
 
 import com.aliothmoon.maameow.remote.CoreDataDir
+import com.aliothmoon.maameow.remote.CoreResourceConfigs
 import com.aliothmoon.maameow.remote.ResourceFiles
 import java.io.BufferedInputStream
 import java.io.File
@@ -113,6 +114,22 @@ class CoreDataStore(val root: File = File(CoreDataDir.ROOT)) {
                 if (!tmp.renameTo(file)) throw IOException("rename failed: $file")
             }
         }.isSuccess
+    }
+
+    fun removeStaleResourceConfigs(retainedPaths: List<String>): Boolean = synchronized(lock) {
+        runCatching {
+            val retained = retainedPaths.toSet()
+            val canonicalRoot = root.canonicalFile
+            for (rel in CoreResourceConfigs.paths(root)) {
+                if (rel in retained) continue
+                val file = File(root, rel)
+                check(file.canonicalFile.toPath().startsWith(canonicalRoot.toPath())) {
+                    "Config escapes Core root: $rel"
+                }
+                check(file.isFile && file.delete()) { "Cannot remove stale Core config: $rel" }
+            }
+            true
+        }.getOrDefault(false)
     }
 
     fun listDebugFiles(): List<String> {
