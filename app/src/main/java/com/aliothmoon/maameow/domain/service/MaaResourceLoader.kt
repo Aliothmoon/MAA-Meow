@@ -271,6 +271,7 @@ class MaaResourceLoader(
         }
         loadedClientType = null
         loadedBinder = null
+        Packages.invalidateResources()
         _state.value = State.NotLoaded
     }
 
@@ -293,6 +294,7 @@ class MaaResourceLoader(
             Timber.i("Skip resource invalidate while full reload is in progress")
             return
         }
+        Packages.invalidateResources()
         _state.value = State.NotLoaded
     }
 

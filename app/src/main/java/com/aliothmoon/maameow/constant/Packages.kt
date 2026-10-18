@@ -10,13 +10,25 @@ object Packages : Iterable<Map.Entry<String, String>> {
     @Volatile
     private var loadedPackages: Map<String, String> = emptyMap()
 
+    // Readiness concerns the next run; active watchdog/audio callers keep the loaded snapshot.
+    @Volatile
+    private var resourcesInvalidated = true
+
     fun initialize(config: GamePackageConfig?) {
         this.config = config
         loadedPackages = emptyMap()
+        resourcesInvalidated = true
     }
 
     operator fun get(type: String): String? =
         loadedPackages[type] ?: config?.resolve(type) ?: GamePackageDefaults.names[type]
+
+    fun invalidateResources() {
+        resourcesInvalidated = true
+    }
+
+    fun forStartup(type: String): String? =
+        if (resourcesInvalidated) config?.resolve(type) ?: GamePackageDefaults.names[type] else get(type)
 
     fun readPackageNames(root: File, clientType: String, overridesEnabled: Boolean = false): Map<String, String> =
         (config ?: GamePackageConfig(root)).snapshot(clientType, overridesEnabled)
@@ -27,6 +39,7 @@ object Packages : Iterable<Map.Entry<String, String>> {
             setOf("Official", "Bilibili")
         } else setOf(clientType)
         loadedPackages = names.filterKeys { it in clients }
+        resourcesInvalidated = false
     }
 
     override fun iterator(): Iterator<Map.Entry<String, String>> =

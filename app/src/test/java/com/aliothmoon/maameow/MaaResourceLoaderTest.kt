@@ -6,6 +6,14 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.ParcelFileDescriptor
 import com.aliothmoon.maameow.remote.internal.CoreDataStore
+import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.service.AchievementReporter
+import com.aliothmoon.maameow.domain.service.AppAliveChecker
+import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
+import com.aliothmoon.maameow.domain.usecase.GameReadiness
+import com.aliothmoon.maameow.domain.usecase.TaskStartContext
+import com.aliothmoon.maameow.domain.usecase.TaskStartMode
+import com.aliothmoon.maameow.remote.AppAliveStatus
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import android.os.IBinder
@@ -395,8 +403,42 @@ class MaaResourceLoaderTest {
         }
     }
 
+    @Test
+    fun invalidatedOverrideUsesPendingPackageForScheduledReadinessAndKeepsActiveTarget() = runBlocking {
+        withEnv(customPackages = true, overridesEnabled = true) { env ->
+            File(env.rootDir, "overrides/resource/config.json")
+                .writeText("""{"packageName":{"YoStarKR":"old.channel"}}""")
+            assertTrue(env.loader.load("YoStarKR").isSuccess)
+            assertEquals("old.channel", Packages.forStartup("YoStarKR"))
+            env.tasksOverrides.value = false
+            assertEquals("old.channel", Packages.forStartup("YoStarKR"))
+            env.loader.invalidate()
+            // A current run must retain the package loaded into its Core process.
+            assertEquals("old.channel", Packages["YoStarKR"])
+            val checked = mutableListOf<String>()
+            val readiness = CheckGameReadinessUseCase(
+                appAliveChecker = mockk<AppAliveChecker> {
+                    coEvery { isAppAlive(any()) } returns AppAliveStatus.ALIVE
+                },
+                appSettings = mockk { every { runMode } returns MutableStateFlow(RunMode.FOREGROUND) },
+                achievementReporter = mockk<AchievementReporter>(relaxed = true),
+                isPackageInstalled = { checked += it; it == "com.YoStarKR.Samsung.Arknights" },
+                isEyeProtectionEnabled = { false },
+                isSmartResolutionEnabled = { false },
+                isAdbInputRestricted = { false },
+            )
+            for (mode in listOf(TaskStartMode.SCHEDULED, TaskStartMode.MANUAL)) {
+                assertTrue(readiness("YoStarKR", true, TaskStartContext(mode)) is GameReadiness.Ready)
+            }
+            assertEquals(List(2) { "com.YoStarKR.Samsung.Arknights" }, checked)
+            assertTrue(env.loader.ensureLoaded("YoStarKR").isSuccess)
+            assertEquals("com.YoStarKR.Samsung.Arknights", Packages["YoStarKR"])
+        }
+    }
+
     private class Env(
         val rootDir: File,
+        val tasksOverrides: MutableStateFlow<Boolean>,
         val loader: MaaResourceLoader,
         val loadedDirs: MutableList<String>,
         val activityManager: ActivityManager,
@@ -447,13 +489,15 @@ class MaaResourceLoaderTest {
                     File(rootDir, "cache/resource/global/${firstArg<String>()}/resource")
                 }
             }
+            val tasksOverrides = MutableStateFlow(overridesEnabled)
             val appSettings = mockk<AppSettingsManager> {
                 every { debugMode } returns MutableStateFlow(false)
                 every { language } returns MutableStateFlow(appLanguage)
                 every { displayLanguage } returns ResourceDataManager.displayLanguageCode(appLanguage)
                 every { forceFullscreenOnVirtualDisplay } returns MutableStateFlow(false)
-                every { tasksOverrideEnabled } returns MutableStateFlow(overridesEnabled)
+                every { tasksOverrideEnabled } returns tasksOverrides
             }
+            if (customPackages) Packages.initialize(GamePackageConfig(rootDir) { tasksOverrides.value })
             val chainState = mockk<TaskChainState> {
                 every { clientType } returns "Official"
             }
@@ -546,6 +590,7 @@ class MaaResourceLoaderTest {
             block(
                 Env(
                     rootDir = rootDir,
+                    tasksOverrides = tasksOverrides,
                     loader = MaaResourceLoader(
                         pathConfig = pathConfig,
                         appSettings = appSettings,

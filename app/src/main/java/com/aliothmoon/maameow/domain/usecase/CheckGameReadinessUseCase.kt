@@ -33,7 +33,7 @@ class CheckGameReadinessUseCase(
         launchesGame: Boolean,
         context: TaskStartContext,
     ): GameReadiness {
-        val packageName = Packages[clientType]
+        val packageName = Packages.forStartup(clientType)
         if (packageName == null) {
             Timber.w(
                 "CheckGameReadiness: cannot resolve package name for clientType=%s",
