@@ -56,6 +56,7 @@ import com.aliothmoon.maameow.presentation.view.settings.AchievementView
 import com.aliothmoon.maameow.presentation.view.settings.ErrorLogView
 import com.aliothmoon.maameow.presentation.view.settings.LogHistoryView
 import com.aliothmoon.maameow.presentation.view.settings.LiveUpdateSettingsView
+import com.aliothmoon.maameow.presentation.view.settings.GamePackageEditorView
 import com.aliothmoon.maameow.presentation.view.settings.TaskOverrideEditorView
 import com.aliothmoon.maameow.presentation.view.settings.WallpaperSettingsView
 import com.aliothmoon.maameow.presentation.viewmodel.AppEventsViewModel
@@ -259,6 +260,9 @@ fun AppNavigation(
                     }
                     composable(Routes.SCHEDULE_APP_BLACKLIST) {
                         ScheduleAppBlacklistView(navController = navController)
+                    }
+                    composable(Routes.GAME_PACKAGE_EDITOR) {
+                        GamePackageEditorView(navController = navController)
                     }
                     composable(Routes.TASK_OVERRIDE_EDITOR) {
                         TaskOverrideEditorView(navController = navController)

@@ -131,6 +131,7 @@ object SettingSearchIndex {
         SettingSearchEntry(R.string.panel_autobattle_operbox_assist, thirdParty, R.string.settings_oper_box_assist_desc),
 
         SettingSearchEntry(R.string.settings_deploy_with_pause, task, R.string.settings_deploy_with_pause_desc),
+        SettingSearchEntry(R.string.game_package_edit, runtime, R.string.game_package_settings_desc),
         SettingSearchEntry(R.string.settings_tasks_override_title, task, R.string.settings_tasks_override_desc),
 
         SettingSearchEntry(R.string.settings_export_config_title, data, R.string.settings_export_config_desc),

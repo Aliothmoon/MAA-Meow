@@ -184,6 +184,9 @@ fun SettingsView(
     val forceFullscreenOnVirtualDisplay by viewModel.forceFullscreenOnVirtualDisplay.collectAsStateWithLifecycle()
     val pipOnHome by viewModel.pipOnHome.collectAsStateWithLifecycle()
     val tasksOverrideEnabled by viewModel.tasksOverrideEnabled.collectAsStateWithLifecycle()
+    val resourceConfigEditable by viewModel.resourceConfigEditable.collectAsStateWithLifecycle()
+    val gamePackageEnabled by viewModel.gamePackageEnabled.collectAsStateWithLifecycle()
+    val gamePackageChanging by viewModel.gamePackageChanging.collectAsStateWithLifecycle()
     val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val useSystemMonetColor by viewModel.useSystemMonetColor.collectAsStateWithLifecycle()
@@ -723,6 +726,31 @@ fun SettingsView(
                                     label = { it.display },
                                     onSelected = { viewModel.setStartupBackend(it) }
                                 )
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.game_package_edit) {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.game_package_edit),
+                                    description = stringResource(R.string.game_package_settings_desc),
+                                    contentColor = contentColor,
+                                    checked = gamePackageEnabled == true,
+                                    enabled = resourceConfigEditable && gamePackageEnabled != null && !gamePackageChanging,
+                                    onCheckedChange = { viewModel.setGamePackageEnabled(it) },
+                                )
+                            }
+                            MaaAnimatedVisibility(
+                                visible = gamePackageEnabled == true,
+                                enter = expandVertically(),
+                                exit = shrinkVertically(),
+                            ) {
+                                Column {
+                                    ListItemDivider()
+                                    SettingClickItem(
+                                        title = stringResource(R.string.game_package_edit_json),
+                                        contentColor = contentColor,
+                                        enabled = resourceConfigEditable && !gamePackageChanging,
+                                    ) { navController.navigate(Routes.GAME_PACKAGE_EDITOR) }
+                                }
                             }
                             ListItemDivider()
                             SettingSearchTarget(R.string.settings_core_data_location_title) {
@@ -1324,6 +1352,7 @@ private fun SettingClickItem(
     title: String,
     description: String = "",
     contentColor: Color,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
     SettingRow(
@@ -1331,6 +1360,7 @@ private fun SettingClickItem(
         description = description.ifEmpty { null },
         titleColor = contentColor,
         descriptionColor = contentColor.copy(alpha = 0.7f),
+        enabled = enabled,
         onClick = onClick,
     )
 }

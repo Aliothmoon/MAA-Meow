@@ -2937,4 +2937,20 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="oper_progress_result_recognition">识别或操作失败</string>
     <string name="oper_progress_log_detail">%1$s：%2$s%3$s</string>
     <string name="oper_progress_log_summary">干员培养本轮处理结果：成功 %1$d，失败 %2$d，跳过 %3$d（专精启动也计入成功）</string>
+    <string name="game_package_edit">自定义游戏包名</string>
+    <string name="game_package_edit_hint">仅修改 packageName 中当前客户端的值。错误包名会导致启动或检测失败。保存后请重启 MaaMeow。</string>
+    <string name="game_package_settings_desc">启用自定义游戏包名。关闭后使用资源默认配置，并保留已保存的自定义值。</string>
+    <string name="game_package_file_hint">包名仅保存到 config_custom_package.json，不修改已有资源配置文件。</string>
+    <string name="game_package_saved">配置已保存，请重启 MaaMeow</string>
+    <string name="game_package_invalid_json">仅允许 packageName，且必须只包含当前客户端的有效包名字符串</string>
+    <string name="resource_editor_busy">请先停止任务，再编辑配置</string>
+    <string name="resource_editor_load_failed">无法读取配置文件，请先初始化资源并检查文件权限</string>
+    <string name="resource_editor_no_file">未找到资源配置</string>
+    <string name="resource_editor_discard_title">放弃未保存的修改？</string>
+    <string name="resource_editor_discard_message">切换文件会丢弃当前文件未保存的修改。</string>
+    <string name="game_package_edit_json">编辑包名 JSON</string>
+    <string name="game_package_reset">恢复默认包名</string>
+    <string name="game_package_reset_message">清除当前客户端已保存的包名并使用资源默认包名？其他客户端不受影响，未保存的修改将被丢弃。</string>
+    <string name="game_package_default">默认包名：%1$s</string>
+    <string name="game_package_toggle_failed">无法更改自定义包名设置，请先停止任务并检查资源文件</string>
 </resources>

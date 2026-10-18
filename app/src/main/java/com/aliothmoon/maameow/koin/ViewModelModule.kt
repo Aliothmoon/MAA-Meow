@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.koin
 
+import com.aliothmoon.maameow.data.config.GamePackageSettings
 import com.aliothmoon.maameow.presentation.viewmodel.AchievementViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.AppEventsViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
@@ -10,6 +11,7 @@ import com.aliothmoon.maameow.presentation.viewmodel.HomeViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.LogHistoryViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.NotificationSettingsViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.SettingsViewModel
+import com.aliothmoon.maameow.presentation.viewmodel.GamePackageEditorViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.TaskOverrideEditorViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.UpdateViewModel
@@ -20,10 +22,12 @@ import com.aliothmoon.maameow.schedule.ui.ScheduleAppBlacklistViewModel
 import com.aliothmoon.maameow.schedule.ui.ScheduleWakeUnlockViewModel
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
+import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 
 val viewModelModule = module {
+    singleOf(::GamePackageSettings)
     viewModelOf(::HomeViewModel)
     viewModelOf(::AchievementViewModel)
     viewModelOf(::AppEventsViewModel)
@@ -39,6 +43,7 @@ val viewModelModule = module {
     viewModelOf(::ScheduleAppBlacklistViewModel)
     viewModelOf(::NotificationSettingsViewModel)
     viewModelOf(::TaskOverrideEditorViewModel)
+    viewModel { GamePackageEditorViewModel(get(), get()) }
 }
 
 

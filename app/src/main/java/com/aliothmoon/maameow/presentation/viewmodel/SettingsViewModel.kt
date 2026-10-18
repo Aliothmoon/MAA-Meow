@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aliothmoon.maameow.data.config.GamePackageSettings
 import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.YituliuApiService
@@ -40,6 +41,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -68,6 +70,7 @@ class SettingsViewModel(
     private val yituliuApiService: YituliuApiService,
     private val livePublisher: LiveUpdatePublisher,
     private val operBoxAssist: CopilotOperBoxAssist,
+    private val gamePackages: GamePackageSettings,
 ) : ViewModel() {
 
     // ========== 导入导出 ==========
@@ -114,6 +117,36 @@ class SettingsViewModel(
                 _settingsMessage.value =
                     uiTextOf(R.string.settings_import_failed, e.message.orEmpty())
             }
+        }
+    }
+
+    val resourceConfigEditable = compositionService.state
+        .map { it == MaaExecutionState.IDLE || it == MaaExecutionState.ERROR }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000),
+            compositionService.state.value == MaaExecutionState.IDLE || compositionService.state.value == MaaExecutionState.ERROR)
+
+    val gamePackageEnabled = gamePackages.enabled
+    private val _gamePackageChanging = MutableStateFlow(false)
+    val gamePackageChanging = _gamePackageChanging.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            runCatching { withContext(Dispatchers.IO) { gamePackages.refresh() } }
+                .onFailure { _settingsMessage.value = uiTextOf(R.string.resource_editor_load_failed) }
+        }
+    }
+
+    fun setGamePackageEnabled(enabled: Boolean) {
+        if (_gamePackageChanging.value) return
+        _gamePackageChanging.value = true
+        viewModelScope.launch {
+            try {
+                check(compositionService.updateResourceConfig { gamePackages.setEnabled(enabled) })
+                _settingsMessage.value = uiTextOf(R.string.game_package_saved)
+            } catch (e: Exception) {
+                Timber.w(e, "Change custom game package setting failed")
+                _settingsMessage.value = uiTextOf(R.string.game_package_toggle_failed)
+            } finally { _gamePackageChanging.value = false }
         }
     }
 

@@ -2880,4 +2880,20 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="oper_progress_result_recognition">Recognition or operation failed</string>
     <string name="oper_progress_log_detail">%1$s: %2$s%3$s</string>
     <string name="oper_progress_log_summary">Operator training results: %1$d successful, %2$d failed, %3$d skipped (starting mastery also counts as success).</string>
+    <string name="game_package_edit">Custom game package names</string>
+    <string name="game_package_edit_hint">Edit only the current client in packageName. An incorrect package can prevent launch or detection. Restart MaaMeow after saving.</string>
+    <string name="game_package_settings_desc">Enable custom game package names. Disable to use standard resource configuration; saved custom values are kept.</string>
+    <string name="game_package_file_hint">Package names are saved in config_custom_package.json. Existing resource configuration files are preserved.</string>
+    <string name="game_package_saved">Configuration saved. Restart MaaMeow.</string>
+    <string name="game_package_invalid_json">Use only packageName with one valid package-name string for the current client</string>
+    <string name="resource_editor_busy">Stop tasks before editing configuration</string>
+    <string name="resource_editor_load_failed">Could not read configuration. Initialize resources and check file permissions.</string>
+    <string name="resource_editor_no_file">No resource configuration found</string>
+    <string name="resource_editor_discard_title">Discard unsaved changes?</string>
+    <string name="resource_editor_discard_message">Switching files will discard unsaved changes to the current file.</string>
+    <string name="game_package_edit_json">Edit package JSON</string>
+    <string name="game_package_reset">Restore default package</string>
+    <string name="game_package_reset_message">Remove the current client’s saved package name and use the standard resource package? Other clients are preserved. Unsaved changes will be discarded.</string>
+    <string name="game_package_default">Default package: %1$s</string>
+    <string name="game_package_toggle_failed">Could not change custom package settings. Stop tasks and check resource files.</string>
 </resources>
