@@ -135,7 +135,7 @@ class AnalyzeTaskChainUseCase(
                 nodes = runNodes,
                 params = params,
                 clientType = clientType,
-                gamePackageName = Packages[clientType],
+                gamePackageName = Packages.forStartup(clientType),
                 launchesGame = runNodes
                     .mapNotNull { it.config as? WakeUpConfig }
                     .any { it.startGameEnabled },

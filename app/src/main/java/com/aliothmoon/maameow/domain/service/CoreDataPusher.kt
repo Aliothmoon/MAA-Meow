@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.constant.MaaFiles
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.remote.CoreDataDir
+import com.aliothmoon.maameow.remote.CoreResourceConfigs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -47,7 +48,8 @@ class CoreDataPusher(
                 return@locked false
             }
             Timber.i("core resources ready (stamp=%s) in %dms", resourceStamp, System.currentTimeMillis() - start)
-            pushHotUpdateIfNeededLocked(srv) && pushUserDataLocked(srv)
+            pushHotUpdateIfNeededLocked(srv) && pushCachedResourcesLocked(srv) &&
+                    pushResourceConfigsLocked(srv) && pushUserDataLocked(srv)
         }
     }
 
@@ -94,6 +96,33 @@ class CoreDataPusher(
         return ok
     }
 
+    /** Activity/task downloads live in App cache, outside the APK and hot-update archive. */
+    private fun pushCachedResourcesLocked(srv: RemoteService): Boolean = runCatching {
+        val root = File(pathConfig.rootDir)
+        val cache = File(root, "cache/resource")
+        if (!cache.exists()) return true
+        check(cache.isDirectory) { "Not a cache resource directory: $cache" }
+        cache.walkTopDown().onFail { file, cause ->
+            throw IllegalStateException("Cannot read cached resources: $file", cause)
+        }.filter { it.isFile && it.name != "config_custom.json" }.forEach { file ->
+            val rel = file.relativeTo(root).invariantSeparatorsPath
+            if (!sendFile(file, "putCoreFile") { srv.putCoreFile(rel, it) }) return false
+        }
+        true
+    }.onFailure { Timber.w(it, "Core cached resource sync failed") }.getOrDefault(false)
+
+    /** Manual config edits must reach separated Core storage even when resource versions match. */
+    private fun pushResourceConfigsLocked(srv: RemoteService): Boolean {
+        val root = File(pathConfig.rootDir)
+        return runCatching {
+            val paths = CoreResourceConfigs.paths(root)
+            for (rel in paths) {
+                if (!sendFile(File(root, rel), "putCoreFile") { srv.putCoreFile(rel, it) }) return false
+            }
+            srv.removeStaleCoreResourceConfigs(paths)
+        }.onFailure { Timber.w(it, "Core config sync failed") }.getOrDefault(false)
+    }
+
     private fun pushUserDataLocked(srv: RemoteService): Boolean {
         val root = File(pathConfig.rootDir)
         var ok = true
@@ -103,6 +132,7 @@ class CoreDataPusher(
             if (!top.isDirectory) continue
             top.walkTopDown().filter { it.isFile }.forEach { file ->
                 val rel = file.relativeTo(root).invariantSeparatorsPath
+                if (rel == "overrides/resource/config_custom.json") return@forEach
                 if (sendFile(file, "putCoreFile") { srv.putCoreFile(rel, it) }) count++ else ok = false
             }
         }

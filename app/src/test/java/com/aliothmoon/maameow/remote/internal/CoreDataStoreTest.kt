@@ -134,6 +134,48 @@ class CoreDataStoreTest {
     }
 
     @Test
+    fun staleConfigsAreRemovedAfterStoreRecreationWithoutDeletingOtherFiles() {
+        val tmp = Files.createTempDirectory("core-config-sync").toFile()
+        try {
+            val store = CoreDataStore(tmp)
+            val configs = listOf(
+                "resource/config.json",
+                "resource/global/YoStarKR/resource/config.json",
+                "cache/resource/config.json",
+                "cache/resource/global/YoStarKR/resource/config.json",
+                "overrides/resource/config.json",
+            )
+            val allConfigs = configs + "package-config/resource/config.json"
+            val unrelated = configs.map { it.replace("config.json", "config_custom.json") } +
+                    listOf("resource/tasks/tasks.json", "copilot/1.json", "debug/asst.log", "overrides/resource/tasks/tasks.json")
+            (allConfigs + unrelated).forEach { rel ->
+                assertTrue(store.putFile(rel, ByteArrayInputStream("{}".toByteArray())))
+            }
+            val retained = configs.take(2)
+            assertTrue(CoreDataStore(tmp).removeStaleResourceConfigs(retained))
+            retained.forEach { assertTrue(File(tmp, it).isFile) }
+            allConfigs.filter { it !in retained }.forEach { assertFalse(File(tmp, it).exists()) }
+            unrelated.forEach { assertEquals("{}", File(tmp, it).readText()) }
+            assertTrue(store.removeStaleResourceConfigs(retained))
+        } finally {
+            tmp.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun configCleanupFailureIsReportedWithoutDeletingDirectories() {
+        val tmp = Files.createTempDirectory("core-config-sync").toFile()
+        try {
+            val directory = File(tmp, "cache/resource/config.json").apply { mkdirs() }
+            File(directory, "keep.txt").writeText("keep")
+            assertFalse(CoreDataStore(tmp).removeStaleResourceConfigs(emptyList()))
+            assertEquals("keep", File(directory, "keep.txt").readText())
+        } finally {
+            tmp.deleteRecursively()
+        }
+    }
+
+    @Test
     fun clear_removesEverything() {
         val tmp = Files.createTempDirectory("core-data").toFile()
         try {

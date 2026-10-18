@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.ParcelFileDescriptor
 import com.aliothmoon.maameow.RemoteService
+import com.aliothmoon.maameow.remote.CoreResourceConfigs
 import com.aliothmoon.maameow.constant.MaaFiles
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.manager.RemoteServiceManager
@@ -58,6 +59,7 @@ class CoreDataPusherTest {
             every { applyCoreHotUpdate(any()) } answers { sent += "zip"; applyOk }
             every { putCoreFile(any(), any()) } answers { sent += firstArg<String>(); true }
             every { clearCoreData() } returns true
+            every { removeStaleCoreResourceConfigs(any()) } returns true
         }
         // JVM 上 android.jar 的 open 是 stub，直接给个可 close 的假 fd
         mockkStatic(ParcelFileDescriptor::class)
@@ -76,6 +78,7 @@ class CoreDataPusherTest {
         verify(exactly = 0) { e.srv.ensureCoreResources(any(), any()) }
         verify(exactly = 0) { e.srv.applyCoreHotUpdate(any()) }
         verify(exactly = 0) { e.srv.putCoreFile(any(), any()) }
+        verify(exactly = 0) { e.srv.removeStaleCoreResourceConfigs(any()) }
     }
 
     @Test
@@ -132,6 +135,98 @@ class CoreDataPusherTest {
         File(e.root, "debug/asst.log").writeText("no")
         assertTrue(e.pusher.pushUserData())
         assertEquals(listOf("copilot/1.json", "custom_infrast/sub/plan.json"), e.sent.sorted())
+    }
+
+    @Test
+    fun manualConfigsAreSentEvenWhenResourceVersionsMatch() = runBlocking {
+        val e = env(remoteVersion = "2026-09-05")
+        val paths = listOf(
+            "resource/config.json",
+            "cache/resource/config.json",
+            "resource/global/YoStarKR/resource/config.json",
+            "cache/resource/global/YoStarKR/resource/config.json",
+            "overrides/resource/config.json",
+        )
+        val allPaths = paths + CoreResourceConfigs.PACKAGE_RESOURCE_CONFIG
+        val legacyPaths = paths.map { it.replace("config.json", "config_custom.json") }
+        (allPaths + legacyPaths).forEach { path ->
+            File(e.root, path).apply {
+                parentFile!!.mkdirs()
+                writeText("""{"packageName":{"YoStarKR":"com.YoStarKR.Samsung.Arknights"}}""")
+            }
+        }
+        try {
+            assertTrue(e.pusher.prepare(e.srv))
+            assertEquals(allPaths.sorted(), e.sent.distinct().sorted())
+            legacyPaths.forEach { assertTrue(File(e.root, it).isFile) }
+            verify(exactly = 1) { e.srv.removeStaleCoreResourceConfigs(match { it.toSet() == allPaths.toSet() }) }
+            verify(exactly = 0) { e.srv.applyCoreHotUpdate(any()) }
+        } finally {
+            e.root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun manualConfigTransferFailurePreventsPreparingCore() = runBlocking {
+        val e = env(remoteVersion = "2026-09-05")
+        File(e.root, "resource/config.json").writeText("{}")
+        every { e.srv.putCoreFile("resource/config.json", any()) } returns false
+        try {
+            assertFalse(e.pusher.prepare(e.srv))
+        } finally {
+            e.root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun deletedConfigIsReconciledAfterPusherRecreation() = runBlocking {
+        val e = env(remoteVersion = "2026-09-05")
+        val path = "cache/resource/global/YoStarKR/resource/config.json"
+        val config = File(e.root, path).apply { parentFile!!.mkdirs(); writeText("{}") }
+        try {
+            assertTrue(e.pusher.prepare(e.srv))
+            verify(exactly = 1) { e.srv.removeStaleCoreResourceConfigs(listOf(path)) }
+            assertTrue(config.delete())
+            val context = mockk<Context> {
+                every { applicationInfo } returns ApplicationInfo().apply { sourceDir = File(e.root, "base.apk").path }
+            }
+            val paths = mockk<MaaPathConfig> {
+                every { isCoreSeparated } returns true
+                every { rootDir } returns e.root.path
+                every { appVersionCode } returns 7L
+                every { readDiskResourceVersion() } returns "2026-09-05"
+            }
+            assertTrue(CoreDataPusher(context, paths).prepare(e.srv))
+            verify(exactly = 1) { e.srv.removeStaleCoreResourceConfigs(emptyList()) }
+        } finally {
+            e.root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun configCleanupFailurePreventsPreparingCore() = runBlocking {
+        val e = env(remoteVersion = "2026-09-05")
+        every { e.srv.removeStaleCoreResourceConfigs(any()) } returns false
+        try {
+            assertFalse(e.pusher.prepare(e.srv))
+        } finally {
+            e.root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun cachedTaskTransferFailurePreventsPreparingCore() = runBlocking {
+        val e = env(remoteVersion = "2026-09-05")
+        try {
+            File(e.root, "cache/resource/tasks/tasks.json").apply {
+                parentFile!!.mkdirs()
+                writeText("{}")
+            }
+            every { e.srv.putCoreFile("cache/resource/tasks/tasks.json", any()) } returns false
+            assertFalse(e.pusher.prepare(e.srv))
+        } finally {
+            e.root.deleteRecursively()
+        }
     }
 
     @Test
