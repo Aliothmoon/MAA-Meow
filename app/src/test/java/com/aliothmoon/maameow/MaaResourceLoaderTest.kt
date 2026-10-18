@@ -436,6 +436,26 @@ class MaaResourceLoaderTest {
         }
     }
 
+    @Test
+    fun customPackageConfigIsLoadedAndFrozenInBothStorageModes() = runBlocking {
+        for (separated in listOf(false, true)) {
+            withEnv(coreSeparated = separated, customPackages = true, syncCachedResources = separated) { env ->
+                if (separated) {
+                    File(env.rootDir, "resource/global/YoStarKR/resource/config.json").writeText("{}")
+                    File(env.rootDir, "cache/resource/global/YoStarKR/resource/tasks.json").writeText("{}")
+                }
+                val config = File(env.rootDir, "cache/resource/config_custom.json")
+                config.writeText("""{"packageName":{"YoStarKR":"custom.channel"}}""")
+                assertTrue(env.loader.load("YoStarKR").isSuccess)
+                if (separated) assertEquals(config.readText(), File(env.rootDir, "remote/cache/resource/config_custom.json").readText())
+                assertEquals("custom.channel", Packages["YoStarKR"])
+                config.writeText("""{"packageName":{"YoStarKR":"changed.channel"}}""")
+                assertEquals("custom.channel", Packages["YoStarKR"])
+            }
+            unmockkObject(RemoteServiceManager)
+        }
+    }
+
     private class Env(
         val rootDir: File,
         val tasksOverrides: MutableStateFlow<Boolean>,

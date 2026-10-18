@@ -146,7 +146,8 @@ class CoreDataPusherTest {
             "cache/resource/global/YoStarKR/resource/config.json",
             "overrides/resource/config.json",
         )
-        paths.forEach { path ->
+        val allPaths = paths + paths.map { it.replace("config.json", "config_custom.json") }
+        allPaths.forEach { path ->
             File(e.root, path).apply {
                 parentFile!!.mkdirs()
                 writeText("""{"packageName":{"YoStarKR":"com.YoStarKR.Samsung.Arknights"}}""")
@@ -154,8 +155,8 @@ class CoreDataPusherTest {
         }
         try {
             assertTrue(e.pusher.prepare(e.srv))
-            assertEquals(paths.sorted(), e.sent.distinct().sorted())
-            verify(exactly = 1) { e.srv.removeStaleCoreResourceConfigs(match { it.toSet() == paths.toSet() }) }
+            assertEquals(allPaths.sorted(), e.sent.distinct().sorted())
+            verify(exactly = 1) { e.srv.removeStaleCoreResourceConfigs(match { it.toSet() == allPaths.toSet() }) }
             verify(exactly = 0) { e.srv.applyCoreHotUpdate(any()) }
         } finally {
             e.root.deleteRecursively()

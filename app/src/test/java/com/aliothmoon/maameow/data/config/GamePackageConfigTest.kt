@@ -107,5 +107,22 @@ class GamePackageConfigTest {
         assertTrue(runCatching { config.snapshot("YoStarKR") }.isFailure)
     }
 
+    @Test fun customConfigsFollowCoreOrderAtEveryResourceLayer() {
+        val layers = listOf("resource", "cache/resource", "resource/global/YoStarKR/resource",
+            "cache/resource/global/YoStarKR/resource", "overrides/resource")
+        val config = GamePackageConfig(root) { true }
+        layers.forEachIndexed { index, layer ->
+            write("$layer/config.json", """{"packageName":{"YoStarKR":"base.layer$index"}}""")
+            assertEquals("base.layer$index", config.snapshot("YoStarKR")["YoStarKR"])
+            write("$layer/config_custom.json", """{"packageName":{"YoStarKR":"custom.layer$index"}}""")
+            assertEquals("custom.layer$index", config.resolve("YoStarKR"))
+            assertEquals("custom.layer$index", config.snapshot("YoStarKR")["YoStarKR"])
+        }
+        assertEquals("custom.layer3", config.snapshot("YoStarKR", false)["YoStarKR"])
+        write("overrides/resource/config_custom.json", "{broken")
+        assertTrue(runCatching { config.snapshot("YoStarKR") }.isFailure)
+        assertEquals("base.layer4", config.resolve("YoStarKR"))
+    }
+
     private companion object { const val SAMSUNG = "com.YoStarKR.Samsung.Arknights" }
 }

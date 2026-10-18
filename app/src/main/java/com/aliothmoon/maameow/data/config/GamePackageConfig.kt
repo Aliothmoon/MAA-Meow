@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.data.config
 
 import com.aliothmoon.maameow.constant.GamePackageDefaults
 import com.aliothmoon.maameow.domain.models.ClientResourceProfile
+import com.aliothmoon.maameow.remote.CoreResourceConfigs
 import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -26,8 +27,9 @@ class GamePackageConfig(
         clientType: String,
         includeOverrides: Boolean = overridesEnabled(),
         strict: Boolean = false,
-    ): List<JsonObject> = ClientResourceProfile.resourceParents(root, clientType, includeOverrides).mapNotNull { parent ->
-        val file = File(parent, "resource/config.json")
+    ): List<JsonObject> = ClientResourceProfile.resourceParents(root, clientType, includeOverrides).flatMap { parent ->
+        CoreResourceConfigs.filenames.map { File(parent, "resource/$it") }
+    }.mapNotNull { file ->
         try {
             if (file.exists()) {
                 JsonUtils.common.parseToJsonElement(file.readText()) as? JsonObject

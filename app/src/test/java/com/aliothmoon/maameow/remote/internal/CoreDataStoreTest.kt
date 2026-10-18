@@ -145,14 +145,15 @@ class CoreDataStoreTest {
                 "cache/resource/global/YoStarKR/resource/config.json",
                 "overrides/resource/config.json",
             )
+            val allConfigs = configs + configs.map { it.replace("config.json", "config_custom.json") }
             val unrelated = listOf("resource/tasks/tasks.json", "copilot/1.json", "debug/asst.log", "overrides/resource/tasks/tasks.json")
-            (configs + unrelated).forEach { rel ->
+            (allConfigs + unrelated).forEach { rel ->
                 assertTrue(store.putFile(rel, ByteArrayInputStream("{}".toByteArray())))
             }
-            val retained = configs.take(2)
+            val retained = configs.take(2) + listOf("resource/config_custom.json")
             assertTrue(CoreDataStore(tmp).removeStaleResourceConfigs(retained))
             retained.forEach { assertTrue(File(tmp, it).isFile) }
-            configs.drop(2).forEach { assertFalse(File(tmp, it).exists()) }
+            allConfigs.filter { it !in retained }.forEach { assertFalse(File(tmp, it).exists()) }
             unrelated.forEach { assertEquals("{}", File(tmp, it).readText()) }
             assertTrue(store.removeStaleResourceConfigs(retained))
         } finally {
