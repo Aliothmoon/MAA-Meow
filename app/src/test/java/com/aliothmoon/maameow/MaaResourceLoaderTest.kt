@@ -2,6 +2,12 @@ package com.aliothmoon.maameow
 
 import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.config.GamePackageConfig
+import android.content.Context
+import android.content.pm.ApplicationInfo
+import android.os.ParcelFileDescriptor
+import com.aliothmoon.maameow.remote.internal.CoreDataStore
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import android.os.IBinder
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
@@ -372,6 +378,23 @@ class MaaResourceLoaderTest {
         }
     }
 
+    @Test
+    fun freshSeparatedStoreReceivesCachedTasksBeforeCoreLoadsThem() = runBlocking {
+        withEnv(coreSeparated = true, syncCachedResources = true) { env ->
+            assertFalse(File(env.rootDir, "remote/cache/resource").exists())
+            File(env.rootDir, "cache/resource/tasks.json").writeText("""{"downloaded":{}}""")
+            File(env.rootDir, "cache/resource/template/event.png").apply {
+                parentFile!!.mkdirs()
+                writeText("event image")
+            }
+            assertTrue(env.loader.load("Official").isSuccess)
+            assertTrue(env.loadedDirs.any { it.replace('\\', '/').endsWith("/cache") })
+            assertEquals("""{"downloaded":{}}""",
+                File(env.rootDir, "remote/cache/resource/tasks/tasks.json").readText())
+            assertEquals("event image", File(env.rootDir, "remote/cache/resource/template/event.png").readText())
+        }
+    }
+
     private class Env(
         val rootDir: File,
         val loader: MaaResourceLoader,
@@ -392,6 +415,7 @@ class MaaResourceLoaderTest {
         rejectGlobalResource: Boolean = false,
         overridesEnabled: Boolean = false,
         rejectOverrideResource: Boolean = false,
+        syncCachedResources: Boolean = false,
         block: suspend (Env) -> Unit,
     ) {
         val rootDir = Files.createTempDirectory("maa-resource-loader-test").toFile()
@@ -443,7 +467,19 @@ class MaaResourceLoaderTest {
                     MaaPathConfig.toCorePath(firstArg(), rootDir.absolutePath, "/data/local/tmp/maameow")
                 } else firstArg()
             }
-            val coreDataPusher = mockk<CoreDataPusher> {
+            val remoteStore = CoreDataStore(File(rootDir, "remote"))
+            val openedFiles = mutableMapOf<ParcelFileDescriptor, File>()
+            val coreDataPusher = if (syncCachedResources) {
+                every { pathConfig.appVersionCode } returns 7L
+                every { pathConfig.readDiskResourceVersion() } returns "same.version"
+                mockkStatic(ParcelFileDescriptor::class)
+                every { ParcelFileDescriptor.open(any(), any()) } answers {
+                    mockk<ParcelFileDescriptor>(relaxed = true).also { openedFiles[it] = firstArg() }
+                }
+                CoreDataPusher(mockk<Context> {
+                    every { applicationInfo } returns ApplicationInfo().apply { sourceDir = File(rootDir, "base.apk").path }
+                }, pathConfig)
+            } else mockk<CoreDataPusher> {
                 coEvery { prepare(any()) } returns true
             }
             val loadedDirs = mutableListOf<String>()
@@ -455,10 +491,30 @@ class MaaResourceLoaderTest {
                     val path = firstArg<String>()
                     loadedDirs += path
                     val resourcePath = path.replace('\\', '/')
+                    if (syncCachedResources) {
+                        val relative = resourcePath.removePrefix("/data/local/tmp/maameow").trimStart('/')
+                        check(File(remoteStore.root, "$relative/resource").isDirectory) {
+                            "Core resource path missing: $path"
+                        }
+                    }
                     !(rejectGlobalResource && resourcePath.contains("global/YoStarKR")) &&
                             !(rejectOverrideResource && resourcePath.endsWith("/overrides"))
                 }
                 return mockk<RemoteService> {
+                    if (syncCachedResources) {
+                        every { ensureCoreResources(any(), any()) } answers {
+                            File(remoteStore.root, "resource").mkdirs()
+                            File(remoteStore.root, "resource/global/YoStarKR/resource").mkdirs()
+                            true
+                        }
+                        every { coreResourceVersion } returns "same.version"
+                        every { putCoreFile(any(), any()) } answers {
+                            openedFiles.getValue(secondArg()).inputStream().use { remoteStore.putFile(firstArg(), it) }
+                        }
+                        every { removeStaleCoreResourceConfigs(any()) } answers {
+                            remoteStore.removeStaleResourceConfigs(firstArg())
+                        }
+                    }
                     every { asBinder() } returns mockk<IBinder>()
                     every { setup(any(), any()) } returns setupCode
                     justRun { setForceFullscreenOnVirtualDisplay(any()) }
@@ -510,6 +566,7 @@ class MaaResourceLoaderTest {
             )
         } finally {
             Packages.initialize(null)
+            if (syncCachedResources) unmockkStatic(ParcelFileDescriptor::class)
             rootDir.deleteRecursively()
         }
     }

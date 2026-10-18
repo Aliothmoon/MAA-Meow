@@ -48,7 +48,8 @@ class CoreDataPusher(
                 return@locked false
             }
             Timber.i("core resources ready (stamp=%s) in %dms", resourceStamp, System.currentTimeMillis() - start)
-            pushHotUpdateIfNeededLocked(srv) && pushResourceConfigsLocked(srv) && pushUserDataLocked(srv)
+            pushHotUpdateIfNeededLocked(srv) && pushCachedResourcesLocked(srv) &&
+                    pushResourceConfigsLocked(srv) && pushUserDataLocked(srv)
         }
     }
 
@@ -94,6 +95,21 @@ class CoreDataPusher(
         Timber.i("core hot update push %s (%s) in %dms", if (ok) "done" else "FAILED", local, System.currentTimeMillis() - start)
         return ok
     }
+
+    /** Activity/task downloads live in App cache, outside the APK and hot-update archive. */
+    private fun pushCachedResourcesLocked(srv: RemoteService): Boolean = runCatching {
+        val root = File(pathConfig.rootDir)
+        val cache = File(root, "cache/resource")
+        if (!cache.exists()) return true
+        check(cache.isDirectory) { "Not a cache resource directory: $cache" }
+        cache.walkTopDown().onFail { file, cause ->
+            throw IllegalStateException("Cannot read cached resources: $file", cause)
+        }.filter { it.isFile }.forEach { file ->
+            val rel = file.relativeTo(root).invariantSeparatorsPath
+            if (!sendFile(file, "putCoreFile") { srv.putCoreFile(rel, it) }) return false
+        }
+        true
+    }.onFailure { Timber.w(it, "Core cached resource sync failed") }.getOrDefault(false)
 
     /** Manual config edits must reach separated Core storage even when resource versions match. */
     private fun pushResourceConfigsLocked(srv: RemoteService): Boolean {

@@ -211,6 +211,21 @@ class CoreDataPusherTest {
     }
 
     @Test
+    fun cachedTaskTransferFailurePreventsPreparingCore() = runBlocking {
+        val e = env(remoteVersion = "2026-09-05")
+        try {
+            File(e.root, "cache/resource/tasks/tasks.json").apply {
+                parentFile!!.mkdirs()
+                writeText("{}")
+            }
+            every { e.srv.putCoreFile("cache/resource/tasks/tasks.json", any()) } returns false
+            assertFalse(e.pusher.prepare(e.srv))
+        } finally {
+            e.root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun clearRemote_ignoresMode() = runBlocking {
         val e = env(separated = false)
         assertTrue(e.pusher.clearRemote())
