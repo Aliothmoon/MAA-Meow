@@ -39,6 +39,12 @@ One-click automation for all daily tasks, powered by image recognition
 | ⏱️ | **Scheduled Tasks** | Auto-start tasks at preset times — perfect for daily routines |
 | 🔄 | **Auto Update** | Automatically check and download app & resource updates on launch |
 
+## Custom package name
+
+Stop tasks and enable **Settings → Runtime Environment → Custom game package names**, then open **Edit package JSON**. This uses the same JSON editor component as MAA Task Override and shows only the current client’s `packageName`.
+
+Saving updates that client in `Maa/config_custom_package.json`, which stores only package names. Existing resource config files are not edited. Disabling ignores the dedicated package file while keeping its values; **Restore default package** removes only the current client’s saved entry. Restart MaaMeow after changes. Meow generates and synchronizes a separate Core resource when the saved package names are enabled.
+
 ## Requirements
 
 | Item | Requirement |
