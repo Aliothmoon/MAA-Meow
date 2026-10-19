@@ -1782,32 +1782,29 @@ private fun SettingLanguageItem(
 ) {
     val effectiveSelectedLanguage = resolveSelectedLanguage(selectedLanguage)
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.md),
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.settings_language_title),
-                style = MaterialTheme.typography.bodyLarge,
-                color = contentColor
-            )
-        }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Text(
+            text = stringResource(R.string.settings_language_title),
+            style = MaterialTheme.typography.bodyLarge,
+            color = contentColor
+        )
+        Row(modifier = Modifier.fillMaxWidth()) {
             val options = listOf(
                 AppSettingsManager.AppLanguage.ZH to stringResource(R.string.settings_language_zh),
-                AppSettingsManager.AppLanguage.EN to stringResource(R.string.settings_language_en)
+                AppSettingsManager.AppLanguage.EN to stringResource(R.string.settings_language_en),
+                AppSettingsManager.AppLanguage.KO to stringResource(R.string.settings_language_ko),
             )
             options.forEach { (lang, label) ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
                     modifier = Modifier
+                        .weight(1f)
                         .clip(RoundedCornerShape(8.dp))
                         .selectable(
                             selected = lang == effectiveSelectedLanguage,
@@ -1819,11 +1816,12 @@ private fun SettingLanguageItem(
                         selected = lang == effectiveSelectedLanguage,
                         onClick = null
                     )
-                    Spacer(modifier = Modifier.width(2.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = label,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = contentColor
+                        color = contentColor,
+                        maxLines = 1,
                     )
                 }
             }

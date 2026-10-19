@@ -188,7 +188,7 @@ android {
 
     androidResources {
         @Suppress("UnstableApiUsage")
-        localeFilters += listOf("zh", "en")
+        localeFilters += listOf("zh", "en", "ko")
     }
 }
 

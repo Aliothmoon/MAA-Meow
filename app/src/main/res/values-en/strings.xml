@@ -27,7 +27,7 @@
     <string name="settings_search_hint">Search settings</string>
     <string name="settings_search_clear">Clear search</string>
     <string name="settings_search_empty">No matching settings</string>
-    <string name="search_keywords_language">language locale chinese english</string>
+    <string name="search_keywords_language">language locale chinese english korean</string>
     <string name="search_keywords_theme">theme dark night black monet color colour</string>
     <string name="search_keywords_font_size">font text size scale zoom</string>
     <string name="search_keywords_backend">elevation shizuku root permission backend</string>
@@ -122,6 +122,7 @@
     <string name="settings_language_system">Follow System</string>
     <string name="settings_language_zh">中文</string>
     <string name="settings_language_en">English</string>
+    <string name="settings_language_ko">한국어</string>
     <string name="settings_background_resolution_title">Background Resolution</string>
     <string name="settings_background_resolution_desc">Background mode only</string>
     <string name="settings_skip_shizuku_check">Skip Shizuku Check</string>

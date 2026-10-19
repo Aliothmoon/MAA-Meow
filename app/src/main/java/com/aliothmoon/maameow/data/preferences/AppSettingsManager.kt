@@ -527,6 +527,7 @@ class AppSettingsManager internal constructor(
         SYSTEM(""),
         ZH("zh"),
         EN("en"),
+        KO("ko"),
     }
 
     /** 资源与干员名用的语言码，system 收敛成显式语言 */

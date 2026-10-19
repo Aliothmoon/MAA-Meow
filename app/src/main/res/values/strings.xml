@@ -267,7 +267,7 @@
     <string name="settings_search_hint">搜索设置</string>
     <string name="settings_search_clear">清空搜索</string>
     <string name="settings_search_empty">没有找到相关设置</string>
-    <string name="search_keywords_language">语言 中文 英文 English</string>
+    <string name="search_keywords_language">语言 中文 英文 English 韩语 한국어</string>
     <string name="search_keywords_theme">主题 深色 夜间 暗色 黑色 莫奈 配色 颜色</string>
     <string name="search_keywords_font_size">字体 字号 文字大小 缩放 放大</string>
     <string name="search_keywords_backend">提权 Shizuku Root 权限</string>
@@ -368,6 +368,7 @@
     <string name="settings_language_system">跟随系统</string>
     <string name="settings_language_zh">中文</string>
     <string name="settings_language_en">English</string>
+    <string name="settings_language_ko">한국어</string>
     <string name="settings_background_resolution_title">后台分辨率</string>
     <string name="settings_background_resolution_desc">仅后台模式生效</string>
     <string name="settings_skip_shizuku_check">跳过 Shizuku 检查</string>
