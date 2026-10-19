@@ -1953,6 +1953,7 @@
     <string name="task_start_eye_protection_warning_log">기기가 눈 보호/야간 모드(%1$s) 상태입니다. 이미지 인식에 영향을 줄 수 있으니 직접 꺼 주세요</string>
     <string name="task_start_adb_input_restricted_warning_log">「USB 디버깅(보안 설정)」이 꺼져 있어 시스템이 터치 입력을 차단합니다. 개발자 옵션에서 켜 주세요(적용되지 않으면 휴대폰을 재부팅하세요)</string>
     <string name="task_start_smart_resolution_warning_log">시스템의 「스마트 해상도」가 켜져 있어 백그라운드 모드에서 인식 오류가 발생합니다. 시스템 디스플레이 설정에서 직접 꺼 주세요</string>
+    <string name="task_start_virtual_display_compat_warning_log">현재 시스템에 백그라운드 가상 디스플레이에 필요한 권한이 없어 호환 모드로 생성했습니다. 화면이 꺼지거나 잠기면 작업이 일시 중지되며, 실행 중 메인 화면이 입력 포커스를 잃을 수 있습니다</string>
 
     <!-- i18n: toolbox / mini game -->
     <string name="toolbox_status_starting">시작 중…</string>

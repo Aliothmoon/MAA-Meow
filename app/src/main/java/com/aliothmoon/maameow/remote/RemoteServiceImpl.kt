@@ -408,6 +408,8 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun getGameFps(): Float = GameFpsMonitor.currentFps()
 
+    override fun getVirtualDisplayFlagTier(): Int = VirtualDisplayManager.getFlagTier()
+
     override fun setPlayAudioOpAllowed(packageName: String?, isAllowed: Boolean): Boolean {
         if (packageName.isNullOrBlank()) return false
         val ok = GameAudioMuteController.setMuted(packageName, muted = !isAllowed)

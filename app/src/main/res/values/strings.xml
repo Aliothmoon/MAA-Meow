@@ -1953,6 +1953,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="task_start_eye_protection_warning_log">设备当前处于护眼/夜光模式 (%1$s)，可能影响正常图像识别，请手动关闭</string>
     <string name="task_start_adb_input_restricted_warning_log">未开启「USB 调试（安全设置）」，系统会拦截触控输入，请在开发者选项中开启（未生效可重启手机）</string>
     <string name="task_start_smart_resolution_warning_log">系统已开启「智能分辨率」，后台模式下会导致识别出错，请在系统显示设置中手动关闭</string>
+    <string name="task_start_virtual_display_compat_warning_log">当前系统缺少后台虚拟屏所需权限，已改用兼容方式创建：熄屏或锁屏时任务会暂停，运行期间主屏可能失去输入焦点</string>
 
     <!-- i18n: toolbox / mini game -->
     <string name="toolbox_status_starting">正在启动…</string>

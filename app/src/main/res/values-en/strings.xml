@@ -1897,6 +1897,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="task_start_eye_protection_warning_log">Eye comfort / night mode is active (%1$s), which may affect normal image recognition. Please turn it off manually</string>
     <string name="task_start_adb_input_restricted_warning_log">“USB debugging (Security settings)” is off, so the system blocks touch input. Please enable it in Developer options (reboot if it does not take effect)</string>
     <string name="task_start_smart_resolution_warning_log">System “Smart resolution” is enabled, which breaks recognition in background mode. Please turn it off manually in the system display settings</string>
+    <string name="task_start_virtual_display_compat_warning_log">This system lacks the permissions a background virtual display needs, so it was created in compatibility mode: tasks pause while the screen is off or locked, and the main screen may lose input focus during the run</string>
 
     <!-- i18n: toolbox / mini game -->
     <string name="toolbox_status_starting">Starting…</string>

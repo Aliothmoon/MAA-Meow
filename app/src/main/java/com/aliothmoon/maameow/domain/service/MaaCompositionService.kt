@@ -490,6 +490,7 @@ class MaaCompositionService(
                 val r = resolveAndSetResolution(service, clientType)
                 val displayId = service.startVirtualDisplay()
                 if (displayId == -1) return failVirtualDisplayStart()
+                reportVirtualDisplayTier(service)
                 buildConnectConfig(r.width, r.height, displayId)
             }
         }
@@ -502,6 +503,17 @@ class MaaCompositionService(
             if (appSettings.deployWithPause.value) "1" else "0"
         )
         return asyncConnect(maa, config)
+    }
+
+    private suspend fun reportVirtualDisplayTier(service: RemoteService) {
+        val tier = runCatching { service.virtualDisplayFlagTier }.getOrDefault(0)
+        telemetry.onVirtualDisplayStarted(tier)
+        if (tier > 0) {
+            sessionLogger.appendAndWait(
+                context.getString(R.string.task_start_virtual_display_compat_warning_log),
+                LogLevel.WARNING
+            )
+        }
     }
 
     private suspend fun failVirtualDisplayStart(): StartResult = failStart(

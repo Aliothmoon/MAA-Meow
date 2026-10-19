@@ -135,6 +135,8 @@ class TelemetryController(
             true
         }
         if (begun != true) return null
+        // 前台模式不建屏，别带上一轮的档位
+        clearEnvTag(VD_TIER_TAG)
         // 调用方可能在主线程
         scope.launch { runCatching { refreshRunTags() } }
         return runId
@@ -144,6 +146,11 @@ class TelemetryController(
         if (!active) return
         val summary = TaskParamSummary.summarize(params)
         guarded { if (active) tracer.register(taskId, summary) }
+    }
+
+    override fun onVirtualDisplayStarted(flagTier: Int) {
+        if (!active) return
+        setEnvTag(VD_TIER_TAG, flagTier.toString())
     }
 
     override fun onCallback(message: AsstMsg, details: JSONObject?) {
@@ -402,6 +409,11 @@ class TelemetryController(
         envTags[key] = value
     }
 
+    private fun clearEnvTag(key: String) {
+        Sentry.removeTag(key)
+        envTags.remove(key)
+    }
+
     private suspend fun secrets(): Collection<String> = TelemetrySecrets.collect(
         app = settings.settings.first(),
         notification = notificationSettings.settings.first(),
@@ -434,6 +446,8 @@ class TelemetryController(
 
         const val SYSTEM_LOG_SOURCE = "logcat/system"
         const val JPEG_QUALITY = 60
+
+        const val VD_TIER_TAG = "vd.tier"
 
         /** 一轮一条事务、每条任务链一条 Span，量不大，全采 */
         const val TRACES_SAMPLE_RATE = 1.0
