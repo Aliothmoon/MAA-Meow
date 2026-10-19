@@ -919,7 +919,7 @@
     <string name="panel_autobattle_oper_elite_1">精一</string>
     <string name="panel_autobattle_oper_elite_2">精二</string>
     <string name="panel_autobattle_oper_promotion">%1$s %2$d</string>
-    <string name="panel_autobattle_oper_skill">S%1$d</string>
+    <string name="panel_autobattle_oper_skill">技能 %1$d</string>
     <string name="panel_autobattle_oper_no_skill">不带技能</string>
     <string name="panel_autobattle_oper_skill_level">Lv.%1$d</string>
     <string name="panel_autobattle_oper_mastery_1">专一</string>
@@ -937,6 +937,12 @@
     <string name="panel_autobattle_support_fill_gaps">补漏</string>
     <string name="panel_autobattle_support_random">随机</string>
     <string name="panel_autobattle_add_trust">补充低信赖干员</string>
+    <string name="panel_autobattle_user_additional">追加自定干员</string>
+    <string name="panel_autobattle_user_additional_tip">自动编队完成后按列表顺序追加这些干员，已在编队中的会跳过，编队满员后不再追加。按住左侧把手可调整顺序；技能选「默认」时沿用游戏内的技能选择</string>
+    <string name="panel_autobattle_user_additional_search">搜索干员以追加</string>
+    <string name="panel_autobattle_user_additional_no_match">未找到匹配的干员</string>
+    <string name="panel_autobattle_user_additional_skill">技能</string>
+    <string name="panel_autobattle_user_additional_skill_default">默认</string>
     <string name="panel_autobattle_operbox_assist">使用一图流数据辅助编队</string>
     <string name="panel_autobattle_operbox_assist_tip">自动编队前，按一图流干员练度（含技能与模组）预匹配作业编队，配不齐时不开打\n需先在「设置 → 三方服务」填写一图流 Token、开启「干员识别从一图流获取」，并同步一次数据</string>
     <string name="panel_autobattle_operbox_sync">同步</string>

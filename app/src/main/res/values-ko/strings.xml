@@ -919,7 +919,7 @@
     <string name="panel_autobattle_oper_elite_1">정예화 1</string>
     <string name="panel_autobattle_oper_elite_2">정예화 2</string>
     <string name="panel_autobattle_oper_promotion">%1$s %2$d</string>
-    <string name="panel_autobattle_oper_skill">S%1$d</string>
+    <string name="panel_autobattle_oper_skill">스킬 %1$d</string>
     <string name="panel_autobattle_oper_no_skill">스킬 없음</string>
     <string name="panel_autobattle_oper_skill_level">Lv.%1$d</string>
     <string name="panel_autobattle_oper_mastery_1">마스터리 1</string>
@@ -937,6 +937,12 @@
     <string name="panel_autobattle_support_fill_gaps">필요 시</string>
     <string name="panel_autobattle_support_random">랜덤</string>
     <string name="panel_autobattle_add_trust">신뢰도가 낮은 오퍼레이터 추가</string>
+    <string name="panel_autobattle_user_additional">커스텀 오퍼레이터 추가</string>
+    <string name="panel_autobattle_user_additional_tip">자동 편성 후 목록 순서대로 이 오퍼레이터들을 추가합니다. 이미 편성된 오퍼레이터는 건너뛰고, 편성이 가득 차면 더 이상 추가하지 않습니다. 왼쪽 핸들을 드래그해 순서를 바꿀 수 있습니다. 스킬을 「기본」으로 두면 게임 내 스킬 선택을 그대로 사용합니다</string>
+    <string name="panel_autobattle_user_additional_search">추가할 오퍼레이터 검색</string>
+    <string name="panel_autobattle_user_additional_no_match">일치하는 오퍼레이터 없음</string>
+    <string name="panel_autobattle_user_additional_skill">스킬</string>
+    <string name="panel_autobattle_user_additional_skill_default">기본</string>
     <string name="panel_autobattle_operbox_assist">Yituliu 데이터로 편성 지원</string>
     <string name="panel_autobattle_operbox_assist_tip">자동 편성 전 Yituliu 오퍼레이터 육성 데이터(스킬 및 모듈 포함)로 작업 편성을 사전 매칭하며, 편성을 채울 수 없으면 전투를 시작하지 않습니다\n먼저 「설정 → 서드파티」에서 Yituliu 토큰을 입력하고 「오퍼레이터 인식을 Yituliu에서 가져오기」를 켠 뒤 데이터를 한 번 동기화하세요</string>
     <string name="panel_autobattle_operbox_sync">동기화</string>

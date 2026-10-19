@@ -865,7 +865,7 @@
     <string name="panel_autobattle_oper_elite_1">E1</string>
     <string name="panel_autobattle_oper_elite_2">E2</string>
     <string name="panel_autobattle_oper_promotion">%1$s %2$d</string>
-    <string name="panel_autobattle_oper_skill">S%1$d</string>
+    <string name="panel_autobattle_oper_skill">Skill %1$d</string>
     <string name="panel_autobattle_oper_no_skill">No skill</string>
     <string name="panel_autobattle_oper_skill_level">Lv.%1$d</string>
     <string name="panel_autobattle_oper_mastery_1">M1</string>
@@ -883,6 +883,12 @@
     <string name="panel_autobattle_support_fill_gaps">When Needed</string>
     <string name="panel_autobattle_support_random">Random</string>
     <string name="panel_autobattle_add_trust">Add low-trust operators</string>
+    <string name="panel_autobattle_user_additional">Add custom operators</string>
+    <string name="panel_autobattle_user_additional_tip">After auto formation, these operators are added in list order. Ones already in the squad are skipped, and nothing more is added once the squad is full. Drag the handle on the left to reorder. With skill set to Default, the in-game skill selection is kept</string>
+    <string name="panel_autobattle_user_additional_search">Search operators to add</string>
+    <string name="panel_autobattle_user_additional_no_match">No matching operators</string>
+    <string name="panel_autobattle_user_additional_skill">Skill</string>
+    <string name="panel_autobattle_user_additional_skill_default">Default</string>
     <string name="panel_autobattle_operbox_assist">Use Yituliu data to assist formation</string>
     <string name="panel_autobattle_operbox_assist_tip">Before auto formation, pre-match the squad against your Yituliu operator data (including skills and modules); the run won\'t start if it can\'t be filled\nFirst enter a Yituliu token in Settings → Third-party services, turn on \"Fetch operator data from Yituliu\" and sync once</string>
     <string name="panel_autobattle_operbox_sync">Sync</string>
