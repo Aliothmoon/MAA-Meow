@@ -276,6 +276,7 @@
     <string name="search_keywords_resolution">分辨率 虚拟屏 虚拟显示器 1080 720 画质</string>
     <string name="search_keywords_pip">画中画 小窗 悬浮 PiP</string>
     <string name="search_keywords_wake_unlock">锁屏 解锁 唤醒 密码 PIN 手势 定时</string>
+    <string name="search_keywords_alarm_clock">勿扰 免打扰 DND 闹钟 定时</string>
     <string name="search_keywords_app_blacklist">黑名单 屏蔽 跳过 前台 游戏 打扰 定时</string>
     <string name="search_keywords_mute">静音 声音 音量</string>
     <string name="search_keywords_run_duration">时长 限时 超时 运行时间</string>
@@ -1970,6 +1971,9 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_trigger_log_title">触发日志</string>
     <string name="schedule_wake_unlock_title">唤醒解锁</string>
     <string name="schedule_wake_unlock_desc">定时任务触发时若设备已锁屏，会按下面的方式自动解锁；手动启动的任务不受影响</string>
+    <string name="schedule_alarm_section">定时闹钟</string>
+    <string name="schedule_use_alarm_clock">以系统闹钟方式注册定时</string>
+    <string name="schedule_use_alarm_clock_desc">可能影响勿扰模式；关闭后定时可能不够准时</string>
     <string name="schedule_app_blacklist_title">应用黑名单</string>
     <string name="schedule_app_blacklist_desc">仅后台模式生效。定时触发时正在使用勾选的应用，则跳过本次执行并通知</string>
     <string name="schedule_app_blacklist_foreground_inactive">当前运行模式为前台，黑名单不生效</string>

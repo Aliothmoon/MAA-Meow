@@ -36,6 +36,7 @@
     <string name="search_keywords_resolution">resolution virtual display 1080 720 quality</string>
     <string name="search_keywords_pip">picture in picture pip floating window</string>
     <string name="search_keywords_wake_unlock">lock screen unlock wake password pin gesture schedule</string>
+    <string name="search_keywords_alarm_clock">do not disturb dnd alarm schedule</string>
     <string name="search_keywords_app_blacklist">blacklist block skip foreground game interrupt schedule</string>
     <string name="search_keywords_mute">mute sound audio volume</string>
     <string name="search_keywords_run_duration">duration time limit timeout runtime</string>
@@ -1914,6 +1915,9 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_trigger_log_title">Trigger log</string>
     <string name="schedule_wake_unlock_title">Wake &amp; Unlock</string>
     <string name="schedule_wake_unlock_desc">When a scheduled task fires while the device is locked, it unlocks using the method below. Manually started tasks are not affected.</string>
+    <string name="schedule_alarm_section">Schedule alarm</string>
+    <string name="schedule_use_alarm_clock">Register schedules as alarm clock</string>
+    <string name="schedule_use_alarm_clock_desc">May affect Do Not Disturb. When off, schedules may fire less punctually.</string>
     <string name="schedule_app_blacklist_title">App Blacklist</string>
     <string name="schedule_app_blacklist_desc">Background mode only. If a checked app is in use when a schedule fires, that run is skipped and you are notified</string>
     <string name="schedule_app_blacklist_foreground_inactive">Run mode is foreground, so the blacklist does nothing</string>

@@ -276,6 +276,7 @@
     <string name="search_keywords_resolution">해상도 가상 디스플레이 가상 화면 1080 720 화질</string>
     <string name="search_keywords_pip">화면 속 화면 작은 창 플로팅 PiP</string>
     <string name="search_keywords_wake_unlock">잠금 화면 잠금 해제 화면 깨우기 비밀번호 PIN 제스처 예약</string>
+    <string name="search_keywords_alarm_clock">방해 금지 DND 알람 예약</string>
     <string name="search_keywords_app_blacklist">블랙리스트 차단 건너뛰기 포그라운드 게임 방해 예약</string>
     <string name="search_keywords_mute">음소거 소리 볼륨</string>
     <string name="search_keywords_run_duration">지속 시간 시간 제한 시간 초과 실행 시간</string>
@@ -1970,6 +1971,9 @@
     <string name="schedule_trigger_log_title">트리거 로그</string>
     <string name="schedule_wake_unlock_title">화면 깨우기 및 잠금 해제</string>
     <string name="schedule_wake_unlock_desc">예약 작업이 실행될 때 기기가 잠겨 있으면 아래 방식으로 자동 잠금 해제합니다. 수동으로 시작한 작업에는 영향이 없습니다</string>
+    <string name="schedule_alarm_section">예약 알람</string>
+    <string name="schedule_use_alarm_clock">시스템 알람으로 예약 등록</string>
+    <string name="schedule_use_alarm_clock_desc">방해 금지 모드에 영향을 줄 수 있습니다. 끄면 예약 실행이 덜 정확할 수 있습니다</string>
     <string name="schedule_app_blacklist_title">앱 블랙리스트</string>
     <string name="schedule_app_blacklist_desc">백그라운드 모드에서만 적용됩니다. 예약 실행 시 선택한 앱을 사용 중이면 이번 실행을 건너뛰고 알립니다</string>
     <string name="schedule_app_blacklist_foreground_inactive">현재 실행 모드가 포그라운드이므로 블랙리스트가 적용되지 않습니다</string>

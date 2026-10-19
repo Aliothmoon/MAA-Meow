@@ -152,6 +152,10 @@ object SettingSearchIndex {
             R.string.schedule_wake_unlock_desc, R.string.search_keywords_wake_unlock,
         ),
         SettingSearchEntry(
+            R.string.schedule_use_alarm_clock, wakeUnlockPage,
+            R.string.schedule_use_alarm_clock_desc, R.string.search_keywords_alarm_clock,
+        ),
+        SettingSearchEntry(
             R.string.schedule_app_blacklist_title, appBlacklistPage,
             R.string.schedule_app_blacklist_desc, R.string.search_keywords_app_blacklist,
         ),
