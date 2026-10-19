@@ -261,6 +261,7 @@
     <string name="settings_export_success">구성을 내보냈습니다</string>
     <string name="settings_export_failed">내보내기 실패: %1$s</string>
     <string name="settings_import_failed">가져오기 실패: %1$s</string>
+    <string name="settings_import_too_large">가져오기 실패: 파일이 %1$d MB를 초과합니다. 설정 백업 파일을 선택했는지 확인하세요</string>
 
     <!-- settings: top-level -->
     <string name="settings_title">설정</string>

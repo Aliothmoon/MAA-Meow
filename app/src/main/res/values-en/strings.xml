@@ -23,6 +23,7 @@
     <string name="settings_export_success">Configuration exported successfully</string>
     <string name="settings_export_failed">Export failed: %1$s</string>
     <string name="settings_import_failed">Import failed: %1$s</string>
+    <string name="settings_import_too_large">Import failed: file exceeds %1$d MB. Make sure you selected a configuration backup</string>
     <string name="settings_title">Settings</string>
     <string name="settings_search_hint">Search settings</string>
     <string name="settings_search_clear">Clear search</string>

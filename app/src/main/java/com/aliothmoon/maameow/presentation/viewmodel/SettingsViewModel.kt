@@ -14,6 +14,7 @@ import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.data.preferences.BackupTooLargeException
 import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
@@ -111,6 +112,10 @@ class SettingsViewModel(
             try {
                 configBackupManager.importFrom(inputStream)
                 _showRestartDialog.value = true
+            } catch (e: BackupTooLargeException) {
+                Timber.w(e, "import config rejected")
+                _settingsMessage.value =
+                    uiTextOf(R.string.settings_import_too_large, e.limitBytes / (1024 * 1024))
             } catch (e: Exception) {
                 Timber.e(e, "import config failed")
                 _settingsMessage.value =

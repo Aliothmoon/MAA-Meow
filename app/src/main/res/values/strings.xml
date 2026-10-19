@@ -261,6 +261,7 @@
     <string name="settings_export_success">配置导出成功</string>
     <string name="settings_export_failed">导出失败: %1$s</string>
     <string name="settings_import_failed">导入失败: %1$s</string>
+    <string name="settings_import_too_large">导入失败: 文件超过 %1$d MB，请确认选择的是配置备份</string>
 
     <!-- settings: top-level -->
     <string name="settings_title">设置</string>
