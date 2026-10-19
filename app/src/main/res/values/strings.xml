@@ -2324,6 +2324,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="onboarding_schedule_trigger_log_body">定时没跑？来这里看每次触发的结果和原因</string>
     <string name="onboarding_tab_settings_title">设置与帮助</string>
     <string name="onboarding_tab_settings_body">公告、更新日志、日志导出和 QQ 交流群都在设置页。\n随时可以在「关于」中重新查看本引导</string>
+    <string name="onboarding_runtime_backend_title">Shizuku / Root 切换</string>
+    <string name="onboarding_runtime_backend_body">默认通过 Shizuku 获取权限；设备已 Root 的可以在「运行环境 → 启动模式」改为 Root，不需要再装 Shizuku。\n切换后首页的授权项会跟着变，按新方式重新授权即可</string>
     <string name="onboarding_about_help_title">常见问题与问题反馈</string>
     <string name="onboarding_about_help_body">遇到问题先看「常见问题」，连接失败、任务卡住、识别出错等常见情况都有现成解答。\n确认不在其中后，再到「日志 → 导出日志压缩包」生成日志包，连同复现步骤通过「问题反馈」提交，没有日志很难定位原因</string>
 

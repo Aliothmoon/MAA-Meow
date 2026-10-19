@@ -35,7 +35,9 @@ enum class OnboardingTarget {
     // 底栏
     TAB_SETTINGS,
 
-    // 设置页：常见问题 + 问题反馈两行
+    // 设置页
+    RUNTIME_BACKEND,
+    // 常见问题 + 问题反馈两行
     ABOUT_HELP,
 }
 

@@ -2324,6 +2324,8 @@
     <string name="onboarding_schedule_trigger_log_body">예약이 실행되지 않았나요? 여기에서 트리거마다의 결과와 원인을 확인할 수 있습니다</string>
     <string name="onboarding_tab_settings_title">설정 및 도움말</string>
     <string name="onboarding_tab_settings_body">공지, 변경 내역, 로그 내보내기, QQ 교류 그룹은 모두 설정 페이지에 있습니다.\n언제든지 「정보」에서 이 가이드를 다시 볼 수 있습니다</string>
+    <string name="onboarding_runtime_backend_title">Shizuku / Root 전환</string>
+    <string name="onboarding_runtime_backend_body">기본적으로 Shizuku로 권한을 얻습니다. 루팅된 기기라면 「실행 환경 → 시작 모드」에서 Root로 바꿀 수 있으며, 이 경우 Shizuku를 설치할 필요가 없습니다.\n전환하면 홈 화면의 권한 항목도 함께 바뀌므로 새 방식으로 다시 권한을 부여하세요</string>
     <string name="onboarding_about_help_title">자주 묻는 질문 및 문제 보고</string>
     <string name="onboarding_about_help_body">문제가 생기면 먼저 「자주 묻는 질문」을 확인하세요. 연결 실패, 작업 멈춤, 인식 오류 등 흔한 상황은 이미 답변이 정리되어 있습니다.\n그래도 해결되지 않으면 「로그 → 로그 압축 파일 내보내기」로 로그 패키지를 만든 뒤, 재현 절차와 함께 「문제 보고」로 제출하세요. 로그가 없으면 원인을 파악하기 어렵습니다</string>
 

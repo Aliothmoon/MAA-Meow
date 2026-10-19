@@ -2268,6 +2268,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="onboarding_schedule_trigger_log_body">Schedule didn\'t run? Check here for the result and reason of every trigger.</string>
     <string name="onboarding_tab_settings_title">Settings &amp; Help</string>
     <string name="onboarding_tab_settings_body">Announcements, changelog, log export and the QQ group all live in Settings.\nYou can replay this walkthrough any time from About.</string>
+    <string name="onboarding_runtime_backend_title">Shizuku / Root</string>
+    <string name="onboarding_runtime_backend_body">Privileges come through Shizuku by default. On a rooted device, switch to Root under Runtime Environment → Startup Mode and Shizuku is no longer needed.\nThe permission item on the home screen changes accordingly; grant access again the new way.</string>
     <string name="onboarding_about_help_title">FAQ &amp; Issue Reports</string>
     <string name="onboarding_about_help_body">When something goes wrong, check the FAQ first; connection failures, stuck tasks and recognition errors already have answers there.\nIf yours isn\'t covered, generate a log package via Logs → Export Log Archive and submit it with reproduction steps through Report an Issue; without logs the cause is hard to pin down.</string>
 

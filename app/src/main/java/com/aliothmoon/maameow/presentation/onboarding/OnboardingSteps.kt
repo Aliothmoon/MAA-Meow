@@ -12,6 +12,7 @@ import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.Tab
 import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material.icons.rounded.VerifiedUser
@@ -122,7 +123,15 @@ object OnboardingSteps {
             titleRes = R.string.onboarding_tab_settings_title,
             bodyRes = R.string.onboarding_tab_settings_body,
         ),
-        // 设置页：遇到问题先看常见问题，再反馈
+        // 设置页：Shizuku / Root 切换
+        OnboardingStep(
+            tab = BottomNavTab.SETTINGS,
+            target = OnboardingTarget.RUNTIME_BACKEND,
+            icon = Icons.Rounded.SwapHoriz,
+            titleRes = R.string.onboarding_runtime_backend_title,
+            bodyRes = R.string.onboarding_runtime_backend_body,
+        ),
+        // 遇到问题先看常见问题，再反馈
         OnboardingStep(
             tab = BottomNavTab.SETTINGS,
             target = OnboardingTarget.ABOUT_HELP,
