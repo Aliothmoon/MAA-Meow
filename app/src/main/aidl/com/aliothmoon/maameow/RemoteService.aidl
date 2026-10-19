@@ -31,7 +31,8 @@ interface RemoteService {
 
     PermissionStateInfo grantPermissions(in PermissionGrantRequest request) = 11;
 
-    void setMonitorSurface(in Surface surface) = 12;
+    // 主线程不等远端，同一 binder 上的 oneway 按序送达
+    oneway void setMonitorSurface(in Surface surface) = 12;
 
     boolean setVirtualDisplayMode(int mode) = 13;
 

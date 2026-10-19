@@ -336,7 +336,6 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun setMonitorSurface(surface: Surface?) {
         Ln.i("$TAG: setMonitorSurface(${surface != null})")
-        VirtualDisplayManager.setMonitorSurface(surface)
         NativeBridgeLib.setPreviewSurface(surface)
     }
 
