@@ -234,7 +234,6 @@ fun BackgroundTaskView(
     val profileId by viewModel.chainState.profileId.collectAsStateWithLifecycle()
     val selectedNode = nodes.find { it.id == state.selectedNodeId }
     val clientType = remember(nodes) { viewModel.chainState.clientType }
-    val canShowTaskActions = PanelTab.canShowTaskActions(state.current)
 
     // 引导靶点在任务面板，重看时先切回去
     val onboarding = LocalOnboardingState.current
@@ -249,7 +248,6 @@ fun BackgroundTaskView(
         }
     }
 
-    // 搜索定位复用当前支持快捷选项的面板，包括日志页。
     val searchNavigator: SettingSearchNavigator = koinInject()
     val pendingSearch by searchNavigator.pending.collectAsStateWithLifecycle()
     LaunchedEffect(pendingSearch) {
@@ -257,7 +255,6 @@ fun BackgroundTaskView(
         if (request.entry.location != SettingLocation.BackgroundActions || !request.isFresh()) {
             return@LaunchedEffect
         }
-        if (!PanelTab.canShowTaskActions(state.current)) viewModel.onTabChange(PanelTab.TASKS)
         showMoreActions = true
     }
 
@@ -305,7 +302,7 @@ fun BackgroundTaskView(
 
     val shouldHideMoreActions by remember {
         derivedStateOf {
-            !canShowTaskActions || showCloseConfirm || state.isFullscreenMonitor || state.dialog != null
+            showCloseConfirm || state.isFullscreenMonitor || state.dialog != null
         }
     }
     LaunchedEffect(shouldHideMoreActions) {
@@ -541,7 +538,7 @@ fun BackgroundTaskView(
                         toolboxViewModel.gachaDisclaimerAccepted.collectAsStateWithLifecycle()
                         val toolsHidesStartBar = toolboxTab == ToolboxTab.GACHA && !gachaDisclaimerOk
                         val hideStartBar = state.current == PanelTab.TOOLS && toolsHidesStartBar
-                        val showStartBar = canShowTaskActions && !hideStartBar
+                        val showStartBar = !hideStartBar
                         val isGachaActions = state.current == PanelTab.TOOLS &&
                                 toolboxTab == ToolboxTab.GACHA && gachaDisclaimerOk
                         BottomBarOverlay(
@@ -633,13 +630,11 @@ fun BackgroundTaskView(
                                             val taskRunning =
                                                 maaState == MaaExecutionState.RUNNING ||
                                                         maaState == MaaExecutionState.STOPPING
-                                            // 日志页没有明确的启动目标，始终保留停止按钮；
-                                            // 非运行态沿用禁用样式，停止中仍显示进度且不可重复点击。
+                                            // 日志页没有启动目标，常驻停止
                                             if (taskRunning || state.current == PanelTab.LOG) {
                                                 OutlinedButton(
                                                     onClick = {
                                                         when (state.current) {
-                                                            // 停止入口作用于当前 Core 任务，不受启动页面限制。
                                                             PanelTab.TASKS, PanelTab.LOG -> viewModel.onStopTasks()
                                                             PanelTab.AUTO_BATTLE -> copilotViewModel.onStop()
                                                             PanelTab.TOOLS -> toolboxViewModel.onStop()
@@ -753,9 +748,7 @@ fun BackgroundTaskView(
                             ) { page ->
                                 CompositionLocalProvider(LocalPageVisible provides rememberPageVisible(pagerState, page)) {
                                     val pageTab = PanelTab.entries[page]
-                                    // 各页独立预留底栏高度，日志末条也不能被按钮遮挡。
-                                    val reserveBar = PanelTab.canShowTaskActions(pageTab) &&
-                                            !(pageTab == PanelTab.TOOLS && toolsHidesStartBar)
+                                    val reserveBar = !(pageTab == PanelTab.TOOLS && toolsHidesStartBar)
                                     Box(Modifier.padding(bottom = if (reserveBar) actionBarHeight else 0.dp)) {
                                         when (page) {
                                             0 -> {

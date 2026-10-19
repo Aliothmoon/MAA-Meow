@@ -20,7 +20,7 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.OperBoxYituliuSync
-import com.aliothmoon.maameow.domain.state.MaaExecutionState
+import com.aliothmoon.maameow.domain.state.isIdle
 import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
 import com.aliothmoon.maameow.domain.usecase.GameReadiness
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
@@ -285,7 +285,6 @@ class ToolboxViewModel(
     private fun startGachaTipRotation() {
         gachaTipJob?.cancel()
         gachaTipJob = viewModelScope.launch {
-            // 轮播作为子协程，切换运行模式或重新启动寻访时会随父任务一起取消。
             val rotation = launch {
                 while (isActive) {
                     val tipRes = GACHA_TIP_RES_IDS[Random.nextInt(GACHA_TIP_RES_IDS.size)]
@@ -293,11 +292,8 @@ class ToolboxViewModel(
                     delay(5_000)
                 }
             }
-            // 全局停止也可能来自日志页；监听最终状态，不能只在工具页按钮中收尾。
-            // first 会检查当前值，覆盖任务在启动轮播前就已经结束的情况。
-            compositionService.state.first {
-                it == MaaExecutionState.IDLE || it == MaaExecutionState.ERROR
-            }
+            // 停止可能来自别的页，按全局状态收尾
+            compositionService.state.first { it.isIdle }
             rotation.cancel()
             _gachaTip.value = uiTextOf(R.string.gacha_init_tip)
             _statusMessage.value = uiTextOf(R.string.toolbox_status_stopped)
@@ -332,13 +328,6 @@ class ToolboxViewModel(
     fun onStop() {
         when (_currentTab.value) {
             ToolboxTab.MINI_GAME -> miniGame.onStop()
-            ToolboxTab.GACHA -> viewModelScope.launch {
-                _statusMessage.value = uiTextOf(R.string.toolbox_status_stopping)
-                compositionService.stop()
-                stopGachaTipRotation()
-                _statusMessage.value = uiTextOf(R.string.toolbox_status_stopped)
-            }
-
             else -> viewModelScope.launch {
                 _statusMessage.value = uiTextOf(R.string.toolbox_status_stopping)
                 compositionService.stop()
