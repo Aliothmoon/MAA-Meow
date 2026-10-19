@@ -33,6 +33,7 @@ public final class DriverClass {
             }
         }
         if (ret) {
+            ActivityUtils.excludeFromRecents(packageName, displayId);
             awaitFirstFrame();
             GameFpsMonitor.start(packageName);
         }

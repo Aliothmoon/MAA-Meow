@@ -429,7 +429,11 @@ class RemoteServiceImpl : RemoteService.Stub() {
         if (targetDisplayId == DefaultDisplayConfig.DISPLAY_NONE) return true
         val onDisplay = ActivityUtils.isAppOnDisplay(packageName, targetDisplayId)
         // 游戏不是 MaaMeow 拉起的（未启用自动启动）时，这里是首次得知它在虚拟屏上
-        if (onDisplay) GameFpsMonitor.ensureStarted(packageName)
+        if (onDisplay) {
+            GameFpsMonitor.ensureStarted(packageName)
+            // 拉回 / 重启后换了新任务也靠巡检补上
+            ActivityUtils.excludeFromRecents(packageName, targetDisplayId)
+        }
         return onDisplay
     }
 
