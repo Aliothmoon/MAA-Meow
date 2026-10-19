@@ -326,6 +326,7 @@
     <string name="settings_core_data_clear_done">独立目录数据已清除</string>
     <string name="settings_core_data_clear_failed">清除失败，请确认 Shizuku / Root 服务已连接</string>
     <string name="settings_core_data_clear_busy">任务运行中，请先停止再清除</string>
+    <string name="settings_reinit_resource_busy">任务运行中，请先停止再重新初始化</string>
     <string name="dialog_core_dir_inaccessible_title">无法访问资源目录</string>
     <string name="dialog_core_dir_inaccessible_message">当前系统限制了对应用目录的访问，切换到独立目录并重启后即可正常使用。</string>
     <string name="dialog_core_dir_local_tmp_inaccessible_message">独立目录无法写入，多半是 Root 方式建出的目录归 root 所有。用 Root 方式启动一次即可自动修复，或切回应用目录并重启。</string>
@@ -767,6 +768,7 @@
     <string name="update_progress_app_installing">正在启动安装…</string>
     <string name="update_progress_resource_downloading">资源下载中 %1$s%%</string>
     <string name="update_progress_resource_extracting">解压中 %1$s%%</string>
+    <string name="update_progress_resource_deferred">已下载，任务结束后自动应用</string>
     <string name="update_cancel_download_cd">取消下载</string>
 
     <!-- 下载中换源 -->

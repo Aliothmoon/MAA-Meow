@@ -43,9 +43,11 @@ class GameMetadataLoaderTest {
         coEvery { load(any(), any(), any()) } returns Unit
     }
     private val itemHelper = mockk<ItemHelper> { justRun { load() } }
-    private val activityManager = mockk<ActivityManager> {
-        coEvery { load(any()) } returns Unit
-        justRun { startPeriodicCheck() }
+    private val activityManager = mockk<ActivityManager> { justRun { load(any(), any()) } }
+    private val hotUpdateRevision = MutableStateFlow(0)
+    private val hotUpdateSync = mockk<HotUpdateSync> {
+        every { revision } returns hotUpdateRevision
+        every { stageActivity() } returns STAGE_JSON
     }
     private val resourceInitService = mockk<ResourceInitService> {
         every { state } returns initState
@@ -60,7 +62,7 @@ class GameMetadataLoaderTest {
     }
 
     private fun loader(scope: CoroutineScope) = GameMetadataLoader(
-        resourceDataManager, itemHelper, activityManager, resourceInitService,
+        resourceDataManager, itemHelper, activityManager, hotUpdateSync, resourceInitService,
         chainState, appSettings, scope,
     ).also { it.start() }
 
@@ -92,13 +94,29 @@ class GameMetadataLoaderTest {
         runCurrent()
 
         coVerify(exactly = 1) { resourceDataManager.load(any(), any(), any()) }
-        coVerify(exactly = 1) { activityManager.load("Official") }
+        verify(exactly = 1) { activityManager.load("Official", STAGE_JSON) }
 
         clientFlow.value = "YoStarEN"
         runCurrent()
 
         coVerify(exactly = 1) { resourceDataManager.load("YoStarEN", "zh-cn", 0) }
-        coVerify(exactly = 1) { activityManager.load("YoStarEN") }
+        verify(exactly = 1) { activityManager.load("YoStarEN", STAGE_JSON) }
+    }
+
+    @Test
+    fun hotUpdateReloadsActivityWithoutRereadingItems() = runTest {
+        initState.value = ResourceInitState.Ready
+        val loader = startLoader()
+
+        hotUpdateRevision.value = 1
+        runCurrent()
+
+        verify(exactly = 2) { activityManager.load("Official", STAGE_JSON) }
+        verify(exactly = 1) { itemHelper.load() }
+        assertEquals(
+            GameMetadataLoader.State.Ready(GameMetadataKey("Official", "zh-cn", 0, hotUpdateRevision = 1)),
+            loader.state.value,
+        )
     }
 
     @Test
@@ -236,5 +254,31 @@ class GameMetadataLoaderTest {
         runCurrent()
 
         assertEquals(readyOf("YoStarKR"), loader.state.value)
+    }
+
+    @Test
+    fun activityStillSwitchesWhenTablesFail() = runTest {
+        coEvery { resourceDataManager.load("YoStarJP", any(), any()) } throws IllegalStateException("boom")
+        initState.value = ResourceInitState.Ready
+        val loader = startLoader()
+
+        clientFlow.value = "YoStarJP"
+        runCurrent()
+
+        verify { activityManager.load("YoStarJP", STAGE_JSON) }
+        assertTrue(loader.state.value is GameMetadataLoader.State.Failed)
+    }
+
+    @Test
+    fun activityFailureDoesNotFailMetadata() = runTest {
+        every { activityManager.load(any(), any()) } throws IllegalStateException("bad json")
+        initState.value = ResourceInitState.Ready
+        val loader = startLoader()
+
+        assertEquals(readyOf("Official"), loader.state.value)
+    }
+
+    private companion object {
+        const val STAGE_JSON = "{}"
     }
 }

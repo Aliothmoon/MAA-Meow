@@ -4,11 +4,12 @@ import android.os.IBinder
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
-import com.aliothmoon.maameow.data.resource.ActivityManager
+import com.aliothmoon.maameow.data.resource.HotUpdateSync
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.ClientResourceProfile
 import com.aliothmoon.maameow.domain.service.CoreDataPusher
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
+import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.remote.SetupResult
 import io.mockk.coEvery
@@ -38,12 +39,48 @@ class MaaResourceLoaderTest {
     }
 
     @Test
-    fun load_refreshesHotUpdate_forClient() = runBlocking {
-        withEnv(AppSettingsManager.AppLanguage.EN) { env ->
-            val result = env.loader.load("YoStarEN")
+    fun ensureLoaded_reloads_afterHotUpdateCommitted() = runBlocking {
+        withEnv { env ->
+            assertTrue(env.loader.load("Official").isSuccess)
+            env.loadedDirs.clear()
+            assertTrue(env.loader.ensureLoaded("Official").isSuccess)
+            assertTrue(env.loadedDirs.isEmpty())
 
-            assertTrue(result.isSuccess)
-            coVerify(exactly = 1) { env.activityManager.load("YoStarEN") }
+            env.hotUpdateRevision.value++
+            assertTrue(env.loader.ensureLoaded("Official").isSuccess)
+            assertTrue(env.loadedDirs.isNotEmpty())
+            verify(exactly = 0) { RemoteServiceManager.unbind() }
+        }
+    }
+
+    @Test
+    fun permanentFailure_retriesOnlyAfterFilesChange() = runBlocking {
+        withEnv { env ->
+            env.resourceReady.set(false)
+            assertTrue(env.loader.load("Official").isFailure)
+            assertTrue((env.loader.state.value as MaaResourceLoader.State.Failed).permanent)
+
+            // 文件没动过，不白重试
+            env.resourceReady.set(true)
+            assertTrue(env.loader.ensureLoaded("Official").isFailure)
+            assertTrue(env.loadedDirs.isEmpty())
+
+            // 重新初始化或资源更新后再试
+            env.resourceRevision.value++
+            assertTrue(env.loader.ensureLoaded("Official").isSuccess)
+            assertTrue(env.loadedDirs.isNotEmpty())
+        }
+    }
+
+    @Test
+    fun ensureLoaded_reloads_afterResourceUpdated() = runBlocking {
+        withEnv { env ->
+            assertTrue(env.loader.load("Official").isSuccess)
+            env.loadedDirs.clear()
+
+            env.resourceRevision.value++
+            assertTrue(env.loader.ensureLoaded("Official").isSuccess)
+            assertTrue(env.loadedDirs.isNotEmpty())
         }
     }
 
@@ -294,7 +331,9 @@ class MaaResourceLoaderTest {
     private class Env(
         val loader: MaaResourceLoader,
         val loadedDirs: MutableList<String>,
-        val activityManager: ActivityManager,
+        val hotUpdateRevision: MutableStateFlow<Int>,
+        val resourceRevision: MutableStateFlow<Int>,
+        val resourceReady: AtomicBoolean,
         /** 置 true 模拟换进程后服务没能回来 */
         val rebindFails: AtomicBoolean,
         val coreDataPusher: CoreDataPusher,
@@ -317,9 +356,10 @@ class MaaResourceLoaderTest {
                 File(rootDir, "cache/resource/global/$it/resource").mkdirs()
             }
 
+            val resourceReady = AtomicBoolean(true)
             val pathConfig = mockk<MaaPathConfig> {
                 every { this@mockk.rootDir } returns rootDir.absolutePath
-                every { isResourceReady } returns true
+                every { isResourceReady } answers { resourceReady.get() }
                 every { cacheDir } returns File(rootDir, "cache").absolutePath
                 every { cacheResourceDir } returns File(rootDir, "cache/resource").absolutePath
                 every { overridesDir } returns File(rootDir, "overrides").absolutePath
@@ -340,7 +380,10 @@ class MaaResourceLoaderTest {
             val chainState = mockk<TaskChainState> {
                 every { clientType } returns "Official"
             }
-            val activityManager = mockk<ActivityManager>()
+            val hotUpdateRevision = MutableStateFlow(0)
+            val hotUpdateSync = mockk<HotUpdateSync> { every { revision } returns hotUpdateRevision }
+            val resourceRevision = MutableStateFlow(0)
+            val resourceInitService = mockk<ResourceInitService> { every { revision } returns resourceRevision }
             every { pathConfig.isCoreSeparated } returns coreSeparated
             every { pathConfig.coreRootDir } answers {
                 if (coreSeparated) "/data/local/tmp/maameow" else rootDir.absolutePath
@@ -355,7 +398,6 @@ class MaaResourceLoaderTest {
             }
             val loadedDirs = mutableListOf<String>()
 
-            coEvery { activityManager.load(any()) } returns Unit
             fun newService(): RemoteService {
                 val maaCore = mockk<MaaCoreService>()
                 every { maaCore.LoadResource(any()) } answers {
@@ -397,11 +439,14 @@ class MaaResourceLoaderTest {
                         pathConfig = pathConfig,
                         appSettings = appSettings,
                         chainState = chainState,
-                        activityManager = activityManager,
+                        hotUpdateSync = hotUpdateSync,
+                        resourceInitService = resourceInitService,
                         coreDataPusher = coreDataPusher,
                     ),
                     loadedDirs = loadedDirs,
-                    activityManager = activityManager,
+                    hotUpdateRevision = hotUpdateRevision,
+                    resourceRevision = resourceRevision,
+                    resourceReady = resourceReady,
                     rebindFails = rebindFails,
                     coreDataPusher = coreDataPusher,
                     replaceService = {

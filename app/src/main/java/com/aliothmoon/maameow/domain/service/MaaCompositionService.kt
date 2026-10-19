@@ -12,11 +12,11 @@ import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
-import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
+import com.aliothmoon.maameow.domain.state.isIdle
 import com.aliothmoon.maameow.maa.AsstMsg
 import com.aliothmoon.maameow.maa.MaaInstanceOptions.ANDROID
 import com.aliothmoon.maameow.maa.MaaInstanceOptions.DEPLOYMENT_WITH_PAUSE
@@ -70,7 +70,6 @@ class MaaCompositionService(
     private val gameMuteCoordinator: GameMuteCoordinator,
     private val unifiedStateDispatcher: UnifiedStateDispatcher,
     private val sessionLogger: MaaSessionLogger,
-    private val activityManager: ActivityManager,
     private val appWatchdog: AppWatchdog,
     private val gameFpsWatcher: GameFpsWatcher,
     private val taskChainState: TaskChainState,
@@ -85,7 +84,7 @@ class MaaCompositionService(
     private val telemetry: RunTelemetry,
     private val screenGate: ForegroundScreenGate,
     private val processExitJournal: ProcessExitJournal,
-) : MaaExecutionStateHolder {
+) : MaaExecutionStateHolder, CoreFilesGate {
 
     private val _state = MutableStateFlow(MaaExecutionState.IDLE)
     val state: StateFlow<MaaExecutionState> = _state.asStateFlow()
@@ -362,12 +361,9 @@ class MaaCompositionService(
      */
     suspend fun prepareResources(clientType: String) = startMutex.withLock {
         // 换进程会杀掉虚拟显示器
-        when (_state.value) {
-            MaaExecutionState.IDLE, MaaExecutionState.ERROR -> Unit
-            else -> {
-                Timber.i("Skip resource prepare while busy: %s", _state.value)
-                return@withLock
-            }
+        if (!_state.value.isIdle) {
+            Timber.i("Skip resource prepare while busy: %s", _state.value)
+            return@withLock
         }
         // 没授权时加载必然失败，useRemoteService 还会自己发起一次授权请求
         val access = RemoteAccessCoordinator.refresh()
@@ -378,26 +374,6 @@ class MaaCompositionService(
         // 可能在主线程调用，解绑是同步 binder 调用
         withContext(Dispatchers.IO) {
             resourceLoader.ensureLoaded(clientType)
-        }
-        Unit
-    }
-
-    /** 任务运行中到的资源更新，留到下次启动前重载 */
-    private val resourceReloadPending = AtomicBoolean(false)
-
-    /**
-     * 资源文件更新后重载
-     * 任务在跑时 LoadResource 会和工作线程同时改 TaskData，堆损坏后 MaaCore 直接崩，只能推迟到下次启动前
-     */
-    suspend fun reloadResources() = startMutex.withLock {
-        when (_state.value) {
-            MaaExecutionState.IDLE, MaaExecutionState.ERROR ->
-                withContext(Dispatchers.IO) { resourceLoader.load() }
-
-            else -> {
-                Timber.i("Defer resource reload while busy: %s", _state.value)
-                resourceReloadPending.set(true)
-            }
         }
         Unit
     }
@@ -435,10 +411,6 @@ class MaaCompositionService(
             )
         }
 
-        // 运行中推迟的资源更新在这里补，与活动数据变动合并成一次 load
-        val reloadPending = resourceReloadPending.getAndSet(false)
-        activityManager.runIfDirty { if (!reloadPending) resourceLoader.load(clientType) }
-        if (reloadPending) resourceLoader.load(clientType)
         val loaded = resourceLoader.ensureLoaded(clientType)
         if (loaded.isFailure) {
             return rejectStart(
@@ -664,8 +636,13 @@ class MaaCompositionService(
         }
     }
 
-    /** 启动互斥：前置检查耗时，双入口/双击可能同时穿过 AlreadyRunning 窗口 */
+    /**
+     * 启动互斥：前置检查耗时，双入口/双击可能同时穿过 AlreadyRunning 窗口
+     * 资源加载与改 core 文件也走它，从加载到进入 STARTING 都持锁，锁内看到的空闲才可靠
+     */
     private val startMutex = Mutex()
+
+    override suspend fun <T> whenIdle(block: suspend () -> T): T = startMutex.withLockWhenIdle(_state, block)
 
     private suspend fun executeStart(
         kind: RunKind,

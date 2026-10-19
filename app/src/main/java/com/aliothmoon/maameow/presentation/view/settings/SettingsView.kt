@@ -56,7 +56,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -137,7 +136,6 @@ import com.aliothmoon.maameow.utils.i18n.resolve
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -194,7 +192,6 @@ fun SettingsView(
     val settingsMessage by viewModel.settingsMessage.collectAsStateWithLifecycle()
     val showRestartDialog by viewModel.showRestartDialog.collectAsStateWithLifecycle()
     val achievementUiState by achievementViewModel.uiState.collectAsStateWithLifecycle()
-    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
     // 首启引导：靶点在「关于」分区内，先滚进视野并强制展开分区；pager 重建后 effect 重跑自动补滚
@@ -372,9 +369,7 @@ fun SettingsView(
         ReInitializeConfirmDialog(
             onConfirm = {
                 showReInitConfirm = false
-                coroutineScope.launch {
-                    resourceInitService.reInitialize()
-                }
+                viewModel.reInitializeResources()
             },
             onDismiss = { showReInitConfirm = false }
         )

@@ -31,15 +31,16 @@ import kotlin.time.Duration
 import kotlin.time.TimeSource
 
 /**
- * 界面用的本地游戏数据：干员、公招 Tag、肉鸽推荐、地图、材料
+ * 界面用的本地游戏数据：干员、公招 Tag、肉鸽推荐、地图、材料、活动关卡
  *
- * 只读 App 侧资源目录，不依赖提权服务；独立目录模式下 App 也读不到 core 那份
- * 按「客户端档 + 显示语言 + 资源版本」加载，同一档不重复解析
+ * 只读 App 侧磁盘，不依赖提权服务也不联网；独立目录模式下 App 也读不到 core 那份
+ * 按「客户端档 + 显示语言 + 资源版本 + 热更版本」加载，同一档不重复解析
  */
 class GameMetadataLoader(
     private val resourceDataManager: ResourceDataManager,
     private val itemHelper: ItemHelper,
     private val activityManager: ActivityManager,
+    private val hotUpdateSync: HotUpdateSync,
     private val resourceInitService: ResourceInitService,
     private val chainState: TaskChainState,
     private val appSettings: AppSettingsManager,
@@ -77,24 +78,6 @@ class GameMetadataLoader(
                     if (key == null) _state.value = State.Idle else load(key)
                 }
         }
-        // 活动关卡走网络，不等本地资源
-        scope.launch {
-            chainState.isLoaded.first { it }
-            chainState.clientTypeFlow
-                .map(ClientResourceProfile::metadataClient)
-                .distinctUntilChanged()
-                .conflate()
-                .collect { client ->
-                    try {
-                        activityManager.load(client)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        Timber.w(e, "Activity data load failed: %s", client)
-                    }
-                    activityManager.startPeriodicCheck()
-                }
-        }
     }
 
     /** 每次收集都现读各来源，不会落后于调用方刚做的切换 */
@@ -103,8 +86,9 @@ class GameMetadataLoader(
         resourceInitService.revision,
         chainState.clientTypeFlow.map(ClientResourceProfile::metadataClient),
         appSettings.displayLanguageFlow,
-    ) { ready, revision, client, language ->
-        if (ready) GameMetadataKey(client, language, revision) else null
+        hotUpdateSync.revision,
+    ) { ready, revision, client, language, hotUpdate ->
+        if (ready) GameMetadataKey(client, language, revision, hotUpdate) else null
     }.distinctUntilChanged()
 
     private suspend fun load(key: GameMetadataKey) {
@@ -112,6 +96,9 @@ class GameMetadataLoader(
         _state.value = State.Loading(key)
         val mark = TimeSource.Monotonic.markNow()
         val reloadItems = itemsRevision != key.revision
+        // 活动关卡单独兜错，不连累干员表
+        runCatching { activityManager.load(key.clientType, hotUpdateSync.stageActivity()) }
+            .onFailure { Timber.e(it, "Activity data load failed: %s", key) }
         try {
             coroutineScope {
                 launch { resourceDataManager.load(key.clientType, key.language, key.revision) }

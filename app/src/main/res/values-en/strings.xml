@@ -80,6 +80,7 @@
     <string name="settings_core_data_clear_done">Separate directory cleared</string>
     <string name="settings_core_data_clear_failed">Clear failed. Make sure the Shizuku / Root service is connected</string>
     <string name="settings_core_data_clear_busy">A task is running. Stop it before clearing</string>
+    <string name="settings_reinit_resource_busy">A task is running. Stop it before re-initializing</string>
     <string name="dialog_core_dir_inaccessible_title">Resource directory inaccessible</string>
     <string name="dialog_core_dir_inaccessible_message">This system restricts access to the app directory. Switch to the separate directory and restart to continue.</string>
     <string name="dialog_core_dir_local_tmp_inaccessible_message">The separate directory is not writable, most likely because the Root backend created it as root. Starting once with the Root backend repairs it automatically, or switch back to the app directory and restart.</string>
@@ -515,6 +516,7 @@
     <string name="update_progress_app_installing">Launching installer…</string>
     <string name="update_progress_resource_downloading">Downloading resources %1$s%%</string>
     <string name="update_progress_resource_extracting">Extracting %1$s%%</string>
+    <string name="update_progress_resource_deferred">Downloaded, will apply when the task finishes</string>
     <string name="update_cancel_download_cd">Cancel download</string>
 
     <!-- switch source while downloading -->

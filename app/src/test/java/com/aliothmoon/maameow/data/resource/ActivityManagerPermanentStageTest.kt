@@ -30,7 +30,6 @@ class ActivityManagerPermanentStageTest {
         val manager = ActivityManager(
             context = mockk(relaxed = true),
             chainState = mockk(relaxed = true),
-            maaApiService = mockk(relaxed = true),
             itemHelper = mockk(relaxed = true),
         )
         val field = ActivityManager::class.java.getDeclaredField("_stages").apply { isAccessible = true }

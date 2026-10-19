@@ -37,7 +37,7 @@ class ResourceSwitchBeforeMuteContractTest {
             .substringBefore("private suspend fun checkPreconditions(")
         assertTrue(
             "prepareResources 只能在 IDLE/ERROR 下换资源，否则会杀掉运行中的虚拟显示器",
-            body.contains("MaaExecutionState.IDLE") && body.contains("MaaExecutionState.ERROR"),
+            body.contains("_state.value.isIdle"),
         )
         assertTrue(body.contains("resourceLoader.ensureLoaded(clientType)"))
     }
