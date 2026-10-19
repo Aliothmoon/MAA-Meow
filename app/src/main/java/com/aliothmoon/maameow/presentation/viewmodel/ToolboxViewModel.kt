@@ -20,6 +20,7 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.OperBoxYituliuSync
+import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
 import com.aliothmoon.maameow.domain.usecase.GameReadiness
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
@@ -37,6 +38,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
@@ -283,11 +285,22 @@ class ToolboxViewModel(
     private fun startGachaTipRotation() {
         gachaTipJob?.cancel()
         gachaTipJob = viewModelScope.launch {
-            while (isActive) {
-                val tipRes = GACHA_TIP_RES_IDS[Random.nextInt(GACHA_TIP_RES_IDS.size)]
-                _gachaTip.value = uiTextOf(tipRes)
-                delay(5_000)
+            // 轮播作为子协程，切换运行模式或重新启动寻访时会随父任务一起取消。
+            val rotation = launch {
+                while (isActive) {
+                    val tipRes = GACHA_TIP_RES_IDS[Random.nextInt(GACHA_TIP_RES_IDS.size)]
+                    _gachaTip.value = uiTextOf(tipRes)
+                    delay(5_000)
+                }
             }
+            // 全局停止也可能来自日志页；监听最终状态，不能只在工具页按钮中收尾。
+            // first 会检查当前值，覆盖任务在启动轮播前就已经结束的情况。
+            compositionService.state.first {
+                it == MaaExecutionState.IDLE || it == MaaExecutionState.ERROR
+            }
+            rotation.cancel()
+            _gachaTip.value = uiTextOf(R.string.gacha_init_tip)
+            _statusMessage.value = uiTextOf(R.string.toolbox_status_stopped)
         }
     }
 

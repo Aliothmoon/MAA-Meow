@@ -16,8 +16,9 @@ enum class PanelTab(@param:StringRes val labelRes: Int) {
     LOG(R.string.panel_tab_log);
 
     companion object {
+        // 日志页也提供停止和快捷选项；是否允许启动由各页面的操作栏决定。
         fun canShowTaskActions(state: PanelTab): Boolean {
-            return state == TASKS || state == AUTO_BATTLE || state == TOOLS
+            return state == TASKS || state == AUTO_BATTLE || state == TOOLS || state == LOG
         }
     }
 }
