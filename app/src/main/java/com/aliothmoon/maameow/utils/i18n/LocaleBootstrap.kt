@@ -105,6 +105,7 @@ object LocaleBootstrap {
     private fun LocaleListCompat.toAppLanguage(): AppSettingsManager.AppLanguage {
         return when (this[0]?.language) {
             "en" -> AppSettingsManager.AppLanguage.EN
+            "ko" -> AppSettingsManager.AppLanguage.KO
             else -> AppSettingsManager.AppLanguage.ZH
         }
     }

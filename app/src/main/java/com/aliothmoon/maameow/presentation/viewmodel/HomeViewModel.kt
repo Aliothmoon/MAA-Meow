@@ -217,7 +217,7 @@ class HomeViewModel(
 
     fun onTryResourceInit() {
         viewModelScope.launch {
-            resourceInitService.doExtractFromAssets()
+            resourceInitService.reInitialize()
         }
     }
 

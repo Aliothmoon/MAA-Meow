@@ -25,7 +25,8 @@ import com.aliothmoon.maameow.domain.service.CopilotOperBoxAssist
 import com.aliothmoon.maameow.domain.service.CoreDataPusher
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
-import com.aliothmoon.maameow.domain.state.MaaExecutionState
+import com.aliothmoon.maameow.domain.service.ResourceInitService
+import com.aliothmoon.maameow.domain.state.isIdle
 import com.aliothmoon.maameow.domain.usecase.SwitchCoreDataLocationUseCase
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
@@ -71,6 +72,7 @@ class SettingsViewModel(
     private val livePublisher: LiveUpdatePublisher,
     private val operBoxAssist: CopilotOperBoxAssist,
     private val gamePackages: GamePackageSettings,
+    private val resourceInitService: ResourceInitService,
 ) : ViewModel() {
 
     // ========== 导入导出 ==========
@@ -239,10 +241,15 @@ class SettingsViewModel(
         viewModelScope.launch { switchCoreDataLocation(target) }
     }
 
-    private fun coreBusy(): Boolean {
-        if (compositionService.state.value == MaaExecutionState.IDLE) return false
-        _settingsMessage.value = uiTextOf(R.string.settings_core_data_clear_busy)
+    private fun coreBusy(message: Int = R.string.settings_core_data_clear_busy): Boolean {
+        if (compositionService.state.value.isIdle) return false
+        _settingsMessage.value = uiTextOf(message)
         return true
+    }
+
+    fun reInitializeResources() {
+        if (coreBusy(R.string.settings_reinit_resource_busy)) return
+        viewModelScope.launch { resourceInitService.reInitialize() }
     }
 
     fun requestClearCoreData() {

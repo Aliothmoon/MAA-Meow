@@ -18,7 +18,13 @@ sealed class UpdateProcessState {
         val total: Int
     ) : UpdateProcessState()
 
+    /** 已下载，等任务结束再解压 */
+    data object Deferred : UpdateProcessState()
+
     data object Installing : UpdateProcessState()
     data object Success : UpdateProcessState()
     data class Failed(val error: UpdateError) : UpdateProcessState()
+
+    val isInProgress: Boolean
+        get() = this is Downloading || this is Deferred || this is Extracting || this is Installing
 }

@@ -14,12 +14,6 @@ enum class PanelTab(@param:StringRes val labelRes: Int) {
     AUTO_BATTLE(R.string.panel_tab_auto_battle),
     TOOLS(R.string.panel_tab_tools),
     LOG(R.string.panel_tab_log);
-
-    companion object {
-        fun canShowTaskActions(state: PanelTab): Boolean {
-            return state == TASKS || state == AUTO_BATTLE || state == TOOLS
-        }
-    }
 }
 
 @Stable

@@ -40,6 +40,7 @@ class AnalyzeTaskChainUseCase(
     private val appSettingsManager: AppSettingsManager,
     private val metadataGate: GameMetadataGate,
     private val relocatePath: (String) -> String = { it },
+    private val awaitHotUpdate: suspend (clientType: String) -> Unit = {},
 ) {
     /**
      * 先等 depot/operBox 分片装载；config 的 toTaskParams 仍是非 suspend
@@ -70,15 +71,16 @@ class AnalyzeTaskChainUseCase(
         }
 
 
+        val clientType = taskChainState.clientType
+        // 关卡开放、干员名都要等元数据，超时按缺数据降级
+        awaitHotUpdate(clientType)
+        metadataGate.awaitCurrent()
+
         // 被跳过的理智作战下次仍要用「上次」关卡，借助战按整条链判断
         val info = MallCreditFightAvailability.resolve(chainNodes, activityManager)
 
         dropsRefresher.clear()
 
-        // 干员名归一与校验要用元数据，超时按缺数据降级
-        metadataGate.awaitCurrent()
-
-        val clientType = taskChainState.clientType
         val report = ReportOptions.of(
             clientType = clientType,
             reportToPenguin = appSettingsManager.reportToPenguin.value,

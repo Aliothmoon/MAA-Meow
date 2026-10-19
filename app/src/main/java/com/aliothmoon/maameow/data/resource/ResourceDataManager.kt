@@ -148,6 +148,7 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
         fun displayLanguageCode(appLanguage: AppSettingsManager.AppLanguage): String =
             when (appLanguage) {
                 AppSettingsManager.AppLanguage.EN -> "en-us"
+                AppSettingsManager.AppLanguage.KO -> "ko-kr"
                 else -> "zh-cn"
             }
     }

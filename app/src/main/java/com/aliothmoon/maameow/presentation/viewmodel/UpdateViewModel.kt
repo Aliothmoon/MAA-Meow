@@ -16,7 +16,6 @@ import com.aliothmoon.maameow.data.model.update.UpdateInfo
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
-import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.update.UpdateService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -44,7 +43,6 @@ class UpdateViewModel(
     private val appContext: Context,
     private val updateService: UpdateService,
     private val appSettingsManager: AppSettingsManager,
-    private val compositionService: MaaCompositionService,
     private val pathConfig: MaaPathConfig,
 ) : ViewModel() {
 
@@ -126,7 +124,7 @@ class UpdateViewModel(
 
     fun checkResourceUpdate() {
         val currentState = resourceUpdateState.value
-        if (_resourceChecking.value || currentState is UpdateProcessState.Downloading || currentState is UpdateProcessState.Extracting || currentState is UpdateProcessState.Installing) {
+        if (_resourceChecking.value || currentState.isInProgress) {
             return
         }
         viewModelScope.launch {
@@ -154,7 +152,6 @@ class UpdateViewModel(
             )
             if (result.isSuccess) {
                 refreshResourceVersion()
-                compositionService.reloadResources()
             }
         }
     }
@@ -234,7 +231,6 @@ class UpdateViewModel(
                     )
                     if (result.isSuccess) {
                         refreshResourceVersion()
-                        compositionService.reloadResources()
                     } else {
                         _toastMessage.tryEmit(appContext.getString(R.string.update_toast_auto_download_resource_failed))
                     }
