@@ -39,6 +39,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -101,6 +102,11 @@ private const val SettleNanos = SettleMillis * 1_000_000
 /** 靶点迟迟不出现（骨架屏等）时，卡片先居中亮出来 */
 private const val MissingTargetGraceMillis = 150L
 
+/** 靶点一直不落定（持续位移）也得亮出卡片，不能只剩遮罩没按钮 */
+private const val CardWatchdogMillis = 1000L
+
+private const val NextCooldownSeconds = 3
+
 /** 洞与卡片共用：略硬、轻微过冲，跟随滚动不拖泥带水 */
 private val SpotlightSpring = spring(
     dampingRatio = 0.85f,
@@ -141,7 +147,8 @@ private fun Spotlight(
     val density = LocalDensity.current
     val currentOnRequestTab by rememberUpdatedState(onRequestTab)
 
-    BackHandler(enabled = state.active) {
+    // 不可跳过时首步不拦返回，交给系统退出
+    BackHandler(enabled = state.active && (state.stepIndex > 0 || state.skippable)) {
         if (state.stepIndex > 0) state.previous() else state.finish()
     }
 
@@ -257,35 +264,44 @@ private fun Spotlight(
 
             var focused = false
             var pendingAt = 0L
-            snapshotFlow { state.bounds[target]?.translate(-origin)?.inflate(holePadding) }
-                .collectLatest { rect ->
-                    if (rect == null) {
-                        focused = false
-                        defocus()
-                        delay(MissingTargetGraceMillis)
-                        cardAnchor = null
+            coroutineScope {
+                launch {
+                    delay(CardWatchdogMillis)
+                    if (cardHidden) {
+                        if (!focused) cardAnchor = null
                         showCard()
-                        return@collectLatest
-                    }
-                    if (focused) {
-                        // 已聚焦的靶点挪动：直接跟随
-                        cardAnchor = rect
-                        focus(rect)
-                        return@collectLatest
-                    }
-                    // 落定窗口内又动 = 随列表滚动中：先散焦，落定后再聚焦
-                    val now = System.nanoTime()
-                    val moving = now - pendingAt < SettleNanos
-                    pendingAt = now
-                    if (moving) defocus()
-                    if (!reduceMotion) delay(SettleMillis)
-                    focused = true
-                    cardAnchor = rect
-                    coroutineScope {
-                        launch { focus(rect) }
-                        launch { showCard() }
                     }
                 }
+                snapshotFlow { state.bounds[target]?.translate(-origin)?.inflate(holePadding) }
+                    .collectLatest { rect ->
+                        if (rect == null) {
+                            focused = false
+                            defocus()
+                            delay(MissingTargetGraceMillis)
+                            cardAnchor = null
+                            showCard()
+                            return@collectLatest
+                        }
+                        if (focused) {
+                            // 已聚焦的靶点挪动：直接跟随
+                            cardAnchor = rect
+                            focus(rect)
+                            return@collectLatest
+                        }
+                        // 落定窗口内又动 = 随列表滚动中：先散焦，落定后再聚焦
+                        val now = System.nanoTime()
+                        val moving = now - pendingAt < SettleNanos
+                        pendingAt = now
+                        if (moving) defocus()
+                        if (!reduceMotion) delay(SettleMillis)
+                        focused = true
+                        cardAnchor = rect
+                        coroutineScope {
+                            launch { focus(rect) }
+                            launch { showCard() }
+                        }
+                    }
+            }
         }
     }
 
@@ -333,6 +349,7 @@ private fun Spotlight(
                     OnboardingCard(
                         state = state,
                         reduceMotion = reduceMotion,
+                        visible = !cardHidden,
                         modifier = Modifier
                             .animateBounds(
                                 lookaheadScope = this@LookaheadScope,
@@ -378,6 +395,7 @@ private fun Spotlight(
 private fun OnboardingCard(
     state: OnboardingState,
     reduceMotion: Boolean,
+    visible: Boolean,
     modifier: Modifier = Modifier,
 ) {
     // 遮罩之上的卡片必须不透明，自定义背景的玻璃配色会透出底下的黑
@@ -420,15 +438,43 @@ private fun OnboardingCard(
                 },
                 label = "OnboardingCardContent",
             ) { index ->
-                OnboardingCardContent(state = state, step = state.steps[index], index = index)
+                OnboardingCardContent(
+                    state = state,
+                    step = state.steps[index],
+                    index = index,
+                    visible = visible,
+                )
             }
         }
     }
 }
 
+/** 卡片亮出来才开始倒数，返回剩余秒数 */
 @Composable
-private fun OnboardingCardContent(state: OnboardingState, step: OnboardingStep, index: Int) {
+private fun rememberNextCooldown(state: OnboardingState, index: Int, visible: Boolean): Int {
+    var remaining by remember(index) {
+        mutableIntStateOf(if (state.needsCooldown(index)) NextCooldownSeconds else 0)
+    }
+    LaunchedEffect(index, visible) {
+        if (!visible) return@LaunchedEffect
+        while (remaining > 0) {
+            delay(1000)
+            remaining--
+        }
+        state.markCooledDown(index)
+    }
+    return remaining
+}
+
+@Composable
+private fun OnboardingCardContent(
+    state: OnboardingState,
+    step: OnboardingStep,
+    index: Int,
+    visible: Boolean,
+) {
     val isLast = index == state.steps.lastIndex
+    val cooldown = rememberNextCooldown(state, index, visible)
     Column(modifier = Modifier.padding(20.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -472,7 +518,7 @@ private fun OnboardingCardContent(state: OnboardingState, step: OnboardingStep, 
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (!isLast) {
+            if (!isLast && state.skippable) {
                 TextButton(onClick = { state.finish() }) {
                     Text(stringResource(R.string.onboarding_skip))
                 }
@@ -486,12 +532,18 @@ private fun OnboardingCardContent(state: OnboardingState, step: OnboardingStep, 
             }
             Button(
                 onClick = { state.next() },
+                enabled = cooldown == 0,
                 shape = MaterialTheme.shapes.large,
             ) {
+                val label = stringResource(
+                    if (isLast) R.string.onboarding_done else R.string.onboarding_next
+                )
                 Text(
-                    stringResource(
-                        if (isLast) R.string.onboarding_done else R.string.onboarding_next
-                    )
+                    if (cooldown > 0) {
+                        stringResource(R.string.onboarding_button_countdown, label, cooldown)
+                    } else {
+                        label
+                    }
                 )
             }
         }

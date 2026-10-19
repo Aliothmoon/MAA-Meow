@@ -26,6 +26,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.announcement.AnnouncementConfig
 import com.aliothmoon.maameow.announcement.AnnouncementContent
 import com.aliothmoon.maameow.announcement.AnnouncementManager
@@ -128,7 +129,15 @@ fun AppNavigation(
     val resourceInitState by resourceInitService.state.collectAsStateWithLifecycle()
     val resourceReady = resourceInitState is ResourceInitState.Ready
     LaunchedEffect(resourceReady, needsOnboarding) {
-        if (resourceReady && needsOnboarding) onboardingState.start()
+        if (!resourceReady || !needsOnboarding) return@LaunchedEffect
+        appSettings.awaitLoaded()
+        // 从没看完过才强制；上次没走完（被杀 / 崩溃 / 退出）再弹时放开跳过，免得卡死的设备进不来
+        val forced = appSettings.onboardingNeverSeen.value
+        val autoStarts = if (forced) appSettings.countOnboardingAutoStart() else 0
+        onboardingState.start(
+            skippable = !forced || autoStarts > 1 || BuildConfig.DEBUG,
+            cooldown = forced,
+        )
     }
     // 跳过或看完都算看过；重看再写一次是幂等的
     LaunchedEffect(onboardingState) {

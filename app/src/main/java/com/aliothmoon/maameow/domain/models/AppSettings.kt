@@ -139,6 +139,10 @@ data class AppSettings(
     @PrefKey(default = "0")
     val onboardingSeenVersion: String = "0",
 
+    /** 首启强制引导自动弹出过几次，没走完再弹时放开跳过 */
+    @PrefKey(default = "0")
+    val onboardingAutoStarts: String = "0",
+
     @PrefKey(default = "false")
     val forceFullscreenOnVirtualDisplay: String = "false",
 

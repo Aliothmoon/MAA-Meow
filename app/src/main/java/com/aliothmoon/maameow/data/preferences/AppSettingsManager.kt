@@ -620,6 +620,27 @@ class AppSettingsManager internal constructor(
 
     val needsOnboarding: StateFlow<Boolean> = setting { parseNeedsOnboarding(it.onboardingSeenVersion) }
 
+    /** 从没看完过引导，只有这时强制 */
+    val onboardingNeverSeen: StateFlow<Boolean> =
+        setting { (it.onboardingSeenVersion.toIntOrNull() ?: 0) == 0 }
+
+    @Volatile
+    private var onboardingAutoStartCount: Int? = null
+
+    /** 记一次首启引导自动弹出，返回累计次数；同进程只记一次，Activity 重建不算 */
+    suspend fun countOnboardingAutoStart(): Int {
+        onboardingAutoStartCount?.let { return it }
+        var count = 0
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                count = (it[onboardingAutoStarts]?.toIntOrNull() ?: 0) + 1
+                it[onboardingAutoStarts] = count.toString()
+            }
+        }
+        onboardingAutoStartCount = count
+        return count
+    }
+
     suspend fun markOnboardingSeen() {
         with(AppSettingsSchema) {
             context.dataStore.edit { it[onboardingSeenVersion] = ONBOARDING_VERSION.toString() }

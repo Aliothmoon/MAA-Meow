@@ -21,8 +21,9 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
 
 /**
- * @param tab    该步所在的主 Tab，切到这一步时 pager 先切过去
- * @param target 高亮靶点，null = 不挖洞、卡片居中
+ * @param tab      该步所在的主 Tab，切到这一步时 pager 先切过去
+ * @param target   高亮靶点，null = 不挖洞、卡片居中
+ * @param cooldown 关键步骤，首启强制引导时「下一步」先冷却
  */
 data class OnboardingStep(
     val tab: BottomNavTab,
@@ -30,6 +31,7 @@ data class OnboardingStep(
     val icon: ImageVector,
     @param:StringRes val titleRes: Int,
     @param:StringRes val bodyRes: Int,
+    val cooldown: Boolean = false,
 )
 
 object OnboardingSteps {
@@ -138,6 +140,7 @@ object OnboardingSteps {
             icon = Icons.AutoMirrored.Rounded.HelpOutline,
             titleRes = R.string.onboarding_about_help_title,
             bodyRes = R.string.onboarding_about_help_body,
+            cooldown = true,
         ),
     )
 }

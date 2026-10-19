@@ -2244,8 +2244,9 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="onboarding_next">Next</string>
     <string name="onboarding_done">Get Started</string>
     <string name="onboarding_step_counter">%1$d / %2$d</string>
+    <string name="onboarding_button_countdown">%1$s (%2$d)</string>
     <string name="onboarding_welcome_title">Welcome to MaaMeow</string>
-    <string name="onboarding_welcome_body">An Arknights assistant for Android — daily chores on autopilot.\n\nShizuku or Root is needed for privileges. Take a minute to learn the key areas of the home screen — you can skip at any time.</string>
+    <string name="onboarding_welcome_body">An Arknights assistant for Android — daily chores on autopilot.\n\nShizuku or Root is needed for privileges. Take a minute to learn the key areas of the home screen.</string>
     <string name="onboarding_status_title">Status Overview</string>
     <string name="onboarding_status_body">Shows screen resolution, resource and app versions, and the connection state of the service.\nTasks can only start properly once the service is connected.</string>
     <string name="onboarding_run_mode_title">Run Mode</string>

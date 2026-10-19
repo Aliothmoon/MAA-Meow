@@ -2300,8 +2300,9 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="onboarding_next">下一步</string>
     <string name="onboarding_done">开始使用</string>
     <string name="onboarding_step_counter">%1$d / %2$d</string>
+    <string name="onboarding_button_countdown">%1$s（%2$d）</string>
     <string name="onboarding_welcome_title">欢迎使用 MaaMeow</string>
-    <string name="onboarding_welcome_body">《明日方舟》小助手 Android 版，全日常一键长草。\n\n运行前需要 Shizuku 或 Root 提供权限。接下来花一分钟了解首页的几个关键区域，随时可以跳过</string>
+    <string name="onboarding_welcome_body">《明日方舟》小助手 Android 版，全日常一键长草。\n\n运行前需要 Shizuku 或 Root 提供权限。接下来花一分钟了解首页的几个关键区域</string>
     <string name="onboarding_status_title">状态总览</string>
     <string name="onboarding_status_body">这里显示屏幕分辨率、资源与应用版本，以及服务的连接状态。\n服务连接成功后才能正常开始任务</string>
     <string name="onboarding_run_mode_title">运行模式</string>
