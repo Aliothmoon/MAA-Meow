@@ -8,6 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.attribute.PosixFilePermission
 
 /** AsstSetUserDir 前的探测：不可访问只能返回原因，绝不能把进程带崩 */
 class UserDirProbeTest {
@@ -19,6 +20,8 @@ class UserDirProbeTest {
             assertNull(UserDirProbe.probe(dir))
             assertTrue(File(dir, "debug").isDirectory)
             assertFalse(File(dir, "debug/.probe").exists())
+            // 独立目录首次 setup 时 resource 还没解压，缺了必须放行
+            assertFalse(File(dir, "resource").exists())
         } finally {
             dir.deleteRecursively()
         }
@@ -31,6 +34,7 @@ class UserDirProbeTest {
             val dir = File(parent, "Maa")
             assertNull(UserDirProbe.probe(dir))
             assertTrue(dir.isDirectory)
+            assertFalse(File(dir, "resource").exists())
         } finally {
             parent.deleteRecursively()
         }
@@ -65,5 +69,195 @@ class UserDirProbeTest {
         // 前缀相同但不是子路径，不能算进去
         assertEquals("/ ext4", UserDirProbe.mountOf("/database", mountInfo))
         assertEquals("?", UserDirProbe.mountOf("/x", emptyList()))
+    }
+
+    @Test
+    fun probe_passesWhenNestedResourceIsReadable_andLeavesNoProbeFile() {
+        val dir = Files.createTempDirectory("user-dir-probe").toFile()
+        try {
+            val model = File(dir, "resource/onnx/model.onnx")
+            model.parentFile!!.mkdirs()
+            val bytes = byteArrayOf(0x08, 0x01)
+            model.writeBytes(bytes)
+            assertNull(UserDirProbe.probe(dir))
+            assertTrue(File(dir, "debug").isDirectory)
+            assertFalse(File(dir, "debug/.probe").exists())
+            assertFalse(File(dir, "resource/.probe").exists())
+            assertTrue(model.readBytes().contentEquals(bytes))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun probe_rejectsUnlistableResourceDirectory() {
+        val dir = Files.createTempDirectory("user-dir-probe").toFile()
+        val resource = File(dir, "resource")
+        try {
+            val onnx = File(resource, "onnx")
+            onnx.mkdirs()
+            File(onnx, "model.onnx").writeBytes(byteArrayOf(1))
+            denyAccess(resource)
+            // 目录本身 stat 得到，子项因为进不去而 exists()==false，不能当成没有资源
+            assertTrue(resource.isDirectory)
+            assertFalse(File(resource, "onnx").exists())
+            val failure = UserDirProbe.probe(dir)
+            assertNotNull(failure)
+            assertTrue(failure, failure!!.contains("cannot list"))
+            assertTrue(failure, failure.contains(resource.path))
+        } finally {
+            allowOwner(resource)
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun probe_rejectsUnlistableOnnxDirectory() {
+        val dir = Files.createTempDirectory("user-dir-probe").toFile()
+        val onnx = File(dir, "resource/onnx")
+        try {
+            onnx.mkdirs()
+            File(onnx, "model.onnx").writeBytes(byteArrayOf(1))
+            denyAccess(onnx)
+            assertTrue(File(dir, "resource").canRead())
+            assertFalse(File(onnx, "model.onnx").exists())
+            val failure = UserDirProbe.probe(dir)
+            assertNotNull(failure)
+            assertTrue(failure, failure!!.contains("cannot list"))
+            assertTrue(failure, failure.contains(onnx.path))
+        } finally {
+            allowOwner(onnx)
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun probe_rejectsModelThatCannotBeOpened() {
+        val dir = Files.createTempDirectory("user-dir-probe").toFile()
+        val model = File(dir, "resource/onnx/model.onnx")
+        try {
+            model.parentFile!!.mkdirs()
+            model.writeBytes(byteArrayOf(9, 9))
+            denyAccess(model)
+            assertFalse(model.canRead())
+            val failure = UserDirProbe.probe(dir)
+            assertNotNull(failure)
+            assertTrue(failure, failure!!.contains("open failed"))
+            assertTrue(failure, failure.contains(model.path))
+        } finally {
+            allowOwner(model)
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun probe_failsWhenListingReturnsNullEvenIfReadable() {
+        val dir = Files.createTempDirectory("user-dir-probe").toFile()
+        try {
+            val hidden = object : File(dir.absolutePath) {
+                override fun canRead(): Boolean = true
+                override fun list(): Array<String>? = null
+                override fun listFiles(): Array<File>? = null
+            }
+            assertTrue(hidden.canRead())
+            val failure = UserDirProbe.probe(hidden)
+            assertNotNull(failure)
+            assertTrue(failure, failure!!.contains("cannot list"))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun probe_returnsFailureWhenListingThrowsSecurityException() {
+        val dir = Files.createTempDirectory("user-dir-probe").toFile()
+        try {
+            val denied = object : File(dir.absolutePath) {
+                override fun list(): Array<String> = throw SecurityException("no list")
+                override fun listFiles(): Array<File> = throw SecurityException("no list")
+            }
+            val failure = UserDirProbe.probe(denied)
+            assertNotNull(failure)
+            assertTrue(failure, failure!!.contains("list denied"))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun probe_rejectsListedResourceWhenExistsIsFalse() {
+        val dir = Files.createTempDirectory("user-dir-probe").toFile()
+        try {
+            val listed = object : File(dir.absolutePath) {
+                override fun list(): Array<String>? {
+                    val real = super.list() ?: return null
+                    return if ("resource" in real) real else real + "resource"
+                }
+            }
+            val resource = File(dir, "resource")
+            assertFalse(resource.exists())
+            assertTrue(listed.list()!!.contains("resource"))
+            val failure = UserDirProbe.probe(listed)
+            assertNotNull(failure)
+            assertTrue(failure, failure!!.contains("open failed"))
+            assertTrue(failure, failure.contains(resource.path))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test(timeout = 5_000)
+    fun probe_rejectsLinkThatEscapesResourceTree() {
+        val dir = Files.createTempDirectory("user-dir-probe").toFile()
+        val outside = Files.createTempDirectory("user-dir-outside").toFile()
+        try {
+            val resource = File(dir, "resource")
+            resource.mkdirs()
+            File(resource, "onnx").mkdirs()
+            File(resource, "onnx/model.onnx").writeBytes(byteArrayOf(1))
+            val secret = File(outside, "secret.onnx")
+            secret.writeBytes(byteArrayOf(2))
+            Files.createSymbolicLink(File(resource, "escape").toPath(), secret.toPath())
+            val failure = UserDirProbe.probe(dir)
+            assertNotNull(failure)
+            assertTrue(failure, failure!!.contains("link escapes"))
+            assertTrue(failure, failure.contains("escape"))
+            assertFalse(failure.contains(secret.name))
+        } finally {
+            outside.deleteRecursively()
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test(timeout = 5_000)
+    fun probe_doesNotLoopOnSymlinkCycle() {
+        val dir = Files.createTempDirectory("user-dir-probe").toFile()
+        try {
+            val onnx = File(dir, "resource/onnx")
+            onnx.mkdirs()
+            val model = File(onnx, "model.onnx")
+            model.writeBytes(byteArrayOf(3))
+            Files.createSymbolicLink(File(onnx, "loop").toPath(), onnx.toPath())
+            assertNull(UserDirProbe.probe(dir))
+            assertFalse(File(dir, "debug/.probe").exists())
+            assertTrue(model.readBytes().contentEquals(byteArrayOf(3)))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    private fun denyAccess(file: File) {
+        Files.setPosixFilePermissions(file.toPath(), emptySet())
+    }
+
+    private fun allowOwner(file: File) {
+        Files.setPosixFilePermissions(
+            file.toPath(),
+            setOf(
+                PosixFilePermission.OWNER_READ,
+                PosixFilePermission.OWNER_WRITE,
+                PosixFilePermission.OWNER_EXECUTE,
+            ),
+        )
     }
 }

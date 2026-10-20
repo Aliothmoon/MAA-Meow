@@ -100,6 +100,16 @@ class MaaResourceLoaderTest {
             assertTrue(state.permanent)
             assertEquals(MaaResourceLoader.State.FailReason.STORAGE_INACCESSIBLE, state.reason)
             assertTrue(env.loadedDirs.isEmpty())
+
+            // 资源版本没变，永久失败不能再 setup / LoadResource
+            assertTrue(env.loader.ensureLoaded("Official").isFailure)
+            val again = env.loader.state.value as MaaResourceLoader.State.Failed
+            assertTrue(again.permanent)
+            assertEquals(MaaResourceLoader.State.FailReason.STORAGE_INACCESSIBLE, again.reason)
+            assertTrue(env.loadedDirs.isEmpty())
+            val service = RemoteServiceManager.getInstanceOrNull()!!
+            verify(exactly = 1) { service.setup(any(), any()) }
+            verify(exactly = 0) { service.maaCoreService.LoadResource(any()) }
         }
     }
 
