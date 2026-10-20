@@ -15,13 +15,16 @@ import java.nio.file.Path
  * #298：根目录和 debug 可写，但 resource/ 丢了 ext_data_rw 组继承时，MaaCore 去 stat
  * onnx 仍会 abort。已经存在的 resource 子树在这里用当前进程身份列目录、只读打开普通文件；
  * 目录真的还没有（独立目录首次解压前）则放行。exists() 在权限被拒时也会是 false，不能拿它当不存在。
- * 不读文件内容，不跟随逃出 resource/ 的链接，成环就停。
+ * 不读文件内容，不跟随逃出 resource/ 的链接；目录成环就停，链接自身成环算失败。
  * 这只是把崩溃换成已有的换目录失败（Refs #298），并不恢复 APP_DIR 权限，原生异常边界也还在。
  */
 object UserDirProbe {
 
     private const val PROBE_FILE = ".probe"
     private const val RESOURCE_DIR = "resource"
+
+    /** 与内核 MAXSYMLINKS 一致，超过就会 ELOOP */
+    private const val MAX_LINK_HOPS = 40
 
     /** 探测通过返回 null，否则返回可读的失败原因，附带属主与挂载诊断 */
     fun probe(userDir: File): String? = firstFailure(userDir)?.let { "$it (${diagnose(userDir)})" }
@@ -63,7 +66,15 @@ object UserDirProbe {
             return "list denied: $userDir: ${e.message}"
         } ?: return "cannot list: $userDir"
         if (RESOURCE_DIR !in names) return null
-        val resource = File(userDir, RESOURCE_DIR)
+        return resourceTreeFailure(File(userDir, RESOURCE_DIR))
+    }
+
+    /** LoadResource 前对 [parentDir]/resource 做同样的探测，cache、overrides 等资源树不经过 setup */
+    fun resourceFailure(parentDir: File): String? = resourceSubtreeFailure(parentDir)
+
+    private fun resourceTreeFailure(resource: File): String? {
+        // resource 被普通文件占了，原生 stat 子路径会 ENOTDIR
+        if (query { resource.isFile }) return "not a directory: $resource"
         val root = resource.absoluteFile.toPath().normalize()
         return try {
             visitResource(resource, root, mutableSetOf())
@@ -97,18 +108,29 @@ object UserDirProbe {
     }
 
     private fun followLink(file: File, path: Path, root: Path, visited: MutableSet<Path>): String? {
-        val target = try {
-            Files.readSymbolicLink(path)
-        } catch (e: IOException) {
-            return "link unresolved: $file: ${e.message}"
-        } catch (e: SecurityException) {
-            return "link denied: $file: ${e.message}"
+        // 链接指向链接时一路解到底：回到链上已有的链接就是 ELOOP，原生 stat 会失败
+        val chain = mutableSetOf(path)
+        var current = path
+        while (true) {
+            val target = try {
+                Files.readSymbolicLink(current)
+            } catch (e: IOException) {
+                return "link unresolved: $file: ${e.message}"
+            } catch (e: SecurityException) {
+                return "link denied: $file: ${e.message}"
+            }
+            val parent = current.parent ?: return "link unresolved: $file"
+            val resolved = parent.resolve(target).normalize()
+            // 先做词法判断，不去 stat 目标，避免跟着链接走出 resource/
+            if (!resolved.startsWith(root)) return "link escapes: $file"
+            // 词法在内，但中间某段可能是指向外面的链接，按真实路径再确认一次父目录
+            if (resolved != root && !resolved.parent.toRealPath().startsWith(root.toRealPath())) {
+                return "link escapes: $file"
+            }
+            if (!Files.isSymbolicLink(resolved)) return visitResource(resolved.toFile(), root, visited)
+            if (!chain.add(resolved) || chain.size > MAX_LINK_HOPS) return "link loop: $file"
+            current = resolved
         }
-        val parent = path.parent ?: return "link unresolved: $file"
-        val resolved = parent.resolve(target).normalize()
-        // 只做词法判断，不去 stat 目标，避免跟着链接走出 resource/
-        if (!resolved.startsWith(root)) return "link escapes: $file"
-        return visitResource(resolved.toFile(), root, visited)
     }
 
     private fun openReadOnly(file: File): String? = try {
