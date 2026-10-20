@@ -261,6 +261,7 @@
     <string name="settings_export_success">配置导出成功</string>
     <string name="settings_export_failed">导出失败: %1$s</string>
     <string name="settings_import_failed">导入失败: %1$s</string>
+    <string name="settings_import_too_large">导入失败: 文件超过 %1$d MB，请确认选择的是配置备份</string>
 
     <!-- settings: top-level -->
     <string name="settings_title">设置</string>
@@ -275,6 +276,7 @@
     <string name="search_keywords_resolution">分辨率 虚拟屏 虚拟显示器 1080 720 画质</string>
     <string name="search_keywords_pip">画中画 小窗 悬浮 PiP</string>
     <string name="search_keywords_wake_unlock">锁屏 解锁 唤醒 密码 PIN 手势 定时</string>
+    <string name="search_keywords_alarm_clock">勿扰 免打扰 DND 闹钟 定时</string>
     <string name="search_keywords_app_blacklist">黑名单 屏蔽 跳过 前台 游戏 打扰 定时</string>
     <string name="search_keywords_mute">静音 声音 音量</string>
     <string name="search_keywords_run_duration">时长 限时 超时 运行时间</string>
@@ -919,7 +921,7 @@
     <string name="panel_autobattle_oper_elite_1">精一</string>
     <string name="panel_autobattle_oper_elite_2">精二</string>
     <string name="panel_autobattle_oper_promotion">%1$s %2$d</string>
-    <string name="panel_autobattle_oper_skill">S%1$d</string>
+    <string name="panel_autobattle_oper_skill">技能 %1$d</string>
     <string name="panel_autobattle_oper_no_skill">不带技能</string>
     <string name="panel_autobattle_oper_skill_level">Lv.%1$d</string>
     <string name="panel_autobattle_oper_mastery_1">专一</string>
@@ -937,6 +939,12 @@
     <string name="panel_autobattle_support_fill_gaps">补漏</string>
     <string name="panel_autobattle_support_random">随机</string>
     <string name="panel_autobattle_add_trust">补充低信赖干员</string>
+    <string name="panel_autobattle_user_additional">追加自定干员</string>
+    <string name="panel_autobattle_user_additional_tip">自动编队完成后按列表顺序追加这些干员，已在编队中的会跳过，编队满员后不再追加。按住左侧把手可调整顺序；技能选「默认」时沿用游戏内的技能选择</string>
+    <string name="panel_autobattle_user_additional_search">搜索干员以追加</string>
+    <string name="panel_autobattle_user_additional_no_match">未找到匹配的干员</string>
+    <string name="panel_autobattle_user_additional_skill">技能</string>
+    <string name="panel_autobattle_user_additional_skill_default">默认</string>
     <string name="panel_autobattle_operbox_assist">使用一图流数据辅助编队</string>
     <string name="panel_autobattle_operbox_assist_tip">自动编队前，按一图流干员练度（含技能与模组）预匹配作业编队，配不齐时不开打\n需先在「设置 → 三方服务」填写一图流 Token、开启「干员识别从一图流获取」，并同步一次数据</string>
     <string name="panel_autobattle_operbox_sync">同步</string>
@@ -1587,7 +1595,6 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="panel_roguelike_mode_exploration">深入调查</string>
     <string name="panel_roguelike_mode_clp_pds">刷坍缩</string>
     <string name="panel_roguelike_mode_find_playtime">刷常乐</string>
-    <string name="panel_roguelike_mode_blackflow_baby_animal">刷襁褓动物</string>
     <string name="panel_roguelike_mode_desc_exp">刷等级，尽可能稳定地打更多层数</string>
     <string name="panel_roguelike_mode_desc_investment">刷源石锭，投资完成后自动退出</string>
     <string name="panel_roguelike_mode_desc_collectible">刷开局，刷取热水壶或精二干员开局</string>
@@ -1596,12 +1603,58 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="panel_roguelike_mode_desc_clp_pds">刷坍缩范式，遇到非稀有坍缩范式后直接重开</string>
     <string name="panel_roguelike_mode_desc_find_playtime">刷常乐节点，第一层进洞，找不到需要的节点就重开</string>
     <string name="panel_roguelike_mode_desc_exp_blackflow">刷等级，快速飞三层</string>
-    <string name="panel_roguelike_mode_desc_blackflow_baby_animal">刷襁褓动物，按所选品种定向培养</string>
-    <string name="panel_roguelike_blackflow_cultivation_target">目标襁褓动物</string>
     <string name="panel_roguelike_blackflow_target_cat">襁褓中的猫</string>
     <string name="panel_roguelike_blackflow_target_feathered_serpent">襁褓羽蛇</string>
     <string name="panel_roguelike_blackflow_target_dog">襁褓中的狗</string>
     <string name="panel_roguelike_blackflow_target_cerberus">襁褓三头犬</string>
+    <string name="panel_roguelike_mode_blackflow_start_run">刷开局</string>
+    <string name="panel_roguelike_mode_desc_blackflow_start_run">刷开局，刷到目标后退出并保留这一局</string>
+    <string name="panel_roguelike_blackflow_fast_flight">快速飞三层</string>
+    <string name="panel_roguelike_blackflow_flight_requirement">需满天赋机械师</string>
+    <string name="panel_roguelike_blackflow_flight_tip">固定用特勤分队、稳扎稳打和自己的机械师开局，只招机械师，第二层用自带的结构性原理直接飞到第三层，到达后重开。\n勾选后常规设置里的分队、职业组和开局干员不能修改，取消勾选后恢复。不勾选时按目标结局打，开局配置是这套组合也不会飞。\n机械师天赋没点满会飞不起来，请不要勾选。</string>
+    <string name="panel_roguelike_blackflow_prep_flight_tip">准备局固定用特勤分队、稳扎稳打和自己的机械师开局，只招机械师，第二层用自带的结构性原理直接飞到第三层。\n勾选后准备局分队显示为特勤分队且不能修改，取消勾选后恢复原来的设置；常规设置里的职业组和开局干员不受影响。\n机械师天赋没点满会飞不起来，请不要勾选。</string>
+    <string name="panel_roguelike_blackflow_fast_flight_lock_tip">已勾选高级设置里的 ｢快速飞三层｣，分队、职业组和开局干员固定为特勤分队、稳扎稳打和机械师，取消勾选后恢复</string>
+    <string name="panel_roguelike_blackflow_ending_flight_tip">只有取消勾选 ｢快速飞三层｣ 才能选择结局</string>
+    <string name="panel_roguelike_blackflow_ending">目标结局</string>
+    <string name="panel_roguelike_blackflow_ending_1">一结局 · 强制重启</string>
+    <string name="panel_roguelike_blackflow_ending_2">二结局 · 维度重构</string>
+    <string name="panel_roguelike_blackflow_ending_3">三结局 · 纠缠，调和</string>
+    <string name="panel_roguelike_blackflow_start_animal_1">襁褓动物 · 第一只</string>
+    <string name="panel_roguelike_blackflow_start_animal_2">襁褓动物 · 第二只</string>
+    <string name="panel_roguelike_blackflow_start_animal_none">不要求</string>
+    <string name="panel_roguelike_blackflow_animal_tip_cat">下一局开局额外获得 5 源石锭。</string>
+    <string name="panel_roguelike_blackflow_animal_tip_dog">下一局开局额外获得 1 希望。</string>
+    <string name="panel_roguelike_blackflow_animal_tip_cerberus">下一局多一次支援选择机会。培育所在的这一局须至少通过两个区域。</string>
+    <string name="panel_roguelike_blackflow_animal_tip_feathered_serpent">下一局的支援选项里多一个随机的蓝色襁褓生灵。培育所在的这一局须至少通过两个区域。</string>
+    <string name="panel_roguelike_blackflow_start_rewards">期望奖励</string>
+    <string name="panel_roguelike_blackflow_start_rewards_tip">期望奖励和羽蛇奖励里勾选的全部算候选，开局出现任意一项就停下</string>
+    <string name="panel_roguelike_blackflow_serpent_rewards">羽蛇奖励</string>
+    <string name="panel_roguelike_blackflow_serpent_rewards_inactive">选了襁褓羽蛇才生效</string>
+    <string name="panel_roguelike_blackflow_prep_squad">准备局分队</string>
+    <string name="panel_roguelike_blackflow_reward_unnumbered_item">未编号物</string>
+    <string name="panel_roguelike_blackflow_reward_unnumbered_item_tip">获得 1 件普通收藏品。</string>
+    <string name="panel_roguelike_blackflow_reward_survey_advance">调查预付款</string>
+    <string name="panel_roguelike_blackflow_reward_survey_advance_tip">获得 8 源石锭。</string>
+    <string name="panel_roguelike_blackflow_reward_space_lease">空间租赁</string>
+    <string name="panel_roguelike_blackflow_reward_space_lease_tip">消耗 6 源石锭，零件箱容量 +2。</string>
+    <string name="panel_roguelike_blackflow_reward_regression_compensation">退行补偿</string>
+    <string name="panel_roguelike_blackflow_reward_regression_compensation_tip">消耗 2 目标生命值上限，获得 1 件随机收藏品。</string>
+    <string name="panel_roguelike_blackflow_reward_forest_ride">林间代步</string>
+    <string name="panel_roguelike_blackflow_reward_forest_ride_tip">获得 1 件加工品。</string>
+    <string name="panel_roguelike_blackflow_reward_nest_parasitism">巢寄生</string>
+    <string name="panel_roguelike_blackflow_reward_nest_parasitism_tip">零件箱容量 -1，获得 1 件稀有收藏品。</string>
+    <string name="panel_roguelike_blackflow_reward_pegasus">襁褓天马</string>
+    <string name="panel_roguelike_blackflow_reward_pegasus_tip">每一区域额外获得 1 行动力。</string>
+    <string name="panel_roguelike_blackflow_reward_hippogriff">襁褓骏鹰</string>
+    <string name="panel_roguelike_blackflow_reward_hippogriff_tip">初始额外获得 1 希望，前 2 个区域初始揭露全部视野。</string>
+    <string name="panel_roguelike_blackflow_reward_dragon">襁褓巨龙</string>
+    <string name="panel_roguelike_blackflow_reward_dragon_tip" formatted="false">前 2 个区域中所有敌人的最大生命值 -50%。</string>
+    <string name="panel_roguelike_blackflow_reward_hydra">襁褓九头蛇</string>
+    <string name="panel_roguelike_blackflow_reward_hydra_tip" formatted="false">所有敌人的攻击和生命值 +30%；每次进入新的区域，我方单位攻击力和生命值 +10%。</string>
+    <string name="panel_roguelike_blackflow_reward_bai_ze">襁褓白泽</string>
+    <string name="panel_roguelike_blackflow_reward_bai_ze_tip">临时招募干员的出现概率提升。</string>
+    <string name="panel_roguelike_blackflow_reward_golden_crow">襁褓金乌</string>
+    <string name="panel_roguelike_blackflow_reward_golden_crow_tip">进入区域血色空脉时获得 3 个随机收藏品。</string>
     <string name="panel_roguelike_role_first_move_advantage">先手必胜（先锋、狙击、特种）</string>
     <string name="panel_roguelike_role_slow_and_steady">稳扎稳打（重装、术师、狙击）</string>
     <string name="panel_roguelike_role_overcoming_weaknesses">取长补短（近卫、辅助、医疗）</string>
@@ -1663,6 +1716,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="panel_roguelike_squad_multilateral_trade">多边贸易分队</string>
     <string name="panel_roguelike_squad_geological_survey">地质调查分队</string>
 
+    <string name="panel_roguelike_squad_united_front">团结阵线分队</string>
+    <string name="panel_roguelike_squad_traversal">踏足遍历分队</string>
     <!-- i18n: shared helpers -->
     <string name="common_enumeration_separator">、</string>
 
@@ -1898,6 +1953,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="task_start_eye_protection_warning_log">设备当前处于护眼/夜光模式 (%1$s)，可能影响正常图像识别，请手动关闭</string>
     <string name="task_start_adb_input_restricted_warning_log">未开启「USB 调试（安全设置）」，系统会拦截触控输入，请在开发者选项中开启（未生效可重启手机）</string>
     <string name="task_start_smart_resolution_warning_log">系统已开启「智能分辨率」，后台模式下会导致识别出错，请在系统显示设置中手动关闭</string>
+    <string name="task_start_virtual_display_compat_warning_log">当前系统缺少后台虚拟屏所需权限，已改用兼容方式创建：熄屏或锁屏时任务会暂停，运行期间主屏可能失去输入焦点</string>
 
     <!-- i18n: toolbox / mini game -->
     <string name="toolbox_status_starting">正在启动…</string>
@@ -1916,6 +1972,9 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_trigger_log_title">触发日志</string>
     <string name="schedule_wake_unlock_title">唤醒解锁</string>
     <string name="schedule_wake_unlock_desc">定时任务触发时若设备已锁屏，会按下面的方式自动解锁；手动启动的任务不受影响</string>
+    <string name="schedule_alarm_section">定时闹钟</string>
+    <string name="schedule_use_alarm_clock">以系统闹钟方式注册定时</string>
+    <string name="schedule_use_alarm_clock_desc">可能影响勿扰模式；关闭后定时可能不够准时</string>
     <string name="schedule_app_blacklist_title">应用黑名单</string>
     <string name="schedule_app_blacklist_desc">仅后台模式生效。定时触发时正在使用勾选的应用，则跳过本次执行并通知</string>
     <string name="schedule_app_blacklist_foreground_inactive">当前运行模式为前台，黑名单不生效</string>
@@ -2246,8 +2305,9 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="onboarding_next">下一步</string>
     <string name="onboarding_done">开始使用</string>
     <string name="onboarding_step_counter">%1$d / %2$d</string>
+    <string name="onboarding_button_countdown">%1$s（%2$d）</string>
     <string name="onboarding_welcome_title">欢迎使用 MaaMeow</string>
-    <string name="onboarding_welcome_body">《明日方舟》小助手 Android 版，全日常一键长草。\n\n运行前需要 Shizuku 或 Root 提供权限。接下来花一分钟了解首页的几个关键区域，随时可以跳过</string>
+    <string name="onboarding_welcome_body">《明日方舟》小助手 Android 版，全日常一键长草。\n\n运行前需要 Shizuku 或 Root 提供权限。接下来花一分钟了解首页的几个关键区域</string>
     <string name="onboarding_status_title">状态总览</string>
     <string name="onboarding_status_body">这里显示屏幕分辨率、资源与应用版本，以及服务的连接状态。\n服务连接成功后才能正常开始任务</string>
     <string name="onboarding_run_mode_title">运行模式</string>
@@ -2270,6 +2330,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="onboarding_schedule_trigger_log_body">定时没跑？来这里看每次触发的结果和原因</string>
     <string name="onboarding_tab_settings_title">设置与帮助</string>
     <string name="onboarding_tab_settings_body">公告、更新日志、日志导出和 QQ 交流群都在设置页。\n随时可以在「关于」中重新查看本引导</string>
+    <string name="onboarding_runtime_backend_title">Shizuku / Root 切换</string>
+    <string name="onboarding_runtime_backend_body">默认通过 Shizuku 获取权限；设备已 Root 的可以在「运行环境 → 启动模式」改为 Root，不需要再装 Shizuku。\n切换后首页的授权项会跟着变，按新方式重新授权即可</string>
     <string name="onboarding_about_help_title">常见问题与问题反馈</string>
     <string name="onboarding_about_help_body">遇到问题先看「常见问题」，连接失败、任务卡住、识别出错等常见情况都有现成解答。\n确认不在其中后，再到「日志 → 导出日志压缩包」生成日志包，连同复现步骤通过「问题反馈」提交，没有日志很难定位原因</string>
 
@@ -2651,16 +2713,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="settings_wake_gesture_test_hint">先锁屏，约 1 秒后回放录制的手势</string>
     <!-- 黑流树海肉鸽运行日志文案 -->
     <string name="blackflow_routing_decision">第 %1$d 层｜行动力 %2$d→%3$d｜%4$s至 %5$s｜安全余量 %6$d</string>
-    <string name="blackflow_routing_reason">原因：%1$s｜说明：%2$s</string>
     <string name="blackflow_movement_walk">徒步移动</string>
     <string name="blackflow_movement_processing">加工品移动</string>
-    <string name="blackflow_reason_mandatory_goal">强制目标</string>
-    <string name="blackflow_reason_resource_reserve">资源保留</string>
-    <string name="blackflow_reason_preferred_goal">偏好目标</string>
-    <string name="blackflow_reason_development">发育</string>
-    <string name="blackflow_reason_risk_avoidance">风险规避</string>
-    <string name="blackflow_reason_safety_fallback">安全退路</string>
-    <string name="blackflow_reason_tie_break">次级比较</string>
     <string name="blackflow_warning_map_rebuild_failed">地图重建失败</string>
     <string name="blackflow_warning_page_recovery_failed">无法从节点页面返回地图</string>
     <string name="blackflow_warning_preview_cost_changed">移动预览显示的行动力消耗发生变化，正在重新规划</string>
@@ -2676,6 +2730,16 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="blackflow_strategy_result">肉鸽策略结束：%1$s（%2$s）</string>
     <string name="blackflow_strategy_started">黑流策略已启动：%1$s</string>
     <string name="blackflow_strategy_unknown">未知策略</string>
+    <string name="blackflow_start_run_preparing">正在进行准备局</string>
+    <string name="blackflow_start_run_target_run">已切换到目标局，等待检查开局奖励</string>
+    <string name="blackflow_start_run_reward_missed">开局奖励未命中，重新进行准备局</string>
+    <string name="blackflow_start_run_completed">开局目标已满足，已退出并保留这一局</string>
+    <string name="blackflow_start_run_reward_recognition_failed">开局奖励识别失败，已停止任务</string>
+    <string name="blackflow_start_run_reward_page_missing">未识别到开局奖励页，已停止任务</string>
+    <string name="blackflow_start_run_reward_unrecognized">选择支援页有奖励没认出来，已停在该页面并停止任务</string>
+    <string name="blackflow_start_run_rewards_seen">本次支援页：%1$s</string>
+    <string name="blackflow_outcome_start_run_prepared">开局准备已完成</string>
+    <string name="blackflow_termination_start_run_prepared">已到达第三层，将按目标难度和分队开启下一局</string>
     <string name="blackflow_inventory_cleanup_started">零件箱超载，开始清理</string>
     <string name="blackflow_inventory_cleanup_discarded">已丢弃零件：%1$s</string>
     <string name="blackflow_inventory_cleanup_completed">零件箱清理完成</string>
@@ -2687,9 +2751,6 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="blackflow_scrap_trade_aborted_sell_back_search_failed">秘境行商未能找到要卖回的「%1$s」，停止交易并离店</string>
     <string name="blackflow_scrap_trade_aborted_sale_failed">秘境行商出售「%1$s」未得到确认，停止交易并离店</string>
     <string name="blackflow_scrap_trade_aborted_unknown">秘境行商交易出现异常，停止交易并离店</string>
-    <string name="blackflow_decision_probe_unknown_node">探测路线前方最近的未分类节点</string>
-    <string name="blackflow_decision_policy_order">按照策略设定的优先顺序选择</string>
-    <string name="blackflow_decision_detail_unknown">决策依据未知</string>
     <string name="blackflow_milestone_unknown">未知阶段目标</string>
     <string name="blackflow_milestone_status_available">可以执行</string>
     <string name="blackflow_milestone_status_satisfied">已经完成</string>
@@ -2721,21 +2782,6 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="blackflow_node_evacuate">撤离点</string>
     <string name="blackflow_node_teleporter">传送点</string>
     <string name="blackflow_node_other">其他节点</string>
-    <string name="blackflow_rule_avoid_empty_scrap_shop">没有源石锭、种子及可出售零件时避开秘境行商</string>
-    <string name="blackflow_rule_preserve_white_model_bird">保留白模鸟，避开需要加工品移动的可选战斗</string>
-    <string name="blackflow_rule_trigger_boss_processing_bonus">使用加工品进入首领节点并触发战斗加成</string>
-    <string name="blackflow_rule_exit_when_required">发育已经完成或安全余量不足，前往出口</string>
-    <string name="blackflow_rule_ending1_avoid_late_combat">已经形成基本精二队伍，避开非必要战斗</string>
-    <string name="blackflow_rule_baby_use_processing_item_for_floor1_shop">第一层使用加工品前往普通商店</string>
-    <string name="blackflow_rule_baby_walk_after_floor1_shop">第一层检查普通商店后徒步探索并保留加工品</string>
-    <string name="blackflow_rule_baby_delay_exit_before_floor3">第三层前仍有发育空间，暂缓前往出口</string>
-    <string name="blackflow_rule_baby_exit_before_floor3_when_required">第三层前发育已经完成或安全余量不足，前往出口</string>
-    <string name="blackflow_rule_baby_avoid_combat">仍有其他安全走法，避开作战节点</string>
-    <string name="blackflow_rule_light_reveals_three">羽瞰点预计可以揭示至少三个未知大节点</string>
-    <string name="blackflow_rule_investment_keep_short_walk">商店距离不超过两格时保持徒步</string>
-    <string name="blackflow_rule_investment_use_m11_for_direct_shop">没有短途徒步方案时使用结构性原理直达商店</string>
-    <string name="blackflow_rule_burn_require_shop_when_flight_guaranteed">开局配置保证精二机械师时，第一层路线必须经过商店</string>
-    <string name="blackflow_rule_burn_require_flight_on_floor2">该开局配置下第二层直接用结构性原理飞向出口</string>
     <string name="blackflow_milestone_ending1_floor1_battles">第一层优先作战</string>
     <string name="blackflow_milestone_ending1_floor1_hidden">第一层尽量探索未知的诡秘</string>
     <string name="blackflow_milestone_ending1_floor1_scrap_shop">第一层顺路进入秘境行商交易</string>

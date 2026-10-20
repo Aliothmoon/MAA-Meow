@@ -91,6 +91,12 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".utils.RestartActivity"
+            android:exported="false"
+            android:process=":restart"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <service
             android:name=".service.AccessibilityHelperService"
             android:exported="false"

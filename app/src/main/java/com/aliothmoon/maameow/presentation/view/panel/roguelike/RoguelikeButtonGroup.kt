@@ -14,7 +14,8 @@ fun RoguelikeButtonGroup(
     selectedValue: String,
     options: List<Pair<String, String>>,
     onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     SelectableChipGroup(
         label = label,
@@ -22,6 +23,7 @@ fun RoguelikeButtonGroup(
         options = options,
         onSelected = onValueChange,
         modifier = modifier,
+        enabled = enabled,
         labelFontWeight = FontWeight.Medium
     )
 }

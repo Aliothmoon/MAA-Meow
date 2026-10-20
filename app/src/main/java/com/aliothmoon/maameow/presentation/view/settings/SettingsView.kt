@@ -143,7 +143,10 @@ import kotlin.math.roundToInt
 
 // 第 0 项是搜索框
 private fun sectionItemIndex(sectionKey: String): Int = SettingsSections.ORDER.indexOf(sectionKey) + 1
-private val ONBOARDING_ABOUT_TARGETS = setOf(OnboardingTarget.ABOUT_HELP)
+private val ONBOARDING_TARGET_SECTIONS = mapOf(
+    OnboardingTarget.RUNTIME_BACKEND to SettingsSections.RUNTIME,
+    OnboardingTarget.ABOUT_HELP to SettingsSections.ABOUT,
+)
 
 @Composable
 fun SettingsView(
@@ -197,7 +200,7 @@ fun SettingsView(
     val achievementUiState by achievementViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    // 首启引导：靶点在「关于」分区内，先滚进视野并强制展开分区；pager 重建后 effect 重跑自动补滚
+    // 首启引导：靶点所在分区先滚进视野并强制展开；pager 重建后 effect 重跑自动补滚
     val onboarding = LocalOnboardingState.current
     val settingsListState = rememberLazyListState()
 
@@ -232,17 +235,17 @@ fun SettingsView(
         }
     }
     val reduceMotion = LocalReduceMotion.current
-    val onboardingInAbout =
-        onboarding?.takeIf { it.active }?.currentStep?.target in ONBOARDING_ABOUT_TARGETS
+    val onboardingSection = onboarding?.takeIf { it.active }?.currentStep?.target
+        ?.let { ONBOARDING_TARGET_SECTIONS[it] }
     LaunchedEffect(onboarding, settingsListState, reduceMotion) {
         if (onboarding == null) return@LaunchedEffect
         snapshotFlow { onboarding.takeIf { it.active }?.currentStep?.target }
             .collectLatest { target ->
-                if (target !in ONBOARDING_ABOUT_TARGETS) return@collectLatest
+                val section = ONBOARDING_TARGET_SECTIONS[target] ?: return@collectLatest
                 if (reduceMotion) {
-                    settingsListState.scrollToItem(sectionItemIndex(SettingsSections.ABOUT))
+                    settingsListState.scrollToItem(sectionItemIndex(section))
                 } else {
-                    settingsListState.animateScrollToItem(sectionItemIndex(SettingsSections.ABOUT))
+                    settingsListState.animateScrollToItem(sectionItemIndex(section))
                 }
             }
     }
@@ -709,18 +712,23 @@ fun SettingsView(
                     CollapsibleSection(
                         title = stringResource(R.string.settings_section_runtime),
                         sectionKey = SettingsSections.RUNTIME,
+                        forceExpanded = onboardingSection == SettingsSections.RUNTIME,
                         revealToken = revealToken(SettingsSections.RUNTIME),
                     ) {
                         SettingsGroupCard {
-                            SettingSearchTarget(R.string.settings_startup_backend_title) {
-                                SettingRadioItem(
-                                    title = stringResource(R.string.settings_startup_backend_title),
-                                    contentColor = contentColor,
-                                    entries = RemoteBackend.entries,
-                                    selected = startupBackend,
-                                    label = { it.display },
-                                    onSelected = { viewModel.setStartupBackend(it) }
-                                )
+                            Column(
+                                modifier = Modifier.onboardingTarget(OnboardingTarget.RUNTIME_BACKEND),
+                            ) {
+                                SettingSearchTarget(R.string.settings_startup_backend_title) {
+                                    SettingRadioItem(
+                                        title = stringResource(R.string.settings_startup_backend_title),
+                                        contentColor = contentColor,
+                                        entries = RemoteBackend.entries,
+                                        selected = startupBackend,
+                                        label = { it.display },
+                                        onSelected = { viewModel.setStartupBackend(it) }
+                                    )
+                                }
                             }
                             ListItemDivider()
                             SettingSearchTarget(R.string.game_package_edit) {
@@ -1160,7 +1168,7 @@ fun SettingsView(
                     CollapsibleSection(
                         title = stringResource(R.string.settings_section_about),
                         sectionKey = SettingsSections.ABOUT,
-                        forceExpanded = onboardingInAbout,
+                        forceExpanded = onboardingSection == SettingsSections.ABOUT,
                         revealToken = revealToken(SettingsSections.ABOUT),
                     ) {
                         SettingsGroupCard {

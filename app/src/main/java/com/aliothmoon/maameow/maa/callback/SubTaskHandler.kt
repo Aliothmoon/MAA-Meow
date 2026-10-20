@@ -649,6 +649,7 @@ class SubTaskHandler(
                 )
             }
 
+            "BlackFlowStartRun" -> handleBlackFlowStartRun(subDetails)
             "BlackFlowMilestoneChanged" -> handleBlackFlowMilestoneChanged(subDetails)
             "BlackFlowInventoryCleanup" -> handleBlackFlowInventoryCleanup(subDetails)
             "BlackFlowScrapTradeAborted" -> {
@@ -817,6 +818,13 @@ class SubTaskHandler(
             "ReclamationSmeltGold" -> {
                 val times = subDetails?.getIntValue("times") ?: 0
                 append("${str("AlgorithmDoneSmeltGold")} $times ${str("UnitTime")}", LogLevel.TRACE)
+            }
+
+            // 多作业模式辅助编队预匹配前报一次，core 传的是绝对路径，只显示文件名
+            "CopilotPrecheckFile" -> {
+                val navName = subDetails?.getString("nav_name").orEmpty()
+                val filename = subDetails?.getString("filename").orEmpty().substringAfterLast('/')
+                append("$navName - $filename", LogLevel.INFO)
             }
 
             "BattleFormation" -> {
@@ -1296,33 +1304,34 @@ class SubTaskHandler(
         // 节点有具名就用具名，没有才退回类型
         val nodeName = subDetails?.getString("node_name")?.takeIf { it.isNotBlank() }
             ?: resources.getString(BlackFlowLogText.nodeType(subDetails?.getString("node_type")))
-        val route = resources.getString(
-            R.string.blackflow_routing_decision,
-            subDetails?.getIntValue("floor") ?: 0,
-            subDetails?.getIntValue("action_points_before") ?: 0,
-            subDetails?.getIntValue("action_points_after") ?: 0,
-            movement,
-            nodeName,
-            subDetails?.getIntValue("safety_margin") ?: 0,
+        // 上游不再显示决策原因，core 也不再上报 reason_detail
+        append(
+            resources.getString(
+                R.string.blackflow_routing_decision,
+                subDetails?.getIntValue("floor") ?: 0,
+                subDetails?.getIntValue("action_points_before") ?: 0,
+                subDetails?.getIntValue("action_points_after") ?: 0,
+                movement,
+                nodeName,
+                subDetails?.getIntValue("safety_margin") ?: 0,
+            ),
+            LogLevel.INFO,
         )
-        val category = resources.getString(
-            BlackFlowLogText.reasonCategory(subDetails?.getString("reason_category"))
-        )
-        val detail = blackFlowDecisionDetail(subDetails)
-        val reason = resources.getString(R.string.blackflow_routing_reason, category, detail)
-        append("$route\n$reason", LogLevel.INFO)
     }
 
-    private fun blackFlowDecisionDetail(subDetails: JSONObject?): String {
-        subDetails?.getString("decisive_rule_id")?.takeIf { it.isNotBlank() }?.let { id ->
-            return BlackFlowLogText.rule(id)?.let { resources.getString(it) } ?: id
+    // 支援页认出的奖励名随状态一起显示，方便看出有没有认错
+    private fun handleBlackFlowStartRun(subDetails: JSONObject?) {
+        val status = subDetails?.getString("status")
+        val textRes = BlackFlowLogText.startRunStatus(status) ?: return
+        val rewards = subDetails?.getJSONArray("rewards")?.joinToString("、").orEmpty()
+        val message = resources.getString(textRes) + if (rewards.isEmpty()) "" else
+            "\n" + resources.getString(R.string.blackflow_start_run_rewards_seen, rewards)
+        val level = when (status) {
+            "completed" -> LogLevel.SUCCESS
+            "reward_recognition_failed", "reward_page_missing", "reward_unrecognized" -> LogLevel.ERROR
+            else -> LogLevel.INFO
         }
-        subDetails?.getString("decisive_milestone_id")?.takeIf { it.isNotBlank() }?.let { id ->
-            return BlackFlowLogText.milestone(id)?.let { resources.getString(it) } ?: id
-        }
-        return resources.getString(
-            BlackFlowLogText.reasonDetail(subDetails?.getString("reason_detail"))
-        )
+        append(message, level)
     }
 
     private fun handleBlackFlowMilestoneChanged(subDetails: JSONObject?) {

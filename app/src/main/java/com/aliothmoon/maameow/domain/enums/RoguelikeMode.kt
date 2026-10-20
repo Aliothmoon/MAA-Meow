@@ -25,6 +25,9 @@ enum class RoguelikeMode(val value: Int) {
     /** 刷常乐节点 */
     FindPlaytime(20001),
 
-    /** 黑流树海：刷襁褓动物 */
-    BlackFlowBabyAnimal(30001);
+    /** 黑流树海：刷襁褓动物，已并入刷开局，只为读旧配置保留 */
+    BlackFlowBabyAnimal(30001),
+
+    /** 黑流树海：刷开局，命中期望奖励后退出并保留这一局 */
+    BlackFlowStartRun(30003);
 }

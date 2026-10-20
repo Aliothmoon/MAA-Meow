@@ -261,6 +261,7 @@
     <string name="settings_export_success">구성을 내보냈습니다</string>
     <string name="settings_export_failed">내보내기 실패: %1$s</string>
     <string name="settings_import_failed">가져오기 실패: %1$s</string>
+    <string name="settings_import_too_large">가져오기 실패: 파일이 %1$d MB를 초과합니다. 설정 백업 파일을 선택했는지 확인하세요</string>
 
     <!-- settings: top-level -->
     <string name="settings_title">설정</string>
@@ -275,6 +276,7 @@
     <string name="search_keywords_resolution">해상도 가상 디스플레이 가상 화면 1080 720 화질</string>
     <string name="search_keywords_pip">화면 속 화면 작은 창 플로팅 PiP</string>
     <string name="search_keywords_wake_unlock">잠금 화면 잠금 해제 화면 깨우기 비밀번호 PIN 제스처 예약</string>
+    <string name="search_keywords_alarm_clock">방해 금지 DND 알람 예약</string>
     <string name="search_keywords_app_blacklist">블랙리스트 차단 건너뛰기 포그라운드 게임 방해 예약</string>
     <string name="search_keywords_mute">음소거 소리 볼륨</string>
     <string name="search_keywords_run_duration">지속 시간 시간 제한 시간 초과 실행 시간</string>
@@ -919,7 +921,7 @@
     <string name="panel_autobattle_oper_elite_1">정예화 1</string>
     <string name="panel_autobattle_oper_elite_2">정예화 2</string>
     <string name="panel_autobattle_oper_promotion">%1$s %2$d</string>
-    <string name="panel_autobattle_oper_skill">S%1$d</string>
+    <string name="panel_autobattle_oper_skill">스킬 %1$d</string>
     <string name="panel_autobattle_oper_no_skill">스킬 없음</string>
     <string name="panel_autobattle_oper_skill_level">Lv.%1$d</string>
     <string name="panel_autobattle_oper_mastery_1">마스터리 1</string>
@@ -937,6 +939,12 @@
     <string name="panel_autobattle_support_fill_gaps">필요 시</string>
     <string name="panel_autobattle_support_random">랜덤</string>
     <string name="panel_autobattle_add_trust">신뢰도가 낮은 오퍼레이터 추가</string>
+    <string name="panel_autobattle_user_additional">커스텀 오퍼레이터 추가</string>
+    <string name="panel_autobattle_user_additional_tip">자동 편성 후 목록 순서대로 이 오퍼레이터들을 추가합니다. 이미 편성된 오퍼레이터는 건너뛰고, 편성이 가득 차면 더 이상 추가하지 않습니다. 왼쪽 핸들을 드래그해 순서를 바꿀 수 있습니다. 스킬을 「기본」으로 두면 게임 내 스킬 선택을 그대로 사용합니다</string>
+    <string name="panel_autobattle_user_additional_search">추가할 오퍼레이터 검색</string>
+    <string name="panel_autobattle_user_additional_no_match">일치하는 오퍼레이터 없음</string>
+    <string name="panel_autobattle_user_additional_skill">스킬</string>
+    <string name="panel_autobattle_user_additional_skill_default">기본</string>
     <string name="panel_autobattle_operbox_assist">Yituliu 데이터로 편성 지원</string>
     <string name="panel_autobattle_operbox_assist_tip">자동 편성 전 Yituliu 오퍼레이터 육성 데이터(스킬 및 모듈 포함)로 작업 편성을 사전 매칭하며, 편성을 채울 수 없으면 전투를 시작하지 않습니다\n먼저 「설정 → 서드파티」에서 Yituliu 토큰을 입력하고 「오퍼레이터 인식을 Yituliu에서 가져오기」를 켠 뒤 데이터를 한 번 동기화하세요</string>
     <string name="panel_autobattle_operbox_sync">동기화</string>
@@ -1587,7 +1595,6 @@
     <string name="panel_roguelike_mode_exploration">심층 조사</string>
     <string name="panel_roguelike_mode_clp_pds">붕괴 패러다임 파밍</string>
     <string name="panel_roguelike_mode_find_playtime">여흥 노드 파밍</string>
-    <string name="panel_roguelike_mode_blackflow_baby_animal">포대기 동물 육성</string>
     <string name="panel_roguelike_mode_desc_exp">레벨 우선, 최대한 많은 구역 클리어</string>
     <string name="panel_roguelike_mode_desc_investment">오리지늄각뿔 투자, 투자 완료 시 자동 종료</string>
     <string name="panel_roguelike_mode_desc_collectible">작전 지원 선택, 전기주전자 또는 2차 정예화 오퍼레이터로 시작할 때까지 반복</string>
@@ -1596,12 +1603,58 @@
     <string name="panel_roguelike_mode_desc_clp_pds">희귀 붕괴 패러다임 파밍, 일반 붕괴 패러다임 획득 시 재시작</string>
     <string name="panel_roguelike_mode_desc_find_playtime">여흥 노드 파밍, 1구역 쉐이의 잔식에 진입, 필요한 노드를 찾지 못하면 재시작</string>
     <string name="panel_roguelike_mode_desc_exp_blackflow">레벨 우선, 빠르게 3구역으로 이동</string>
-    <string name="panel_roguelike_mode_desc_blackflow_baby_animal">포대기 동물 육성, 선택한 종을 목표로 육성</string>
-    <string name="panel_roguelike_blackflow_cultivation_target">목표 포대기 동물</string>
     <string name="panel_roguelike_blackflow_target_cat">포대기의 고양이</string>
     <string name="panel_roguelike_blackflow_target_feathered_serpent">포대기의 깃털 뱀</string>
     <string name="panel_roguelike_blackflow_target_dog">포대기의 개</string>
     <string name="panel_roguelike_blackflow_target_cerberus">포대기의 케르베로스</string>
+    <string name="panel_roguelike_mode_blackflow_start_run">시작 보상 반복</string>
+    <string name="panel_roguelike_mode_desc_blackflow_start_run">시작 보상 반복, 목표 달성 시 종료하고 이번 탐험 유지</string>
+    <string name="panel_roguelike_blackflow_fast_flight">3구역으로 빠르게 비행</string>
+    <string name="panel_roguelike_blackflow_flight_requirement">재능을 모두 해금한 메커니스트 필요</string>
+    <string name="panel_roguelike_blackflow_flight_tip">항상 특근 분대, 차근차근, 본인의 메커니스트로 시작하며 메커니스트만 모집하고, 2구역에서 기본 지참한 구조적 원리로 3구역까지 바로 비행한 뒤 도착하면 재시작합니다.\n체크하는 동안 일반 설정의 분대, 직업 그룹, 시작 오퍼레이터는 변경할 수 없으며 체크를 해제하면 다시 수정할 수 있습니다. 체크하지 않으면 목표 엔딩을 향해 진행하며, 시작 구성이 이 조합이어도 비행하지 않습니다.\n메커니스트의 재능을 모두 해금하지 않으면 비행할 수 없으니 체크하지 마세요.</string>
+    <string name="panel_roguelike_blackflow_prep_flight_tip">준비 탐험은 항상 특근 분대, 차근차근, 본인의 메커니스트로 시작하며 메커니스트만 모집하고, 2구역에서 기본 지참한 구조적 원리로 3구역까지 바로 비행합니다.\n체크하면 준비 탐험 분대가 특근 분대로 표시되며 변경할 수 없고, 체크를 해제하면 원래 설정으로 돌아갑니다. 일반 설정의 직업 그룹과 시작 오퍼레이터는 영향을 받지 않습니다.\n메커니스트의 재능을 모두 해금하지 않으면 비행할 수 없으니 체크하지 마세요.</string>
+    <string name="panel_roguelike_blackflow_fast_flight_lock_tip">고급 설정의 ｢3구역으로 빠르게 비행｣ 이 선택되어 분대, 직업 그룹, 시작 오퍼레이터가 특근 분대, 차근차근, 메커니스트로 고정되며, 선택을 해제하면 복원됩니다</string>
+    <string name="panel_roguelike_blackflow_ending_flight_tip">엔딩을 선택하려면 ｢3구역으로 빠르게 비행｣ 체크를 해제해야 합니다</string>
+    <string name="panel_roguelike_blackflow_ending">목표 엔딩</string>
+    <string name="panel_roguelike_blackflow_ending_1">제1 엔딩 · 강제 재시작</string>
+    <string name="panel_roguelike_blackflow_ending_2">제2 엔딩 · 차원 재구성</string>
+    <string name="panel_roguelike_blackflow_ending_3">제3 엔딩 · 얽힘, 조화</string>
+    <string name="panel_roguelike_blackflow_start_animal_1">포대기 동물 · 첫 번째</string>
+    <string name="panel_roguelike_blackflow_start_animal_2">포대기 동물 · 두 번째</string>
+    <string name="panel_roguelike_blackflow_start_animal_none">지정 안 함</string>
+    <string name="panel_roguelike_blackflow_animal_tip_cat">다음 탐험 시작 시 오리지늄각뿔 5개를 추가로 획득합니다.</string>
+    <string name="panel_roguelike_blackflow_animal_tip_dog">다음 탐험 시작 시 희망 1을 추가로 획득합니다.</string>
+    <string name="panel_roguelike_blackflow_animal_tip_cerberus">다음 탐험에서 지원 선택 기회가 1회 늘어납니다. 육성하는 이번 탐험에서 최소 2개 구역을 통과해야 합니다.</string>
+    <string name="panel_roguelike_blackflow_animal_tip_feathered_serpent">다음 탐험의 지원 선택지에 무작위 파란색 포대기 생물이 하나 추가됩니다. 육성하는 이번 탐험에서 최소 2개 구역을 통과해야 합니다.</string>
+    <string name="panel_roguelike_blackflow_start_rewards">원하는 보상</string>
+    <string name="panel_roguelike_blackflow_start_rewards_tip">원하는 보상과 깃털 뱀 보상에서 체크한 항목은 모두 후보가 되며, 시작 시 하나라도 나오면 중지합니다</string>
+    <string name="panel_roguelike_blackflow_serpent_rewards">깃털 뱀 보상</string>
+    <string name="panel_roguelike_blackflow_serpent_rewards_inactive">포대기의 깃털 뱀을 선택해야 적용됨</string>
+    <string name="panel_roguelike_blackflow_prep_squad">준비 탐험 분대</string>
+    <string name="panel_roguelike_blackflow_reward_unnumbered_item">번호 없는 물건</string>
+    <string name="panel_roguelike_blackflow_reward_unnumbered_item_tip">일반 소장품 1개를 획득합니다.</string>
+    <string name="panel_roguelike_blackflow_reward_survey_advance">조사 선급금</string>
+    <string name="panel_roguelike_blackflow_reward_survey_advance_tip">오리지늄각뿔 8개를 획득합니다.</string>
+    <string name="panel_roguelike_blackflow_reward_space_lease">공간 임대</string>
+    <string name="panel_roguelike_blackflow_reward_space_lease_tip">오리지늄각뿔 6개를 소모하고 부품 상자 용량 +2.</string>
+    <string name="panel_roguelike_blackflow_reward_regression_compensation">퇴행 보상</string>
+    <string name="panel_roguelike_blackflow_reward_regression_compensation_tip">최대 목표 생명력 2를 소모하고 무작위 소장품 1개를 획득합니다.</string>
+    <string name="panel_roguelike_blackflow_reward_forest_ride">숲속 탈것</string>
+    <string name="panel_roguelike_blackflow_reward_forest_ride_tip">가공품 1개를 획득합니다.</string>
+    <string name="panel_roguelike_blackflow_reward_nest_parasitism">탁란</string>
+    <string name="panel_roguelike_blackflow_reward_nest_parasitism_tip">부품 상자 용량 -1, 희귀 소장품 1개를 획득합니다.</string>
+    <string name="panel_roguelike_blackflow_reward_pegasus">포대기의 페가수스</string>
+    <string name="panel_roguelike_blackflow_reward_pegasus_tip">구역마다 행동력 1을 추가로 획득합니다.</string>
+    <string name="panel_roguelike_blackflow_reward_hippogriff">포대기의 히포그리프</string>
+    <string name="panel_roguelike_blackflow_reward_hippogriff_tip">시작 시 희망 1을 추가로 획득하고, 처음 2개 구역은 시작부터 시야가 모두 공개됩니다.</string>
+    <string name="panel_roguelike_blackflow_reward_dragon">포대기의 드래곤</string>
+    <string name="panel_roguelike_blackflow_reward_dragon_tip" formatted="false">처음 2개 구역의 모든 적의 최대 HP -50%.</string>
+    <string name="panel_roguelike_blackflow_reward_hydra">포대기의 히드라</string>
+    <string name="panel_roguelike_blackflow_reward_hydra_tip" formatted="false">모든 적의 공격력과 HP +30%. 새 구역에 들어갈 때마다 아군 유닛의 공격력과 HP +10%.</string>
+    <string name="panel_roguelike_blackflow_reward_bai_ze">포대기의 백택</string>
+    <string name="panel_roguelike_blackflow_reward_bai_ze_tip">임시 모집 오퍼레이터의 등장 확률이 증가합니다.</string>
+    <string name="panel_roguelike_blackflow_reward_golden_crow">포대기의 금오</string>
+    <string name="panel_roguelike_blackflow_reward_golden_crow_tip">3구역 ｢혈색 공맥｣ 진입 시 무작위 소장품 3개를 획득합니다.</string>
     <string name="panel_roguelike_role_first_move_advantage">선수필승 (뱅가드, 스나이퍼, 스페셜리스트)</string>
     <string name="panel_roguelike_role_slow_and_steady">차근차근 (디펜더, 캐스터, 스나이퍼)</string>
     <string name="panel_roguelike_role_overcoming_weaknesses">상호보완 (가드, 서포터, 메딕)</string>
@@ -1663,6 +1716,8 @@
     <string name="panel_roguelike_squad_multilateral_trade">다자 무역 분대</string>
     <string name="panel_roguelike_squad_geological_survey">지질 조사 분대</string>
 
+    <string name="panel_roguelike_squad_united_front">단결 전선 분대</string>
+    <string name="panel_roguelike_squad_traversal">답파 편력 분대</string>
     <!-- i18n: shared helpers -->
     <string name="common_enumeration_separator">, </string>
 
@@ -1898,6 +1953,7 @@
     <string name="task_start_eye_protection_warning_log">기기가 눈 보호/야간 모드(%1$s) 상태입니다. 이미지 인식에 영향을 줄 수 있으니 직접 꺼 주세요</string>
     <string name="task_start_adb_input_restricted_warning_log">「USB 디버깅(보안 설정)」이 꺼져 있어 시스템이 터치 입력을 차단합니다. 개발자 옵션에서 켜 주세요(적용되지 않으면 휴대폰을 재부팅하세요)</string>
     <string name="task_start_smart_resolution_warning_log">시스템의 「스마트 해상도」가 켜져 있어 백그라운드 모드에서 인식 오류가 발생합니다. 시스템 디스플레이 설정에서 직접 꺼 주세요</string>
+    <string name="task_start_virtual_display_compat_warning_log">현재 시스템에 백그라운드 가상 디스플레이에 필요한 권한이 없어 호환 모드로 생성했습니다. 화면이 꺼지거나 잠기면 작업이 일시 중지되며, 실행 중 메인 화면이 입력 포커스를 잃을 수 있습니다</string>
 
     <!-- i18n: toolbox / mini game -->
     <string name="toolbox_status_starting">시작 중…</string>
@@ -1916,6 +1972,9 @@
     <string name="schedule_trigger_log_title">트리거 로그</string>
     <string name="schedule_wake_unlock_title">화면 깨우기 및 잠금 해제</string>
     <string name="schedule_wake_unlock_desc">예약 작업이 실행될 때 기기가 잠겨 있으면 아래 방식으로 자동 잠금 해제합니다. 수동으로 시작한 작업에는 영향이 없습니다</string>
+    <string name="schedule_alarm_section">예약 알람</string>
+    <string name="schedule_use_alarm_clock">시스템 알람으로 예약 등록</string>
+    <string name="schedule_use_alarm_clock_desc">방해 금지 모드에 영향을 줄 수 있습니다. 끄면 예약 실행이 덜 정확할 수 있습니다</string>
     <string name="schedule_app_blacklist_title">앱 블랙리스트</string>
     <string name="schedule_app_blacklist_desc">백그라운드 모드에서만 적용됩니다. 예약 실행 시 선택한 앱을 사용 중이면 이번 실행을 건너뛰고 알립니다</string>
     <string name="schedule_app_blacklist_foreground_inactive">현재 실행 모드가 포그라운드이므로 블랙리스트가 적용되지 않습니다</string>
@@ -2246,8 +2305,9 @@
     <string name="onboarding_next">다음 단계</string>
     <string name="onboarding_done">사용 시작</string>
     <string name="onboarding_step_counter">%1$d / %2$d</string>
+    <string name="onboarding_button_countdown">%1$s (%2$d)</string>
     <string name="onboarding_welcome_title">MaaMeow에 오신 것을 환영합니다</string>
-    <string name="onboarding_welcome_body">《명일방주》 안드로이드 도우미입니다. 모든 일일 작업을 일괄 실행합니다.\n\n실행에는 Shizuku 또는 Root 권한이 필요합니다. 이제 홈 화면의 주요 영역을 잠시 둘러보세요. 언제든지 건너뛸 수 있습니다</string>
+    <string name="onboarding_welcome_body">《명일방주》 안드로이드 도우미입니다. 모든 일일 작업을 일괄 실행합니다.\n\n실행에는 Shizuku 또는 Root 권한이 필요합니다. 이제 홈 화면의 주요 영역을 잠시 둘러보세요</string>
     <string name="onboarding_status_title">상태 개요</string>
     <string name="onboarding_status_body">여기에서 화면 해상도, 리소스 및 앱 버전, 서비스 연결 상태를 확인할 수 있습니다.\n서비스 연결에 성공해야 작업을 정상적으로 시작할 수 있습니다</string>
     <string name="onboarding_run_mode_title">실행 모드</string>
@@ -2270,6 +2330,8 @@
     <string name="onboarding_schedule_trigger_log_body">예약이 실행되지 않았나요? 여기에서 트리거마다의 결과와 원인을 확인할 수 있습니다</string>
     <string name="onboarding_tab_settings_title">설정 및 도움말</string>
     <string name="onboarding_tab_settings_body">공지, 변경 내역, 로그 내보내기, QQ 교류 그룹은 모두 설정 페이지에 있습니다.\n언제든지 「정보」에서 이 가이드를 다시 볼 수 있습니다</string>
+    <string name="onboarding_runtime_backend_title">Shizuku / Root 전환</string>
+    <string name="onboarding_runtime_backend_body">기본적으로 Shizuku로 권한을 얻습니다. 루팅된 기기라면 「실행 환경 → 시작 모드」에서 Root로 바꿀 수 있으며, 이 경우 Shizuku를 설치할 필요가 없습니다.\n전환하면 홈 화면의 권한 항목도 함께 바뀌므로 새 방식으로 다시 권한을 부여하세요</string>
     <string name="onboarding_about_help_title">자주 묻는 질문 및 문제 보고</string>
     <string name="onboarding_about_help_body">문제가 생기면 먼저 「자주 묻는 질문」을 확인하세요. 연결 실패, 작업 멈춤, 인식 오류 등 흔한 상황은 이미 답변이 정리되어 있습니다.\n그래도 해결되지 않으면 「로그 → 로그 압축 파일 내보내기」로 로그 패키지를 만든 뒤, 재현 절차와 함께 「문제 보고」로 제출하세요. 로그가 없으면 원인을 파악하기 어렵습니다</string>
 
@@ -2651,16 +2713,8 @@
     <string name="settings_wake_gesture_test_hint">먼저 화면을 잠그고, 약 1초 후 녹화한 제스처를 재생합니다</string>
     <!-- 黑流树海肉鸽运行日志文案 -->
     <string name="blackflow_routing_decision">%1$d구역 | 행동력 %2$d→%3$d | %5$s까지 %4$s | 안전 여유 %6$d</string>
-    <string name="blackflow_routing_reason">이유: %1$s | 설명: %2$s</string>
     <string name="blackflow_movement_walk">도보 이동</string>
     <string name="blackflow_movement_processing">가공품 이동</string>
-    <string name="blackflow_reason_mandatory_goal">필수 목표</string>
-    <string name="blackflow_reason_resource_reserve">자원 보존</string>
-    <string name="blackflow_reason_preferred_goal">선호 목표</string>
-    <string name="blackflow_reason_development">성장</string>
-    <string name="blackflow_reason_risk_avoidance">위험 회피</string>
-    <string name="blackflow_reason_safety_fallback">안전 퇴로</string>
-    <string name="blackflow_reason_tie_break">동률 비교</string>
     <string name="blackflow_warning_map_rebuild_failed">지도 재구축 실패</string>
     <string name="blackflow_warning_page_recovery_failed">노드 화면에서 지도 복귀 불가</string>
     <string name="blackflow_warning_preview_cost_changed">미리보기 행동력 소모가 변경되어 다시 계획합니다</string>
@@ -2676,6 +2730,16 @@
     <string name="blackflow_strategy_result">로그라이크 전략 종료: %1$s (%2$s)</string>
     <string name="blackflow_strategy_started">블랙 플로우 전략 시작: %1$s</string>
     <string name="blackflow_strategy_unknown">알 수 없는 전략</string>
+    <string name="blackflow_start_run_preparing">준비 탐험 진행 중</string>
+    <string name="blackflow_start_run_target_run">목표 탐험을 시작하고 시작 보상 확인을 기다리는 중</string>
+    <string name="blackflow_start_run_reward_missed">원하는 시작 보상이 없어 준비 탐험을 다시 진행합니다</string>
+    <string name="blackflow_start_run_completed">시작 조건을 충족하여 이번 탐험을 유지한 채 나왔습니다</string>
+    <string name="blackflow_start_run_reward_recognition_failed">시작 보상을 인식하지 못하여 작업을 중지했습니다</string>
+    <string name="blackflow_start_run_reward_page_missing">시작 보상 화면을 찾지 못하여 작업을 중지했습니다</string>
+    <string name="blackflow_start_run_reward_unrecognized">지원 선택 화면에서 인식하지 못한 보상이 있어 해당 화면에 머문 채 작업을 중지했습니다</string>
+    <string name="blackflow_start_run_rewards_seen">이번 지원 화면: %1$s</string>
+    <string name="blackflow_outcome_start_run_prepared">탐험 준비 완료</string>
+    <string name="blackflow_termination_start_run_prepared">3구역에 도달했습니다. 다음 탐험은 지정한 난이도와 분대로 시작합니다</string>
     <string name="blackflow_inventory_cleanup_started">부품 상자 과부하, 정리 시작</string>
     <string name="blackflow_inventory_cleanup_discarded">버린 부품: %1$s</string>
     <string name="blackflow_inventory_cleanup_completed">부품 상자 정리 완료</string>
@@ -2687,9 +2751,6 @@
     <string name="blackflow_scrap_trade_aborted_sell_back_search_failed">신비한 상인에서 되팔 「%1$s」을(를) 찾지 못해 거래를 중단하고 나갑니다</string>
     <string name="blackflow_scrap_trade_aborted_sale_failed">신비한 상인에서 「%1$s」 판매가 확인되지 않아 거래를 중단하고 나갑니다</string>
     <string name="blackflow_scrap_trade_aborted_unknown">신비한 상인 거래 중 이상이 발생해 거래를 중단하고 나갑니다</string>
-    <string name="blackflow_decision_probe_unknown_node">경로상 가장 가까운 미분류 노드 탐색</string>
-    <string name="blackflow_decision_policy_order">전략에 설정된 우선순위대로 선택</string>
-    <string name="blackflow_decision_detail_unknown">판단 근거를 알 수 없음</string>
     <string name="blackflow_milestone_unknown">알 수 없는 단계 목표</string>
     <string name="blackflow_milestone_status_available">실행 가능</string>
     <string name="blackflow_milestone_status_satisfied">완료됨</string>
@@ -2721,21 +2782,6 @@
     <string name="blackflow_node_evacuate">철수 지점</string>
     <string name="blackflow_node_teleporter">전송 지점</string>
     <string name="blackflow_node_other">기타 노드</string>
-    <string name="blackflow_rule_avoid_empty_scrap_shop">오리지늄각뿔·종자·판매 가능한 부품이 없을 때는 신비한 상인을 피함</string>
-    <string name="blackflow_rule_preserve_white_model_bird">하얀 새 모형을 보존하고 가공품 이동이 필요한 선택적 전투를 피함</string>
-    <string name="blackflow_rule_trigger_boss_processing_bonus">가공품을 사용해 보스 노드에 진입해 전투 보너스 발동</string>
-    <string name="blackflow_rule_exit_when_required">성장이 끝났거나 안전 여유가 부족해 출구로 이동</string>
-    <string name="blackflow_rule_ending1_avoid_late_combat">기본 2차 정예화 편성이 갖춰져 불필요한 전투를 피함</string>
-    <string name="blackflow_rule_baby_use_processing_item_for_floor1_shop">1구역에서 가공품을 사용해 교활한 상인으로 이동</string>
-    <string name="blackflow_rule_baby_walk_after_floor1_shop">1구역은 교활한 상인 확인 후 도보로 탐색하고 가공품을 보존</string>
-    <string name="blackflow_rule_baby_delay_exit_before_floor3">3구역 전까지 성장 여지가 있어 출구 이동을 보류</string>
-    <string name="blackflow_rule_baby_exit_before_floor3_when_required">3구역 전에 성장이 끝났거나 안전 여유가 부족해 출구로 이동</string>
-    <string name="blackflow_rule_baby_avoid_combat">다른 안전한 선택지가 있는 동안은 작전 노드를 피함</string>
-    <string name="blackflow_rule_light_reveals_three">깃털 조망점에서 미확인 대형 노드 3개 이상을 밝힐 것으로 예상</string>
-    <string name="blackflow_rule_investment_keep_short_walk">상점이 2칸 이내면 도보 유지</string>
-    <string name="blackflow_rule_investment_use_m11_for_direct_shop">짧은 도보 경로가 없으면 구조적 원리로 상점에 직행</string>
-    <string name="blackflow_rule_burn_require_shop_when_flight_guaranteed">2차 정예화 메커니스트가 확정되는 시작 구성에서는 1구역 경로가 상점을 지나야 함</string>
-    <string name="blackflow_rule_burn_require_flight_on_floor2">이 시작 구성에서는 2구역을 구조적 원리로 출구까지 직행</string>
     <string name="blackflow_milestone_ending1_floor1_battles">1구역은 작전 우선</string>
     <string name="blackflow_milestone_ending1_floor1_hidden">1구역은 미지의 괴이를 최대한 탐색</string>
     <string name="blackflow_milestone_ending1_floor1_scrap_shop">1구역은 지나가는 길에 신비한 상인과 거래</string>
@@ -2940,4 +2986,20 @@
     <string name="oper_progress_result_recognition">인식 또는 조작 실패</string>
     <string name="oper_progress_log_detail">%1$s: %2$s%3$s</string>
     <string name="oper_progress_log_summary">오퍼레이터 육성 이번 라운드 결과: 성공 %1$d, 실패 %2$d, 건너뜀 %3$d (마스터리 시작도 성공으로 집계)</string>
+    <string name="game_package_edit">사용자 지정 게임 패키지명</string>
+    <string name="game_package_edit_hint">packageName에서 현재 클라이언트의 항목만 수정하세요. 잘못된 패키지명을 입력하면 게임을 실행하거나 감지하지 못할 수 있습니다. 저장 후 MaaMeow를 다시 시작하세요.</string>
+    <string name="game_package_settings_desc">사용자 지정 게임 패키지명을 사용합니다. 끄면 기본 리소스 설정을 사용하며, 저장한 사용자 지정 값은 유지됩니다.</string>
+    <string name="game_package_file_hint">패키지명은 config_custom_package.json에 저장됩니다. 기존 리소스 설정 파일은 유지됩니다.</string>
+    <string name="game_package_saved">설정을 저장했습니다. MaaMeow를 다시 시작하세요.</string>
+    <string name="game_package_invalid_json">packageName에 현재 클라이언트의 유효한 패키지명 문자열 하나만 입력하세요</string>
+    <string name="resource_editor_busy">설정을 편집하려면 먼저 작업을 중지하세요</string>
+    <string name="resource_editor_load_failed">설정을 읽을 수 없습니다. 리소스를 초기화하고 파일 권한을 확인하세요.</string>
+    <string name="resource_editor_no_file">리소스 설정을 찾을 수 없습니다</string>
+    <string name="resource_editor_discard_title">저장하지 않은 변경 사항을 버릴까요?</string>
+    <string name="resource_editor_discard_message">파일을 전환하면 현재 파일에서 저장하지 않은 변경 사항이 사라집니다.</string>
+    <string name="game_package_edit_json">패키지명 JSON 편집</string>
+    <string name="game_package_reset">기본 패키지명 복원</string>
+    <string name="game_package_reset_message">현재 클라이언트에 저장된 패키지명을 삭제하고 기본 리소스의 패키지명을 사용할까요? 다른 클라이언트의 설정은 유지됩니다. 저장하지 않은 변경 사항은 사라집니다.</string>
+    <string name="game_package_default">기본 패키지명: %1$s</string>
+    <string name="game_package_toggle_failed">사용자 지정 패키지명 설정을 변경할 수 없습니다. 작업을 중지하고 리소스 파일을 확인하세요.</string>
 </resources>

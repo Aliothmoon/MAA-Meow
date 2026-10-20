@@ -35,7 +35,9 @@ enum class OnboardingTarget {
     // 底栏
     TAB_SETTINGS,
 
-    // 设置页：常见问题 + 问题反馈两行
+    // 设置页
+    RUNTIME_BACKEND,
+    // 常见问题 + 问题反馈两行
     ABOUT_HELP,
 }
 
@@ -55,6 +57,12 @@ class OnboardingState(pending: Boolean = false) {
     var stepIndex by mutableIntStateOf(0)
         private set
 
+    var skippable by mutableStateOf(true)
+        private set
+
+    private var cooldown = false
+    private val cooledDown = mutableSetOf<Int>()
+
     /** 待展示或展示中：启动弹窗让路；看 [pending] 才能首帧压住不闪 */
     val blocksStartupDialogs: Boolean get() = pending || active
 
@@ -64,11 +72,26 @@ class OnboardingState(pending: Boolean = false) {
 
     val bounds = mutableStateMapOf<OnboardingTarget, Rect>()
 
-    /** 跳过或看完都结束于 [active] 变 false，持久化由观察方处理 */
-    fun start() {
+    /**
+     * 跳过或看完都结束于 [active] 变 false，持久化由观察方处理
+     *
+     * @param cooldown 关键步骤的「下一步」先冷却几秒
+     */
+    fun start(skippable: Boolean = true, cooldown: Boolean = false) {
         if (active) return
+        this.skippable = skippable
+        this.cooldown = cooldown
+        cooledDown.clear()
         stepIndex = 0
         active = true
+    }
+
+    /** 本轮冷却过的步骤回退再来不重复 */
+    fun needsCooldown(index: Int): Boolean =
+        cooldown && steps[index].cooldown && index !in cooledDown
+
+    fun markCooledDown(index: Int) {
+        cooledDown += index
     }
 
     fun next() {

@@ -38,6 +38,10 @@ class ScheduleAlarmManager(
 
         private const val FIRED_PREFS = "schedule_fired"
 
+        /** 不能并入 FIRED_PREFS：重排会清掉非策略 id 的键 */
+        private const val ALARM_PREFS = "schedule_alarm"
+        private const val KEY_USE_ALARM_CLOCK = "use_alarm_clock"
+
         /**
          * 重排起点：上次触发点仍在「未来」说明时钟往回拨过，从它之后排，免得同一时段再跑一遍
          * 回拨超过一个周期（固定时间按 24 小时）视为时钟纠错，回到按当前时间算
@@ -59,6 +63,15 @@ class ScheduleAlarmManager(
     private val firedPrefs: SharedPreferences by lazy {
         context.getSharedPreferences(FIRED_PREFS, Context.MODE_PRIVATE)
     }
+
+    private val alarmPrefs: SharedPreferences by lazy {
+        context.getSharedPreferences(ALARM_PREFS, Context.MODE_PRIVATE)
+    }
+
+    /** 不放 DataStore：开机重排时它可能还没读完 */
+    var useAlarmClock: Boolean
+        get() = alarmPrefs.getBoolean(KEY_USE_ALARM_CLOCK, true)
+        set(value) = alarmPrefs.edit { putBoolean(KEY_USE_ALARM_CLOCK, value) }
 
     /**
      * 按设定时间注册下一个闹钟，后台倒计时在触发后开始
@@ -111,10 +124,7 @@ class ScheduleAlarmManager(
             return false
         }
         return try {
-            alarmManager.setAlarmClock(
-                AlarmManager.AlarmClockInfo(System.currentTimeMillis() + RESYNC_DELAY_MS, showIntent),
-                buildResyncPendingIntent(),
-            )
+            setExact(System.currentTimeMillis() + RESYNC_DELAY_MS, buildResyncPendingIntent())
             Timber.i("已注册 %d 分钟后重排闹钟", RESYNC_DELAY_MS / 60_000L)
             true
         } catch (e: SecurityException) {
@@ -141,16 +151,21 @@ class ScheduleAlarmManager(
             return false
         }
         return try {
-            // 强制脱 Doze 准时投递，代价是状态栏常驻闹钟图标
-            alarmManager.setAlarmClock(
-                AlarmManager.AlarmClockInfo(triggerMs, showIntent),
-                buildPendingIntent(strategyId, scheduledTimeMs, retryCount),
-            )
+            setExact(triggerMs, buildPendingIntent(strategyId, scheduledTimeMs, retryCount))
             true
         } catch (e: SecurityException) {
             // 系统可能在检查与注册之间撤销权限
             Timber.w(e, "策略 [%s] 注册失败：精确闹钟权限已撤销", strategyId)
             false
+        }
+    }
+
+    private fun setExact(triggerMs: Long, operation: PendingIntent) {
+        if (useAlarmClock) {
+            // 强制脱 Doze 准时投递，代价是状态栏常驻闹钟图标
+            alarmManager.setAlarmClock(AlarmManager.AlarmClockInfo(triggerMs, showIntent), operation)
+        } else {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMs, operation)
         }
     }
 

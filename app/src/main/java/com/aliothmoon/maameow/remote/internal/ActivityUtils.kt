@@ -8,12 +8,13 @@ import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
 import android.view.Display
+import com.aliothmoon.maameow.constant.AndroidVersions
 import com.aliothmoon.maameow.remote.internal.ActivityUtils.DISPLAY_NO_TASK
 import com.aliothmoon.maameow.third.FakeContext
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
 
-@SuppressLint("BlockedPrivateApi")
+@SuppressLint("BlockedPrivateApi", "PrivateApi", "DiscouragedPrivateApi")
 object ActivityUtils {
 
     // android.app.WindowConfiguration.WINDOWING_MODE_FULLSCREEN
@@ -268,6 +269,55 @@ object ActivityUtils {
         }
     }
 
+    @Volatile
+    private var recentsExcludedTaskId: Int? = null
+
+    /**
+     * 把虚拟屏上的 [packageName] 任务强制排除出最近任务；每个任务只试一次，可随巡检反复调用
+     *
+     * API 37 起 EXCLUDE_FROM_RECENTS 的任务只要可见就进最近任务，不再要求在主屏，
+     * 虚拟屏上的游戏因此常驻最近任务；任务级强制排除不受可见性影响
+     */
+    @JvmStatic
+    fun excludeFromRecents(packageName: String, displayId: Int) {
+        if (Build.VERSION.SDK_INT < AndroidVersions.API_37_ANDROID_17) return
+        val apply = applyForceExcludedFromRecents ?: return
+        val task = runCatching { findRecentTask(packageName) }.getOrNull() ?: return
+        if (getTaskDisplayId(task) != displayId || task.taskId == recentsExcludedTaskId) return
+        recentsExcludedTaskId = task.taskId
+        runCatching {
+            apply(taskTokenField!!.get(task)!!)
+            Ln.i("excludeFromRecents: task ${task.taskId} of $packageName excluded")
+        }.onFailure { Ln.w("excludeFromRecents: failed for task ${task.taskId}", it) }
+    }
+
+    private val taskTokenField by lazy {
+        runCatching { ActivityManager.RunningTaskInfo::class.java.getField("token") }
+            .onFailure { Ln.w("taskTokenField: reflection failed", it) }.getOrNull()
+    }
+
+    // WindowContainerTransaction#setTaskForceExcludedFromRecents 经 IWindowOrganizerController 提交，需 MANAGE_ACTIVITY_TASKS
+    private val applyForceExcludedFromRecents: ((Any) -> Unit)? by lazy {
+        runCatching {
+            if (taskTokenField == null) return@runCatching null
+            val atm = activityTaskManager ?: return@runCatching null
+            val organizer = atm.javaClass.getMethod("getWindowOrganizerController").invoke(atm)!!
+            val wctClass = Class.forName("android.window.WindowContainerTransaction")
+            val setExcluded = wctClass.getMethod(
+                "setTaskForceExcludedFromRecents",
+                Class.forName("android.window.WindowContainerToken"),
+                Boolean::class.javaPrimitiveType,
+            )
+            val applyTransaction = organizer.javaClass.getMethod("applyTransaction", wctClass)
+            val block: (Any) -> Unit = { token ->
+                val wct = wctClass.getConstructor().newInstance()
+                setExcluded.invoke(wct, token, true)
+                applyTransaction.invoke(organizer, wct)
+            }
+            block
+        }.onFailure { Ln.w("applyForceExcludedFromRecents: reflection failed", it) }.getOrNull()
+    }
+
     private fun moveAppTaskToDisplay(packageName: String, displayId: Int): Boolean {
         val taskId = findTaskId(packageName) ?: run {
             Ln.w("moveAppTaskToDisplay: no running task of $packageName")
@@ -288,7 +338,7 @@ object ActivityUtils {
             val binder = Class.forName("android.os.ServiceManager")
                 .getDeclaredMethod("getService", String::class.java)
                 .invoke(null, "activity_task")
-            Class.forName("android.app.IActivityTaskManager\$Stub")
+            Class.forName($$"android.app.IActivityTaskManager$Stub")
                 .getMethod("asInterface", IBinder::class.java)
                 .invoke(null, binder)
         }.onFailure { Ln.w("activityTaskManager: reflection failed", it) }.getOrNull()

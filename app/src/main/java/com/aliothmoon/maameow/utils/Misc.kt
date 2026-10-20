@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.Process
 import android.provider.OpenableColumns
 import android.util.DisplayMetrics
@@ -11,12 +13,13 @@ import android.view.WindowManager
 import androidx.core.net.toUri
 import timber.log.Timber
 import kotlin.math.abs
-import kotlin.system.exitProcess
 
 object Misc {
 
     /** 16:9 容差（相对目标比例），与首页悬浮层启动校验一致 */
     private const val ASPECT_16X9_TOLERANCE = 0.05f
+
+    private const val RESTART_FALLBACK_KILL_MS = 3_000L
 
     fun getScreenSize(context: Context): Pair<Int, Int> {
         val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -98,12 +101,17 @@ object Misc {
         intent?.let { context.startActivity(it) }
     }
 
+    // RestartActivity 没起来时兜底自杀
     fun restartApp(context: Context) {
-        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-        intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-        intent?.let { context.startActivity(it) }
-        Process.killProcess(Process.myPid())
-        exitProcess(0)
+        context.startActivity(
+            Intent(context, RestartActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .putExtra(RestartActivity.EXTRA_MAIN_PID, Process.myPid())
+        )
+        Handler(Looper.getMainLooper()).postDelayed(
+            { Process.killProcess(Process.myPid()) },
+            RESTART_FALLBACK_KILL_MS
+        )
     }
 
     fun queryFileName(context: Context, uri: Uri): String? {

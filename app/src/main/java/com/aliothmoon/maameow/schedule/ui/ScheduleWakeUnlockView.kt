@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -50,6 +52,7 @@ import com.aliothmoon.maameow.domain.models.UnlockStep
 import com.aliothmoon.maameow.presentation.components.CollapsibleSection
 import com.aliothmoon.maameow.presentation.components.ListItemDivider
 import com.aliothmoon.maameow.presentation.components.LocalSettingRowBleed
+import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.SettingsGroupCard
 import com.aliothmoon.maameow.presentation.components.horizontalBleed
@@ -57,6 +60,7 @@ import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.search.ProvideSettingSearch
 import com.aliothmoon.maameow.presentation.search.SettingSearchTarget
 import com.aliothmoon.maameow.presentation.view.settings.SettingSecretField
+import com.aliothmoon.maameow.presentation.view.settings.SettingSwitchItem
 import com.aliothmoon.maameow.theme.LocalReduceMotion
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.theme.MaaMotion
@@ -73,6 +77,7 @@ fun ScheduleWakeUnlockView(
     val wakeTestState by viewModel.wakeTestState.collectAsStateWithLifecycle()
     val unlockGesture by viewModel.unlockGesture.collectAsStateWithLifecycle()
     val gestureRecordState by viewModel.gestureRecordState.collectAsStateWithLifecycle()
+    val useAlarmClock by viewModel.useAlarmClock.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     wakeTestState?.let { state ->
@@ -178,6 +183,20 @@ fun ScheduleWakeUnlockView(
                                     gestureRecordState.isRecording,
                             onTest = { viewModel.runWakeTest() },
                         )
+                    }
+                    // 屏外 item 不组合，拆开搜索锚点会落空
+                    Spacer(Modifier.height(MaaDesignTokens.Spacing.sectionGap))
+                    SectionHeader(stringResource(R.string.schedule_alarm_section))
+                    SettingsGroupCard {
+                        SettingSearchTarget(R.string.schedule_use_alarm_clock) {
+                            SettingSwitchItem(
+                                title = stringResource(R.string.schedule_use_alarm_clock),
+                                description = stringResource(R.string.schedule_use_alarm_clock_desc),
+                                contentColor = contentColor,
+                                checked = useAlarmClock,
+                                onCheckedChange = { viewModel.setUseAlarmClock(it) },
+                            )
+                        }
                     }
                 }
             }

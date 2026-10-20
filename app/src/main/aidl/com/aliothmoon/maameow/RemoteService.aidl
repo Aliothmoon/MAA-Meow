@@ -31,7 +31,8 @@ interface RemoteService {
 
     PermissionStateInfo grantPermissions(in PermissionGrantRequest request) = 11;
 
-    void setMonitorSurface(in Surface surface) = 12;
+    // 主线程不等远端，同一 binder 上的 oneway 按序送达
+    oneway void setMonitorSurface(in Surface surface) = 12;
 
     boolean setVirtualDisplayMode(int mode) = 13;
 
@@ -134,6 +135,9 @@ interface RemoteService {
     // 系统记下的进程退出（含被杀、崩溃），只返回不早于 sinceMs 的；查别的包靠 shell 自带的 DUMP 权限
     List<ProcessExitRecord> getProcessExitRecords(String packageName, long sinceMs, int maxNum) = 56;
 
+    // 后台虚拟屏的 flag 档位，0 为完整权限，没建返回 -1
+    int getVirtualDisplayFlagTier() = 57;
+
     // 清理独立 Core 目录中未列入 retainedPaths 的已知 config.json（包含生成的包名资源），路径相对 Core 根目录
-    boolean removeStaleCoreResourceConfigs(in List<String> retainedPaths) = 57;
+    boolean removeStaleCoreResourceConfigs(in List<String> retainedPaths) = 58;
 }

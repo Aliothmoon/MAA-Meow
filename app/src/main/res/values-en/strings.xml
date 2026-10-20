@@ -23,6 +23,7 @@
     <string name="settings_export_success">Configuration exported successfully</string>
     <string name="settings_export_failed">Export failed: %1$s</string>
     <string name="settings_import_failed">Import failed: %1$s</string>
+    <string name="settings_import_too_large">Import failed: file exceeds %1$d MB. Make sure you selected a configuration backup</string>
     <string name="settings_title">Settings</string>
     <string name="settings_search_hint">Search settings</string>
     <string name="settings_search_clear">Clear search</string>
@@ -35,6 +36,7 @@
     <string name="search_keywords_resolution">resolution virtual display 1080 720 quality</string>
     <string name="search_keywords_pip">picture in picture pip floating window</string>
     <string name="search_keywords_wake_unlock">lock screen unlock wake password pin gesture schedule</string>
+    <string name="search_keywords_alarm_clock">do not disturb dnd alarm schedule</string>
     <string name="search_keywords_app_blacklist">blacklist block skip foreground game interrupt schedule</string>
     <string name="search_keywords_mute">mute sound audio volume</string>
     <string name="search_keywords_run_duration">duration time limit timeout runtime</string>
@@ -865,7 +867,7 @@
     <string name="panel_autobattle_oper_elite_1">E1</string>
     <string name="panel_autobattle_oper_elite_2">E2</string>
     <string name="panel_autobattle_oper_promotion">%1$s %2$d</string>
-    <string name="panel_autobattle_oper_skill">S%1$d</string>
+    <string name="panel_autobattle_oper_skill">Skill %1$d</string>
     <string name="panel_autobattle_oper_no_skill">No skill</string>
     <string name="panel_autobattle_oper_skill_level">Lv.%1$d</string>
     <string name="panel_autobattle_oper_mastery_1">M1</string>
@@ -883,6 +885,12 @@
     <string name="panel_autobattle_support_fill_gaps">When Needed</string>
     <string name="panel_autobattle_support_random">Random</string>
     <string name="panel_autobattle_add_trust">Add low-trust operators</string>
+    <string name="panel_autobattle_user_additional">Add custom operators</string>
+    <string name="panel_autobattle_user_additional_tip">After auto formation, these operators are added in list order. Ones already in the squad are skipped, and nothing more is added once the squad is full. Drag the handle on the left to reorder. With skill set to Default, the in-game skill selection is kept</string>
+    <string name="panel_autobattle_user_additional_search">Search operators to add</string>
+    <string name="panel_autobattle_user_additional_no_match">No matching operators</string>
+    <string name="panel_autobattle_user_additional_skill">Skill</string>
+    <string name="panel_autobattle_user_additional_skill_default">Default</string>
     <string name="panel_autobattle_operbox_assist">Use Yituliu data to assist formation</string>
     <string name="panel_autobattle_operbox_assist_tip">Before auto formation, pre-match the squad against your Yituliu operator data (including skills and modules); the run won\'t start if it can\'t be filled\nFirst enter a Yituliu token in Settings → Third-party services, turn on \"Fetch operator data from Yituliu\" and sync once</string>
     <string name="panel_autobattle_operbox_sync">Sync</string>
@@ -1532,7 +1540,6 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="panel_roguelike_mode_exploration">Deep Investigation</string>
     <string name="panel_roguelike_mode_clp_pds">Collapse Paradigm</string>
     <string name="panel_roguelike_mode_find_playtime">Playtime Node</string>
-    <string name="panel_roguelike_mode_blackflow_baby_animal">Swaddled Animals</string>
     <string name="panel_roguelike_mode_desc_exp">Gain Experience Points, clear as many nodes as possible</string>
     <string name="panel_roguelike_mode_desc_investment">Invests ingots, exits automatically after investment completes</string>
     <string name="panel_roguelike_mode_desc_collectible">Grind to obtain Hot Water Kettle or an Elite 2 starting operator</string>
@@ -1541,12 +1548,58 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="panel_roguelike_mode_desc_clp_pds">Farm collapse paradigms, restart immediately after encountering a non-rare collapse paradigm</string>
     <string name="panel_roguelike_mode_desc_find_playtime">Farm Playtime nodes, enter the cave on the first floor, restart if target node not found</string>
     <string name="panel_roguelike_mode_desc_exp_blackflow">Farm levels, quickly reach Floor 3</string>
-    <string name="panel_roguelike_mode_desc_blackflow_baby_animal">Farm swaddled animals, cultivating the selected species</string>
-    <string name="panel_roguelike_blackflow_cultivation_target">Target swaddled animal</string>
     <string name="panel_roguelike_blackflow_target_cat">Swaddled Cat</string>
     <string name="panel_roguelike_blackflow_target_feathered_serpent">Swaddled Feathered Serpent</string>
     <string name="panel_roguelike_blackflow_target_dog">Swaddled Dog</string>
     <string name="panel_roguelike_blackflow_target_cerberus">Swaddled Cerberus</string>
+    <string name="panel_roguelike_mode_blackflow_start_run">Start Rewards</string>
+    <string name="panel_roguelike_mode_desc_blackflow_start_run">Farm starting rewards, exit and keep the run once a target is met</string>
+    <string name="panel_roguelike_blackflow_fast_flight">Fly to Floor 3 quickly</string>
+    <string name="panel_roguelike_blackflow_flight_requirement">Requires a Mechanic with talent fully unlocked</string>
+    <string name="panel_roguelike_blackflow_flight_tip">Always starts with Special Squad, Slow and Steady Wins the Race and your own Mechanic, recruits only the Mechanic, flies straight from Floor 2 to Floor 3 with the built-in Structural Principle, and restarts on arrival.\nThe squad, roles and starting operator in General settings cannot be edited while this is checked; unchecking it makes them editable again. When unchecked, the run plays toward the target ending and does not fly even if the starting setup matches this combination.\nDo not check this if your Mechanic\'s talent is not fully unlocked, as the flight will fail.</string>
+    <string name="panel_roguelike_blackflow_prep_flight_tip">The preparation run always starts with Special Squad, Slow and Steady Wins the Race and your own Mechanic, recruits only the Mechanic, and flies straight from Floor 2 to Floor 3 with the built-in Structural Principle.\nWhen checked, the preparation run squad shows Special Squad and cannot be changed; unchecking restores the previous setting. The roles and starting operator in General settings are not affected.\nDo not check this if your Mechanic\'s talent is not fully unlocked, as the flight will fail.</string>
+    <string name="panel_roguelike_blackflow_fast_flight_lock_tip">｢Fly to Floor 3 quickly｣ is checked in Advanced; squad, roles and starting operator are fixed to Special Squad, Slow and Steady Wins the Race and Mechanic until it is unchecked</string>
+    <string name="panel_roguelike_blackflow_ending_flight_tip">The ending can only be selected when ｢Fly to Floor 3 quickly｣ is unchecked</string>
+    <string name="panel_roguelike_blackflow_ending">Target Ending</string>
+    <string name="panel_roguelike_blackflow_ending_1">Ending 1 · Forced Restart</string>
+    <string name="panel_roguelike_blackflow_ending_2">Ending 2 · Dimensional Reconstruction</string>
+    <string name="panel_roguelike_blackflow_ending_3">Ending 3 · Entanglement, Reconciliation</string>
+    <string name="panel_roguelike_blackflow_start_animal_1">Swaddled Animal · 1st</string>
+    <string name="panel_roguelike_blackflow_start_animal_2">Swaddled Animal · 2nd</string>
+    <string name="panel_roguelike_blackflow_start_animal_none">No requirement</string>
+    <string name="panel_roguelike_blackflow_animal_tip_cat">Gain 5 extra Originium Ingots at the start of the next run.</string>
+    <string name="panel_roguelike_blackflow_animal_tip_dog">Gain 1 extra Hope at the start of the next run.</string>
+    <string name="panel_roguelike_blackflow_animal_tip_cerberus">Grants one extra support selection in the next run. The run in which it is cultivated must pass through at least two floors.</string>
+    <string name="panel_roguelike_blackflow_animal_tip_feathered_serpent">Adds a random blue swaddled creature to the support options in the next run. The run in which it is cultivated must pass through at least two floors.</string>
+    <string name="panel_roguelike_blackflow_start_rewards">Desired Rewards</string>
+    <string name="panel_roguelike_blackflow_start_rewards_tip">Everything checked in Desired Rewards and Feathered Serpent Rewards counts as a candidate; the task stops as soon as any one of them appears at the start</string>
+    <string name="panel_roguelike_blackflow_serpent_rewards">Feathered Serpent Rewards</string>
+    <string name="panel_roguelike_blackflow_serpent_rewards_inactive">Only applies when Swaddled Feathered Serpent is selected</string>
+    <string name="panel_roguelike_blackflow_prep_squad">Preparation Run Squad</string>
+    <string name="panel_roguelike_blackflow_reward_unnumbered_item">Unnumbered Item</string>
+    <string name="panel_roguelike_blackflow_reward_unnumbered_item_tip">Gain 1 normal collectible.</string>
+    <string name="panel_roguelike_blackflow_reward_survey_advance">Survey Advance</string>
+    <string name="panel_roguelike_blackflow_reward_survey_advance_tip">Gain 8 Originium Ingots.</string>
+    <string name="panel_roguelike_blackflow_reward_space_lease">Space Lease</string>
+    <string name="panel_roguelike_blackflow_reward_space_lease_tip">Spend 6 Originium Ingots; parts box capacity +2.</string>
+    <string name="panel_roguelike_blackflow_reward_regression_compensation">Regression Compensation</string>
+    <string name="panel_roguelike_blackflow_reward_regression_compensation_tip">Spend 2 max Life Points; gain 1 random collectible.</string>
+    <string name="panel_roguelike_blackflow_reward_forest_ride">Forest Ride</string>
+    <string name="panel_roguelike_blackflow_reward_forest_ride_tip">Gain 1 processing item.</string>
+    <string name="panel_roguelike_blackflow_reward_nest_parasitism">Brood Parasitism</string>
+    <string name="panel_roguelike_blackflow_reward_nest_parasitism_tip">Parts box capacity -1; gain 1 rare collectible.</string>
+    <string name="panel_roguelike_blackflow_reward_pegasus">Swaddled Pegasus</string>
+    <string name="panel_roguelike_blackflow_reward_pegasus_tip">Gain 1 extra AP on each floor.</string>
+    <string name="panel_roguelike_blackflow_reward_hippogriff">Swaddled Hippogriff</string>
+    <string name="panel_roguelike_blackflow_reward_hippogriff_tip">Start with 1 extra Hope; the first 2 floors are fully revealed from the start.</string>
+    <string name="panel_roguelike_blackflow_reward_dragon">Swaddled Dragon</string>
+    <string name="panel_roguelike_blackflow_reward_dragon_tip" formatted="false">All enemies on the first 2 floors have -50% max HP.</string>
+    <string name="panel_roguelike_blackflow_reward_hydra">Swaddled Hydra</string>
+    <string name="panel_roguelike_blackflow_reward_hydra_tip" formatted="false">All enemies gain +30% ATK and HP; each time a new floor is entered, friendly units gain +10% ATK and HP.</string>
+    <string name="panel_roguelike_blackflow_reward_bai_ze">Swaddled Bai Ze</string>
+    <string name="panel_roguelike_blackflow_reward_bai_ze_tip">Increases the chance of temporary recruitment operators appearing.</string>
+    <string name="panel_roguelike_blackflow_reward_golden_crow">Swaddled Golden Crow</string>
+    <string name="panel_roguelike_blackflow_reward_golden_crow_tip">Gain 3 random collectibles upon entering Floor 3.</string>
     <string name="panel_roguelike_role_first_move_advantage">First Move Advantage (Vanguard, Sniper, Specialist)</string>
     <string name="panel_roguelike_role_slow_and_steady">Slow and Steady Wins the Race (Defender, Caster, Sniper)</string>
     <string name="panel_roguelike_role_overcoming_weaknesses">Overcoming Your Weaknesses (Guard, Supporter, Medic)</string>
@@ -1607,6 +1660,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="panel_roguelike_squad_pioneer">Pioneer Squad</string>
     <string name="panel_roguelike_squad_multilateral_trade">Multilateral Trade Squad</string>
     <string name="panel_roguelike_squad_geological_survey">Geological Survey Squad</string>
+    <string name="panel_roguelike_squad_united_front">United Front Squad</string>
+    <string name="panel_roguelike_squad_traversal">Traversal Squad</string>
     <!-- i18n: shared helpers -->
     <string name="common_enumeration_separator">, </string>
 
@@ -1842,6 +1897,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="task_start_eye_protection_warning_log">Eye comfort / night mode is active (%1$s), which may affect normal image recognition. Please turn it off manually</string>
     <string name="task_start_adb_input_restricted_warning_log">“USB debugging (Security settings)” is off, so the system blocks touch input. Please enable it in Developer options (reboot if it does not take effect)</string>
     <string name="task_start_smart_resolution_warning_log">System “Smart resolution” is enabled, which breaks recognition in background mode. Please turn it off manually in the system display settings</string>
+    <string name="task_start_virtual_display_compat_warning_log">This system lacks the permissions a background virtual display needs, so it was created in compatibility mode: tasks pause while the screen is off or locked, and the main screen may lose input focus during the run</string>
 
     <!-- i18n: toolbox / mini game -->
     <string name="toolbox_status_starting">Starting…</string>
@@ -1860,6 +1916,9 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_trigger_log_title">Trigger log</string>
     <string name="schedule_wake_unlock_title">Wake &amp; Unlock</string>
     <string name="schedule_wake_unlock_desc">When a scheduled task fires while the device is locked, it unlocks using the method below. Manually started tasks are not affected.</string>
+    <string name="schedule_alarm_section">Schedule alarm</string>
+    <string name="schedule_use_alarm_clock">Register schedules as alarm clock</string>
+    <string name="schedule_use_alarm_clock_desc">May affect Do Not Disturb. When off, schedules may fire less punctually.</string>
     <string name="schedule_app_blacklist_title">App Blacklist</string>
     <string name="schedule_app_blacklist_desc">Background mode only. If a checked app is in use when a schedule fires, that run is skipped and you are notified</string>
     <string name="schedule_app_blacklist_foreground_inactive">Run mode is foreground, so the blacklist does nothing</string>
@@ -2190,8 +2249,9 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="onboarding_next">Next</string>
     <string name="onboarding_done">Get Started</string>
     <string name="onboarding_step_counter">%1$d / %2$d</string>
+    <string name="onboarding_button_countdown">%1$s (%2$d)</string>
     <string name="onboarding_welcome_title">Welcome to MaaMeow</string>
-    <string name="onboarding_welcome_body">An Arknights assistant for Android — daily chores on autopilot.\n\nShizuku or Root is needed for privileges. Take a minute to learn the key areas of the home screen — you can skip at any time.</string>
+    <string name="onboarding_welcome_body">An Arknights assistant for Android — daily chores on autopilot.\n\nShizuku or Root is needed for privileges. Take a minute to learn the key areas of the home screen.</string>
     <string name="onboarding_status_title">Status Overview</string>
     <string name="onboarding_status_body">Shows screen resolution, resource and app versions, and the connection state of the service.\nTasks can only start properly once the service is connected.</string>
     <string name="onboarding_run_mode_title">Run Mode</string>
@@ -2214,6 +2274,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="onboarding_schedule_trigger_log_body">Schedule didn\'t run? Check here for the result and reason of every trigger.</string>
     <string name="onboarding_tab_settings_title">Settings &amp; Help</string>
     <string name="onboarding_tab_settings_body">Announcements, changelog, log export and the QQ group all live in Settings.\nYou can replay this walkthrough any time from About.</string>
+    <string name="onboarding_runtime_backend_title">Shizuku / Root</string>
+    <string name="onboarding_runtime_backend_body">Privileges come through Shizuku by default. On a rooted device, switch to Root under Runtime Environment → Startup Mode and Shizuku is no longer needed.\nThe permission item on the home screen changes accordingly; grant access again the new way.</string>
     <string name="onboarding_about_help_title">FAQ &amp; Issue Reports</string>
     <string name="onboarding_about_help_body">When something goes wrong, check the FAQ first; connection failures, stuck tasks and recognition errors already have answers there.\nIf yours isn\'t covered, generate a log package via Logs → Export Log Archive and submit it with reproduction steps through Report an Issue; without logs the cause is hard to pin down.</string>
 
@@ -2594,16 +2656,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="settings_wake_gesture_test_hint">Locks first, then replays the recorded gesture after ~1s</string>
     <!-- BlackFlow roguelike run-log texts -->
     <string name="blackflow_routing_decision">Floor %1$d | AP %2$d→%3$d | %4$s to %5$s | Safety margin %6$d</string>
-    <string name="blackflow_routing_reason">Reason: %1$s | Detail: %2$s</string>
     <string name="blackflow_movement_walk">Walk</string>
     <string name="blackflow_movement_processing">Processing-item move</string>
-    <string name="blackflow_reason_mandatory_goal">Mandatory goal</string>
-    <string name="blackflow_reason_resource_reserve">Resource reserve</string>
-    <string name="blackflow_reason_preferred_goal">Preferred goal</string>
-    <string name="blackflow_reason_development">Development</string>
-    <string name="blackflow_reason_risk_avoidance">Risk avoidance</string>
-    <string name="blackflow_reason_safety_fallback">Safe route</string>
-    <string name="blackflow_reason_tie_break">Tie-break</string>
     <string name="blackflow_warning_map_rebuild_failed">Map rebuild failed</string>
     <string name="blackflow_warning_page_recovery_failed">Unable to return from the node page to the map</string>
     <string name="blackflow_warning_preview_cost_changed">The preview AP cost changed; replanning</string>
@@ -2619,6 +2673,16 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="blackflow_strategy_result">Roguelike strategy ended: %1$s (%2$s)</string>
     <string name="blackflow_strategy_started">BlackFlow strategy started: %1$s</string>
     <string name="blackflow_strategy_unknown">Unknown strategy</string>
+    <string name="blackflow_start_run_preparing">Preparation run in progress</string>
+    <string name="blackflow_start_run_target_run">Target run started; waiting to check starting rewards</string>
+    <string name="blackflow_start_run_reward_missed">No desired starting reward found; preparing another run</string>
+    <string name="blackflow_start_run_completed">Starting conditions met; exited and kept this run</string>
+    <string name="blackflow_start_run_reward_recognition_failed">Starting reward recognition failed; task stopped</string>
+    <string name="blackflow_start_run_reward_page_missing">Starting reward screen not found; task stopped</string>
+    <string name="blackflow_start_run_reward_unrecognized">Some rewards on the support selection screen were not recognized; stopped on that screen and ended the task</string>
+    <string name="blackflow_start_run_rewards_seen">Rewards on this support screen: %1$s</string>
+    <string name="blackflow_outcome_start_run_prepared">Preparation complete</string>
+    <string name="blackflow_termination_start_run_prepared">Floor 3 reached; the next run will use the target difficulty and squad</string>
     <string name="blackflow_inventory_cleanup_started">Parts box overloaded, discarding parts</string>
     <string name="blackflow_inventory_cleanup_discarded">Discarded part: %1$s</string>
     <string name="blackflow_inventory_cleanup_completed">Parts box cleanup completed</string>
@@ -2630,9 +2694,6 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="blackflow_scrap_trade_aborted_sell_back_search_failed">Could not find \"%1$s\" to sell back at the scrap trader; stopping the trade and leaving</string>
     <string name="blackflow_scrap_trade_aborted_sale_failed">Selling \"%1$s\" at the scrap trader was not confirmed; stopping the trade and leaving</string>
     <string name="blackflow_scrap_trade_aborted_unknown">The trade at the scrap trader ran into an error; stopping the trade and leaving</string>
-    <string name="blackflow_decision_probe_unknown_node">Probe the nearest unclassified node on the route</string>
-    <string name="blackflow_decision_policy_order">Selected by the configured policy order</string>
-    <string name="blackflow_decision_detail_unknown">Decision detail unknown</string>
     <string name="blackflow_milestone_unknown">Unknown objective</string>
     <string name="blackflow_milestone_status_available">Available</string>
     <string name="blackflow_milestone_status_satisfied">Completed</string>
@@ -2664,21 +2725,6 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="blackflow_node_evacuate">Evacuate</string>
     <string name="blackflow_node_teleporter">Teleporter</string>
     <string name="blackflow_node_other">Other node</string>
-    <string name="blackflow_rule_avoid_empty_scrap_shop">Avoid the scrap trader when there are no usable resources</string>
-    <string name="blackflow_rule_preserve_white_model_bird">Preserve the White Model Bird by avoiding optional processing-item combat</string>
-    <string name="blackflow_rule_trigger_boss_processing_bonus">Use a processing item to enter the boss node and trigger combat bonuses</string>
-    <string name="blackflow_rule_exit_when_required">Head to the exit when development is exhausted or the safety margin is low</string>
-    <string name="blackflow_rule_ending1_avoid_late_combat">Avoid unnecessary combat after forming a basic Elite 2 squad</string>
-    <string name="blackflow_rule_baby_use_processing_item_for_floor1_shop">Use a processing item to reach the Rogue Trader on floor 1</string>
-    <string name="blackflow_rule_baby_walk_after_floor1_shop">Explore on foot after checking the floor 1 shop and preserve processing items</string>
-    <string name="blackflow_rule_baby_delay_exit_before_floor3">Delay the exit before floor 3 while development opportunities remain</string>
-    <string name="blackflow_rule_baby_exit_before_floor3_when_required">Head to the exit before floor 3 when development is exhausted or the safety margin is low</string>
-    <string name="blackflow_rule_baby_avoid_combat">Avoid battle nodes while another safe option remains</string>
-    <string name="blackflow_rule_light_reveals_three">Prioritize a light node that reveals at least three unknown major nodes</string>
-    <string name="blackflow_rule_investment_keep_short_walk">Stay on foot when the shop is within two tiles</string>
-    <string name="blackflow_rule_investment_use_m11_for_direct_shop">Use Structural Principle to reach the shop directly when no short walk exists</string>
-    <string name="blackflow_rule_burn_require_shop_when_flight_guaranteed">Require the floor 1 route to pass a shop when the starting setup guarantees an Elite 2 mechanic</string>
-    <string name="blackflow_rule_burn_require_flight_on_floor2">Fly directly to the floor 2 exit with Structural Principle under the same setup</string>
     <string name="blackflow_milestone_ending1_floor1_battles">Prioritize battle nodes on floor 1</string>
     <string name="blackflow_milestone_ending1_floor1_hidden">Explore hide invisible nodes on floor 1</string>
     <string name="blackflow_milestone_ending1_floor1_scrap_shop">Trade at the scrap trader on floor 1 when passing by</string>
