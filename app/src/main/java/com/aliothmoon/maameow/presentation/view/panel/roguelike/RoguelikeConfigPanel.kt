@@ -224,7 +224,7 @@ private fun BasicRoguelikeSettings(
             )
 
             // 模式说明 - 紧跟在策略按钮组下方
-            val modeDescription = localizedRoguelikeModeDescription(config.mode, config.theme)
+            val modeDescription = localizedRoguelikeModeDescription(config.mode)
             if (modeDescription.isNotEmpty()) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -241,13 +241,24 @@ private fun BasicRoguelikeSettings(
             }
         }
 
+        // 黑流快速飞三层时分队、职业组、开局干员由固定开局接管，原设置保留，取消勾选后恢复
+        val flightLocked = config.blackFlowExpFlightActive
+        if (flightLocked) {
+            Text(
+                stringResource(R.string.panel_roguelike_blackflow_fast_flight_lock_tip),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
         // 分队选择 - 使用按钮组
         RoguelikeSquadButtonGroup(
             label = stringResource(R.string.panel_roguelike_squad),
             selectedValue = config.squad,
             theme = config.theme,
             mode = config.mode,
-            onValueChange = { onConfigChange(config.copy(squad = it)) }
+            onValueChange = { onConfigChange(config.copy(squad = it)) },
+            enabled = !flightLocked
         )
 
         // 职业阵容 - 使用按钮组（根据主题动态变化）
@@ -255,7 +266,8 @@ private fun BasicRoguelikeSettings(
             label = stringResource(R.string.panel_roguelike_roles),
             selectedValue = config.roles,
             options = localizedRoguelikeRoleOptionsForTheme(config.theme),
-            onValueChange = { onConfigChange(config.copy(roles = it)) }
+            onValueChange = { onConfigChange(config.copy(roles = it)) },
+            enabled = !flightLocked
         )
 
         // 核心干员选择 - 带校验和自动补全
@@ -267,7 +279,8 @@ private fun BasicRoguelikeSettings(
             theme = config.theme,
             resourceDataManager = resourceDataManager,
             modifier = Modifier.fillMaxWidth(),
-            themeTip = localizedRoguelikeThemeTip(config.theme)
+            themeTip = if (flightLocked) null else localizedRoguelikeThemeTip(config.theme),
+            enabled = !flightLocked
         )
 
         // 第 2、3 顺位，开关在高级设置里
@@ -285,7 +298,7 @@ private fun BasicRoguelikeSettings(
                         title = stringResource(
                             R.string.panel_roguelike_starting_core_char, index + 1
                         ),
-                        enabled = config.isStartingOperEditable(index)
+                        enabled = config.isStartingOperEditable(index) && !flightLocked
                     )
                 }
             }

@@ -58,6 +58,10 @@ data class AppSettings(
     @PrefKey(default = "")
     val mutedGamePackage: String = "",
 
+    /** 自定义游戏包名，客户端 → 包名的 JSON，空即全用默认 */
+    @PrefKey(default = "")
+    val gamePackages: String = "",
+
     @PrefKey(default = "false")
     val closeAppOnTaskEnd: String = "false",
 
@@ -144,6 +148,10 @@ data class AppSettings(
     /** 已看过的首启引导版本，小于当前版本则展示 */
     @PrefKey(default = "0")
     val onboardingSeenVersion: String = "0",
+
+    /** 首启强制引导自动弹出过几次，没走完再弹时放开跳过 */
+    @PrefKey(default = "0")
+    val onboardingAutoStarts: String = "0",
 
     @PrefKey(default = "false")
     val forceFullscreenOnVirtualDisplay: String = "false",

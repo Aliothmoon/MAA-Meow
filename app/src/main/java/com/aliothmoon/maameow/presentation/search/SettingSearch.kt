@@ -142,6 +142,7 @@ object SettingSearchIndex {
 
         SettingSearchEntry(R.string.settings_deploy_with_pause, task, R.string.settings_deploy_with_pause_desc),
         SettingSearchEntry(R.string.settings_tasks_override_title, task, R.string.settings_tasks_override_desc),
+        SettingSearchEntry(R.string.settings_game_package_title, task),
 
         SettingSearchEntry(R.string.settings_export_config_title, data, R.string.settings_export_config_desc),
         SettingSearchEntry(R.string.settings_import_config_title, data, R.string.settings_import_config_desc),
@@ -160,6 +161,10 @@ object SettingSearchIndex {
         SettingSearchEntry(
             R.string.settings_wake_unlock_type, wakeUnlockPage,
             R.string.schedule_wake_unlock_desc, R.string.search_keywords_wake_unlock,
+        ),
+        SettingSearchEntry(
+            R.string.schedule_use_alarm_clock, wakeUnlockPage,
+            R.string.schedule_use_alarm_clock_desc, R.string.search_keywords_alarm_clock,
         ),
         SettingSearchEntry(
             R.string.schedule_app_blacklist_title, appBlacklistPage,

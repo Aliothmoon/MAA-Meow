@@ -14,7 +14,15 @@ data class CopilotConfig(
     val loop: Boolean = false,               // 是否循环
     val useFormation: Boolean = false,       // 是否指定编队
     val formationIndex: Int = 1,             // 编队索引 1-4
-    val addUserAdditional: Boolean = false,  // 是否追加自定义干员
-    val userAdditional: String = "",         // 自定义干员 JSON
+    val addUserAdditional: Boolean = false,  // 是否追加自定干员
+    // 旧字段 userAdditional 是字符串，换名免得旧配置解码失败
+    val userAdditionalOpers: List<UserAdditionalOper> = emptyList(),
     val useCopilotList: Boolean = false,     // 战斗列表模式（用户偏好，是否生效见 CopilotUiState.listModeActive）
+)
+
+/** [name] 存简中名；[skill] 0 为游戏内默认技能 */
+@Serializable
+data class UserAdditionalOper(
+    val name: String,
+    val skill: Int = 0,
 )

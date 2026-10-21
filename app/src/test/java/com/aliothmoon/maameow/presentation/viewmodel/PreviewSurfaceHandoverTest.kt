@@ -85,6 +85,63 @@ class PreviewSurfaceHandoverTest {
         assertEquals(0, handover.surfaceEpoch.value)
     }
 
+    private fun recordingService(sent: MutableList<Surface?>): RemoteService = service().also {
+        every { it.setMonitorSurface(any()) } answers { sent += firstArg<Surface?>() }
+    }
+
+    @Test
+    fun `rapid create and destroy reach the service in call order`() {
+        val handover = PreviewSurfaceHandover()
+        val sent = mutableListOf<Surface?>()
+        val service = recordingService(sent)
+        val surfaces = List(50) { mockk<Surface>() }
+
+        surfaces.forEach { surface ->
+            handover.attach(surface, service)
+            assertSame(surface, handover.detach(service))
+        }
+
+        assertEquals(surfaces.flatMap { listOf(it, null) }, sent)
+        assertEquals(0, handover.surfaceEpoch.value)
+    }
+
+    @Test
+    fun `a surface destroyed while disconnected is not sent on reconnect`() {
+        val handover = PreviewSurfaceHandover()
+        val sent = mutableListOf<Surface?>()
+        val service = recordingService(sent)
+        val surface = mockk<Surface>()
+
+        handover.attach(surface, service = null)
+        assertSame(surface, handover.detach(service = null))
+        handover.onServiceConnected(service)
+
+        assertEquals(emptyList<Surface?>(), sent)
+    }
+
+    @Test
+    fun `a service swap during rapid switching sends later surfaces only to the new service`() {
+        val handover = PreviewSurfaceHandover()
+        val oldSent = mutableListOf<Surface?>()
+        val newSent = mutableListOf<Surface?>()
+        val old = recordingService(oldSent)
+        val new = recordingService(newSent)
+        val first = mockk<Surface>()
+        val second = mockk<Surface>()
+        val replacement = mockk<Surface>()
+
+        handover.attach(first, old)
+        handover.detach(old)
+        handover.attach(second, old)
+        handover.onServiceConnected(new)
+        assertSame(second, handover.detach(new))
+        handover.attach(replacement, new)
+
+        assertEquals(listOf(first, null, second), oldSent)
+        assertEquals(listOf(null, replacement), newSent)
+        assertEquals(1, handover.surfaceEpoch.value)
+    }
+
     @Test
     fun `a failed handover is retried on the next connection`() {
         val handover = PreviewSurfaceHandover()

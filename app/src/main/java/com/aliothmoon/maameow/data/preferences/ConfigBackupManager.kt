@@ -16,6 +16,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.time.LocalDateTime
@@ -58,19 +60,21 @@ class ConfigBackupManager(
      * 不会立刻触发，建议导入后重启应用以确保所有设置完全生效。
      */
     suspend fun importFrom(inputStream: InputStream) = withContext(Dispatchers.IO) {
-        val content = inputStream.bufferedReader().use { it.readText() }
+        val content = inputStream.use { it.readTextAtMost(MAX_IMPORT_BYTES) }
         val backup = json.decodeFromString(ConfigBackup.serializer(), content)
         require(backup.version <= CURRENT_VERSION) {
             "不支持的备份版本: ${backup.version}，当前最高支持: $CURRENT_VERSION"
         }
         // 自定义背景的开关与令牌指向本机文件，导入其他设备的配置时保留本机值。
         // 遥测开关是本机用户自己的选择，别人的备份（或没这个字段的旧备份）不能替他打开
+        // 游戏包名跟着本机装的版本走，也不随备份变
         val localSettings = appSettingsManager.settings.first()
         appSettingsManager.setSettings(
             backup.appSettings.normalizedForImport().copy(
                 customBackgroundEnabled = localSettings.customBackgroundEnabled,
                 customBackgroundToken = localSettings.customBackgroundToken,
                 telemetryEnabled = localSettings.telemetryEnabled,
+                gamePackages = localSettings.gamePackages,
             )
         )
         notificationSettingsManager.updateSettings(backup.notificationSettings.reapplyWebhookPresetIfBlank())
@@ -86,9 +90,13 @@ class ConfigBackupManager(
     companion object {
         const val CURRENT_VERSION = 1
 
+        /** 备份正常只有几十 KB，超限多半是选错了文件，整份读进内存会 OOM */
+        const val MAX_IMPORT_BYTES = 8 * 1024 * 1024
+
         /**
          * 导出时剥离设备本地字段：CDK、解锁 PIN 与一图流 Token 属敏感信息；
-         * 自定义背景与实况图标对应本机 filesDir 下的图片文件，在其他设备上不存在。
+         * 自定义背景与实况图标对应本机 filesDir 下的图片文件，在其他设备上不存在；
+         * 自定义游戏包名取决于本机装的游戏版本
          */
         private fun AppSettings.sanitized() = copy(
             mirrorChyanCdk = "",
@@ -98,6 +106,7 @@ class ConfigBackupManager(
             operBoxAssistEnabled = "false",
             customBackgroundEnabled = "false",
             customBackgroundToken = "",
+            gamePackages = "",
         ).withoutCustomTrackerIcon()
 
         /**
@@ -133,6 +142,20 @@ class ConfigBackupManager(
             }
         )
     }
+}
+
+class BackupTooLargeException(val limitBytes: Int) : IOException("backup exceeds $limitBytes bytes")
+
+internal fun InputStream.readTextAtMost(limitBytes: Int): String {
+    val out = ByteArrayOutputStream()
+    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+    while (true) {
+        val n = read(buffer)
+        if (n < 0) break
+        if (out.size() + n > limitBytes) throw BackupTooLargeException(limitBytes)
+        out.write(buffer, 0, n)
+    }
+    return out.toString(Charsets.UTF_8.name())
 }
 
 // 导出脱敏：凭证清空，识别类字段（userId/chatId 等）保留

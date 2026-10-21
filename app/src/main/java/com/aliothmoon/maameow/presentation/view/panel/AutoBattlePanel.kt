@@ -97,6 +97,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.model.UserAdditionalOper
 import com.aliothmoon.maameow.data.model.copilot.CopilotDocumentation
 import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
 import com.aliothmoon.maameow.data.resource.CharacterInfo
@@ -204,7 +205,21 @@ fun AutoBattlePanel(
         // 非列表项的 key 在 VM 里查不到 id，直接忽略
         val fromId = from.key as? String ?: return@rememberReorderableLazyListState
         val toId = to.key as? String ?: return@rememberReorderableLazyListState
-        viewModel.onReorderList(fromId, toId)
+        if (fromId.startsWith(USER_ADDITIONAL_KEY_PREFIX)) {
+            viewModel.onReorderUserAdditional(
+                fromId.removePrefix(USER_ADDITIONAL_KEY_PREFIX),
+                toId.removePrefix(USER_ADDITIONAL_KEY_PREFIX)
+            )
+        } else {
+            viewModel.onReorderList(fromId, toId)
+        }
+    }
+    // 拖一组时另一组退出换位，跨组 onMove 落空会让拖拽项跳位
+    var draggingUserAdditional by remember { mutableStateOf(false) }
+    val resourceDataManager: ResourceDataManager = koinInject()
+    val metadata by resourceDataManager.snapshot.collectAsStateWithLifecycle()
+    val operDisplayName: (CharacterInfo) -> String = { info ->
+        resourceDataManager.getLocalizedCharacterName(info, metadata.key?.language ?: "zh-cn") ?: info.name
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -546,6 +561,75 @@ fun AutoBattlePanel(
                                 label = stringResource(R.string.panel_autobattle_add_trust)
                             )
 
+                            CheckBoxWithExpandableTip(
+                                checked = state.config.addUserAdditional,
+                                onCheckedChange = {
+                                    viewModel.onConfigChanged(state.config.copy(addUserAdditional = it))
+                                },
+                                label = stringResource(R.string.panel_autobattle_user_additional),
+                                tipText = stringResource(R.string.panel_autobattle_user_additional_tip)
+                            )
+                        }
+                    }
+                }
+
+                if (state.config.formation && state.config.addUserAdditional) {
+                    // 手改配置可能重名，key 重复会崩；后续编辑顺带写回去重结果
+                    val opers = state.config.userAdditionalOpers.distinctBy { it.name }
+                    items(opers, key = { USER_ADDITIONAL_KEY_PREFIX + it.name }) { oper ->
+                        val info = remember(oper.name, metadata) {
+                            resourceDataManager.getCharacterByNameOrAlias(oper.name)
+                        }
+                        ReorderableItem(
+                            reorderableState,
+                            key = USER_ADDITIONAL_KEY_PREFIX + oper.name,
+                            enabled = !reorderableState.isAnyItemDragging || draggingUserAdditional
+                        ) { isDragging ->
+                            UserAdditionalRow(
+                                operId = info?.id.orEmpty(),
+                                displayName = info?.let(operDisplayName) ?: oper.name,
+                                skill = oper.skill,
+                                isDragging = isDragging,
+                                onDragStarted = {
+                                    draggingUserAdditional = true
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                },
+                                onDragStopped = viewModel::onUserAdditionalReorderSettled,
+                                onSkillChange = { skill ->
+                                    viewModel.onConfigChanged(
+                                        state.config.copy(
+                                            userAdditionalOpers = opers.map {
+                                                if (it.name == oper.name) it.copy(skill = skill) else it
+                                            }
+                                        )
+                                    )
+                                },
+                                onRemove = {
+                                    viewModel.onConfigChanged(
+                                        state.config.copy(userAdditionalOpers = opers - oper)
+                                    )
+                                },
+                            )
+                        }
+                    }
+                    item(key = "user_additional_search") {
+                        UserAdditionalSearch(
+                            added = remember(opers) { opers.mapTo(HashSet()) { it.name } },
+                            clientType = metadata.key?.clientType ?: "Official",
+                            displayName = operDisplayName,
+                            onAdd = { info ->
+                                viewModel.onConfigChanged(
+                                    state.config.copy(userAdditionalOpers = opers + UserAdditionalOper(info.name))
+                                )
+                            },
+                            resourceDataManager = resourceDataManager,
+                        )
+                    }
+                }
+
+                if (state.config.formation) {
+                    item(key = "operbox_assist") {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             val assist = state.operBoxAssist
                             CheckBoxWithExpandableTip(
                                 checked = assist.active,
@@ -685,11 +769,16 @@ fun AutoBattlePanel(
                     state.taskList,
                     key = { _, item -> item.id }
                 ) { index, item ->
-                    ReorderableItem(reorderableState, key = item.id) { isDragging ->
+                    ReorderableItem(
+                        reorderableState,
+                        key = item.id,
+                        enabled = !reorderableState.isAnyItemDragging || !draggingUserAdditional
+                    ) { isDragging ->
                         BattleListRow(
                             item = item,
                             isDragging = isDragging,
                             onDragStarted = {
+                                draggingUserAdditional = false
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             },
                             onDragStopped = viewModel::onReorderSettled,

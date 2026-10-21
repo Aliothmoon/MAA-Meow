@@ -40,6 +40,7 @@ import com.aliothmoon.maameow.theme.MaaThemeAlphas
  * @param tipText 提示文本
  * @param modifier 修饰符
  * @param enabled 是否启用
+ * @param subtitle 副标题（可选）
  */
 @Composable
 fun CheckBoxWithExpandableTip(
@@ -48,7 +49,8 @@ fun CheckBoxWithExpandableTip(
     label: String,
     tipText: String,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    subtitle: String? = null
 ) {
     var tipExpanded by remember { mutableStateOf(false) }
 
@@ -64,7 +66,8 @@ fun CheckBoxWithExpandableTip(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
                 label = label,
-                enabled = enabled
+                enabled = enabled,
+                subtitle = subtitle
             )
             ExpandableTipIcon(
                 expanded = tipExpanded,

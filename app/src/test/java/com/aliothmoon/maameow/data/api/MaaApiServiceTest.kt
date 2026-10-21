@@ -14,6 +14,7 @@ import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -25,6 +26,7 @@ import java.io.IOException
  * 锁住两条不变量：
  * 1. 条件请求头与正文缓存同键（api 路径），换源不会读到别人写的正文
  * 2. 304 但正文缺失时当场无条件重取，本轮就要有数据，且不打转
+ * 3. fetch 只拉不写，正文与 validator 都等 commit
  */
 class MaaApiServiceTest {
 
@@ -94,7 +96,7 @@ class MaaApiServiceTest {
     fun validatorIsKeyedByApiPathNotUrl() = runBlocking {
         responder = { url, _ -> ok(url, "V1", etag = "\"e1\"") }
 
-        assertEquals("V1", newService().getStageActivity().data)
+        assertEquals("V1", newService().sync())
         assertEquals(setOf(api), storedETags.keys)
     }
 
@@ -104,14 +106,14 @@ class MaaApiServiceTest {
 
         // 主源写入 V1
         responder = { url, _ -> ok(url, "V1", etag = "\"e1\"") }
-        assertEquals("V1", service.getStageActivity().data)
+        assertEquals("V1", service.sync())
 
         // 主源不可达，回落备源，备源滞后一版
         responder = { url, _ ->
             if (url.startsWith(primary)) throw IOException("primary down")
             ok(url, "V0", etag = "\"e0\"")
         }
-        assertEquals("V0", service.getStageActivity().data)
+        assertEquals("V0", service.sync())
 
         // 主源恢复：内容仍是 V1，只认自己的 e1
         calls.clear()
@@ -124,14 +126,14 @@ class MaaApiServiceTest {
         }
 
         // 带出去的必须是备源写入时留下的 e0，否则就是一个路径存了两份 validator
-        assertEquals("V1", service.getStageActivity().data)
+        assertEquals("V1", service.sync())
         assertEquals("\"e0\"", calls.first().second[ETagCacheManager.IF_NONE_MATCH])
     }
 
     @Test
     fun missingBodyOn304RefetchesImmediately() = runBlocking {
         responder = { url, _ -> ok(url, "V1", etag = "\"e1\"") }
-        assertEquals("V1", newService().getStageActivity().data)
+        assertEquals("V1", newService().sync())
 
         // 清理软件删掉外部缓存目录，validator 在 SharedPreferences 里活着
         cacheRoot.deleteRecursively()
@@ -144,7 +146,7 @@ class MaaApiServiceTest {
             }
         }
 
-        assertEquals("V2", newService().getStageActivity().data)
+        assertEquals("V2", newService().sync())
         // 重取必须由同一个源当场发出，而不是靠备源兜底
         assertEquals(listOf(primary, primary), calls.map { it.first.removeSuffix(api) })
         assertEquals(emptyMap<String, String>(), calls[1].second)
@@ -157,24 +159,48 @@ class MaaApiServiceTest {
         storedETags[api] = "\"stale\""
         responder = { url, _ -> notModified(url) }
 
-        assertNull(newService().getStageActivity().data)
+        assertNull(newService().sync())
         // 两个源各一次条件请求加一次无条件重取，到此为止
         assertEquals(4, calls.size)
         assertEquals(listOf(primary, primary, backup, backup), calls.map { it.first.removeSuffix(api) })
     }
 
     @Test
-    fun offlineFallbackIsNotFresh() = runBlocking {
+    fun fetchWritesNothingUntilCommit() = runBlocking {
         val service = newService()
         responder = { url, _ -> ok(url, "V1", etag = "\"e1\"") }
-        assertEquals(MaaApiService.CachedBody("V1", fresh = true), service.getStageActivity())
 
-        // 304 也算从网络确认过
+        val result = service.fetch(api) as MaaApiService.FetchResult.Changed
+        assertNull(service.cached(api))
+        assertTrue(storedETags.isEmpty())
+
+        service.commit(api, result)
+        assertEquals("V1", service.cached(api))
+        assertEquals("\"e1\"", storedETags[api])
+
         responder = { url, _ -> notModified(url) }
-        assertEquals(MaaApiService.CachedBody("V1", fresh = true), service.getStageActivity())
+        assertEquals(MaaApiService.FetchResult.NotModified, service.fetch(api))
 
         responder = { _, _ -> throw IOException("offline") }
-        assertEquals(MaaApiService.CachedBody("V1", fresh = false), service.getStageActivity())
+        assertNull(service.fetch(api))
+    }
+
+    @Test
+    fun sameBodyOn200_isNotModified_butKeepsNewETag() = runBlocking {
+        val service = newService()
+        responder = { url, _ -> ok(url, "V1", etag = "\"e1\"") }
+        assertEquals("V1", service.sync())
+
+        // 换源后 ETag 变了，正文没变
+        responder = { url, _ -> ok(url, "V1", etag = "\"e2\"") }
+        assertEquals(MaaApiService.FetchResult.NotModified, service.fetch(api))
+        assertEquals("\"e2\"", storedETags[api])
+    }
+
+    private suspend fun MaaApiService.sync(): String? = when (val r = fetch(api)) {
+        is MaaApiService.FetchResult.Changed -> r.body.also { commit(api, r) }
+        MaaApiService.FetchResult.NotModified -> cached(api)
+        null -> null
     }
 
     private fun ok(url: String, body: String, etag: String? = null): Response =

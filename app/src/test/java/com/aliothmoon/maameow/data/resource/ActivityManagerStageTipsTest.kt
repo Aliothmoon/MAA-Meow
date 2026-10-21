@@ -44,7 +44,6 @@ class ActivityManagerStageTipsTest {
         val manager = ActivityManager(
             context = context,
             chainState = mockk(relaxed = true),
-            maaApiService = mockk(relaxed = true),
             itemHelper = itemHelper,
         )
         setFlow(manager, "_stages", stages)

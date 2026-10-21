@@ -1,82 +1,64 @@
 package com.aliothmoon.maameow.data.resource
 
-import com.aliothmoon.maameow.data.api.MaaApiService
-import com.aliothmoon.maameow.data.api.MaaApiService.CachedBody
-import com.aliothmoon.maameow.data.preferences.TaskChainState
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runCurrent
-import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.DayOfWeek
 
-/**
- * 界面元数据与 Core 加载前后脚都会拉活动关卡，同一客户端只拉一次
- */
+/** 同一份 StageActivityV2.json 按客户端取各自那段，切客户端不残留上一个的活动 */
 class ActivityManagerLoadTest {
-
-    private val fresh = CachedBody("{}", fresh = true)
-
-    private val api = mockk<MaaApiService> {
-        coEvery { getStageActivity() } returns fresh
-        coEvery { getTasksInfo() } returns fresh
-        coEvery { getGlobalTasksInfo(any()) } returns fresh
-    }
 
     private val manager = ActivityManager(
         context = mockk(relaxed = true),
-        chainState = mockk<TaskChainState> { every { clientType } returns "Official" },
-        maaApiService = api,
+        chainState = mockk(relaxed = true),
         itemHelper = mockk(relaxed = true),
     )
 
-    @Test
-    fun sameClientIsReusedRightAfterAFreshLoad() = runTest {
-        manager.load("Official")
-        manager.load("Official")
-        // B 服与官服同一档
-        manager.load("Bilibili")
+    private fun open(stage: String) = manager.isStageOpen(stage, DayOfWeek.MONDAY)
 
-        coVerify(exactly = 1) { api.getStageActivity() }
-        coVerify(exactly = 1) { api.getTasksInfo() }
+    @Test
+    fun switchingClientProjectsItsOwnSection() {
+        manager.load("YoStarJP", JSON)
+        assertFalse(open("YW-6"))
+
+        manager.load("Official", JSON)
+        assertTrue(open("YW-6"))
     }
 
     @Test
-    fun otherClientLoadsAgain() = runTest {
-        manager.load("Official")
-        manager.load("YoStarEN")
+    fun missingSectionDropsPreviousClientStages() {
+        manager.load("Official", JSON)
+        manager.load("YoStarKR", JSON)
 
-        coVerify(exactly = 2) { api.getStageActivity() }
-        coVerify(exactly = 1) { api.getGlobalTasksInfo("YoStarEN") }
+        assertFalse(open("YW-6"))
+        assertTrue(manager.activityStages.value.isEmpty())
     }
 
     @Test
-    fun offlineFallbackIsNotReused() = runTest {
-        coEvery { api.getTasksInfo() } returns CachedBody("{}", fresh = false)
+    fun noCacheYet_permanentStagesStillOpen() {
+        manager.load("Official", null)
 
-        manager.load("Official")
-        manager.load("Official")
-
-        coVerify(exactly = 2) { api.getTasksInfo() }
+        assertTrue(open("1-7"))
+        assertFalse(open("YW-6"))
     }
 
-    @Test
-    fun concurrentCallersShareOneFetch() = runTest {
-        val gate = CompletableDeferred<Unit>()
-        coEvery { api.getStageActivity() } coAnswers {
-            gate.await()
-            fresh
-        }
-
-        launch { manager.load("Official") }
-        launch { manager.load("Official") }
-        runCurrent()
-        gate.complete(Unit)
-        runCurrent()
-
-        coVerify(exactly = 1) { api.getStageActivity() }
+    private companion object {
+        val JSON = """
+            {
+              "Official": {
+                "sideStoryStage": {
+                  "YW": {
+                    "Activity": {
+                      "Tip": "", "StageName": "测试活动", "TimeZone": 8,
+                      "UtcStartTime": "2000/01/01 00:00:00", "UtcExpireTime": "2099/01/01 00:00:00"
+                    },
+                    "Stages": [{ "Display": "YW-6", "Value": "YW-6", "Drop": "30063" }]
+                  }
+                }
+              },
+              "YoStarJP": { "sideStoryStage": {} }
+            }
+        """.trimIndent()
     }
 }

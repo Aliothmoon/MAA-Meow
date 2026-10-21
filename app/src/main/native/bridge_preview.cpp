@@ -368,7 +368,7 @@ static void RenderLoop() {
     DestroyEgl();
 }
 
-/** 换窗口不停渲染线程：join 在 binder 事务里做，调用方主线程得一直等着。收摊走 [ShutdownPreview] */
+/** 换窗口不停渲染线程：join 会卡住 binder 线程。收摊走 [ShutdownPreview] */
 void SetPreviewSurface(JNIEnv *env, jobject jSurface) {
     std::lock_guard<std::mutex> lock(g_previewMutex);
 

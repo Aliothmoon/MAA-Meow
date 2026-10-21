@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.state.ResourceInitState
+import com.aliothmoon.maameow.domain.state.isIdle
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import kotlinx.coroutines.CoroutineScope
@@ -100,12 +101,14 @@ class UnifiedStateDispatcher(
                             onServiceReplaced()
                         }
                         val loaderState = resourceLoader.state.value
+                        // 永久失败要不要重试由 ensureLoaded 按文件版本判断
                         val shouldLoad = loaderState is MaaResourceLoader.State.NotLoaded
-                                || (loaderState is MaaResourceLoader.State.Failed && !loaderState.permanent)
+                                || loaderState is MaaResourceLoader.State.Failed
                         if (shouldLoad) {
                             Timber.i("Service connected and resource initialized, loading resources")
-                            withContext(Dispatchers.IO) {
-                                resourceLoader.load()
+                            // 另起协程，不能挡住本收集器判断换进程
+                            scope.launch(Dispatchers.IO) {
+                                compositionService.whenIdle { resourceLoader.ensureLoaded(chainState.clientType) }
                             }
                         }
                     }
@@ -153,7 +156,7 @@ class UnifiedStateDispatcher(
     /** 换进程不经过 Died，旧进程的死讯被当过期丢弃；任务在跑就补发，否则卡在 RUNNING */
     private fun onServiceReplaced() {
         val state = compositionService.state.value
-        if (state == MaaExecutionState.IDLE || state == MaaExecutionState.ERROR) return
+        if (state.isIdle) return
         Timber.w("Elevated service replaced while %s", state)
         _serviceDiedEvent.tryEmit(Unit)
     }

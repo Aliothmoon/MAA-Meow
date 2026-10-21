@@ -7,3 +7,6 @@ enum class MaaExecutionState {
     STOPPING,  // 停止中
     ERROR      // 错误
 }
+
+val MaaExecutionState.isIdle: Boolean
+    get() = this == MaaExecutionState.IDLE || this == MaaExecutionState.ERROR

@@ -2,7 +2,9 @@ package com.aliothmoon.maameow.data.preferences
 
 import com.aliothmoon.maameow.data.notification.NotificationSettings
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Test
+import java.io.ByteArrayInputStream
 
 class ConfigBackupManagerTest {
 
@@ -83,5 +85,22 @@ class ConfigBackupManagerTest {
         assertEquals("""{"content": "{content}"}""", sanitized.customWebhookBody)
         assertEquals("kook-target-id", sanitized.kookTargetId)
         assertEquals("telegram-chat-id", sanitized.telegramChatId)
+    }
+
+    @Test
+    fun importReadAcceptsContentUpToLimit() {
+        val text = "备份".repeat(4096)
+        val bytes = text.toByteArray()
+        assertEquals(text, ByteArrayInputStream(bytes).readTextAtMost(bytes.size))
+    }
+
+    // 选错大文件时整读进内存会 OOM（ANDROID-13W）
+    @Test
+    fun importReadRejectsContentOverLimit() {
+        val bytes = ByteArray(64 * 1024 + 1)
+        val e = assertThrows(BackupTooLargeException::class.java) {
+            ByteArrayInputStream(bytes).readTextAtMost(64 * 1024)
+        }
+        assertEquals(64 * 1024, e.limitBytes)
     }
 }

@@ -19,11 +19,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,7 +32,6 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,10 +50,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -99,7 +94,7 @@ import com.aliothmoon.maameow.presentation.StaySober
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ChangelogDialog
 import com.aliothmoon.maameow.presentation.components.CollapsibleSection
-import com.aliothmoon.maameow.presentation.components.ITextField
+import com.aliothmoon.maameow.presentation.components.InstalledAppPickerDialog
 import com.aliothmoon.maameow.presentation.components.ListItemDivider
 import com.aliothmoon.maameow.presentation.components.LocalSettingRowBleed
 import com.aliothmoon.maameow.presentation.components.LogExportController
@@ -129,24 +124,22 @@ import com.aliothmoon.maameow.presentation.viewmodel.SettingsViewModel
 import com.aliothmoon.maameow.theme.LocalReduceMotion
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.theme.MaaDesignTokens
-import com.aliothmoon.maameow.utils.LauncherApps
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.UiScale
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
 import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.utils.i18n.resolve
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import kotlin.math.roundToInt
 
 // 第 0 项是搜索框
 private fun sectionItemIndex(sectionKey: String): Int = SettingsSections.ORDER.indexOf(sectionKey) + 1
-private val ONBOARDING_ABOUT_TARGETS = setOf(OnboardingTarget.ABOUT_HELP)
+private val ONBOARDING_TARGET_SECTIONS = mapOf(
+    OnboardingTarget.RUNTIME_BACKEND to SettingsSections.RUNTIME,
+    OnboardingTarget.ABOUT_HELP to SettingsSections.ABOUT,
+)
 
 @Composable
 fun SettingsView(
@@ -196,10 +189,9 @@ fun SettingsView(
     val settingsMessage by viewModel.settingsMessage.collectAsStateWithLifecycle()
     val showRestartDialog by viewModel.showRestartDialog.collectAsStateWithLifecycle()
     val achievementUiState by achievementViewModel.uiState.collectAsStateWithLifecycle()
-    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // 首启引导：靶点在「关于」分区内，先滚进视野并强制展开分区；pager 重建后 effect 重跑自动补滚
+    // 首启引导：靶点所在分区先滚进视野并强制展开；pager 重建后 effect 重跑自动补滚
     val onboarding = LocalOnboardingState.current
     val settingsListState = rememberLazyListState()
 
@@ -234,17 +226,17 @@ fun SettingsView(
         }
     }
     val reduceMotion = LocalReduceMotion.current
-    val onboardingInAbout =
-        onboarding?.takeIf { it.active }?.currentStep?.target in ONBOARDING_ABOUT_TARGETS
+    val onboardingSection = onboarding?.takeIf { it.active }?.currentStep?.target
+        ?.let { ONBOARDING_TARGET_SECTIONS[it] }
     LaunchedEffect(onboarding, settingsListState, reduceMotion) {
         if (onboarding == null) return@LaunchedEffect
         snapshotFlow { onboarding.takeIf { it.active }?.currentStep?.target }
             .collectLatest { target ->
-                if (target !in ONBOARDING_ABOUT_TARGETS) return@collectLatest
+                val section = ONBOARDING_TARGET_SECTIONS[target] ?: return@collectLatest
                 if (reduceMotion) {
-                    settingsListState.scrollToItem(sectionItemIndex(SettingsSections.ABOUT))
+                    settingsListState.scrollToItem(sectionItemIndex(section))
                 } else {
-                    settingsListState.animateScrollToItem(sectionItemIndex(SettingsSections.ABOUT))
+                    settingsListState.animateScrollToItem(sectionItemIndex(section))
                 }
             }
     }
@@ -284,27 +276,6 @@ fun SettingsView(
     }
 
     var showShizukuAppPicker by remember { mutableStateOf(false) }
-    var shizukuAppPickerLoadKey by remember { mutableIntStateOf(0) }
-    var shizukuAppSearch by remember { mutableStateOf("") }
-    var shizukuAppOptions by remember { mutableStateOf<List<LauncherApps.App>?>(null) }
-    var shizukuAppLoadFailed by remember { mutableStateOf(false) }
-
-    LaunchedEffect(showShizukuAppPicker, shizukuAppPickerLoadKey) {
-        if (!showShizukuAppPicker) return@LaunchedEffect
-
-        shizukuAppLoadFailed = false
-        shizukuAppOptions = null
-        shizukuAppOptions = try {
-            withContext(Dispatchers.IO) {
-                LauncherApps.load(context.applicationContext)
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            shizukuAppLoadFailed = true
-            emptyList()
-        }
-    }
 
     settingsMessage?.let { msg ->
         Toast.makeText(context, msg.resolve(context), Toast.LENGTH_SHORT).show()
@@ -374,9 +345,7 @@ fun SettingsView(
         ReInitializeConfirmDialog(
             onConfirm = {
                 showReInitConfirm = false
-                coroutineScope.launch {
-                    resourceInitService.reInitialize()
-                }
+                viewModel.reInitializeResources()
             },
             onDismiss = { showReInitConfirm = false }
         )
@@ -422,109 +391,13 @@ fun SettingsView(
     }
 
     if (showShizukuAppPicker) {
-        val searchText = shizukuAppSearch.trim()
-        val filteredOptions = shizukuAppOptions
-            ?.filter { option ->
-                searchText.isBlank() ||
-                        option.label.contains(searchText, ignoreCase = true) ||
-                        option.packageName.contains(searchText, ignoreCase = true)
-            }
-            .orEmpty()
-
-        AdaptiveTaskPromptDialog(
-            visible = true,
+        InstalledAppPickerDialog(
             title = stringResource(R.string.settings_shizuku_launch_app_picker_title),
-            icon = Icons.Rounded.Build,
-            confirmText = stringResource(R.string.common_close),
-            dismissText = "",
-            onConfirm = { showShizukuAppPicker = false },
-            onDismissRequest = { showShizukuAppPicker = false },
-            content = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    when {
-                        shizukuAppOptions == null -> {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 12.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                CircularProgressIndicator()
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = stringResource(R.string.settings_shizuku_launch_app_loading),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        shizukuAppLoadFailed -> {
-                            Text(
-                                text = stringResource(R.string.settings_shizuku_launch_app_picker_failed),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-
-                        else -> {
-                            ITextField(
-                                value = shizukuAppSearch,
-                                onValueChange = { shizukuAppSearch = it },
-                                placeholder = stringResource(R.string.settings_shizuku_launch_app_search_hint),
-                                singleLine = true
-                            )
-
-                            if (filteredOptions.isEmpty()) {
-                                Text(
-                                    text = stringResource(R.string.settings_shizuku_launch_app_empty),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            } else {
-                                LazyColumn(
-                                    modifier = Modifier.heightIn(max = 320.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    items(filteredOptions, key = { it.packageName }) { option ->
-                                        Column(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                                        ) {
-                                            Column(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .clip(RoundedCornerShape(8.dp))
-                                                    .clickable {
-                                                        viewModel.setShizukuLaunchPackage(option.packageName)
-                                                        showShizukuAppPicker = false
-                                                    }
-                                                    .padding(horizontal = 8.dp, vertical = 10.dp),
-                                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                                            ) {
-                                                Text(
-                                                    text = option.label,
-                                                    style = MaterialTheme.typography.bodyLarge,
-                                                    color = MaterialTheme.colorScheme.onSurface
-                                                )
-                                                Text(
-                                                    text = option.packageName,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            onPick = {
+                viewModel.setShizukuLaunchPackage(it.packageName)
+                showShizukuAppPicker = false
+            },
+            onDismiss = { showShizukuAppPicker = false },
         )
     }
 
@@ -713,18 +586,23 @@ fun SettingsView(
                     CollapsibleSection(
                         title = stringResource(R.string.settings_section_runtime),
                         sectionKey = SettingsSections.RUNTIME,
+                        forceExpanded = onboardingSection == SettingsSections.RUNTIME,
                         revealToken = revealToken(SettingsSections.RUNTIME),
                     ) {
                         SettingsGroupCard {
-                            SettingSearchTarget(R.string.settings_startup_backend_title) {
-                                SettingRadioItem(
-                                    title = stringResource(R.string.settings_startup_backend_title),
-                                    contentColor = contentColor,
-                                    entries = RemoteBackend.entries,
-                                    selected = startupBackend,
-                                    label = { it.display },
-                                    onSelected = { viewModel.setStartupBackend(it) }
-                                )
+                            Column(
+                                modifier = Modifier.onboardingTarget(OnboardingTarget.RUNTIME_BACKEND),
+                            ) {
+                                SettingSearchTarget(R.string.settings_startup_backend_title) {
+                                    SettingRadioItem(
+                                        title = stringResource(R.string.settings_startup_backend_title),
+                                        contentColor = contentColor,
+                                        entries = RemoteBackend.entries,
+                                        selected = startupBackend,
+                                        label = { it.display },
+                                        onSelected = { viewModel.setStartupBackend(it) }
+                                    )
+                                }
                             }
                             ListItemDivider()
                             SettingSearchTarget(R.string.settings_core_data_location_title) {
@@ -781,9 +659,6 @@ fun SettingsView(
                                             description = shizukuLaunchAppDescription,
                                             contentColor = contentColor
                                         ) {
-                                            // 先弹窗再异步查列表，免得点了没反应
-                                            shizukuAppSearch = ""
-                                            shizukuAppPickerLoadKey += 1
                                             showShizukuAppPicker = true
                                         }
                                         ListItemDivider()
@@ -959,7 +834,7 @@ fun SettingsView(
                     }
                 }
 
-                // 任务设置：划火柴模式、MAA 任务覆盖
+                // 任务设置：划火柴模式、MAA 任务覆盖、自定义游戏包名
                 item {
                     CollapsibleSection(
                         title = stringResource(R.string.settings_section_task),
@@ -999,6 +874,15 @@ fun SettingsView(
                                     ) {
                                         navController.navigate(Routes.TASK_OVERRIDE_EDITOR)
                                     }
+                                }
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_game_package_title) {
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_game_package_title),
+                                    contentColor = contentColor
+                                ) {
+                                    navController.navigate(Routes.GAME_PACKAGE)
                                 }
                             }
                         }
@@ -1160,7 +1044,7 @@ fun SettingsView(
                     CollapsibleSection(
                         title = stringResource(R.string.settings_section_about),
                         sectionKey = SettingsSections.ABOUT,
-                        forceExpanded = onboardingInAbout,
+                        forceExpanded = onboardingSection == SettingsSections.ABOUT,
                         revealToken = revealToken(SettingsSections.ABOUT),
                     ) {
                         SettingsGroupCard {
@@ -1810,32 +1694,29 @@ private fun SettingLanguageItem(
 ) {
     val effectiveSelectedLanguage = resolveSelectedLanguage(selectedLanguage)
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.md),
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.settings_language_title),
-                style = MaterialTheme.typography.bodyLarge,
-                color = contentColor
-            )
-        }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Text(
+            text = stringResource(R.string.settings_language_title),
+            style = MaterialTheme.typography.bodyLarge,
+            color = contentColor
+        )
+        Row(modifier = Modifier.fillMaxWidth()) {
             val options = listOf(
                 AppSettingsManager.AppLanguage.ZH to stringResource(R.string.settings_language_zh),
-                AppSettingsManager.AppLanguage.EN to stringResource(R.string.settings_language_en)
+                AppSettingsManager.AppLanguage.EN to stringResource(R.string.settings_language_en),
+                AppSettingsManager.AppLanguage.KO to stringResource(R.string.settings_language_ko),
             )
             options.forEach { (lang, label) ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
                     modifier = Modifier
+                        .weight(1f)
                         .clip(RoundedCornerShape(8.dp))
                         .selectable(
                             selected = lang == effectiveSelectedLanguage,
@@ -1847,11 +1728,12 @@ private fun SettingLanguageItem(
                         selected = lang == effectiveSelectedLanguage,
                         onClick = null
                     )
-                    Spacer(modifier = Modifier.width(2.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = label,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = contentColor
+                        color = contentColor,
+                        maxLines = 1,
                     )
                 }
             }

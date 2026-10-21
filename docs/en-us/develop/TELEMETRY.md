@@ -27,6 +27,7 @@ Every record carries:
 - An anonymous device ID: a salted SHA-256 of `ANDROID_ID`, which cannot be reversed. The same value appears as `Telemetry ID` in the `device_info.txt` of an exported log package; include it in bug reports so the matching records can be found
 - App version, MaaCore version, resource version and build type
 - Client type, game version, run mode, background resolution and data location
+- In background mode, whether the virtual display was created with full permissions or fell back to compatibility mode because the system lacks them
 - Elevation backend, whether Shizuku runs as root or adb, and whether the app is exempt from battery optimization
 - Whether each of four behavior-changing switches is on: MAA task override, force fullscreen on the virtual display, deploy-with-pause, and turning off display power for Screen Off
 - Whether the display was already turned off by Screen Off when the run started, and whether that was done manually or by a schedule

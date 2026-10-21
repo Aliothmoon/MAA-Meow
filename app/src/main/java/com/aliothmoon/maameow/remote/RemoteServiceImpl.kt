@@ -347,7 +347,6 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun setMonitorSurface(surface: Surface?) {
         Ln.i("$TAG: setMonitorSurface(${surface != null})")
-        VirtualDisplayManager.setMonitorSurface(surface)
         NativeBridgeLib.setPreviewSurface(surface)
     }
 
@@ -444,7 +443,6 @@ class RemoteServiceImpl : RemoteService.Stub() {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                         VdmDisplayController.stop()
                     }
-                    VirtualDisplayManager.setMonitorSurface(null)
                 } else {
                     VirtualDisplayManager.stop()
                 }
@@ -456,6 +454,8 @@ class RemoteServiceImpl : RemoteService.Stub() {
     }
 
     override fun getGameFps(): Float = GameFpsMonitor.currentFps()
+
+    override fun getVirtualDisplayFlagTier(): Int = VirtualDisplayManager.getFlagTier()
 
     override fun setPlayAudioOpAllowed(packageName: String?, isAllowed: Boolean): Boolean {
         if (packageName.isNullOrBlank()) return false
@@ -478,7 +478,11 @@ class RemoteServiceImpl : RemoteService.Stub() {
         if (targetDisplayId == DefaultDisplayConfig.DISPLAY_NONE) return true
         val onDisplay = ActivityUtils.isAppOnDisplay(packageName, targetDisplayId)
         // 游戏不是 MaaMeow 拉起的（未启用自动启动）时，这里是首次得知它在虚拟屏上
-        if (onDisplay) GameFpsMonitor.ensureStarted(packageName)
+        if (onDisplay) {
+            GameFpsMonitor.ensureStarted(packageName)
+            // 拉回 / 重启后换了新任务也靠巡检补上
+            ActivityUtils.excludeFromRecents(packageName, targetDisplayId)
+        }
         return onDisplay
     }
 

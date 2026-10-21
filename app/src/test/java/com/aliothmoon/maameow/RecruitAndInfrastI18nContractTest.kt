@@ -21,6 +21,7 @@ class RecruitAndInfrastI18nContractTest {
     fun displayLanguageCode_mapsSupportedAppLanguages() {
         assertEquals("zh-cn", ResourceDataManager.displayLanguageCode(AppSettingsManager.AppLanguage.ZH))
         assertEquals("en-us", ResourceDataManager.displayLanguageCode(AppSettingsManager.AppLanguage.EN))
+        assertEquals("ko-kr", ResourceDataManager.displayLanguageCode(AppSettingsManager.AppLanguage.KO))
         assertEquals(
             "zh-cn",
             ResourceDataManager.displayLanguageCode(AppSettingsManager.AppLanguage.SYSTEM)
