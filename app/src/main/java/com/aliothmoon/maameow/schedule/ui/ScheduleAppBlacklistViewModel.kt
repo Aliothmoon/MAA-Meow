@@ -20,7 +20,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import timber.log.Timber
 import kotlin.math.roundToInt
 
@@ -70,14 +69,18 @@ class ScheduleAppBlacklistViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UiState.Loading)
 
     init {
-        viewModelScope.launch {
-            load.value = try {
-                withContext(Dispatchers.IO) { loadApps() }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val ready = loadApps()
+                // 先显示应用条目和占位图标，图标读取较慢时仍可搜索、勾选。
+                load.value = ready
+                loadIcons(ready)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Timber.w(e, "Load launcher apps failed")
-                Load.Failed
+                Timber.w(e, "Load launcher apps or icons failed")
+                // 列表已可用时，后续图标加载异常只保留占位显示。
+                if (load.value !is Load.Ready) load.value = Load.Failed
             }
         }
     }
@@ -86,21 +89,26 @@ class ScheduleAppBlacklistViewModel(
         viewModelScope.launch { appSettings.setScheduleAppBlacklisted(packageName, blacklisted) }
     }
 
-    private suspend fun loadApps(): Load.Ready {
+    private fun loadApps(): Load.Ready {
         val pinned = appSettings.scheduleAppBlacklist.value
         val apps = LauncherApps.load(appContext)
             .filter { it.packageName != appContext.packageName }
             .sortedByDescending { it.packageName in pinned }
+        return Load.Ready(apps, pinned, emptyMap())
+    }
+
+    private suspend fun loadIcons(ready: Load.Ready) {
         val density = appContext.resources.displayMetrics.density
         val iconSizePx = (ScheduleAppBlacklistIconSize.value * density).roundToInt().coerceAtLeast(1)
-        val icons = buildMap {
-            for (app in apps) {
-                // 系统图标读取本身不可挂起，但页面销毁后不再继续处理后续应用。
-                currentCoroutineContext().ensureActive()
-                loadIcon(app.packageName, iconSizePx)?.let { put(app.packageName, it) }
-            }
+        var icons = ready.icons
+        for (app in ready.apps) {
+            // 系统图标读取本身不可挂起，但页面销毁后不再继续处理后续应用。
+            currentCoroutineContext().ensureActive()
+            val icon = loadIcon(app.packageName, iconSizePx) ?: continue
+            // 发布新快照，避免修改 Compose 已在使用的图标缓存；勾选仍取最新设置。
+            icons = icons + (app.packageName to icon)
+            load.value = ready.copy(icons = icons)
         }
-        return Load.Ready(apps, pinned, icons)
     }
 
     private fun loadIcon(packageName: String, sizePx: Int): ImageBitmap? = try {

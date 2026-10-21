@@ -15,6 +15,7 @@ import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
 import java.util.concurrent.Executors
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -73,15 +74,73 @@ class ScheduleAppBlacklistViewModelTest {
 
     @Test
     fun loadsLauncherAppsAndUsesPlaceholderWhenIconsFail() = runBlocking(mainDispatcher) {
+        val iconsQueried = CompletableDeferred<Unit>()
+        every { context.packageManager.getApplicationIcon(beta.packageName) } answers {
+            iconsQueried.complete(Unit)
+            throw IllegalStateException("Icon unavailable")
+        }
         every { LauncherApps.load(context) } returns listOf(
             alpha, beta, LauncherApps.App("Meow", context.packageName),
         )
         createViewModel()
+        withTimeout(5_000) { iconsQueried.await() }
         val loaded = awaitLoaded()
 
         assertEquals(listOf(alpha.packageName, beta.packageName), loaded.rows.map { it.packageName })
         assertTrue(loaded.rows.all { it.icon == null })
         verify(exactly = 1) { LauncherApps.load(context) }
+    }
+
+    @Test
+    fun listRemainsEditableWhileIconsLoadAndUpdatesIconsIncrementally() = runBlocking(mainDispatcher) {
+        val alphaStarted = CompletableDeferred<Unit>()
+        val releaseAlpha = CompletableDeferred<Unit>()
+        val betaStarted = CompletableDeferred<Unit>()
+        val releaseBeta = CompletableDeferred<Unit>()
+        val iconBitmap = mockk<Bitmap> {
+            every { width } returns 80
+            every { height } returns 80
+        }
+        val drawable = mockk<BitmapDrawable> {
+            every { intrinsicWidth } returns 80
+            every { intrinsicHeight } returns 80
+            every { bitmap } returns iconBitmap
+        }
+        val packageManager = context.packageManager
+        // 模拟不可挂起的系统查询，只阻塞 IO 线程；用信号控制顺序，不依赖 sleep。
+        every { packageManager.getApplicationIcon(alpha.packageName) } answers {
+            alphaStarted.complete(Unit)
+            runBlocking { releaseAlpha.await() }
+            drawable
+        }
+        every { packageManager.getApplicationIcon(beta.packageName) } answers {
+            betaStarted.complete(Unit)
+            runBlocking { releaseBeta.await() }
+            throw IllegalStateException("Icon unavailable")
+        }
+
+        try {
+            createViewModel()
+            withTimeout(5_000) { alphaStarted.await() }
+            val initial = awaitLoaded()
+            assertEquals(listOf(alpha.packageName, beta.packageName), initial.rows.map { it.packageName })
+            assertTrue(initial.rows.all { it.icon == null })
+
+            viewModel.setBlacklisted(alpha.packageName, true)
+            val edited = awaitLoaded { it.checkedCount == 1 }
+            assertTrue(edited.rows.first().checked)
+
+            releaseAlpha.complete(Unit)
+            withTimeout(5_000) { betaStarted.await() }
+            // 第二个图标仍在读取时，第一个已显示，且没有覆盖加载期间的勾选。
+            val partial = awaitLoaded { it.rows.first().icon != null }
+            assertTrue(partial.rows.first().checked)
+            assertEquals(1, partial.checkedCount)
+            assertEquals(null, partial.rows.last().icon)
+        } finally {
+            releaseAlpha.complete(Unit)
+            releaseBeta.complete(Unit)
+        }
     }
 
     @Test
@@ -100,7 +159,7 @@ class ScheduleAppBlacklistViewModelTest {
         val packageManager = context.packageManager
         every { packageManager.getApplicationIcon(alpha.packageName) } returns drawable
         createViewModel()
-        val loaded = awaitLoaded()
+        val loaded = awaitLoaded { it.rows.first().icon != null }
         val icon = requireNotNull(loaded.rows.first().icon)
         assertEquals(80, icon.width)
         assertEquals(40, icon.height)
