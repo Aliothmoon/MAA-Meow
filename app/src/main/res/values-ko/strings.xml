@@ -1291,6 +1291,9 @@
     <string name="panel_depot_format_toolbox">Arkntools</string>
     <string name="panel_depot_hint_scan">아래의 「작업 시작」을 탭하면 현재 창고의 물품과 수량을 스캔합니다.</string>
     <string name="panel_depot_hint_results">인식이 완료되면 Arkplanner / Arkntools 형식으로 내보낼 수 있습니다.</string>
+    <string name="panel_depot_delta_summary">%1$s 대비 %2$d종 변동</string>
+    <string name="panel_depot_delta_none">%1$s 대비 변동 없음</string>
+    <string name="panel_depot_only_changed">변동만 보기</string>
 
     <!-- panel: mini game -->
     <string name="panel_mini_game_title">편의 기능</string>
@@ -2652,6 +2655,8 @@
     <string name="runlog_depot_set_params_failed">%1$s: 작업 파라미터 업데이트 실패, 원래 파라미터로 실행합니다</string>
     <string name="runlog_depot_plan_sanity_insufficient">%1$s: 이성 부족 (예상 %2$d, 스테이지 소모 %3$d), 건너뜀</string>
     <string name="runlog_depot_plan_stale_skipped">%1$s #%2$d: %3$s 실제 %4$d/%5$d 부족. 사전 점검에서 건너뛴 계획은 실행 중에 추가할 수 없으니, 다시 실행하면 수집됩니다</string>
+    <string name="runlog_depot_delta_summary">창고: %1$s 대비 %2$d종 변동. 「툴박스 → 창고 인식」에서 확인하세요</string>
+    <string name="runlog_depot_delta_none">창고 변동 없음 (%1$s 대비)</string>
     <string name="runlog_depot_skipped_activity">현재 이벤트가 진행 중이라 재고 유지를 건너뛰었습니다</string>
     <string name="runlog_depot_skipped_resource">현재 ｢물자 비축｣ 기간 한정 상시 개방 중이라 재고 유지를 건너뛰었습니다</string>
     <string name="runlog_depot_sorted_by_progress">재고 달성률 오름차순으로 정렬하여 실행했습니다</string>

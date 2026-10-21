@@ -14,12 +14,15 @@ import com.aliothmoon.maameow.data.model.RecruitOper
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.repository.DepotDelta
 import com.aliothmoon.maameow.data.repository.DepotRepository
+import com.aliothmoon.maameow.data.repository.delta
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.data.resource.ServerTimezone
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
+import com.aliothmoon.maameow.utils.i18n.formatToolboxSyncTime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -547,7 +550,7 @@ class SubTaskHandler(
         val subDetails = details.getJSONObject("details")
         when (taskchain) {
             "Depot" -> {
-                toolboxResultCollector.onDepotResult(subDetails)
+                toolboxResultCollector.onDepotResult(subDetails)?.delta()?.let(::appendDepotDelta)
                 return
             }
 
@@ -960,6 +963,16 @@ class SubTaskHandler(
             // 同步写穿内存，下一关 TaskChainStart 立刻能 countOf 到本场掉落
             depotRepository.merge(drops)
         }
+    }
+
+    private fun appendDepotDelta(delta: DepotDelta) {
+        val since = formatToolboxSyncTime(delta.fromMillis)
+        val text = if (delta.changes.isEmpty()) {
+            resources.getString(R.string.runlog_depot_delta_none, since)
+        } else {
+            resources.getString(R.string.runlog_depot_delta_summary, since, delta.changes.size)
+        }
+        append(text, LogLevel.TRACE)
     }
 
     private fun handleInfrastTrainingCompleted(subDetails: JSONObject?) {

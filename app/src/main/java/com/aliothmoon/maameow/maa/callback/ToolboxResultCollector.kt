@@ -8,6 +8,7 @@ import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.data.model.toolbox.RecruitCalcResult
 import com.aliothmoon.maameow.data.model.toolbox.RecruitOperator
 import com.aliothmoon.maameow.data.repository.DepotRepository
+import com.aliothmoon.maameow.data.repository.DepotSnapshot
 import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import kotlinx.coroutines.CoroutineScope
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 /** 像素画填色进度 */
 data class PixelPaintProgress(val done: Int, val total: Int, val color: Int)
@@ -86,17 +88,23 @@ class ToolboxResultCollector(
         _recruitResults.value = emptyList()
     }
 
-    fun onDepotResult(details: JSONObject?) {
-        details ?: return
-        if (!details.getBooleanValue("done")) return
+    /** @return 落库后的快照，未落库为 null */
+    fun onDepotResult(details: JSONObject?): DepotSnapshot? {
+        details ?: return null
+        if (!details.getBooleanValue("done")) return null
 
-        val dataStr = details.getString("data") ?: return
-        val dataObj = com.alibaba.fastjson2.JSON.parseObject(dataStr) ?: return
+        val dataStr = details.getString("data") ?: return null
+        val dataObj = com.alibaba.fastjson2.JSON.parseObject(dataStr) ?: return null
         val items = dataObj.entries.mapNotNull { (id, value) ->
             val count = (value as? Number)?.toInt() ?: return@mapNotNull null
             if (count > 0) DepotItem(id, count) else null
         }
-        depotRepository.set(items)
+        // 空结果多半是识别失败，不覆盖旧数据
+        if (items.isEmpty()) {
+            Timber.w("仓库识别结果为空，跳过落库")
+            return null
+        }
+        val stored = depotRepository.set(items) ?: return null
         achievement.onDepotSuccess()
         ioScope.launch {
             achievementRepository.report {
@@ -105,6 +113,7 @@ class ToolboxResultCollector(
                 "maxCount" to (items.maxOfOrNull { it.count } ?: 0)
             }
         }
+        return stored
     }
 
     fun onOperBoxResult(details: JSONObject?) {

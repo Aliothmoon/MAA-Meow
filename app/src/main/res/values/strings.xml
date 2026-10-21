@@ -1291,6 +1291,9 @@
     <string name="panel_depot_format_toolbox">明日方舟工具箱</string>
     <string name="panel_depot_hint_scan">点击下方「开始任务」扫描当前仓库物品及数量。</string>
     <string name="panel_depot_hint_results">识别完成后支持导出企鹅物流刷图规划 / 明日方舟工具箱格式。</string>
+    <string name="panel_depot_delta_summary">较 %1$s：%2$d 种有变化</string>
+    <string name="panel_depot_delta_none">较 %1$s 无变化</string>
+    <string name="panel_depot_only_changed">仅看变化</string>
 
     <!-- panel: mini game -->
     <string name="panel_mini_game_title">牛杂</string>
@@ -2652,6 +2655,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="runlog_depot_set_params_failed">%1$s：更新任务参数失败，将按原参数执行</string>
     <string name="runlog_depot_plan_sanity_insufficient">%1$s：理智不足（预估 %2$d，低于关卡消耗 %3$d），已跳过</string>
     <string name="runlog_depot_plan_stale_skipped">%1$s #%2$d：%3$s 实际 %4$d/%5$d 不足，预检时已跳过的计划无法在运行中补上，重新运行即可刷取</string>
+    <string name="runlog_depot_delta_summary">仓库较 %1$s 有 %2$d 种物品变化，可在「小工具 → 仓库识别」查看</string>
+    <string name="runlog_depot_delta_none">仓库无变化（较 %1$s）</string>
     <string name="runlog_depot_skipped_activity">当前有活动进行中，已跳过库存保持</string>
     <string name="runlog_depot_skipped_resource">当前处于资源收集限时全天开放期间，已跳过库存保持</string>
     <string name="runlog_depot_sorted_by_progress">已按库存达成率从低到高排序执行</string>

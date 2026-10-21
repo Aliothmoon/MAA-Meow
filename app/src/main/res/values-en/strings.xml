@@ -1237,6 +1237,9 @@
     <string name="panel_depot_format_toolbox">Arknights Toolbox</string>
     <string name="panel_depot_hint_scan">Tap Start to scan the current depot items and quantities.</string>
     <string name="panel_depot_hint_results">After recognition, you can export to Penguin Stats planner / Arknights Toolbox format.</string>
+    <string name="panel_depot_delta_summary">vs %1$s: %2$d changed</string>
+    <string name="panel_depot_delta_none">No change since %1$s</string>
+    <string name="panel_depot_only_changed">Changes only</string>
 
     <!-- panel: mini game -->
     <string name="panel_mini_game_title">Useful Tasks</string>
@@ -2595,6 +2598,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="runlog_depot_set_params_failed">%1$s: failed to update task params; original params will be used</string>
     <string name="runlog_depot_plan_sanity_insufficient">%1$s: not enough sanity (estimated %2$d, stage costs %3$d), skipped</string>
     <string name="runlog_depot_plan_stale_skipped">%1$s #%2$d: %3$s is actually %4$d/%5$d, insufficient. Plans skipped at the pre-check can\'t be added mid-run; run again to farm it</string>
+    <string name="runlog_depot_delta_summary">Depot: %2$d items changed since %1$s. See Tools → Depot</string>
+    <string name="runlog_depot_delta_none">No depot changes (vs %1$s)</string>
     <string name="runlog_depot_skipped_activity">An event is in progress; Depot Maintain skipped</string>
     <string name="runlog_depot_skipped_resource">The resource collection event is active; Depot Maintain skipped</string>
     <string name="runlog_depot_sorted_by_progress">Plans queued in ascending order of inventory progress</string>

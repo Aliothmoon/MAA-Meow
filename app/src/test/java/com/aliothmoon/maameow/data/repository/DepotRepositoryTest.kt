@@ -155,6 +155,73 @@ class DepotRepositoryTest {
     }
 
     @Test
+    fun set_firstScan_hasNoBaseline() {
+        repository.set(listOf(DepotItem("30011", 100)))
+
+        assertEquals(0L, repository.snapshot.value.prevSyncTimeMillis)
+        assertNull(repository.snapshot.value.delta())
+    }
+
+    @Test
+    fun set_returnsStoredSnapshot() {
+        val stored = repository.set(listOf(DepotItem("30011", 100)))
+
+        assertEquals(repository.snapshot.value, stored)
+    }
+
+    @Test
+    fun set_withoutActiveProfile_returnsNull() {
+        activeProfileId.value = ""
+
+        assertNull(repository.set(listOf(DepotItem("30011", 100))))
+    }
+
+    @Test
+    fun set_shiftsPreviousScanIntoBaseline() {
+        repository.set(listOf(DepotItem("30011", 100)))
+        val firstSync = repository.snapshot.value.syncTimeMillis
+        repository.set(listOf(DepotItem("30012", 5)))
+
+        val snap = repository.snapshot.value
+        assertEquals(mapOf("30012" to 5), snap.scanItems)
+        assertEquals(mapOf("30011" to 100), snap.prevScanItems)
+        assertEquals(firstSync, snap.prevSyncTimeMillis)
+    }
+
+    @Test
+    fun merge_doesNotTouchScanItems() {
+        repository.set(listOf(DepotItem("30011", 100)))
+        repository.merge(listOf("30011" to 20))
+
+        assertEquals(mapOf("30011" to 100), repository.snapshot.value.scanItems)
+    }
+
+    @Test
+    fun delta_excludesDropsMergedBetweenScans() {
+        repository.set(listOf(DepotItem("30011", 100)))
+        repository.merge(listOf("30011" to 20))
+        repository.set(listOf(DepotItem("30011", 130)))
+
+        assertEquals(mapOf("30011" to 30), repository.snapshot.value.delta()?.changes)
+    }
+
+    @Test
+    fun set_afterLegacySnapshot_hasNoBaseline() = runBlocking {
+        val legacyStore = FakePreferencesDataStore()
+        legacyStore.edit {
+            it[stringPreferencesKey("depot_$PROFILE_A")] =
+                """{"items":{"30011":120},"syncTimeMillis":1000}"""
+        }
+        val legacy = DepotRepository(legacyStore, fakeChainState())
+        withTimeout(AWAIT_TIMEOUT_MS) { legacy.isLoaded.first { it } }
+        assertEquals(120, legacy.countOf("30011"))
+
+        legacy.set(listOf(DepotItem("30011", 150)))
+
+        assertNull("旧数据 items 混了掉落，不能当基线", legacy.snapshot.value.delta())
+    }
+
+    @Test
     fun merge_accumulatesAcrossRepeatedCalls() {
         repeat(5) { repository.merge(listOf("30011" to 1)) }
 
