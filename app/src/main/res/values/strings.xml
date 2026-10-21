@@ -373,10 +373,11 @@
     <string name="settings_language_ko">한국어</string>
     <string name="settings_background_resolution_title">后台分辨率</string>
     <string name="settings_background_resolution_desc">仅后台模式生效</string>
-    <string name="settings_virtual_display_backend_title">虚拟屏后端</string>
+    <string name="settings_virtual_display_backend_title">虚拟屏模式</string>
     <string name="settings_virtual_display_backend_desc">Legacy 保持原有行为；VDM 使用独立显示组，失败时不会回退到 Legacy</string>
     <string name="settings_virtual_display_backend_legacy">Legacy</string>
     <string name="settings_virtual_display_backend_vdm">VDM（实验性）</string>
+    <string name="runlog_display_backend_switch_blocked">虚拟屏模式已更改，但上一轮的虚拟屏还在，请先「关闭游戏」再启动</string>
     <string name="runlog_vdm_display_failed">VDM 独立虚拟屏创建失败，已取消本次启动，请在设置中调整至 Legacy 重试</string>
     <string name="settings_skip_shizuku_check">跳过 Shizuku 检查</string>
     <string name="settings_shizuku_launch_mode_title">打开快捷入口</string>

@@ -118,7 +118,7 @@ data class AppSettings(
     @PrefKey(default = "P720")
     val backgroundResolution: String = "P720",
 
-    /** 后台虚拟屏创建方式；VDM 仅在 Android 14+ 设置页展示。 */
+    /** 后台虚拟屏创建方式；VDM 仅在 Android 14+ 设置页展示 */
     @PrefKey(default = "LEGACY")
     val virtualDisplayBackend: String = "LEGACY",
 

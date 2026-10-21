@@ -479,12 +479,12 @@ class MaaCompositionService(
         clientType: String,
         displayBackend: VirtualDisplayBackend,
     ): StartResult? {
-        val useVdm = mode == RunMode.BACKGROUND &&
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+        // 只跟设置走，前台模式也不翻转，免得撞上留着的后台屏
+        val useVdm = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
             displayBackend == VirtualDisplayBackend.VDM
-        if (!service.setUseVirtualDeviceDisplay(useVdm, context.applicationInfo.uid / 100_000))
+        if (!service.setUseVirtualDeviceDisplay(useVdm))
             return failStart(
-                context.getString(R.string.runlog_display_mode_failed), "DISPLAY_BACKEND_ERROR",
+                context.getString(R.string.runlog_display_backend_switch_blocked), "DISPLAY_BACKEND_ERROR",
                 StartResult.ConnectionError(StartResult.ConnectionError.ConnectPhase.DISPLAY_MODE)
             )
         if (!service.setVirtualDisplayMode(mode.displayMode))
@@ -504,7 +504,7 @@ class MaaCompositionService(
                 val r = resolveAndSetResolution(service, clientType)
                 val displayId = service.startVirtualDisplay()
                 if (displayId == -1) return failVirtualDisplayStart(useVdm)
-                reportVirtualDisplayTier(service)
+                reportVirtualDisplayTier(service, useVdm)
                 buildConnectConfig(r.width, r.height, displayId)
             }
         }
@@ -519,9 +519,9 @@ class MaaCompositionService(
         return asyncConnect(maa, config)
     }
 
-    private suspend fun reportVirtualDisplayTier(service: RemoteService) {
+    private suspend fun reportVirtualDisplayTier(service: RemoteService, useVdm: Boolean) {
         val tier = runCatching { service.virtualDisplayFlagTier }.getOrDefault(0)
-        telemetry.onVirtualDisplayStarted(tier)
+        telemetry.onVirtualDisplayStarted(useVdm, tier)
         if (tier > 0) {
             sessionLogger.appendAndWait(
                 context.getString(R.string.task_start_virtual_display_compat_warning_log),
@@ -535,7 +535,7 @@ class MaaCompositionService(
             if (useVdm) R.string.runlog_vdm_display_failed
             else R.string.runlog_virtual_display_failed
         ),
-        "VIRTUAL_DISPLAY_ERROR",
+        if (useVdm) "VDM_DISPLAY_ERROR" else "VIRTUAL_DISPLAY_ERROR",
         StartResult.ConnectionError(StartResult.ConnectionError.ConnectPhase.VIRTUAL_DISPLAY),
     )
 

@@ -14,8 +14,8 @@ interface RunTelemetry {
 
     fun onTaskRegistered(taskId: Int, params: String)
 
-    /** 后台虚拟屏建好后调，[flagTier] 为 0 即完整权限 */
-    fun onVirtualDisplayStarted(flagTier: Int)
+    /** 后台虚拟屏建好后调，[vdm] 为 VirtualDevice 后端，[flagTier] 为 0 即完整权限 */
+    fun onVirtualDisplayStarted(vdm: Boolean, flagTier: Int)
 
     fun onCallback(message: AsstMsg, details: JSONObject?)
 

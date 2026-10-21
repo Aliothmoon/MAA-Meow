@@ -121,18 +121,18 @@ object SettingSearchIndex {
         SettingSearchEntry(R.string.settings_core_data_clear_title, runtime),
         SettingSearchEntry(R.string.settings_skip_shizuku_check, runtime),
 
-        SettingSearchEntry(
-            R.string.settings_virtual_display_backend_title,
-            backgroundRun,
-            R.string.settings_virtual_display_backend_desc,
-            minSdk = Build.VERSION_CODES.UPSIDE_DOWN_CAKE,
-        ),
         SettingSearchEntry(R.string.settings_background_resolution_title, backgroundRun, keywordsRes = R.string.search_keywords_resolution),
         SettingSearchEntry(
             R.string.settings_force_fullscreen_on_virtual_display, backgroundRun,
             R.string.settings_force_fullscreen_on_virtual_display_desc,
         ),
         SettingSearchEntry(R.string.settings_pip_on_home, backgroundRun, keywordsRes = R.string.search_keywords_pip),
+        SettingSearchEntry(
+            R.string.settings_virtual_display_backend_title,
+            backgroundRun,
+            R.string.settings_virtual_display_backend_desc,
+            minSdk = Build.VERSION_CODES.UPSIDE_DOWN_CAKE,
+        ),
 
         SettingSearchEntry(R.string.settings_telemetry, thirdParty, keywordsRes = R.string.search_keywords_telemetry),
         SettingSearchEntry(R.string.settings_report_penguin, thirdParty, R.string.settings_report_penguin_desc),

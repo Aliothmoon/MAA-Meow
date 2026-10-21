@@ -185,6 +185,7 @@ fun SettingsView(
     val showAchievementSnackbar by viewModel.showAchievementSnackbar.collectAsStateWithLifecycle()
     val backgroundResolution by viewModel.backgroundResolution.collectAsStateWithLifecycle()
     val virtualDisplayBackend by viewModel.virtualDisplayBackend.collectAsStateWithLifecycle()
+    val coreIdle by viewModel.coreIdle.collectAsStateWithLifecycle()
     val language by viewModel.language.collectAsStateWithLifecycle()
     val settingsMessage by viewModel.settingsMessage.collectAsStateWithLifecycle()
     val showRestartDialog by viewModel.showRestartDialog.collectAsStateWithLifecycle()
@@ -694,27 +695,6 @@ fun SettingsView(
                         revealToken = revealToken(SettingsSections.BACKGROUND_RUN),
                     ) {
                         SettingsGroupCard {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                                SettingSearchTarget(R.string.settings_virtual_display_backend_title) {
-                                    SettingRadioItem(
-                                        title = stringResource(R.string.settings_virtual_display_backend_title),
-                                        contentColor = contentColor,
-                                        entries = VirtualDisplayBackend.entries,
-                                        selected = virtualDisplayBackend,
-                                        label = { backend ->
-                                            stringResource(
-                                                if (backend == VirtualDisplayBackend.LEGACY) {
-                                                    R.string.settings_virtual_display_backend_legacy
-                                                } else {
-                                                    R.string.settings_virtual_display_backend_vdm
-                                                }
-                                            )
-                                        },
-                                        onSelected = viewModel::setVirtualDisplayBackend,
-                                    )
-                                }
-                                ListItemDivider()
-                            }
                             SettingSearchTarget(R.string.settings_background_resolution_title) {
                                 SettingBackgroundResolutionItem(
                                     contentColor = contentColor,
@@ -746,6 +726,28 @@ fun SettingsView(
                                     checked = pipOnHome,
                                     onCheckedChange = { viewModel.setPipOnHome(it) }
                                 )
+                            }
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                                ListItemDivider()
+                                SettingSearchTarget(R.string.settings_virtual_display_backend_title) {
+                                    SettingRadioItem(
+                                        title = stringResource(R.string.settings_virtual_display_backend_title),
+                                        contentColor = contentColor,
+                                        entries = VirtualDisplayBackend.entries,
+                                        selected = virtualDisplayBackend,
+                                        label = { backend ->
+                                            stringResource(
+                                                if (backend == VirtualDisplayBackend.LEGACY) {
+                                                    R.string.settings_virtual_display_backend_legacy
+                                                } else {
+                                                    R.string.settings_virtual_display_backend_vdm
+                                                }
+                                            )
+                                        },
+                                        onSelected = viewModel::setVirtualDisplayBackend,
+                                        enabled = coreIdle,
+                                    )
+                                }
                             }
                         }
                     }
@@ -1748,7 +1750,8 @@ private fun <T> SettingRadioItem(
     entries: List<T>,
     selected: T,
     label: @Composable (T) -> String,
-    onSelected: (T) -> Unit
+    onSelected: (T) -> Unit,
+    enabled: Boolean = true,
 ) {
     Row(
         modifier = Modifier
@@ -1775,12 +1778,14 @@ private fun <T> SettingRadioItem(
                         .selectable(
                             selected = entry == selected,
                             onClick = { onSelected(entry) },
+                            enabled = enabled,
                             role = Role.RadioButton
                         )
                 ) {
                     RadioButton(
                         selected = entry == selected,
-                        onClick = null
+                        onClick = null,
+                        enabled = enabled
                     )
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(

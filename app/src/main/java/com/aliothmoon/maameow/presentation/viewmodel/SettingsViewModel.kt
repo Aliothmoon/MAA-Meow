@@ -441,8 +441,13 @@ class SettingsViewModel(
                 VirtualDisplayBackend.LEGACY,
             )
 
+    /** 运行中不许换；空闲时先关掉留着的虚拟屏（连同上面的游戏），下一轮按新后端建 */
     fun setVirtualDisplayBackend(backend: VirtualDisplayBackend) {
-        viewModelScope.launch { appSettingsManager.setVirtualDisplayBackend(backend) }
+        if (backend == appSettingsManager.virtualDisplayBackend.value || coreBusy(R.string.settings_game_package_busy)) return
+        viewModelScope.launch {
+            compositionService.stopVirtualDisplay()
+            appSettingsManager.setVirtualDisplayBackend(backend)
+        }
     }
 
     val language: StateFlow<AppSettingsManager.AppLanguage> = appSettingsManager.language
