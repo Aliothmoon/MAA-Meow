@@ -137,4 +137,7 @@ interface RemoteService {
 
     // 后台虚拟屏的 flag 档位，0 为完整权限，没建返回 -1
     int getVirtualDisplayFlagTier() = 57;
+
+    // 每轮启动前调；true 走 VirtualDevice（14+）；后台虚拟屏还在时不能换后端，返回 false
+    boolean setUseVirtualDeviceDisplay(boolean enabled) = 58;
 }

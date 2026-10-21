@@ -148,8 +148,9 @@ class TelemetryController(
         guarded { if (active) tracer.register(taskId, summary) }
     }
 
-    override fun onVirtualDisplayStarted(flagTier: Int) {
+    override fun onVirtualDisplayStarted(vdm: Boolean, flagTier: Int) {
         if (!active) return
+        setEnvTag(VD_BACKEND_TAG, if (vdm) "vdm" else "legacy")
         setEnvTag(VD_TIER_TAG, flagTier.toString())
     }
 
@@ -448,6 +449,7 @@ class TelemetryController(
         const val JPEG_QUALITY = 60
 
         const val VD_TIER_TAG = "vd.tier"
+        const val VD_BACKEND_TAG = "vd.backend"
 
         /** 一轮一条事务、每条任务链一条 Span，量不大，全采 */
         const val TRACES_SAMPLE_RATE = 1.0
@@ -489,6 +491,7 @@ class TelemetryController(
             "SET_TOUCH_MODE_ERROR",
             "DISPLAY_MODE_ERROR",
             "VIRTUAL_DISPLAY_ERROR",
+            "VDM_DISPLAY_ERROR",
             "MAA_CONNECT_ERROR",
             "START_ERROR",
         )

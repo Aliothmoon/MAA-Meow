@@ -127,6 +127,12 @@
     <string name="settings_language_ko">한국어</string>
     <string name="settings_background_resolution_title">Background Resolution</string>
     <string name="settings_background_resolution_desc">Background mode only</string>
+    <string name="settings_virtual_display_backend_title">Virtual Display Mode</string>
+    <string name="settings_virtual_display_backend_desc">Legacy preserves the existing behavior. VDM uses an independent display group and never falls back to Legacy.</string>
+    <string name="settings_virtual_display_backend_legacy">Legacy</string>
+    <string name="settings_virtual_display_backend_vdm">VDM (experimental)</string>
+    <string name="runlog_display_backend_switch_blocked">The virtual display mode changed while the previous virtual display is still open. Use Close Game first, then start again</string>
+    <string name="runlog_vdm_display_failed">Could not create the independent VDM display, so this start was cancelled. Switch to Legacy in Settings and try again</string>
     <string name="settings_skip_shizuku_check">Skip Shizuku Check</string>
     <string name="settings_shizuku_launch_mode_title">Enable Shortcut</string>
     <string name="settings_shizuku_launch_mode_desc">Show a Shizuku launch button on Home for quick access</string>

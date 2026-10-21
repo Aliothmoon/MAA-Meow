@@ -26,4 +26,9 @@ class AppSettingsTest {
         // 与 WPF RuntimeSettings.DeployWithPause 一致；旧键 deployment_with_pause 不迁移
         assertEquals("false", AppSettings().deployWithPause)
     }
+
+    @Test
+    fun virtualDisplayBackendDefaultsToLegacy() {
+        assertEquals(VirtualDisplayBackend.LEGACY.name, AppSettings().virtualDisplayBackend)
+    }
 }

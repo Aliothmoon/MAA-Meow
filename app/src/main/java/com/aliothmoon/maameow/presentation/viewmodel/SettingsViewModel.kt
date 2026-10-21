@@ -19,6 +19,7 @@ import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
 import com.aliothmoon.maameow.domain.models.RemoteBackend
+import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.CopilotOperBoxAssist
@@ -429,6 +430,23 @@ class SettingsViewModel(
     fun setBackgroundResolution(pref: DefaultDisplayConfig.ResolutionPreference) {
         viewModelScope.launch {
             appSettingsManager.setBackgroundResolution(pref)
+        }
+    }
+
+    val virtualDisplayBackend: StateFlow<VirtualDisplayBackend> =
+        appSettingsManager.virtualDisplayBackend
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                VirtualDisplayBackend.LEGACY,
+            )
+
+    /** 运行中不许换；空闲时先关掉留着的虚拟屏（连同上面的游戏），下一轮按新后端建 */
+    fun setVirtualDisplayBackend(backend: VirtualDisplayBackend) {
+        if (backend == appSettingsManager.virtualDisplayBackend.value || coreBusy(R.string.settings_game_package_busy)) return
+        viewModelScope.launch {
+            compositionService.stopVirtualDisplay()
+            appSettingsManager.setVirtualDisplayBackend(backend)
         }
     }
 

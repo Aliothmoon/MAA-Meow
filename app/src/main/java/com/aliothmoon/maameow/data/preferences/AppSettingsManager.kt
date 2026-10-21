@@ -28,6 +28,7 @@ import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunDurationLimit
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.models.UnlockCredential
+import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
 import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap
 import kotlinx.coroutines.CompletableDeferred
@@ -545,6 +546,17 @@ class AppSettingsManager internal constructor(
     suspend fun setBackgroundResolution(pref: DefaultDisplayConfig.ResolutionPreference) {
         with(AppSettingsSchema) {
             context.dataStore.edit { it[backgroundResolution] = pref.name }
+        }
+    }
+
+    val virtualDisplayBackend: StateFlow<VirtualDisplayBackend> = setting {
+        runCatching { VirtualDisplayBackend.valueOf(it.virtualDisplayBackend) }
+            .getOrDefault(VirtualDisplayBackend.LEGACY)
+    }
+
+    suspend fun setVirtualDisplayBackend(backend: VirtualDisplayBackend) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[virtualDisplayBackend] = backend.name }
         }
     }
 
