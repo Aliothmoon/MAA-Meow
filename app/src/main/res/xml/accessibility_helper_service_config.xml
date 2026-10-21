@@ -2,9 +2,9 @@
 <!--
   canRequestFilterKeyEvents：拦音量键组合的前提。flagRequestFilterKeyEvents 不在这里常开，只在装了组合键监听时
   由服务运行时打开（见 AccessibilityHelperService.applyKeyFiltering），其余时间按键不经过本服务
+  不写 accessibilityEventTypes 即不订阅事件：onAccessibilityEvent 用不到，各应用也不必为本服务产生无障碍事件
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeAllMask"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault"
     android:canRequestFilterKeyEvents="true"

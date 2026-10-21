@@ -349,15 +349,16 @@ class PermissionManager(
 
             Timber.i("grantAll: packageName=$packageName, uid=$uid, isForeground=$isForeground")
 
+            // 后台模式用不到按键，开着是借系统绑定抬高进程优先级
             val result = srv.grantPermissions(
                 PermissionGrantRequest(
                     packageName = packageName,
                     uid = uid,
-                    accessibilityServiceId = if (isForeground)
-                        AccessibilityHelperService.SERVICE_ID else ""
+                    accessibilityServiceId = AccessibilityHelperService.SERVICE_ID,
                 )
             )
 
+            // 只有前台的组合键要等服务连上
             if (isForeground && result.accessibilityPermission) {
                 withTimeoutOrNull(3000L) {
                     AccessibilityHelperService.isConnected.first { it }
