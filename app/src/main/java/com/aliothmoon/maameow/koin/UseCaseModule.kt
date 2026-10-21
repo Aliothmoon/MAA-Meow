@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.koin
 
 import com.aliothmoon.maameow.data.config.MaaPathConfig
+import com.aliothmoon.maameow.data.resource.HotUpdateSync
 import com.aliothmoon.maameow.domain.usecase.AnalyzeTaskChainUseCase
 import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
@@ -19,6 +20,7 @@ val useCaseModule = module {
     factory { SwitchCoreDataLocationUseCase(get(), get()) }
 
     factory {
+        val hotUpdate = get<HotUpdateSync>()
         AnalyzeTaskChainUseCase(
             taskChainState = get(),
             resourceDataManager = get(),
@@ -30,6 +32,7 @@ val useCaseModule = module {
             appSettingsManager = get(),
             metadataGate = get(),
             relocatePath = get<MaaPathConfig>()::toCorePath,
+            awaitHotUpdate = { hotUpdate.awaitFresh(it) },
         )
     }
     factory {

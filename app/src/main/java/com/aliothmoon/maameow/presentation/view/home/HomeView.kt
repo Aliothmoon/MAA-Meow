@@ -71,9 +71,11 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.components.BackendReadyFixHost
 import com.aliothmoon.maameow.presentation.components.ChangelogDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.UpdateCard
+import com.aliothmoon.maameow.presentation.components.rememberBackendReadyFixState
 import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
 import com.aliothmoon.maameow.presentation.onboarding.OnboardingTarget
 import com.aliothmoon.maameow.presentation.onboarding.onboardingBlocksStartupDialogs
@@ -167,6 +169,10 @@ fun HomeView(
             }
         }
     }
+
+    // Shizuku 没装 / 没运行时与启动任务同一套引导
+    val backendFix = rememberBackendReadyFixState()
+    BackendReadyFixHost(backendFix)
 
     // 资源初始化完成后刷新版本号
     LaunchedEffect(uiState.resourceInitState) {
@@ -335,7 +341,14 @@ fun HomeView(
                         permissionState = permissionState,
                         isShowAccessibility = uiState.runMode == RunMode.FOREGROUND && uiState.overlayControlMode == OverlayControlMode.ACCESSIBILITY,
                         isGranting = uiState.isGranting,
-                        onRequestRemoteAccess = { viewModel.onRequestRemoteAccess() },
+                        onRequestRemoteAccess = {
+                            // Root 各家管理器不同，引导不了，照旧直接请求
+                            if (permissionState.startupBackend == RemoteBackend.SHIZUKU) {
+                                backendFix.request(authDirectly = true)
+                            } else {
+                                viewModel.onRequestRemoteAccess()
+                            }
+                        },
                         onRequestOverlay = { viewModel.onRequestOverlay(context) },
                         onRequestStorage = { viewModel.onRequestStorage(context) },
                         onRequestBatteryWhitelist = { viewModel.onRequestBatteryWhitelist(context) },

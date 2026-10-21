@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.ITouchEventCallback;
 import com.aliothmoon.maameow.MaaCoreService;
 import com.aliothmoon.maameow.remote.PermissionGrantRequest;
 import com.aliothmoon.maameow.remote.PermissionStateInfo;
+import com.aliothmoon.maameow.remote.ProcessExitRecord;
 
 interface RemoteService {
 
@@ -30,7 +31,8 @@ interface RemoteService {
 
     PermissionStateInfo grantPermissions(in PermissionGrantRequest request) = 11;
 
-    void setMonitorSurface(in Surface surface) = 12;
+    // 主线程不等远端，同一 binder 上的 oneway 按序送达
+    oneway void setMonitorSurface(in Surface surface) = 12;
 
     boolean setVirtualDisplayMode(int mode) = 13;
 
@@ -129,4 +131,13 @@ interface RemoteService {
     // 最近一次唤醒解锁（含自测）的步骤与耗时，不含 PIN 与轨迹
     // sinceElapsedMs 为 App 发起解锁时的 elapsedRealtime，更早开始的返回空串
     String getLastWakeTrace(long sinceElapsedMs) = 55;
+
+    // 系统记下的进程退出（含被杀、崩溃），只返回不早于 sinceMs 的；查别的包靠 shell 自带的 DUMP 权限
+    List<ProcessExitRecord> getProcessExitRecords(String packageName, long sinceMs, int maxNum) = 56;
+
+    // 后台虚拟屏的 flag 档位，0 为完整权限，没建返回 -1
+    int getVirtualDisplayFlagTier() = 57;
+
+    // 每轮启动前调；true 走 VirtualDevice（14+）；后台虚拟屏还在时不能换后端，返回 false
+    boolean setUseVirtualDeviceDisplay(boolean enabled) = 58;
 }

@@ -14,6 +14,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.ShizukuReadiness
 import com.aliothmoon.maameow.manager.ShizukuReadinessProvider
+import com.aliothmoon.maameow.manager.ShizukuReadinessStage
 import com.aliothmoon.maameow.presentation.LocalToaster
 import com.dokar.sonner.ToastType
 import kotlinx.coroutines.CoroutineScope
@@ -21,7 +22,7 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 /**
- * Shizuku/Root 没就绪时「去修复」的统一实现，供任务页启动、健康卡与触发日志共用
+ * Shizuku/Root 没就绪时「去修复」的统一实现，供任务页启动、首页请求权限、健康卡与触发日志共用
  *
  * 与 [ShizukuReadinessGate] 的差别：那个是常驻引导，关掉即写 skipShizukuCheck 全局不再提醒；
  * 这里是用户主动点出来的一次性弹窗，勾了跳过检查也照样弹，关掉不动全局设置
@@ -41,10 +42,13 @@ class BackendReadyFixState internal constructor(
     /** 置位后由 Host 弹提示并清零 */
     internal var stillNotReady by mutableStateOf(false)
 
-    fun request() {
+    /** @param authDirectly 差授权时直接请求不弹引导，给本身就写着「请求权限」的入口，免得多点一次 */
+    fun request(authDirectly: Boolean = false) {
         scope.launch {
             val readiness = readinessProvider.resolveUnskipped()
-            if (readiness.fixable) {
+            val guide = readiness.fixable &&
+                    !(authDirectly && readiness.stage == ShizukuReadinessStage.NeedAuth)
+            if (guide) {
                 guidance = readiness
             } else if (!permissionManager.requestRemoteAccess()) {
                 // 引导覆盖不到时（Root 后端）直接请求，别静默空操作

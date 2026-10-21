@@ -252,9 +252,7 @@ fun UpdateCard(
     // ==================== 状态标记 ====================
 
     val resIsDownloading = resourceUpdateState is UpdateProcessState.Downloading
-    val resIsExtracting = resourceUpdateState is UpdateProcessState.Extracting
-    val resIsInstalling = resourceUpdateState is UpdateProcessState.Installing
-    val resIsUpdating = resIsDownloading || resIsExtracting || resIsInstalling
+    val resIsUpdating = resourceUpdateState.isInProgress
 
     val appIsDownloading = appUpdateState is UpdateProcessState.Downloading
     val appIsInstalling = appUpdateState is UpdateProcessState.Installing
@@ -791,6 +789,14 @@ private fun ResourceUpdateProgress(
                     color = MaterialTheme.colorScheme.secondary
                 )
             }
+        }
+
+        is UpdateProcessState.Deferred -> {
+            Text(
+                text = stringResource(R.string.update_progress_resource_deferred),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer
+            )
         }
 
         else -> {}

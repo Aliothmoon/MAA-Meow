@@ -13,7 +13,6 @@ import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.LocalizedException
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -270,7 +269,7 @@ class CopilotManager(
                     put("formation_index", config.formationIndex)
                 }
                 operBoxDataPath?.let { put("operbox_data_path", it) }
-                put("user_additional", parseUserAdditional(config))
+                userAdditionalParam(config)?.let { put("user_additional", it) }
             }.toString()
         )
     }
@@ -332,7 +331,7 @@ class CopilotManager(
                         put("formation_index", config.formationIndex)
                     }
                     operBoxDataPath?.let { put("operbox_data_path", it) }
-                    put("user_additional", parseUserAdditional(config))
+                    userAdditionalParam(config)?.let { put("user_additional", it) }
                 }.toString()
             )
         )
@@ -422,9 +421,18 @@ class CopilotManager(
         )
     }
 
-    private fun parseUserAdditional(config: CopilotConfig): JsonElement {
-        // TODO: 恢复并重构“追加自定义干员”逻辑
-        //  接线时记得补 getCharacterByNameOrAlias 归一化，上游 #18180 起干员名可能是外服名
-        return JsonArray(emptyList())
+    /** core 只认 name 与 skill，且仅在自动编队时生效；名字由调用方归一化为简中名 */
+    private fun userAdditionalParam(config: CopilotConfig): JsonArray? {
+        if (!config.formation || !config.addUserAdditional) return null
+        val opers = config.userAdditionalOpers.filter { it.name.isNotBlank() }
+        if (opers.isEmpty()) return null
+        return buildJsonArray {
+            opers.forEach { oper ->
+                add(buildJsonObject {
+                    put("name", oper.name)
+                    put("skill", oper.skill.coerceIn(0, 3))
+                })
+            }
+        }
     }
 }

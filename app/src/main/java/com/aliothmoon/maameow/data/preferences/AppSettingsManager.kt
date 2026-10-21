@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
+import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.EventShopBlacklist
@@ -27,6 +28,8 @@ import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunDurationLimit
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.models.UnlockCredential
+import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
+import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -68,6 +71,13 @@ class AppSettingsManager internal constructor(
 
         fun parsePackageList(raw: String): Set<String> =
             raw.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+
+        fun parseGamePackages(raw: String): Map<String, String> {
+            if (raw.isBlank()) return emptyMap()
+            val map = runCatching { JsonUtils.common.decodeFromString<Map<String, String>>(raw) }
+                .getOrDefault(emptyMap())
+            return map.filter { (type, pkg) -> Packages.isValidOverride(type, pkg) }
+        }
 
         /** 首启引导版本，内容大改需全员重看时 +1 */
         const val ONBOARDING_VERSION = 1
@@ -273,6 +283,24 @@ class AppSettingsManager internal constructor(
         with(AppSettingsSchema) {
             context.dataStore.edit {
                 it[shizukuLaunchPackage] = trimmedPackageName
+            }
+        }
+    }
+
+    // 自定义游戏包名
+    val gamePackages: StateFlow<Map<String, String>> = setting { parseGamePackages(it.gamePackages) }
+
+    /** [packageName] 为 null 或等于默认即恢复默认 */
+    suspend fun setGamePackage(clientType: String, packageName: String?) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                val current = parseGamePackages(it[gamePackages].orEmpty())
+                val next = if (packageName != null && Packages.isValidOverride(clientType, packageName)) {
+                    current + (clientType to packageName)
+                } else {
+                    current - clientType
+                }
+                it[gamePackages] = if (next.isEmpty()) "" else JsonUtils.common.encodeToString(next)
             }
         }
     }
@@ -521,12 +549,24 @@ class AppSettingsManager internal constructor(
         }
     }
 
+    val virtualDisplayBackend: StateFlow<VirtualDisplayBackend> = setting {
+        runCatching { VirtualDisplayBackend.valueOf(it.virtualDisplayBackend) }
+            .getOrDefault(VirtualDisplayBackend.LEGACY)
+    }
+
+    suspend fun setVirtualDisplayBackend(backend: VirtualDisplayBackend) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[virtualDisplayBackend] = backend.name }
+        }
+    }
+
     // 应用语言
     enum class AppLanguage(val tag: String) {
         // 仅用于兼容旧数据；启动时会被收敛成显式语言。
         SYSTEM(""),
         ZH("zh"),
         EN("en"),
+        KO("ko"),
     }
 
     /** 资源与干员名用的语言码，system 收敛成显式语言 */
@@ -618,6 +658,27 @@ class AppSettingsManager internal constructor(
         (raw.toIntOrNull() ?: 0) < ONBOARDING_VERSION
 
     val needsOnboarding: StateFlow<Boolean> = setting { parseNeedsOnboarding(it.onboardingSeenVersion) }
+
+    /** 从没看完过引导，只有这时强制 */
+    val onboardingNeverSeen: StateFlow<Boolean> =
+        setting { (it.onboardingSeenVersion.toIntOrNull() ?: 0) == 0 }
+
+    @Volatile
+    private var onboardingAutoStartCount: Int? = null
+
+    /** 记一次首启引导自动弹出，返回累计次数；同进程只记一次，Activity 重建不算 */
+    suspend fun countOnboardingAutoStart(): Int {
+        onboardingAutoStartCount?.let { return it }
+        var count = 0
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                count = (it[onboardingAutoStarts]?.toIntOrNull() ?: 0) + 1
+                it[onboardingAutoStarts] = count.toString()
+            }
+        }
+        onboardingAutoStartCount = count
+        return count
+    }
 
     suspend fun markOnboardingSeen() {
         with(AppSettingsSchema) {

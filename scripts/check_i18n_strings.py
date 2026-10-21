@@ -2,17 +2,18 @@
 """
 i18n strings.xml 一致性校验与冗余清理工具。
 
-项目的多语言结构(由 translate_maa_strings.py 的工作流决定):
+项目的多语言结构:
   - res/values/strings.xml      默认资源 = 中文源(source of truth)
-  - res/values-en/strings.xml   英文翻译(由 translate_maa_strings.py 生成)
+  - res/values-en/strings.xml   英文翻译
+  - res/values-ko/strings.xml   韩语翻译
   - res/values-zh/strings.xml   历史遗留的中文冗余副本,应删除
                                 (中文 locale "zh" 会自动 fallback 到默认 values)
 
 本脚本做两件事:
-  1) 校验(默认):对比默认 values(中文)与 values-en(英文),报告
-       - key 不一致:英文漏翻 / 英文多余残留
+  1) 校验(默认):对比默认 values(中文)与各译文(TRANSLATIONS),报告
+       - key 不一致:漏翻 / 多余残留
        - 占位符(%1$s 等)集合不匹配
-       - 英文值里残留中文(疑似漏翻,或运行时会 fallback 成中文)
+       - 译文里残留中文(疑似漏翻,或运行时会 fallback 成中文)
        - 单个文件内重复定义的 key
   2) 清理(--clean):在确认零丢失后删除冗余的 values-zh。
 
@@ -35,14 +36,21 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RES_DIR = PROJECT_ROOT / "app" / "src" / "main" / "res"
 VALUES_DEFAULT = RES_DIR / "values" / "strings.xml"   # 中文源(source of truth)
-VALUES_EN = RES_DIR / "values-en" / "strings.xml"     # 英文翻译
 VALUES_ZH = RES_DIR / "values-zh" / "strings.xml"     # 冗余中文副本
 
 # Android 带序号占位符:%1$s、%2$d、%1$04d、%1$dx%2$d 等
 PLACEHOLDER_RE = re.compile(r"%\d+\$[-#+ 0-9.]*[a-zA-Z]")
 # CJK 统一表意文字 + 常见中日韩标点/全角符号(用于检测英文里残留的中文)
 CJK_RE = re.compile(r"[㐀-䶿一-鿿　-〿！-｠]")
-# 英文文案里合法含中文的 key:语言自名、专有名词等,不计入“疑似漏翻”
+# 韩语正文会用「」等 CJK 标点,只查汉字
+HAN_RE = re.compile(r"[㐀-䶿一-鿿]")
+
+# 译文语言 → (文件, 残留中文检测);与 build-logic I18nVerifyPlugin 的 TRANSLATION_LOCALES 保持一致
+TRANSLATIONS = {
+    "en": (RES_DIR / "values-en" / "strings.xml", CJK_RE),
+    "ko": (RES_DIR / "values-ko" / "strings.xml", HAN_RE),
+}
+# 译文里合法含中文的 key:语言自名、专有名词等,不计入“疑似漏翻”
 CJK_ALLOWED = {
     "settings_language_zh",   # 语言选择项,用语言自身名字显示
     "update_card_mirror_desc",  # 含专有名词 “Mirror酱”
@@ -115,58 +123,68 @@ def clean_redundant_zh() -> bool:
 
 
 def check() -> int:
-    """校验默认 values(中文)与 values-en(英文),打印报告,返回错误条数。"""
+    """校验默认 values(中文)与各译文,打印报告,返回错误条数。"""
     zh, zh_dups = parse_strings(VALUES_DEFAULT)
-    en, en_dups = parse_strings(VALUES_EN)
     errors = 0
     warns = 0
+    counts = [f"中文 {len(zh)} 条"]
 
-    # 1) 单文件内重复 key
-    for label, dups in (("values/strings.xml", zh_dups), ("values-en/strings.xml", en_dups)):
-        if dups:
-            errors += len(dups)
-            print(f"[错误] {label} 重复定义 {len(dups)} 个 key:")
-            for k in dups:
+    if zh_dups:
+        errors += len(zh_dups)
+        print(f"[错误] values/strings.xml 重复定义 {len(zh_dups)} 个 key:")
+        for k in zh_dups:
+            print(f"    - {k}")
+
+    for lang, (path, residual_re) in TRANSLATIONS.items():
+        label = f"values-{lang}"
+        tr, tr_dups = parse_strings(path)
+        counts.append(f"{lang} {len(tr)} 条")
+
+        # 1) 单文件内重复 key
+        if tr_dups:
+            errors += len(tr_dups)
+            print(f"[错误] {label}/strings.xml 重复定义 {len(tr_dups)} 个 key:")
+            for k in tr_dups:
                 print(f"    - {k}")
 
-    # 2) key 缺失 / 多余
-    missing_in_en = sorted(set(zh) - set(en))   # 英文漏翻
-    extra_in_en = sorted(set(en) - set(zh))     # 英文残留
-    if missing_in_en:
-        errors += len(missing_in_en)
-        print(f"[错误] 英文漏翻(values-en 缺失,运行时会 fallback 成中文)共 {len(missing_in_en)} 条:")
-        for k in missing_in_en:
-            print(f"    - {k}")
-    if extra_in_en:
-        warns += len(extra_in_en)
-        print(f"[警告] 英文残留(values-en 多余,中文源已无此 key)共 {len(extra_in_en)} 条:")
-        for k in extra_in_en:
-            print(f"    - {k}")
+        # 2) key 缺失 / 多余
+        missing = sorted(set(zh) - set(tr))
+        extra = sorted(set(tr) - set(zh))
+        if missing:
+            errors += len(missing)
+            print(f"[错误] {label} 漏翻(运行时会 fallback 成中文)共 {len(missing)} 条:")
+            for k in missing:
+                print(f"    - {k}")
+        if extra:
+            warns += len(extra)
+            print(f"[警告] {label} 残留(中文源已无此 key)共 {len(extra)} 条:")
+            for k in extra:
+                print(f"    - {k}")
 
-    # 3) 占位符不匹配 / 4) 英文里残留中文(仅检查共有 key)
-    ph_mismatch: list[str] = []
-    cjk_in_en: list[str] = []
-    for k in sorted(set(zh) & set(en)):
-        if placeholders(zh[k]) != placeholders(en[k]):
-            ph_mismatch.append(k)
-        if k not in CJK_ALLOWED and CJK_RE.search(en[k]):
-            cjk_in_en.append(k)
+        # 3) 占位符不匹配 / 4) 译文里残留中文(仅检查共有 key)
+        ph_mismatch: list[str] = []
+        residual: list[str] = []
+        for k in sorted(set(zh) & set(tr)):
+            if placeholders(zh[k]) != placeholders(tr[k]):
+                ph_mismatch.append(k)
+            if k not in CJK_ALLOWED and residual_re.search(tr[k]):
+                residual.append(k)
 
-    if ph_mismatch:
-        errors += len(ph_mismatch)
-        print(f"[错误] 占位符不匹配(中英文 %n$X 不一致,格式化可能崩溃)共 {len(ph_mismatch)} 条:")
-        for k in ph_mismatch:
-            print(f"    - {k}")
-            print(f"        zh: {zh[k]}")
-            print(f"        en: {en[k]}")
-    if cjk_in_en:
-        warns += len(cjk_in_en)
-        print(f"[警告] 英文值里含中文(疑似漏翻)共 {len(cjk_in_en)} 条:")
-        for k in cjk_in_en:
-            print(f"    - {k}: {en[k]}")
+        if ph_mismatch:
+            errors += len(ph_mismatch)
+            print(f"[错误] {label} 占位符不匹配(%n$X 与中文不一致,格式化可能崩溃)共 {len(ph_mismatch)} 条:")
+            for k in ph_mismatch:
+                print(f"    - {k}")
+                print(f"        zh: {zh[k]}")
+                print(f"        {lang}: {tr[k]}")
+        if residual:
+            warns += len(residual)
+            print(f"[警告] {label} 值里含中文(疑似漏翻)共 {len(residual)} 条:")
+            for k in residual:
+                print(f"    - {k}: {tr[k]}")
 
     print()
-    print(f"校验完成:中文 {len(zh)} 条,英文 {len(en)} 条;错误 {errors},警告 {warns}。")
+    print(f"校验完成:{','.join(counts)};错误 {errors},警告 {warns}。")
     return errors
 
 
@@ -177,13 +195,15 @@ def main() -> int:
     parser.add_argument("--no-fail", action="store_true",
                         help="即使有错误也以 0 退出(仅查看报告)")
     args = parser.parse_args()
+    # GBK 控制台编码不了韩文,别因打印报告崩掉
+    sys.stdout.reconfigure(errors="backslashreplace")
 
     if args.clean:
         print("== 清理冗余 values-zh ==")
         clean_redundant_zh()
         print()
 
-    print("== 校验 values(中文) vs values-en(英文) ==")
+    print(f"== 校验 values(中文) vs {', '.join(f'values-{lang}' for lang in TRANSLATIONS)} ==")
     errors = check()
 
     return 1 if (errors and not args.no_fail) else 0

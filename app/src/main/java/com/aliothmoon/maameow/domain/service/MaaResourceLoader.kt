@@ -4,16 +4,18 @@ import android.os.IBinder
 import android.os.Process
 import com.aliothmoon.maameow.MaaCoreService
 import com.aliothmoon.maameow.RemoteService
+import com.aliothmoon.maameow.constant.MaaFiles
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
-import com.aliothmoon.maameow.data.resource.ActivityManager
+import com.aliothmoon.maameow.data.resource.HotUpdateSync
 import com.aliothmoon.maameow.domain.models.ClientResourceProfile
 import com.aliothmoon.maameow.manager.LogcatServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
 import com.aliothmoon.maameow.remote.ResourceFiles
 import com.aliothmoon.maameow.remote.SetupResult
+import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,9 +27,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import timber.log.Timber
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
@@ -37,7 +41,8 @@ class MaaResourceLoader(
     private val pathConfig: MaaPathConfig,
     private val appSettings: AppSettingsManager,
     private val chainState: TaskChainState,
-    private val activityManager: ActivityManager,
+    private val hotUpdateSync: HotUpdateSync,
+    private val resourceInitService: ResourceInitService,
     private val coreDataPusher: CoreDataPusher,
 ) {
     // 换档重启期间抑制 reset()，主动解绑会触发 onServiceDisconnected
@@ -52,6 +57,13 @@ class MaaResourceLoader(
     /** Ready 对应的提权进程；Shizuku 重启后的重绑不经过 Died/Disconnected，只能靠它识别换了进程 */
     @Volatile
     private var loadedBinder: IBinder? = null
+
+    /** 最近一次加载所用的（资源版本, 热更版本, 自定义包名） */
+    @Volatile
+    private var loadedFiles: Triple<Int, Int, Map<String, String>>? = null
+
+    private fun currentFiles() =
+        Triple(resourceInitService.revision.value, hotUpdateSync.revision.value, appSettings.gamePackages.value)
 
     sealed class State {
         data object NotLoaded : State()
@@ -86,17 +98,14 @@ class MaaResourceLoader(
         val restartNeeded = requiresServiceRestart(previousClientType, clientType)
 
         _state.value = if (restartNeeded) State.Reloading() else State.Loading()
+        val files = currentFiles()
+        loadedFiles = files
         if (!pathConfig.isResourceReady) {
             Timber.e("MaaResourceLoader.load() aborted: resource not ready (version.json missing or app version mismatch)")
             _state.value = State.Failed("资源未就绪，请重新初始化", permanent = true)
             return Result.failure(Exception("Resource not ready"))
         }
         Timber.i("MaaCore resources loading, client type=$clientType")
-        try {
-            refreshHotUpdate(clientType)
-        } catch (e: Exception) {
-            Timber.e(e, "refreshHotUpdate error")
-        }
 
         return try {
             if (restartNeeded) {
@@ -143,6 +152,8 @@ class MaaResourceLoader(
                 if (isGlobal) {
                     copyTasksJson(pathConfig.globalCacheResourceDir(clientType).absolutePath)
                 }
+                // 先于投递写好，独立目录才能带上
+                val gamePackageDir = writeGamePackageLayer(files.third)
 
                 // 独立目录：投递热更包与用户文件
                 if (!coreDataPusher.prepare(srv)) {
@@ -156,6 +167,13 @@ class MaaResourceLoader(
                     _state.value = State.Failed("Failed to load main resource")
                     Timber.e("LoadResource failed: ${pathConfig.rootDir}")
                     return@useRemoteService Result.failure(Exception("Failed to load main resource"))
+                }
+
+                // 紧跟主资源，后续层照常覆盖 options；失败不能放行，否则 core 拉起默认包
+                if (gamePackageDir != null && !loadResIfExists(maa, gamePackageDir)) {
+                    val msg = "Failed to load game package config"
+                    _state.value = State.Failed(msg)
+                    return@useRemoteService Result.failure(Exception(msg))
                 }
 
                 val followUps = buildList {
@@ -206,13 +224,6 @@ class MaaResourceLoader(
         delay(SERVICE_RESTART_SETTLE_MS.milliseconds)
     }
 
-    /** 确保活动关卡与热更 tasks.json 就位，刚拉过会复用 */
-    private suspend fun refreshHotUpdate(clientType: String) {
-        withTimeout(30_000.milliseconds) {
-            withContext(Dispatchers.IO) { activityManager.load(clientType) }
-        }
-    }
-
     /** 存在性按 App 侧目录判断：独立目录下内置资源、热更、用户文件两侧一致 */
     private fun loadResIfExists(maa: MaaCoreService, parentDir: String): Boolean {
         val resDir = File(parentDir, "resource")
@@ -236,11 +247,10 @@ class MaaResourceLoader(
                 else ensureProfile(clientType)
             }
 
-            is State.Failed -> if (s.permanent) {
-                // 资源文件缺失，重试无意义
+            is State.Failed -> if (s.permanent && loadedFiles == currentFiles()) {
+                // 资源缺失且文件没动过，重试无意义
                 Result.failure(Exception(s.message))
             } else {
-                // 临时失败（IPC/IO），重新尝试加载
                 load(clientType)
             }
 
@@ -257,10 +267,11 @@ class MaaResourceLoader(
 
     private suspend fun ensureProfile(clientType: String): Result<Unit> {
         val loaded = loadedClientType
-        if (loaded != null && ClientResourceProfile.of(loaded) == ClientResourceProfile.of(clientType)) {
+        val sameProfile = loaded != null && ClientResourceProfile.of(loaded) == ClientResourceProfile.of(clientType)
+        if (sameProfile && loadedFiles == currentFiles()) {
             return Result.success(Unit)
         }
-        Timber.i("Loaded client %s mismatches requested %s, reloading", loaded, clientType)
+        Timber.i("Loaded client %s (files %s) is stale for %s, reloading", loaded, loadedFiles, clientType)
         return load(clientType)
     }
 
@@ -297,6 +308,18 @@ class MaaResourceLoader(
         _state.value = State.NotLoaded
     }
 
+    private fun writeGamePackageLayer(overrides: Map<String, String>): String? {
+        val dir = File(pathConfig.rootDir, MaaFiles.GAME_PACKAGE_DIR)
+        if (overrides.isEmpty()) {
+            dir.deleteRecursively()
+            return null
+        }
+        val base = File(pathConfig.resourceDir, "config.json").readText()
+        File(dir, "resource/config.json").apply { parentFile?.mkdirs() }
+            .writeText(gamePackageConfig(base, overrides))
+        return dir.absolutePath
+    }
+
     private fun copyTasksJson(resourcePath: String) {
         if (!ResourceFiles.deriveTasksJson(File(resourcePath))) Timber.w("copyTasksJson failed: $resourcePath")
     }
@@ -308,5 +331,19 @@ class MaaResourceLoader(
         /** 换档必须换进程，global 之间互切也算 */
         internal fun requiresServiceRestart(loaded: String?, target: String): Boolean =
             loaded != null && ClientResourceProfile.of(loaded) != ClientResourceProfile.of(target)
+
+        /**
+         * core 解析 config.json 时 version/options/packageName/connection 缺一不可，packageName 按客户端合并
+         * 照抄主配置只换 packageName，connection 主配置已加载过，清空
+         */
+        internal fun gamePackageConfig(base: String, overrides: Map<String, String>): String {
+            val config = JsonUtils.common.parseToJsonElement(base).jsonObject
+            return JsonObject(
+                config + mapOf(
+                    "packageName" to JsonObject(overrides.mapValues { JsonPrimitive(it.value) }),
+                    "connection" to JsonArray(emptyList()),
+                )
+            ).toString()
+        }
     }
 }

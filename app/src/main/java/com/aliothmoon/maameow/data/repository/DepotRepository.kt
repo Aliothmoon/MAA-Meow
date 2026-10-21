@@ -11,11 +11,18 @@ import com.aliothmoon.maameow.data.preferences.TaskChainState
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.Serializable
 
-/** @param syncTimeMillis 上次全量识别；0=从未识别。merge 不更新。 */
+/**
+ * @param syncTimeMillis 上次全量识别；0=从未识别；merge 不更新
+ * @param scanItems 本次识别原值，merge 不动
+ * @param prevSyncTimeMillis 上次识别时间；0=无对比基线
+ */
 @Serializable
 data class DepotSnapshot(
     val items: Map<String, Int> = emptyMap(),
     val syncTimeMillis: Long = 0L,
+    val scanItems: Map<String, Int> = emptyMap(),
+    val prevScanItems: Map<String, Int> = emptyMap(),
+    val prevSyncTimeMillis: Long = 0L,
 )
 
 /** 仓库分片：内存权威，set/merge 同步写内存并排队落盘。 */
@@ -37,11 +44,15 @@ class DepotRepository(
 
     fun start() = shards.start()
 
-    fun set(items: List<DepotItem>) {
-        shards.mutate {
+    fun set(items: List<DepotItem>): DepotSnapshot? {
+        val scan = items.associate { it.id to it.count }
+        return shards.mutate { current ->
             DepotSnapshot(
-                items = items.associate { it.id to it.count },
+                items = scan,
                 syncTimeMillis = System.currentTimeMillis(),
+                scanItems = scan,
+                prevScanItems = current.scanItems,
+                prevSyncTimeMillis = if (current.scanItems.isEmpty()) 0L else current.syncTimeMillis,
             )
         }
     }

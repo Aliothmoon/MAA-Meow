@@ -1,9 +1,16 @@
 package com.aliothmoon.maameow.data.model
 
-import com.aliothmoon.maameow.domain.enums.RoguelikeBlackFlowCultivationTarget
+import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.domain.enums.RoguelikeBlackFlowStartAnimal
+import com.aliothmoon.maameow.domain.enums.RoguelikeBlackFlowStartReward
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants.Roguelike as RoguelikeUi
+import com.aliothmoon.maameow.utils.JsonUtils
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
@@ -13,49 +20,149 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 黑流树海（BlackFlow）主题的参数与选项契约，对齐上游 v6.17.0-beta.2
- *
- * 其余模式不下发 blackflow_strategy —— core 会按 mode + investment_enabled 自行推导
+ * 黑流树海（BlackFlow）主题的参数与选项契约，对齐上游 v6.20.0 AsstRoguelikeTask.Serialize
  */
 class RoguelikeBlackFlowParamsTest {
 
+    private val resourceDataManager = mockk<ResourceDataManager>(relaxed = true) {
+        every { normalizeCharacterName(any()) } answers { firstArg() }
+    }
+
     private fun params(config: RoguelikeConfig) =
         Json.parseToJsonElement(
-            config.toTaskParams(testTaskParamContext()).single().params
+            config.toTaskParams(testTaskParamContext(resourceDataManager = resourceDataManager))
+                .single().params
         ).jsonObject
 
+    private fun JsonObject.str(key: String) = this[key]!!.jsonPrimitive.content
+
+    private fun JsonObject.coreChars() =
+        this["core_char_list"]!!.jsonArray.map { it.jsonObject }
+
+    private val userStart = RoguelikeConfig(
+        theme = THEME,
+        squad = "地质调查分队",
+        roles = RoguelikeUi.ROLE_FIRST_MOVE_ADVANTAGE,
+        startingOpers = listOf(RoguelikeStartingOper("山", useSupport = true)),
+        collectibleModeSquad = "开拓者分队",
+    )
+
     @Test
-    fun babyAnimalMode_sendsStrategyAndTarget() {
+    fun exp_withoutFlight_sendsTargetEnding_andKeepsUserStart() {
+        val json = params(userStart.copy(mode = RoguelikeMode.Exp))
+        assertEquals("ending1", json.str("blackflow_strategy"))
+        assertEquals("地质调查分队", json.str("squad"))
+        assertEquals(RoguelikeUi.ROLE_FIRST_MOVE_ADVANTAGE, json.str("roles"))
+        assertEquals("山", json.coreChars().single().getValue("name").jsonPrimitive.content)
+    }
+
+    @Test
+    fun exp_withFlight_omitsStrategy_andUsesMechanicStart() {
+        val json = params(userStart.copy(mode = RoguelikeMode.Exp, blackFlowFastFlight = true))
+        assertNull(json["blackflow_strategy"])
+        assertEquals("特勤分队", json.str("squad"))
+        assertEquals("稳扎稳打", json.str("roles"))
+        val oper = json.coreChars().single()
+        assertEquals("机械师", oper.getValue("name").jsonPrimitive.content)
+        assertFalse(oper.getValue("use_support").jsonPrimitive.content.toBoolean())
+    }
+
+    @Test
+    fun exp_onOtherTheme_ignoresBlackFlowOptions() {
         val json = params(
-            RoguelikeConfig(
-                theme = THEME,
-                mode = RoguelikeMode.BlackFlowBabyAnimal,
-                blackFlowCultivationTarget = RoguelikeBlackFlowCultivationTarget.Cerberus,
+            userStart.copy(theme = "JieGarden", mode = RoguelikeMode.Exp, blackFlowFastFlight = true)
+        )
+        assertNull(json["blackflow_strategy"])
+        assertEquals("地质调查分队", json.str("squad"))
+        assertEquals("山", json.coreChars().single().getValue("name").jsonPrimitive.content)
+    }
+
+    @Test
+    fun startRun_sendsAnimalsRewardsAndPrepSquad() {
+        val json = params(
+            userStart.copy(
+                mode = RoguelikeMode.BlackFlowStartRun,
+                blackFlowStartAnimal1 = RoguelikeBlackFlowStartAnimal.Cat,
+                blackFlowStartAnimal2 = RoguelikeBlackFlowStartAnimal.FeatheredSerpent,
+                blackFlowStartRewards = setOf(
+                    RoguelikeBlackFlowStartReward.SpaceLease,
+                    RoguelikeBlackFlowStartReward.GoldenCrow,
+                ),
             )
         )
-        assertEquals("baby_animal", json["blackflow_strategy"]!!.jsonPrimitive.content)
+        assertEquals(30003, json.str("mode").toInt())
         assertEquals(
-            "swaddled_cerberus",
-            json["blackflow_cultivation_target"]!!.jsonPrimitive.content,
+            listOf("swaddled_cat", "swaddled_feathered_serpent"),
+            json["blackflow_start_animals"]!!.jsonArray.map { it.jsonPrimitive.content },
         )
-        assertEquals(30001, json["mode"]!!.jsonPrimitive.content.toInt())
+        assertEquals(4 or 2048, json.str("blackflow_start_rewards").toInt())
+        assertEquals("开拓者分队", json.str("collectible_mode_squad"))
+        // 目标局用常规分队，职业组与开局干员只作用于准备局
+        assertEquals("地质调查分队", json.str("squad"))
+        assertEquals("山", json.coreChars().single().getValue("name").jsonPrimitive.content)
     }
 
     @Test
-    fun otherModes_omitStrategy() {
-        val json = params(RoguelikeConfig(theme = THEME, mode = RoguelikeMode.Exp))
-        assertNull(json["blackflow_strategy"])
-        assertNull(json["blackflow_cultivation_target"])
-    }
-
-    @Test
-    fun babyAnimalMode_onOtherTheme_omitsStrategy() {
-        // 主题与模式都对上才发，对齐 WPF AsstRoguelikeTask
+    fun startRun_withoutSerpent_dropsSerpentRewards() {
         val json = params(
-            RoguelikeConfig(theme = "JieGarden", mode = RoguelikeMode.BlackFlowBabyAnimal)
+            userStart.copy(
+                mode = RoguelikeMode.BlackFlowStartRun,
+                blackFlowStartAnimal1 = RoguelikeBlackFlowStartAnimal.Dog,
+                blackFlowStartRewards = setOf(
+                    RoguelikeBlackFlowStartReward.UnnumberedItem,
+                    RoguelikeBlackFlowStartReward.Pegasus,
+                ),
+            )
         )
+        assertEquals(1, json.str("blackflow_start_rewards").toInt())
+        assertEquals(
+            listOf("swaddled_dog"),
+            json["blackflow_start_animals"]!!.jsonArray.map { it.jsonPrimitive.content },
+        )
+    }
+
+    @Test
+    fun startRun_alwaysSendsRequiredFields() {
+        // core 在模式 30003 下缺任一字段都会拒绝任务
+        val json = params(userStart.copy(mode = RoguelikeMode.BlackFlowStartRun))
+        assertTrue(json["blackflow_start_animals"]!!.jsonArray.isEmpty())
+        assertEquals(0, json.str("blackflow_start_rewards").toInt())
+    }
+
+    @Test
+    fun startRun_withFlight_fixesPrepSquadRolesAndMechanic_butKeepsTargetSquad() {
+        val json = params(
+            userStart.copy(mode = RoguelikeMode.BlackFlowStartRun, blackFlowStartRunFastFlight = true)
+        )
+        assertEquals("特勤分队", json.str("collectible_mode_squad"))
+        assertEquals("地质调查分队", json.str("squad"))
+        assertEquals("稳扎稳打", json.str("roles"))
+        assertEquals("机械师", json.coreChars().single().getValue("name").jsonPrimitive.content)
         assertNull(json["blackflow_strategy"])
-        assertNull(json["blackflow_cultivation_target"])
+    }
+
+    @Test
+    fun legacyBabyAnimal_isMigratedToStartRun_andLegacyFieldIsDropped() {
+        val legacy = JsonUtils.common.decodeFromString<RoguelikeConfig>(
+            """{"theme":"BlackFlow","mode":"BlackFlowBabyAnimal","blackFlowCultivationTarget":"Dog"}"""
+        )
+        val migrated = legacy.migrate()
+        assertEquals(RoguelikeMode.BlackFlowStartRun, migrated.mode)
+        assertEquals(RoguelikeBlackFlowStartAnimal.Dog, migrated.blackFlowStartAnimal1)
+        assertEquals(RoguelikeBlackFlowStartAnimal.None, migrated.blackFlowStartAnimal2)
+        assertFalse(
+            "blackFlowCultivationTarget" in JsonUtils.common.encodeToString(migrated)
+        )
+    }
+
+    @Test
+    fun legacyCultivationTarget_onOtherMode_isOnlyDropped() {
+        val migrated = JsonUtils.common.decodeFromString<RoguelikeConfig>(
+            """{"theme":"BlackFlow","mode":"Investment","blackFlowCultivationTarget":"Dog"}"""
+        ).migrate()
+        assertEquals(RoguelikeMode.Investment, migrated.mode)
+        assertEquals(RoguelikeBlackFlowStartAnimal.None, migrated.blackFlowStartAnimal1)
+        assertNull(migrated.legacyBlackFlowCultivationTarget)
     }
 
     @Test
@@ -68,7 +175,7 @@ class RoguelikeBlackFlowParamsTest {
                 investmentWithMoreScore = true,
             )
         )
-        assertFalse(json["investment_with_more_score"]!!.jsonPrimitive.content.toBoolean())
+        assertFalse(json.str("investment_with_more_score").toBoolean())
     }
 
     @Test
@@ -81,29 +188,29 @@ class RoguelikeBlackFlowParamsTest {
                 investmentWithMoreScore = true,
             )
         )
-        assertTrue(json["investment_with_more_score"]!!.jsonPrimitive.content.toBoolean())
+        assertTrue(json.str("investment_with_more_score").toBoolean())
     }
 
     @Test
     fun modeList_isRestrictedToThreeStrategies() {
         assertEquals(
-            listOf("Exp", "Investment", "BlackFlowBabyAnimal"),
+            listOf("Exp", "Investment", "BlackFlowStartRun"),
             RoguelikeUi.getModeKeysForTheme(THEME),
         )
         assertFalse(RoguelikeUi.isModeValidForTheme(RoguelikeMode.Collectible, THEME))
-        assertTrue(RoguelikeUi.isModeValidForTheme(RoguelikeMode.BlackFlowBabyAnimal, THEME))
-    }
-
-    @Test
-    fun babyAnimalMode_isRejectedByOtherThemes() {
-        assertFalse(RoguelikeUi.isModeValidForTheme(RoguelikeMode.BlackFlowBabyAnimal, "JieGarden"))
+        assertFalse(RoguelikeUi.isModeValidForTheme(RoguelikeMode.BlackFlowBabyAnimal, THEME))
+        assertFalse(RoguelikeUi.isModeValidForTheme(RoguelikeMode.BlackFlowStartRun, "JieGarden"))
     }
 
     @Test
     fun squadList_dropsFirstClassAndKeepsIs6Squads() {
         val squads = RoguelikeUi.getSquadOptionsForTheme(THEME)
         assertFalse(squads.toString(), "高规格分队" in squads)
-        assertTrue(squads.containsAll(listOf("本源研修分队", "地质调查分队", "特勤分队")))
+        assertTrue(
+            squads.containsAll(
+                listOf("本源研修分队", "地质调查分队", "团结阵线分队", "踏足遍历分队", "特勤分队")
+            )
+        )
         // 其他主题不受影响
         assertTrue("高规格分队" in RoguelikeUi.getSquadOptionsForTheme("JieGarden"))
     }
@@ -123,8 +230,8 @@ class RoguelikeBlackFlowParamsTest {
     }
 
     @Test
-    fun maxDifficulty_is15() {
-        assertEquals(15, RoguelikeUi.getMaxDifficultyForTheme(THEME))
+    fun maxDifficulty_is16() {
+        assertEquals(16, RoguelikeUi.getMaxDifficultyForTheme(THEME))
     }
 
     private companion object {

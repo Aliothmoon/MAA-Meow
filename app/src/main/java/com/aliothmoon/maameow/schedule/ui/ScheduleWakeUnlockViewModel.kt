@@ -13,7 +13,10 @@ import com.aliothmoon.maameow.domain.models.UnlockGesture
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
+import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
+import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
 import com.aliothmoon.maameow.schedule.service.ScheduleWakeLock
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +31,8 @@ class ScheduleWakeUnlockViewModel(
     private val wakeUnlockEngine: WakeUnlockEngine,
     private val unlockGestureStore: UnlockGestureStore,
     private val compositionService: MaaCompositionService,
+    private val scheduleAlarmManager: ScheduleAlarmManager,
+    private val scheduleRepository: ScheduleStrategyRepository,
 ) : ViewModel() {
 
     /** 锁屏和注入都会打断正在跑的任务 */
@@ -45,6 +50,18 @@ class ScheduleWakeUnlockViewModel(
     }
 
     val wakeCredential: StateFlow<String> = appSettingsManager.wakeCredential
+
+    private val _useAlarmClock = MutableStateFlow(scheduleAlarmManager.useAlarmClock)
+    val useAlarmClock: StateFlow<Boolean> = _useAlarmClock.asStateFlow()
+
+    /** 先同步落值，连点不乱序 */
+    fun setUseAlarmClock(enabled: Boolean) {
+        _useAlarmClock.value = enabled
+        scheduleAlarmManager.useAlarmClock = enabled
+        viewModelScope.launch(Dispatchers.IO) {
+            scheduleAlarmManager.rescheduleAll(scheduleRepository.getAll())
+        }
+    }
 
     fun setWakeCredential(credential: String) {
         viewModelScope.launch { appSettingsManager.setWakeCredential(credential) }

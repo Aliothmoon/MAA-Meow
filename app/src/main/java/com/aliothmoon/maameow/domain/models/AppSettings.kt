@@ -5,6 +5,8 @@ import com.aliothmoon.preferences.PrefKey
 import com.aliothmoon.preferences.PrefSchema
 import kotlinx.serialization.Serializable
 
+enum class VirtualDisplayBackend { LEGACY, VDM }
+
 @Serializable
 @PrefSchema
 data class AppSettings(
@@ -55,6 +57,10 @@ data class AppSettings(
     /** 非空表示该包可能残留 MaaMeow 设置的静音，需要在关闭或重连时恢复。 */
     @PrefKey(default = "")
     val mutedGamePackage: String = "",
+
+    /** 自定义游戏包名，客户端 → 包名的 JSON，空即全用默认 */
+    @PrefKey(default = "")
+    val gamePackages: String = "",
 
     @PrefKey(default = "false")
     val closeAppOnTaskEnd: String = "false",
@@ -112,6 +118,10 @@ data class AppSettings(
     @PrefKey(default = "P720")
     val backgroundResolution: String = "P720",
 
+    /** 后台虚拟屏创建方式；VDM 仅在 Android 14+ 设置页展示 */
+    @PrefKey(default = "LEGACY")
+    val virtualDisplayBackend: String = "LEGACY",
+
     @PrefKey(default = "SYSTEM")
     val language: String = "SYSTEM",
 
@@ -138,6 +148,10 @@ data class AppSettings(
     /** 已看过的首启引导版本，小于当前版本则展示 */
     @PrefKey(default = "0")
     val onboardingSeenVersion: String = "0",
+
+    /** 首启强制引导自动弹出过几次，没走完再弹时放开跳过 */
+    @PrefKey(default = "0")
+    val onboardingAutoStarts: String = "0",
 
     @PrefKey(default = "false")
     val forceFullscreenOnVirtualDisplay: String = "false",

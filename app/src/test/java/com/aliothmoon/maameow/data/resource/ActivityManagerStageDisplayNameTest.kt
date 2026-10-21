@@ -19,7 +19,6 @@ class ActivityManagerStageDisplayNameTest {
     private val manager = ActivityManager(
         context = context,
         chainState = mockk(relaxed = true),
-        maaApiService = mockk(relaxed = true),
         itemHelper = mockk(relaxed = true),
     ).also { manager ->
         val field = ActivityManager::class.java.getDeclaredField("_activityStages")

@@ -8,7 +8,10 @@ import android.os.IInterface;
 
 import com.aliothmoon.maameow.third.FakeContext;
 
+import com.aliothmoon.maameow.constant.AndroidVersions;
+
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 @SuppressLint("PrivateApi,DiscouragedPrivateApi")
@@ -22,6 +25,8 @@ public final class ServiceManager {
     private static StatusBarManager statusBarManager;
     private static ActivityManager activityManager;
     private static CameraManager cameraManager;
+    private static CompanionDeviceManager companionDeviceManager;
+    private static VirtualDeviceManager virtualDeviceManager;
 
     static {
         try {
@@ -87,6 +92,34 @@ public final class ServiceManager {
             activityManager = ActivityManager.create();
         }
         return activityManager;
+    }
+
+    @androidx.annotation.RequiresApi(AndroidVersions.API_33_ANDROID_13)
+    public static synchronized CompanionDeviceManager getCompanionDeviceManager() {
+        if (companionDeviceManager == null) {
+            companionDeviceManager = CompanionDeviceManager.create();
+        }
+        return companionDeviceManager;
+    }
+
+    @androidx.annotation.RequiresApi(AndroidVersions.API_34_ANDROID_14)
+    public static synchronized VirtualDeviceManager getVirtualDeviceManager() {
+        if (virtualDeviceManager == null) {
+            virtualDeviceManager = VirtualDeviceManager.create();
+        }
+        return virtualDeviceManager;
+    }
+
+    /** 拆掉反射包的一层，让 SecurityException 这类远端异常原样抛给调用方 */
+    static RuntimeException unwrap(InvocationTargetException e) throws InvocationTargetException {
+        Throwable cause = e.getTargetException();
+        if (cause instanceof RuntimeException) {
+            throw (RuntimeException) cause;
+        }
+        if (cause instanceof Error) {
+            throw (Error) cause;
+        }
+        throw e;
     }
 
     public static CameraManager getCameraManager() {

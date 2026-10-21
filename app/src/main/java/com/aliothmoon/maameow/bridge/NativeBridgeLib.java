@@ -28,7 +28,6 @@ public class NativeBridgeLib {
 
     public static native void releaseNativeCapturer();
 
-    @FastNative
     public static native void setPreviewSurface(Object surface);
 
     /** 停掉预览渲染线程并断开 Surface，阻塞到线程退出 */

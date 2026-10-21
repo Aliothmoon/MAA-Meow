@@ -17,7 +17,8 @@ fun RoguelikeSquadButtonGroup(
     theme: String,
     mode: RoguelikeMode,
     onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     val options = localizedRoguelikeSquadOptions(theme, mode)
     val rawValue = selectedValue.ifEmpty { options.firstOrNull()?.first.orEmpty() }
@@ -28,6 +29,7 @@ fun RoguelikeSquadButtonGroup(
         options = options,
         onSelected = onValueChange,
         modifier = modifier,
+        enabled = enabled,
         labelFontWeight = FontWeight.Medium
     )
 }

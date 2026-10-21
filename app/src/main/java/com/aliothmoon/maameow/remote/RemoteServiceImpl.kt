@@ -16,6 +16,7 @@ import com.aliothmoon.maameow.constant.DisplayMode
 import com.aliothmoon.maameow.constant.MaaFiles
 import com.aliothmoon.maameow.maa.InputControlUtils
 import com.aliothmoon.maameow.remote.internal.ActivityUtils
+import com.aliothmoon.maameow.remote.internal.BackgroundDisplay
 import com.aliothmoon.maameow.remote.internal.CoreDataStore
 import com.aliothmoon.maameow.remote.internal.GameAudioMuteController
 import com.aliothmoon.maameow.remote.internal.GameFpsMonitor
@@ -24,13 +25,13 @@ import com.aliothmoon.maameow.remote.internal.LogcatRetention
 import com.aliothmoon.maameow.remote.internal.PermissionGrantHelper
 import com.aliothmoon.maameow.remote.internal.PowerController
 import com.aliothmoon.maameow.remote.internal.PrimaryDisplayManager
+import com.aliothmoon.maameow.remote.internal.ProcessExitQuery
 import com.aliothmoon.maameow.remote.internal.ProcessLiveness
 import com.aliothmoon.maameow.remote.internal.RemoteUtils
 import com.aliothmoon.maameow.remote.internal.ScreenManager
 import com.aliothmoon.maameow.remote.internal.StaleFrameGuard
 import com.aliothmoon.maameow.remote.internal.SystemLogDump
 import com.aliothmoon.maameow.remote.internal.UserDirProbe
-import com.aliothmoon.maameow.remote.internal.VirtualDisplayManager
 import com.aliothmoon.maameow.remote.internal.WakeUnlockController
 import com.aliothmoon.maameow.remote.internal.XmsfFirewall
 import com.aliothmoon.maameow.root.ProcessExit
@@ -335,7 +336,6 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun setMonitorSurface(surface: Surface?) {
         Ln.i("$TAG: setMonitorSurface(${surface != null})")
-        VirtualDisplayManager.setMonitorSurface(surface)
         NativeBridgeLib.setPreviewSurface(surface)
     }
 
@@ -346,7 +346,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun touchDown(x: Int, y: Int, contact: Int) {
         if (virtualDisplayMode.get() == DisplayMode.PRIMARY) return
-        val displayId = VirtualDisplayManager.getDisplayId()
+        val displayId = BackgroundDisplay.displayId()
         if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
             InputControlUtils.down(x, y, contact, displayId)
         }
@@ -354,7 +354,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun touchMove(x: Int, y: Int, contact: Int) {
         if (virtualDisplayMode.get() == DisplayMode.PRIMARY) return
-        val displayId = VirtualDisplayManager.getDisplayId()
+        val displayId = BackgroundDisplay.displayId()
         if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
             InputControlUtils.move(x, y, contact, displayId)
         }
@@ -362,7 +362,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun touchUp(x: Int, y: Int, contact: Int) {
         if (virtualDisplayMode.get() == DisplayMode.PRIMARY) return
-        val displayId = VirtualDisplayManager.getDisplayId()
+        val displayId = BackgroundDisplay.displayId()
         if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
             InputControlUtils.up(x, y, contact, displayId)
         }
@@ -370,7 +370,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun touchCancel() {
         if (virtualDisplayMode.get() == DisplayMode.PRIMARY) return
-        val displayId = VirtualDisplayManager.getDisplayId()
+        val displayId = BackgroundDisplay.displayId()
         if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
             InputControlUtils.cancel(displayId)
         }
@@ -378,11 +378,12 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun setDisplayPower(on: Boolean): Boolean = PowerController.setDisplayPower(on)
 
+    @Synchronized
     override fun startVirtualDisplay(): Int {
         Ln.i("$TAG: startVirtualDisplay() ${virtualDisplayMode.get()}")
         return when (virtualDisplayMode.get()) {
             DisplayMode.PRIMARY -> PrimaryDisplayManager.start()
-            DisplayMode.BACKGROUND -> VirtualDisplayManager.start().also { displayId ->
+            DisplayMode.BACKGROUND -> BackgroundDisplay.start().also { displayId ->
                 if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
                     PowerController.startUserActivityKeepAlive(displayId)
                 }
@@ -392,6 +393,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
         }
     }
 
+    @Synchronized
     override fun stopVirtualDisplay() {
         Ln.i("$TAG: stopVirtualDisplay() ${virtualDisplayMode.get()}")
         when (virtualDisplayMode.get()) {
@@ -400,13 +402,15 @@ class RemoteServiceImpl : RemoteService.Stub() {
                 GameFpsMonitor.stop()
                 StaleFrameGuard.stop()
                 PowerController.stopUserActivityKeepAlive()
-                VirtualDisplayManager.stop()
+                BackgroundDisplay.stop()
             }
         }
         GameAudioMuteController.restoreAll()
     }
 
     override fun getGameFps(): Float = GameFpsMonitor.currentFps()
+
+    override fun getVirtualDisplayFlagTier(): Int = BackgroundDisplay.flagTier()
 
     override fun setPlayAudioOpAllowed(packageName: String?, isAllowed: Boolean): Boolean {
         if (packageName.isNullOrBlank()) return false
@@ -425,16 +429,20 @@ class RemoteServiceImpl : RemoteService.Stub() {
     }
 
     override fun isAppOnVirtualDisplay(packageName: String): Boolean {
-        val targetDisplayId = VirtualDisplayManager.getDisplayId()
+        val targetDisplayId = BackgroundDisplay.displayId()
         if (targetDisplayId == DefaultDisplayConfig.DISPLAY_NONE) return true
         val onDisplay = ActivityUtils.isAppOnDisplay(packageName, targetDisplayId)
         // 游戏不是 MaaMeow 拉起的（未启用自动启动）时，这里是首次得知它在虚拟屏上
-        if (onDisplay) GameFpsMonitor.ensureStarted(packageName)
+        if (onDisplay) {
+            GameFpsMonitor.ensureStarted(packageName)
+            // 拉回 / 重启后换了新任务也靠巡检补上
+            ActivityUtils.excludeFromRecents(packageName, targetDisplayId)
+        }
         return onDisplay
     }
 
     override fun moveAppToVirtualDisplay(packageName: String): Boolean {
-        val targetDisplayId = VirtualDisplayManager.getDisplayId()
+        val targetDisplayId = BackgroundDisplay.displayId()
         if (targetDisplayId == DefaultDisplayConfig.DISPLAY_NONE) {
             Ln.w("$TAG: moveAppToVirtualDisplay: no active virtual display")
             return false
@@ -488,6 +496,9 @@ class RemoteServiceImpl : RemoteService.Stub() {
         return SystemLogDump.dump(sinceMs, untilMs, pid, processPrefix)
     }
 
+    override fun getProcessExitRecords(packageName: String?, sinceMs: Long, maxNum: Int): List<ProcessExitRecord> =
+        ProcessExitQuery.query(packageName, sinceMs, maxNum)
+
     override fun isSmartResolutionEnabled(): Boolean {
         return try {
             Command.execReadLine("settings", "get", "global", "low_resolution_switch")?.trim() == "1"
@@ -518,13 +529,29 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun setVirtualDisplayResolution(width: Int, height: Int, dpi: Int) {
         Ln.i("$TAG: setVirtualDisplayResolution(${width}x${height}, dpi=$dpi)")
-        VirtualDisplayManager.setResolution(width, height, dpi)
+        BackgroundDisplay.setResolution(width, height, dpi)
     }
 
+    @Synchronized
+    override fun setUseVirtualDeviceDisplay(enabled: Boolean): Boolean {
+        if (enabled && Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
+        if (BackgroundDisplay.useVdm == enabled) return true
+        // 不在运行时换后端：上一轮的屏还在就拒绝，由 App 侧先关屏
+        val activeId = BackgroundDisplay.displayId()
+        if (activeId != DefaultDisplayConfig.DISPLAY_NONE) {
+            Ln.w("$TAG: refuse backend switch while displayId=$activeId is active")
+            return false
+        }
+        BackgroundDisplay.useVdm = enabled
+        Ln.i("$TAG: virtual display backend=${if (enabled) "VDM" else "LEGACY"}")
+        return true
+    }
+
+    @Synchronized
     override fun setVirtualDisplayMode(mode: Int): Boolean {
         when (mode) {
             DisplayMode.PRIMARY -> {
-                VirtualDisplayManager.stop()
+                BackgroundDisplay.stop()
                 virtualDisplayMode.set(mode)
                 return true
             }

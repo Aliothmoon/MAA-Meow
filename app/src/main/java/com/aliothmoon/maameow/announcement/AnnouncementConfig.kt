@@ -31,7 +31,7 @@ object AnnouncementConfig {
 
     private fun isZh(language: AppSettingsManager.AppLanguage) = when (language) {
         AppSettingsManager.AppLanguage.ZH -> true
-        AppSettingsManager.AppLanguage.EN -> false
+        AppSettingsManager.AppLanguage.EN, AppSettingsManager.AppLanguage.KO -> false
         AppSettingsManager.AppLanguage.SYSTEM -> Locale.getDefault().language.startsWith("zh")
     }
 }

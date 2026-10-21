@@ -60,6 +60,9 @@ class TaskExecutionService : Service() {
             val intent = Intent(context, TaskExecutionService::class.java)
             context.startForegroundService(intent)
         }
+
+        /** 本进程没开过任务：进程被杀后系统按未投递完的 start 重建的（#302） */
+        internal fun isSystemRestart(runToken: Long): Boolean = runToken == 0L
     }
 
     private val compositionService: MaaCompositionService by inject()
@@ -81,6 +84,10 @@ class TaskExecutionService : Service() {
     override fun onCreate() {
         super.onCreate()
         bindToken()
+        if (isSystemRestart(boundToken)) {
+            stopRestarted()
+            return
+        }
         // 必须先 startForeground，再做任何可能读到 IDLE/ERROR 并 stop 的逻辑，
         // 避免与 Composition 快速失败/stopService 竞态触发
         // ForegroundServiceDidNotStartInTimeException。
@@ -98,6 +105,10 @@ class TaskExecutionService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (foregroundDenied) return START_NOT_STICKY
         bindToken()
+        if (isSystemRestart(boundToken)) {
+            stopRestarted()
+            return START_NOT_STICKY
+        }
         // 系统可能只走 onStartCommand；再保证一次 FGS 提升
         // onCreate 若因终态提前 return 未启动观察，随后竞态进入 STARTING 时须在此补上
         val snapshot = currentSnapshot()
@@ -124,6 +135,12 @@ class TaskExecutionService : Service() {
 
     private fun bindToken() {
         boundToken = liveCoordinator.currentToken()
+    }
+
+    /** 重建的服务没有进度可展示；后台起前台服务在 12+ 可能被拒，不发通知直接退 */
+    private fun stopRestarted() {
+        Timber.i("TaskExecutionService: restarted by system without a run, stopping")
+        stopSelf()
     }
 
     private fun currentSnapshot(): TaskNotificationSnapshot = TaskNotificationSnapshot(

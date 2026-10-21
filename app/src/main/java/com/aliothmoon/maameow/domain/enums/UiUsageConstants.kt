@@ -110,7 +110,7 @@ object UiUsageConstants {
             "Sami" -> 15
             "Sarkaz" -> 18
             "JieGarden" -> 18
-            THEME_BLACK_FLOW -> 15
+            THEME_BLACK_FLOW -> 16
             else -> 20
         }
 
@@ -160,7 +160,7 @@ object UiUsageConstants {
             "Sami" -> BASE_MODES + "CLP_PDS"
             "JieGarden" -> BASE_MODES + "FindPlaytime"
             // 黑流树海只支持这三种，不走 BASE_MODES
-            THEME_BLACK_FLOW -> listOf("Exp", "Investment", "BlackFlowBabyAnimal")
+            THEME_BLACK_FLOW -> listOf("Exp", "Investment", "BlackFlowStartRun")
             else -> BASE_MODES
         }
 
@@ -261,7 +261,9 @@ object UiUsageConstants {
                 "文明开化分队",
                 "开拓者分队",
                 "多边贸易分队",
-                "地质调查分队"
+                "地质调查分队",
+                "团结阵线分队",
+                "踏足遍历分队"
             )
         )
 
@@ -289,8 +291,12 @@ object UiUsageConstants {
             return themeSquads + commonSquads
         }
 
-        /** 刷襁褓动物模式的可选目标品种 */
-        val BLACK_FLOW_CULTIVATION_TARGETS: List<RoguelikeBlackFlowCultivationTarget> =
-            RoguelikeBlackFlowCultivationTarget.entries
+        // 满天赋机械师快速飞三层的固定开局，与 core mechanic_flight 模块的条件一致
+        const val BLACK_FLOW_FLIGHT_SQUAD = "特勤分队"
+        const val BLACK_FLOW_FLIGHT_ROLES = DEFAULT_ROLE
+        const val BLACK_FLOW_FLIGHT_CORE_CHAR = "机械师"
+
+        /** 刷等级可选结局，二、三结局上游暂不开放 */
+        val BLACK_FLOW_ENDINGS = listOf(RoguelikeBlackFlowEnding.Ending1)
     }
 }

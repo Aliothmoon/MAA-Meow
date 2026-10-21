@@ -14,6 +14,9 @@ interface RunTelemetry {
 
     fun onTaskRegistered(taskId: Int, params: String)
 
+    /** 后台虚拟屏建好后调，[vdm] 为 VirtualDevice 后端，[flagTier] 为 0 即完整权限 */
+    fun onVirtualDisplayStarted(vdm: Boolean, flagTier: Int)
+
     fun onCallback(message: AsstMsg, details: JSONObject?)
 
     /** [code] 是失败环节的状态码；哪些算故障由实现筛 */

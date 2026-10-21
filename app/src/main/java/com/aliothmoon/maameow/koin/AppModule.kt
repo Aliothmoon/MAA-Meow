@@ -56,6 +56,7 @@ import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.data.resource.CopilotResourceProvider
 import com.aliothmoon.maameow.data.resource.GameMetadataLoader
+import com.aliothmoon.maameow.data.resource.HotUpdateSync
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.data.resource.OperAvatarLoader
@@ -77,6 +78,7 @@ import com.aliothmoon.maameow.domain.service.AppWatchdog
 import com.aliothmoon.maameow.domain.service.CopilotManager
 import com.aliothmoon.maameow.domain.service.CopilotOperBoxAssist
 import com.aliothmoon.maameow.domain.service.CoreDataPusher
+import com.aliothmoon.maameow.domain.service.CoreFilesGate
 import com.aliothmoon.maameow.domain.service.ExternalNotificationService
 import com.aliothmoon.maameow.domain.service.FightDropsRefresher
 import com.aliothmoon.maameow.domain.service.ForegroundScreenGate
@@ -103,6 +105,8 @@ import com.aliothmoon.maameow.domain.service.ScreenSaverController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.ToolboxExportService
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
+import com.aliothmoon.maameow.domain.service.ProcessExitJournal
+import com.aliothmoon.maameow.data.log.ProcessExitRecorder
 import com.aliothmoon.maameow.domain.service.UnlockGestureReader
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.service.update.UpdateService
@@ -183,6 +187,8 @@ val appModule = module {
     }
     singleOf(::ETagCacheManager)
     singleOf(::MaaApiService)
+    // 与 MaaCompositionService 循环依赖，只能懒取
+    single { HotUpdateSync(get(), get(), inject()) }
     singleOf(::YituliuApiService)
     singleOf(::AnnouncementManager)
     singleOf(::PermissionManager)
@@ -305,10 +311,16 @@ val appModule = module {
 
     singleOf(::UpdateService)
 
-    singleOf(::ResourceInitService)
+    // 与 MaaCompositionService 循环依赖，只能懒取
+    single { ResourceInitService(get(), get(), get(), inject()) }
     singleOf(::MaaResourceLoader)
     // scope 走构造默认值
-    single { GameMetadataLoader(get(), get(), get(), get(), get(), get()) } bind GameMetadataGate::class
+    single {
+        GameMetadataLoader(
+            get(), get(), get(), get(), get(), get(), get(),
+            templateImageLoaders = listOf(get<ItemIconLoader>(), get<OperAvatarLoader>(), get<OperRoleIconLoader>()),
+        )
+    } bind GameMetadataGate::class
     singleOf(::MaaSessionLogger)
 
     // 外部通知
@@ -365,6 +377,7 @@ val appModule = module {
     single<ForegroundScreenGate> { ForegroundScreenGate { get<OverlayController>().awaitPanelCleared() } }
     singleOf(::MaaCompositionService)
     single<MaaExecutionStateHolder> { get<MaaCompositionService>() }
+    single<CoreFilesGate> { get<MaaCompositionService>() }
     single { GameMuteCoordinator(get(), RemoteGameAudioAdapter) }
     single<FrameSnapshotter> { RemoteFrameSnapshotter() }
     singleOf(::MaaCallbackDispatcher)
@@ -375,6 +388,7 @@ val appModule = module {
     singleOf(::WakeUnlockEngine)
 
     singleOf(::UnifiedStateDispatcher)
+    singleOf(::ProcessExitRecorder) { bind<ProcessExitJournal>() }
     // scope 走构造默认值，singleOf 会试图解析它
     single {
         val settings = get<AppSettingsManager>()

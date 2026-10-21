@@ -21,7 +21,8 @@ import java.io.File
 class ResourceInitService(
     private val context: Context,
     private val assetExtractor: AssetExtractor,
-    private val pathConfig: MaaPathConfig
+    private val pathConfig: MaaPathConfig,
+    private val coreFiles: Lazy<CoreFilesGate>,
 ) {
     private val _state = MutableStateFlow<ResourceInitState>(ResourceInitState.NotChecked)
     val state: StateFlow<ResourceInitState> = _state.asStateFlow()
@@ -56,42 +57,47 @@ class ResourceInitService(
         }
     }
 
+    /** 会删掉整个资源目录 */
     suspend fun reInitialize() {
-        doExtractFromAssets()
+        coreFiles.value.whenIdle { doExtractFromAssets() }
     }
 
-    suspend fun doExtractFromAssets() {
+    private suspend fun doExtractFromAssets() {
         _state.value =
             ResourceInitState.Extracting(0, 0, context.getString(R.string.resource_init_preparing))
 
         try {
-            withContext(Dispatchers.IO) {
-                pathConfig.ensureDirectories()
-                val resourceDir = File(pathConfig.resourceDir)
-                if (resourceDir.exists() && !resourceDir.deleteRecursively()) {
-                    Timber.w("清理旧资源目录失败: ${resourceDir.absolutePath}")
+            val result = try {
+                withContext(Dispatchers.IO) {
+                    pathConfig.ensureDirectories()
+                    val resourceDir = File(pathConfig.resourceDir)
+                    if (resourceDir.exists() && !resourceDir.deleteRecursively()) {
+                        Timber.w("清理旧资源目录失败: ${resourceDir.absolutePath}")
+                    }
+                    resourceDir.mkdirs()
                 }
-                resourceDir.mkdirs()
-            }
 
-            val result = assetExtractor.extract(
-                assetDir = ASSET_DIR_NAME,
-                destDir = File(pathConfig.resourceDir),
-                onProgress = { progress ->
-                    _state.value = ResourceInitState.Extracting(
-                        extractedCount = progress.extractedCount,
-                        totalCount = progress.totalCount,
-                        currentFile = progress.currentFile
-                    )
-                }
-            )
+                assetExtractor.extract(
+                    assetDir = ASSET_DIR_NAME,
+                    destDir = File(pathConfig.resourceDir),
+                    onProgress = { progress ->
+                        _state.value = ResourceInitState.Extracting(
+                            extractedCount = progress.extractedCount,
+                            totalCount = progress.totalCount,
+                            currentFile = progress.currentFile
+                        )
+                    }
+                )
+            } finally {
+                // 早于发布 Ready/Failed；checkAndInit 不走门禁，解压中的加载靠这次递增重试
+                _revision.update { it + 1 }
+            }
 
             result.fold(
                 onSuccess = {
                     pathConfig.markAppVersion()
                     doForceSyncOverridesTemplate()
                     Timber.i("资源初始化完成")
-                    _revision.update { it + 1 }
                     _state.value = ResourceInitState.Ready
                 },
                 onFailure = { e ->

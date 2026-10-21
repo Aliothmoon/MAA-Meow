@@ -824,8 +824,7 @@ class CopilotViewModel(
                 useSupportUnit = false,
                 addTrust = false,
                 ignoreRequirements = false,
-                addUserAdditional = false,
-                userAdditional = ""
+                addUserAdditional = false
             )
         }
         return state.copy(
@@ -1126,6 +1125,23 @@ class CopilotViewModel(
         persistTaskList()
     }
 
+    /** 拖拽中只改内存，松手再落盘 */
+    fun onReorderUserAdditional(fromName: String, toName: String) {
+        if (fromName == toName) return
+        _state.update {
+            val list = it.config.userAdditionalOpers.toMutableList()
+            val from = list.indexOfFirst { oper -> oper.name == fromName }
+            val to = list.indexOfFirst { oper -> oper.name == toName }
+            if (from < 0 || to < 0) return@update it
+            list.add(to, list.removeAt(from))
+            it.copy(config = it.config.copy(userAdditionalOpers = list))
+        }
+    }
+
+    fun onUserAdditionalReorderSettled() {
+        persistConfig()
+    }
+
     fun onDialogConfirm() {
         when (_dialog.value?.confirmAction) {
             PanelDialogConfirmAction.CONFIRM_PENDING_START -> {
@@ -1416,8 +1432,7 @@ class CopilotViewModel(
                 useSupportUnit = false,
                 addTrust = false,
                 ignoreRequirements = false,
-                addUserAdditional = false,
-                userAdditional = ""
+                addUserAdditional = false
             )
         }
         if (!supportsLoopCount(snapshot.tabIndex)) {
@@ -1426,6 +1441,12 @@ class CopilotViewModel(
         if (!(snapshot.listModeActive && snapshot.tabIndex == TAB_MAIN)) {
             config = config.copy(useSanityPotion = false)
         }
+        // core 按简中名校验，名字不认识会整个任务提交失败
+        config = config.copy(
+            userAdditionalOpers = config.userAdditionalOpers.map {
+                it.copy(name = resourceDataManager.normalizeCharacterName(it.name))
+            }
+        )
         return config
     }
 

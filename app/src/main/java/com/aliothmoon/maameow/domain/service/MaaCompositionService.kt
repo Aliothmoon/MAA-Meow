@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.domain.service
 
 import android.content.Context
+import android.os.Build
 import android.os.RemoteException
 import com.alibaba.fastjson2.JSON
 import com.aliothmoon.maameow.MaaCoreCallback
@@ -12,11 +13,12 @@ import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
-import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
 import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
+import com.aliothmoon.maameow.domain.state.isIdle
 import com.aliothmoon.maameow.maa.AsstMsg
 import com.aliothmoon.maameow.maa.MaaInstanceOptions.ANDROID
 import com.aliothmoon.maameow.maa.MaaInstanceOptions.DEPLOYMENT_WITH_PAUSE
@@ -70,7 +72,6 @@ class MaaCompositionService(
     private val gameMuteCoordinator: GameMuteCoordinator,
     private val unifiedStateDispatcher: UnifiedStateDispatcher,
     private val sessionLogger: MaaSessionLogger,
-    private val activityManager: ActivityManager,
     private val appWatchdog: AppWatchdog,
     private val gameFpsWatcher: GameFpsWatcher,
     private val taskChainState: TaskChainState,
@@ -84,7 +85,8 @@ class MaaCompositionService(
     private val coreDataPusher: CoreDataPusher,
     private val telemetry: RunTelemetry,
     private val screenGate: ForegroundScreenGate,
-) : MaaExecutionStateHolder {
+    private val processExitJournal: ProcessExitJournal,
+) : MaaExecutionStateHolder, CoreFilesGate {
 
     private val _state = MutableStateFlow(MaaExecutionState.IDLE)
     val state: StateFlow<MaaExecutionState> = _state.asStateFlow()
@@ -255,6 +257,8 @@ class MaaCompositionService(
                     context.getString(R.string.runlog_game_process_gone, packageName),
                     LogLevel.ERROR
                 )
+                // 系统记下的死因当场进应用日志，任务日志只留上面这条
+                processExitJournal.recordGame(packageName)
                 // 游戏没了剩下的任务链也是白跑，整轮中止
                 if (_state.value == MaaExecutionState.RUNNING) {
                     notificationCenter.notifySubTaskFailure(
@@ -359,12 +363,9 @@ class MaaCompositionService(
      */
     suspend fun prepareResources(clientType: String) = startMutex.withLock {
         // 换进程会杀掉虚拟显示器
-        when (_state.value) {
-            MaaExecutionState.IDLE, MaaExecutionState.ERROR -> Unit
-            else -> {
-                Timber.i("Skip resource prepare while busy: %s", _state.value)
-                return@withLock
-            }
+        if (!_state.value.isIdle) {
+            Timber.i("Skip resource prepare while busy: %s", _state.value)
+            return@withLock
         }
         // 没授权时加载必然失败，useRemoteService 还会自己发起一次授权请求
         val access = RemoteAccessCoordinator.refresh()
@@ -375,26 +376,6 @@ class MaaCompositionService(
         // 可能在主线程调用，解绑是同步 binder 调用
         withContext(Dispatchers.IO) {
             resourceLoader.ensureLoaded(clientType)
-        }
-        Unit
-    }
-
-    /** 任务运行中到的资源更新，留到下次启动前重载 */
-    private val resourceReloadPending = AtomicBoolean(false)
-
-    /**
-     * 资源文件更新后重载
-     * 任务在跑时 LoadResource 会和工作线程同时改 TaskData，堆损坏后 MaaCore 直接崩，只能推迟到下次启动前
-     */
-    suspend fun reloadResources() = startMutex.withLock {
-        when (_state.value) {
-            MaaExecutionState.IDLE, MaaExecutionState.ERROR ->
-                withContext(Dispatchers.IO) { resourceLoader.load() }
-
-            else -> {
-                Timber.i("Defer resource reload while busy: %s", _state.value)
-                resourceReloadPending.set(true)
-            }
         }
         Unit
     }
@@ -432,10 +413,6 @@ class MaaCompositionService(
             )
         }
 
-        // 运行中推迟的资源更新在这里补，与活动数据变动合并成一次 load
-        val reloadPending = resourceReloadPending.getAndSet(false)
-        activityManager.runIfDirty { if (!reloadPending) resourceLoader.load(clientType) }
-        if (reloadPending) resourceLoader.load(clientType)
         val loaded = resourceLoader.ensureLoaded(clientType)
         if (loaded.isFailure) {
             return rejectStart(
@@ -496,8 +473,20 @@ class MaaCompositionService(
     }
 
     private suspend fun setupDisplayAndConnect(
-        service: RemoteService, maa: MaaCoreService, mode: RunMode, clientType: String
+        service: RemoteService,
+        maa: MaaCoreService,
+        mode: RunMode,
+        clientType: String,
+        displayBackend: VirtualDisplayBackend,
     ): StartResult? {
+        // 只跟设置走，前台模式也不翻转，免得撞上留着的后台屏
+        val useVdm = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            displayBackend == VirtualDisplayBackend.VDM
+        if (!service.setUseVirtualDeviceDisplay(useVdm))
+            return failStart(
+                context.getString(R.string.runlog_display_backend_switch_blocked), "DISPLAY_BACKEND_ERROR",
+                StartResult.ConnectionError(StartResult.ConnectionError.ConnectPhase.DISPLAY_MODE)
+            )
         if (!service.setVirtualDisplayMode(mode.displayMode))
             return failStart(
                 context.getString(R.string.runlog_display_mode_failed), "DISPLAY_MODE_ERROR",
@@ -506,7 +495,7 @@ class MaaCompositionService(
         val config = when (mode) {
             RunMode.FOREGROUND -> {
                 val displayId = service.startVirtualDisplay()
-                if (displayId == -1) return failVirtualDisplayStart()
+                if (displayId == -1) return failVirtualDisplayStart(useVdm = false)
                 val (w, h) = Misc.getScreenSize(context)
                 buildConnectConfig(w, h, displayId)
             }
@@ -514,7 +503,8 @@ class MaaCompositionService(
             RunMode.BACKGROUND -> {
                 val r = resolveAndSetResolution(service, clientType)
                 val displayId = service.startVirtualDisplay()
-                if (displayId == -1) return failVirtualDisplayStart()
+                if (displayId == -1) return failVirtualDisplayStart(useVdm)
+                reportVirtualDisplayTier(service, useVdm)
                 buildConnectConfig(r.width, r.height, displayId)
             }
         }
@@ -529,9 +519,23 @@ class MaaCompositionService(
         return asyncConnect(maa, config)
     }
 
-    private suspend fun failVirtualDisplayStart(): StartResult = failStart(
-        context.getString(R.string.runlog_virtual_display_failed),
-        "VIRTUAL_DISPLAY_ERROR",
+    private suspend fun reportVirtualDisplayTier(service: RemoteService, useVdm: Boolean) {
+        val tier = runCatching { service.virtualDisplayFlagTier }.getOrDefault(0)
+        telemetry.onVirtualDisplayStarted(useVdm, tier)
+        if (tier > 0) {
+            sessionLogger.appendAndWait(
+                context.getString(R.string.task_start_virtual_display_compat_warning_log),
+                LogLevel.WARNING
+            )
+        }
+    }
+
+    private suspend fun failVirtualDisplayStart(useVdm: Boolean): StartResult = failStart(
+        context.getString(
+            if (useVdm) R.string.runlog_vdm_display_failed
+            else R.string.runlog_virtual_display_failed
+        ),
+        if (useVdm) "VDM_DISPLAY_ERROR" else "VIRTUAL_DISPLAY_ERROR",
         StartResult.ConnectionError(StartResult.ConnectionError.ConnectPhase.VIRTUAL_DISPLAY),
     )
 
@@ -661,8 +665,13 @@ class MaaCompositionService(
         }
     }
 
-    /** 启动互斥：前置检查耗时，双入口/双击可能同时穿过 AlreadyRunning 窗口 */
+    /**
+     * 启动互斥：前置检查耗时，双入口/双击可能同时穿过 AlreadyRunning 窗口
+     * 资源加载与改 core 文件也走它，从加载到进入 STARTING 都持锁，锁内看到的空闲才可靠
+     */
     private val startMutex = Mutex()
+
+    override suspend fun <T> whenIdle(block: suspend () -> T): T = startMutex.withLockWhenIdle(_state, block)
 
     private suspend fun executeStart(
         kind: RunKind,
@@ -706,6 +715,7 @@ class MaaCompositionService(
         // 辅助任务不继承启动失败或服务死亡留下的库存登记
         if (kind == RunKind.AUX) dropsRefresher.clear()
         val mode = appSettings.runMode.value
+        val displayBackend = appSettings.virtualDisplayBackend.value
         sessionLogger.startSession(tasks.map { it.type.value })
         // 凭这行能从会话日志找到遥测里的那一轮
         telemetry.onRunStarted(kind, tasks)?.let { sessionLogger.appendToFileOnly("[Telemetry] run_id=$it") }
@@ -757,7 +767,8 @@ class MaaCompositionService(
                         service,
                         maa,
                         mode,
-                        clientType
+                        clientType,
+                        displayBackend,
                     )?.let { return@useRemoteService it }
                     val result = appendTasksAndStart(
                         maa, tasks, fallbacks, successMessage, mode, limitRunDuration,

@@ -14,17 +14,20 @@ import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.data.preferences.BackupTooLargeException
 import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
 import com.aliothmoon.maameow.domain.models.RemoteBackend
+import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.CopilotOperBoxAssist
 import com.aliothmoon.maameow.domain.service.CoreDataPusher
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
-import com.aliothmoon.maameow.domain.state.MaaExecutionState
+import com.aliothmoon.maameow.domain.service.ResourceInitService
+import com.aliothmoon.maameow.domain.state.isIdle
 import com.aliothmoon.maameow.domain.usecase.SwitchCoreDataLocationUseCase
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
@@ -40,6 +43,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -68,6 +72,7 @@ class SettingsViewModel(
     private val yituliuApiService: YituliuApiService,
     private val livePublisher: LiveUpdatePublisher,
     private val operBoxAssist: CopilotOperBoxAssist,
+    private val resourceInitService: ResourceInitService,
 ) : ViewModel() {
 
     // ========== 导入导出 ==========
@@ -109,6 +114,10 @@ class SettingsViewModel(
             try {
                 configBackupManager.importFrom(inputStream)
                 _showRestartDialog.value = true
+            } catch (e: BackupTooLargeException) {
+                Timber.w(e, "import config rejected")
+                _settingsMessage.value =
+                    uiTextOf(R.string.settings_import_too_large, e.limitBytes / (1024 * 1024))
             } catch (e: Exception) {
                 Timber.e(e, "import config failed")
                 _settingsMessage.value =
@@ -206,10 +215,15 @@ class SettingsViewModel(
         viewModelScope.launch { switchCoreDataLocation(target) }
     }
 
-    private fun coreBusy(): Boolean {
-        if (compositionService.state.value == MaaExecutionState.IDLE) return false
-        _settingsMessage.value = uiTextOf(R.string.settings_core_data_clear_busy)
+    private fun coreBusy(message: Int = R.string.settings_core_data_clear_busy): Boolean {
+        if (compositionService.state.value.isIdle) return false
+        _settingsMessage.value = uiTextOf(message)
         return true
+    }
+
+    fun reInitializeResources() {
+        if (coreBusy(R.string.settings_reinit_resource_busy)) return
+        viewModelScope.launch { resourceInitService.reInitialize() }
     }
 
     fun requestClearCoreData() {
@@ -419,6 +433,23 @@ class SettingsViewModel(
         }
     }
 
+    val virtualDisplayBackend: StateFlow<VirtualDisplayBackend> =
+        appSettingsManager.virtualDisplayBackend
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                VirtualDisplayBackend.LEGACY,
+            )
+
+    /** 运行中不许换；空闲时先关掉留着的虚拟屏（连同上面的游戏），下一轮按新后端建 */
+    fun setVirtualDisplayBackend(backend: VirtualDisplayBackend) {
+        if (backend == appSettingsManager.virtualDisplayBackend.value || coreBusy(R.string.settings_game_package_busy)) return
+        viewModelScope.launch {
+            compositionService.stopVirtualDisplay()
+            appSettingsManager.setVirtualDisplayBackend(backend)
+        }
+    }
+
     val language: StateFlow<AppSettingsManager.AppLanguage> = appSettingsManager.language
         .stateIn(
             viewModelScope,
@@ -444,6 +475,17 @@ class SettingsViewModel(
             // 进程还活着，用 invalidate 保留资源档信息
             resourceLoader.invalidate()
         }
+    }
+
+    val gamePackages: StateFlow<Map<String, String>> = appSettingsManager.gamePackages
+
+    val coreIdle: StateFlow<Boolean> = compositionService.state.map { it.isIdle }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), compositionService.state.value.isIdle)
+
+    /** 运行中改会让 Meow 与 core 用的包对不上；core 侧由下次加载比对重载 */
+    fun setGamePackage(clientType: String, packageName: String?) {
+        if (coreBusy(R.string.settings_game_package_busy)) return
+        viewModelScope.launch { appSettingsManager.setGamePackage(clientType, packageName) }
     }
 
     // ============ System Monet theme color ============

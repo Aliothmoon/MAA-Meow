@@ -21,16 +21,21 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
@@ -44,13 +49,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
-import com.aliothmoon.maameow.data.model.toolbox.DepotItem
-import com.aliothmoon.maameow.data.repository.toSortedItems
+import com.aliothmoon.maameow.data.model.LogColorRole
+import com.aliothmoon.maameow.data.repository.DepotDelta
+import com.aliothmoon.maameow.data.repository.DepotSnapshot
+import com.aliothmoon.maameow.data.repository.delta
+import com.aliothmoon.maameow.data.repository.depotItemOrder
+import com.aliothmoon.maameow.data.repository.formatDepotDelta
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
+import com.aliothmoon.maameow.data.resource.ItemInfo
 import com.aliothmoon.maameow.domain.service.ToolboxExportFileType
 import com.aliothmoon.maameow.presentation.components.ItemIcon
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
+import com.aliothmoon.maameow.theme.themedColor
 import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.utils.i18n.formatToolboxSyncTime
 import kotlinx.coroutines.launch
@@ -65,7 +76,11 @@ fun DepotRecognitionPanel(
 ) {
     val snapshot by viewModel.depotRepository.snapshot.collectAsStateWithLifecycle()
     val itemMap by itemHelper.items.collectAsStateWithLifecycle()
-    val items = remember(snapshot, itemMap) { snapshot.toSortedItems(itemMap) }
+    var onlyChanged by rememberSaveable { mutableStateOf(false) }
+    val delta = remember(snapshot) { snapshot.delta() }
+    val rows = remember(snapshot, itemMap, onlyChanged) {
+        depotRows(snapshot, itemMap, delta, onlyChanged)
+    }
     val statusMessage by viewModel.statusMessage.collectAsStateWithLifecycle()
     val resolvedStatusMessage = statusMessage.asString()
     val clipboard = LocalClipboard.current
@@ -82,11 +97,16 @@ fun DepotRecognitionPanel(
         Toast.makeText(context, toast, Toast.LENGTH_SHORT).show()
     }
 
-    LaunchedEffect(items) {
-        items.forEach { iconLoader.load(it.id) }
+    LaunchedEffect(rows) {
+        rows.forEach { iconLoader.load(it.id) }
     }
 
-    if (items.isEmpty() && snapshot.syncTimeMillis <= 0L) {
+    // 开关隐藏时复位
+    LaunchedEffect(delta) {
+        if (delta?.changes.isNullOrEmpty()) onlyChanged = false
+    }
+
+    if (snapshot.items.isEmpty() && snapshot.syncTimeMillis <= 0L) {
         DepotEmptyState(modifier, resolvedStatusMessage)
         return
     }
@@ -116,7 +136,7 @@ fun DepotRecognitionPanel(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = stringResource(R.string.panel_depot_item_count, items.size),
+                        text = stringResource(R.string.panel_depot_item_count, snapshot.items.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -134,6 +154,9 @@ fun DepotRecognitionPanel(
                             modifier = Modifier.padding(start = 8.dp),
                         )
                     }
+                }
+                if (delta != null) {
+                    DepotDeltaRow(delta, onlyChanged) { onlyChanged = it }
                 }
                 ExportFormatRow(
                     label = stringResource(R.string.panel_depot_format_penguin),
@@ -165,9 +188,61 @@ fun DepotRecognitionPanel(
         }
 
         // 物品网格
-        items(items, key = { it.id }) { item ->
-            val name = itemMap[item.id]?.name
-            DepotItemCell(item, name)
+        items(rows, key = { it.id }) { row ->
+            DepotItemCell(row, itemMap[row.id]?.name, showDelta = !delta?.changes.isNullOrEmpty())
+        }
+    }
+}
+
+/** count 含识别后的掉落，delta 只看两次识别 */
+@Immutable
+private data class DepotRow(val id: String, val count: Int, val delta: Int)
+
+private fun depotRows(
+    snapshot: DepotSnapshot,
+    itemMap: Map<String, ItemInfo>,
+    delta: DepotDelta?,
+    onlyChanged: Boolean,
+): List<DepotRow> {
+    val changes = delta?.changes.orEmpty()
+    // 并上 changes：用完的也显示
+    val ids = if (onlyChanged && changes.isNotEmpty()) changes.keys else snapshot.items.keys + changes.keys
+    return ids.sortedWith(depotItemOrder(itemMap))
+        .map { DepotRow(it, snapshot.items[it] ?: 0, changes[it] ?: 0) }
+}
+
+@Composable
+private fun DepotDeltaRow(
+    delta: DepotDelta,
+    onlyChanged: Boolean,
+    onOnlyChangedChange: (Boolean) -> Unit,
+) {
+    val since = formatToolboxSyncTime(delta.fromMillis)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = if (delta.changes.isEmpty()) {
+                stringResource(R.string.panel_depot_delta_none, since)
+            } else {
+                stringResource(R.string.panel_depot_delta_summary, since, delta.changes.size)
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        if (delta.changes.isNotEmpty()) {
+            FilterChip(
+                selected = onlyChanged,
+                onClick = { onOnlyChangedChange(!onlyChanged) },
+                label = {
+                    Text(
+                        stringResource(R.string.panel_depot_only_changed),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                },
+            )
         }
     }
 }
@@ -268,7 +343,7 @@ private fun HintRow(text: String) {
 }
 
 @Composable
-private fun DepotItemCell(item: DepotItem, name: String?) {
+private fun DepotItemCell(row: DepotRow, name: String?, showDelta: Boolean) {
     Surface(
         shape = RoundedCornerShape(6.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -280,12 +355,12 @@ private fun DepotItemCell(item: DepotItem, name: String?) {
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             ItemIcon(
-                itemId = item.id,
+                itemId = row.id,
                 modifier = Modifier.size(44.dp),
                 contentDescription = name,
             )
             Text(
-                text = name ?: item.id,
+                text = name ?: row.id,
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -293,12 +368,23 @@ private fun DepotItemCell(item: DepotItem, name: String?) {
                 textAlign = TextAlign.Center
             )
             Text(
-                text = "x${item.count}",
+                text = "x${row.count}",
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center
             )
+            // 无变化也占位，保持同行格子等高
+            if (showDelta) {
+                Text(
+                    text = if (row.delta != 0) formatDepotDelta(row.delta) else "",
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                    fontWeight = FontWeight.Medium,
+                    // 涨红跌绿
+                    color = if (row.delta > 0) LogColorRole.ERROR.themedColor() else LogColorRole.SUCCESS.themedColor(),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }

@@ -81,6 +81,20 @@ class ScheduleAlarmManagerTest {
     }
 
     @Test
+    fun exactModeRegistersWithoutAlarmClock() {
+        val scheduledTime = System.currentTimeMillis() + 15_000L
+        prepareRegistration()
+        every { alarms.useAlarmClock } returns false
+
+        assertTrue(alarms.scheduleNext(strategy.copy(startTimeMs = scheduledTime)))
+
+        verify(exactly = 1) {
+            platformAlarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, scheduledTime, any())
+        }
+        verify(exactly = 0) { platformAlarms.setAlarmClock(any(), any()) }
+    }
+
+    @Test
     fun missingPermissionSkipsRegistration() {
         every { alarms.canScheduleExact() } returns false
         assertFalse(alarms.scheduleNext(strategy))
@@ -160,6 +174,7 @@ class ScheduleAlarmManagerTest {
 
     private fun prepareRegistration(triggerTime: Long? = null) {
         every { alarms.canScheduleExact() } returns true
+        every { alarms.useAlarmClock } returns true
         mockkConstructor(Intent::class)
         every { anyConstructed<Intent>().setClassName(any<Context>(), any()) } answers { self as Intent }
         every { anyConstructed<Intent>().setClass(any<Context>(), MainActivity::class.java) } answers { self as Intent }

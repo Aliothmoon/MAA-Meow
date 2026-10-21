@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.search
 
+import android.os.Build
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -147,7 +148,7 @@ fun SettingSearchResults(
     val locales = LocalConfiguration.current.locales
     val resources = LocalContext.current.resources
     val searchables = remember(locales, resources) {
-        SettingSearchIndex.entries.map { entry ->
+        SettingSearchIndex.entries.filter { it.isAvailable(Build.VERSION.SDK_INT) }.map { entry ->
             SearchableSetting(
                 entry = entry,
                 title = resources.getString(entry.titleRes),
