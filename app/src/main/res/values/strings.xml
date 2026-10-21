@@ -436,6 +436,10 @@
     <string name="settings_tasks_override_title">MAA 任务覆盖</string>
     <string name="settings_tasks_override_desc">如果你不知道这是什么请不要修改，会导致 MAA 无法正常工作</string>
     <string name="settings_tasks_override_edit_title">编辑配置 JSON</string>
+    <string name="settings_game_package_title">自定义游戏客户端包名</string>
+    <string name="settings_game_package_picker_title">选择%1$s的游戏应用</string>
+    <string name="settings_game_package_reset">恢复默认包名</string>
+    <string name="settings_game_package_busy">任务运行中，请先停止再修改</string>
     <string name="editor_json_valid">JSON 格式有效</string>
     <string name="editor_json_invalid">JSON 格式错误</string>
     <string name="editor_save_success">保存成功，下次任务启动生效</string>

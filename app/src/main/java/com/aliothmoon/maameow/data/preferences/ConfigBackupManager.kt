@@ -67,12 +67,14 @@ class ConfigBackupManager(
         }
         // 自定义背景的开关与令牌指向本机文件，导入其他设备的配置时保留本机值。
         // 遥测开关是本机用户自己的选择，别人的备份（或没这个字段的旧备份）不能替他打开
+        // 游戏包名跟着本机装的版本走，也不随备份变
         val localSettings = appSettingsManager.settings.first()
         appSettingsManager.setSettings(
             backup.appSettings.normalizedForImport().copy(
                 customBackgroundEnabled = localSettings.customBackgroundEnabled,
                 customBackgroundToken = localSettings.customBackgroundToken,
                 telemetryEnabled = localSettings.telemetryEnabled,
+                gamePackages = localSettings.gamePackages,
             )
         )
         notificationSettingsManager.updateSettings(backup.notificationSettings.reapplyWebhookPresetIfBlank())
@@ -93,7 +95,8 @@ class ConfigBackupManager(
 
         /**
          * 导出时剥离设备本地字段：CDK、解锁 PIN 与一图流 Token 属敏感信息；
-         * 自定义背景与实况图标对应本机 filesDir 下的图片文件，在其他设备上不存在。
+         * 自定义背景与实况图标对应本机 filesDir 下的图片文件，在其他设备上不存在；
+         * 自定义游戏包名取决于本机装的游戏版本
          */
         private fun AppSettings.sanitized() = copy(
             mirrorChyanCdk = "",
@@ -103,6 +106,7 @@ class ConfigBackupManager(
             operBoxAssistEnabled = "false",
             customBackgroundEnabled = "false",
             customBackgroundToken = "",
+            gamePackages = "",
         ).withoutCustomTrackerIcon()
 
         /**

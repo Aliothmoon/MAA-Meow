@@ -436,6 +436,10 @@
     <string name="settings_tasks_override_title">MAA 작업 재정의</string>
     <string name="settings_tasks_override_desc">무엇인지 모른다면 수정하지 마세요. MAA가 정상적으로 작동하지 않을 수 있습니다</string>
     <string name="settings_tasks_override_edit_title">설정 JSON 편집</string>
+    <string name="settings_game_package_title">사용자 지정 게임 클라이언트 패키지명</string>
+    <string name="settings_game_package_picker_title">%1$s 게임 앱 선택</string>
+    <string name="settings_game_package_reset">기본 패키지명으로 복원</string>
+    <string name="settings_game_package_busy">작업 실행 중입니다. 먼저 중지한 후 변경하세요</string>
     <string name="editor_json_valid">올바른 JSON 형식</string>
     <string name="editor_json_invalid">JSON 형식 오류</string>
     <string name="editor_save_success">저장했습니다. 다음 작업 시작 시 적용됩니다</string>

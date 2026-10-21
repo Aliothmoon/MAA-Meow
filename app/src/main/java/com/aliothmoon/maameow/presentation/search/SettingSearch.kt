@@ -132,6 +132,7 @@ object SettingSearchIndex {
 
         SettingSearchEntry(R.string.settings_deploy_with_pause, task, R.string.settings_deploy_with_pause_desc),
         SettingSearchEntry(R.string.settings_tasks_override_title, task, R.string.settings_tasks_override_desc),
+        SettingSearchEntry(R.string.settings_game_package_title, task),
 
         SettingSearchEntry(R.string.settings_export_config_title, data, R.string.settings_export_config_desc),
         SettingSearchEntry(R.string.settings_import_config_title, data, R.string.settings_import_config_desc),

@@ -190,6 +190,10 @@
     <string name="settings_tasks_override_title">MAA Task Override</string>
     <string name="settings_tasks_override_desc">Do not modify unless you know what you are doing — incorrect values will break MAA</string>
     <string name="settings_tasks_override_edit_title">Edit Config JSON</string>
+    <string name="settings_game_package_title">Custom Game Client Packages</string>
+    <string name="settings_game_package_picker_title">Select Game App for %1$s</string>
+    <string name="settings_game_package_reset">Restore default package</string>
+    <string name="settings_game_package_busy">A task is running. Stop it before changing this</string>
     <string name="common_save">Save</string>
     <string name="editor_json_valid">JSON valid</string>
     <string name="editor_json_invalid">JSON invalid</string>

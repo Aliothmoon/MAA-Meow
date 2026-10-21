@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
+import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.EventShopBlacklist
@@ -27,6 +28,7 @@ import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunDurationLimit
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.models.UnlockCredential
+import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -68,6 +70,13 @@ class AppSettingsManager internal constructor(
 
         fun parsePackageList(raw: String): Set<String> =
             raw.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+
+        fun parseGamePackages(raw: String): Map<String, String> {
+            if (raw.isBlank()) return emptyMap()
+            val map = runCatching { JsonUtils.common.decodeFromString<Map<String, String>>(raw) }
+                .getOrDefault(emptyMap())
+            return map.filter { (type, pkg) -> Packages.isValidOverride(type, pkg) }
+        }
 
         /** 首启引导版本，内容大改需全员重看时 +1 */
         const val ONBOARDING_VERSION = 1
@@ -273,6 +282,24 @@ class AppSettingsManager internal constructor(
         with(AppSettingsSchema) {
             context.dataStore.edit {
                 it[shizukuLaunchPackage] = trimmedPackageName
+            }
+        }
+    }
+
+    // 自定义游戏包名
+    val gamePackages: StateFlow<Map<String, String>> = setting { parseGamePackages(it.gamePackages) }
+
+    /** [packageName] 为 null 或等于默认即恢复默认 */
+    suspend fun setGamePackage(clientType: String, packageName: String?) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                val current = parseGamePackages(it[gamePackages].orEmpty())
+                val next = if (packageName != null && Packages.isValidOverride(clientType, packageName)) {
+                    current + (clientType to packageName)
+                } else {
+                    current - clientType
+                }
+                it[gamePackages] = if (next.isEmpty()) "" else JsonUtils.common.encodeToString(next)
             }
         }
     }

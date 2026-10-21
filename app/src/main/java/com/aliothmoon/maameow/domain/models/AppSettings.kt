@@ -56,6 +56,10 @@ data class AppSettings(
     @PrefKey(default = "")
     val mutedGamePackage: String = "",
 
+    /** 自定义游戏包名，客户端 → 包名的 JSON，空即全用默认 */
+    @PrefKey(default = "")
+    val gamePackages: String = "",
+
     @PrefKey(default = "false")
     val closeAppOnTaskEnd: String = "false",
 

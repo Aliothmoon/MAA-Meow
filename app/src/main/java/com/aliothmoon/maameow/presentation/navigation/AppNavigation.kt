@@ -55,6 +55,7 @@ import com.aliothmoon.maameow.presentation.view.notification.NotificationSetting
 import com.aliothmoon.maameow.presentation.view.settings.AchievementDebugView
 import com.aliothmoon.maameow.presentation.view.settings.AchievementView
 import com.aliothmoon.maameow.presentation.view.settings.ErrorLogView
+import com.aliothmoon.maameow.presentation.view.settings.GamePackageSettingsView
 import com.aliothmoon.maameow.presentation.view.settings.LogHistoryView
 import com.aliothmoon.maameow.presentation.view.settings.LiveUpdateSettingsView
 import com.aliothmoon.maameow.presentation.view.settings.TaskOverrideEditorView
@@ -271,6 +272,9 @@ fun AppNavigation(
                     }
                     composable(Routes.TASK_OVERRIDE_EDITOR) {
                         TaskOverrideEditorView(navController = navController)
+                    }
+                    composable(Routes.GAME_PACKAGE) {
+                        GamePackageSettingsView(navController = navController)
                     }
                 }
             }

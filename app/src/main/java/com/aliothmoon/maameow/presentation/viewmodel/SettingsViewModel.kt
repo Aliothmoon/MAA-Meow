@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -456,6 +457,17 @@ class SettingsViewModel(
             // 进程还活着，用 invalidate 保留资源档信息
             resourceLoader.invalidate()
         }
+    }
+
+    val gamePackages: StateFlow<Map<String, String>> = appSettingsManager.gamePackages
+
+    val coreIdle: StateFlow<Boolean> = compositionService.state.map { it.isIdle }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), compositionService.state.value.isIdle)
+
+    /** 运行中改会让 Meow 与 core 用的包对不上；core 侧由下次加载比对重载 */
+    fun setGamePackage(clientType: String, packageName: String?) {
+        if (coreBusy(R.string.settings_game_package_busy)) return
+        viewModelScope.launch { appSettingsManager.setGamePackage(clientType, packageName) }
     }
 
     // ============ System Monet theme color ============

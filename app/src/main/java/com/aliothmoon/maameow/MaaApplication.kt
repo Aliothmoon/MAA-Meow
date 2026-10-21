@@ -2,6 +2,7 @@ package com.aliothmoon.maameow
 
 import android.app.Application
 import android.content.res.Configuration
+import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.datasource.AppDownloader
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
@@ -74,6 +75,7 @@ class MaaApplication : Application() {
             androidContext(app)
             modules(appModule, useCaseModule, viewModelModule, floatingWindowModule)
         }
+        Packages.bindOverrides(appSettingsManager.gamePackages)
         // 不等设置读盘，冷启动 receiver / FGS 的日志与崩溃才接得住
         treeHolder.setup()
         crashHandler.init(this)
