@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,7 +25,8 @@ internal fun TemplateImage(
 ) {
     // 首帧直接用缓存，免得滚回来先空一帧；按 id 重建，同一位置换了 id 不沿用上一张
     var bitmap: ImageBitmap? by remember(id) { mutableStateOf(loader.peek(id)) }
-    LaunchedEffect(id) {
+    val generation by loader.generation.collectAsState()
+    LaunchedEffect(id, generation) {
         if (bitmap == null) bitmap = loader.load(id)
     }
     val current = bitmap

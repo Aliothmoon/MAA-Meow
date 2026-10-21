@@ -45,6 +45,7 @@ class GameMetadataLoader(
     private val chainState: TaskChainState,
     private val appSettings: AppSettingsManager,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+    private val templateImageLoaders: List<TemplateImageLoader> = emptyList(),
 ) : GameMetadataGate {
 
     sealed interface State {
@@ -93,6 +94,8 @@ class GameMetadataLoader(
 
     private suspend fun load(key: GameMetadataKey) {
         if (_state.value == State.Ready(key)) return
+        // 重解或热更后缺图记忆作废
+        templateImageLoaders.forEach { it.invalidateMissing() }
         _state.value = State.Loading(key)
         val mark = TimeSource.Monotonic.markNow()
         val reloadItems = itemsRevision != key.revision

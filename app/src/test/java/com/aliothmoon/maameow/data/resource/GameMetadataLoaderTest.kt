@@ -61,9 +61,11 @@ class GameMetadataLoaderTest {
         every { displayLanguageFlow } returns languageFlow
     }
 
+    private val iconLoader = mockk<ItemIconLoader>(relaxed = true)
+
     private fun loader(scope: CoroutineScope) = GameMetadataLoader(
         resourceDataManager, itemHelper, activityManager, hotUpdateSync, resourceInitService,
-        chainState, appSettings, scope,
+        chainState, appSettings, scope, templateImageLoaders = listOf(iconLoader),
     ).also { it.start() }
 
     private fun TestScope.startLoader() = loader(backgroundScope).also { runCurrent() }
@@ -151,6 +153,32 @@ class GameMetadataLoaderTest {
 
         coVerify(exactly = 1) { resourceDataManager.load("Official", "zh-cn", 1) }
         assertEquals(readyOf("Official", revision = 1), loader.state.value)
+    }
+
+    @Test
+    fun extractionFinishInvalidatesMissingIcons() = runTest {
+        initState.value = ResourceInitState.Ready
+        startLoader()
+        verify(exactly = 1) { iconLoader.invalidateMissing() }
+
+        initState.value = ResourceInitState.Extracting(0, 0)
+        runCurrent()
+        revision.value = 1
+        initState.value = ResourceInitState.Ready
+        runCurrent()
+
+        verify(exactly = 2) { iconLoader.invalidateMissing() }
+    }
+
+    @Test
+    fun hotUpdateInvalidatesMissingIcons() = runTest {
+        initState.value = ResourceInitState.Ready
+        startLoader()
+
+        hotUpdateRevision.value = 1
+        runCurrent()
+
+        verify(exactly = 2) { iconLoader.invalidateMissing() }
     }
 
     @Test

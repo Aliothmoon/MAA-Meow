@@ -6,6 +6,10 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
@@ -25,7 +29,18 @@ abstract class TemplateImageLoader(
 
     private val missing = ConcurrentHashMap.newKeySet<String>()
 
+    private val _generation = MutableStateFlow(0)
+
+    /** 缺图记忆作废时递增，界面据此重试 */
+    val generation: StateFlow<Int> = _generation.asStateFlow()
+
     fun peek(id: String): ImageBitmap? = cache.get(id)
+
+    fun invalidateMissing() {
+        if (missing.isEmpty()) return
+        missing.clear()
+        _generation.update { it + 1 }
+    }
 
     suspend fun load(id: String): ImageBitmap? {
         if (id.isEmpty()) return null

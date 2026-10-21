@@ -315,7 +315,12 @@ val appModule = module {
     single { ResourceInitService(get(), get(), get(), inject()) }
     singleOf(::MaaResourceLoader)
     // scope 走构造默认值
-    single { GameMetadataLoader(get(), get(), get(), get(), get(), get(), get()) } bind GameMetadataGate::class
+    single {
+        GameMetadataLoader(
+            get(), get(), get(), get(), get(), get(), get(),
+            templateImageLoaders = listOf(get<ItemIconLoader>(), get<OperAvatarLoader>(), get<OperRoleIconLoader>()),
+        )
+    } bind GameMetadataGate::class
     singleOf(::MaaSessionLogger)
 
     // 外部通知
