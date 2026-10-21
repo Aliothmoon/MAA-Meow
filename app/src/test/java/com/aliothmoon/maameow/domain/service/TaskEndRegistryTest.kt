@@ -117,6 +117,37 @@ class TaskEndRegistryTest {
         assertEquals(listOf(TaskEndRegistry.Reason.DURATION_LIMIT), pendingSeen)
     }
 
+    /** 登记前就已手动停止：补跑须按手动停止，不能当自然结束 */
+    @Test
+    fun armAfterManualStop_backfillsManual() = runBlocking<Unit> {
+        drive(MaaExecutionState.RUNNING)
+        stopOrigin = MaaCompositionService.StopOrigin.USER
+        drive(MaaExecutionState.STOPPING, MaaExecutionState.IDLE)
+        registry.armOnce { pendingSeen.add(it) }
+        delay(300)
+        assertEquals(listOf(TaskEndRegistry.Reason.MANUAL), pendingSeen)
+    }
+
+    @Test
+    fun armAfterNaturalEnd_backfillsNatural() = runBlocking<Unit> {
+        drive(MaaExecutionState.RUNNING, MaaExecutionState.IDLE)
+        registry.armOnce { pendingSeen.add(it) }
+        delay(300)
+        assertEquals(listOf(TaskEndRegistry.Reason.NATURAL), pendingSeen)
+    }
+
+    /** 启动失败没有结束边沿，补跑照旧按自然结束 */
+    @Test
+    fun armAfterStartFailure_backfillsNatural() = runBlocking<Unit> {
+        drive(MaaExecutionState.RUNNING)
+        stopOrigin = MaaCompositionService.StopOrigin.USER
+        drive(MaaExecutionState.STOPPING, MaaExecutionState.IDLE)
+        drive(MaaExecutionState.STARTING, MaaExecutionState.ERROR)
+        registry.armOnce { pendingSeen.add(it) }
+        delay(300)
+        assertEquals(listOf(TaskEndRegistry.Reason.NATURAL), pendingSeen)
+    }
+
     @Test
     fun startingToIdle_emitsNothing() = runBlocking<Unit> {
         drive(MaaExecutionState.STARTING, MaaExecutionState.IDLE)

@@ -2059,6 +2059,8 @@
     <string name="schedule_close_game_effect_global">현재 효과: 전역 스위치가 켜져 있어 작업이 끝나면 게임을 종료합니다</string>
     <string name="schedule_close_game_effect_strategy">현재 효과: 작업이 정상적으로 끝나면 이 예약 설정에 따라 게임을 종료합니다</string>
     <string name="schedule_close_game_effect_inactive">현재 효과: 작업이 끝나도 게임을 종료하지 않습니다</string>
+    <string name="schedule_exit_app_after_task">앱 종료</string>
+    <string name="schedule_exit_app_tip">작업이 끝나면 Shizuku / Root 서비스를 종료하고 MaaMeow를 종료합니다. 게임 종료·자동 화면 끄기 이후에 실행되며, 외부 알림 전송이 끝난 뒤 종료합니다. 백그라운드 모드에서는 가상 화면과 함께 게임도 종료됩니다. 작업을 수동으로 중지하면 종료하지 않습니다</string>
     <string name="schedule_permission_tip_battery_optimization">배터리 최적화 해제</string>
     <string name="schedule_permission_tip_exact_alarm">정확한 알람 허용</string>
     <string name="schedule_permission_tip_notification">알림 권한 켜기</string>

@@ -74,6 +74,7 @@ import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.AppAliveChecker
+import com.aliothmoon.maameow.domain.service.AppTerminator
 import com.aliothmoon.maameow.domain.service.AppWatchdog
 import com.aliothmoon.maameow.domain.service.CopilotManager
 import com.aliothmoon.maameow.domain.service.CopilotOperBoxAssist
@@ -291,8 +292,10 @@ val appModule = module {
                 }
             },
             appLabel = { LauncherApps.label(appContext, it) ?: it },
+            terminateApp = { sleep -> get<AppTerminator>().exit(sleep) },
         )
     }
+    singleOf(::AppTerminator)
     singleOf(::TaskChainState)
     singleOf(::ConfigBackupManager)
     singleOf(::MaaPathConfig)

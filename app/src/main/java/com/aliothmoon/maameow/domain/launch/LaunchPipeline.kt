@@ -69,6 +69,8 @@ class LaunchPipeline(
     /** 主屏顶层应用包名，判不出为 null */
     private val foregroundPackage: suspend () -> String?,
     private val appLabel: (String) -> String,
+    /** 参数为关服务前是否锁屏休眠 */
+    private val terminateApp: suspend (sleep: Boolean) -> Unit,
 ) {
     private val _session = MutableStateFlow<LaunchSession>(LaunchSession.Idle)
     val session: StateFlow<LaunchSession> = _session.asStateFlow()
@@ -466,12 +468,13 @@ class LaunchPipeline(
                     && request.closeGameAfterTask
                     && !appSettingsManager.closeAppOnTaskEnd.value
             val screenSaverEngaged = outcome.screenSaverEngaged
+            val exitApp = request.exitAppAfterTask
             // Core 未起时 armOnce 看到 IDLE 会当场补跑，不能整段跳过，否则息屏锁屏不执行
             if (result != ExecutionResult.STARTED) {
                 if (screenSaverEngaged) screenSaver.hide()
-            } else if (closeGame || autoSleep || screenSaverEngaged) {
+            } else if (closeGame || autoSleep || screenSaverEngaged || exitApp) {
                 taskEndRegistry.armOnce { reason ->
-                    onTaskEnd(reason, closeGame, autoSleep, screenSaverEngaged)
+                    onTaskEnd(reason, closeGame, autoSleep, screenSaverEngaged, exitApp)
                 }
             }
         }
@@ -625,10 +628,11 @@ class LaunchPipeline(
         closeGame: Boolean,
         autoSleep: Boolean,
         releaseScreenSaver: Boolean,
+        exitApp: Boolean,
     ) {
         Timber.i(
-            "LaunchPipeline: task end reason=%s closeGame=%s autoSleep=%s saver=%s",
-            reason, closeGame, autoSleep, releaseScreenSaver,
+            "LaunchPipeline: task end reason=%s closeGame=%s autoSleep=%s saver=%s exitApp=%s",
+            reason, closeGame, autoSleep, releaseScreenSaver, exitApp,
         )
         // 手动停止不关游戏，其余结束（自然完成 / 掉线中止 / 到达时长上限）都关
         if (closeGame && reason != TaskEndRegistry.Reason.MANUAL) {
@@ -637,6 +641,11 @@ class LaunchPipeline(
         // 屏保有 KEEP_SCREEN_ON，须先关再熄屏
         if (releaseScreenSaver) {
             screenSaver.hide()
+        }
+        // 手动停止说明有人在用，不退；退出要等通知发完，不占 TaskEndRegistry 的收集协程，熄屏也交给它排在关服务前
+        if (exitApp && reason != TaskEndRegistry.Reason.MANUAL) {
+            scope.launch { terminateApp(autoSleep) }
+            return
         }
         if (autoSleep) {
             wakeUnlockEngine.lockAndSleep()

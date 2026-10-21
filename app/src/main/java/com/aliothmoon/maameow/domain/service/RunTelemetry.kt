@@ -6,7 +6,7 @@ import com.aliothmoon.maameow.maa.AsstMsg
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 
-/** 全部方法可在任意线程调用且不阻塞；开关关着或构建没带 DSN 时空转 */
+/** 除 [onAppExit] 外全部方法可在任意线程调用且不阻塞；开关关着或构建没带 DSN 时空转 */
 interface RunTelemetry {
 
     /** 会话开启之后、追加任务之前调用；返回本轮的关联 ID，未启用时为 null */
@@ -30,6 +30,9 @@ interface RunTelemetry {
 
     /** 发出 Shizuku 未运行提醒时调 */
     fun onShizukuDown(afterBoot: Boolean, enabledSchedules: Int)
+
+    /** 进程马上要退出：挂起到在途上报发完，再关 SDK 把队列发出去 */
+    suspend fun onAppExit()
 }
 
 data class LaunchOutcome(

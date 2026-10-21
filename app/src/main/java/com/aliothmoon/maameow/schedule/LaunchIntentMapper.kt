@@ -32,6 +32,7 @@ object LaunchIntentMapper {
         autoSleepAfterTask = strategy.autoSleepAfterTask,
         skipAutoSleepIfAwake = strategy.skipAutoSleepIfAwake,
         closeGameAfterTask = strategy.closeGameAfterTask,
+        exitAppAfterTask = strategy.exitAppAfterTask,
         strategyId = strategy.id,
         countdownSeconds = ScheduledExecutionRequest.COUNTDOWN_SECONDS,
     )

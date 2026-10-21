@@ -2059,6 +2059,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_close_game_effect_global">当前效果：全局开关已开启，任务结束后会关闭游戏</string>
     <string name="schedule_close_game_effect_strategy">当前效果：任务自然结束后会按本策略关闭游戏</string>
     <string name="schedule_close_game_effect_inactive">当前效果：任务结束后不会关闭游戏</string>
+    <string name="schedule_exit_app_after_task">退出应用</string>
+    <string name="schedule_exit_app_tip">任务结束后关闭 Shizuku / Root 服务并退出 MaaMeow，在关闭游戏、自动熄屏之后执行，外部通知发送完再退出。后台模式下游戏随虚拟屏一并关闭。手动停止任务不会退出</string>
     <string name="schedule_permission_tip_battery_optimization">关闭电池优化</string>
     <string name="schedule_permission_tip_exact_alarm">允许精确闹钟</string>
     <string name="schedule_permission_tip_notification">开启通知权限</string>

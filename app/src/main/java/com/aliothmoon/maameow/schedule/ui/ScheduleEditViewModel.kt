@@ -54,6 +54,7 @@ data class ScheduleEditUiState(
     val autoSleepAfterTask: Boolean = false,
     val skipAutoSleepIfAwake: Boolean = false,
     val closeGameAfterTask: Boolean = false,
+    val exitAppAfterTask: Boolean = false,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
     /** 空列表 = 无需向导 */
@@ -137,6 +138,7 @@ class ScheduleEditViewModel(
                         autoSleepAfterTask = strategy.autoSleepAfterTask,
                         skipAutoSleepIfAwake = strategy.skipAutoSleepIfAwake,
                         closeGameAfterTask = strategy.closeGameAfterTask,
+                        exitAppAfterTask = strategy.exitAppAfterTask,
                     )
                     return@launch
                 }
@@ -242,6 +244,10 @@ class ScheduleEditViewModel(
         _state.update { it.copy(closeGameAfterTask = value) }
     }
 
+    fun onExitAppAfterTaskChanged(value: Boolean) {
+        _state.update { it.copy(exitAppAfterTask = value) }
+    }
+
     fun onReplaceTime(old: LocalTime, new: LocalTime) {
         _state.update { state ->
             val updated =
@@ -309,6 +315,7 @@ class ScheduleEditViewModel(
                     autoSleepAfterTask = current.autoSleepAfterTask,
                     skipAutoSleepIfAwake = current.skipAutoSleepIfAwake,
                     closeGameAfterTask = current.closeGameAfterTask,
+                    exitAppAfterTask = current.exitAppAfterTask,
                 ) ?: ScheduleStrategy(
                     id = strategyId ?: UUID.randomUUID().toString(),
                     name = current.name.trim(),
@@ -326,6 +333,7 @@ class ScheduleEditViewModel(
                     autoSleepAfterTask = current.autoSleepAfterTask,
                     skipAutoSleepIfAwake = current.skipAutoSleepIfAwake,
                     closeGameAfterTask = current.closeGameAfterTask,
+                    exitAppAfterTask = current.exitAppAfterTask,
                 )
 
                 if (current.isNew) {

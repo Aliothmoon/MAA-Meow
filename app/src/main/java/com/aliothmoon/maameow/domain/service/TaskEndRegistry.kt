@@ -46,13 +46,21 @@ class TaskEndRegistry(
     private val pending = AtomicReference<PendingAction?>(null)
     private val started = AtomicBoolean(false)
 
+    /** 收集协程处理到的状态与最近一次结束原因，补跑据此判断 */
+    @Volatile
+    private var observed: MaaExecutionState? = null
+
+    @Volatile
+    private var lastReason = Reason.NATURAL
+
     /** 登记本次收尾；重复登记覆盖前一次 */
     fun armOnce(action: PendingAction) {
         pending.set(action)
-        // 边沿可能已过，补跑一次；与 dispatch 共用 getAndSet
+        // 边沿已过：收集协程处理过的按那次原因补跑，没处理到的交给 dispatch；与 dispatch 共用 getAndSet
         val now = compositionService.state.value
-        if (now == MaaExecutionState.IDLE || now == MaaExecutionState.ERROR) {
-            scope.launch { runPending(Reason.NATURAL) }
+        if (isTerminal(now) && (observed == now || !started.get())) {
+            val reason = lastReason
+            scope.launch { runPending(reason) }
         }
     }
 
@@ -63,18 +71,26 @@ class TaskEndRegistry(
 
     fun start() {
         if (!started.compareAndSet(false, true)) return
+        var prev = compositionService.state.value
+        observed = prev
         scope.launch {
-            var prev = compositionService.state.value
             compositionService.state.collect { cur ->
-                reasonFor(prev, cur)?.let { dispatch(it) }
+                val reason = reasonFor(prev, cur)
+                // 先记下再 dispatch，armOnce 才不会漏补跑
+                if (isTerminal(cur) && !isTerminal(prev)) lastReason = reason ?: Reason.NATURAL
+                observed = cur
                 prev = cur
+                reason?.let { dispatch(it) }
             }
         }
         Timber.i("TaskEndRegistry: started observing task end")
     }
 
+    private fun isTerminal(state: MaaExecutionState) =
+        state == MaaExecutionState.IDLE || state == MaaExecutionState.ERROR
+
     private fun reasonFor(prev: MaaExecutionState, cur: MaaExecutionState): Reason? {
-        if (cur != MaaExecutionState.IDLE && cur != MaaExecutionState.ERROR) return null
+        if (!isTerminal(cur)) return null
         return when (prev) {
             MaaExecutionState.RUNNING -> Reason.NATURAL
             MaaExecutionState.STOPPING -> when (compositionService.lastStopOrigin) {

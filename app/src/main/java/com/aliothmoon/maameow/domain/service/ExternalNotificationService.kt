@@ -18,7 +18,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 
 class ExternalNotificationService(
@@ -28,12 +30,27 @@ class ExternalNotificationService(
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // 发送单独一个 scope，退出前只等它
+    private val sendJob = SupervisorJob()
+    private val sendScope = CoroutineScope(sendJob + Dispatchers.IO)
     private val providers = providerList.associateBy(NotificationProvider::id)
     private val _feedbackMessages = MutableSharedFlow<UiText>(extraBufferCapacity = 16)
     val feedbackMessages: SharedFlow<UiText> = _feedbackMessages.asSharedFlow()
 
+    /** 等在途的发送，等的过程中排上队的也等；超时不再等 */
+    suspend fun awaitPendingSends(timeoutMs: Long) {
+        withTimeoutOrNull(timeoutMs) {
+            while (true) {
+                val pending = sendJob.children.toList()
+                if (pending.isEmpty()) break
+                pending.joinAll()
+            }
+        } ?: Timber.w("pending notification sends still running after %dms", timeoutMs)
+    }
+
     fun send(title: String, content: String) {
-        scope.launch {
+        sendScope.launch {
             dispatchToProviders(title, content, isTest = false)
         }
     }
@@ -47,7 +64,7 @@ class ExternalNotificationService(
         ids.any { providers[it]?.supportsImage == true }
 
     fun sendWithLogs(title: String, content: String, image: NotificationImage? = null) {
-        scope.launch {
+        sendScope.launch {
             val body = if (settingsManager.includeLogDetails.value) {
                 val logs = sessionLogger.logs.value
                     .joinToString("\n") { "[${it.formattedTime}] ${it.content}" }
@@ -60,7 +77,7 @@ class ExternalNotificationService(
     }
 
     fun sendTest(title: String, content: String) {
-        scope.launch {
+        sendScope.launch {
             dispatchToProviders(title, content, isTest = true)
         }
     }

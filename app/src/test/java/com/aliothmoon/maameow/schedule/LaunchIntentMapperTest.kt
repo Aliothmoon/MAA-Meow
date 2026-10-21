@@ -47,6 +47,7 @@ class LaunchIntentMapperTest {
             autoSleepAfterTask = true,
             skipAutoSleepIfAwake = true,
             closeGameAfterTask = true,
+            exitAppAfterTask = true,
         )
         val request = LaunchIntentMapper.fromStrategy(s, scheduledTimeMs = 1L)
         assertEquals(true, request.forceStart)
@@ -54,5 +55,6 @@ class LaunchIntentMapperTest {
         assertEquals(true, request.autoSleepAfterTask)
         assertEquals(true, request.skipAutoSleepIfAwake)
         assertEquals(true, request.closeGameAfterTask)
+        assertEquals(true, request.exitAppAfterTask)
     }
 }

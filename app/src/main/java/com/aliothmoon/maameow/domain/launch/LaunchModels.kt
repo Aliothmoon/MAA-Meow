@@ -26,6 +26,7 @@ data class LaunchRequest(
     /** 启动时已亮屏未锁屏则不熄屏 */
     val skipAutoSleepIfAwake: Boolean = false,
     val closeGameAfterTask: Boolean = false,
+    val exitAppAfterTask: Boolean = false,
     val strategyId: String = "",
     val countdownSeconds: Int = DEFAULT_COUNTDOWN_SECONDS,
 ) {

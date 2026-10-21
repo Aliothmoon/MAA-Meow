@@ -2003,6 +2003,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_close_game_effect_global">Current effect: the global switch is on, so the game closes when the task ends</string>
     <string name="schedule_close_game_effect_strategy">Current effect: this strategy closes the game after the task ends normally</string>
     <string name="schedule_close_game_effect_inactive">Current effect: the game is not closed when the task ends</string>
+    <string name="schedule_exit_app_after_task">Exit app</string>
+    <string name="schedule_exit_app_tip">When the task ends, stop the Shizuku / Root service and exit MaaMeow. Runs after closing the game and auto sleep, and waits for external notifications to finish sending. In background mode the game closes along with the virtual display. Manually stopping a task will not exit</string>
     <string name="schedule_permission_tip_battery_optimization">Disable battery optimization</string>
     <string name="schedule_permission_tip_exact_alarm">Allow exact alarms</string>
     <string name="schedule_permission_tip_notification">Enable notifications</string>

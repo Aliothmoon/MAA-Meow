@@ -724,6 +724,12 @@ private fun AdvancedOptions(
                 },
                 noteHighlighted = closeEffect == CloseGameEffect.GlobalOverride,
             )
+            OptionSwitchRow(
+                title = stringResource(R.string.schedule_exit_app_after_task),
+                tip = stringResource(R.string.schedule_exit_app_tip),
+                checked = state.exitAppAfterTask,
+                onCheckedChange = viewModel::onExitAppAfterTaskChanged,
+            )
         }
     }
 }

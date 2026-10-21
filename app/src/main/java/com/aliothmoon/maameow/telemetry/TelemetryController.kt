@@ -41,6 +41,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -247,6 +248,19 @@ class TelemetryController(
         }
     }
 
+    override suspend fun onAppExit() {
+        if (!active) return
+        reporter.awaitIdle(INCIDENT_FLUSH_TIMEOUT_MS)
+        val wasActive = synchronized(lock) { active.also { active = false } }
+        if (wasActive) withContext(Dispatchers.IO) { closeSentry() }
+    }
+
+    private fun closeSentry() {
+        // 先正常结束 Session，否则它会被判为 abnormal，拉低 crash-free 率
+        Sentry.endSession()
+        Sentry.close()
+    }
+
     /** [incident] 要在收掉这一轮之前构造，它取的是当前这轮的 ID 与 tag */
     private fun reportRunIncident(status: SpanStatus, incident: () -> Incident) {
         guarded {
@@ -337,11 +351,7 @@ class TelemetryController(
             reporter.cancelAll()
             active.also { active = false }
         }
-        if (wasActive) {
-            // 先正常结束 Session，否则它会被判为 abnormal，拉低 crash-free 率
-            Sentry.endSession()
-            Sentry.close()
-        }
+        if (wasActive) closeSentry()
         if (!enabled) return
         runCatching { init() }
             .onFailure { Timber.w(it, "[telemetry] 初始化失败") }
@@ -453,6 +463,8 @@ class TelemetryController(
 
         /** 一轮一条事务、每条任务链一条 Span，量不大，全采 */
         const val TRACES_SAMPLE_RATE = 1.0
+
+        const val INCIDENT_FLUSH_TIMEOUT_MS = 10_000L
 
         val TRACKED_MESSAGES = setOf(
             AsstMsg.TaskChainStart,

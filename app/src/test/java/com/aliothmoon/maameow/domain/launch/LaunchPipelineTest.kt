@@ -77,6 +77,7 @@ class LaunchPipelineTest {
     private val stopCalls = AtomicInteger(0)
     private val uiLaunches = AtomicInteger(0)
     private val powerOffCalls = CopyOnWriteArrayList<ScreenPowerController.Origin>()
+    private val endSteps = CopyOnWriteArrayList<String>()
 
     @Volatile
     private var powerOffSucceeds = true
@@ -301,6 +302,7 @@ class LaunchPipelineTest {
             foregroundPkg
         },
         appLabel = { "label:$it" },
+        terminateApp = { sleep -> endSteps.add("exit:$sleep") },
     ).also { current = it }
 
     private fun givenWakeGate(
@@ -330,6 +332,7 @@ class LaunchPipelineTest {
         hardwareScreenOff: Boolean = false,
         closeGame: Boolean = false,
         silent: Boolean = false,
+        exitApp: Boolean = false,
     ) = LaunchRequest(
         requestId = id,
         source = LaunchSource.Schedule,
@@ -341,6 +344,7 @@ class LaunchPipelineTest {
         hardwareScreenOff = hardwareScreenOff,
         silentStartWhenInUse = silent,
         closeGameAfterTask = closeGame,
+        exitAppAfterTask = exitApp,
         autoSleepAfterTask = autoSleep,
         skipAutoSleepIfAwake = skipIfAwake,
         strategyId = "strat-1",
@@ -522,6 +526,34 @@ class LaunchPipelineTest {
         driveTaskToEnd()
         delay(500)
         coVerify(exactly = 0) { composition.stopVirtualDisplay() }
+    }
+
+    /** 熄屏要用 RemoteService，交给退出排在关服务前，管线自己不再熄屏 */
+    @Test
+    fun exitApp_withAutoSleep_handsSleepToExit() = runBlocking<Unit> {
+        pipeline().execute(scheduleRequest(autoSleep = true, exitApp = true)).join()
+        driveTaskToEnd()
+        withTimeout(5_000) { while (endSteps.isEmpty()) delay(20) }
+        delay(200)
+        assertEquals(listOf("exit:true"), endSteps.toList())
+        coVerify(exactly = 0) { wake.lockAndSleep() }
+    }
+
+    /** 只开退出也要登记收尾；掉线中止视同结束 */
+    @Test
+    fun exitApp_callbackAbort_exits() = runBlocking<Unit> {
+        pipeline().execute(scheduleRequest(exitApp = true)).join()
+        driveTaskToStop(MaaCompositionService.StopOrigin.CALLBACK)
+        withTimeout(5_000) { while (endSteps.isEmpty()) delay(20) }
+        assertEquals(listOf("exit:false"), endSteps.toList())
+    }
+
+    @Test
+    fun exitApp_manualStop_staysAlive() = runBlocking<Unit> {
+        pipeline().execute(scheduleRequest(exitApp = true)).join()
+        driveTaskToStop(MaaCompositionService.StopOrigin.USER)
+        delay(500)
+        assertTrue(endSteps.isEmpty())
     }
 
     @Test

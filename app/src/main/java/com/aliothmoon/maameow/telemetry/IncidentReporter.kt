@@ -10,7 +10,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -109,6 +111,11 @@ internal class IncidentReporter(
                 Timber.w(e, "[telemetry] 事件发送失败")
             }
         }
+    }
+
+    /** 等在途的取证与发送，超时不再等 */
+    suspend fun awaitIdle(timeoutMs: Long) {
+        withTimeoutOrNull(timeoutMs) { workers.children.toList().joinAll() }
     }
 
     fun cancelAll() {

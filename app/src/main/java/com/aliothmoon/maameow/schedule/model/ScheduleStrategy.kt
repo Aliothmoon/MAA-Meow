@@ -81,6 +81,8 @@ data class ScheduleStrategy(
     val skipAutoSleepIfAwake: Boolean = false,
     /** 自然结束后关游戏；仅后台，全局开关优先 */
     val closeGameAfterTask: Boolean = false,
+    /** 自然结束后关 RemoteService 与 App */
+    val exitAppAfterTask: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val lastExecutedAt: Long? = null,
     val lastResult: ExecutionResult? = null,

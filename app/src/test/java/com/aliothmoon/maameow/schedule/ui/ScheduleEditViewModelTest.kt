@@ -62,6 +62,7 @@ class ScheduleEditViewModelTest {
         autoSleepAfterTask = true,
         skipAutoSleepIfAwake = true,
         closeGameAfterTask = true,
+        exitAppAfterTask = true,
         createdAt = 100L,
         lastExecutedAt = 200L,
         lastResult = ExecutionResult.STARTED,
@@ -135,6 +136,7 @@ class ScheduleEditViewModelTest {
                 autoSleepAfterTask = true,
                 skipAutoSleepIfAwake = true,
                 closeGameAfterTask = true,
+                exitAppAfterTask = true,
             ),
             observed.last(),
         )
