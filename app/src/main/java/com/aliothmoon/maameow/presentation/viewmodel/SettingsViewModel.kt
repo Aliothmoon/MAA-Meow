@@ -14,7 +14,6 @@ import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
-import com.aliothmoon.maameow.data.preferences.BackupTooLargeException
 import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
@@ -31,6 +30,7 @@ import com.aliothmoon.maameow.domain.state.isIdle
 import com.aliothmoon.maameow.domain.usecase.SwitchCoreDataLocationUseCase
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
+import com.aliothmoon.maameow.utils.InputTooLargeException
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
@@ -114,7 +114,7 @@ class SettingsViewModel(
             try {
                 configBackupManager.importFrom(inputStream)
                 _showRestartDialog.value = true
-            } catch (e: BackupTooLargeException) {
+            } catch (e: InputTooLargeException) {
                 Timber.w(e, "import config rejected")
                 _settingsMessage.value =
                     uiTextOf(R.string.settings_import_too_large, e.limitBytes / (1024 * 1024))

@@ -387,6 +387,11 @@ class TelemetryController(
             options.isEnableAutoSessionTracking = true
             // 自动采集只留未捕获异常与 ANR，其余全部关掉
             options.isAnrEnabled = true
+            options.beforeSend = SentryOptions.BeforeSendCallback { event, hint ->
+                runCatching { TelemetryAnr.enrich(context, event, hint) }
+                    .onFailure { Timber.w(it, "[telemetry] ANR 原因补充失败") }
+                event
+            }
             // 不关的话每条消息事件都会附上发送线程的调用栈
             options.isAttachStacktrace = false
             options.isAttachScreenshot = false

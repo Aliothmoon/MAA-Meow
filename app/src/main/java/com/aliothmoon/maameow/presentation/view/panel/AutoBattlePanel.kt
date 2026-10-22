@@ -122,6 +122,7 @@ import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.utils.i18n.formatToolboxSyncTime
+import com.aliothmoon.maameow.utils.readTextAtMost
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -129,6 +130,7 @@ import org.koin.compose.koinInject
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import timber.log.Timber
 
 private data class CopilotTabUiSpec(
     val index: Int,
@@ -164,15 +166,19 @@ fun AutoBattlePanel(
                         val name = Misc.queryFileName(context, uri)
                             ?: uri.lastPathSegment
                             ?: "copilot_${System.currentTimeMillis()}.json"
-                        val json = context.contentResolver.openInputStream(uri)?.use {
-                            it.bufferedReader().readText()
+                        val json = try {
+                            context.contentResolver.openInputStream(uri)?.use {
+                                it.readTextAtMost(MAX_COPILOT_FILE_BYTES)
+                            }
+                        } catch (e: Exception) {
+                            Timber.w(e, "read copilot file failed: $name")
+                            null
                         } ?: return@mapNotNull null
                         name to json
                     }
                 }
-                if (files.isNotEmpty()) {
-                    viewModel.onImportLocalFiles(files)
-                }
+                // 全部读失败也要交给 ViewModel 提示导入失败
+                viewModel.onImportLocalFiles(files)
             }
         }
     } else null
@@ -1194,6 +1200,9 @@ private fun GroupToggleTile(expanded: Boolean, hidden: Int, onClick: () -> Unit)
 }
 
 private const val DETAIL_COLLAPSED_LINES = 3
+
+/** 作业 JSON 正常只有几十 KB，超限多半是选错了文件（ANDROID-13W） */
+private const val MAX_COPILOT_FILE_BYTES = 4 * 1024 * 1024
 
 @Composable
 private fun CopilotMetaRow(

@@ -1,6 +1,8 @@
 package com.aliothmoon.maameow.data.preferences
 
 import com.aliothmoon.maameow.data.notification.NotificationSettings
+import com.aliothmoon.maameow.utils.InputTooLargeException
+import com.aliothmoon.maameow.utils.readTextAtMost
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -98,7 +100,7 @@ class ConfigBackupManagerTest {
     @Test
     fun importReadRejectsContentOverLimit() {
         val bytes = ByteArray(64 * 1024 + 1)
-        val e = assertThrows(BackupTooLargeException::class.java) {
+        val e = assertThrows(InputTooLargeException::class.java) {
             ByteArrayInputStream(bytes).readTextAtMost(64 * 1024)
         }
         assertEquals(64 * 1024, e.limitBytes)

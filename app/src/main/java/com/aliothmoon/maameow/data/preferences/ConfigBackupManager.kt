@@ -12,12 +12,11 @@ import com.aliothmoon.maameow.domain.models.AppSettings
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
 import com.aliothmoon.maameow.utils.JsonUtils
+import com.aliothmoon.maameow.utils.readTextAtMost
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import java.io.ByteArrayOutputStream
-import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.time.LocalDateTime
@@ -142,20 +141,6 @@ class ConfigBackupManager(
             }
         )
     }
-}
-
-class BackupTooLargeException(val limitBytes: Int) : IOException("backup exceeds $limitBytes bytes")
-
-internal fun InputStream.readTextAtMost(limitBytes: Int): String {
-    val out = ByteArrayOutputStream()
-    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-    while (true) {
-        val n = read(buffer)
-        if (n < 0) break
-        if (out.size() + n > limitBytes) throw BackupTooLargeException(limitBytes)
-        out.write(buffer, 0, n)
-    }
-    return out.toString(Charsets.UTF_8.name())
 }
 
 // 导出脱敏：凭证清空，识别类字段（userId/chatId 等）保留

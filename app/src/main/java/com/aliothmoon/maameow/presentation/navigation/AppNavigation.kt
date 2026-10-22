@@ -2,8 +2,8 @@ package com.aliothmoon.maameow.presentation.navigation
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -293,8 +293,10 @@ fun AppNavigation(
                     richColors = true,
                     showCloseButton = true,
                     darkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f,
-                    containerPadding = PaddingValues(top = 8.dp),
-                    modifier = Modifier.windowInsetsPadding(MaaWindowInsets.topBar),
+                    // 间距不走 containerPadding：sonner 拿它直减约束，弹窗矮于间距时减成负数崩溃（ANDROID-12E）
+                    modifier = Modifier
+                        .windowInsetsPadding(MaaWindowInsets.topBar)
+                        .padding(top = 8.dp),
                 )
                 // 全局定时任务倒计时弹窗（前台所有控制模式均不弹出对话框，静默处理）
                 val countdown = scheduledCountdownState

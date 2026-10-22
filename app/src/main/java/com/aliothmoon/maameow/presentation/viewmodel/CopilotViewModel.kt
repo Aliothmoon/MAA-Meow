@@ -267,7 +267,6 @@ class CopilotViewModel(
      * @param files 文件名与 JSON 内容的列表
      */
     fun onImportLocalFiles(files: List<Pair<String, String>>) {
-        if (files.isEmpty()) return
         viewModelScope.launch {
             _state.update { it.startingParse() }
             var successCount = 0
