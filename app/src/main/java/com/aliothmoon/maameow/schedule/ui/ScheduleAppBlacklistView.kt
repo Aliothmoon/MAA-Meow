@@ -35,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.presentation.components.AppIcon
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.search.ProvideSettingSearch
@@ -185,6 +186,8 @@ private fun BlacklistAppRow(
             .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        AppIcon(row.packageName)
+        Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = row.label,

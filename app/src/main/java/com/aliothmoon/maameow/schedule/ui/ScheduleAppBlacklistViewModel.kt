@@ -81,6 +81,12 @@ class ScheduleAppBlacklistViewModel(
         val missing = (ready.pinned + blacklist)
             .filter { it !in installed }
             .map { AppRow(it, it, it in blacklist) }
-        return missing + ready.apps.map { AppRow(it.label, it.packageName, it.packageName in blacklist) }
+        return missing + ready.apps.map {
+            AppRow(
+                it.label,
+                it.packageName,
+                it.packageName in blacklist
+            )
+        }
     }
 }
