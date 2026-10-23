@@ -82,7 +82,7 @@ android {
         versionCode = gitVersionCode
         versionName = gitVersionName
         println("Build version: versionCode=$versionCode, versionName=$versionName")
-        ndkVersion = "29.0.13113456"
+        ndkVersion = "29.0.14206865"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // setup_maa_core.py deploy 时写入 .maaversion；缺失时为空串，运行时检查宽松放行
