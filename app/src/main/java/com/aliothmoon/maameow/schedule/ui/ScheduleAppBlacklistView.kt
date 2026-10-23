@@ -1,7 +1,6 @@
 package com.aliothmoon.maameow.schedule.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -35,7 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.models.RunMode
-import com.aliothmoon.maameow.presentation.components.AppIcon
+import com.aliothmoon.maameow.presentation.components.AppListItem
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.search.ProvideSettingSearch
@@ -160,9 +159,15 @@ fun ScheduleAppBlacklistView(
                             }
                         } else {
                             items(rows, key = { it.packageName }) { row ->
-                                BlacklistAppRow(
-                                    row = row,
-                                    onToggle = { viewModel.setBlacklisted(row.packageName, it) },
+                                AppListItem(
+                                    label = row.label,
+                                    packageName = row.packageName,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .toggleable(value = row.checked, role = Role.Checkbox) {
+                                            viewModel.setBlacklisted(row.packageName, it)
+                                        },
+                                    trailing = { Checkbox(checked = row.checked, onCheckedChange = null) },
                                 )
                             }
                         }
@@ -170,38 +175,5 @@ fun ScheduleAppBlacklistView(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun BlacklistAppRow(
-    row: ScheduleAppBlacklistViewModel.AppRow,
-    onToggle: (Boolean) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .toggleable(value = row.checked, role = Role.Checkbox, onValueChange = onToggle)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AppIcon(row.packageName)
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = row.label,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            if (row.label != row.packageName) {
-                Text(
-                    text = row.packageName,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        Checkbox(checked = row.checked, onCheckedChange = null)
     }
 }

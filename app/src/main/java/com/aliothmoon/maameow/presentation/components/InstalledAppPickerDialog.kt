@@ -129,25 +129,13 @@ fun InstalledAppPickerDialog(
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 items(filteredOptions, key = { it.packageName }) { option ->
-                                    Column(
+                                    AppListItem(
+                                        label = option.label,
+                                        packageName = option.packageName,
                                         modifier = Modifier
-                                            .fillMaxWidth()
                                             .clip(RoundedCornerShape(8.dp))
-                                            .clickable { onPick(option) }
-                                            .padding(horizontal = 8.dp, vertical = 10.dp),
-                                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                                    ) {
-                                        Text(
-                                            text = option.label,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = option.packageName,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                            .clickable { onPick(option) },
+                                    )
                                 }
                             }
                         }
