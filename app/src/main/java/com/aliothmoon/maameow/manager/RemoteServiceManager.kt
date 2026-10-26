@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,12 +20,31 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import java.io.File
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.milliseconds
+
+class RemoteCallStuckException(val call: String, val threadDump: String?) :
+    Exception("$call did not return, elevated service restarted")
+
+/** binder 阻塞取消不掉：超时只是不再等，交给 [onStuck] 善后 */
+internal suspend fun <R> awaitOrAbandon(
+    scope: CoroutineScope,
+    timeoutMs: Long,
+    block: () -> R,
+    onStuck: suspend () -> Nothing,
+): R {
+    val pending = scope.async { block() }
+    return try {
+        withTimeout(timeoutMs.milliseconds) { pending.await() }
+    } catch (_: TimeoutCancellationException) {
+        onStuck()
+    }
+}
 
 object RemoteServiceManager {
 
@@ -44,6 +64,8 @@ object RemoteServiceManager {
 
     private const val SHORT_CAUSE_MAX = 120
 
+    private const val DUMP_TIMEOUT_MS = 3_000L
+
     // 状态迁移（boundBackend / currentBinder / _state）统一在此锁内完成
     private val lock = Any()
 
@@ -52,6 +74,9 @@ object RemoteServiceManager {
     private val _state = MutableStateFlow<ServiceState>(ServiceState.Disconnected)
 
     private val timeoutScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    // 卡住的调用挂在这，不拖住调用方
+    private val callScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val connectAttempt = AtomicInteger(0)
 
     private val connectors: Map<RemoteBackend, RemoteServiceConnectorBackend> = mapOf(
@@ -298,6 +323,29 @@ object RemoteServiceManager {
                 _state.value = ServiceState.Disconnected
             }
         }
+    }
+
+    private fun unbindIf(binder: IBinder) {
+        synchronized(lock) {
+            if (currentBinder.get() !== binder) return
+            unbind()
+        }
+    }
+
+    /** 超时就重启提权进程，把卡住的线程放出来；重启前先取线程栈 */
+    suspend fun <R> callOrRestart(
+        service: RemoteService,
+        call: String,
+        timeoutMs: Long,
+        block: (RemoteService) -> R,
+    ): R = awaitOrAbandon(callScope, timeoutMs, { block(service) }) {
+        val dump = withTimeoutOrNull(DUMP_TIMEOUT_MS.milliseconds) {
+            callScope.async { runCatching { service.dumpThreads() }.getOrNull() }.await()
+        }
+        ServiceBootLogger.event("CALL_STUCK", "call=$call after ${timeoutMs}ms")
+        Timber.e("Remote call %s stuck for %dms, restarting elevated service", call, timeoutMs)
+        unbindIf(service.asBinder())
+        throw RemoteCallStuckException(call, dump)
     }
 
     private fun fallbackTimeoutMs(backend: RemoteBackend): Long =

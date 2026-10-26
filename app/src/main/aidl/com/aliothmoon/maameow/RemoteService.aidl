@@ -140,4 +140,7 @@ interface RemoteService {
 
     // 每轮启动前调；true 走 VirtualDevice（14+）；后台虚拟屏还在时不能换后端，返回 false
     boolean setUseVirtualDeviceDisplay(boolean enabled) = 58;
+
+    // 卡死诊断用，不能加锁
+    String dumpThreads() = 59;
 }

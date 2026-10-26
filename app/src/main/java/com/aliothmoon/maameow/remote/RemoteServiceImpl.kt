@@ -31,6 +31,7 @@ import com.aliothmoon.maameow.remote.internal.RemoteUtils
 import com.aliothmoon.maameow.remote.internal.ScreenManager
 import com.aliothmoon.maameow.remote.internal.StaleFrameGuard
 import com.aliothmoon.maameow.remote.internal.SystemLogDump
+import com.aliothmoon.maameow.remote.internal.ThreadDump
 import com.aliothmoon.maameow.remote.internal.UserDirProbe
 import com.aliothmoon.maameow.remote.internal.WakeUnlockController
 import com.aliothmoon.maameow.remote.internal.XmsfFirewall
@@ -411,6 +412,8 @@ class RemoteServiceImpl : RemoteService.Stub() {
     override fun getGameFps(): Float = GameFpsMonitor.currentFps()
 
     override fun getVirtualDisplayFlagTier(): Int = BackgroundDisplay.flagTier()
+
+    override fun dumpThreads(): String = ThreadDump.capture()
 
     override fun setPlayAudioOpAllowed(packageName: String?, isAllowed: Boolean): Boolean {
         if (packageName.isNullOrBlank()) return false

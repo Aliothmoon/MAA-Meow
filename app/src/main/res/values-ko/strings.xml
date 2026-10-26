@@ -1961,6 +1961,7 @@
     <string name="task_start_error_virtual_display">가상 디스플레이를 시작하지 못했습니다. 서비스 권한을 확인하세요</string>
     <string name="task_start_error_connect_timeout">MaaCore 시작 시간이 초과되었습니다. 다시 시도하세요</string>
     <string name="task_start_error_start_failed">MaaCore를 시작하지 못했습니다. 작업 설정을 확인하세요</string>
+    <string name="task_start_error_remote_call_stuck">서비스가 응답하지 않아 다시 시작했습니다. 작업을 다시 시작하세요</string>
     <string name="task_start_success">MAA 시작 성공</string>
     <string name="task_start_dialog_failed_title">시작 실패</string>
     <string name="task_start_dialog_view_log">로그 보기</string>
@@ -2688,6 +2689,7 @@
     <string name="runlog_virtual_display_failed">가상 디스플레이 시작 실패</string>
     <string name="runlog_maa_start_failed">MaaCore 시작 실패</string>
     <string name="runlog_remote_connect_failed">원격 서비스에 연결할 수 없음: %1$s</string>
+    <string name="runlog_remote_call_stuck">원격 서비스가 응답하지 않아 다시 시작했습니다. 이번 시작은 취소되었습니다</string>
     <string name="runlog_task_stopping">작업 중지 중...</string>
     <string name="runlog_task_stopped">작업 중지됨, 상태: %1$s</string>
     <string name="runlog_run_duration_limit_reached">실행 시간 상한(%1$d분)에 도달하여 작업을 중지합니다</string>

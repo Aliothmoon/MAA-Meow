@@ -22,6 +22,7 @@ import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.maa.AsstMsg
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.manager.RemoteAccessCoordinator
+import com.aliothmoon.maameow.manager.RemoteCallStuckException
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.utils.device.RomDetector
@@ -167,9 +168,21 @@ class TelemetryController(
             StartFailure(
                 runId = tracer.runId,
                 code = code,
-                what = cause?.javaClass?.simpleName,
+                // 自家异常类名会被 R8 改掉，卡死按调用名分组
+                what = (cause as? RemoteCallStuckException)?.call ?: cause?.javaClass?.simpleName,
                 cause = cause?.toString(),
+                threadDump = (cause as? RemoteCallStuckException)?.threadDump,
                 tags = tracer.tags,
+            )
+        }
+    }
+
+    override fun onRemoteCallStuck(call: String, threadDump: String?) {
+        if (!active) return
+        guarded {
+            if (!active) return@guarded
+            reporter.report(
+                RemoteCallStuck(runId = tracer.runId, call = call, threadDump = threadDump, tags = tracer.tags)
             )
         }
     }
@@ -511,6 +524,7 @@ class TelemetryController(
             "VDM_DISPLAY_ERROR",
             "MAA_CONNECT_ERROR",
             "START_ERROR",
+            "REMOTE_CALL_STUCK",
         )
     }
 }

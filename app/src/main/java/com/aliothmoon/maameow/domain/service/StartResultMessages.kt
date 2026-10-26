@@ -50,4 +50,7 @@ fun resolveStartResultMessage(result: MaaCompositionService.StartResult): UiText
 
         is MaaCompositionService.StartResult.AlreadyRunning ->
             uiTextOf(R.string.task_start_error_already_running)
+
+        is MaaCompositionService.StartResult.RemoteCallStuck ->
+            uiTextOf(R.string.task_start_error_remote_call_stuck)
     }

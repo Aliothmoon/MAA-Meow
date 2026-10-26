@@ -95,6 +95,8 @@ internal suspend fun runRainbowFlow(
     isVisible: () -> Boolean,
 ) {
     val durationScale = currentCoroutineContext()[MotionDurationScale]
+    // 首读会写 state 起监听，不能放进 snapshotFlow 的只读快照
+    durationScale?.scaleFactor
     snapshotFlow { isVisible() && (durationScale?.scaleFactor ?: 1f) > 0f }
         .collectLatest { active ->
             if (!active) return@collectLatest

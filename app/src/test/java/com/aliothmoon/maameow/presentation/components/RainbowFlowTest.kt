@@ -76,7 +76,31 @@ class RainbowFlowTest {
         job.cancelAndJoin()
     }
 
+    @Test
+    fun scaleThatWritesStateOnFirstReadDoesNotCrash() = runTest {
+        val clock = BroadcastFrameClock()
+        val phase = Animatable(0f)
+        val job = launch(clock + LazyObservingScale()) { runRainbowFlow(phase) { true } }
+        runCurrent()
+        assertTrue(clock.hasAwaiters)
+        job.cancelAndJoin()
+    }
+
     private class TestScale(initial: Float) : MotionDurationScale {
         override var scaleFactor by mutableFloatStateOf(initial)
+    }
+
+    // 仿 Compose 的 MotionDurationScaleImpl：首读才写 state 起监听
+    private class LazyObservingScale : MotionDurationScale {
+        private var observing = false
+        private var value by mutableFloatStateOf(0f)
+        override val scaleFactor: Float
+            get() {
+                if (!observing) {
+                    observing = true
+                    value = 1f
+                }
+                return value
+            }
     }
 }

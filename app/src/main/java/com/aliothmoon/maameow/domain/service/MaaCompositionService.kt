@@ -34,6 +34,7 @@ import com.aliothmoon.maameow.domain.models.appendFirstSuccessful
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.TaskSlot
 import com.aliothmoon.maameow.manager.RemoteAccessCoordinator
+import com.aliothmoon.maameow.manager.RemoteCallStuckException
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
 import com.aliothmoon.maameow.remote.PermissionGrantRequest
@@ -228,6 +229,9 @@ class MaaCompositionService(
 
         /** 已有任务在启动/运行/停止，拒绝重入 */
         data object AlreadyRunning : StartResult()
+
+        /** 提权侧调用卡死，进程已重启 */
+        data object RemoteCallStuck : StartResult()
     }
 
     sealed class StopResult {
@@ -332,9 +336,9 @@ class MaaCompositionService(
     )
 
     private suspend fun failStart(
-        message: String, sessionStatus: String, result: StartResult
+        message: String, sessionStatus: String, result: StartResult, cause: Throwable? = null,
     ): StartResult {
-        telemetry.onStartFailed(sessionStatus)
+        telemetry.onStartFailed(sessionStatus, cause)
         setRunState(MaaExecutionState.ERROR)
         sessionLogger.appendAndWait(message, LogLevel.ERROR)
         sessionLogger.endSessionAndWait(sessionStatus)
@@ -482,19 +486,19 @@ class MaaCompositionService(
         // 只跟设置走，前台模式也不翻转，免得撞上留着的后台屏
         val useVdm = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
             displayBackend == VirtualDisplayBackend.VDM
-        if (!service.setUseVirtualDeviceDisplay(useVdm))
+        if (!service.bounded("setUseVirtualDeviceDisplay") { it.setUseVirtualDeviceDisplay(useVdm) })
             return failStart(
                 context.getString(R.string.runlog_display_backend_switch_blocked), "DISPLAY_BACKEND_ERROR",
                 StartResult.ConnectionError(StartResult.ConnectionError.ConnectPhase.DISPLAY_MODE)
             )
-        if (!service.setVirtualDisplayMode(mode.displayMode))
+        if (!service.bounded("setVirtualDisplayMode") { it.setVirtualDisplayMode(mode.displayMode) })
             return failStart(
                 context.getString(R.string.runlog_display_mode_failed), "DISPLAY_MODE_ERROR",
                 StartResult.ConnectionError(StartResult.ConnectionError.ConnectPhase.DISPLAY_MODE)
             )
         val config = when (mode) {
             RunMode.FOREGROUND -> {
-                val displayId = service.startVirtualDisplay()
+                val displayId = service.bounded("startVirtualDisplay", START_DISPLAY_TIMEOUT_MS) { it.startVirtualDisplay() }
                 if (displayId == -1) return failVirtualDisplayStart(useVdm = false)
                 val (w, h) = Misc.getScreenSize(context)
                 buildConnectConfig(w, h, displayId)
@@ -502,7 +506,7 @@ class MaaCompositionService(
 
             RunMode.BACKGROUND -> {
                 val r = resolveAndSetResolution(service, clientType)
-                val displayId = service.startVirtualDisplay()
+                val displayId = service.bounded("startVirtualDisplay", START_DISPLAY_TIMEOUT_MS) { it.startVirtualDisplay() }
                 if (displayId == -1) return failVirtualDisplayStart(useVdm)
                 reportVirtualDisplayTier(service, useVdm)
                 buildConnectConfig(r.width, r.height, displayId)
@@ -780,6 +784,13 @@ class MaaCompositionService(
                 }
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: RemoteCallStuckException) {
+                Timber.e(e, "Elevated service stuck during start")
+                failStart(
+                    context.getString(R.string.runlog_remote_call_stuck), "REMOTE_CALL_STUCK",
+                    StartResult.RemoteCallStuck,
+                    cause = e,
+                )
             } catch (e: Exception) {
                 Timber.e(e, "Failed to acquire remote service during start")
                 rejectStart(
@@ -792,13 +803,14 @@ class MaaCompositionService(
         }
     }
 
-    private fun resolveAndSetResolution(
+    private suspend fun resolveAndSetResolution(
         service: RemoteService,
         clientType: String
     ): DefaultDisplayConfig.Resolution {
         val preference = appSettings.backgroundResolution.value
         val r = DefaultDisplayConfig.resolveResolution(clientType, preference)
-        service.setVirtualDisplayResolution(r.width, r.height, r.dpi)
+        // 屏还在时改分辨率会重建采集，同样可能卡在 native 收尾
+        service.bounded("setVirtualDisplayResolution") { it.setVirtualDisplayResolution(r.width, r.height, r.dpi) }
         Timber.i(
             "Virtual display resolution: %dx%d@%d for client=%s, pref=%s",
             r.width,
@@ -923,7 +935,9 @@ class MaaCompositionService(
                 val service = RemoteServiceManager.getInstanceOrNull()
                     ?: return@withContext
                 try {
-                    service.stopVirtualDisplay()
+                    service.bounded("stopVirtualDisplay") { it.stopVirtualDisplay() }
+                } catch (e: RemoteCallStuckException) {
+                    telemetry.onRemoteCallStuck(e.call, e.threadDump)
                 } catch (e: RemoteException) {
                     // 进程已死，虚拟屏随之销毁
                     Timber.w(e, "stopVirtualDisplay: elevated service gone")
@@ -937,4 +951,16 @@ class MaaCompositionService(
             }
         }
     }
+
+    private suspend fun <R> RemoteService.bounded(
+        call: String,
+        timeoutMs: Long = DISPLAY_CALL_TIMEOUT_MS,
+        block: (RemoteService) -> R,
+    ): R = RemoteServiceManager.callOrRestart(this, call, timeoutMs, block)
 }
+
+// 正常毫秒级，15s 没回就是卡死
+private const val DISPLAY_CALL_TIMEOUT_MS = 15_000L
+
+// VDM 关联最长 17s，另加逐档回退
+private const val START_DISPLAY_TIMEOUT_MS = 30_000L

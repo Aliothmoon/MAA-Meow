@@ -25,6 +25,9 @@ interface RunTelemetry {
     /** [state] 须是置 ERROR 之前的执行状态 */
     fun onServiceDied(state: MaaExecutionState)
 
+    /** 启动以外的提权侧调用卡死；启动时的走 [onStartFailed] */
+    fun onRemoteCallStuck(call: String, threadDump: String?)
+
     /** 定时或外部触发的一次启动收尾，成功与否都调；哪些结果算故障由实现筛 */
     fun onLaunchFinished(outcome: LaunchOutcome)
 

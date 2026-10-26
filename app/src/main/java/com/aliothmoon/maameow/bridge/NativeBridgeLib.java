@@ -47,4 +47,7 @@ public class NativeBridgeLib {
      */
     public static native boolean blankFrame(long expectedFrameCount);
 
+    /** 采集收尾停在哪一步，没在收尾返回空串 */
+    public static native String describeReleaseStage();
+
 }

@@ -1905,6 +1905,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="task_start_error_virtual_display">Failed to start the virtual display. Check service permissions</string>
     <string name="task_start_error_connect_timeout">Timed out while starting MaaCore. Please try again</string>
     <string name="task_start_error_start_failed">MaaCore failed to start. Check the task configuration</string>
+    <string name="task_start_error_remote_call_stuck">The service stopped responding and was restarted. Please start the task again</string>
     <string name="task_start_success">MAA started successfully</string>
     <string name="task_start_dialog_failed_title">Start failed</string>
     <string name="task_start_dialog_view_log">View logs</string>
@@ -2631,6 +2632,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="runlog_virtual_display_failed">Failed to start virtual display</string>
     <string name="runlog_maa_start_failed">Failed to start MaaCore</string>
     <string name="runlog_remote_connect_failed">Cannot connect to remote service: %1$s</string>
+    <string name="runlog_remote_call_stuck">Remote service stopped responding and was restarted; this start was canceled</string>
     <string name="runlog_task_stopping">Stopping tasks...</string>
     <string name="runlog_task_stopped">Tasks stopped, status: %1$s</string>
     <string name="runlog_run_duration_limit_reached">Run duration limit reached (%1$d min), stopping tasks</string>

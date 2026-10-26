@@ -152,6 +152,7 @@ internal data class StartFailure(
     /** 同一环节下再细分的原因，目前是异常类名 */
     val what: String? = null,
     val cause: String? = null,
+    val threadDump: String? = null,
     override val tags: Map<String, String>,
 ) : Incident {
 
@@ -169,6 +170,30 @@ internal data class StartFailure(
         event.fingerprints = listOf(START_FAILURE_FINGERPRINT, code, what.orEmpty())
         event.putTags(tags + mapOf("failure.code" to code, "failure.what" to what.orEmpty(), "result" to "failure"))
         cause?.let { event.setExtra("failure.cause", it) }
+        threadDump?.let { event.setExtra(THREAD_DUMP_KEY, it) }
+    }
+}
+
+/** 启动以外的提权侧调用卡死 */
+internal data class RemoteCallStuck(
+    override val runId: String?,
+    val call: String,
+    val threadDump: String?,
+    override val tags: Map<String, String>,
+) : Incident {
+
+    override val reason: String get() = "remote_call_stuck"
+
+    override val logAttributes: Map<String, String> get() = mapOf("stuck.call" to call)
+
+    override fun toSentryEvent(): SentryEvent = SentryEvent().also { event ->
+        event.level = SentryLevel.ERROR
+        event.logger = RUN_LOGGER
+        event.transaction = REMOTE_CALL_STUCK_TRANSACTION
+        event.message = Message().apply { formatted = "Maa remote call stuck: $call" }
+        event.fingerprints = listOf(REMOTE_CALL_STUCK_FINGERPRINT, call)
+        event.putTags(tags + mapOf("stuck.call" to call))
+        threadDump?.let { event.setExtra(THREAD_DUMP_KEY, it) }
     }
 }
 
@@ -335,6 +360,7 @@ internal const val START_FAILURE_TRANSACTION = "maameow.start.failure"
 internal const val SERVICE_DEATH_TRANSACTION = "maameow.service.died"
 internal const val LAUNCH_FAILURE_TRANSACTION = "maameow.launch.failure"
 internal const val SHIZUKU_DOWN_TRANSACTION = "maameow.shizuku.down"
+internal const val REMOTE_CALL_STUCK_TRANSACTION = "maameow.remote.stuck"
 private const val TASK_LOGGER = "maameow.task"
 private const val RUN_LOGGER = "maameow.run"
 private const val TASK_FAILURE_FINGERPRINT = "maameow-task-failure"
@@ -343,6 +369,8 @@ private const val SERVICE_DEATH_FINGERPRINT = "maameow-service-died"
 private const val LAUNCH_FAILURE_FINGERPRINT = "maameow-launch-failure"
 private const val SKIPPED_PREFIX = "skipped_"
 private const val SHIZUKU_DOWN_FINGERPRINT = "maameow-shizuku-down"
+private const val REMOTE_CALL_STUCK_FINGERPRINT = "maameow-remote-call-stuck"
+private const val THREAD_DUMP_KEY = "remote.thread_dump"
 
 /** 任务链没报过子任务错误就失败时的占位，与 MaaFwApp 同名 */
 internal const val UNOBSERVED_SUBTASK = "terminal_failure"

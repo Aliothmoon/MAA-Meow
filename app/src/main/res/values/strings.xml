@@ -1961,6 +1961,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="task_start_error_virtual_display">虚拟屏幕启动失败，请检查服务权限</string>
     <string name="task_start_error_connect_timeout">启动 MaaCore 超时，请重试</string>
     <string name="task_start_error_start_failed">MaaCore 启动失败，请检查任务配置</string>
+    <string name="task_start_error_remote_call_stuck">服务无响应，已自动重启，请重新启动任务</string>
     <string name="task_start_success">Maa启动成功</string>
     <string name="task_start_dialog_failed_title">启动失败</string>
     <string name="task_start_dialog_view_log">查看日志</string>
@@ -2688,6 +2689,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="runlog_virtual_display_failed">启动虚拟显示失败</string>
     <string name="runlog_maa_start_failed">MaaCore 启动失败</string>
     <string name="runlog_remote_connect_failed">无法连接远程服务：%1$s</string>
+    <string name="runlog_remote_call_stuck">远程服务无响应，已自动重启服务，本次启动取消</string>
     <string name="runlog_task_stopping">正在停止任务...</string>
     <string name="runlog_task_stopped">任务停止，状态: %1$s</string>
     <string name="runlog_run_duration_limit_reached">已达到运行时长上限（%1$d 分钟），停止任务</string>

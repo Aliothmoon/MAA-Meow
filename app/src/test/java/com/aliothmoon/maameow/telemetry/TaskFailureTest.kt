@@ -276,6 +276,37 @@ class TaskFailureTest {
         assertEquals(SHIZUKU_DOWN_TRANSACTION, event.transaction)
     }
 
+    @Test
+    fun `提权侧调用卡死按调用名分组，线程栈进 extra`() {
+        val event = RemoteCallStuck(
+            runId = null,
+            call = "stopVirtualDisplay",
+            threadDump = "\"Binder:1_2\" RUNNABLE",
+            tags = emptyMap(),
+        ).toSentryEvent()
+
+        assertEquals("Maa remote call stuck: stopVirtualDisplay", event.message?.formatted)
+        assertEquals(listOf("maameow-remote-call-stuck", "stopVirtualDisplay"), event.fingerprints)
+        assertEquals(SentryLevel.ERROR, event.level)
+        assertEquals("stopVirtualDisplay", event.tags?.get("stuck.call"))
+        assertEquals("\"Binder:1_2\" RUNNABLE", event.extras?.get("remote.thread_dump"))
+        assertEquals(REMOTE_CALL_STUCK_TRANSACTION, event.transaction)
+    }
+
+    @Test
+    fun `启动时卡死带上线程栈，其余启动失败不带`() {
+        fun start(dump: String?) = StartFailure(
+            runId = "r1",
+            code = "REMOTE_CALL_STUCK",
+            what = "setUseVirtualDeviceDisplay",
+            threadDump = dump,
+            tags = emptyMap(),
+        ).toSentryEvent()
+
+        assertEquals("native: frame_buffers for 15000ms", start("native: frame_buffers for 15000ms").extras?.get("remote.thread_dump"))
+        assertFalse(start(null).extras.orEmpty().containsKey("remote.thread_dump"))
+    }
+
     private fun evidenceExtras(evidence: Evidence): Map<String, Any?> =
         failure.toSentryEvent().apply { setEvidence(evidence) }.extras.orEmpty()
             .filterKeys { it.startsWith("logs.") || it.startsWith("attachment.") }
