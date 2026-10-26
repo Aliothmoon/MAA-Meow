@@ -195,10 +195,15 @@ class SubTaskHandler(
 
             "DepotRecognitionTask" -> {
                 if (details.getString("what") == "DepotTemplateLoadError") {
-                    val ids = details.getJSONObject("details")?.getJSONArray("item_ids")
-                        ?.mapNotNull { (it as? String)?.ifEmpty { null } }
-                        .orEmpty()
-                    append(str("DepotTemplateLoadError", ids.joinToString(", ")), LogLevel.ERROR)
+                    stopForBrokenResource(str("DepotTemplateLoadError", detailNames(details, "item_ids")))
+                }
+                reportSubTaskError(subtask)
+            }
+
+            "ProcessTask" -> {
+                // 匹配列表引用了未定义任务，说明资源与 core 不匹配，按资源损坏处理
+                if (details.getString("what") == "UnknownTask") {
+                    stopForBrokenResource(str("UnknownTaskInChain", detailNames(details, "tasks")))
                 }
                 reportSubTaskError(subtask)
             }
@@ -1437,6 +1442,20 @@ class SubTaskHandler(
 
     private fun str(key: String, vararg args: Any): String =
         MaaStringRes.getString(resources, packageName, key, *args)
+
+    /** 资源损坏：队列剩余任务一并停下，并推送通知，同掉线停机 */
+    private fun stopForBrokenResource(message: String) {
+        append(message, LogLevel.ERROR)
+        notificationCenter.notifySubTaskFailure(message, sendExternal = true)
+        executionStateHolder.requestStopFromCallback()
+    }
+
+    /** details.details.<key> 字符串数组，跳过空项后逗号拼接 */
+    private fun detailNames(details: JSONObject, key: String): String =
+        details.getJSONObject("details")?.getJSONArray(key)
+            ?.mapNotNull { (it as? String)?.ifEmpty { null } }
+            .orEmpty()
+            .joinToString(", ")
 
     private fun reportSubTaskError(subtask: String) {
         ioScope.launch {

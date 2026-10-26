@@ -9,6 +9,7 @@ import com.aliothmoon.maameow.data.model.activity.StageActivityInfo
 import com.aliothmoon.maameow.data.model.activity.StageActivityRoot
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.utils.i18n.resolve
+import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -502,7 +503,7 @@ class ActivityManager(
                     value = entry.value,
                     utcStartTime = 0L,
                     utcExpireTime = Long.MAX_VALUE,
-                    tip = uiTextOf(entry.tipRes),
+                    tip = entry.tipRes?.let { uiTextOf(it) } ?: UiText.Empty,
                     category = uiTextOf(entry.categoryRes)
                 )
             }

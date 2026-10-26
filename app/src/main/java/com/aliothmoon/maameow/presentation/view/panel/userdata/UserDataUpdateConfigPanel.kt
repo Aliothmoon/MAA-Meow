@@ -54,7 +54,7 @@ fun UserDataUpdateConfigPanel(
     } else {
         neverSynced
     }
-    val depotSyncText = if (depotSnap.syncTimeMillis > 0L) {
+    val depotSyncText = if (depotSnap.hasSynced) {
         stringResource(
             R.string.panel_toolbox_last_sync,
             formatToolboxSyncTime(depotSnap.syncTimeMillis),

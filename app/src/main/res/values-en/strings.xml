@@ -640,7 +640,8 @@
     <string name="maa_missing_operators">No operators in the following groups meet this operation\'s requirements (not owned or attributes below the requirements):</string>
     <string name="maa_copilot_user_additional_name_invalid">Additional custom Operator name invalid: %1$s, please check spelling</string>
     <string name="maa_copilot_operbox_data_parse_failed">Failed to parse operator box data</string>
-    <string name="maa_depot_template_load_error">Failed to load depot recognition templates (%1$s); recognition stopped. Resource files may be corrupted; go to Settings → Updates → Reinitialize Resources and retry</string>
+    <string name="maa_depot_template_load_error">Failed to load depot recognition templates (%1$s); tasks stopped. Resource files may be corrupted; go to Settings → Updates → Reinitialize Resources and retry</string>
+    <string name="maa_unknown_task_in_chain">The task chain references an undefined task (%1$s). The resource may be corrupted or mismatched with the app version; tasks stopped. Go to Settings → Updates → Reinitialize Resources and retry</string>
     <string name="maa_mission_start">Mission started</string>
     <string name="maa_stone_used">Originite Prime used</string>
     <string name="maa_acting_command_error">PRTS error</string>
@@ -809,7 +810,6 @@
     <string name="panel_task_type_mall">Credit Store</string>
     <string name="panel_task_type_mission">Collect Rewards</string>
     <string name="panel_task_type_auto_roguelike">Auto I.S.</string>
-    <string name="panel_task_type_reclamation">Reclamation Algorithm</string>
     <string name="panel_task_type_user_data_update">Update doctor data</string>
     <string name="panel_task_type_depot_maintain">Depot Maintain</string>
 
@@ -1093,6 +1093,12 @@
     <string name="panel_infrast_fiammetta_target_shamare">Shamare</string>
     <string name="panel_infrast_fiammetta_target_tequila">Tequila</string>
     <string name="panel_infrast_fiammetta_target_gladiia">Gladiia</string>
+    <string name="panel_infrast_fiammetta_target_saileach">Saileach</string>
+    <string name="panel_infrast_fiammetta_target_greyy2">Greyy the Lightningbearer</string>
+    <string name="panel_infrast_fiammetta_target_weedy">Weedy</string>
+    <string name="panel_infrast_fiammetta_target_waai_fu">Waai Fu</string>
+    <string name="panel_infrast_fiammetta_target_minimalist">Minimalist</string>
+    <string name="panel_infrast_fiammetta_target_hbound">旅骨 (Unreleased)</string>
     <string name="panel_infrast_use_pinus_sylvestris">Use Pinus Sylvestris cross-facility team</string>
     <string name="panel_infrast_use_pinus_sylvestris_tip">Required operators: Flametail (E2), Viviana (E2), and at least one of Wild Mane (E2), Ashlock (E2), or Fartooth (E2)\nOperators included in calculation: Gravel</string>
     <string name="panel_infrast_use_perception_information">Use Perception Information cross-facility team</string>
@@ -1270,6 +1276,7 @@
     <string name="mini_game_name_ra_store">Reclamation Algorithm Shop</string>
     <string name="mini_game_tip_ra_store">Please start from the event shop page.</string>
     <string name="mini_game_name_secret_front">Hidden Front</string>
+    <string name="mini_game_name_reclamation">Reclamation Algorithm</string>
     <string name="mini_game_tip_secret_front">Start from the squad selection screen;\nIf there is a saved game, please delete it manually.\nClose the tutorial after playing it for the first time.\nRecommended to enable in-game ｢Inherit previous squad\'s data｣.</string>
     <string name="mini_game_name_auto_raise_potential">Auto raise potential</string>
     <string name="mini_game_tip_auto_raise_potential">Enter the operator list screen before starting. Raises the potential of every operator with a notice badge.\nStops on the profile of the last processed operator; stays on the operator list when there is nothing to raise.</string>
@@ -1456,9 +1463,9 @@
     <string name="panel_reclamation_no_save_line1">1. The task stops automatically after max points are reached and outputs \"Task completed\"</string>
     <string name="panel_reclamation_no_save_line2">2. Do not use this when there are operators in the Reclamation squad</string>
     <string name="panel_reclamation_no_save_line3">3. Check and delete save data manually to avoid MAA deleting a valuable save</string>
-    <string name="panel_reclamation_no_save_line4">4. Navigation is not implemented yet, so the task cannot start outside Reclamation mode</string>
+    <string name="panel_reclamation_no_save_line4">4. The task must be started from the main screen where \"Start Reclamation\" appears at the bottom-right</string>
     <string name="panel_reclamation_no_save_line5">5. If an error occurs or the task completes before max points are reached, please submit a GitHub issue</string>
-    <string name="panel_reclamation_with_save_title">Farm points through crafting with an existing save (Advanced Settings)</string>
+    <string name="panel_reclamation_with_save_title">Farm points through crafting with an existing save</string>
     <string name="panel_reclamation_with_save_line1">1. It must be the first day after settlement, and there must be no enemy attacks entering the stationed area for the next three days</string>
     <string name="panel_reclamation_with_save_line2">2. You must start from the overworld screen where the stationed area is visible</string>
     <string name="panel_reclamation_with_save_line3">3. If the craftable amount is exactly a multiple of 99, it may get stuck. Use some materials before saving</string>
@@ -1545,7 +1552,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="panel_roguelike_theme_tip_sami">Sami recommended configuration:\n\nStarting Squad: Special Training Squad / Tactical Ranged Squad\nStarting Roles: Slow and Steady Wins the Race (Defender, Caster, Sniper)\nStarting Operator: Wiš\'adel\n\nWhen difficulty ≥ N6, 6★ Hope cost +1; some squads may be unable to recruit a 6★ operator at the start, which can cause errors or failures</string>
     <string name="panel_roguelike_theme_tip_sarkaz">Sarkaz recommended configuration:\n\nStarting Squad: Blueprint Squad / Tactical Ranged Squad\nStarting Roles: Slow and Steady Wins the Race (Defender, Caster, Sniper)\nStarting Operator: Wiš\'adel\n\n1. Using ｢Blueprint Squad｣ fully avoids combat; suitable for quick leveling without aiming to clear\n2. Using ｢Ingots Squad｣ can improve ingot farming efficiency, but note the strategy must be set to \"Farm Originium Ingots\"\n3. When difficulty ≥ N15, 6★ Hope cost +1; some squads may be unable to recruit a 6★ operator at the start, which can cause errors or failures</string>
     <string name="panel_roguelike_theme_tip_jiegarden">Sui\'s Garden recommended configuration:\n\nStarting Squad: Leader Squad / Tactical Ranged Squad\nStarting Roles: Slow and Steady Wins the Race (Defender, Caster, Sniper)\nStarting Operator: Wiš\'adel\n\n1. When the strategy is \"Farm Originium Ingots\", difficulty is ≥ N3 or \"MAX\", and Starting Squad is ｢Leader Squad｣, the command-avoid-combat strategy will be enabled\n2. The command-avoid-combat strategy greatly improves ingot farming efficiency and can also be used for quick leveling (without aiming to clear), but note the strategy must be set to \"Farm Originium Ingots\"\n3. If the highest unlocked difficulty is &lt; N3 or the relevant tech is not unlocked, do not use the command-avoid-combat strategy; otherwise, it may cause errors\n4. When difficulty ≥ N15, 6★ Hope cost +1; using some squads may make it impossible to recruit a 6★ operator at the start, causing errors or failures</string>
-    <string name="panel_roguelike_theme_tip_blackflow">BlackFlow recommended configuration:\n\nStarting operator: Mechanic (Elite 2 required)\nStarting Squad: ｢Special Squad｣ / ｢Tactical Fortification Squad｣\nStarting Roles: ｢Slow and Steady Wins the Race｣ / ｢Indestructible｣\n\n1. There is no dedicated battle strategy yet; combat is decided automatically by the recruitment scoring system. Ingot farming, level farming and swaddled-animal farming all currently revolve around the Elite 2 Mechanic\'s flight. This roguelike is full of special mechanics, and without the setup above you are stuck with the default pathfinding and combat, which will most likely fail. Starting with an Elite 2 Mechanic is strongly recommended (getting one only requires clearing N1 once, which is fairly easy)\n2. After Elite 2, unlock the ｢Recruitment Mastery II｣ and ｢Effect Improvement II｣ techs so ｢Structural Principle｣ is carried from the start (fly anywhere on the map 3 times). The unlock is easy, just sell 10 parts in total after Elite 2, and strongly recommended. Without it you can only fly to the 8 surrounding tiles 3 times; still farmable, but much less efficient\n3. When farming levels, the Mechanic (Elite 2 required) + the squads and roles above + a Defender voucher let you fly through the three floors quickly\n4. Do not pick the Mechanic without Elite 2; you can farm money normally, but battles will most likely end in defeat. Other strategies await future optimization\n5. Farming levels with ｢Invest ingots｣ unchecked skips shops entirely</string>
+    <string name="panel_roguelike_theme_tip_blackflow">BlackFlow recommended configuration:\n\nStarting operator: Mechanic (Elite 2 required)\nStarting Squad: ｢Special Squad｣ / ｢Tactical Fortification Squad｣\nStarting Roles: ｢Slow and Steady Wins the Race｣ / ｢Indestructible｣\n\n1. There is no dedicated battle strategy yet; combat is decided automatically by the recruitment scoring system. Ingot farming and the fast flight to Floor 3 currently revolve around the Elite 2 Mechanic\'s flight. When starting with the setup above, once the Mechanic is recruited, the promotion check is skipped and the strategy runs as if it were Elite 2 for efficiency; when flying to Floor 3 quickly, a Mechanic without the full talent cannot fly, so an Elite 2 Mechanic with the full talent is required (getting Elite 2 only requires clearing N1 once, which is fairly easy)\n2. After Elite 2, unlock the ｢Recruitment Mastery II｣ and ｢Effect Improvement II｣ techs so ｢Structural Principle｣ is carried from the start (fly anywhere on the map 3 times). The unlock is easy, just sell 10 parts in total after Elite 2, and strongly recommended. Without it you can only fly to the 8 surrounding tiles 3 times; still farmable, but much less efficient\n3. Level farming only flies when ｢Fly to Floor 3 quickly｣ is checked; the squad, roles and starting operator then switch to the setup above automatically. When unchecked, the run plays toward the target ending and does not fly even if it starts with the setup above. When farming starting rewards, the preparation run can also check ｢Fly to Floor 3 quickly｣\n4. Without an Elite 2 Mechanic with the full talent, you can still farm money normally, but battles will most likely end in defeat\n5. Farming levels with ｢Fly to Floor 3 quickly｣ checked and ｢Invest ingots｣ unchecked skips shops entirely</string>
     <string name="panel_roguelike_mode_exp">Gain XP</string>
     <string name="panel_roguelike_mode_investment">Invest Ingots</string>
     <string name="panel_roguelike_mode_collectible">Collectible Start</string>
@@ -1570,7 +1577,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="panel_roguelike_blackflow_fast_flight">Fly to Floor 3 quickly</string>
     <string name="panel_roguelike_blackflow_flight_requirement">Requires a Mechanic with talent fully unlocked</string>
     <string name="panel_roguelike_blackflow_flight_tip">Always starts with Special Squad, Slow and Steady Wins the Race and your own Mechanic, recruits only the Mechanic, flies straight from Floor 2 to Floor 3 with the built-in Structural Principle, and restarts on arrival.\nThe squad, roles and starting operator in General settings cannot be edited while this is checked; unchecking it makes them editable again. When unchecked, the run plays toward the target ending and does not fly even if the starting setup matches this combination.\nDo not check this if your Mechanic\'s talent is not fully unlocked, as the flight will fail.</string>
-    <string name="panel_roguelike_blackflow_prep_flight_tip">The preparation run always starts with Special Squad, Slow and Steady Wins the Race and your own Mechanic, recruits only the Mechanic, and flies straight from Floor 2 to Floor 3 with the built-in Structural Principle.\nWhen checked, the preparation run squad shows Special Squad and cannot be changed; unchecking restores the previous setting. The roles and starting operator in General settings are not affected.\nDo not check this if your Mechanic\'s talent is not fully unlocked, as the flight will fail.</string>
+    <string name="panel_roguelike_blackflow_prep_flight_tip">The preparation run always starts with Special Squad, Slow and Steady Wins the Race and your own Mechanic, recruits only the Mechanic, and flies straight from Floor 2 to Floor 3 with the built-in Structural Principle.\nWhen checked, ｢Squad to get collectibles｣ shows Special Squad and cannot be changed; unchecking restores the previous setting. The roles and starting operator in General settings are not affected.\nDo not check this if your Mechanic\'s talent is not fully unlocked, as the flight will fail.</string>
     <string name="panel_roguelike_blackflow_fast_flight_lock_tip">｢Fly to Floor 3 quickly｣ is checked in Advanced; squad, roles and starting operator are fixed to Special Squad, Slow and Steady Wins the Race and Mechanic until it is unchecked</string>
     <string name="panel_roguelike_blackflow_ending_flight_tip">The ending can only be selected when ｢Fly to Floor 3 quickly｣ is unchecked</string>
     <string name="panel_roguelike_blackflow_ending">Target Ending</string>
@@ -1587,8 +1594,11 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="panel_roguelike_blackflow_start_rewards">Desired Rewards</string>
     <string name="panel_roguelike_blackflow_start_rewards_tip">Everything checked in Desired Rewards and Feathered Serpent Rewards counts as a candidate; the task stops as soon as any one of them appears at the start</string>
     <string name="panel_roguelike_blackflow_serpent_rewards">Feathered Serpent Rewards</string>
-    <string name="panel_roguelike_blackflow_serpent_rewards_inactive">Only applies when Swaddled Feathered Serpent is selected</string>
-    <string name="panel_roguelike_blackflow_prep_squad">Preparation Run Squad</string>
+    <string name="panel_roguelike_blackflow_start_utopia">Reroll until Floor 1 is 实托邦 (a Floor 1 variant)</string>
+    <string name="panel_roguelike_blackflow_start_utopia_requirement">Requires difficulty 6 or higher</string>
+    <string name="panel_roguelike_blackflow_start_utopia_tip">Once a desired reward appears on the support screen, the target run picks cards by \"Starting Reward Pick Priority\" and enters Floor 1.\nIf Floor 1 is 实托邦, the task exits and keeps the run; otherwise it abandons the run and starts another preparation run.\nThe target run starts with the roles and starting operator from General settings.\nRequires difficulty 6 or higher; difficulty is not checked when it is set not to switch.</string>
+    <string name="panel_roguelike_blackflow_start_reward_priority">Starting Reward Pick Priority</string>
+    <string name="panel_roguelike_blackflow_start_reward_priority_tip">Drag to reorder. On the support screen, the first card in this list that is present is picked.\nThe order is independent of the animals and rewards selected above: a Swaddled Feathered Serpent may come along even when not required, so its rewards are listed too.</string>
     <string name="panel_roguelike_blackflow_reward_unnumbered_item">Unnumbered Item</string>
     <string name="panel_roguelike_blackflow_reward_unnumbered_item_tip">Gain 1 normal collectible.</string>
     <string name="panel_roguelike_blackflow_reward_survey_advance">Survey Advance</string>
@@ -2243,7 +2253,6 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="task_type_mall">Credit</string>
     <string name="task_type_mission">Rewards</string>
     <string name="task_type_auto_roguelike">Auto I.S.</string>
-    <string name="task_type_reclamation">Recl. Alg.</string>
     <string name="task_type_user_data_update">Update doctor data</string>
     <string name="task_type_depot_maintain">Depot Maintain</string>
 
@@ -2595,10 +2604,11 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="runlog_depot_plan_stage_not_open">#%1$d: stage \'%2$s\' is not open</string>
     <string name="runlog_depot_plan_inventory_enough">%1$s: %2$s sufficient %3$d/%4$d</string>
     <string name="runlog_depot_plan_inventory_insufficient">%1$s: %2$s insufficient %3$d/%4$d, need %5$d more</string>
-    <string name="runlog_fight_inventory_unavailable">Task \"%1$s\" uses target inventory, but no inventory data is currently available, so it was skipped. Update it via \"Toolbox - Depot Recognition\"</string>
+    <string name="runlog_fight_inventory_unavailable">Task \"%1$s\" uses target inventory, but no inventory data is currently available, so it was skipped. Update it via the \"Update doctor data\" task or \"Toolbox - Depot Recognition\"</string>
     <string name="runlog_fight_stage_unavailable">%1$s: no stage open today (primary %2$s), fight task skipped</string>
     <string name="runlog_depot_set_params_failed">%1$s: failed to update task params; original params will be used</string>
     <string name="runlog_depot_plan_sanity_insufficient">%1$s: not enough sanity (estimated %2$d, stage costs %3$d), skipped</string>
+    <string name="runlog_depot_plan_inventory_unavailable">%1$s: no inventory data is currently available, so farming was skipped. Update it via the \"Update doctor data\" task or \"Toolbox - Depot Recognition\"</string>
     <string name="runlog_depot_plan_stale_skipped">%1$s #%2$d: %3$s is actually %4$d/%5$d, insufficient. Plans skipped at the pre-check can\'t be added mid-run; run again to farm it</string>
     <string name="runlog_depot_delta_summary">Depot: %2$d items changed since %1$s. See Tools → Depot</string>
     <string name="runlog_depot_delta_none">No depot changes (vs %1$s)</string>
@@ -2693,13 +2703,16 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="blackflow_start_run_preparing">Preparation run in progress</string>
     <string name="blackflow_start_run_target_run">Target run started; waiting to check starting rewards</string>
     <string name="blackflow_start_run_reward_missed">No desired starting reward found; preparing another run</string>
+    <string name="blackflow_start_run_reward_picked">Starting reward picked; entering Floor 1 to check for 实托邦</string>
     <string name="blackflow_start_run_completed">Starting conditions met; exited and kept this run</string>
     <string name="blackflow_start_run_reward_recognition_failed">Starting reward recognition failed; task stopped</string>
     <string name="blackflow_start_run_reward_page_missing">Starting reward screen not found; task stopped</string>
     <string name="blackflow_start_run_reward_unrecognized">Some rewards on the support selection screen were not recognized; stopped on that screen and ended the task</string>
     <string name="blackflow_start_run_rewards_seen">Rewards on this support screen: %1$s</string>
     <string name="blackflow_outcome_start_run_prepared">Preparation complete</string>
+    <string name="blackflow_outcome_start_run_utopia_missed">Floor 1 is not 实托邦</string>
     <string name="blackflow_termination_start_run_prepared">Floor 3 reached; the next run will use the target difficulty and squad</string>
+    <string name="blackflow_termination_first_floor_without_utopia">This run will be abandoned and another preparation run started</string>
     <string name="blackflow_inventory_cleanup_started">Parts box overloaded, discarding parts</string>
     <string name="blackflow_inventory_cleanup_discarded">Discarded part: %1$s</string>
     <string name="blackflow_inventory_cleanup_completed">Parts box cleanup completed</string>
@@ -2840,6 +2853,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="panel_depot_only_first_insufficient_plan_tip">Use the inventory saved at startup to select the first plan with insufficient stock and an available stage. Later plans are considered on the next run.</string>
     <string name="panel_depot_sort_by_progress">Run in order of inventory progress</string>
     <string name="panel_depot_sort_by_progress_tip">Uses the inventory saved at startup to compute progress (current/target) and runs plans from lowest to highest, so the plan with the largest shortfall ratio gets sanity first. The list order shown here is unchanged. Combined with \"Only run the first insufficient plan\", only the open plan with the lowest progress runs.</string>
+    <string name="panel_depot_count_dual_chip">Count dual chips as chip packs</string>
+    <string name="panel_depot_count_dual_chip_tip">When counting chip pack inventory, dual chips of the matching class are converted at the synthesis ratio (each dual chip counts as 2 chip packs).\nThe plan summary shows raw (+converted), and completion checks use the converted count.\nThis only changes the counting method; no synthesis is performed automatically.</string>
     <string name="runlog_append_task_failed">Failed to add task to the queue: %1$s</string>
     <string name="runlog_weekly_schedule_skipped">%1$s: not selected for today in the weekly schedule, skipped</string>
     <string name="runlog_no_task_appended">No task was added to the queue; start cancelled</string>

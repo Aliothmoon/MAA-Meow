@@ -111,7 +111,16 @@ class DepotRepositoryTest {
     }
 
     @Test
+    fun merge_withoutRecognitionBaseline_writesNothing() {
+        repository.merge(listOf("30011" to 20))
+
+        assertEquals(emptyMap<String, Int>(), repository.snapshot.value.items)
+        assertFalse(repository.snapshot.value.hasSynced)
+    }
+
+    @Test
     fun merge_accumulatesOnlyEligibleEntries() {
+        repository.set(listOf(DepotItem("30011", 1)))
         repository.merge(
             listOf(
                 "3401" to 10,
@@ -128,7 +137,7 @@ class DepotRepositoryTest {
             )
         )
 
-        assertEquals(mapOf("30013" to 7), repository.snapshot.value.items)
+        assertEquals(mapOf("30011" to 1, "30013" to 7), repository.snapshot.value.items)
     }
 
     @Test
@@ -223,6 +232,8 @@ class DepotRepositoryTest {
 
     @Test
     fun merge_accumulatesAcrossRepeatedCalls() {
+        // 掉落累加需要识别基线
+        repository.set(listOf(DepotItem("30012", 1)))
         repeat(5) { repository.merge(listOf("30011" to 1)) }
 
         assertEquals(5, repository.countOf("30011"))
@@ -233,6 +244,8 @@ class DepotRepositoryTest {
      */
     @Test
     fun merge_neverLosesUpdates_acrossManyWrites() {
+        // 掉落累加需要识别基线
+        repository.set(listOf(DepotItem("30012", 1)))
         repeat(50) { repository.merge(listOf("30011" to 1)) }
 
         assertEquals(50, repository.countOf("30011"))
@@ -240,6 +253,8 @@ class DepotRepositoryTest {
 
     @Test
     fun diskWriteAfterHydrate_doesNotOverrideMemory() = runBlocking {
+        // 掉落累加需要识别基线
+        repository.set(listOf(DepotItem("30012", 1)))
         repository.merge(listOf("30011" to 7))
         awaitSnapshot { it.items["30011"] == 7 }
 
@@ -254,6 +269,8 @@ class DepotRepositoryTest {
 
     @Test
     fun concurrentMerge_doNotLoseUpdates() = runBlocking {
+        // 掉落累加需要识别基线
+        repository.set(listOf(DepotItem("30012", 1)))
         (1..20).map { async { repository.merge(listOf("30011" to 1)) } }.awaitAll()
 
         assertEquals(20, repository.countOf("30011"))

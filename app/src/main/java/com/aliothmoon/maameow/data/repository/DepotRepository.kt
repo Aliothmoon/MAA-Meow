@@ -23,7 +23,12 @@ data class DepotSnapshot(
     val scanItems: Map<String, Int> = emptyMap(),
     val prevScanItems: Map<String, Int> = emptyMap(),
     val prevSyncTimeMillis: Long = 0L,
-)
+) {
+    /** 至少完整识别过一次仓库，掉落累加与缺口重算都以此为基线 */
+    val hasSynced: Boolean get() = syncTimeMillis > 0L
+
+    fun countOf(itemId: String): Int = items[itemId] ?: 0
+}
 
 /** 仓库分片：内存权威，set/merge 同步写内存并排队落盘。 */
 class DepotRepository(
@@ -58,6 +63,8 @@ class DepotRepository(
     }
 
     fun merge(drops: List<Pair<String, Int>>) {
+        // 没有识别基线时累加只会得到残缺数据，留空让消费侧按无数据处理
+        if (!snapshot.value.hasSynced) return
         val valid = drops.filter { (itemId, add) -> add > 0 && !shouldExclude(itemId) }
         if (valid.isEmpty()) return
         shards.mutate { current ->
@@ -69,7 +76,7 @@ class DepotRepository(
         }
     }
 
-    fun countOf(itemId: String): Int = snapshot.value.items[itemId] ?: 0
+    fun countOf(itemId: String): Int = snapshot.value.countOf(itemId)
 
     private fun shouldExclude(itemId: String): Boolean =
         itemId.isEmpty() || !itemId.all { it in '0'..'9' } || itemId in EXCLUDED_ITEM_IDS

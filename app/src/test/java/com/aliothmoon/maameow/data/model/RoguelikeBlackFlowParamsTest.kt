@@ -20,7 +20,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 黑流树海（BlackFlow）主题的参数与选项契约，对齐上游 v6.20.0 AsstRoguelikeTask.Serialize
+ * 黑流树海（BlackFlow）主题的参数与选项契约，对齐上游 v6.21.0-beta.1 AsstRoguelikeTask.Serialize
  */
 class RoguelikeBlackFlowParamsTest {
 
@@ -130,15 +130,84 @@ class RoguelikeBlackFlowParamsTest {
     }
 
     @Test
-    fun startRun_withFlight_fixesPrepSquadRolesAndMechanic_butKeepsTargetSquad() {
+    fun startRun_withFlight_sendsPrepStartSeparately_andKeepsTargetStart() {
         val json = params(
             userStart.copy(mode = RoguelikeMode.BlackFlowStartRun, blackFlowStartRunFastFlight = true)
         )
         assertEquals("特勤分队", json.str("collectible_mode_squad"))
+        assertEquals("稳扎稳打", json.str("collectible_mode_roles"))
+        val prepOper = json["collectible_mode_core_char_list"]!!.jsonArray.single().jsonObject
+        assertEquals("机械师", prepOper.getValue("name").jsonPrimitive.content)
+        // 目标局凹实托邦时要按常规设置开局
         assertEquals("地质调查分队", json.str("squad"))
-        assertEquals("稳扎稳打", json.str("roles"))
-        assertEquals("机械师", json.coreChars().single().getValue("name").jsonPrimitive.content)
+        assertEquals(RoguelikeUi.ROLE_FIRST_MOVE_ADVANTAGE, json.str("roles"))
+        assertEquals("山", json.coreChars().single().getValue("name").jsonPrimitive.content)
         assertNull(json["blackflow_strategy"])
+    }
+
+    @Test
+    fun startRun_withoutFlight_omitsPrepStart() {
+        val json = params(userStart.copy(mode = RoguelikeMode.BlackFlowStartRun))
+        assertNull(json["collectible_mode_roles"])
+        assertNull(json["collectible_mode_core_char_list"])
+    }
+
+    @Test
+    fun startRun_utopia_sendsFullPriorityIds() {
+        val priority = listOf(
+            RoguelikeBlackFlowStartReward.GoldenCrow,
+            RoguelikeBlackFlowStartReward.SurveyAdvance,
+        )
+        val json = params(
+            userStart.copy(
+                mode = RoguelikeMode.BlackFlowStartRun,
+                difficulty = 8,
+                blackFlowStartUtopia = true,
+                blackFlowStartRewardPriority = priority,
+            )
+        )
+        assertTrue(json["blackflow_start_utopia"]!!.jsonPrimitive.content.toBoolean())
+        val ids = json["blackflow_start_reward_priority"]!!.jsonArray.map { it.jsonPrimitive.content }
+        assertEquals(12, ids.size)
+        assertEquals(listOf("golden_crow", "survey_advance", "pegasus"), ids.take(3))
+        assertEquals(ids.distinct(), ids)
+    }
+
+    @Test
+    fun startRun_utopia_needsDifficultySixOrCurrent() {
+        fun utopiaOf(difficulty: Int) = params(
+            userStart.copy(
+                mode = RoguelikeMode.BlackFlowStartRun,
+                difficulty = difficulty,
+                blackFlowStartUtopia = true,
+            )
+        )["blackflow_start_utopia"]
+
+        assertNull(utopiaOf(5))
+        assertTrue(utopiaOf(6) != null)
+        assertTrue(utopiaOf(-1) != null)
+        assertTrue(utopiaOf(Int.MAX_VALUE) != null)
+    }
+
+    @Test
+    fun utopia_onOtherMode_isIgnored() {
+        val json = params(userStart.copy(mode = RoguelikeMode.Exp, blackFlowStartUtopia = true))
+        assertNull(json["blackflow_start_utopia"])
+        assertNull(json["blackflow_start_reward_priority"])
+    }
+
+    @Test
+    fun rewardPriority_isNormalizedOnMigrate() {
+        val migrated = userStart.copy(
+            blackFlowStartRewardPriority = listOf(
+                RoguelikeBlackFlowStartReward.Hydra,
+                RoguelikeBlackFlowStartReward.Hydra,
+            )
+        ).migrate()
+        val priority = migrated.blackFlowStartRewardPriority
+        assertEquals(RoguelikeBlackFlowStartReward.Hydra, priority.first())
+        assertEquals(RoguelikeBlackFlowStartReward.entries.toSet(), priority.toSet())
+        assertEquals(12, priority.size)
     }
 
     @Test

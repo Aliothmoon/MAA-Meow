@@ -5,13 +5,13 @@ import com.aliothmoon.maameow.R
 
 /**
  * 默认小游戏列表
- * 分组对齐上游 StageManager.BuildDefaultMiniGameEntries：隐秘战线归「常驻活动」，其余归「常驻功能」
+ * 分组对齐上游 StageManager.BuildDefaultMiniGameEntries：隐秘战线、生息演算归「常驻活动」，其余归「常驻功能」
  */
 object DefaultMiniGames {
     data class DefaultMiniGameEntry(
         @param:StringRes val displayRes: Int,
         val value: String,
-        @param:StringRes val tipRes: Int,
+        @param:StringRes val tipRes: Int?,
         @param:StringRes val categoryRes: Int = R.string.mini_game_category_permanent_feature,
     )
 
@@ -20,6 +20,13 @@ object DefaultMiniGames {
             R.string.mini_game_name_secret_front,
             "MiniGame@SecretFront",
             R.string.mini_game_tip_secret_front,
+            R.string.mini_game_category_permanent
+        ),
+        // 说明随设置面板展示，不走通用提示
+        DefaultMiniGameEntry(
+            R.string.mini_game_name_reclamation,
+            "Reclamation",
+            null,
             R.string.mini_game_category_permanent
         ),
         DefaultMiniGameEntry(

@@ -29,10 +29,11 @@ Pick where the failure **first appears**. If a problem spans several areas, desc
 
 | Area | Scope |
 |------|-------|
-| `Login` / `Combat` / `Auto Recruit` / `Base` / `Credit Store` / `Collect Rewards` / `Auto I.S.` / `Reclamation Algorithm` | Recognition, actions, or results of that task in the task list; Visit Friends belongs to `Credit Store` |
+| `Login` / `Combat` / `Auto Recruit` / `Base` / `Credit Store` / `Collect Rewards` / `Auto I.S.` | Recognition, actions, or results of that task in the task list; Visit Friends belongs to `Credit Store` |
 | `Other Tasks` | Update doctor data, Depot Maintain, Operator Training, Switch Theme, close game, custom tasks, etc. |
 | `Copilot` | Features on the Copilot page, such as copilot operations and Paradox Simulation |
 | `Tools` | Recruitment recognition, depot recognition, operator recognition, gacha, etc. |
+| `Reclamation Algorithm` | Reclamation Algorithm under Tools > Useful Tasks |
 | `Schedule` | Scheduled triggers, wake-up, tasks not starting on time |
 | `Foreground Mode` | Problems specific to foreground mode, such as landscape or primary display |
 | `Background Mode` | Virtual display issues: black screen, game moving back to the main display, process killed |

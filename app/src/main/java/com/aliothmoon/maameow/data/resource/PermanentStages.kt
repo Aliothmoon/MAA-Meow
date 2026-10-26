@@ -53,12 +53,13 @@ object PermanentStages {
 
             // ==================== 芯片本 ====================
             // PR-X-2 不单独出提示，同上游，免得与 PR-X-1 重复
+            // dropGroups：芯片 / 芯片组 / 双芯片，对齐上游 #16193
             // PR-A: 重装/医疗 - 周一、四、五、日
             createStage(
                 code = "PR-A-1",
                 openDays = StageOpenDays.CHIP_OPEN_DAYS["PR-A"]!!,
                 tipRes = R.string.panel_fight_stage_tip_pr_a,
-                dropGroups = listOf(listOf("3261", "3231"), listOf("3262", "3232"))
+                dropGroups = listOf(listOf("3261", "3231"), listOf("3262", "3232"), listOf("3263", "3233"))
             ),
             createStage(
                 code = "PR-A-2",
@@ -70,7 +71,7 @@ object PermanentStages {
                 code = "PR-B-1",
                 openDays = StageOpenDays.CHIP_OPEN_DAYS["PR-B"]!!,
                 tipRes = R.string.panel_fight_stage_tip_pr_b,
-                dropGroups = listOf(listOf("3251", "3241"), listOf("3252", "3242"))
+                dropGroups = listOf(listOf("3251", "3241"), listOf("3252", "3242"), listOf("3253", "3243"))
             ),
             createStage(
                 code = "PR-B-2",
@@ -82,7 +83,7 @@ object PermanentStages {
                 code = "PR-C-1",
                 openDays = StageOpenDays.CHIP_OPEN_DAYS["PR-C"]!!,
                 tipRes = R.string.panel_fight_stage_tip_pr_c,
-                dropGroups = listOf(listOf("3211", "3271"), listOf("3212", "3272"))
+                dropGroups = listOf(listOf("3211", "3271"), listOf("3212", "3272"), listOf("3213", "3273"))
             ),
             createStage(
                 code = "PR-C-2",
@@ -94,7 +95,7 @@ object PermanentStages {
                 code = "PR-D-1",
                 openDays = StageOpenDays.CHIP_OPEN_DAYS["PR-D"]!!,
                 tipRes = R.string.panel_fight_stage_tip_pr_d,
-                dropGroups = listOf(listOf("3221", "3281"), listOf("3222", "3282"))
+                dropGroups = listOf(listOf("3221", "3281"), listOf("3222", "3282"), listOf("3223", "3283"))
             ),
             createStage(
                 code = "PR-D-2",

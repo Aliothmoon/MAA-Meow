@@ -177,9 +177,8 @@ fun TaskConfigPanel(
                             config = cfg, onConfigChange = onConfigChange
                         )
 
-                        is ReclamationConfig -> ReclamationConfigPanel(
-                            config = cfg, onConfigChange = onConfigChange
-                        )
+                        // 已迁到工具箱，载入时移出任务链
+                        is ReclamationConfig -> Unit
 
                         is UserDataUpdateConfig -> UserDataUpdateConfigPanel(
                             config = cfg, onConfigChange = onConfigChange
@@ -465,7 +464,6 @@ private fun taskTypeLabel(typeInfo: TaskTypeInfo): String {
         TaskTypeInfo.MALL -> stringResource(R.string.panel_task_type_mall)
         TaskTypeInfo.MISSION -> stringResource(R.string.panel_task_type_mission)
         TaskTypeInfo.AUTO_ROGUELIKE -> stringResource(R.string.panel_task_type_auto_roguelike)
-        TaskTypeInfo.RECLAMATION -> stringResource(R.string.panel_task_type_reclamation)
         TaskTypeInfo.USER_DATA_UPDATE -> stringResource(R.string.panel_task_type_user_data_update)
         TaskTypeInfo.DEPOT_MAINTAIN -> stringResource(R.string.panel_task_type_depot_maintain)
         TaskTypeInfo.SWITCH_THEME -> stringResource(R.string.panel_task_type_switch_theme)

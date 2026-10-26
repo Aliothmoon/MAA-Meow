@@ -55,7 +55,10 @@ fun MiniGamePanel(
     val state by delegate.state.collectAsStateWithLifecycle()
     val miniGames by delegate.miniGames.collectAsStateWithLifecycle()
 
+    val reclamationConfig by delegate.reclamationConfig.collectAsStateWithLifecycle()
+
     val currentGame = delegate.findGame(state.selectedTaskName)
+    val isReclamation = delegate.isReclamation(state.selectedTaskName)
     val tip = currentGame?.tip.asString().ifBlank { MiniGameTextRegistry.EMPTY_TIP.asString() }
     val isUnsupported = currentGame?.isUnsupported == true
     val currentGameDisplay = currentGame?.display.asString()
@@ -106,8 +109,8 @@ fun MiniGamePanel(
             }
         }
 
-        // Tip 提示
-        if (tip.isNotBlank()) {
+        // Tip 提示，生息演算的说明随设置展示
+        if (tip.isNotBlank() && !isReclamation) {
             item {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
@@ -167,6 +170,12 @@ fun MiniGamePanel(
         if (delegate.isEventShop(state.selectedTaskName)) {
             item { HorizontalDivider() }
             item { EventShopBlacklistSection(delegate) }
+        }
+
+        // 生息演算设置，任务下发仍走底部「开始任务」
+        if (isReclamation) {
+            item { HorizontalDivider() }
+            reclamationSettingsItems(reclamationConfig, delegate::onReclamationConfigChanged)
         }
 
         // 像素画配置：选图 + 转换参数，任务下发仍走底部「开始任务」

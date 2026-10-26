@@ -74,6 +74,7 @@ import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.StageGroup
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.domain.models.DepotActivityPreset
+import com.aliothmoon.maameow.domain.models.DualChipConversion
 import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
@@ -125,11 +126,10 @@ fun DepotMaintainConfigPanel(
         stageGroups.flatMap { group -> group.stages.map { it.code } }
     }
     val itemNameMap = remember(dropItems) { dropItems.associate { it.id to it.name } }
-    val planOutcomes = remember(config.plans, snapshot, activityStages) {
+    val planOutcomes = remember(config.plans, config.countDualChipAsChipPack, snapshot, activityStages) {
         config.plans.map { plan ->
-            depotPlanOutcome(plan, snapshot.items[plan.dropId] ?: 0) {
-                activityManager.isStageOpen(it)
-            }
+            val current = DualChipConversion.count(plan.dropId, config.countDualChipAsChipPack, snapshot::countOf)
+            depotPlanOutcome(plan, current) { activityManager.isStageOpen(it) }
         }
     }
     val itemIds =
@@ -240,7 +240,7 @@ fun DepotMaintainConfigPanel(
                         itemIds = itemIds,
                         itemNameMap = itemNameMap,
                         inventory = snapshot.items,
-                        inventorySynced = snapshot.syncTimeMillis != 0L,
+                        inventorySynced = snapshot.hasSynced,
                         expandedIndices = expandedIndices,
                         presetPanelExpanded = presetPanelExpanded,
                         onPresetPanelExpandedChange = {
@@ -280,6 +280,7 @@ private fun PlanSummary(
     itemNameMap: Map<String, String>,
     inventory: Map<String, Int>,
     inventorySynced: Boolean,
+    countDualChips: Boolean,
 ) {
     val notSelectedLabel = stringResource(R.string.panel_depot_not_selected)
     val runnableCount = outcomes.count { it == DepotPlanOutcome.Runnable }
@@ -371,9 +372,9 @@ private fun PlanSummary(
                             text = stringResource(R.string.panel_depot_summary_enough),
                             color = MaterialTheme.colorScheme.primary,
                         )
-                        // 未识别过库存时用「--」表达「无数据」，而非误导性的 0
+                        // 未识别过库存时用「--」表达「无数据」，而非误导性的 0；折算部分以「原始 (+折算)」显示
                         DepotPlanOutcome.Runnable -> SummaryTag(
-                            text = (if (inventorySynced) "${inventory[plan.dropId] ?: 0}" else "--") +
+                            text = inventoryText(plan.dropId, inventory, inventorySynced, countDualChips) +
                                     " / ${plan.dropCount}",
                             color = MaterialTheme.colorScheme.onSurface,
                         )
@@ -382,6 +383,18 @@ private fun PlanSummary(
             }
         }
     }
+}
+
+private fun inventoryText(
+    dropId: String,
+    inventory: Map<String, Int>,
+    synced: Boolean,
+    countDualChips: Boolean,
+): String {
+    if (!synced) return "--"
+    val raw = inventory[dropId] ?: 0
+    val extra = if (countDualChips) DualChipConversion.extra(dropId) { inventory[it] ?: 0 } else 0
+    return if (extra > 0) "$raw (+$extra)" else "$raw"
 }
 
 @Composable
@@ -423,6 +436,7 @@ private fun LazyListScope.GeneralTab(
                 itemNameMap = itemNameMap,
                 inventory = inventory,
                 inventorySynced = inventorySynced,
+                countDualChips = config.countDualChipAsChipPack,
             )
         }
     }
@@ -736,6 +750,13 @@ private fun ColumnScope.AdvancedTab(
         onCheckedChange = { onConfigChange(config.copy(sortByProgress = it)) },
         label = stringResource(R.string.panel_depot_sort_by_progress),
         tipText = stringResource(R.string.panel_depot_sort_by_progress_tip),
+    )
+
+    CheckBoxWithExpandableTip(
+        checked = config.countDualChipAsChipPack,
+        onCheckedChange = { onConfigChange(config.copy(countDualChipAsChipPack = it)) },
+        label = stringResource(R.string.panel_depot_count_dual_chip),
+        tipText = stringResource(R.string.panel_depot_count_dual_chip_tip),
     )
 
     CheckBoxWithLabel(

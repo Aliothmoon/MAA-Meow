@@ -106,7 +106,7 @@ fun DepotRecognitionPanel(
         if (delta?.changes.isNullOrEmpty()) onlyChanged = false
     }
 
-    if (snapshot.items.isEmpty() && snapshot.syncTimeMillis <= 0L) {
+    if (snapshot.items.isEmpty() && !snapshot.hasSynced) {
         DepotEmptyState(modifier, resolvedStatusMessage)
         return
     }
@@ -140,7 +140,7 @@ fun DepotRecognitionPanel(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    if (snapshot.syncTimeMillis > 0L) {
+                    if (snapshot.hasSynced) {
                         Text(
                             text = stringResource(
                                 R.string.panel_toolbox_last_sync,

@@ -30,6 +30,7 @@ object BlackFlowLogText {
         "preparing" -> R.string.blackflow_start_run_preparing
         "target_run" -> R.string.blackflow_start_run_target_run
         "reward_missed" -> R.string.blackflow_start_run_reward_missed
+        "reward_picked" -> R.string.blackflow_start_run_reward_picked
         "completed" -> R.string.blackflow_start_run_completed
         "reward_recognition_failed" -> R.string.blackflow_start_run_reward_recognition_failed
         "reward_page_missing" -> R.string.blackflow_start_run_reward_page_missing
@@ -111,6 +112,7 @@ object BlackFlowLogText {
     @StringRes
     fun outcome(code: String?): Int = when (code) {
         "start_run_prepared" -> R.string.blackflow_outcome_start_run_prepared
+        "start_run_utopia_missed" -> R.string.blackflow_outcome_start_run_utopia_missed
         "investment_completed" -> R.string.blackflow_outcome_investment_completed
         "investment_missed" -> R.string.blackflow_outcome_investment_missed
         "burn_completed" -> R.string.blackflow_outcome_floor3_route_completed
@@ -150,6 +152,7 @@ object BlackFlowLogText {
     @StringRes
     fun terminationReason(code: String?): Int = when (code) {
         "start_run_prepared" -> R.string.blackflow_termination_start_run_prepared
+        "first_floor_without_utopia" -> R.string.blackflow_termination_first_floor_without_utopia
         "investment_finished" -> R.string.blackflow_termination_investment_finished
         "investment_shop_window_closed" ->
             R.string.blackflow_termination_investment_shop_window_closed

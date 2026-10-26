@@ -4,6 +4,7 @@ import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.StageApCostHelper
 import com.aliothmoon.maameow.domain.models.DropTarget
+import com.aliothmoon.maameow.domain.models.DualChipConversion
 import com.aliothmoon.maameow.domain.models.SkippedDepotPlans
 import com.aliothmoon.maameow.domain.models.StaleSkippedPlan
 import com.aliothmoon.maameow.maa.callback.SubTaskHandler
@@ -90,8 +91,10 @@ class FightDropsRefresher(
         val t = targets[slot] ?: return
         val expireDays = t.medicineExpireDays ?: 0
         if (expireDays <= 0 || t.dropId.isBlank() || t.dropCount <= 0) return
+        // 无库存数据判不出是否达标，不构成耗尽证明
+        if (!depotRepository.snapshot.value.hasSynced) return
         // 已达标说明结束原因与理智无关，不构成耗尽证明
-        if (depotRepository.countOf(t.dropId) >= t.dropCount) return
+        if (currentCount(t) >= t.dropCount) return
         if (expireDays > provenExhaustedMedicineDays) {
             provenExhaustedMedicineDays = expireDays
             Timber.i("临期药窗口已证明耗尽：%d 天（来自 %s）", expireDays, t.logLabel)
@@ -129,24 +132,17 @@ class FightDropsRefresher(
         val t = targets[slot] ?: return RefreshOutcome.Skipped
         if (t.dropId.isBlank() || t.dropCount <= 0) return RefreshOutcome.Skipped
 
-        val current = depotRepository.countOf(t.dropId)
+        // 从没识别过仓库，缺口无从谈起，按 0 计会把目标量全额下发
+        if (!depotRepository.snapshot.value.hasSynced) {
+            val ok = setParams(taskId, t.toFightParamsJson(0))
+            return RefreshOutcome.InventoryUnavailable(logLabel = t.logLabel, applied = ok)
+        }
+
+        val current = currentCount(t)
         val need = t.dropCount - current
         val dropName = itemHelper.getItemInfo(t.dropId)?.name ?: t.dropId
         val shortfall = if (need > 0) estimateSkipForSanity(t) else null
-        val paramsJson = t.toFightParamsJson(need, forceSkip = shortfall != null)
-
-        val maa = RemoteServiceManager.getInstanceOrNull()?.maaCoreService
-        val ok = if (maa == null) {
-            Timber.w("SetTaskParams 时 MaaCore 服务不可用，taskId=%d", taskId)
-            false
-        } else {
-            runCatching { maa.SetTaskParams(taskId, paramsJson) }
-                .onFailure { Timber.e(it, "SetTaskParams 失败 taskId=%d", taskId) }
-                .getOrDefault(false)
-        }
-        if (!ok) {
-            Timber.w("SetTaskParams 返回 false，taskId=%d，任务将按原参数执行", taskId)
-        }
+        val ok = setParams(taskId, t.toFightParamsJson(need, forceSkip = shortfall != null))
 
         return if (need <= 0) {
             RefreshOutcome.Sufficient(
@@ -184,33 +180,64 @@ class FightDropsRefresher(
         }
     }
 
+    private fun currentCount(t: DropTarget): Int =
+        DualChipConversion.count(t.dropId, t.countDualChips, depotRepository::countOf)
+
+    private fun setParams(taskId: Int, paramsJson: String): Boolean {
+        val maa = RemoteServiceManager.getInstanceOrNull()?.maaCoreService
+        val ok = if (maa == null) {
+            Timber.w("SetTaskParams 时 MaaCore 服务不可用，taskId=%d", taskId)
+            false
+        } else {
+            runCatching { maa.SetTaskParams(taskId, paramsJson) }
+                .onFailure { Timber.e(it, "SetTaskParams 失败 taskId=%d", taskId) }
+                .getOrDefault(false)
+        }
+        if (!ok) {
+            Timber.w("SetTaskParams 返回 false，taskId=%d，任务将按原参数执行", taskId)
+        }
+        return ok
+    }
+
     sealed interface RefreshOutcome {
         data object Skipped : RefreshOutcome
 
+        /** 改过参数、需要写运行日志的结果 */
+        sealed interface Reported : RefreshOutcome {
+            val logLabel: String
+            val applied: Boolean
+        }
+
+        /** 没有任何库存数据，本任务整体跳过 */
+        data class InventoryUnavailable(
+            override val logLabel: String,
+            override val applied: Boolean,
+        ) : Reported
+
         data class Sufficient(
-            val logLabel: String,
+            override val logLabel: String,
             val dropName: String,
             val current: Int,
             val target: Int,
-            val applied: Boolean,
-        ) : RefreshOutcome
+            override val applied: Boolean,
+        ) : Reported
 
         data class Updated(
-            val logLabel: String,
+            override val logLabel: String,
             val dropName: String,
             val need: Int,
             val current: Int,
             val target: Int,
-            val applied: Boolean,
-        ) : RefreshOutcome
+            override val applied: Boolean,
+        ) : Reported
 
         /** 缺口还在，但理智跑不动，本任务整体跳过 */
         data class SanityInsufficient(
-            val logLabel: String,
+            override val logLabel: String,
             val estimatedSanity: Int,
             val apCost: Int,
-            val applied: Boolean,
-        ) : RefreshOutcome
+            override val applied: Boolean,
+        ) : Reported
     }
 
     private companion object {

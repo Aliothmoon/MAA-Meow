@@ -9,7 +9,8 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 
 /**
- * 生息演算配置
+ * 生息演算配置，v6.21.0 起随上游迁到工具箱，存于 AppSettings
+ * 仍保留 [TaskParamProvider] 身份只为解码旧任务链，载入时由 TaskChainState 移出
  *
  * 参数严格对齐 MaaWpfGui v6.10.5:
  * - mode 字段含义由 theme 决定,采用 flags 风格编码以避免 Tales / RelaunchAnchor 值冲突:
@@ -41,9 +42,6 @@ data class ReclamationConfig(
         val TALES_MODE_VALUES = listOf(MODE_PROSPERITY_NO_SAVE, MODE_PROSPERITY_IN_SAVE)
         val RELAUNCH_ANCHOR_MODE_VALUES = listOf(MODE_RA1, MODE_RA4, MODE_RA15)
 
-        // 向后兼容旧引用(Tales 0/1 值列表)
-        @Deprecated("Use TALES_MODE_VALUES", ReplaceWith("TALES_MODE_VALUES"))
-        val MODE_VALUES = TALES_MODE_VALUES
         val INCREMENT_MODE_VALUES = listOf(0, 1)
 
         // 对应 WPF ReclamationToolToCraftPlaceholder 各语言版本,按 clientType 取
@@ -55,9 +53,9 @@ data class ReclamationConfig(
             "YoStarJP" to "ケミカルライト",
             "YoStarKR" to "형광봉"
         )
-        const val DEFAULT_TOOL_TO_CRAFT = "荧光棒"
+        private const val DEFAULT_TOOL_TO_CRAFT = "荧光棒"
 
-        fun defaultToolToCraft(clientType: String): String =
+        private fun defaultToolToCraft(clientType: String): String =
             DEFAULT_TOOL_BY_CLIENT[clientType] ?: DEFAULT_TOOL_TO_CRAFT
     }
 
@@ -73,9 +71,12 @@ data class ReclamationConfig(
         }
     }
 
-    override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
+    override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> =
+        listOf(toTaskParams(ctx.clientType))
+
+    fun toTaskParams(clientType: String): MaaTaskParams {
         // 对齐 WPF: 全角分号→半角;空字符串→ReclamationToolToCraftPlaceholder;按 ; 切分;仅 trim,不过滤空 entry
-        val source = toolToCraft.ifEmpty { defaultToolToCraft(ctx.clientType) }
+        val source = toolToCraft.ifEmpty { defaultToolToCraft(clientType) }
         val tools = source.replace('；', ';').split(';').map { it.trim() }
 
         val paramsJson = buildJsonObject {
@@ -88,6 +89,6 @@ data class ReclamationConfig(
             }
             put("clear_store", clearStore)
         }
-        return listOf(MaaTaskParams(MaaTaskType.RECLAMATION, paramsJson.toString()))
+        return MaaTaskParams(MaaTaskType.RECLAMATION, paramsJson.toString())
     }
 }

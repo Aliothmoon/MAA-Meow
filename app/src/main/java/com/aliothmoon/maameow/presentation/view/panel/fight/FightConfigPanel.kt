@@ -91,7 +91,7 @@ fun FightConfigPanel(
     val stageTips = remember(activityStages, depotSnapshot) {
         activityManager.getStageTips(
             inventory = depotSnapshot.items,
-            hasSyncedInventory = depotSnapshot.syncTimeMillis > 0L
+            hasSyncedInventory = depotSnapshot.hasSynced
         )
     }
     val todayName = remember(activityStages) { activityManager.getYjDayOfWeekName() }

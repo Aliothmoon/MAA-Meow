@@ -16,6 +16,7 @@ import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.EventShopBlacklist
 import com.aliothmoon.maameow.data.model.EventShopPreset
+import com.aliothmoon.maameow.data.model.ReclamationConfig
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager.Companion.FONT_SIZE_SCALE_AUTO
@@ -43,6 +44,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.util.concurrent.CopyOnWriteArrayList
+import timber.log.Timber
 
 
 /** 构造不等待读盘；启动时读取 .value 前须先 awaitLoaded */
@@ -901,6 +903,38 @@ class AppSettingsManager internal constructor(
         with(AppSettingsSchema) {
             context.dataStore.edit { it[eventShopBlacklistCustom] = custom }
         }
+    }
+
+    val reclamationConfig: StateFlow<ReclamationConfig> = setting { parseReclamationConfig(it.reclamationConfig) }
+
+    /** 在事务内读改写，连续修改不会互相覆盖 */
+    suspend fun updateReclamationConfig(transform: (ReclamationConfig) -> ReclamationConfig) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                val current = parseReclamationConfig(it[reclamationConfig].orEmpty())
+                it[reclamationConfig] = JsonUtils.common.encodeToString(transform(current))
+            }
+        }
+    }
+
+    /** 旧任务链里的生息演算迁入工具箱；已保存过则不覆盖 */
+    suspend fun adoptReclamationConfig(config: ReclamationConfig) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                if (it[reclamationConfig].isNullOrBlank()) {
+                    it[reclamationConfig] = JsonUtils.common.encodeToString(config)
+                }
+            }
+        }
+    }
+
+    private fun parseReclamationConfig(raw: String): ReclamationConfig {
+        val config = raw.takeIf { it.isNotBlank() }?.let {
+            runCatching { JsonUtils.common.decodeFromString<ReclamationConfig>(it) }
+                .onFailure { e -> Timber.w(e, "生息演算设置解析失败") }
+                .getOrNull()
+        } ?: ReclamationConfig()
+        return config.copy(mode = config.sanitizedMode())
     }
 
     // 放在类体末尾，启动收集器时 setting() 已全部注册

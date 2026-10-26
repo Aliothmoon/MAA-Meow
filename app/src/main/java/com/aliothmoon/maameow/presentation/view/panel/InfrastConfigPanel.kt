@@ -1377,6 +1377,12 @@ private fun fiammettaTargetLabel(name: String): String = when (name) {
     "巫恋" -> stringResource(R.string.panel_infrast_fiammetta_target_shamare)
     "龙舌兰" -> stringResource(R.string.panel_infrast_fiammetta_target_tequila)
     "歌蕾蒂娅" -> stringResource(R.string.panel_infrast_fiammetta_target_gladiia)
+    "琴柳" -> stringResource(R.string.panel_infrast_fiammetta_target_saileach)
+    "承曦格雷伊" -> stringResource(R.string.panel_infrast_fiammetta_target_greyy2)
+    "温蒂" -> stringResource(R.string.panel_infrast_fiammetta_target_weedy)
+    "槐琥" -> stringResource(R.string.panel_infrast_fiammetta_target_waai_fu)
+    "至简" -> stringResource(R.string.panel_infrast_fiammetta_target_minimalist)
+    "旅骨" -> stringResource(R.string.panel_infrast_fiammetta_target_hbound)
     else -> name
 }
 

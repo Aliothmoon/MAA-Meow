@@ -83,54 +83,41 @@ class TaskChainHandler(
             ?: str(details.getString("taskchain") ?: "Unknown")
 
     private fun refreshDropsIfNeeded(taskId: Int) {
-        val outcome = dropsRefresher.onTaskStarted(taskId)
-        val (logLabel, applied) = when (outcome) {
-            FightDropsRefresher.RefreshOutcome.Skipped -> return
-            is FightDropsRefresher.RefreshOutcome.Sufficient -> {
-                sessionLogger.append(
-                    appContext.getString(
-                        R.string.runlog_depot_plan_inventory_enough,
-                        outcome.logLabel,
-                        outcome.dropName,
-                        outcome.current,
-                        outcome.target,
-                    ),
-                    LogLevel.INFO,
-                )
-                outcome.logLabel to outcome.applied
-            }
+        val outcome = dropsRefresher.onTaskStarted(taskId) as? FightDropsRefresher.RefreshOutcome.Reported ?: return
+        val (text, level) = when (outcome) {
+            is FightDropsRefresher.RefreshOutcome.InventoryUnavailable -> appContext.getString(
+                R.string.runlog_depot_plan_inventory_unavailable,
+                outcome.logLabel,
+            ) to LogLevel.WARNING
 
-            is FightDropsRefresher.RefreshOutcome.Updated -> {
-                sessionLogger.append(
-                    appContext.getString(
-                        R.string.runlog_depot_plan_inventory_insufficient,
-                        outcome.logLabel,
-                        outcome.dropName,
-                        outcome.current,
-                        outcome.target,
-                        outcome.need,
-                    ),
-                    LogLevel.INFO,
-                )
-                outcome.logLabel to outcome.applied
-            }
+            is FightDropsRefresher.RefreshOutcome.Sufficient -> appContext.getString(
+                R.string.runlog_depot_plan_inventory_enough,
+                outcome.logLabel,
+                outcome.dropName,
+                outcome.current,
+                outcome.target,
+            ) to LogLevel.INFO
 
-            is FightDropsRefresher.RefreshOutcome.SanityInsufficient -> {
-                sessionLogger.append(
-                    appContext.getString(
-                        R.string.runlog_depot_plan_sanity_insufficient,
-                        outcome.logLabel,
-                        outcome.estimatedSanity,
-                        outcome.apCost,
-                    ),
-                    LogLevel.INFO,
-                )
-                outcome.logLabel to outcome.applied
-            }
+            is FightDropsRefresher.RefreshOutcome.Updated -> appContext.getString(
+                R.string.runlog_depot_plan_inventory_insufficient,
+                outcome.logLabel,
+                outcome.dropName,
+                outcome.current,
+                outcome.target,
+                outcome.need,
+            ) to LogLevel.INFO
+
+            is FightDropsRefresher.RefreshOutcome.SanityInsufficient -> appContext.getString(
+                R.string.runlog_depot_plan_sanity_insufficient,
+                outcome.logLabel,
+                outcome.estimatedSanity,
+                outcome.apCost,
+            ) to LogLevel.INFO
         }
-        if (!applied) {
+        sessionLogger.append(text, level)
+        if (!outcome.applied) {
             sessionLogger.append(
-                appContext.getString(R.string.runlog_depot_set_params_failed, logLabel),
+                appContext.getString(R.string.runlog_depot_set_params_failed, outcome.logLabel),
                 LogLevel.WARNING,
             )
         }

@@ -70,6 +70,9 @@ data class RoguelikeConfig(
     val blackFlowStartAnimal2: RoguelikeBlackFlowStartAnimal = RoguelikeBlackFlowStartAnimal.None,  // 刷开局第二只襁褓动物
     val blackFlowStartRewards: Set<RoguelikeBlackFlowStartReward> = emptySet(),  // 刷开局期望奖励，含羽蛇奖励
     val blackFlowStartRunFastFlight: Boolean = false,  // 刷开局准备局快速飞三层
+    val blackFlowStartUtopia: Boolean = false,  // 刷开局目标局凹第一层实托邦
+    val blackFlowStartRewardPriority: List<RoguelikeBlackFlowStartReward> =
+        RoguelikeBlackFlowStartReward.DEFAULT_PRIORITY,  // 凹实托邦时目标局的支援选取顺序，十二种全列
 
     // 界园专用
     val findPlaytimeTarget: RoguelikeBoskySubNodeType = RoguelikeBoskySubNodeType.Ling,  // 目标常乐节点
@@ -168,10 +171,20 @@ data class RoguelikeConfig(
     val blackFlowStartRewardMask: Int
         get() = blackFlowStartRewards.filter { !it.serpent || blackFlowHasSerpent }.sumOf { it.bit }
 
+    /** 实托邦从难度 6 开始出现；不切换难度时按游戏里当前的难度来，不做检查 */
+    val blackFlowStartUtopiaAvailable: Boolean
+        get() = difficulty == -1 || difficulty >= RoguelikeUi.BLACK_FLOW_UTOPIA_MIN_DIFFICULTY
+
+    /** 凹实托邦实际生效，勾选本身保留 */
+    val blackFlowStartUtopiaActive: Boolean
+        get() = isBlackFlow && mode == RoguelikeMode.BlackFlowStartRun &&
+                blackFlowStartUtopia && blackFlowStartUtopiaAvailable
+
     /**
      * 旧档迁移：
      * - beta.2 前的 coreChar/useSupport 并入第 1 顺位，对齐 WPF RoguelikeStartingOpersConverter，仅在 [startingOpers] 为空时合成
      * - 刷襁褓动物并入刷开局，原培育目标作为第一只动物，对齐 WPF RoguelikeTask.OnDeserialized
+     * - 支援选取顺序整理成十二种各一次
      */
     override fun migrate(): RoguelikeConfig {
         var config = this
@@ -195,6 +208,10 @@ data class RoguelikeConfig(
         if (config.legacyBlackFlowCultivationTarget != null) {
             config = config.copy(legacyBlackFlowCultivationTarget = null)
         }
+        val priority = RoguelikeBlackFlowStartReward.normalizePriority(blackFlowStartRewardPriority)
+        if (priority != blackFlowStartRewardPriority) {
+            config = config.copy(blackFlowStartRewardPriority = priority)
+        }
         return config
     }
 
@@ -206,9 +223,8 @@ data class RoguelikeConfig(
             mode == RoguelikeMode.Collectible && theme == "Sami" && squad == "生活至上分队"
 
         // 黑流快速飞三层的固定开局，对齐 WPF AsstRoguelikeTask.Serialize
-        // 刷开局的目标局到支援页就结束，职业组和开局干员只作用于准备局，直接替换即可
+        // 刷等级直接替换；刷开局的准备局另走 collectible_mode_*，目标局凹实托邦时仍用常规设置开局
         val expFlight = blackFlowExpFlightActive
-        val flightStart = expFlight || blackFlowStartRunFlightActive
 
         val paramsJson = buildJsonObject {
             //  基础设置（始终发送）
@@ -217,24 +233,17 @@ data class RoguelikeConfig(
             put("mode", mode.value)  // MaaCore 期望整数值
             val squadParam = if (expFlight) RoguelikeUi.BLACK_FLOW_FLIGHT_SQUAD else squad
             if (squadParam.isNotBlank()) put("squad", squadParam)
-            val rolesParam = if (flightStart) RoguelikeUi.BLACK_FLOW_FLIGHT_ROLES else roles
+            val rolesParam = if (expFlight) RoguelikeUi.BLACK_FLOW_FLIGHT_ROLES else roles
             if (rolesParam.isNotBlank()) put("roles", rolesParam)
-            // MaaCore 只认简中名（BattleDataConfig::find_oper 只匹配 name 字段，
-            // 繁中/英文名会使 get_role 返回 Unknown 导致开局干员选择失败）
-            val startOpers = if (flightStart) {
-                listOf(RoguelikeStartingOper(RoguelikeUi.BLACK_FLOW_FLIGHT_CORE_CHAR))
+            if (expFlight) {
+                put("core_char_list", FLIGHT_CORE_CHARS)
             } else {
-                effectiveStartingOpers.map {
-                    it.copy(name = ctx.resourceDataManager.normalizeCharacterName(it.name))
+                // MaaCore 只认简中名（BattleDataConfig::find_oper 只匹配 name 字段，
+                // 繁中/英文名会使 get_role 返回 Unknown 导致开局干员选择失败）
+                val startOpers = effectiveStartingOpers.map {
+                    startOperJson(it.copy(name = ctx.resourceDataManager.normalizeCharacterName(it.name)))
                 }
-            }
-            if (startOpers.isNotEmpty()) {
-                put("core_char_list", JsonArray(startOpers.map {
-                    buildJsonObject {
-                        put("name", it.name)
-                        put("use_support", it.useSupport)
-                    }
-                }))
+                if (startOpers.isNotEmpty()) put("core_char_list", JsonArray(startOpers))
             }
             put("starts_count", startsCount)
 
@@ -333,11 +342,19 @@ data class RoguelikeConfig(
                         .filter { it != RoguelikeBlackFlowStartAnimal.None }
                     put("blackflow_start_animals", JsonArray(animals.map { JsonPrimitive(it.value) }))
                     put("blackflow_start_rewards", blackFlowStartRewardMask)
-                    put(
-                        "collectible_mode_squad",
-                        if (blackFlowStartRunFlightActive) RoguelikeUi.BLACK_FLOW_FLIGHT_SQUAD
-                        else collectibleModeSquad
-                    )
+                    if (blackFlowStartRunFlightActive) {
+                        put("collectible_mode_squad", RoguelikeUi.BLACK_FLOW_FLIGHT_SQUAD)
+                        put("collectible_mode_roles", RoguelikeUi.BLACK_FLOW_FLIGHT_ROLES)
+                        put("collectible_mode_core_char_list", FLIGHT_CORE_CHARS)
+                    } else {
+                        put("collectible_mode_squad", collectibleModeSquad)
+                    }
+                    // 开启后 core 要求顺序非空且不重复
+                    if (blackFlowStartUtopiaActive) {
+                        put("blackflow_start_utopia", true)
+                        val priority = RoguelikeBlackFlowStartReward.normalizePriority(blackFlowStartRewardPriority)
+                        put("blackflow_start_reward_priority", JsonArray(priority.map { JsonPrimitive(it.id) }))
+                    }
                 }
 
                 // 载入时已迁移为刷开局
@@ -370,6 +387,15 @@ data class RoguelikeConfig(
     }
 
     companion object {
+        private fun startOperJson(oper: RoguelikeStartingOper) = buildJsonObject {
+            put("name", oper.name)
+            put("use_support", oper.useSupport)
+        }
+
+        /** 快速飞三层的固定开局干员 */
+        private val FLIGHT_CORE_CHARS =
+            JsonArray(listOf(startOperJson(RoguelikeStartingOper(RoguelikeUi.BLACK_FLOW_FLIGHT_CORE_CHAR))))
+
         /** 开局免费招募次数，上游同为 3 */
         const val MAX_STARTING_OPERS = 3
 

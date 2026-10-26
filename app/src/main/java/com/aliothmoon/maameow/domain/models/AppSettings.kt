@@ -260,6 +260,10 @@ data class AppSettings(
     @PrefKey(default = "")
     val eventShopBlacklistCustom: String = "",
 
+    /** 牛杂生息演算设置 JSON；空串表示从未保存，可接收旧任务链迁入 */
+    @PrefKey(default = "")
+    val reclamationConfig: String = "",
+
     /** 帮助改进本项目：匿名上报崩溃、任务统计与失败现场 */
     @PrefKey(default = "true")
     val telemetryEnabled: String = "true",

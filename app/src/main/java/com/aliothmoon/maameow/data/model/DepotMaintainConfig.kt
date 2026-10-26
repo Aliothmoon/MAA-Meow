@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.data.model
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.DepotMaintainConfig.Companion.EXPIRING_MEDICINE_DAYS
 import com.aliothmoon.maameow.domain.models.DropTarget
+import com.aliothmoon.maameow.domain.models.DualChipConversion
 import com.aliothmoon.maameow.domain.models.SkippedDepotPlans
 import com.aliothmoon.maameow.domain.models.TaskCandidate
 import com.aliothmoon.maameow.domain.models.TaskFallbackChain
@@ -59,7 +60,8 @@ fun depotPlanOutcome(
 
 /**
  * 库存保持：展开为可选 Depot + N 个 Fight
- * 无库存记录按 0 满量刷（与 Fight 目标库存「未识别 skip」不同）
+ * 预检时无库存记录按 0 计照常下发，前面的仓库识别会补上数据；开始时仍无任何库存数据才跳过
+ * （Fight 目标库存在预检就跳过）
  */
 @Serializable
 data class DepotMaintainConfig(
@@ -67,6 +69,8 @@ data class DepotMaintainConfig(
     val onlyFirstInsufficientPlan: Boolean = false,
     /** 按库存达成率升序下发，只改执行顺序不动列表，对齐 WPF SortByProgress */
     val sortByProgress: Boolean = false,
+    /** 芯片组计入双芯片折算，只改计数口径，对齐 WPF CountDualChipAsChipPack */
+    val countDualChipAsChipPack: Boolean = false,
     val customStageCode: Boolean = false,
     /** false→series=1；true→series=0（AUTO）。对齐 WPF UseAutoSeries。 */
     val useAutoSeries: Boolean = false,
@@ -109,7 +113,7 @@ data class DepotMaintainConfig(
 
         // 预先评估后备计划，暂不输出日志
         val evaluated = plans.mapIndexed { index, plan ->
-            val current = ctx.depotRepository.countOf(plan.dropId)
+            val current = DualChipConversion.count(plan.dropId, countDualChipAsChipPack, ctx.depotRepository::countOf)
             PlanDecision(
                 index = index,
                 plan = plan,
@@ -179,6 +183,7 @@ data class DepotMaintainConfig(
                 firstOnly = onlyFirstInsufficientPlan,
                 sortByProgress = sortByProgress,
                 chosen = primary?.skippedPlan(),
+                countDualChips = countDualChipAsChipPack,
             )
         )
     }
@@ -274,6 +279,7 @@ data class DepotMaintainConfig(
             logLabel = no.toString(),
             medicineExpireDays = if (useExpiringMedicine) EXPIRING_MEDICINE_DAYS else null,
             report = ctx.report,
+            countDualChips = countDualChipAsChipPack,
         )
     }
 

@@ -168,7 +168,10 @@ class InfrastCrossFacilityParamsTest {
     @Test
     fun fiammettaTargetOptions_matchUpstreamAndContainDefaults() {
         assertEquals(
-            listOf("清流", "可露希尔", "但书", "巫恋", "龙舌兰", "歌蕾蒂娅"),
+            listOf(
+                "清流", "可露希尔", "但书", "巫恋", "龙舌兰", "歌蕾蒂娅",
+                "琴柳", "承曦格雷伊", "温蒂", "槐琥", "至简", "旅骨",
+            ),
             UiUsageConstants.fiammettaTargetValues,
         )
         assertTrue(

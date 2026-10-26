@@ -49,7 +49,10 @@ object UiUsageConstants {
     )
 
     /** 菲亚梅塔恢复目标可选干员，展示文案见 strings `panel_infrast_fiammetta_target_*` */
-    val fiammettaTargetValues = listOf("清流", "可露希尔", "但书", "巫恋", "龙舌兰", "歌蕾蒂娅")
+    val fiammettaTargetValues = listOf(
+        "清流", "可露希尔", "但书", "巫恋", "龙舌兰", "歌蕾蒂娅",
+        "琴柳", "承曦格雷伊", "温蒂", "槐琥", "至简", "旅骨",
+    )
 
     /** 与 core DefaultFiammettaTargets 一致 */
     val defaultFiammettaTargets = listOf("清流", "可露希尔", "但书")
@@ -295,6 +298,9 @@ object UiUsageConstants {
         const val BLACK_FLOW_FLIGHT_SQUAD = "特勤分队"
         const val BLACK_FLOW_FLIGHT_ROLES = DEFAULT_ROLE
         const val BLACK_FLOW_FLIGHT_CORE_CHAR = "机械师"
+
+        /** 第一层实托邦出现的最低难度 */
+        const val BLACK_FLOW_UTOPIA_MIN_DIFFICULTY = 6
 
         /** 刷等级可选结局，二、三结局上游暂不开放 */
         val BLACK_FLOW_ENDINGS = listOf(RoguelikeBlackFlowEnding.Ending1)

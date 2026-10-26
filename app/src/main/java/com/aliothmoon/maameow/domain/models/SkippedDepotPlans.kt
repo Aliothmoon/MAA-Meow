@@ -9,6 +9,7 @@ package com.aliothmoon.maameow.domain.models
  * @param firstOnly 仅执行第一个不足计划：只提示第一个翻转的
  * @param sortByProgress 按达成率排序执行：复查时按最新库存重排，对齐上游 ReviewSkippedPlansAfterDepotSync
  * @param chosen 仅首个模式下本轮下发的主计划，只提示按最新库存会排在它前面的翻转
+ * @param countDualChips 双芯片折算计入芯片组，与预检口径一致
  */
 data class SkippedDepotPlans(
     val taskName: String,
@@ -16,13 +17,16 @@ data class SkippedDepotPlans(
     val firstOnly: Boolean,
     val sortByProgress: Boolean = false,
     val chosen: Plan? = null,
+    val countDualChips: Boolean = false,
 ) {
     /** @param no 计划序号，从 1 起，与预检日志一致 */
     data class Plan(val no: Int, val dropId: String, val dropCount: Int)
 
     /** 按最新库存挑出要提示的翻转，附带当前数量，按执行顺序排列 */
     fun stale(countOf: (String) -> Int): List<Pair<Plan, Int>> {
-        val counts = (plans + listOfNotNull(chosen)).associateWith { countOf(it.dropId) }
+        val counts = (plans + listOfNotNull(chosen)).associateWith {
+            DualChipConversion.count(it.dropId, countDualChips, countOf)
+        }
         val order = depotPlanOrder<Plan>(
             sortByProgress,
             progress = { depotPlanProgress(counts.getValue(it), it.dropCount) },
