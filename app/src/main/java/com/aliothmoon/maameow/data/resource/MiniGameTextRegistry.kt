@@ -7,57 +7,57 @@ import com.aliothmoon.maameow.utils.i18n.uiTextOf
 
 /**
  * 小游戏文案注册表：API 本地化键 / 任务 value → 字符串资源
- * 键集合与 MaaWpfGui Res/Localizations 中的 MiniGame* 键保持一致
+ * 键名对齐 MaaWpfGui Res/Localizations 的 Toolbox.MiniGame.*（v6.21.0-beta.2 起），只登记 API 会下发的条目
  */
 object MiniGameTextRegistry {
     val EMPTY_TIP: UiText = uiTextOf(R.string.mini_game_empty_tip)
 
     @StringRes
     private fun displayResByKey(key: String): Int? = when (key) {
-        "MiniGameNameSsStore" -> R.string.mini_game_name_ss_store
-        "MiniGameNameGreenTicketStore" -> R.string.mini_game_name_green_ticket_store
-        "MiniGameNameYellowTicketStore" -> R.string.mini_game_name_yellow_ticket_store
-        "MiniGameNameRAStore" -> R.string.mini_game_name_ra_store
-        "MiniGame@SecretFront" -> R.string.mini_game_name_secret_front
-        "MiniGame@AutoRaisePotential" -> R.string.mini_game_name_auto_raise_potential
-        "MiniGame@MaterialSynthesis" -> R.string.mini_game_name_material_synthesis
-        "MiniGame@CursedRelic" -> R.string.mini_game_name_cursed_relic
-        "MiniGame@PV" -> R.string.mini_game_name_pv
-        "MiniGame@SPA" -> R.string.mini_game_name_spa
-        "MiniGame@OS" -> R.string.mini_game_name_os
-        "MiniGame@RM-TR-1" -> R.string.mini_game_name_rm_tr_1
-        "MiniGame@RM-1" -> R.string.mini_game_name_rm_1
-        "MiniGame@AT@ConversationRoom" -> R.string.mini_game_name_at_conversation_room
-        "MiniGame@ALL@GreenGrass" -> R.string.mini_game_name_all_green_grass
-        "MiniGame@ALL@HoneyFruit" -> R.string.mini_game_name_all_honey_fruit
-        "MiniGame@ALL@IvyVine" -> R.string.mini_game_name_all_ivy_vine
-        "MiniGame@PF" -> R.string.mini_game_name_pf
-        "MiniGame@InteractiveExhibition" -> R.string.mini_game_name_interactive_exhibition
+        "Toolbox.MiniGame.Name.SsStore" -> R.string.mini_game_name_ss_store
+        "Toolbox.MiniGame.Name.GreenTicketStore" -> R.string.mini_game_name_green_ticket_store
+        "Toolbox.MiniGame.Name.YellowTicketStore" -> R.string.mini_game_name_yellow_ticket_store
+        "Toolbox.MiniGame.Name.RAStore" -> R.string.mini_game_name_ra_store
+        "Toolbox.MiniGame.SecretFront" -> R.string.mini_game_name_secret_front
+        "Toolbox.MiniGame.AutoRaisePotential" -> R.string.mini_game_name_auto_raise_potential
+        "Toolbox.MiniGame.MaterialSynthesis" -> R.string.mini_game_name_material_synthesis
+        "Toolbox.MiniGame.CursedRelic" -> R.string.mini_game_name_cursed_relic
+        "Toolbox.MiniGame.PV" -> R.string.mini_game_name_pv
+        "Toolbox.MiniGame.SPA" -> R.string.mini_game_name_spa
+        "Toolbox.MiniGame.OS" -> R.string.mini_game_name_os
+        "Toolbox.MiniGame.RMTR1" -> R.string.mini_game_name_rm_tr_1
+        "Toolbox.MiniGame.RM1" -> R.string.mini_game_name_rm_1
+        "Toolbox.MiniGame.AT.ConversationRoom" -> R.string.mini_game_name_at_conversation_room
+        "Toolbox.MiniGame.All.GreenGrass" -> R.string.mini_game_name_all_green_grass
+        "Toolbox.MiniGame.All.HoneyFruit" -> R.string.mini_game_name_all_honey_fruit
+        "Toolbox.MiniGame.All.IvyVine" -> R.string.mini_game_name_all_ivy_vine
+        "Toolbox.MiniGame.PF" -> R.string.mini_game_name_pf
+        "Toolbox.MiniGame.InteractiveExhibition" -> R.string.mini_game_name_interactive_exhibition
         else -> null
     }
 
     @StringRes
     private fun tipResByKey(key: String): Int? = when (key) {
-        "MiniGameNameSsStoreTip" -> R.string.mini_game_tip_ss_store
-        "MiniGameNameGreenTicketStoreTip" -> R.string.mini_game_tip_green_ticket_store
-        "MiniGameNameYellowTicketStoreTip" -> R.string.mini_game_tip_yellow_ticket_store
-        "MiniGameNameRAStoreTip" -> R.string.mini_game_tip_ra_store
-        "MiniGame@SecretFrontTip" -> R.string.mini_game_tip_secret_front
-        "MiniGame@AutoRaisePotentialTip" -> R.string.mini_game_tip_auto_raise_potential
-        "MiniGame@MaterialSynthesisTip" -> R.string.mini_game_tip_material_synthesis
-        "MiniGame@CursedRelicTip" -> R.string.mini_game_tip_cursed_relic
-        "MiniGame@PixelPaintTip" -> R.string.mini_game_tip_pixel_paint
-        "MiniGame@PVTip" -> R.string.mini_game_tip_pv
-        "MiniGame@SPATip" -> R.string.mini_game_tip_spa
-        "MiniGame@OSTip" -> R.string.mini_game_tip_os
-        "MiniGame@RM-TR-1Tip" -> R.string.mini_game_tip_rm_tr_1
-        "MiniGame@RM-1Tip" -> R.string.mini_game_tip_rm_1
-        "MiniGame@AT@ConversationRoomTip" -> R.string.mini_game_tip_at_conversation_room
-        "MiniGame@ALL@GreenGrassTip" -> R.string.mini_game_tip_all_duel_channel
-        "MiniGame@ALL@HoneyFruitTip" -> R.string.mini_game_tip_all_duel_channel
-        "MiniGame@ALL@IvyVineTip" -> R.string.mini_game_tip_all_duel_channel
-        "MiniGame@PFTip" -> R.string.mini_game_tip_pf
-        "MiniGame@InteractiveExhibitionTip" -> R.string.mini_game_tip_interactive_exhibition
+        "Toolbox.MiniGame.Name.SsStore.Tip" -> R.string.mini_game_tip_ss_store
+        "Toolbox.MiniGame.Name.GreenTicketStore.Tip" -> R.string.mini_game_tip_green_ticket_store
+        "Toolbox.MiniGame.Name.YellowTicketStore.Tip" -> R.string.mini_game_tip_yellow_ticket_store
+        "Toolbox.MiniGame.Name.RAStore.Tip" -> R.string.mini_game_tip_ra_store
+        "Toolbox.MiniGame.SecretFront.Tip" -> R.string.mini_game_tip_secret_front
+        "Toolbox.MiniGame.AutoRaisePotential.Tip" -> R.string.mini_game_tip_auto_raise_potential
+        "Toolbox.MiniGame.MaterialSynthesis.Tip" -> R.string.mini_game_tip_material_synthesis
+        "Toolbox.MiniGame.CursedRelic.Tip" -> R.string.mini_game_tip_cursed_relic
+        "Toolbox.MiniGame.PixelPaint.Tip" -> R.string.mini_game_tip_pixel_paint
+        "Toolbox.MiniGame.PV.Tip" -> R.string.mini_game_tip_pv
+        "Toolbox.MiniGame.SPA.Tip" -> R.string.mini_game_tip_spa
+        "Toolbox.MiniGame.OS.Tip" -> R.string.mini_game_tip_os
+        "Toolbox.MiniGame.RMTR1.Tip" -> R.string.mini_game_tip_rm_tr_1
+        "Toolbox.MiniGame.RM1.Tip" -> R.string.mini_game_tip_rm_1
+        "Toolbox.MiniGame.AT.ConversationRoom.Tip" -> R.string.mini_game_tip_at_conversation_room
+        "Toolbox.MiniGame.All.GreenGrass.Tip" -> R.string.mini_game_tip_all_duel_channel
+        "Toolbox.MiniGame.All.HoneyFruit.Tip" -> R.string.mini_game_tip_all_duel_channel
+        "Toolbox.MiniGame.All.IvyVine.Tip" -> R.string.mini_game_tip_all_duel_channel
+        "Toolbox.MiniGame.PF.Tip" -> R.string.mini_game_tip_pf
+        "Toolbox.MiniGame.InteractiveExhibition.Tip" -> R.string.mini_game_tip_interactive_exhibition
         else -> null
     }
 
@@ -77,15 +77,15 @@ object MiniGameTextRegistry {
         "MiniGame@CursedRelic", "MiniGame@CursedRelic@Begin" ->
             R.string.mini_game_name_cursed_relic
 
-        "MiniGame@PV" -> R.string.mini_game_name_pv
-        "MiniGame@SPA" -> R.string.mini_game_name_spa
-        "MiniGame@OS" -> R.string.mini_game_name_os
-        "MiniGame@RM-TR-1" -> R.string.mini_game_name_rm_tr_1
-        "MiniGame@RM-1" -> R.string.mini_game_name_rm_1
+        "MiniGame@PV", "MiniGame@PV@Begin" -> R.string.mini_game_name_pv
+        "MiniGame@SPA", "MiniGame@SPA@Begin" -> R.string.mini_game_name_spa
+        "MiniGame@OS", "MiniGame@OS@Begin" -> R.string.mini_game_name_os
+        "MiniGame@RM-TR-1", "MiniGame@RM-TR-1@Begin" -> R.string.mini_game_name_rm_tr_1
+        "MiniGame@RM-1", "MiniGame@RM-1@Begin" -> R.string.mini_game_name_rm_1
         "MiniGame@AT@ConversationRoom" -> R.string.mini_game_name_at_conversation_room
-        "MiniGame@ALL@GreenGrass" -> R.string.mini_game_name_all_green_grass
-        "MiniGame@ALL@HoneyFruit" -> R.string.mini_game_name_all_honey_fruit
-        "MiniGame@ALL@IvyVine" -> R.string.mini_game_name_all_ivy_vine
+        "MiniGame@ALL@GreenGrass@DuelChannel@Begin" -> R.string.mini_game_name_all_green_grass
+        "MiniGame@ALL@GreenGrass@HoneyFruit@Begin" -> R.string.mini_game_name_all_honey_fruit
+        "MiniGame@ALL@GreenGrass@IvyVine@Begin" -> R.string.mini_game_name_all_ivy_vine
         "MiniGame@PF", "MiniGame@PF@Begin" -> R.string.mini_game_name_pf
         "MiniGame@InteractiveExhibition", "MiniGame@InteractiveExhibition@Begin" ->
             R.string.mini_game_name_interactive_exhibition
@@ -109,15 +109,15 @@ object MiniGameTextRegistry {
         "MiniGame@CursedRelic", "MiniGame@CursedRelic@Begin" ->
             R.string.mini_game_tip_cursed_relic
 
-        "MiniGame@PV" -> R.string.mini_game_tip_pv
-        "MiniGame@SPA" -> R.string.mini_game_tip_spa
-        "MiniGame@OS" -> R.string.mini_game_tip_os
-        "MiniGame@RM-TR-1" -> R.string.mini_game_tip_rm_tr_1
-        "MiniGame@RM-1" -> R.string.mini_game_tip_rm_1
+        "MiniGame@PV", "MiniGame@PV@Begin" -> R.string.mini_game_tip_pv
+        "MiniGame@SPA", "MiniGame@SPA@Begin" -> R.string.mini_game_tip_spa
+        "MiniGame@OS", "MiniGame@OS@Begin" -> R.string.mini_game_tip_os
+        "MiniGame@RM-TR-1", "MiniGame@RM-TR-1@Begin" -> R.string.mini_game_tip_rm_tr_1
+        "MiniGame@RM-1", "MiniGame@RM-1@Begin" -> R.string.mini_game_tip_rm_1
         "MiniGame@AT@ConversationRoom" -> R.string.mini_game_tip_at_conversation_room
-        "MiniGame@ALL@GreenGrass" -> R.string.mini_game_tip_all_duel_channel
-        "MiniGame@ALL@HoneyFruit" -> R.string.mini_game_tip_all_duel_channel
-        "MiniGame@ALL@IvyVine" -> R.string.mini_game_tip_all_duel_channel
+        "MiniGame@ALL@GreenGrass@DuelChannel@Begin",
+        "MiniGame@ALL@GreenGrass@HoneyFruit@Begin",
+        "MiniGame@ALL@GreenGrass@IvyVine@Begin" -> R.string.mini_game_tip_all_duel_channel
         "MiniGame@PF", "MiniGame@PF@Begin" -> R.string.mini_game_tip_pf
         "MiniGame@InteractiveExhibition", "MiniGame@InteractiveExhibition@Begin" ->
             R.string.mini_game_tip_interactive_exhibition
@@ -127,9 +127,9 @@ object MiniGameTextRegistry {
 
     @StringRes
     private fun categoryResByKey(key: String): Int? = when (key) {
-        "MiniGameCategoryPermanentFeature" -> R.string.mini_game_category_permanent_feature
-        "MiniGameCategoryPermanent" -> R.string.mini_game_category_permanent
-        "MiniGameCategoryCurrentEvent" -> R.string.mini_game_category_current_event
+        "Toolbox.MiniGame.Category.PermanentFeature" -> R.string.mini_game_category_permanent_feature
+        "Toolbox.MiniGame.Category.Permanent" -> R.string.mini_game_category_permanent
+        "Toolbox.MiniGame.Category.CurrentEvent" -> R.string.mini_game_category_current_event
         else -> null
     }
 
@@ -167,8 +167,8 @@ object MiniGameTextRegistry {
     }
 
     /**
-     * 解析优先级（同 resolveDisplay，已知 Key 优先，偏离 WPF v6.12.0-beta.2 的内联优先取向）：
-     * TipKey 本地化 > API 内联 Tip > DisplayKey+"Tip" 约定键 > Value 映射 > Display 回退
+     * 解析优先级（前三级与上游 GetMiniGameTip 一致，Value 映射为本地兜底）：
+     * TipKey 本地化 > API 内联 Tip > DisplayKey+".Tip" 约定键 > Value 映射 > Display 回退
      */
     fun resolveTip(
         tip: String?,
@@ -180,15 +180,12 @@ object MiniGameTextRegistry {
         if (!tipKey.isNullOrBlank()) {
             tipResByKey(tipKey)?.let { return uiTextOf(it) }
         }
-        val localizedTip: UiText? = when {
-            !tip.isNullOrBlank() -> UiText.Dynamic(tip)
-            !displayKey.isNullOrBlank() -> tipResByKey("${displayKey}Tip")?.let { uiTextOf(it) }
-            !value.isNullOrBlank() -> tipResByValue(value)?.let { uiTextOf(it) }
-            else -> null
-        }
+        if (!tip.isNullOrBlank()) return UiText.Dynamic(tip)
 
+        val res = displayKey?.takeIf { it.isNotBlank() }?.let { tipResByKey("$it.Tip") }
+            ?: value?.takeIf { it.isNotBlank() }?.let { tipResByValue(it) }
         return when {
-            localizedTip != null -> localizedTip
+            res != null -> uiTextOf(res)
             display != UiText.Empty -> display
             else -> EMPTY_TIP
         }

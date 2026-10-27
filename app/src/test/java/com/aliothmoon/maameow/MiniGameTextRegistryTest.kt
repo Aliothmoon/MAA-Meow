@@ -12,7 +12,7 @@ class MiniGameTextRegistryTest {
         // 线上 PF 条目同时带内联中文 Display 和 DisplayKey，必须命中本地化资源
         val result = MiniGameTextRegistry.resolveDisplay(
             display = "阵地足球锦标赛",
-            displayKey = "MiniGame@PF",
+            displayKey = "Toolbox.MiniGame.PF",
             value = "MiniGame@PF@Begin"
         )
         assertEquals(UiText.Resource(R.string.mini_game_name_pf), result)
@@ -22,7 +22,7 @@ class MiniGameTextRegistryTest {
     fun resolveDisplay_unknownKey_fallsBackToInlineApiText() {
         val result = MiniGameTextRegistry.resolveDisplay(
             display = "未来的新活动",
-            displayKey = "MiniGame@FutureUnknown",
+            displayKey = "Toolbox.MiniGame.FutureUnknown",
             value = "MiniGame@FutureUnknown@Begin"
         )
         assertEquals(UiText.Dynamic("未来的新活动"), result)
@@ -42,9 +42,9 @@ class MiniGameTextRegistryTest {
     fun resolveTip_prefersLocalizedKey_overInlineApiText() {
         val result = MiniGameTextRegistry.resolveTip(
             tip = "API 内联中文提示",
-            tipKey = "MiniGame@PFTip",
+            tipKey = "Toolbox.MiniGame.PF.Tip",
             display = UiText.Dynamic("阵地足球锦标赛"),
-            displayKey = "MiniGame@PF",
+            displayKey = "Toolbox.MiniGame.PF",
             value = "MiniGame@PF@Begin"
         )
         assertEquals(UiText.Resource(R.string.mini_game_tip_pf), result)
@@ -54,9 +54,9 @@ class MiniGameTextRegistryTest {
     fun resolveTip_unknownKey_fallsBackToInlineApiText() {
         val result = MiniGameTextRegistry.resolveTip(
             tip = "API 内联中文提示",
-            tipKey = "MiniGame@FutureUnknownTip",
+            tipKey = "Toolbox.MiniGame.FutureUnknown.Tip",
             display = UiText.Dynamic("未来的新活动"),
-            displayKey = "MiniGame@FutureUnknown",
+            displayKey = "Toolbox.MiniGame.FutureUnknown",
             value = "MiniGame@FutureUnknown@Begin"
         )
         assertEquals(UiText.Dynamic("API 内联中文提示"), result)
@@ -82,7 +82,7 @@ class MiniGameTextRegistryTest {
             UiText.Resource(R.string.mini_game_name_interactive_exhibition),
             MiniGameTextRegistry.resolveDisplay(
                 display = "奇象巡展-找未收录生物",
-                displayKey = "MiniGame@InteractiveExhibition",
+                displayKey = "Toolbox.MiniGame.InteractiveExhibition",
                 value = "MiniGame@InteractiveExhibition@Begin"
             )
         )
@@ -94,9 +94,9 @@ class MiniGameTextRegistryTest {
             UiText.Resource(R.string.mini_game_tip_interactive_exhibition),
             MiniGameTextRegistry.resolveTip(
                 tip = "API 内联中文提示",
-                tipKey = "MiniGame@InteractiveExhibitionTip",
+                tipKey = "Toolbox.MiniGame.InteractiveExhibition.Tip",
                 display = UiText.Dynamic("奇象巡展-找未收录生物"),
-                displayKey = "MiniGame@InteractiveExhibition",
+                displayKey = "Toolbox.MiniGame.InteractiveExhibition",
                 value = "MiniGame@InteractiveExhibition@Begin"
             )
         )
@@ -107,7 +107,7 @@ class MiniGameTextRegistryTest {
         // 上游 v6.18.0 新增的刷傀影维多利亚皇冠
         val display = MiniGameTextRegistry.resolveDisplay(
             display = "刷傀影维多利亚皇冠",
-            displayKey = "MiniGame@CursedRelic",
+            displayKey = "Toolbox.MiniGame.CursedRelic",
             value = "MiniGame@CursedRelic@Begin"
         )
         assertEquals(UiText.Resource(R.string.mini_game_name_cursed_relic), display)
@@ -115,10 +115,88 @@ class MiniGameTextRegistryTest {
             UiText.Resource(R.string.mini_game_tip_cursed_relic),
             MiniGameTextRegistry.resolveTip(
                 tip = null,
-                tipKey = "MiniGame@CursedRelicTip",
+                tipKey = "Toolbox.MiniGame.CursedRelic.Tip",
                 display = display,
-                displayKey = "MiniGame@CursedRelic",
+                displayKey = "Toolbox.MiniGame.CursedRelic",
                 value = "MiniGame@CursedRelic@Begin"
+            )
+        )
+    }
+
+    @Test
+    fun resolveLiveTxwyEntries_useLocalizedText() {
+        // 上游 v6.21.0-beta.2 起 API 下发 Toolbox.MiniGame.* 点分键，取自线上台服条目
+        val spa = MiniGameTextRegistry.resolveDisplay(
+            display = "衛戍協議：盟約",
+            displayKey = "Toolbox.MiniGame.SPA",
+            value = "MiniGame@SPA@Begin"
+        )
+        assertEquals(UiText.Resource(R.string.mini_game_name_spa), spa)
+        assertEquals(
+            UiText.Resource(R.string.mini_game_tip_spa),
+            MiniGameTextRegistry.resolveTip(
+                tip = null,
+                tipKey = "Toolbox.MiniGame.SPA.Tip",
+                display = spa,
+                displayKey = "Toolbox.MiniGame.SPA",
+                value = "MiniGame@SPA@Begin"
+            )
+        )
+
+        val ivyVine = MiniGameTextRegistry.resolveDisplay(
+            display = "爭鋒頻道：綠藤城",
+            displayKey = "Toolbox.MiniGame.All.IvyVine",
+            value = "MiniGame@ALL@GreenGrass@IvyVine@Begin"
+        )
+        assertEquals(UiText.Resource(R.string.mini_game_name_all_ivy_vine), ivyVine)
+        assertEquals(
+            UiText.Resource(R.string.mini_game_tip_all_duel_channel),
+            MiniGameTextRegistry.resolveTip(
+                tip = null,
+                tipKey = "Toolbox.MiniGame.All.IvyVine.Tip",
+                display = ivyVine,
+                displayKey = "Toolbox.MiniGame.All.IvyVine",
+                value = "MiniGame@ALL@GreenGrass@IvyVine@Begin"
+            )
+        )
+    }
+
+    @Test
+    fun resolveTip_noTipKey_usesDisplayKeyDotTipConvention() {
+        assertEquals(
+            UiText.Resource(R.string.mini_game_tip_rm_1),
+            MiniGameTextRegistry.resolveTip(
+                tip = null,
+                tipKey = null,
+                display = UiText.Dynamic("次生预案 RM-1"),
+                displayKey = "Toolbox.MiniGame.RM1",
+                value = "MiniGame@Unmapped@Begin"
+            )
+        )
+    }
+
+    @Test
+    fun resolveTip_unknownDisplayKey_fallsBackToValueMapping() {
+        // 约定键查不到时继续走 Value 映射，不能直接退化成显示名
+        assertEquals(
+            UiText.Resource(R.string.mini_game_tip_spa),
+            MiniGameTextRegistry.resolveTip(
+                tip = null,
+                tipKey = null,
+                display = UiText.Dynamic("衛戍協議：盟約"),
+                displayKey = "MiniGame@SPA",
+                value = "MiniGame@SPA@Begin"
+            )
+        )
+    }
+
+    @Test
+    fun resolveCategory_dottedKey_usesLocalizedText() {
+        assertEquals(
+            UiText.Resource(R.string.mini_game_category_permanent_feature),
+            MiniGameTextRegistry.resolveCategory(
+                category = "常驻功能",
+                categoryKey = "Toolbox.MiniGame.Category.PermanentFeature"
             )
         )
     }
