@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.maa;
 
 import android.os.RemoteException;
 import android.os.SystemClock;
+import android.view.Display;
 import android.view.InputDevice;
 import android.view.InputEvent;
 import android.view.KeyEvent;
@@ -89,7 +90,10 @@ public final class InputControlUtils {
             if (!setDisplayId(event, displayId)) {
                 return false;
             }
-            notifyTouchCallback(event, reportIndex);
+            // 触控预览只画虚拟屏；主屏不上报，解锁回放的轨迹等价于凭证
+            if (displayId != Display.DEFAULT_DISPLAY) {
+                notifyTouchCallback(event, reportIndex);
+            }
             return getManager().injectInputEvent(event, mode);
         } finally {
             event.recycle();

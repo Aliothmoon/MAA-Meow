@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.core.content.FileProvider
 import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
+import com.aliothmoon.maameow.utils.LauncherApps
 import rikka.sui.Sui
 import timber.log.Timber
 import java.io.File
@@ -79,13 +80,8 @@ object ShizukuInstallHelper {
         return context.packageManager.getLaunchIntentForPackage(packageName)
     }
 
-    fun getLaunchAppLabel(context: Context, packageName: String): String? {
-        if (packageName.isBlank()) return null
-        return runCatching {
-            val info = context.packageManager.getApplicationInfo(packageName, 0)
-            context.packageManager.getApplicationLabel(info).toString()
-        }.getOrNull()
-    }
+    fun getLaunchAppLabel(context: Context, packageName: String): String? =
+        LauncherApps.label(context, packageName)
 
     private fun isPackageInstalled(context: Context, packageName: String): Boolean {
         if (packageName.isBlank()) return false

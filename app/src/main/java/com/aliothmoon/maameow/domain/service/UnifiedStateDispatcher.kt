@@ -1,11 +1,13 @@
 package com.aliothmoon.maameow.domain.service
 
+import android.os.RemoteException
 import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
-import com.aliothmoon.maameow.data.resource.ActivityManager
+import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.state.ResourceInitState
+import com.aliothmoon.maameow.domain.state.isIdle
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import kotlinx.coroutines.CoroutineScope
@@ -18,8 +20,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -33,7 +33,7 @@ class UnifiedStateDispatcher(
     private val permissionManager: PermissionManager,
     private val chainState: TaskChainState,
     private val resourceInitService: ResourceInitService,
-    private val activityManager: ActivityManager,
+    private val processExitJournal: ProcessExitJournal,
 ) {
     private val dispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
@@ -84,13 +84,6 @@ class UnifiedStateDispatcher(
             resourceInitService.checkAndInit()
         }
 
-        scope.launch {
-            chainState.isLoaded.first { it }
-            runCatching { activityManager.load(chainState.clientType) }
-                .onFailure { Timber.w(it, "Startup activity data load failed") }
-            activityManager.startPeriodicCheck()
-        }
-
         // 服务已连接 + 资源已初始化 → 触发资源加载
         scope.launch {
             combine(
@@ -104,25 +97,21 @@ class UnifiedStateDispatcher(
                     if (serviceState is RemoteServiceManager.ServiceState.Connected
                         && initState is ResourceInitState.Ready
                     ) {
+                        if (resourceLoader.resetIfStale(serviceState.service)) {
+                            onServiceReplaced()
+                        }
                         val loaderState = resourceLoader.state.value
+                        // 永久失败要不要重试由 ensureLoaded 按文件版本判断
                         val shouldLoad = loaderState is MaaResourceLoader.State.NotLoaded
-                                || (loaderState is MaaResourceLoader.State.Failed && !loaderState.permanent)
+                                || loaderState is MaaResourceLoader.State.Failed
                         if (shouldLoad) {
                             Timber.i("Service connected and resource initialized, loading resources")
-                            withContext(Dispatchers.IO) {
-                                resourceLoader.load()
+                            // 另起协程，不能挡住本收集器判断换进程
+                            scope.launch(Dispatchers.IO) {
+                                compositionService.whenIdle { resourceLoader.ensureLoaded(chainState.clientType) }
                             }
                         }
                     }
-                }
-        }
-
-        // 资源加载成功后启动热更定时检查
-        scope.launch {
-            resourceLoader.state
-                .filter { it is MaaResourceLoader.State.Ready }
-                .collect {
-                    activityManager.startPeriodicCheck()
                 }
         }
 
@@ -147,14 +136,28 @@ class UnifiedStateDispatcher(
 
     suspend fun onServiceConnected(srv: RemoteService) {
         withContext(Dispatchers.IO) {
-            permissionManager.grantRequiredPermissions(srv)
-            val mode = appSettingsManager.runMode.value
-            srv.setVirtualDisplayMode(mode.displayMode)
+            try {
+                permissionManager.grantRequiredPermissions(srv)
+                val mode = appSettingsManager.runMode.value
+                srv.setVirtualDisplayMode(mode.displayMode)
+            } catch (e: RemoteException) {
+                // 刚连上就死了，下次连上会重做
+                Timber.w(e, "onServiceConnected: remote call failed")
+            }
         }
+        processExitJournal.recordGames()
     }
 
     fun onServiceDied() {
         resourceLoader.reset()
+        _serviceDiedEvent.tryEmit(Unit)
+    }
+
+    /** 换进程不经过 Died，旧进程的死讯被当过期丢弃；任务在跑就补发，否则卡在 RUNNING */
+    private fun onServiceReplaced() {
+        val state = compositionService.state.value
+        if (state.isIdle) return
+        Timber.w("Elevated service replaced while %s", state)
         _serviceDiedEvent.tryEmit(Unit)
     }
 

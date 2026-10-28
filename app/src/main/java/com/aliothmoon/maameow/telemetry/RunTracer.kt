@@ -17,6 +17,8 @@ import io.sentry.SpanStatus
 internal class RunTracer(
     private val startTransaction: (name: String, op: String) -> ISpan,
     private val clock: () -> Long = System::currentTimeMillis,
+    /** Scope 上的环境 tag 只落到事务上，任务 Span 拿不到；开跑时抄一份，失败率才能按版本与环境切 */
+    private val environment: () -> Map<String, String> = { emptyMap() },
     private val onTaskStarted: () -> Unit,
     private val onTaskFailure: (TaskFailure) -> Unit,
 ) {
@@ -45,6 +47,9 @@ internal class RunTracer(
     ) {
         var task: TaskTrace? = null
         var failedTasks = 0
+
+        /** 本轮第一条失败的任务链：它没把游戏带回主界面，后面的任务常在第一步就跟着失败 */
+        var firstFailedChain: String? = null
     }
 
     private var pending: PendingRun? = null
@@ -109,9 +114,11 @@ internal class RunTracer(
         val chain = details.getString("taskchain") ?: UNKNOWN_CHAIN
         val summary = options[taskId].orEmpty()
         val span = trace.transaction.startChild(TASK_OP, chain).apply {
+            environment().forEach { (key, value) -> setData(key, value) }
             setData("run_id", trace.runId)
             setData("task", chain)
             setData("task_id", taskId)
+            setData(PRIOR_FAILURE_KEY, trace.firstFailedChain ?: NO_PRIOR_FAILURE)
             summary.forEach { (key, value) -> setData("option.$key", value) }
         }
         trace.task = TaskTrace(taskId, chain, span, clock(), summary)
@@ -126,8 +133,8 @@ internal class RunTracer(
         val signal = FailureSignal(
             subtask = subtask,
             className = details.getString("class"),
-            first = details.getJSONArray("first")?.let { it.firstOrNull()?.toString().orEmpty() },
-            preTask = details.getString("pre_task"),
+            first = details.getJSONArray("first")?.let { stripTaskAddress(it.firstOrNull()?.toString().orEmpty()) },
+            preTask = details.getString("pre_task")?.let(::stripTaskAddress),
             what = details.getString("what") ?: inner?.getString("what"),
             why = details.getString("why") ?: inner?.getString("why"),
             atMs = clock(),
@@ -155,6 +162,8 @@ internal class RunTracer(
         val task = currentTask(details) ?: return
         trace.task = null
         trace.failedTasks++
+        val prior = trace.firstFailedChain
+        if (prior == null) trace.firstFailedChain = task.chain
         finishTask(task, SpanStatus.INTERNAL_ERROR)
 
         val signals = task.recent.toList()
@@ -175,6 +184,7 @@ internal class RunTracer(
                 options = task.options,
                 tags = trace.tags,
                 span = task.span,
+                priorFailure = prior,
             )
         )
     }

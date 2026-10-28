@@ -67,7 +67,7 @@ object StaleFrameGuard {
         }
 
         private fun tick() {
-            val displayId = VirtualDisplayManager.getDisplayId()
+            val displayId = BackgroundDisplay.displayId()
             if (displayId == DefaultDisplayConfig.DISPLAY_NONE) return
             // 还在出帧就不会去查：游戏运行期间这里不发任何 binder 调用
             val frameCount = NativeBridgeLib.getFrameCount()
@@ -98,7 +98,7 @@ object StaleFrameGuard {
 
     /** 一轮开始时屏上已经空着就直接换：上一轮收尾后退出的应用，轮询要 1.5s 才认得出来 */
     fun blankIfVacant() {
-        val displayId = VirtualDisplayManager.getDisplayId()
+        val displayId = BackgroundDisplay.displayId()
         if (displayId == DefaultDisplayConfig.DISPLAY_NONE) return
         val frameCount = NativeBridgeLib.getFrameCount()
         if (ActivityUtils.probeDisplay(displayId) != DisplayOccupancy.Empty) return
@@ -113,7 +113,7 @@ object StaleFrameGuard {
      */
     fun blankAfterKill(displayId: Int, killedPackage: String) {
         if (displayId == DefaultDisplayConfig.DISPLAY_NONE) return
-        if (displayId != VirtualDisplayManager.getDisplayId()) return
+        if (displayId != BackgroundDisplay.displayId()) return
         val startedMs = SystemClock.elapsedRealtime()
         val settledCount = awaitFramesSettled(startedMs) ?: return
         val occupancy = ActivityUtils.probeDisplay(displayId)

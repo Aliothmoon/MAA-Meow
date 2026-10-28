@@ -4,10 +4,12 @@ import android.app.Application
 import android.content.ComponentCallbacks
 import android.content.res.Configuration
 import android.graphics.Color
+import android.os.SystemClock
 import android.view.ViewGroup
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -24,6 +26,8 @@ import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.overlay.border.BorderOverlayManager
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import com.aliothmoon.maameow.presentation.ProvideInputFocusManager
+import com.aliothmoon.maameow.presentation.components.LocalPagerPreloadState
+import com.aliothmoon.maameow.presentation.components.PagerPreloadState
 import com.aliothmoon.maameow.presentation.view.panel.ExpandedControlPanel
 import com.aliothmoon.maameow.schedule.model.CountdownState
 import com.aliothmoon.maameow.service.AccessibilityHelperService
@@ -40,6 +44,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -47,6 +52,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 class OverlayController(
@@ -61,6 +67,9 @@ class OverlayController(
         private const val MAIN_PANEL_TAG = "MP_TAG"
         private const val FLOAT_BALL_TAG = "FB_TAG"
         private const val ENABLE_LOG = false
+
+        /** 窗口撤掉到合成进屏幕、再送进截图镜像要几帧，实测主线程忙时约 150ms */
+        private const val PANEL_CLEAR_SETTLE_MS = 300L
     }
 
     private val _isLocked = MutableStateFlow(true)
@@ -99,6 +108,9 @@ class OverlayController(
     }
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    @Volatile
+    private var panelHiddenAtMs = 0L
 
     private val callback = object : ComponentCallbacks {
         override fun onConfigurationChanged(newConfig: Configuration) {
@@ -156,7 +168,7 @@ class OverlayController(
     }
 
     private suspend fun onMaaStateChanged(previous: MaaExecutionState, current: MaaExecutionState) {
-        // 仅在 show() 之后才响应 RUNNING 切换
+        // 仅在 show() 之后才响应运行态切换
         // 前台定时任务不会自动 show：未开控制层时这里直接 return，无悬浮球/音量键
         if (!_isActive.value) return
 
@@ -170,8 +182,10 @@ class OverlayController(
                     || current == MaaExecutionState.STOPPING
 
         when {
-            // 进入运行态：隐藏主面板，显示悬浮控件
-            current == MaaExecutionState.RUNNING && previous != MaaExecutionState.RUNNING -> {
+            // 进入启动/运行态：隐藏主面板，显示悬浮控件
+            // STARTING 就收：core 一 Start 就截首帧，等到 RUNNING 面板还挡着；RUNNING 再收一次，防启动中被点开
+            (current == MaaExecutionState.STARTING || current == MaaExecutionState.RUNNING)
+                    && previous != current -> {
                 hideMainPanel()
                 when (currentMode) {
                     OverlayControlMode.FLOAT_BALL -> {
@@ -235,6 +249,7 @@ class OverlayController(
                     )
                     CompositionLocalProvider(
                         LocalFloatingWindowContext provides true,
+                        LocalPagerPreloadState provides remember { PagerPreloadState() },
                         LocalDensity provides Density(
                             density = baseDensity.density * effectiveScale / 100f,
                             fontScale = UiScale.clampOverlayFontScale(baseDensity.fontScale),
@@ -407,10 +422,28 @@ class OverlayController(
     }
 
     fun hideMainPanel() {
-        scope.launch {
-            FloatingX.controlOrNull(MAIN_PANEL_TAG)?.hide()
-            fwViewModelOwner.stop()
+        scope.launch { hideMainPanelNow() }
+    }
+
+    /** 主线程调用 */
+    private fun hideMainPanelNow() {
+        val control = FloatingX.controlOrNull(MAIN_PANEL_TAG)
+        if (control?.isShow() == true) {
+            control.hide()
+            panelHiddenAtMs = SystemClock.uptimeMillis()
         }
+        fwViewModelOwner.stop()
+    }
+
+    /** 前台开跑前收干净主面板，见 [com.aliothmoon.maameow.domain.service.ForegroundScreenGate] */
+    suspend fun awaitPanelCleared() {
+        if (!_isActive.value) return
+        val hiddenAt = withContext(Dispatchers.Main) {
+            hideMainPanelNow()
+            panelHiddenAtMs
+        }
+        val remaining = PANEL_CLEAR_SETTLE_MS - (SystemClock.uptimeMillis() - hiddenAt)
+        if (remaining > 0) delay(remaining)
     }
 
     fun showFloatBall() {

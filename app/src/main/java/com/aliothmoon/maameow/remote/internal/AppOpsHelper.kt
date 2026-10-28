@@ -1,35 +1,59 @@
 package com.aliothmoon.maameow.remote.internal
 
 import android.app.AppOpsManager
+import android.os.Process
 import com.aliothmoon.maameow.third.Ln
+import com.android.internal.app.IAppOpsService
 
-
+/** 走 binder：`appops set` 底层是同一个 setMode，还拿不到结果 */
 object AppOpsHelper {
     private const val TAG = "AppOpsHelper"
 
-    private const val OP_PLAY_AUDIO = 28
-
-    /** 读取当前生效 mode；读取失败返回 -1 */
-    fun checkPlayAudioMode(packageName: String, uid: Int): Int = runCatching {
-        RemoteUtils.appOpsService.checkOperation(OP_PLAY_AUDIO, uid, packageName)
-    }.getOrElse {
-        Ln.w("$TAG: checkOperation failed for $packageName: ${it.message}")
-        -1
+    /** 读当前生效 mode；本机没有该 op 或读取失败返回 null */
+    fun check(
+        op: AppOp,
+        packageName: String,
+        uid: Int,
+        service: () -> IAppOpsService = RemoteUtils::appOpsService,
+    ): Int? {
+        val code = op.code ?: return null
+        return runCatching { service().checkOperation(code, uid, packageName) }
+            .onFailure { Ln.w("$TAG: check ${op.label} failed for $packageName: ${it.message}") }
+            .getOrNull()
     }
 
-    /** 设置 PLAY_AUDIO mode 并校验实际生效 */
-    fun setPlayAudioMode(packageName: String, uid: Int, mode: Int): Boolean {
-        val viaBinder = runCatching {
-            RemoteUtils.appOpsService.setMode(OP_PLAY_AUDIO, uid, packageName, mode)
-        }.onFailure {
-            Ln.w("$TAG: setMode via binder failed for $packageName: ${it.message}")
-        }.isSuccess
-
-        if (!viaBinder) {
-            val arg = if (mode == AppOpsManager.MODE_ALLOWED) "allow" else "ignore"
-            RemoteUtils.shellExec("appops set $packageName PLAY_AUDIO $arg")
+    /** 写完读回才算成功；uid 无效时 setMode 静默丢弃且读回未必分得出，先挡掉 */
+    fun set(
+        op: AppOp,
+        packageName: String,
+        uid: Int,
+        mode: Int,
+        service: () -> IAppOpsService = RemoteUtils::appOpsService,
+    ): Boolean {
+        val code = op.code ?: run {
+            Ln.i("$TAG: ${op.label} unavailable, skip")
+            return false
         }
-        return checkPlayAudioMode(packageName, uid) == mode
+        if (uid < Process.FIRST_APPLICATION_UID) {
+            Ln.w("$TAG: ${op.label} $packageName invalid uid=$uid, skip")
+            return false
+        }
+        val before = check(op, packageName, uid, service)
+        if (before == mode) return true
+        // 分开写，uid 级失败不连累包级
+        if (op.uidScoped) {
+            runCatching { service().setUidMode(code, uid, mode) }
+                .onFailure { Ln.w("$TAG: setUidMode ${op.label} failed for $packageName: ${it.message}") }
+        }
+        runCatching { service().setMode(code, uid, packageName, mode) }
+            .onFailure { Ln.w("$TAG: setMode ${op.label} failed for $packageName: ${it.message}") }
+        val after = check(op, packageName, uid, service)
+        if (after == mode) {
+            Ln.i("$TAG: ${op.label} $packageName $before -> $after")
+            return true
+        }
+        Ln.w("$TAG: ${op.label} $packageName $before -> $after, want $mode")
+        return false
     }
 
     /**
@@ -43,8 +67,8 @@ object AppOpsHelper {
             Ln.w("$TAG: reset $packageName exit=$exitCode, cannot verify mode (no uid)")
             return exitCode == 0
         }
-        val mode = checkPlayAudioMode(packageName, uid)
-        if (mode < 0) {
+        val mode = check(AppOps.PLAY_AUDIO, packageName, uid)
+        if (mode == null) {
             Ln.w("$TAG: reset $packageName exit=$exitCode, checkOperation failed")
             return exitCode == 0
         }
@@ -57,6 +81,5 @@ object AppOpsHelper {
         return restored
     }
 
-    internal fun isPlayAudioRestored(mode: Int): Boolean =
-        mode >= 0 && mode != AppOpsManager.MODE_IGNORED
+    internal fun isPlayAudioRestored(mode: Int): Boolean = mode != AppOpsManager.MODE_IGNORED
 }

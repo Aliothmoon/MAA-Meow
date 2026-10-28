@@ -42,7 +42,6 @@ import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
@@ -115,13 +114,13 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.isInvisible
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.models.RunDurationLimit
-import com.aliothmoon.maameow.domain.service.AppWatchdog
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -129,12 +128,14 @@ import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.components.PanelPromptDialog
 import com.aliothmoon.maameow.presentation.components.BackendReadyFixHost
 import com.aliothmoon.maameow.presentation.components.LocalPageVisible
+import com.aliothmoon.maameow.presentation.components.PageBackHandler
 import com.aliothmoon.maameow.presentation.components.LogExportController
 import com.aliothmoon.maameow.presentation.components.MaaWindowInsets
 import com.aliothmoon.maameow.presentation.components.collectWhilePageVisible
-import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
+import com.aliothmoon.maameow.presentation.components.BottomBarOverlay
 import com.aliothmoon.maameow.presentation.components.LocalSettingRowBleed
 import com.aliothmoon.maameow.presentation.components.horizontalBleed
 import com.aliothmoon.maameow.presentation.components.rememberBackendReadyFixState
@@ -143,7 +144,6 @@ import com.aliothmoon.maameow.presentation.components.rememberStagedBeyondViewpo
 import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
 import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
 import com.aliothmoon.maameow.presentation.onboarding.OnboardingTarget
-import com.aliothmoon.maameow.presentation.onboarding.onboardingBlocksStartupDialogs
 import com.aliothmoon.maameow.presentation.onboarding.onboardingTarget
 import com.aliothmoon.maameow.presentation.pip.LocalIsInPip
 import com.aliothmoon.maameow.presentation.pip.PipController
@@ -157,7 +157,6 @@ import com.aliothmoon.maameow.presentation.state.PreviewPointerSlots
 import com.aliothmoon.maameow.presentation.view.panel.AutoBattlePanel
 import com.aliothmoon.maameow.presentation.view.panel.LocalToolboxFileExporter
 import com.aliothmoon.maameow.presentation.view.panel.LogPanel
-import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType
 import com.aliothmoon.maameow.presentation.view.panel.PanelHeader
 import com.aliothmoon.maameow.presentation.view.panel.PanelTab
 import com.aliothmoon.maameow.presentation.view.panel.TaskListDetailLayout
@@ -170,26 +169,36 @@ import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.theme.LocalReduceMotion
 import com.aliothmoon.maameow.theme.MaaMotion
 import com.aliothmoon.maameow.theme.MaaThemeAlphas
+import com.aliothmoon.maameow.theme.OpaqueTheme
 import com.aliothmoon.maameow.theme.PagerPageSpacing
 import com.aliothmoon.maameow.theme.rememberMaaPagerFling
-import com.aliothmoon.maameow.utils.i18n.asString
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import timber.log.Timber
 import kotlin.math.roundToInt
 
 @Composable
+private fun StartBarProgress(visible: Boolean, color: Color) {
+    val pageVisible by LocalPageVisible.current
+    Box(Modifier.size(20.dp)) {
+        if (visible && pageVisible) {
+            CircularProgressIndicator(modifier = Modifier.fillMaxSize(), color = color, strokeWidth = 2.dp)
+        }
+    }
+}
+
+@Composable
 fun BackgroundTaskView(
     viewModel: BackgroundTaskViewModel,
-    /** 子页面盖上来时 MainScreen 用 alpha 0 保活组合树，本页仍在组合但看不见，此时不能开画中画 */
-    isActivePage: Boolean = true,
+    /** 子页面盖上来时 MainScreen 用 alpha 0 保活组合树，本页仍在组合但看不见，此时不能开画中画；传函数免得切页重组整页 */
+    isActivePage: () -> Boolean = { true },
     copilotViewModel: CopilotViewModel = koinInject(),
     toolboxViewModel: ToolboxViewModel = koinInject(),
     compositionService: MaaCompositionService = koinInject(),
     dispatcher: UnifiedStateDispatcher = koinInject(),
     screenSaverManager: ScreenSaverOverlayManager = koinInject(),
-    appWatchdog: AppWatchdog = koinInject(),
     appSettingsManager: AppSettingsManager = koinInject(),
     permissionManager: PermissionManager = koinInject(),
 ) {
@@ -225,7 +234,6 @@ fun BackgroundTaskView(
     val profileId by viewModel.chainState.profileId.collectAsStateWithLifecycle()
     val selectedNode = nodes.find { it.id == state.selectedNodeId }
     val clientType = remember(nodes) { viewModel.chainState.clientType }
-    val canShowTaskActions = PanelTab.canShowTaskActions(state.current)
 
     // 引导靶点在任务面板，重看时先切回去
     val onboarding = LocalOnboardingState.current
@@ -240,7 +248,6 @@ fun BackgroundTaskView(
         }
     }
 
-    // 浮层只在任务类面板可开，先切过去再展开
     val searchNavigator: SettingSearchNavigator = koinInject()
     val pendingSearch by searchNavigator.pending.collectAsStateWithLifecycle()
     LaunchedEffect(pendingSearch) {
@@ -248,7 +255,6 @@ fun BackgroundTaskView(
         if (request.entry.location != SettingLocation.BackgroundActions || !request.isFresh()) {
             return@LaunchedEffect
         }
-        if (!PanelTab.canShowTaskActions(state.current)) viewModel.onTabChange(PanelTab.TASKS)
         showMoreActions = true
     }
 
@@ -278,31 +284,12 @@ fun BackgroundTaskView(
     }
     val context = LocalContext.current
     val serviceDiedMessage = stringResource(R.string.bg_toast_service_died)
-    val appDiedMessage = stringResource(R.string.bg_toast_app_died)
-    val displayDriftMessage = stringResource(R.string.bg_toast_display_drift)
 
-    // pageReady 栅栏已移除：启动由 LaunchPipeline 驱动，无需等本页 Surface
 
     LaunchedEffect(Unit) {
         dispatcher.serviceDiedEvent.collect {
             Toast.makeText(
                 context, serviceDiedMessage, Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        appWatchdog.appDiedEvent.collect {
-            Toast.makeText(
-                context, appDiedMessage, Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        appWatchdog.displayDriftEvent.collect {
-            Toast.makeText(
-                context, displayDriftMessage, Toast.LENGTH_LONG
             ).show()
         }
     }
@@ -315,7 +302,7 @@ fun BackgroundTaskView(
 
     val shouldHideMoreActions by remember {
         derivedStateOf {
-            !canShowTaskActions || showCloseConfirm || state.isFullscreenMonitor || state.dialog != null
+            showCloseConfirm || state.isFullscreenMonitor || state.dialog != null
         }
     }
     LaunchedEffect(shouldHideMoreActions) {
@@ -326,11 +313,12 @@ fun BackgroundTaskView(
     var isSurfaceAvailable by remember { mutableStateOf(false) }
     var lastSentSurface by remember { mutableStateOf<Surface?>(null) }
     val currentResolution by rememberUpdatedState(displayResolution)
+    val currentIsActivePage by rememberUpdatedState(isActivePage)
 
     val pipHost = context as? PipHost
     val isInPip = LocalIsInPip.current
 
-    // 竞态兜底：pipEligible 已排除全屏态，但 setPictureInPictureParams 要跨进程生效，
+    // 竞态兜底：PiP 条件已排除全屏态，但 setPictureInPictureParams 要跨进程生效，
     // 点开全屏后立刻按 Home 仍可能带着全屏态进小窗，进去就退掉
     LaunchedEffect(isInPip) {
         if (isInPip) viewModel.onExitFullscreenMonitor()
@@ -382,7 +370,10 @@ fun BackgroundTaskView(
                                         }
                                     })
                                 }
-                            }, modifier = Modifier.fillMaxSize()
+                            },
+                            modifier = Modifier.fillMaxSize(),
+                            // 本页常驻后离页不再销毁 Surface，隐藏让远端停投屏
+                            update = { it.isInvisible = !currentIsActivePage() },
                         )
                     }
                     // 必须重新读，movableContent 是 remember 出来的，捕获外层 val 会拿到陈旧值
@@ -412,25 +403,33 @@ fun BackgroundTaskView(
         }
     }
 
-    // 全屏预览态排除在外：auto-enter 没有前置钩子，带着强制横屏和收起的系统栏进小窗会互相打架
-    val pipEligible = pipOnHome &&
-            isActivePage &&
-            !state.isFullscreenMonitor &&
-            runMode == RunMode.BACKGROUND &&
-            (maaState == MaaExecutionState.STARTING || maaState == MaaExecutionState.RUNNING) &&
-            isSurfaceAvailable &&
-            PipController.isSupported(context)
     val pipActivity = pipHost as? Activity
-    DisposableEffect(pipHost, pipActivity, pipEligible, displayResolution, previewBounds) {
+    val pipSupported = remember(context) { PipController.isSupported(context) }
+    // 只在协程里读：预览随分页滑动时坐标逐帧变，放进组合会逐帧重组并跨进程设参数
+    LaunchedEffect(pipHost, pipActivity) {
+        val host = pipHost ?: return@LaunchedEffect
+        val activity = pipActivity ?: return@LaunchedEffect
         fun arm(enabled: Boolean, sourceRect: Rect?) {
-            val host = pipHost ?: return
-            val activity = pipActivity ?: return
-            val request = PipRequest(displayResolution, sourceRect)
+            val request = PipRequest(currentResolution, sourceRect)
             host.pipRequest = if (enabled) request else null
             PipController.updateParams(activity, enabled, request)
         }
-        arm(pipEligible, previewBounds)
-        onDispose { arm(enabled = false, sourceRect = null) }
+        try {
+            snapshotFlow {
+                // 全屏预览态排除在外：auto-enter 没有前置钩子，带着强制横屏和收起的系统栏进小窗会互相打架
+                val eligible = pipOnHome &&
+                        currentIsActivePage() &&
+                        !state.isFullscreenMonitor &&
+                        runMode == RunMode.BACKGROUND &&
+                        (maaState == MaaExecutionState.STARTING || maaState == MaaExecutionState.RUNNING) &&
+                        isSurfaceAvailable &&
+                        pipSupported
+                // 不可开时不读坐标
+                Triple(eligible, currentResolution, if (eligible) previewBounds else null)
+            }.distinctUntilChanged().collect { (eligible, _, bounds) -> arm(eligible, bounds) }
+        } finally {
+            arm(enabled = false, sourceRect = null)
+        }
     }
 
     if (isInPip) {
@@ -445,10 +444,6 @@ fun BackgroundTaskView(
         return
     }
 
-    // 放在画中画分支之后，小窗里不该弹准备度引导；首启引导期间也让路
-    if (!onboardingBlocksStartupDialogs()) {
-        ShizukuReadinessGate()
-    }
     // 点开始时后端没就绪的一次性引导，勾了跳过检查也弹
     val backendFix = rememberBackendReadyFixState()
     BackendReadyFixHost(backendFix)
@@ -461,7 +456,6 @@ fun BackgroundTaskView(
                 .padding(horizontal = 16.dp)
                 .padding(top = 8.dp, bottom = 8.dp)
         ) {
-            // --- 预览图区域：实时加载 ---
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -496,7 +490,6 @@ fun BackgroundTaskView(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // --- 业务内容区域：阶梯加载 ---
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -540,298 +533,288 @@ fun BackgroundTaskView(
                         val retainedPages = rememberStagedBeyondViewportCount(
                             pagerState, PanelTab.entries.size - 1,
                         )
-                        HorizontalPager(
-                            state = pagerState,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
-                                .onboardingTarget(OnboardingTarget.BG_TASK_LIST),
-                            userScrollEnabled = true,
-                            flingBehavior = rememberMaaPagerFling(pagerState),
-                            pageSpacing = PagerPageSpacing,
-                            // 分帧常驻四页：切页不再在动画首帧现组合整页
-                            beyondViewportPageCount = retainedPages
-                        ) { page ->
-                            CompositionLocalProvider(LocalPageVisible provides rememberPageVisible(pagerState, page)) {
-                                when (page) {
-                                    0 -> {
-                                        TaskListDetailLayout(
-                                            nodes = nodes,
-                                            selectedNode = selectedNode,
-                                            selectedNodeId = state.selectedNodeId,
-                                            isEditMode = state.isEditMode,
-                                            isAddingTask = state.isAddingTask,
-                                            isProfileMode = state.isProfileMode,
-                                            profiles = profiles,
-                                            activeProfileId = profileId,
-                                            clientType = clientType,
-                                            onNodeEnabledChange = viewModel::onNodeEnabledChange,
-                                            onNodeSelected = viewModel::onNodeSelected,
-                                            onNodeMove = viewModel::onNodeMove,
-                                            onToggleEditMode = viewModel::onToggleEditMode,
-                                            onToggleAddingTask = viewModel::onToggleAddingTask,
-                                            onToggleProfileMode = viewModel::onToggleProfileMode,
-                                            onConfigChange = { config ->
-                                                val nodeId = selectedNode?.id
-                                                    ?: return@TaskListDetailLayout
-                                                viewModel.onNodeConfigChange(nodeId, config)
-                                            },
-                                            onAddNode = viewModel::onAddNode,
-                                            onRemoveNode = viewModel::onRemoveNode,
-                                            onDuplicateNode = viewModel::onDuplicateNode,
-                                            onRenameNode = viewModel::onRenameNode,
-                                            onRunFromNode = { nodeId ->
-                                                guardedStart { viewModel.onStartTasksFrom(nodeId) }
-                                            },
-                                            canRunFromNode = !isTaskActive,
-                                            onSwitchProfile = viewModel::onSwitchProfile,
-                                            onRenameProfile = viewModel::onRenameProfile,
-                                            onDuplicateProfile = viewModel::onDuplicateProfile,
-                                            onDeleteProfile = viewModel::onDeleteProfile,
-                                            onCreateProfile = viewModel::onCreateProfile,
-                                            onReorderProfile = viewModel::onReorderProfile,
-                                            modifier = Modifier.fillMaxSize(),
-                                            wrapDetailInCard = true,
-                                            runFromNodeBlocked = startBlocked,
-                                        )
-                                    }
-
-                                    1 -> AutoBattlePanel(modifier = Modifier.fillMaxSize())
-                                    2 -> CompositionLocalProvider(
-                                        LocalToolboxFileExporter provides rememberSafToolboxFileExporter()
+                        val toolboxTab by toolboxViewModel.currentTab.collectAsStateWithLifecycle()
+                        val gachaDisclaimerOk by
+                        toolboxViewModel.gachaDisclaimerAccepted.collectAsStateWithLifecycle()
+                        val toolsHidesStartBar = toolboxTab == ToolboxTab.GACHA && !gachaDisclaimerOk
+                        val hideStartBar = state.current == PanelTab.TOOLS && toolsHidesStartBar
+                        val showStartBar = !hideStartBar
+                        val isGachaActions = state.current == PanelTab.TOOLS &&
+                                toolboxTab == ToolboxTab.GACHA && gachaDisclaimerOk
+                        BottomBarOverlay(
+                            showBottomBar = showStartBar,
+                            modifier = Modifier.fillMaxWidth().weight(1f),
+                            bottomBar = {
+                                Column(Modifier.fillMaxWidth()) {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .onboardingTarget(OnboardingTarget.BG_START),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        ToolboxPanel(modifier = Modifier.fillMaxSize())
-                                    }
+                                        if (isGachaActions) {
+                                            // 运行中换成停止，否则再加「快捷选项」会挤成四键
+                                            val gachaRunning = maaState == MaaExecutionState.RUNNING ||
+                                                    maaState == MaaExecutionState.STOPPING
+                                            if (gachaRunning) {
+                                                OutlinedButton(
+                                                    onClick = { toolboxViewModel.onStop() },
+                                                    enabled = maaState == MaaExecutionState.RUNNING,
+                                                    modifier = Modifier.weight(1f),
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    colors = ButtonDefaults.outlinedButtonColors(
+                                                        contentColor = MaterialTheme.colorScheme.error,
+                                                    ),
+                                                ) {
+                                                    if (maaState == MaaExecutionState.STOPPING) {
+                                                        StartBarProgress(visible = showStartBar, color = MaterialTheme.colorScheme.error)
+                                                    } else {
+                                                        Text(
+                                                            text = stringResource(R.string.task_btn_stop),
+                                                            maxLines = 1,
+                                                        )
+                                                    }
+                                                }
+                                            } else {
+                                                Button(
+                                                    onClick = {
+                                                        guardedStart {
+                                                            toolboxViewModel.onStartGacha(once = true)
+                                                        }
+                                                    },
+                                                    enabled = !isTaskActive,
+                                                    colors = if (startBlocked) {
+                                                        ButtonDefaults.buttonColors(
+                                                            containerColor = MaterialTheme.colorScheme.onSurface.copy(
+                                                                alpha = 0.12f,
+                                                            ),
+                                                            contentColor = MaterialTheme.colorScheme.onSurface.copy(
+                                                                alpha = MaaThemeAlphas.DISABLED,
+                                                            ),
+                                                        )
+                                                    } else {
+                                                        ButtonDefaults.buttonColors()
+                                                    },
+                                                    modifier = Modifier.weight(1f),
+                                                    shape = RoundedCornerShape(8.dp),
+                                                ) {
+                                                    if (maaState == MaaExecutionState.STARTING) {
+                                                        StartBarProgress(visible = showStartBar, color = MaterialTheme.colorScheme.onPrimary)
+                                                    } else {
+                                                        Text(
+                                                            text = stringResource(R.string.gacha_once),
+                                                            maxLines = 1,
+                                                        )
+                                                    }
+                                                }
+                                                OutlinedButton(
+                                                    onClick = {
+                                                        guardedStart {
+                                                            toolboxViewModel.onStartGacha(once = false)
+                                                        }
+                                                    },
+                                                    enabled = !isTaskActive,
+                                                    modifier = Modifier.weight(1f),
+                                                    shape = RoundedCornerShape(8.dp),
+                                                ) {
+                                                    Text(
+                                                        text = stringResource(R.string.gacha_ten_times),
+                                                        maxLines = 1,
+                                                    )
+                                                }
+                                            }
+                                        } else {
+                                            // 运行中换成停止，空出的位置给「快捷选项」
+                                            val taskRunning =
+                                                maaState == MaaExecutionState.RUNNING ||
+                                                        maaState == MaaExecutionState.STOPPING
+                                            // 日志页没有启动目标，常驻停止
+                                            if (taskRunning || state.current == PanelTab.LOG) {
+                                                OutlinedButton(
+                                                    onClick = {
+                                                        when (state.current) {
+                                                            PanelTab.TASKS, PanelTab.LOG -> viewModel.onStopTasks()
+                                                            PanelTab.AUTO_BATTLE -> copilotViewModel.onStop()
+                                                            PanelTab.TOOLS -> toolboxViewModel.onStop()
+                                                        }
+                                                    },
+                                                    enabled = maaState == MaaExecutionState.RUNNING,
+                                                    modifier = Modifier.weight(1f),
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    colors = ButtonDefaults.outlinedButtonColors(
+                                                        contentColor = MaterialTheme.colorScheme.error
+                                                    )
+                                                ) {
+                                                    if (maaState == MaaExecutionState.STOPPING) {
+                                                        StartBarProgress(visible = showStartBar, color = MaterialTheme.colorScheme.error)
+                                                    } else {
+                                                        Text(
+                                                            text = stringResource(R.string.task_btn_stop),
+                                                            maxLines = 1,
+                                                        )
+                                                    }
+                                                }
+                                            } else {
+                                                Button(
+                                                    onClick = {
+                                                        guardedStart {
+                                                            when (state.current) {
+                                                                PanelTab.TASKS -> viewModel.onStartTasks()
+                                                                PanelTab.AUTO_BATTLE -> copilotViewModel.onStart()
+                                                                PanelTab.TOOLS -> toolboxViewModel.onStart()
+                                                                else -> {}
+                                                            }
+                                                        }
+                                                    },
+                                                    enabled = !isTaskActive,
+                                                    colors = if (startBlocked) {
+                                                        ButtonDefaults.buttonColors(
+                                                            containerColor = MaterialTheme.colorScheme.onSurface.copy(
+                                                                alpha = 0.12f
+                                                            ),
+                                                            contentColor = MaterialTheme.colorScheme.onSurface.copy(
+                                                                alpha = MaaThemeAlphas.DISABLED
+                                                            ),
+                                                        )
+                                                    } else {
+                                                        ButtonDefaults.buttonColors()
+                                                    },
+                                                    modifier = Modifier.weight(1f),
+                                                    shape = RoundedCornerShape(8.dp)
+                                                ) {
+                                                    if (maaState == MaaExecutionState.STARTING) {
+                                                        StartBarProgress(visible = showStartBar, color = MaterialTheme.colorScheme.onPrimary)
+                                                    } else {
+                                                        Text(
+                                                            text = stringResource(R.string.task_btn_start),
+                                                            maxLines = 1,
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
 
-                                    3 -> {
-                                        val runtimeLogs by viewModel.logs.collectWhilePageVisible()
-                                        LogPanel(
-                                            logs = runtimeLogs,
-                                            onClearLogs = { viewModel.onClearLogs() },
-                                            onExportLogs = { showLogExportSheet = true },
-                                        )
+                                        // 次级操作不参与等分，按内容取宽，剩下的都留给主操作
+                                        OutlinedButton(
+                                            onClick = { showMoreActions = !showMoreActions },
+                                            shape = RoundedCornerShape(8.dp),
+                                            contentPadding = PaddingValues(horizontal = 14.dp),
+                                            colors = ButtonDefaults.outlinedButtonColors(
+                                                contentColor = if (showMoreActions) {
+                                                    MaterialTheme.colorScheme.primary
+                                                } else {
+                                                    MaterialTheme.colorScheme.onSurface
+                                                }
+                                            ),
+                                            border = BorderStroke(
+                                                1.dp,
+                                                if (showMoreActions) {
+                                                    MaterialTheme.colorScheme.primary
+                                                } else {
+                                                    MaterialTheme.colorScheme.outline
+                                                }
+                                            )
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.MoreVert,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = stringResource(R.string.task_btn_quick_options),
+                                                maxLines = 1,
+                                            )
+                                        }
                                     }
                                 }
-                            }
-                        }
+                            },
+                        ) { actionBarHeight ->
+                            Box(
+                                Modifier
+                                    .matchParentSize()
+                                    .padding(bottom = actionBarHeight)
+                                    .onboardingTarget(OnboardingTarget.BG_TASK_LIST)
+                            )
+                            HorizontalPager(
+                                state = pagerState,
+                                modifier = Modifier.fillMaxSize(),
+                                userScrollEnabled = true,
+                                flingBehavior = rememberMaaPagerFling(pagerState),
+                                pageSpacing = PagerPageSpacing,
+                                beyondViewportPageCount = retainedPages
+                            ) { page ->
+                                CompositionLocalProvider(LocalPageVisible provides rememberPageVisible(pagerState, page)) {
+                                    val pageTab = PanelTab.entries[page]
+                                    val reserveBar = !(pageTab == PanelTab.TOOLS && toolsHidesStartBar)
+                                    Box(Modifier.padding(bottom = if (reserveBar) actionBarHeight else 0.dp)) {
+                                        when (page) {
+                                            0 -> {
+                                                TaskListDetailLayout(
+                                                    nodes = nodes,
+                                                    selectedNode = selectedNode,
+                                                    selectedNodeId = state.selectedNodeId,
+                                                    isEditMode = state.isEditMode,
+                                                    isAddingTask = state.isAddingTask,
+                                                    isProfileMode = state.isProfileMode,
+                                                    profiles = profiles,
+                                                    activeProfileId = profileId,
+                                                    clientType = clientType,
+                                                    onNodeEnabledChange = viewModel::onNodeEnabledChange,
+                                                    onNodeSelected = viewModel::onNodeSelected,
+                                                    onNodeMove = viewModel::onNodeMove,
+                                                    onToggleEditMode = viewModel::onToggleEditMode,
+                                                    onToggleAddingTask = viewModel::onToggleAddingTask,
+                                                    onToggleProfileMode = viewModel::onToggleProfileMode,
+                                                    onConfigChange = { config ->
+                                                        val nodeId = selectedNode?.id
+                                                            ?: return@TaskListDetailLayout
+                                                        viewModel.onNodeConfigChange(nodeId, config)
+                                                    },
+                                                    onAddNode = viewModel::onAddNode,
+                                                    onRemoveNode = viewModel::onRemoveNode,
+                                                    onDuplicateNode = viewModel::onDuplicateNode,
+                                                    onRenameNode = viewModel::onRenameNode,
+                                                    onRunFromNode = { nodeId ->
+                                                        guardedStart { viewModel.onStartTasksFrom(nodeId) }
+                                                    },
+                                                    canRunFromNode = !isTaskActive,
+                                                    onSwitchProfile = viewModel::onSwitchProfile,
+                                                    onRenameProfile = viewModel::onRenameProfile,
+                                                    onDuplicateProfile = viewModel::onDuplicateProfile,
+                                                    onDeleteProfile = viewModel::onDeleteProfile,
+                                                    onCreateProfile = viewModel::onCreateProfile,
+                                                    onReorderProfile = viewModel::onReorderProfile,
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    wrapDetailInCard = true,
+                                                    runFromNodeBlocked = startBlocked,
+                                                )
+                                            }
 
-                        if (canShowTaskActions) {
-                            Spacer(modifier = Modifier.height(6.dp))
-                            val toolboxTab by toolboxViewModel.currentTab.collectAsStateWithLifecycle()
-                            val gachaDisclaimerOk by
-                            toolboxViewModel.gachaDisclaimerAccepted.collectAsStateWithLifecycle()
-                            // 牛牛抽卡：底部栏改为寻访一次/十次，避免与面板内按钮 + 开始任务重复
-                            val isGachaActions = state.current == PanelTab.TOOLS &&
-                                    toolboxTab == ToolboxTab.GACHA &&
-                                    gachaDisclaimerOk
-                            // 未同意免责时隐藏开始栏（只在内容区点「知道了」）
-                            val hideStartBarForGachaDisclaimer = state.current == PanelTab.TOOLS &&
-                                    toolboxTab == ToolboxTab.GACHA &&
-                                    !gachaDisclaimerOk
-                            if (!hideStartBarForGachaDisclaimer) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .onboardingTarget(OnboardingTarget.BG_START),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    if (isGachaActions) {
-                                        // 运行中换成停止，否则再加「快捷选项」会挤成四键
-                                        val gachaRunning = maaState == MaaExecutionState.RUNNING ||
-                                                maaState == MaaExecutionState.STOPPING
-                                        if (gachaRunning) {
-                                            OutlinedButton(
-                                                onClick = { toolboxViewModel.onStop() },
-                                                enabled = maaState == MaaExecutionState.RUNNING,
-                                                modifier = Modifier.weight(1f),
-                                                shape = RoundedCornerShape(8.dp),
-                                                colors = ButtonDefaults.outlinedButtonColors(
-                                                    contentColor = MaterialTheme.colorScheme.error,
-                                                ),
+                                            1 -> AutoBattlePanel(modifier = Modifier.fillMaxSize())
+                                            2 -> CompositionLocalProvider(
+                                                LocalToolboxFileExporter provides rememberSafToolboxFileExporter()
                                             ) {
-                                                if (maaState == MaaExecutionState.STOPPING) {
-                                                    CircularProgressIndicator(
-                                                        modifier = Modifier.size(20.dp),
-                                                        color = MaterialTheme.colorScheme.error,
-                                                        strokeWidth = 2.dp,
-                                                    )
-                                                } else {
-                                                    Text(
-                                                        text = stringResource(R.string.task_btn_stop),
-                                                        maxLines = 1,
-                                                    )
-                                                }
+                                                ToolboxPanel(modifier = Modifier.fillMaxSize())
                                             }
-                                        } else {
-                                            Button(
-                                                onClick = {
-                                                    guardedStart {
-                                                        toolboxViewModel.onStartGacha(once = true)
-                                                    }
-                                                },
-                                                enabled = !isTaskActive,
-                                                colors = if (startBlocked) {
-                                                    ButtonDefaults.buttonColors(
-                                                        containerColor = MaterialTheme.colorScheme.onSurface.copy(
-                                                            alpha = 0.12f,
-                                                        ),
-                                                        contentColor = MaterialTheme.colorScheme.onSurface.copy(
-                                                            alpha = MaaThemeAlphas.DISABLED,
-                                                        ),
-                                                    )
-                                                } else {
-                                                    ButtonDefaults.buttonColors()
-                                                },
-                                                modifier = Modifier.weight(1f),
-                                                shape = RoundedCornerShape(8.dp),
-                                            ) {
-                                                if (maaState == MaaExecutionState.STARTING) {
-                                                    CircularProgressIndicator(
-                                                        modifier = Modifier.size(20.dp),
-                                                        color = MaterialTheme.colorScheme.onPrimary,
-                                                        strokeWidth = 2.dp,
-                                                    )
-                                                } else {
-                                                    Text(
-                                                        text = stringResource(R.string.gacha_once),
-                                                        maxLines = 1,
-                                                    )
-                                                }
-                                            }
-                                            OutlinedButton(
-                                                onClick = {
-                                                    guardedStart {
-                                                        toolboxViewModel.onStartGacha(once = false)
-                                                    }
-                                                },
-                                                enabled = !isTaskActive,
-                                                modifier = Modifier.weight(1f),
-                                                shape = RoundedCornerShape(8.dp),
-                                            ) {
-                                                Text(
-                                                    text = stringResource(R.string.gacha_ten_times),
-                                                    maxLines = 1,
+
+                                            3 -> {
+                                                val runtimeLogs by viewModel.logs.collectWhilePageVisible()
+                                                LogPanel(
+                                                    logs = runtimeLogs,
+                                                    onClearLogs = { viewModel.onClearLogs() },
+                                                    onExportLogs = { showLogExportSheet = true },
                                                 )
                                             }
                                         }
-                                    } else {
-                                        // 运行中换成停止，空出的位置给「快捷选项」
-                                        val taskRunning =
-                                            maaState == MaaExecutionState.RUNNING ||
-                                                    maaState == MaaExecutionState.STOPPING
-                                        if (taskRunning) {
-                                            OutlinedButton(
-                                                onClick = {
-                                                    when (state.current) {
-                                                        PanelTab.TASKS -> viewModel.onStopTasks()
-                                                        PanelTab.AUTO_BATTLE -> copilotViewModel.onStop()
-                                                        PanelTab.TOOLS -> toolboxViewModel.onStop()
-                                                        else -> {}
-                                                    }
-                                                },
-                                                enabled = maaState == MaaExecutionState.RUNNING,
-                                                modifier = Modifier.weight(1f),
-                                                shape = RoundedCornerShape(8.dp),
-                                                colors = ButtonDefaults.outlinedButtonColors(
-                                                    contentColor = MaterialTheme.colorScheme.error
-                                                )
-                                            ) {
-                                                if (maaState == MaaExecutionState.STOPPING) {
-                                                    CircularProgressIndicator(
-                                                        modifier = Modifier.size(20.dp),
-                                                        color = MaterialTheme.colorScheme.error,
-                                                        strokeWidth = 2.dp
-                                                    )
-                                                } else {
-                                                    Text(
-                                                        text = stringResource(R.string.task_btn_stop),
-                                                        maxLines = 1,
-                                                    )
-                                                }
-                                            }
-                                        } else {
-                                            Button(
-                                                onClick = {
-                                                    guardedStart {
-                                                        when (state.current) {
-                                                            PanelTab.TASKS -> viewModel.onStartTasks()
-                                                            PanelTab.AUTO_BATTLE -> copilotViewModel.onStart()
-                                                            PanelTab.TOOLS -> toolboxViewModel.onStart()
-                                                            else -> {}
-                                                        }
-                                                    }
-                                                },
-                                                enabled = !isTaskActive,
-                                                colors = if (startBlocked) {
-                                                    ButtonDefaults.buttonColors(
-                                                        containerColor = MaterialTheme.colorScheme.onSurface.copy(
-                                                            alpha = 0.12f
-                                                        ),
-                                                        contentColor = MaterialTheme.colorScheme.onSurface.copy(
-                                                            alpha = MaaThemeAlphas.DISABLED
-                                                        ),
-                                                    )
-                                                } else {
-                                                    ButtonDefaults.buttonColors()
-                                                },
-                                                modifier = Modifier.weight(1f),
-                                                shape = RoundedCornerShape(8.dp)
-                                            ) {
-                                                if (maaState == MaaExecutionState.STARTING) {
-                                                    CircularProgressIndicator(
-                                                        modifier = Modifier.size(20.dp),
-                                                        color = MaterialTheme.colorScheme.onPrimary,
-                                                        strokeWidth = 2.dp
-                                                    )
-                                                } else {
-                                                    Text(
-                                                        text = stringResource(R.string.task_btn_start),
-                                                        maxLines = 1,
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    // 次级操作不参与等分，按内容取宽，剩下的都留给主操作
-                                    OutlinedButton(
-                                        onClick = { showMoreActions = !showMoreActions },
-                                        shape = RoundedCornerShape(8.dp),
-                                        contentPadding = PaddingValues(horizontal = 14.dp),
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            contentColor = if (showMoreActions) {
-                                                MaterialTheme.colorScheme.primary
-                                            } else {
-                                                MaterialTheme.colorScheme.onSurface
-                                            }
-                                        ),
-                                        border = BorderStroke(
-                                            1.dp,
-                                            if (showMoreActions) {
-                                                MaterialTheme.colorScheme.primary
-                                            } else {
-                                                MaterialTheme.colorScheme.outline
-                                            }
-                                        )
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.MoreVert,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = stringResource(R.string.task_btn_quick_options),
-                                            maxLines = 1,
-                                        )
                                     }
                                 }
                             }
                         }
                     }
                 } else {
-                    // 初始化中的骨架占位
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -846,7 +829,7 @@ fun BackgroundTaskView(
             }
         }
 
-        BackHandler(enabled = showMoreActions) {
+        PageBackHandler(enabled = showMoreActions) {
             showMoreActions = false
         }
 
@@ -991,34 +974,7 @@ fun BackgroundTaskView(
         }
         activeDialog?.let { dialog ->
             val (onDismiss, onConfirm) = activeDialogCallbacks!!
-            val confirmColor = when (dialog.type) {
-                PanelDialogType.SUCCESS -> MaterialTheme.colorScheme.primary
-                PanelDialogType.WARNING -> MaterialTheme.colorScheme.tertiary
-                PanelDialogType.ERROR -> MaterialTheme.colorScheme.error
-            }
-            val dialogTitle = dialog.title.asString()
-            val dialogMessage = dialog.message.asString()
-            val dialogConfirmText = dialog.confirmText.asString()
-            val dialogDismissText = dialog.dismissText.asString()
-            AdaptiveTaskPromptDialog(
-                visible = true,
-                title = dialogTitle,
-                message = AnnotatedString(dialogMessage),
-                onDismissRequest = onDismiss,
-                onConfirm = onConfirm,
-                confirmText = dialogConfirmText.ifBlank {
-                    stringResource(R.string.common_confirm)
-                },
-                dismissText = dialogDismissText.ifBlank {
-                    stringResource(R.string.common_close)
-                },
-                icon = when (dialog.type) {
-                    PanelDialogType.SUCCESS -> Icons.Filled.CheckCircle
-                    else -> Icons.Filled.Warning
-                },
-                iconTint = confirmColor,
-                confirmColor = confirmColor,
-            )
+            PanelPromptDialog(dialog, onDismiss = onDismiss, onConfirm = onConfirm)
         }
 
         if (showCloseConfirm) {
@@ -1093,184 +1049,187 @@ private fun BackgroundMoreActionsOverlay(
     val overlayInteractionSource = remember { MutableInteractionSource() }
     val cardInteractionSource = remember { MutableInteractionSource() }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .clickable(
-                interactionSource = overlayInteractionSource,
-                indication = null,
-                onClick = onDismissRequest
-            )
-    ) {
-        Card(
+    // 同窗口浮层无遮罩，玻璃 surface 会透出下层任务列表
+    OpaqueTheme {
+        Box(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, bottom = 64.dp)
+                .fillMaxSize()
                 .clickable(
-                    interactionSource = cardInteractionSource, indication = null, onClick = {}),
-            shape = RoundedCornerShape(4.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+                    interactionSource = overlayInteractionSource,
+                    indication = null,
+                    onClick = onDismissRequest
+                )
         ) {
-            CompositionLocalProvider(LocalSettingRowBleed provides ActionsCardPadding) {
-                Column(modifier = Modifier.padding(ActionsCardPadding)) {
-                    // 标题与快速操作组
-                    Text(
-                        text = stringResource(R.string.bg_actions_title),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        ActionTile(
-                            icon = Icons.Filled.PowerSettingsNew,
-                            label = stringResource(R.string.bg_action_screen_off),
-                            onClick = {
-                                if (useHardwareScreenOff) onScreenOff() else onShowScreenSaver()
-                            },
-                            modifier = Modifier.weight(1f),
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onSurface
+            Card(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 64.dp)
+                    .clickable(
+                        interactionSource = cardInteractionSource, indication = null, onClick = {}),
+                shape = RoundedCornerShape(4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                CompositionLocalProvider(LocalSettingRowBleed provides ActionsCardPadding) {
+                    Column(modifier = Modifier.padding(ActionsCardPadding)) {
+                        // 标题与快速操作组
+                        Text(
+                            text = stringResource(R.string.bg_actions_title),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
                         )
-                        ActionTile(
-                            icon = Icons.AutoMirrored.Filled.ExitToApp,
-                            label = stringResource(R.string.bg_action_close_game),
-                            onClick = onCloseApp,
-                            modifier = Modifier.weight(1f),
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.error
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            ActionTile(
+                                icon = Icons.Filled.PowerSettingsNew,
+                                label = stringResource(R.string.bg_action_screen_off),
+                                onClick = {
+                                    if (useHardwareScreenOff) onScreenOff() else onShowScreenSaver()
+                                },
+                                modifier = Modifier.weight(1f),
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                            ActionTile(
+                                icon = Icons.AutoMirrored.Filled.ExitToApp,
+                                label = stringResource(R.string.bg_action_close_game),
+                                onClick = onCloseApp,
+                                modifier = Modifier.weight(1f),
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            ActionTile(
+                                icon = if (isGameMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                                label = if (isGameMuted) stringResource(R.string.bg_action_game_muted)
+                                else stringResource(R.string.bg_action_mute_game),
+                                onClick = {
+                                    if (isGameMuted) onToggleGameSound() else pendingMuteAction = onToggleGameSound
+                                },
+                                modifier = Modifier.weight(1f),
+                                containerColor = if (isGameMuted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary,
+                                contentColor = if (isGameMuted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        // 截图按钮，保存到 {rootDir}/debug/screenshots
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            ActionTile(
+                                icon = Icons.Filled.Screenshot,
+                                label = stringResource(R.string.bg_action_screenshot),
+                                onClick = onCaptureScreenshot,
+                                modifier = Modifier.weight(1f),
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp
                         )
-                    }
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        ActionTile(
-                            icon = if (isGameMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                            label = if (isGameMuted) stringResource(R.string.bg_action_game_muted)
-                            else stringResource(R.string.bg_action_mute_game),
-                            onClick = {
-                                if (isGameMuted) onToggleGameSound() else pendingMuteAction = onToggleGameSound
-                            },
-                            modifier = Modifier.weight(1f),
-                            containerColor = if (isGameMuted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary,
-                            contentColor = if (isGameMuted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
+                        Text(
+                            text = stringResource(R.string.bg_auto_settings_title),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
                         )
-                    }
 
-                    // 截图按钮，保存到 {rootDir}/debug/screenshots
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        ActionTile(
-                            icon = Icons.Filled.Screenshot,
-                            label = stringResource(R.string.bg_action_screenshot),
-                            onClick = onCaptureScreenshot,
-                            modifier = Modifier.weight(1f),
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
+                        Spacer(modifier = Modifier.height(4.dp))
 
-                    Spacer(modifier = Modifier.height(12.dp))
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        text = stringResource(R.string.bg_auto_settings_title),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    SettingSearchTarget(R.string.bg_auto_mute_on_launch) {
-                        SettingSwitchRow(
-                            icon = Icons.Filled.NotificationsPaused,
-                            label = stringResource(R.string.bg_auto_mute_on_launch),
-                            checked = muteOnGameLaunch,
-                            onCheckedChange = { checked ->
-                                val apply = {
-                                    coroutineScope.launch { appSettingsManager.setMuteOnGameLaunch(checked) }
-                                    Unit
-                                }
-                                if (checked) pendingMuteAction = apply else apply()
-                            })
-                    }
-                    SettingSearchTarget(R.string.bg_auto_close_on_end) {
-                        SettingSwitchRow(
-                            icon = Icons.Filled.Cancel,
-                            label = stringResource(R.string.bg_auto_close_on_end),
-                            checked = closeAppOnTaskEnd,
-                            onCheckedChange = {
-                                coroutineScope.launch { appSettingsManager.setCloseAppOnTaskEnd(it) }
-                            })
-                    }
-                    // 本轮已按开始时的设置计时，运行中禁改
-                    SettingSearchTarget(R.string.bg_auto_run_duration_limit) {
-                        SettingSwitchRow(
-                            icon = Icons.Filled.Timer,
-                            label = stringResource(R.string.bg_auto_run_duration_limit),
-                            checked = runDurationLimitEnabled,
-                            enabled = !isTaskActive,
-                            onCheckedChange = {
-                                coroutineScope.launch { appSettingsManager.setRunDurationLimitEnabled(it) }
-                            })
-                    }
-                    if (runDeadline != null) {
-                        RunDurationRemainingRow(deadline = runDeadline)
-                    } else if (runDurationLimitEnabled) {
-                        RunDurationStepperRow(
-                            minutes = runDurationLimitMinutes,
-                            enabled = !isTaskActive,
-                            onMinutesChange = {
-                                coroutineScope.launch { appSettingsManager.setRunDurationLimitMinutes(it) }
-                            },
-                            onEditClick = { showRunDurationInput = true })
-                    }
-                    SettingSearchTarget(R.string.bg_auto_hardware_screen_off) {
-                        SettingSwitchRow(
-                            icon = Icons.Filled.StayCurrentPortrait,
-                            label = stringResource(R.string.bg_auto_hardware_screen_off),
-                            checked = useHardwareScreenOff,
-                            onCheckedChange = { checked ->
-                                if (checked) {
-                                    showHardwareScreenOffConfirm = true
-                                } else {
-                                    coroutineScope.launch {
-                                        appSettingsManager.setUseHardwareScreenOff(
-                                            false
-                                        )
+                        SettingSearchTarget(R.string.bg_auto_mute_on_launch) {
+                            SettingSwitchRow(
+                                icon = Icons.Filled.NotificationsPaused,
+                                label = stringResource(R.string.bg_auto_mute_on_launch),
+                                checked = muteOnGameLaunch,
+                                onCheckedChange = { checked ->
+                                    val apply = {
+                                        coroutineScope.launch { appSettingsManager.setMuteOnGameLaunch(checked) }
+                                        Unit
                                     }
-                                }
-                            })
-                    }
-                    SettingSearchTarget(R.string.bg_auto_show_touch_preview) {
-                        SettingSwitchRow(
-                            icon = Icons.Filled.TouchApp,
-                            label = stringResource(R.string.bg_auto_show_touch_preview),
-                            checked = showTouchPreview,
-                            onCheckedChange = {
-                                coroutineScope.launch { appSettingsManager.setShowTouchPreview(it) }
-                            })
+                                    if (checked) pendingMuteAction = apply else apply()
+                                })
+                        }
+                        SettingSearchTarget(R.string.bg_auto_close_on_end) {
+                            SettingSwitchRow(
+                                icon = Icons.Filled.Cancel,
+                                label = stringResource(R.string.bg_auto_close_on_end),
+                                checked = closeAppOnTaskEnd,
+                                onCheckedChange = {
+                                    coroutineScope.launch { appSettingsManager.setCloseAppOnTaskEnd(it) }
+                                })
+                        }
+                        // 本轮已按开始时的设置计时，运行中禁改
+                        SettingSearchTarget(R.string.bg_auto_run_duration_limit) {
+                            SettingSwitchRow(
+                                icon = Icons.Filled.Timer,
+                                label = stringResource(R.string.bg_auto_run_duration_limit),
+                                checked = runDurationLimitEnabled,
+                                enabled = !isTaskActive,
+                                onCheckedChange = {
+                                    coroutineScope.launch { appSettingsManager.setRunDurationLimitEnabled(it) }
+                                })
+                        }
+                        if (runDeadline != null) {
+                            RunDurationRemainingRow(deadline = runDeadline)
+                        } else if (runDurationLimitEnabled) {
+                            RunDurationStepperRow(
+                                minutes = runDurationLimitMinutes,
+                                enabled = !isTaskActive,
+                                onMinutesChange = {
+                                    coroutineScope.launch { appSettingsManager.setRunDurationLimitMinutes(it) }
+                                },
+                                onEditClick = { showRunDurationInput = true })
+                        }
+                        SettingSearchTarget(R.string.bg_auto_hardware_screen_off) {
+                            SettingSwitchRow(
+                                icon = Icons.Filled.StayCurrentPortrait,
+                                label = stringResource(R.string.bg_auto_hardware_screen_off),
+                                checked = useHardwareScreenOff,
+                                onCheckedChange = { checked ->
+                                    if (checked) {
+                                        showHardwareScreenOffConfirm = true
+                                    } else {
+                                        coroutineScope.launch {
+                                            appSettingsManager.setUseHardwareScreenOff(
+                                                false
+                                            )
+                                        }
+                                    }
+                                })
+                        }
+                        SettingSearchTarget(R.string.bg_auto_show_touch_preview) {
+                            SettingSwitchRow(
+                                icon = Icons.Filled.TouchApp,
+                                label = stringResource(R.string.bg_auto_show_touch_preview),
+                                checked = showTouchPreview,
+                                onCheckedChange = {
+                                    coroutineScope.launch { appSettingsManager.setShowTouchPreview(it) }
+                                })
+                        }
                     }
                 }
             }
@@ -1320,7 +1279,7 @@ private fun BackgroundMoreActionsOverlay(
                 showHardwareScreenOffConfirm = false
                 coroutineScope.launch { appSettingsManager.setUseHardwareScreenOff(true) }
             },
-            confirmText = stringResource(R.string.common_confirm),
+            confirmText = stringResource(R.string.dialog_hardware_screen_off_confirm),
             dismissText = stringResource(R.string.common_cancel),
             icon = Icons.Filled.PowerSettingsNew,
             iconTint = MaterialTheme.colorScheme.primary,

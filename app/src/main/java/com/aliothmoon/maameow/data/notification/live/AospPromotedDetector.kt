@@ -3,7 +3,7 @@ package com.aliothmoon.maameow.data.notification.live
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
-import com.aliothmoon.maameow.domain.notification.OemLivePolicy
+import com.aliothmoon.maameow.utils.device.Manufacturer
 
 class AospPromotedDetector(context: Context) {
     private val appContext = context.applicationContext
@@ -12,7 +12,7 @@ class AospPromotedDetector(context: Context) {
 
     fun isGranted(): Boolean {
         if (!isApiSupported()) return false
-        if (OemLivePolicy.isSamsung()) return true
+        if (Manufacturer.isSamsung()) return true
         return runCatching {
             appContext.getSystemService(NotificationManager::class.java)
                 .canPostPromotedNotifications()

@@ -10,7 +10,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -71,7 +73,13 @@ internal class IncidentReporter(
             // 任务失败只看这个任务期间的
             is TaskFailure -> taskStart.also { taskStart = null }
             // 触发日志一次一个文件，整份都是这次的
-            is LaunchFailure -> CompletableDeferred(wholeFile(incident.logFile))
+            is LaunchFailure -> if (incident.withBootLogs) {
+                scope.async(workers + io) { withBootLogTails(store(), incident.logFile) }
+            } else {
+                CompletableDeferred(wholeFile(incident.logFile))
+            }
+            // 本地日志里没有 Shizuku 的死因
+            is ShizukuDown -> null
             // 启动失败与进程死亡看整轮的
             else -> runStart
         }
@@ -103,6 +111,11 @@ internal class IncidentReporter(
                 Timber.w(e, "[telemetry] 事件发送失败")
             }
         }
+    }
+
+    /** 等在途的取证与发送，超时不再等 */
+    suspend fun awaitIdle(timeoutMs: Long) {
+        withTimeoutOrNull(timeoutMs) { workers.children.toList().joinAll() }
     }
 
     fun cancelAll() {
@@ -163,6 +176,27 @@ internal class IncidentReporter(
             lengths = mapOf(path to 0L),
             images = null,
         )
+
+        /** 不分轮次，只取最近一段 */
+        val BOOT_LOGS = listOf(
+            EvidenceFile("service_bind_debug.log", kind = "boot", core = false),
+            EvidenceFile("shizuku_launch_debug.log", kind = "boot", core = true),
+            EvidenceFile("root_launch_debug.log", kind = "boot", core = true),
+        )
+        const val BOOT_LOG_TAIL_BYTES = 8L * 1024
+
+        /** 基线往回退一段，取证时这一段就算新写的 */
+        fun withBootLogTails(store: EvidenceStore, triggerLog: String): EvidenceStart {
+            val trigger = wholeFile(triggerLog)
+            val tails = BOOT_LOGS.mapNotNull { file ->
+                store.length(file)?.let { file.path to (it - BOOT_LOG_TAIL_BYTES).coerceAtLeast(0) }
+            }
+            return EvidenceStart(
+                files = trigger.files + BOOT_LOGS,
+                lengths = trigger.lengths + tails,
+                images = null,
+            )
+        }
 
         /** Core 的崩溃现场与启动诊断日志体积小却最要紧，排在前面免得被大日志挤掉 */
         fun runFiles(session: EvidenceFile?): List<EvidenceFile> = listOf(

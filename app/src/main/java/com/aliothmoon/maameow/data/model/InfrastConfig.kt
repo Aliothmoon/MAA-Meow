@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.model
 
 
+import com.aliothmoon.maameow.data.resource.MaaCoreVersion
 import com.aliothmoon.maameow.domain.enums.InfrastMode
 import com.aliothmoon.maameow.domain.enums.InfrastRoomType
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
@@ -209,6 +210,10 @@ data class InfrastConfig(
     /** 深海猎人跨设施组合，不与红松骑士团同时参与排班 */
     val useAbyssalHunter: Boolean = false,
 
+    /** 周计划，迁移自 WPF InfrastTask.UseWeeklySchedule / WeeklySchedule */
+    override val useWeeklySchedule: Boolean = false,
+    override val weeklySchedule: Map<String, Boolean> = WeeklyScheduled.ALL_DAYS,
+
     /**
      * 自定义基建计划的时间段数据（不参与序列化）
      *
@@ -228,13 +233,13 @@ data class InfrastConfig(
      * 列表为空表示 UI 尚未成功解析配置文件，此时自动切换流程会跳过。
      */
     val customPlanNames: List<String> = emptyList()
-) : TaskParamProvider {
+) : TaskParamProvider, WeeklyScheduled {
 
     override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
         val threshold = dormThreshold / 100.0
         val paramsJson = buildJsonObject {
             put("facility", buildJsonArray {
-                normalizedFacilities().filter { it.second }
+                availableFacilities().filter { it.second }
                     .map { it.first.name }
                     .forEach {
                         add(JsonPrimitive(it))
@@ -283,6 +288,25 @@ data class InfrastConfig(
             known.any { it.first == room }
         }
         return if (missing.isEmpty()) known else known + missing.map { it to false }
+    }
+
+    /**
+     * 当前 core 认识的设施，用于展示与下发
+     *
+     * 旧 core 不认识的设施只隐藏不删除，换新 core 后原勾选状态还在
+     */
+    fun availableFacilities(
+        coreVersion: String = MaaCoreVersion.current
+    ): List<Pair<InfrastRoomType, Boolean>> = normalizedFacilities().filter {
+        MaaCoreVersion.meetsMinimumRequired(it.first.minCoreVersion, coreVersion)
+    }
+
+    /** 用可见设施列表回写，被隐藏的设施原样接在末尾 */
+    fun withAvailableFacilities(
+        available: List<Pair<InfrastRoomType, Boolean>>
+    ): InfrastConfig {
+        val shown = available.mapTo(HashSet()) { it.first }
+        return copy(facilities = available + normalizedFacilities().filterNot { it.first in shown })
     }
 
     /**

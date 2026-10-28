@@ -63,17 +63,32 @@ class BackendReadyFixStateTest {
     }
 
     @Test
-    fun sui_requestsDirectlyInsteadOfShowingCompatNotice() = runTest {
-        resolvesTo(ShizukuReadinessStage.SuiAvailable)
+    fun authDirectly_needAuthRequestsWithoutGuidance() = runTest {
+        // 首页按钮本身就是「请求权限」，差授权时不该再套一层引导
+        resolvesTo(ShizukuReadinessStage.NeedAuth)
         coEvery { permissionManager.requestRemoteAccess() } returns true
         val state = state()
 
-        state.request()
+        state.request(authDirectly = true)
         runCurrent()
 
         assertNull(state.guidance)
         assertFalse(state.stillNotReady)
         coVerify(exactly = 1) { permissionManager.requestRemoteAccess() }
+    }
+
+    @Test
+    fun authDirectly_stillGuidesWhenNotInstalledOrNotRunning() = runTest {
+        for (stage in listOf(ShizukuReadinessStage.NotInstalled, ShizukuReadinessStage.NotRunning)) {
+            resolvesTo(stage)
+            val state = state()
+
+            state.request(authDirectly = true)
+            runCurrent()
+
+            assertEquals(stage, state.guidance?.stage)
+        }
+        coVerify(exactly = 0) { permissionManager.requestRemoteAccess() }
     }
 
     @Test

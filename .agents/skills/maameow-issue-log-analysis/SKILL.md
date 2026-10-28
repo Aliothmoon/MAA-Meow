@@ -245,7 +245,7 @@ zip 内路径相对 App 的 `debug/` 目录。`LOCAL_TMP` 模式下，下文标"
 
 ### `interface/`、`crash.log`（MaaCore 失败现场，core 侧）
 
-- **`interface/*.png`**：任务链失败时 core 自己存的那一帧（`InterfaceTask::run`），早于失败回调。后台模式下是虚拟屏上的游戏画面，直接用 Read 看图判断卡在哪个界面
+- **`interface/*.png`**：任务链失败时 core 自己存的那一帧，早于失败回调。v6.19.0-beta.2 起改在 `Assistant::working_proc` 用缓存帧存，抛异常也存（此前在 `InterfaceTask::run` 现拍）。后台模式下是虚拟屏上的游戏画面，直接用 Read 看图判断卡在哪个界面
 - **`crash.log`**：MaaCore 的崩溃记录，提权进程死亡类问题必看
 - debug 目录下其它 core 产物（截图、识别调试图等）导出时也会一并带上，按需翻
 
@@ -495,7 +495,7 @@ git sparse-checkout set src/MaaCore
 | 实例管理 | `Assistant.h/cpp` | 消息队列、回调路由 |
 | 任务基类 | `Task/AbstractTask.cpp` | 任务生命周期、basic_info() |
 | 流程任务 | `Task/ProcessTask.cpp` | 状态机驱动的任务执行 |
-| 接口任务 | `Task/InterfaceTask.cpp`、`Task/Interface/` | 各任务类型入口、参数校验（`AppendTask` 被拒看这里）、失败截图 |
+| 接口任务 | `Task/InterfaceTask.cpp`、`Task/Interface/` | 各任务类型入口、参数校验（`AppendTask` 被拒看这里）、失败截图（`save_fail_img`） |
 | 战斗任务 | `Task/Fight/` | 刷理智相关 |
 | 基建任务 | `Task/Infrast/` | 基建管理逻辑 |
 | 肉鸽任务 | `Task/Roguelike/` | 肉鸽模式逻辑 |

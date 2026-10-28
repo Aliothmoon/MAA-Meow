@@ -8,6 +8,7 @@ import kotlinx.serialization.json.put
  * 整表字段是为了 SetTaskParams 整表重放，避免冲掉 medicine/stone/series。
  *
  * @param logLabel 库存保持=计划序号，理智作战=节点名
+ * @param countDualChips 库存保持开了双芯片折算，见 [DualChipConversion]
  */
 data class DropTarget(
     val dropId: String,
@@ -20,6 +21,7 @@ data class DropTarget(
     val medicineExpireDays: Int? = null,
     val drGrandet: Boolean = false,
     val report: ReportOptions = ReportOptions.DEFAULT,
+    val countDualChips: Boolean = false,
 ) {
     /**
      * 按缺口生成 Fight 参数 JSON。need≤0 或 [forceSkip] 时下发 `times=0`：

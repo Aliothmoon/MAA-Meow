@@ -14,8 +14,7 @@ class GameAudioMuteControllerTest {
     }
 
     @Test
-    fun playAudioNotRestoredWhenIgnoredOrInvalid() {
+    fun playAudioNotRestoredWhenIgnored() {
         assertFalse(AppOpsHelper.isPlayAudioRestored(AppOpsManager.MODE_IGNORED))
-        assertFalse(AppOpsHelper.isPlayAudioRestored(-1))
     }
 }

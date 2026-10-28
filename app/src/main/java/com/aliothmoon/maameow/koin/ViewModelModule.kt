@@ -16,6 +16,7 @@ import com.aliothmoon.maameow.presentation.viewmodel.UpdateViewModel
 import com.aliothmoon.maameow.schedule.ui.ScheduleEditViewModel
 import com.aliothmoon.maameow.schedule.ui.ScheduleListViewModel
 import com.aliothmoon.maameow.schedule.ui.ScheduleTriggerLogViewModel
+import com.aliothmoon.maameow.schedule.ui.ScheduleAppBlacklistViewModel
 import com.aliothmoon.maameow.schedule.ui.ScheduleWakeUnlockViewModel
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
@@ -35,6 +36,7 @@ val viewModelModule = module {
     viewModelOf(::ScheduleEditViewModel)
     viewModelOf(::ScheduleTriggerLogViewModel)
     viewModelOf(::ScheduleWakeUnlockViewModel)
+    viewModelOf(::ScheduleAppBlacklistViewModel)
     viewModelOf(::NotificationSettingsViewModel)
     viewModelOf(::TaskOverrideEditorViewModel)
 }

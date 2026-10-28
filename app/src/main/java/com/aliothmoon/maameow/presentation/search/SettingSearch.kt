@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.search
 
+import android.os.Build
 import android.os.SystemClock
 import androidx.annotation.StringRes
 import com.aliothmoon.maameow.R
@@ -56,7 +57,10 @@ data class SettingSearchEntry(
     @StringRes val descRes: Int? = null,
     @StringRes val keywordsRes: Int? = null,
     @StringRes val anchorRes: Int = titleRes,
-)
+    val minSdk: Int = Build.VERSION_CODES.BASE,
+) {
+    fun isAvailable(sdkInt: Int): Boolean = sdkInt >= minSdk
+}
 
 /** 只收常显项：依赖其它开关才出现的子项定位不到，交给父项 */
 object SettingSearchIndex {
@@ -80,6 +84,11 @@ object SettingSearchIndex {
     private val wakeUnlockPage = SettingLocation.Page(
         route = Routes.SCHEDULE_WAKE_UNLOCK,
         path = listOf(R.string.bottom_nav_schedule, R.string.schedule_wake_unlock_title),
+    )
+
+    private val appBlacklistPage = SettingLocation.Page(
+        route = Routes.SCHEDULE_APP_BLACKLIST,
+        path = listOf(R.string.bottom_nav_schedule, R.string.schedule_app_blacklist_title),
     )
 
     val entries: List<SettingSearchEntry> = listOf(
@@ -118,14 +127,22 @@ object SettingSearchIndex {
             R.string.settings_force_fullscreen_on_virtual_display_desc,
         ),
         SettingSearchEntry(R.string.settings_pip_on_home, backgroundRun, keywordsRes = R.string.search_keywords_pip),
+        SettingSearchEntry(
+            R.string.settings_virtual_display_backend_title,
+            backgroundRun,
+            R.string.settings_virtual_display_backend_desc,
+            minSdk = Build.VERSION_CODES.UPSIDE_DOWN_CAKE,
+        ),
 
         SettingSearchEntry(R.string.settings_telemetry, thirdParty, keywordsRes = R.string.search_keywords_telemetry),
         SettingSearchEntry(R.string.settings_report_penguin, thirdParty, R.string.settings_report_penguin_desc),
         SettingSearchEntry(R.string.settings_report_yituliu, thirdParty, R.string.settings_report_yituliu_desc),
         SettingSearchEntry(R.string.settings_oper_box_yituliu_title, thirdParty, R.string.settings_oper_box_yituliu_desc),
+        SettingSearchEntry(R.string.panel_autobattle_operbox_assist, thirdParty, R.string.settings_oper_box_assist_desc),
 
         SettingSearchEntry(R.string.settings_deploy_with_pause, task, R.string.settings_deploy_with_pause_desc),
         SettingSearchEntry(R.string.settings_tasks_override_title, task, R.string.settings_tasks_override_desc),
+        SettingSearchEntry(R.string.settings_game_package_title, task),
 
         SettingSearchEntry(R.string.settings_export_config_title, data, R.string.settings_export_config_desc),
         SettingSearchEntry(R.string.settings_import_config_title, data, R.string.settings_import_config_desc),
@@ -144,6 +161,14 @@ object SettingSearchIndex {
         SettingSearchEntry(
             R.string.settings_wake_unlock_type, wakeUnlockPage,
             R.string.schedule_wake_unlock_desc, R.string.search_keywords_wake_unlock,
+        ),
+        SettingSearchEntry(
+            R.string.schedule_use_alarm_clock, wakeUnlockPage,
+            R.string.schedule_use_alarm_clock_desc, R.string.search_keywords_alarm_clock,
+        ),
+        SettingSearchEntry(
+            R.string.schedule_app_blacklist_title, appBlacklistPage,
+            R.string.schedule_app_blacklist_desc, R.string.search_keywords_app_blacklist,
         ),
 
         SettingSearchEntry(R.string.bg_auto_mute_on_launch, SettingLocation.BackgroundActions, keywordsRes = R.string.search_keywords_mute),

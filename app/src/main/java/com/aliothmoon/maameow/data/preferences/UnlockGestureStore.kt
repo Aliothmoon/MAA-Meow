@@ -39,6 +39,10 @@ class UnlockGestureStore(private val context: Context) : UnlockGestureReader {
     /** 已录制的手势；未录制为 null */
     val gesture: StateFlow<UnlockGesture?> = _gesture.asStateFlow()
 
+    /** 本进程里录的；写盘失败时内存里的手势比文件新，修改时间也得跟内存走 */
+    @Volatile
+    private var savedAtMs: Long? = null
+
     init {
         scope.launch { _gesture.value = read() }
     }
@@ -57,6 +61,7 @@ class UnlockGestureStore(private val context: Context) : UnlockGestureReader {
             }
         }
         _gesture.value = gesture
+        savedAtMs = System.currentTimeMillis()
     }
 
     suspend fun clear() {
@@ -67,11 +72,19 @@ class UnlockGestureStore(private val context: Context) : UnlockGestureReader {
             }
         }
         _gesture.value = null
+        savedAtMs = null
     }
 
     override suspend fun readJson(): String = withContext(Dispatchers.IO) {
         val gesture = _gesture.value ?: read() ?: return@withContext ""
         JsonUtils.common.encodeToString(UnlockGesture.serializer(), gesture)
+    }
+
+    /** 轨迹里不存录制时间：本进程录的用内存记的时刻，否则取文件修改时间 */
+    override suspend fun recordedAtMs(): Long? = savedAtMs ?: withContext(Dispatchers.IO) {
+        // 与 read() 一致，只剩 .bak 时取它的时间；AtomicFile.getLastModifiedTime 要 API 31
+        val backup = File(gestureFile.path + ".bak")
+        (if (backup.isFile) backup else gestureFile).lastModified().takeIf { it > 0 }
     }
 
     private suspend fun read(): UnlockGesture? = withContext(Dispatchers.IO) {

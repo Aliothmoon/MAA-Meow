@@ -29,7 +29,11 @@ object LogcatServiceManager {
 
     private val callbacks = object : RemoteServiceConnectorBackend.Callbacks {
         override fun onConnected(backend: RemoteBackend, binder: IBinder) {
-            if (boundBackend != backend) return
+            if (boundBackend != backend) {
+                // 没人认领的进程不收就成了孤儿
+                runCatching { ILogcatService.Stub.asInterface(binder).destroy() }
+                return
+            }
             Timber.i("LogcatService connected via %s", backend)
             _service.value = ILogcatService.Stub.asInterface(binder)
         }
@@ -98,9 +102,6 @@ object LogcatServiceManager {
         override val processNameSuffix = "${backend.name.lowercase()}_logcat"
         override val serviceClass: Class<*> = LogcatCaptureServiceImpl::class.java
         override val logFileName = "${processNameSuffix}_launch_debug.log"
-
-        // logcat 无需输入注入，shell 身份自带 log 组权限
-        override val keepRoot: Boolean get() = false
 
         override fun destroyRemote(binder: IBinder) {
             ILogcatService.Stub.asInterface(binder)?.destroy()

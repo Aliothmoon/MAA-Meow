@@ -19,10 +19,9 @@ data class StageActivityInfo(
      * 活动是否正在进行中
      */
     val isOpen: Boolean
-        get() {
-            val now = System.currentTimeMillis()
-            return now in utcStartTime until utcExpireTime
-        }
+        get() = isOpenAt(System.currentTimeMillis())
+
+    fun isOpenAt(nowMillis: Long): Boolean = nowMillis in utcStartTime until utcExpireTime
 
     /**
      * 活动是否已过期

@@ -59,7 +59,9 @@ import com.aliothmoon.maameow.data.model.MallConfig
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.models.MallCreditFightAvailability
+import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
+import com.aliothmoon.maameow.presentation.components.rememberStagedBeyondViewportCount
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
@@ -76,6 +78,7 @@ fun MallConfigPanel(config: MallConfig, onConfigChange: (MallConfig) -> Unit) {
         pageCount = { 2 }
     )
     val coroutineScope = rememberCoroutineScope()
+    val inputFocus = LocalInputFocusManager.current
     var isDraggingPriority by remember { mutableStateOf(false) }
 
     Column(
@@ -96,6 +99,7 @@ fun MallConfigPanel(config: MallConfig, onConfigChange: (MallConfig) -> Unit) {
                 color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
                 modifier = Modifier.clickable(interactionSource = null, indication = null) {
+                    inputFocus.clear()
                     coroutineScope.launch { pagerState.animateScrollToPage(0) }
                 }
             )
@@ -105,6 +109,7 @@ fun MallConfigPanel(config: MallConfig, onConfigChange: (MallConfig) -> Unit) {
                 color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
                 modifier = Modifier.clickable(interactionSource = null, indication = null) {
+                    inputFocus.clear()
                     coroutineScope.launch { pagerState.animateScrollToPage(1) }
                 }
             )
@@ -117,6 +122,7 @@ fun MallConfigPanel(config: MallConfig, onConfigChange: (MallConfig) -> Unit) {
         HorizontalPager(
             pageSize = PageSize.Fill,
             state = pagerState,
+            beyondViewportPageCount = rememberStagedBeyondViewportCount(pagerState, 1),
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),

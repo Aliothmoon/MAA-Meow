@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
@@ -20,10 +21,20 @@ import java.io.File
 class ResourceInitService(
     private val context: Context,
     private val assetExtractor: AssetExtractor,
-    private val pathConfig: MaaPathConfig
+    private val pathConfig: MaaPathConfig,
+    private val coreFiles: Lazy<CoreFilesGate>,
 ) {
     private val _state = MutableStateFlow<ResourceInitState>(ResourceInitState.NotChecked)
     val state: StateFlow<ResourceInitState> = _state.asStateFlow()
+
+    // App 侧资源目录内容版本，重解或资源更新后自增
+    private val _revision = MutableStateFlow(0)
+    val revision: StateFlow<Int> = _revision.asStateFlow()
+
+    /** 资源更新包已解到 App 侧目录 */
+    fun onResourceUpdated() {
+        _revision.update { it + 1 }
+    }
 
     suspend fun checkAndInit() {
         val cur = _state.value
@@ -34,43 +45,53 @@ class ResourceInitService(
             return
         }
 
-        if (withContext(Dispatchers.IO) { pathConfig.isResourceReady }) {
-            _state.value = ResourceInitState.Ready
-            return
+        try {
+            if (withContext(Dispatchers.IO) { pathConfig.isResourceReady }) {
+                _state.value = ResourceInitState.Ready
+                return
+            }
+            doExtractFromAssets()
+        } finally {
+            // 调用方被取消时还停在 Checking，后续调用都会早退，放回去让下次重查
+            _state.compareAndSet(ResourceInitState.Checking, ResourceInitState.NotChecked)
         }
-
-        doExtractFromAssets()
     }
 
+    /** 会删掉整个资源目录 */
     suspend fun reInitialize() {
-        doExtractFromAssets()
+        coreFiles.value.whenIdle { doExtractFromAssets() }
     }
 
-    suspend fun doExtractFromAssets() {
+    private suspend fun doExtractFromAssets() {
         _state.value =
             ResourceInitState.Extracting(0, 0, context.getString(R.string.resource_init_preparing))
 
         try {
-            withContext(Dispatchers.IO) {
-                pathConfig.ensureDirectories()
-                val resourceDir = File(pathConfig.resourceDir)
-                if (resourceDir.exists() && !resourceDir.deleteRecursively()) {
-                    Timber.w("清理旧资源目录失败: ${resourceDir.absolutePath}")
+            val result = try {
+                withContext(Dispatchers.IO) {
+                    pathConfig.ensureDirectories()
+                    val resourceDir = File(pathConfig.resourceDir)
+                    if (resourceDir.exists() && !resourceDir.deleteRecursively()) {
+                        Timber.w("清理旧资源目录失败: ${resourceDir.absolutePath}")
+                    }
+                    resourceDir.mkdirs()
                 }
-                resourceDir.mkdirs()
-            }
 
-            val result = assetExtractor.extract(
-                assetDir = ASSET_DIR_NAME,
-                destDir = File(pathConfig.resourceDir),
-                onProgress = { progress ->
-                    _state.value = ResourceInitState.Extracting(
-                        extractedCount = progress.extractedCount,
-                        totalCount = progress.totalCount,
-                        currentFile = progress.currentFile
-                    )
-                }
-            )
+                assetExtractor.extract(
+                    assetDir = ASSET_DIR_NAME,
+                    destDir = File(pathConfig.resourceDir),
+                    onProgress = { progress ->
+                        _state.value = ResourceInitState.Extracting(
+                            extractedCount = progress.extractedCount,
+                            totalCount = progress.totalCount,
+                            currentFile = progress.currentFile
+                        )
+                    }
+                )
+            } finally {
+                // 早于发布 Ready/Failed；checkAndInit 不走门禁，解压中的加载靠这次递增重试
+                _revision.update { it + 1 }
+            }
 
             result.fold(
                 onSuccess = {

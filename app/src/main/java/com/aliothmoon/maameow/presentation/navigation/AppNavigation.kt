@@ -2,8 +2,8 @@ package com.aliothmoon.maameow.presentation.navigation
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -26,13 +26,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.announcement.AnnouncementConfig
 import com.aliothmoon.maameow.announcement.AnnouncementContent
 import com.aliothmoon.maameow.announcement.AnnouncementManager
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
-import com.aliothmoon.maameow.domain.launch.LaunchEffect
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.ExternalNotificationService
@@ -44,6 +44,8 @@ import com.aliothmoon.maameow.presentation.components.AnnouncementDialog
 import com.aliothmoon.maameow.presentation.components.MaaWindowInsets
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
 import com.aliothmoon.maameow.presentation.components.clearFocusOnBlankTap
+import com.aliothmoon.maameow.presentation.components.LocalPagerPreloadState
+import com.aliothmoon.maameow.presentation.components.PagerPreloadState
 import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
 import com.aliothmoon.maameow.presentation.onboarding.OnboardingOverlay
 import com.aliothmoon.maameow.presentation.onboarding.OnboardingState
@@ -53,6 +55,7 @@ import com.aliothmoon.maameow.presentation.view.notification.NotificationSetting
 import com.aliothmoon.maameow.presentation.view.settings.AchievementDebugView
 import com.aliothmoon.maameow.presentation.view.settings.AchievementView
 import com.aliothmoon.maameow.presentation.view.settings.ErrorLogView
+import com.aliothmoon.maameow.presentation.view.settings.GamePackageSettingsView
 import com.aliothmoon.maameow.presentation.view.settings.LogHistoryView
 import com.aliothmoon.maameow.presentation.view.settings.LiveUpdateSettingsView
 import com.aliothmoon.maameow.presentation.view.settings.TaskOverrideEditorView
@@ -63,6 +66,7 @@ import com.aliothmoon.maameow.schedule.model.CountdownState
 import com.aliothmoon.maameow.schedule.ui.CountdownDialog
 import com.aliothmoon.maameow.schedule.ui.ScheduleEditView
 import com.aliothmoon.maameow.schedule.ui.ScheduleTriggerLogView
+import com.aliothmoon.maameow.schedule.ui.ScheduleAppBlacklistView
 import com.aliothmoon.maameow.schedule.ui.ScheduleWakeUnlockView
 import com.aliothmoon.maameow.theme.AppBackgroundHost
 import com.aliothmoon.maameow.theme.LocalReduceMotion
@@ -126,7 +130,15 @@ fun AppNavigation(
     val resourceInitState by resourceInitService.state.collectAsStateWithLifecycle()
     val resourceReady = resourceInitState is ResourceInitState.Ready
     LaunchedEffect(resourceReady, needsOnboarding) {
-        if (resourceReady && needsOnboarding) onboardingState.start()
+        if (!resourceReady || !needsOnboarding) return@LaunchedEffect
+        appSettings.awaitLoaded()
+        // 从没看完过才强制；上次没走完（被杀 / 崩溃 / 退出）再弹时放开跳过，免得卡死的设备进不来
+        val forced = appSettings.onboardingNeverSeen.value
+        val autoStarts = if (forced) appSettings.countOnboardingAutoStart() else 0
+        onboardingState.start(
+            skippable = !forced || autoStarts > 1 || BuildConfig.DEBUG,
+            cooldown = forced,
+        )
     }
     // 跳过或看完都算看过；重看再写一次是幂等的
     LaunchedEffect(onboardingState) {
@@ -151,19 +163,6 @@ fun AppNavigation(
     // 主界面分页偏移，供背景层做切 Tab 视差
     val backgroundParallax = remember { mutableFloatStateOf(0f) }
 
-    LaunchedEffect(backgroundTaskViewModel) {
-        backgroundTaskViewModel.launchEffects.collect { effect ->
-            when (effect) {
-                is LaunchEffect.Feedback -> {
-                    Toast.makeText(
-                        context,
-                        effect.message.resolve(context),
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                }
-            }
-        }
-    }
     // 后台倒计时 Overlay 由 CountdownUIImpl 写入；前台无倒计时不触碰
     LaunchedEffect(backgroundTaskViewModel) {
         overlayController.onCountdownClick = {
@@ -201,6 +200,7 @@ fun AppNavigation(
     CompositionLocalProvider(
         LocalToaster provides toaster,
         LocalOnboardingState provides onboardingState,
+        LocalPagerPreloadState provides remember { PagerPreloadState() },
     ) {
         Box(modifier = Modifier
             .fillMaxSize()
@@ -267,8 +267,14 @@ fun AppNavigation(
                     composable(Routes.SCHEDULE_WAKE_UNLOCK) {
                         ScheduleWakeUnlockView(navController = navController)
                     }
+                    composable(Routes.SCHEDULE_APP_BLACKLIST) {
+                        ScheduleAppBlacklistView(navController = navController)
+                    }
                     composable(Routes.TASK_OVERRIDE_EDITOR) {
                         TaskOverrideEditorView(navController = navController)
+                    }
+                    composable(Routes.GAME_PACKAGE) {
+                        GamePackageSettingsView(navController = navController)
                     }
                 }
             }
@@ -287,8 +293,10 @@ fun AppNavigation(
                     richColors = true,
                     showCloseButton = true,
                     darkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f,
-                    containerPadding = PaddingValues(top = 8.dp),
-                    modifier = Modifier.windowInsetsPadding(MaaWindowInsets.topBar),
+                    // 间距不走 containerPadding：sonner 拿它直减约束，弹窗矮于间距时减成负数崩溃（ANDROID-12E）
+                    modifier = Modifier
+                        .windowInsetsPadding(MaaWindowInsets.topBar)
+                        .padding(top = 8.dp),
                 )
                 // 全局定时任务倒计时弹窗（前台所有控制模式均不弹出对话框，静默处理）
                 val countdown = scheduledCountdownState

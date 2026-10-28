@@ -82,7 +82,7 @@ android {
         versionCode = gitVersionCode
         versionName = gitVersionName
         println("Build version: versionCode=$versionCode, versionName=$versionName")
-        ndkVersion = "29.0.13113456"
+        ndkVersion = "29.0.14206865"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // setup_maa_core.py deploy 时写入 .maaversion；缺失时为空串，运行时检查宽松放行
@@ -188,7 +188,7 @@ android {
 
     androidResources {
         @Suppress("UnstableApiUsage")
-        localeFilters += listOf("zh", "en")
+        localeFilters += listOf("zh", "en", "ko")
     }
 }
 
@@ -255,6 +255,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.xzakota.focus.api)
 
+    // 提权进程代码的单测要 mock 隐藏接口
+    testImplementation(project(":hidden-api"))
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)

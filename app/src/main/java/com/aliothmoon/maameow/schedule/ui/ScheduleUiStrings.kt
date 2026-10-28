@@ -18,17 +18,6 @@ private val scheduleTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val scheduleStartFormatter = DateTimeFormatter.ofPattern("MM-dd HH:mm")
 
 @Composable
-internal fun scheduleDayChipLabel(day: DayOfWeek): String = when (day) {
-    DayOfWeek.MONDAY -> stringResource(R.string.schedule_day_full_monday)
-    DayOfWeek.TUESDAY -> stringResource(R.string.schedule_day_full_tuesday)
-    DayOfWeek.WEDNESDAY -> stringResource(R.string.schedule_day_full_wednesday)
-    DayOfWeek.THURSDAY -> stringResource(R.string.schedule_day_full_thursday)
-    DayOfWeek.FRIDAY -> stringResource(R.string.schedule_day_full_friday)
-    DayOfWeek.SATURDAY -> stringResource(R.string.schedule_day_full_saturday)
-    DayOfWeek.SUNDAY -> stringResource(R.string.schedule_day_full_sunday)
-}
-
-@Composable
 internal fun scheduleDaySummaryLabel(day: DayOfWeek): String = when (day) {
     DayOfWeek.MONDAY -> stringResource(R.string.schedule_day_short_monday)
     DayOfWeek.TUESDAY -> stringResource(R.string.schedule_day_short_tuesday)
@@ -47,6 +36,7 @@ internal fun scheduleExecutionResultLabel(result: ExecutionResult): String = whe
     ExecutionResult.FAILED_UI_LAUNCH -> stringResource(R.string.schedule_result_failed_ui_launch)
     ExecutionResult.SKIPPED_BUSY -> stringResource(R.string.schedule_result_skipped_busy)
     ExecutionResult.SKIPPED_LOCKED -> stringResource(R.string.schedule_result_skipped_locked)
+    ExecutionResult.SKIPPED_BLACKLIST -> stringResource(R.string.schedule_result_skipped_blacklist)
     ExecutionResult.CANCELLED -> stringResource(R.string.schedule_result_cancelled)
 }
 
@@ -60,6 +50,13 @@ internal fun scheduleHealthIssueText(
     issue: ScheduleHealthIssue,
     backend: RemoteBackend = RemoteBackend.SHIZUKU,
 ): Pair<String, String> = when (issue) {
+    // Root 没有「运行」一说，su 不在就是不可用
+    ScheduleHealthIssue.BACKEND_DOWN -> stringResource(
+        if (backend == RemoteBackend.SHIZUKU) R.string.schedule_health_backend_not_running
+        else R.string.schedule_health_backend_unavailable,
+        backend.display,
+    ) to stringResource(R.string.schedule_health_backend_down_desc)
+
     ScheduleHealthIssue.BACKEND ->
         stringResource(R.string.schedule_health_backend, backend.display) to
                 stringResource(R.string.schedule_health_backend_desc)
@@ -106,6 +103,7 @@ internal fun schedulePermissionActionText(issue: ScheduleHealthIssue): Pair<Stri
                     stringResource(R.string.schedule_health_overlay_desc)
 
         // 不进向导，回落到卡片文案只为 when 穷尽
+        ScheduleHealthIssue.BACKEND_DOWN,
         ScheduleHealthIssue.BACKEND,
         ScheduleHealthIssue.UNLOCK_CREDENTIAL -> scheduleHealthIssueText(issue)
     }

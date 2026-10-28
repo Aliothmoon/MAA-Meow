@@ -1,5 +1,7 @@
 package com.aliothmoon.maameow.remote.internal
 
+import android.app.AppOpsManager
+import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
 import com.aliothmoon.maameow.third.FakeContext
@@ -8,11 +10,11 @@ import com.aliothmoon.maameow.third.Ln
 object PermissionGrantHelper {
     private const val TAG = "PermissionGrantHelper"
 
+    // UserHandle.PER_USER_RANGE，隐藏常量
+    private const val PER_USER_RANGE = 100_000
+
     fun grantAccessibilityService(serviceId: String): Boolean {
-        if (serviceId == "") {
-            return false
-        }
-        return try {
+        return serviceId != "" && try {
             val contentResolver = FakeContext.get().contentResolver
             val existingServices = Settings.Secure.getString(
                 contentResolver,
@@ -49,42 +51,27 @@ object PermissionGrantHelper {
     }
 
 
-    fun grantFloatingWindowPermission(packageName: String, uid: Int): Boolean {
-        return try {
-            // OP_SYSTEM_ALERT_WINDOW = 24
-            RemoteUtils.appOpsService.setMode(24, uid, packageName, 0) // MODE_ALLOWED = 0
-            Ln.i("$TAG: Floating window permission granted for $packageName")
-            true
-        } catch (e: Exception) {
-            Ln.e("$TAG: Failed to grant floating window permission: $e")
-            false
-        }
-    }
+    fun grantFloatingWindowPermission(packageName: String, uid: Int): Boolean =
+        allow(packageName, uid, AppOps.SYSTEM_ALERT_WINDOW)
 
 
     fun grantNotificationPermission(packageName: String, uid: Int): Boolean {
-        return try {
-            // OP_POST_NOTIFICATION = 11
-            RemoteUtils.appOpsService.setMode(11, uid, packageName, 0) // MODE_ALLOWED = 0
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                runCatching {
-                    RemoteUtils.packageManager.grantRuntimePermission(
-                        packageName,
-                        "android.permission.POST_NOTIFICATIONS",
-                        0
-                    )
-                }.onFailure {
-                    Ln.w("$TAG: Failed to grant POST_NOTIFICATIONS runtime permission: $it")
-                }
-            }
-
-            Ln.i("$TAG: Notification permission granted for $packageName")
-            true
-        } catch (e: Exception) {
-            Ln.e("$TAG: Failed to grant notification permission: $e")
-            false
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return allow(packageName, uid, AppOps.POST_NOTIFICATION)
         }
+        // 13+ 通知只认运行时权限，op 由系统按权限同步
+        return grantRuntimePermission(packageName, "android.permission.POST_NOTIFICATIONS", uid)
+    }
+
+    /** 授完读回，userId 由 uid 推出 */
+    private fun grantRuntimePermission(packageName: String, permission: String, uid: Int): Boolean {
+        val userId = uid / PER_USER_RANGE
+        return runCatching {
+            RemoteUtils.packageManager.grantRuntimePermission(packageName, permission, userId)
+            RemoteUtils.packageManager.checkPermission(permission, packageName, userId) ==
+                    PackageManager.PERMISSION_GRANTED
+        }.onFailure { Ln.w("$TAG: grant $permission failed for $packageName: $it") }
+            .getOrDefault(false)
     }
 
 
@@ -101,12 +88,9 @@ object PermissionGrantHelper {
 
 
     fun grantBackgroundUnrestricted(packageName: String, uid: Int): Boolean {
+        val opsAllowed =
+            allow(packageName, uid, AppOps.RUN_IN_BACKGROUND, AppOps.RUN_ANY_IN_BACKGROUND)
         return try {
-            // OP_RUN_IN_BACKGROUND = 63, MODE_ALLOWED = 0
-            RemoteUtils.appOpsService.setMode(63, uid, packageName, 0)
-            // OP_RUN_ANY_IN_BACKGROUND = 70, MODE_ALLOWED = 0
-            RemoteUtils.appOpsService.setMode(70, uid, packageName, 0)
-
             RemoteUtils.shellExec("am set-standby-bucket $packageName active")
             RemoteUtils.shellExec("am set-inactive $packageName false")
 
@@ -118,7 +102,7 @@ object PermissionGrantHelper {
             disablePhantomProcessKiller()
 
             Ln.i("$TAG: Background unrestricted for $packageName")
-            true
+            opsAllowed
         } catch (e: Exception) {
             Ln.e("$TAG: Failed to grant background unrestricted: $e")
             false
@@ -126,33 +110,25 @@ object PermissionGrantHelper {
     }
 
     /** specialUse FGS 的 appop 可能被 ROM 或管控工具拒绝，任务 FGS 会因此起不来 */
-    fun grantForegroundServiceSpecialUse(packageName: String): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return true
-        return try {
-            // uid 级 op：非默认的 uid 模式会盖过包模式，两级都放开；用 op 名免硬编码编号
-            val uidExit = RemoteUtils.shellExec("appops set --uid $packageName FOREGROUND_SERVICE_SPECIAL_USE allow")
-            val pkgExit = RemoteUtils.shellExec("appops set $packageName FOREGROUND_SERVICE_SPECIAL_USE allow")
-            val ok = uidExit == 0 && pkgExit == 0
-            if (ok) {
-                Ln.i("$TAG: FOREGROUND_SERVICE_SPECIAL_USE allowed for $packageName")
-            } else {
-                Ln.w("$TAG: FOREGROUND_SERVICE_SPECIAL_USE allow failed (uid=$uidExit, pkg=$pkgExit)")
-            }
-            ok
-        } catch (e: Exception) {
-            Ln.e("$TAG: Failed to allow FOREGROUND_SERVICE_SPECIAL_USE: $e")
-            false
-        }
+    fun grantForegroundServiceSpecialUse(packageName: String, uid: Int) {
+        allow(packageName, uid, AppOps.FOREGROUND_SERVICE_SPECIAL_USE)
     }
+
+    fun grantScheduleOps(packageName: String, uid: Int) {
+        allow(packageName, uid, *AppOps.SCHEDULE)
+    }
+
+    /** 本机没有的 op 跳过，不算失败 */
+    private fun allow(packageName: String, uid: Int, vararg ops: AppOp): Boolean =
+        ops.filter { it.code != null }
+            .map { AppOpsHelper.set(it, packageName, uid, AppOpsManager.MODE_ALLOWED) }
+            .all { it }
 
     /**
      * 禁用 Android 12+ 的 Phantom Process Killer
      */
     fun disablePhantomProcessKiller(): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            return true
-        }
-        return try {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.S || try {
             // Android 12L & 13+
             RemoteUtils.shellExec("device_config put activity_manager max_phantom_processes 2147483647")
             // Android 12 Beta
@@ -168,27 +144,14 @@ object PermissionGrantHelper {
     }
 
     fun grantStoragePermission(packageName: String, uid: Int): Boolean {
-        return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                RemoteUtils.appOpsService.setMode(92, uid, packageName, 0) // MODE_ALLOWED = 0
-                Ln.i("$TAG: MANAGE_EXTERNAL_STORAGE granted for $packageName via AppOps")
-            } else {
-                RemoteUtils.packageManager.grantRuntimePermission(
-                    packageName,
-                    "android.permission.READ_EXTERNAL_STORAGE",
-                    0
-                )
-                RemoteUtils.packageManager.grantRuntimePermission(
-                    packageName,
-                    "android.permission.WRITE_EXTERNAL_STORAGE",
-                    0
-                )
-                Ln.i("$TAG: Storage permission granted for $packageName")
-            }
-            true
-        } catch (e: Exception) {
-            Ln.e("$TAG: Failed to grant storage permission: $e", e)
-            false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return allow(packageName, uid, AppOps.MANAGE_EXTERNAL_STORAGE)
         }
+        val granted = listOf(
+            "android.permission.READ_EXTERNAL_STORAGE",
+            "android.permission.WRITE_EXTERNAL_STORAGE",
+        ).map { grantRuntimePermission(packageName, it, uid) }.all { it }
+        if (granted) Ln.i("$TAG: Storage permission granted for $packageName")
+        return granted
     }
 }

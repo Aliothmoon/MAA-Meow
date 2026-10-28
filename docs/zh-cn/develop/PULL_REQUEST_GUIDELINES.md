@@ -61,6 +61,7 @@ PR 描述至少应包含以下信息：
 ### 关联内容
 
 - 关联 Issue：`Closes #123`、`Fixes #123` 或 `Related #123`
+- 新建关联 Issue 时，标题应遵循 [Issue 规范](ISSUE_GUIDELINES.md)
 - 如果没有 Issue，请说明需求来源、复现方式或为什么需要这个改动
 
 ### 变更摘要

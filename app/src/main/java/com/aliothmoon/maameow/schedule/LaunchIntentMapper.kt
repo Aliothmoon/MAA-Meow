@@ -27,9 +27,12 @@ object LaunchIntentMapper {
         scheduledTimeMs = scheduledTimeMs,
         forceStart = strategy.forceStart,
         autoScreenSaver = strategy.autoScreenSaver,
+        hardwareScreenOff = strategy.hardwareScreenOff,
+        silentStartWhenInUse = strategy.silentStartWhenInUse,
         autoSleepAfterTask = strategy.autoSleepAfterTask,
         skipAutoSleepIfAwake = strategy.skipAutoSleepIfAwake,
         closeGameAfterTask = strategy.closeGameAfterTask,
+        exitAppAfterTask = strategy.exitAppAfterTask,
         strategyId = strategy.id,
         countdownSeconds = ScheduledExecutionRequest.COUNTDOWN_SECONDS,
     )

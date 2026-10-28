@@ -85,6 +85,7 @@ class OperBoxRepositoryTest {
         assertEquals(sampleNotOwned(), snap.notOwned)
         assertTrue(snap.hasSynced)
         assertTrue(snap.syncTimeMillis > 0)
+        assertEquals(OperBoxSnapshot.CURRENT_VERSION, snap.version)
     }
 
     @Test
@@ -127,6 +128,7 @@ class OperBoxRepositoryTest {
 
         assertEquals(1, awaitDiskShard(PROFILE_A).owned.size)
         assertEquals("char_002_amiya", awaitDiskShard(PROFILE_A).owned.single().id)
+        assertEquals(OperBoxSnapshot.CURRENT_VERSION, awaitDiskShard(PROFILE_A).version)
         assertEquals(1, awaitDiskShard(PROFILE_B).owned.size)
         assertEquals("char_1001_amiya2", awaitDiskShard(PROFILE_B).owned.single().id)
     }

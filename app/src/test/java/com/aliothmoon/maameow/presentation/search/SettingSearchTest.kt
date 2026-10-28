@@ -94,6 +94,9 @@ class SettingSearchTest {
             Routes.SCHEDULE_WAKE_UNLOCK ->
                 source("src/main/java/com/aliothmoon/maameow/schedule/ui/ScheduleWakeUnlockView.kt")
 
+            Routes.SCHEDULE_APP_BLACKLIST ->
+                source("src/main/java/com/aliothmoon/maameow/schedule/ui/ScheduleAppBlacklistView.kt")
+
             else -> error("no source mapping for route ${location.route}")
         }
     }

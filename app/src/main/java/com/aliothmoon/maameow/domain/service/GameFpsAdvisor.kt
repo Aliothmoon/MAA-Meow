@@ -58,13 +58,6 @@ class GameFpsAdvisor(
         return if (sorted.size % 2 == 0) (sorted[mid - 1] + sorted[mid]) / 2f else sorted[mid]
     }
 
-    fun reset() {
-        window.clear()
-        idleStreak = 0
-        lowAdvised = false
-        degradedAdvised = false
-    }
-
     companion object {
         /** 每秒一个样本，15 秒窗口 */
         const val DEFAULT_WINDOW_SIZE = 15

@@ -28,6 +28,7 @@ class CheckGameReadinessUseCaseTest {
         isPackageInstalled: suspend (String) -> Boolean = { true },
         isEyeProtectionEnabled: () -> Boolean = { false },
         isSmartResolutionEnabled: suspend () -> Boolean = { false },
+        isAdbInputRestricted: suspend () -> Boolean = { false },
     ) = CheckGameReadinessUseCase(
         appAliveChecker = FakeAppAliveChecker(aliveStatus, onBackgroundDisplay),
         appSettings = appSettings(runMode),
@@ -35,6 +36,7 @@ class CheckGameReadinessUseCaseTest {
         isPackageInstalled = isPackageInstalled,
         isEyeProtectionEnabled = isEyeProtectionEnabled,
         isSmartResolutionEnabled = isSmartResolutionEnabled,
+        isAdbInputRestricted = isAdbInputRestricted,
     )
 
     private fun context(
@@ -248,6 +250,44 @@ class CheckGameReadinessUseCaseTest {
 
         assertEquals(
             GameReadiness.RequiresConfirmation(TaskStartAcknowledgement.EYE_PROTECTION_ENABLED),
+            result
+        )
+    }
+
+    /** 点击全被拦，前台后台都要问 */
+    @Test
+    fun adbInputRestricted_manual_requiresConfirmationInBothModes() = runBlocking {
+        for (mode in RunMode.entries) {
+            val result = useCase(runMode = mode, isAdbInputRestricted = { true })("Official", false, context())
+
+            assertEquals(
+                GameReadiness.RequiresConfirmation(TaskStartAcknowledgement.ADB_INPUT_RESTRICTED),
+                result
+            )
+        }
+    }
+
+    @Test
+    fun adbInputRestricted_scheduled_autoReady() = runBlocking {
+        val result = useCase(isAdbInputRestricted = { true })(
+            "Official",
+            false,
+            context(TaskStartMode.SCHEDULED)
+        )
+
+        assertEquals(GameReadiness.Ready(gameAliveBeforeStart = true), result)
+    }
+
+    @Test
+    fun adbInputAcknowledged_thenSmartResolutionStillAsked() = runBlocking {
+        val result = useCase(isAdbInputRestricted = { true }, isSmartResolutionEnabled = { true })(
+            "Official",
+            false,
+            context(acks = setOf(TaskStartAcknowledgement.ADB_INPUT_RESTRICTED))
+        )
+
+        assertEquals(
+            GameReadiness.RequiresConfirmation(TaskStartAcknowledgement.SMART_RESOLUTION_ENABLED),
             result
         )
     }

@@ -124,6 +124,19 @@ public final class DisplayManager {
         }
     }
 
+    // Android 12 起才有，取不到返回 -1
+    public int getDisplayGroupId(int displayId) {
+        try {
+            Object displayInfo = getGetDisplayInfoMethod().invoke(manager, displayId);
+            if (displayInfo == null) {
+                return -1;
+            }
+            return displayInfo.getClass().getDeclaredField("displayGroupId").getInt(displayInfo);
+        } catch (ReflectiveOperationException e) {
+            return -1;
+        }
+    }
+
     public int[] getDisplayIds() {
         try {
             return (int[]) manager.getClass().getMethod("getDisplayIds").invoke(manager);

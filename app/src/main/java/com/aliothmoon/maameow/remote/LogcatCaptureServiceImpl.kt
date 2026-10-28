@@ -4,13 +4,13 @@ import com.aliothmoon.maameow.ILogcatService
 import com.aliothmoon.maameow.constant.LogConfig
 import com.aliothmoon.maameow.remote.internal.LogcatNoiseFilter
 import com.aliothmoon.maameow.remote.internal.RollingLogFile
+import com.aliothmoon.maameow.root.ProcessExit
 import com.aliothmoon.maameow.third.Ln
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.system.exitProcess
 
 class LogcatCaptureServiceImpl : ILogcatService.Stub() {
 
@@ -36,7 +36,8 @@ class LogcatCaptureServiceImpl : ILogcatService.Stub() {
     }
 
     override fun destroy() {
-        exitProcess(0)
+        // logcat --pid 盯着的进程死后不再有输出，等不来 SIGPIPE，不收就成了孤儿
+        ProcessExit.exit("destroy requested") { watchTargets.values.forEach { it.destroyForcibly() } }
     }
 
     override fun startCapture(appPid: Int, servicePid: Int, userDir: String) {

@@ -19,7 +19,6 @@ enum class TaskTypeInfo(
     MALL(R.string.task_type_mall, { MallConfig() }),
     MISSION(R.string.task_type_mission, { AwardConfig() }),
     AUTO_ROGUELIKE(R.string.task_type_auto_roguelike, { RoguelikeConfig() }),
-    RECLAMATION(R.string.task_type_reclamation, { ReclamationConfig() }),
     USER_DATA_UPDATE(
         R.string.task_type_user_data_update,
         { UserDataUpdateConfig() },
@@ -32,6 +31,11 @@ enum class TaskTypeInfo(
     SWITCH_THEME(
         R.string.task_type_switch_theme,
         { SwitchThemeConfig() },
+        inDefaultChain = false,
+    ),
+    OPER_PROGRESS(
+        R.string.task_type_oper_progress,
+        { OperProgressConfig() },
         inDefaultChain = false,
     );
 

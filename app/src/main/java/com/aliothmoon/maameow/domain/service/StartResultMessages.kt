@@ -30,11 +30,7 @@ fun resolveStartResultMessage(result: MaaCompositionService.StartResult): UiText
                 uiTextOf(R.string.task_start_error_display_mode)
 
             MaaCompositionService.StartResult.ConnectionError.ConnectPhase.VIRTUAL_DISPLAY ->
-                if (result.shizukuAsRoot) {
-                    uiTextOf(R.string.task_start_error_virtual_display_shizuku_as_root)
-                } else {
-                    uiTextOf(R.string.task_start_error_virtual_display)
-                }
+                uiTextOf(R.string.task_start_error_virtual_display)
 
             MaaCompositionService.StartResult.ConnectionError.ConnectPhase.MAA_CONNECT ->
                 uiTextOf(R.string.task_start_error_connect_timeout)
@@ -54,4 +50,7 @@ fun resolveStartResultMessage(result: MaaCompositionService.StartResult): UiText
 
         is MaaCompositionService.StartResult.AlreadyRunning ->
             uiTextOf(R.string.task_start_error_already_running)
+
+        is MaaCompositionService.StartResult.RemoteCallStuck ->
+            uiTextOf(R.string.task_start_error_remote_call_stuck)
     }

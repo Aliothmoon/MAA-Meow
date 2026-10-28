@@ -20,6 +20,7 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.OperBoxYituliuSync
+import com.aliothmoon.maameow.domain.state.isIdle
 import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
 import com.aliothmoon.maameow.domain.usecase.GameReadiness
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
@@ -37,6 +38,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
@@ -208,7 +210,7 @@ class ToolboxViewModel(
             )) {
                 is GameReadiness.RequiresConfirmation -> {
                     pendingStartContext = context.acknowledged(readiness.acknowledgement)
-                    _dialog.value = appContext.createStartWarningDialog(readiness.acknowledgement.message)
+                    _dialog.value = appContext.createStartWarningDialog(readiness.acknowledgement)
                     return@launch
                 }
 
@@ -283,11 +285,18 @@ class ToolboxViewModel(
     private fun startGachaTipRotation() {
         gachaTipJob?.cancel()
         gachaTipJob = viewModelScope.launch {
-            while (isActive) {
-                val tipRes = GACHA_TIP_RES_IDS[Random.nextInt(GACHA_TIP_RES_IDS.size)]
-                _gachaTip.value = uiTextOf(tipRes)
-                delay(5_000)
+            val rotation = launch {
+                while (isActive) {
+                    val tipRes = GACHA_TIP_RES_IDS[Random.nextInt(GACHA_TIP_RES_IDS.size)]
+                    _gachaTip.value = uiTextOf(tipRes)
+                    delay(5_000)
+                }
             }
+            // 停止可能来自别的页，按全局状态收尾
+            compositionService.state.first { it.isIdle }
+            rotation.cancel()
+            _gachaTip.value = uiTextOf(R.string.gacha_init_tip)
+            _statusMessage.value = uiTextOf(R.string.toolbox_status_stopped)
         }
     }
 
@@ -319,13 +328,6 @@ class ToolboxViewModel(
     fun onStop() {
         when (_currentTab.value) {
             ToolboxTab.MINI_GAME -> miniGame.onStop()
-            ToolboxTab.GACHA -> viewModelScope.launch {
-                _statusMessage.value = uiTextOf(R.string.toolbox_status_stopping)
-                compositionService.stop()
-                stopGachaTipRotation()
-                _statusMessage.value = uiTextOf(R.string.toolbox_status_stopped)
-            }
-
             else -> viewModelScope.launch {
                 _statusMessage.value = uiTextOf(R.string.toolbox_status_stopping)
                 compositionService.stop()
@@ -388,10 +390,7 @@ class ToolboxViewModel(
         if (useYituliuOperBox()) {
             viewModelScope.launch {
                 _statusMessage.value = uiTextOf(R.string.oper_box_yituliu_fetching)
-                _statusMessage.value = when (val result = operBoxYituliuSync.sync()) {
-                    is OperBoxYituliuSync.Result.Success -> result.message
-                    is OperBoxYituliuSync.Result.Failed -> result.message
-                }
+                _statusMessage.value = operBoxYituliuSync.sync().message
             }
             return
         }

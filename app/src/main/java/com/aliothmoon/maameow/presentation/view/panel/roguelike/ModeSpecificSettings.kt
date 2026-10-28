@@ -11,7 +11,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
-import com.aliothmoon.maameow.domain.enums.RoguelikeBlackFlowCultivationTarget
 import com.aliothmoon.maameow.domain.enums.RoguelikeBoskySubNodeType
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
@@ -45,6 +44,9 @@ fun ModeSpecificSettings(
                 onCheckedChange = { onConfigChange(config.copy(stopAtMaxLevel = it)) },
                 label = stringResource(R.string.panel_roguelike_stop_at_max_level)
             )
+            if (config.theme == RoguelikeUi.THEME_BLACK_FLOW) {
+                BlackFlowExpSettings(config, onConfigChange)
+            }
         }
 
         RoguelikeMode.Investment -> {
@@ -185,21 +187,14 @@ fun ModeSpecificSettings(
             )
         }
 
-        RoguelikeMode.BlackFlowBabyAnimal -> {
-            RoguelikeButtonGroup(
-                label = stringResource(R.string.panel_roguelike_blackflow_cultivation_target),
-                selectedValue = config.blackFlowCultivationTarget.name,
-                options = localizedRoguelikeCultivationTargetOptions(),
-                onValueChange = {
-                    onConfigChange(
-                        config.copy(
-                            blackFlowCultivationTarget =
-                                RoguelikeBlackFlowCultivationTarget.valueOf(it)
-                        )
-                    )
-                }
-            )
+        RoguelikeMode.BlackFlowStartRun -> {
+            if (config.theme == RoguelikeUi.THEME_BLACK_FLOW) {
+                BlackFlowStartRunSettings(config, onConfigChange)
+            }
         }
+
+        // 载入时已迁移为刷开局
+        RoguelikeMode.BlackFlowBabyAnimal -> {}
 
         RoguelikeMode.FindPlaytime -> {
             if (config.theme == "JieGarden") {

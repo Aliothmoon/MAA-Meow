@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.EventShopBlacklist
 import com.aliothmoon.maameow.data.model.EventShopPreset
 import com.aliothmoon.maameow.data.model.LogLevel
+import com.aliothmoon.maameow.data.model.ReclamationConfig
 import com.aliothmoon.maameow.data.model.activity.MiniGame
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.resource.ActivityManager
@@ -48,6 +49,9 @@ private const val DEFAULT_TASK_NAME = EVENT_SHOP_VALUE
 /** 自动提升潜能，勾选后带 params.auto_raise_potential.use_normal_token */
 private const val AUTO_RAISE_POTENTIAL_VALUE = "MiniGame@AutoRaisePotential@Begin"
 
+/** 生息演算不走 CustomTask，直接以 Reclamation 任务类型下发，对齐上游 AsstReclamation */
+private const val RECLAMATION_VALUE = "Reclamation"
+
 data class MiniGameUiState(
     val selectedTaskName: String = DEFAULT_TASK_NAME,
     val selectedEnding: String = "A",
@@ -76,6 +80,8 @@ class MiniGameDelegate(
     val eventShopPresets: StateFlow<Set<EventShopPreset>> = appSettingsManager.eventShopBlacklistPresets
     val eventShopCustom: StateFlow<String> = appSettingsManager.eventShopBlacklistCustom
 
+    val reclamationConfig: StateFlow<ReclamationConfig> = appSettingsManager.reclamationConfig
+
     fun isSecretFront(selectedTaskName: String): Boolean =
         selectedTaskName == SECRET_FRONT_VALUE
 
@@ -87,6 +93,9 @@ class MiniGameDelegate(
 
     fun isEventShop(selectedTaskName: String): Boolean =
         selectedTaskName == EVENT_SHOP_VALUE
+
+    fun isReclamation(selectedTaskName: String): Boolean =
+        selectedTaskName == RECLAMATION_VALUE
 
     fun onTaskSelected(value: String) {
         _state.update { it.copy(selectedTaskName = value) }
@@ -113,6 +122,10 @@ class MiniGameDelegate(
         scope.launch { appSettingsManager.setEventShopBlacklistCustom(custom) }
     }
 
+    fun onReclamationConfigChanged(transform: (ReclamationConfig) -> ReclamationConfig) {
+        scope.launch { appSettingsManager.updateReclamationConfig(transform) }
+    }
+
     fun findGame(selectedTaskName: String): MiniGame? =
         miniGames.value.find { it.value == selectedTaskName }
 
@@ -129,6 +142,9 @@ class MiniGameDelegate(
     }
 
     internal fun buildTaskParams(): MaaTaskParams {
+        if (isReclamation(_state.value.selectedTaskName)) {
+            return reclamationConfig.value.toTaskParams(clientType())
+        }
         val taskName = buildTaskName()
         val params = buildJsonObject {
             putJsonArray("task_names") { add(JsonPrimitive(taskName)) }

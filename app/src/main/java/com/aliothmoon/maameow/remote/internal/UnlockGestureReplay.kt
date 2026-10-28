@@ -1,12 +1,9 @@
 package com.aliothmoon.maameow.remote.internal
 
-import android.os.SystemClock
-import android.view.InputDevice
-import android.view.MotionEvent
+import android.view.Display
 import com.aliothmoon.maameow.domain.models.UnlockGesture
 import com.aliothmoon.maameow.domain.models.UnlockStep
-import com.aliothmoon.maameow.third.wrappers.InputManager
-import com.aliothmoon.maameow.third.wrappers.ServiceManager
+import com.aliothmoon.maameow.maa.InputControlUtils
 import kotlin.math.roundToInt
 
 internal sealed interface InjectAction {
@@ -66,25 +63,40 @@ internal object UnlockGestureReplay {
     }
 
     /**
-     * 按时间轴注入到主屏
-     * 不走 InputControlUtils：那边的触点状态与 MAA 任务共用，后台模式跑任务时测解锁会互相打乱，
-     * 且会推给触控预览，等于把解锁轨迹广播出去
+     * 按时间轴注入到主屏，与任务共用 [InputControlUtils]
+     * 回放时不会有任务在跑：定时启动先跳过或停掉在跑的任务，设置页自测与录制有 TASK_RUNNING 拦截
      */
-    fun execute(actions: List<InjectAction>) {
-        val touch = SingleTouch()
+    fun execute(actions: List<InjectAction>, touch: ReplayTouch = MainDisplayTouch): ReplayStats {
+        // 残留的多指槽位会把这一笔规划成 POINTER_DOWN，先清掉
+        touch.cancel()
+        var downs = 0
+        var downsOk = 0
+        var events = 0
+        var eventsOk = 0
         try {
             for (action in actions) {
-                when (action) {
-                    is InjectAction.Sleep -> Thread.sleep(action.ms)
-                    is InjectAction.Down -> touch.down(action.x, action.y)
+                val ok = when (action) {
+                    is InjectAction.Sleep -> {
+                        Thread.sleep(action.ms)
+                        continue
+                    }
+
+                    is InjectAction.Down -> touch.down(action.x, action.y).also {
+                        downs++
+                        if (it) downsOk++
+                    }
+
                     is InjectAction.Move -> touch.move(action.x, action.y)
                     is InjectAction.Up -> touch.up(action.x, action.y)
                 }
+                events++
+                if (ok) eventsOk++
             }
         } finally {
-            // 中途被打断也别把手指留在屏上
-            touch.cancelIfPressed()
+            // 中途被打断或 UP 没送达，别把手指留在屏上
+            touch.cancel()
         }
+        return ReplayStats(downs = Delivery.of(downsOk, downs), events = Delivery.of(eventsOk, events))
     }
 
     private fun press(x: Int, y: Int, holdMs: Long): List<InjectAction> = listOf(
@@ -94,60 +106,46 @@ internal object UnlockGestureReplay {
     )
 }
 
-/** 回放专用单指注入，状态只活在一次回放里 */
-private class SingleTouch {
-    private val input = ServiceManager.getInputManager()
-    private var downTime = 0L
-    private var pressed = false
-    private var lastX = 0
-    private var lastY = 0
+/** 送达情况只分全部/部分/没有，不带个数：点按录的手势个数就是 PIN 位数 */
+internal enum class Delivery(val label: String) {
+    NONE("none"),
+    PARTIAL("partial"),
+    ALL("all");
 
-    fun down(x: Int, y: Int) {
-        if (pressed) cancelIfPressed()
-        downTime = SystemClock.uptimeMillis()
-        // DOWN 等系统收下再继续，与 InputControlUtils 一致
-        pressed = inject(MotionEvent.ACTION_DOWN, x, y, InputManager.INJECT_INPUT_EVENT_MODE_WAIT_FOR_FINISH)
-    }
-
-    fun move(x: Int, y: Int) {
-        if (pressed) inject(MotionEvent.ACTION_MOVE, x, y, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)
-    }
-
-    fun up(x: Int, y: Int) {
-        if (!pressed) return
-        inject(MotionEvent.ACTION_UP, x, y, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)
-        pressed = false
-    }
-
-    fun cancelIfPressed() {
-        if (!pressed) return
-        inject(MotionEvent.ACTION_CANCEL, lastX, lastY, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)
-        pressed = false
-    }
-
-    private fun inject(action: Int, x: Int, y: Int, mode: Int): Boolean {
-        lastX = x
-        lastY = y
-        val props = MotionEvent.PointerProperties().apply {
-            id = 0
-            toolType = MotionEvent.TOOL_TYPE_FINGER
-        }
-        val lifting = action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL
-        val coords = MotionEvent.PointerCoords().apply {
-            this.x = x.toFloat()
-            this.y = y.toFloat()
-            pressure = if (lifting) 0f else 1f
-            size = 1f
-        }
-        val event = MotionEvent.obtain(
-            downTime, SystemClock.uptimeMillis(), action,
-            1, arrayOf(props), arrayOf(coords),
-            0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0,
-        )
-        return try {
-            input.injectInputEvent(event, mode)
-        } finally {
-            event.recycle()
+    companion object {
+        fun of(ok: Int, total: Int) = when {
+            ok == 0 -> NONE
+            ok == total -> ALL
+            else -> PARTIAL
         }
     }
+}
+
+/** 一次回放的注入结果；不带坐标，轨迹等价于凭证 */
+internal data class ReplayStats(val downs: Delivery, val events: Delivery) {
+    val allAccepted: Boolean get() = events == Delivery.ALL
+
+    override fun toString() = "downs ${downs.label}, events ${events.label}"
+}
+
+/** 回放的注入出口，单测替换 */
+internal interface ReplayTouch {
+    fun down(x: Int, y: Int): Boolean
+    fun move(x: Int, y: Int): Boolean
+    fun up(x: Int, y: Int): Boolean
+    fun cancel()
+}
+
+/** 主屏单指 */
+private object MainDisplayTouch : ReplayTouch {
+    override fun down(x: Int, y: Int) =
+        InputControlUtils.down(x, y, InputControlUtils.SINGLE_CONTACT, Display.DEFAULT_DISPLAY)
+
+    override fun move(x: Int, y: Int) =
+        InputControlUtils.move(x, y, InputControlUtils.SINGLE_CONTACT, Display.DEFAULT_DISPLAY)
+
+    override fun up(x: Int, y: Int) =
+        InputControlUtils.up(x, y, InputControlUtils.SINGLE_CONTACT, Display.DEFAULT_DISPLAY)
+
+    override fun cancel() = InputControlUtils.cancel(Display.DEFAULT_DISPLAY)
 }

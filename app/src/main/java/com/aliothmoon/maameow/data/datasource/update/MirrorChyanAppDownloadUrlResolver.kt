@@ -31,7 +31,7 @@ class MirrorChyanAppDownloadUrlResolver(
                 "channel" to channel.value,
                 "cdk" to cdk
             )
-        ).map { data ->
+        ).mapCatching { data ->
             data.url ?: throw LocalizedException(uiTextOf(R.string.update_error_empty_download_url))
         }
     }

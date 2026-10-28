@@ -52,6 +52,11 @@ static jboolean nativeBlankFrame(JNIEnv *env, jclass clazz, jlong expectedFrameC
     return JNI_TRUE;
 }
 
+static jstring nativeDescribeReleaseStage(JNIEnv *env, jclass clazz) {
+    (void) clazz;
+    return env->NewStringUTF(DescribeReleaseStage().c_str());
+}
+
 static JNINativeMethod gMethods[] = {
         {"ping",                  "()Ljava/lang/String;",        reinterpret_cast<void *>(ping)},
         {"setupNativeCapturer",   "(II)Landroid/view/Surface;",  reinterpret_cast<void *>(nativeSetupNativeCapturer)},
@@ -61,6 +66,7 @@ static JNINativeMethod gMethods[] = {
         {"getFrameBufferBitmap",  "()Landroid/graphics/Bitmap;", reinterpret_cast<void *>(nativeGetFrameBufferBitmap)},
         {"getFrameCount",         "()J",                         reinterpret_cast<void *>(nativeGetFrameCount)},
         {"blankFrame",            "(J)Z",                        reinterpret_cast<void *>(nativeBlankFrame)},
+        {"describeReleaseStage",  "()Ljava/lang/String;",        reinterpret_cast<void *>(nativeDescribeReleaseStage)},
 };
 
 static constexpr char kNativeBridgeClass[] = "com/aliothmoon/maameow/bridge/NativeBridgeLib";

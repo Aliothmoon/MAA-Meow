@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -38,6 +39,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
@@ -67,25 +69,22 @@ fun CoreCharSelector(
 
     var tipExpanded by remember { mutableStateOf(false) }
 
-    // 内部输入状态（与配置值分离，用于显示用户正在输入的内容）
+    // 输入草稿独立于生效配置
     var inputText by remember(value) { mutableStateOf(value) }
+    var cursorToEndRequest by remember { mutableIntStateOf(0) }
 
-    // 校验状态
     var isValid by remember { mutableStateOf(true) }
-    // 默认不展开推荐列表
     var showSuggestions by remember { mutableStateOf(false) }
 
-    // 是否正在校验（用于显示加载状态）
     var isValidating by remember { mutableStateOf(false) }
 
-    // 推荐开局干员列表（按主题）
     var recommendedChars by remember { mutableStateOf<List<String>>(emptyList()) }
 
-    // 过滤后的建议列表
     var filteredSuggestions by remember { mutableStateOf<List<String>>(emptyList()) }
 
-    // 加载推荐开局干员列表
-    val themeChars = remember(theme) { resourceDataManager.getRoguelikeCoreCharList(theme) }
+    // 元数据可能晚于界面加载，要订阅
+    val roguelikeChars by resourceDataManager.roguelikeCoreCharacters.collectAsStateWithLifecycle()
+    val themeChars = remember(theme, roguelikeChars) { roguelikeChars[theme].orEmpty() }
     LaunchedEffect(themeChars) {
         recommendedChars = themeChars
         if (inputText.isBlank()) {
@@ -93,26 +92,21 @@ fun CoreCharSelector(
         }
     }
 
-    // 处理输入变化的函数
     fun handleInputChange(newValue: String) {
         inputText = newValue
-        // 输入即是搜索，保持列表展开并实时过滤
         showSuggestions = true
         Timber.d("[CoreCharSelector] handleInputChange: newValue='$newValue', currentValue='$value'")
 
         if (newValue.isBlank()) {
-            // 空字符串始终有效
             isValid = true
             isValidating = false
             filteredSuggestions = recommendedChars
             Timber.d("[CoreCharSelector] 空字符串，设置 isValid=true")
-            // 立即更新配置
             if (value != newValue) {
                 Timber.d("[CoreCharSelector] 更新配置为空字符串")
                 onValueChange(newValue)
             }
         } else {
-            // 开始校验
             isValidating = true
             Timber.d("[CoreCharSelector] 开始校验: '$newValue'")
             coroutineScope.launch {
@@ -120,14 +114,13 @@ fun CoreCharSelector(
                 val validationResult = resourceDataManager.isValidOperatorName(newValue)
                 Timber.d("[CoreCharSelector] 校验结果: validationResult=$validationResult, newValue='$newValue'")
 
-                // 先在推荐列表里找，没命中再搜索当前语言与客户端的干员名
-                // 否则输入「有效但非该主题推荐」的干员时列表会空掉
+                // 补查非推荐干员，避免有效名称搜不到
                 val newSuggestions = recommendedChars
                     .filter { it.contains(newValue, ignoreCase = true) }
                     .ifEmpty { resourceDataManager.searchOperatorNames(newValue, 15) }
                 Timber.d("[CoreCharSelector] 建议列表计算完成: ${newSuggestions.size} 个结果")
 
-                // 检查输入值是否仍然 match（防止竞态条件）
+                // 丢弃过期校验结果
                 if (inputText != newValue) {
                     Timber.d("[CoreCharSelector] 输入已变化，跳过此次校验结果: 当前='$inputText', 校验='$newValue'")
                     return@launch
@@ -161,7 +154,6 @@ fun CoreCharSelector(
             else MaterialTheme.colorScheme.onSurface.copy(alpha = MaaThemeAlphas.DISABLED)
         )
 
-        // 只有带专属开局建议的主题才显示入口，单独占一行
         if (themeTip != null) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -183,7 +175,7 @@ fun CoreCharSelector(
         val showNotFound = !isValid && !isValidating && inputText.isNotBlank()
         val showSuggestionList = enabled && showSuggestions && filteredSuggestions.isNotEmpty()
 
-        // 键盘弹出后系统只把窗口推一次；之后提示与候选增减会把输入框挤到键盘下面，得重新请求
+        // 候选区变化后重新定位，避免键盘遮挡输入框
         val inputAreaRequester = remember { BringIntoViewRequester() }
         var inputFocused by remember { mutableStateOf(false) }
         LaunchedEffect(inputFocused, showNotFound, showSuggestionList, filteredSuggestions) {
@@ -199,9 +191,11 @@ fun CoreCharSelector(
             verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier
                 .bringIntoViewRequester(inputAreaRequester)
+                // 悬浮窗点候选和图标不清焦
+                .inputFocusGroup()
                 .onFocusChanged { inputFocused = it.hasFocus }
         ) {
-            // 输入框；头像跟已生效的配置值走，输入到一半不会跟着闪
+            // 头像使用生效配置，避免输入时闪烁
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -215,6 +209,7 @@ fun CoreCharSelector(
                 }
                 ITextField(
                     value = inputText,
+                    cursorToEndRequest = cursorToEndRequest,
                     onValueChange = { newValue ->
                         handleInputChange(newValue)
                     },
@@ -268,7 +263,6 @@ fun CoreCharSelector(
                 )
             }
 
-            // 错误提示 - 只有校验完成且失败时显示
             if (showNotFound) {
                 Surface(
                     color = MaterialTheme.colorScheme.errorContainer,
@@ -284,7 +278,6 @@ fun CoreCharSelector(
                 }
             }
 
-            // 建议列表
             if (showSuggestionList) {
                 Surface(
                     modifier = Modifier
@@ -307,10 +300,10 @@ fun CoreCharSelector(
                                     .clickable {
                                         // 从建议列表选择的干员一定是有效的
                                         inputText = charName
+                                        cursorToEndRequest++
                                         showSuggestions = false
                                         isValid = true
                                         isValidating = false
-                                        // 立即更新配置
                                         onValueChange(charName)
                                     }
                                     .padding(horizontal = 12.dp, vertical = 6.dp),

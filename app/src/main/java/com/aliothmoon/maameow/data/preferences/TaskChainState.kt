@@ -11,6 +11,9 @@ import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.InfrastConfig
 import com.aliothmoon.maameow.data.model.MallConfig
+import com.aliothmoon.maameow.data.model.OperProgressConfig
+import com.aliothmoon.maameow.data.model.OperProgressResult
+import com.aliothmoon.maameow.data.model.ReclamationConfig
 import com.aliothmoon.maameow.data.model.RecruitConfig
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskParamProvider
@@ -19,6 +22,7 @@ import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +35,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -87,11 +93,21 @@ class TaskChainState(
     private val persistOps = Channel<PersistOp>(Channel.UNLIMITED)
 
     val clientType: String
-        get() = getClientTypeOrNull() ?: "Official"
+        get() = resolveClientType(findFirstEnabledConfig<WakeUpConfig>()?.clientType, _lastUsedClientType.value)
 
     /** 最近一次成功启动的会话所用客户端；运行中即本次会话的服务器，不随切换 Profile 变 */
     val lastUsedClientType: String?
         get() = _lastUsedClientType.value
+
+    val clientTypeFlow: Flow<String>
+        get() = combine(
+            firstEnabledConfigFlow<WakeUpConfig>().map { it?.clientType },
+            _lastUsedClientType,
+        ) { wakeUp, lastUsed -> resolveClientType(wakeUp, lastUsed) }
+            .distinctUntilChanged()
+
+    private fun resolveClientType(wakeUp: String?, lastUsed: String?): String =
+        wakeUp ?: lastUsed ?: "Official"
 
     private fun doSync() {
         persistOps.trySend(PersistOp.Sync)
@@ -168,12 +184,14 @@ class TaskChainState(
         scope.launch {
             try {
                 val prefs = context.store.data.first()
+                val storedActiveId = prefs[ACTIVE_PROFILE_KEY]
 
-                val storedProfiles = prefs[PROFILES_KEY]?.let {
+                val decodedProfiles = prefs[PROFILES_KEY]?.let {
                     runCatching { json.decodeFromString<List<TaskProfile>>(it) }.onFailure { e ->
                         Timber.e(e, "TaskChainState decodeFromString error")
                     }.getOrNull()
                 }?.migrated()
+                val storedProfiles = decodedProfiles?.let { adoptReclamation(it, storedActiveId) }
 
                 val needsDefaultProfile = storedProfiles.isNullOrEmpty()
 
@@ -184,12 +202,12 @@ class TaskChainState(
                     )
                 )
 
-                val storedActiveId = prefs[ACTIVE_PROFILE_KEY]
-
                 val activeProfile =
                     profiles.firstOrNull { it.id == storedActiveId } ?: profiles.first()
 
-                val needsSync = needsDefaultProfile || storedActiveId != activeProfile.id
+                // 迁出生息演算会换成新列表
+                val needsSync = needsDefaultProfile || storedActiveId != activeProfile.id ||
+                        storedProfiles !== decodedProfiles
 
                 _profiles.value = profiles
                 _profileId.value = activeProfile.id
@@ -313,6 +331,21 @@ class TaskChainState(
         updateMallCompletion(nodeId) { it.copy(visitFriendsLastDate = date) }
     }
 
+    suspend fun recordOperProgress(
+        nodeId: String,
+        results: List<OperProgressResult>,
+        removeFinished: Boolean = false,
+    ) {
+        val update = { node: TaskChainNode ->
+            val config = node.config
+            if (node.id == nodeId && config is OperProgressConfig) {
+                node.copy(config = config.applyResults(results, removeFinished))
+            } else node
+        }
+        // 回调按原节点写回，切换配置也能保留培养进度
+        mutate(others = { chain -> chain.map(update) }) { current -> current.replaceAll { update(it) } }
+    }
+
     private suspend fun updateMallCompletion(nodeId: String, transform: (MallConfig) -> MallConfig) {
         val update = { node: TaskChainNode ->
             val config = node.config
@@ -381,10 +414,6 @@ class TaskChainState(
         val next = (cfg.customInfrastPlanSelect + 1) % count
         updateNodeConfig(nodeId, cfg.copy(customInfrastPlanSelect = next))
         return next to cfg.customPlanNames.getOrNull(next)
-    }
-
-    fun getClientTypeOrNull(): String? {
-        return findFirstEnabledConfig<WakeUpConfig>()?.clientType ?: _lastUsedClientType.value
     }
 
     fun saveLastUsedClientType(clientType: String) {
@@ -586,7 +615,7 @@ class TaskChainState(
     }
 
     suspend fun importProfiles(rawProfiles: List<TaskProfile>, activeId: String) {
-        val profiles = rawProfiles.migrated()
+        val profiles = adoptReclamation(rawProfiles.migrated(), activeId)
         val resolvedActiveId =
             profiles.find { it.id == activeId }?.id ?: profiles.firstOrNull()?.id ?: return
         val activeChain = profiles.find { it.id == resolvedActiveId }?.chain ?: buildDefaultChain()
@@ -604,6 +633,24 @@ class TaskChainState(
         profile.copy(chain = profile.chain.map { it.copy(config = it.config.migrate()) })
     }
 
+    /**
+     * 生息演算设置迁入工具箱，写入成功才返回移除旧节点后的新列表
+     * 写入失败原样返回，下次载入再试，不能连累任务链载入或导入
+     */
+    private suspend fun adoptReclamation(profiles: List<TaskProfile>, activeId: String?): List<TaskProfile> {
+        val (migrated, legacy) = profiles.extractReclamation(activeId)
+        legacy ?: return profiles
+        return try {
+            appSettings.adoptReclamationConfig(legacy)
+            migrated
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.e(e, "生息演算设置迁入工具箱失败")
+            profiles
+        }
+    }
+
     private fun nextProfileName(profiles: List<TaskProfile>): String {
         val maxNum = profiles.mapNotNull { p ->
             if (p.name.startsWith(PROFILE_NAME_PREFIX)) {
@@ -614,4 +661,23 @@ class TaskChainState(
         }.maxOrNull() ?: 0
         return "$PROFILE_NAME_PREFIX${maxNum + 1}"
     }
+}
+
+/**
+ * 生息演算随上游迁到工具箱：各链去掉生息演算节点，
+ * 当前配置档优先取第一个节点的设置交给工具箱，对齐 WPF ToolboxSectionMigrationConverter
+ */
+internal fun List<TaskProfile>.extractReclamation(
+    activeId: String?,
+): Pair<List<TaskProfile>, ReclamationConfig?> {
+    val legacy = sortedByDescending { it.id == activeId }
+        .firstNotNullOfOrNull { profile -> profile.chain.firstNotNullOfOrNull { it.config as? ReclamationConfig } }
+        ?: return this to null
+    val profiles = map { profile ->
+        profile.copy(
+            chain = profile.chain.filterNot { it.config is ReclamationConfig }
+                .mapIndexed { index, node -> node.copy(order = index) }
+        )
+    }
+    return profiles to legacy
 }

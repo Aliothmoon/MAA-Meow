@@ -20,6 +20,7 @@
     <string name="maa_combat_error">战斗出错</string>
     <string name="maa_start_task">开始任务: </string>
     <string name="maa_complete_task">完成任务: </string>
+    <string name="maa_task_time">\n(用时 %1$s)</string>
     <string name="maa_task_stopped">任务已停止</string>
     <string name="maa_all_tasks_complete">任务已全部完成！</string>
     <string name="maa_task_completed_with_errors">任务已结束，以下任务出现错误:\n%1$s</string>
@@ -61,6 +62,9 @@
     <string name="maa_penguin_upload_unknown_drops">未识别掉落物</string>
     <string name="maa_missing_operators">以下干员组中没有符合本次作业要求的干员（未拥有或属性未达标）：</string>
     <string name="maa_copilot_user_additional_name_invalid">追加自定干员名称无效: %1$s，请检查拼写</string>
+    <string name="maa_copilot_operbox_data_parse_failed">干员识别数据解析失败</string>
+    <string name="maa_depot_template_load_error">仓库识别模板加载失败（%1$s），已停止任务；资源文件可能已损坏，可在「设置 → 更新管理 → 重新初始化资源」修复后重试</string>
+    <string name="maa_unknown_task_in_chain">任务链引用了未定义的任务（%1$s），资源可能损坏或与程序版本不匹配，已停止任务；可在「设置 → 更新管理 → 重新初始化资源」修复后重试</string>
 
     <!-- subtask_start -->
     <string name="maa_mission_start">已开始行动</string>
@@ -121,8 +125,19 @@
     <string name="maa_product_change_fail">产物切换失败</string>
     <string name="maa_room_groups_match">匹配编组: </string>
     <string name="maa_room_groups_match_failed">匹配干员编组失败，编组列表: </string>
+    <string name="maa_room_groups_match_recog_failed">编组干员识别失败，房间保持原样</string>
     <string name="maa_custom_infrast_plan_index_auto_switch">已自动切换至下一套自定义基建方案，下次运行生效</string>
     <string name="maa_room_operators">首选干员: </string>
+    <string name="maa_infrast_trainee_not_found">训练位候选均未命中，训练位保持原样：%1$s</string>
+    <string name="maa_infrast_assistant_not_found">协助者候选均未命中，协助者保持原样：%1$s</string>
+    <string name="maa_infrast_assistant_working_excluded">协助者候选正在其他设施工作中，已跳过，协助者保持原样：%1$s</string>
+    <string name="maa_infrast_assistant_low_mood">协助者候选心情低于阈值，已跳过，协助者保持原样：%1$s</string>
+    <string name="maa_infrast_room_kept_unchanged">该房间未配置选人名单，保持原样，未换班</string>
+    <string name="maa_infrast_facility_kept_unchanged">排班表该设施未配置房间，整个设施保持原样，未换班</string>
+    <string name="maa_infrast_candidates_unavailable">候选干员均不可用，保持原样，未换班</string>
+    <string name="maa_infrast_candidates_working">候选干员全部在其他设施工作，保持原样，未换班</string>
+    <string name="maa_infrast_candidates_low_mood">候选干员心情不满足要求，保持原样，未换班</string>
+    <string name="maa_infrast_rooms_not_configured">%1$s 间起未配置，保持原样</string>
     <string name="maa_training_idle">训练室空闲中</string>
     <string name="maa_training_completed">训练完成</string>
     <string name="maa_training_level">专精等级</string>
@@ -166,6 +181,8 @@
     <string name="maa_battle_formation_parse_failed">编队解析失败</string>
     <string name="maa_battle_formation_selected">选择干员: </string>
     <string name="maa_battle_formation_oper_unavailable">干员不可用: %1$s, 原因: %2$s</string>
+    <string name="maa_battle_formation_operbox_matched">预匹配的干员（组）：</string>
+    <string name="maa_battle_formation_operbox1_unmatched">干员（组）%1$s 没有匹配的干员，需要借助战（预匹配建议 %2$s，实际按助战列表选择）</string>
     <string name="maa_current_steps">当前步骤: %1$s %2$s</string>
     <string name="maa_elapsed_time">当前计时器: %1$sms</string>
     <string name="maa_current_stage">当前关卡: %1$s</string>
@@ -179,6 +196,7 @@
     <string name="maa_control">控制中枢</string>
     <string name="maa_reception">会客室</string>
     <string name="maa_office">办公室</string>
+    <string name="maa_recycle">回收站</string>
     <string name="maa_dorm">宿舍</string>
     <string name="maa_training">训练室</string>
 
@@ -244,13 +262,14 @@
     <string name="settings_export_success">配置导出成功</string>
     <string name="settings_export_failed">导出失败: %1$s</string>
     <string name="settings_import_failed">导入失败: %1$s</string>
+    <string name="settings_import_too_large">导入失败: 文件超过 %1$d MB，请确认选择的是配置备份</string>
 
     <!-- settings: top-level -->
     <string name="settings_title">设置</string>
     <string name="settings_search_hint">搜索设置</string>
     <string name="settings_search_clear">清空搜索</string>
     <string name="settings_search_empty">没有找到相关设置</string>
-    <string name="search_keywords_language">语言 中文 英文 English</string>
+    <string name="search_keywords_language">语言 中文 英文 English 韩语 한국어</string>
     <string name="search_keywords_theme">主题 深色 夜间 暗色 黑色 莫奈 配色 颜色</string>
     <string name="search_keywords_font_size">字体 字号 文字大小 缩放 放大</string>
     <string name="search_keywords_backend">提权 Shizuku Root 权限</string>
@@ -258,6 +277,8 @@
     <string name="search_keywords_resolution">分辨率 虚拟屏 虚拟显示器 1080 720 画质</string>
     <string name="search_keywords_pip">画中画 小窗 悬浮 PiP</string>
     <string name="search_keywords_wake_unlock">锁屏 解锁 唤醒 密码 PIN 手势 定时</string>
+    <string name="search_keywords_alarm_clock">勿扰 免打扰 DND 闹钟 定时</string>
+    <string name="search_keywords_app_blacklist">黑名单 屏蔽 跳过 前台 游戏 打扰 定时</string>
     <string name="search_keywords_mute">静音 声音 音量</string>
     <string name="search_keywords_run_duration">时长 限时 超时 运行时间</string>
     <string name="search_keywords_screen_off">熄屏 息屏 黑屏 关屏 锁屏 省电</string>
@@ -308,8 +329,10 @@
     <string name="settings_core_data_clear_done">独立目录数据已清除</string>
     <string name="settings_core_data_clear_failed">清除失败，请确认 Shizuku / Root 服务已连接</string>
     <string name="settings_core_data_clear_busy">任务运行中，请先停止再清除</string>
+    <string name="settings_reinit_resource_busy">任务运行中，请先停止再重新初始化</string>
     <string name="dialog_core_dir_inaccessible_title">无法访问资源目录</string>
     <string name="dialog_core_dir_inaccessible_message">当前系统限制了对应用目录的访问，切换到独立目录并重启后即可正常使用。</string>
+    <string name="dialog_core_dir_local_tmp_inaccessible_message">独立目录无法写入，多半是 Root 方式建出的目录归 root 所有。用 Root 方式启动一次即可自动修复，或切回应用目录并重启。</string>
     <!-- settings: monet theme color (system Material You toggle, Android 12+) -->
     <string name="settings_monet_color_title">莫奈主题色</string>
     <string name="settings_monet_color_desc">根据壁纸动态取色，关闭则使用内置蓝色主题</string>
@@ -348,8 +371,15 @@
     <string name="settings_language_system">跟随系统</string>
     <string name="settings_language_zh">中文</string>
     <string name="settings_language_en">English</string>
+    <string name="settings_language_ko">한국어</string>
     <string name="settings_background_resolution_title">后台分辨率</string>
     <string name="settings_background_resolution_desc">仅后台模式生效</string>
+    <string name="settings_virtual_display_backend_title">虚拟屏模式</string>
+    <string name="settings_virtual_display_backend_desc">Legacy 保持原有行为；VDM 使用独立显示组，失败时不会回退到 Legacy</string>
+    <string name="settings_virtual_display_backend_legacy">Legacy</string>
+    <string name="settings_virtual_display_backend_vdm">VDM（实验性）</string>
+    <string name="runlog_display_backend_switch_blocked">虚拟屏模式已更改，但上一轮的虚拟屏还在，请先「关闭游戏」再启动</string>
+    <string name="runlog_vdm_display_failed">VDM 独立虚拟屏创建失败，已取消本次启动，请在设置中调整至 Legacy 重试</string>
     <string name="settings_skip_shizuku_check">跳过 Shizuku 检查</string>
     <string name="settings_shizuku_launch_mode_title">打开快捷入口</string>
     <string name="settings_shizuku_launch_mode_desc">在首页显示 Shizuku 打开按钮，方便快速启动</string>
@@ -387,11 +417,13 @@
     <string name="settings_yituliu_open_api_token">OpenAPI Token</string>
     <string name="settings_yituliu_open_api_token_hint">一图流个人中心生成，建议只给读取权限</string>
     <string name="settings_yituliu_token_verify">验证</string>
+    <string name="settings_yituliu_get_token">获取 Token</string>
     <string name="settings_yituliu_token_empty">请先填写 Token</string>
     <string name="settings_yituliu_token_valid">Token 有效，共 %1$d 名干员</string>
     <string name="settings_yituliu_token_valid_no_data">Token 有效，但账号暂无干员练度数据</string>
     <string name="settings_oper_box_yituliu_title">干员识别从一图流获取</string>
     <string name="settings_oper_box_yituliu_desc">开启后不再进游戏截图识别，改为拉取一图流数据；数据来自森空岛导入，仅国服有</string>
+    <string name="settings_oper_box_assist_desc">自动战斗编队前按一图流练度预匹配作业编队，与自动战斗页同名选项是同一个开关；需开启上一项并同步过一图流数据</string>
     <string name="oper_box_yituliu_fetching">正在从一图流获取干员数据…</string>
     <string name="oper_box_yituliu_done">已从一图流获取 %1$d 名干员</string>
     <string name="oper_box_yituliu_done_skipped">已从一图流获取 %1$d 名干员，%2$d 名在本地资源中不存在，已跳过</string>
@@ -404,13 +436,17 @@
     <string name="oper_box_yituliu_write_only">Token 没有读取权限，请换只读或读写 Token</string>
     <string name="oper_box_yituliu_invalid">Token 无效或已失效，请重新生成</string>
     <string name="oper_box_yituliu_network_error">网络错误，请稍后重试</string>
-    <string name="oper_box_yituliu_local_data_missing">本地干员数据未装载，请先连接一次提权服务</string>
+    <string name="oper_box_yituliu_local_data_missing">本地干员数据未装载，请先连接一次服务</string>
     <string name="oper_box_yituliu_busy">正在拉取，请稍候</string>
     <string name="runlog_oper_box_yituliu_failed">从一图流获取干员数据失败：%1$s</string>
     <string name="report_http_failed">上报失败，放弃上传企鹅物流</string>
     <string name="settings_tasks_override_title">MAA 任务覆盖</string>
     <string name="settings_tasks_override_desc">如果你不知道这是什么请不要修改，会导致 MAA 无法正常工作</string>
     <string name="settings_tasks_override_edit_title">编辑配置 JSON</string>
+    <string name="settings_game_package_title">自定义游戏客户端包名</string>
+    <string name="settings_game_package_picker_title">选择%1$s的游戏应用</string>
+    <string name="settings_game_package_reset">恢复默认包名</string>
+    <string name="settings_game_package_busy">任务运行中，请先停止再修改</string>
     <string name="editor_json_valid">JSON 格式有效</string>
     <string name="editor_json_invalid">JSON 格式错误</string>
     <string name="editor_save_success">保存成功，下次任务启动生效</string>
@@ -635,6 +671,8 @@
     <string name="copilot_file_read_error">读取文件失败！</string>
     <string name="copilot_file_read_error_with_detail">读取文件失败：%1$s</string>
     <string name="copilot_status_started">自动战斗已启动</string>
+    <string name="copilot_start_failed">自动战斗启动失败</string>
+    <string name="copilot_operbox_assist_write_failed">干员练度数据写入失败，无法辅助编队</string>
     <string name="copilot_empty_load_first">作业为空，请先读取作业</string>
     <string name="copilot_type_mismatch">当前选择的作业与页签不匹配</string>
     <string name="copilot_empty_list">正在使用 ｢多作业模式｣, 但未添加任何作业</string>
@@ -666,8 +704,6 @@
 
     <!-- background task: toast -->
     <string name="bg_toast_service_died">MaaService 异常关闭，请尝试重新启动</string>
-    <string name="bg_toast_app_died">游戏进程未启动或被异常关闭</string>
-    <string name="bg_toast_display_drift">游戏已离开虚拟显示器且自动拉回失败，可尝试开启「强制 FULLSCREEN 模式」</string>
 
     <!-- task action buttons -->
     <string name="task_btn_start">开始任务</string>
@@ -703,15 +739,16 @@
     <string name="bg_auto_run_duration_limit_input_label">分钟</string>
     <string name="bg_auto_run_duration_limit_input_hint">范围 %1$d–%2$d 分钟</string>
     <string name="bg_toast_mute_failed">静音失败，建议直接用系统音量键调低媒体音量</string>
-    <string name="bg_auto_hardware_screen_off">熄屏挂机时关闭屏幕</string>
+    <string name="bg_auto_hardware_screen_off">熄屏挂机时关闭屏幕电源</string>
     <string name="bg_auto_show_touch_preview">显示触摸预览</string>
 
     <!-- dialog: hardware screen off -->
     <string name="dialog_mute_game_title">确认关闭游戏声音？</string>
     <string name="dialog_mute_game_message">该功能依赖系统接口，部分机型可能无效或无法自动恢复声音。\n更稳妥的做法是直接用音量键把媒体音量调到 0。</string>
     <string name="dialog_mute_game_confirm">仍要静音</string>
-    <string name="dialog_hardware_screen_off_title">确认开启硬件熄屏？</string>
-    <string name="dialog_hardware_screen_off_message">开启后，点击「熄屏挂机」将彻底关闭屏幕，进入极致省电状态。\n• 屏幕常亮：启用期间 MaaMeow 在前台时不会自动息屏，以防系统休眠中断任务。\n• 唤醒说明：需按两次电源键（先亮锁屏，再解锁定）。\n• 屏保模式：不开启则显示屏保时钟，可随时查看任务进度与电量。</string>
+    <string name="dialog_hardware_screen_off_title">开启「关闭屏幕电源」？</string>
+    <string name="dialog_hardware_screen_off_message">开启后，点击「熄屏挂机」将关闭屏幕电源，不再显示屏保。手机与任务照常运行，耗电更低\n\n开启前请了解：\n• 启用期间 MaaMeow 在前台时保持系统唤醒，避免自动锁屏中断任务\n• 屏幕关闭后需按两次电源键唤醒：先亮起锁屏，再解锁\n• 关闭此项则显示屏保时钟，可随时查看任务进度与电量\n• 部分设备因兼容性原因可能不生效，开启后请自行确认是否正常工作</string>
+    <string name="dialog_hardware_screen_off_confirm">我已了解，开启</string>
 
     <!-- update card -->
     <string name="update_card_title">更新管理</string>
@@ -745,6 +782,7 @@
     <string name="update_progress_app_installing">正在启动安装…</string>
     <string name="update_progress_resource_downloading">资源下载中 %1$s%%</string>
     <string name="update_progress_resource_extracting">解压中 %1$s%%</string>
+    <string name="update_progress_resource_deferred">已下载，任务结束后自动应用</string>
     <string name="update_cancel_download_cd">取消下载</string>
 
     <!-- 下载中换源 -->
@@ -775,11 +813,9 @@
     <string name="dialog_shizuku_install_confirm">快捷安装 Shizuku</string>
     <string name="dialog_shizuku_switch_to_root">切换至 Root 模式</string>
     <string name="dialog_shizuku_skip_check">跳过检查 (不推荐)</string>
-    <string name="dialog_shizuku_not_running_title">Shizuku 未启动</string>
-    <string name="dialog_shizuku_not_running_message">检测到 Shizuku 已安装但服务未启动，请打开 Shizuku 应用并启动服务。</string>
+    <string name="dialog_shizuku_not_running_title">Shizuku 未运行</string>
+    <string name="dialog_shizuku_not_running_message">检测到 Shizuku 已安装但未运行，请打开 Shizuku 应用并启动服务。</string>
     <string name="dialog_shizuku_open_app">打开 Shizuku</string>
-    <string name="dialog_sui_detected_title">检测到 Sui</string>
-    <string name="dialog_sui_detected_message">当前使用 Sui 提供 Shizuku 服务，Sui 以 Root 权限运行，MaaMeow 可能无法正常工作，请以实际测试为主</string>
     <string name="dialog_shizuku_need_auth_title">Shizuku 未授权</string>
     <string name="dialog_shizuku_need_auth_message">检测到 Shizuku 服务正在运行但尚未授权 MaaMeow，请完成授权。授权成功前将持续显示该提示。</string>
 
@@ -828,7 +864,6 @@
     <string name="panel_task_type_mall">信用收支</string>
     <string name="panel_task_type_mission">领取奖励</string>
     <string name="panel_task_type_auto_roguelike">自动肉鸽</string>
-    <string name="panel_task_type_reclamation">生息演算</string>
     <string name="panel_task_type_user_data_update">更新数据</string>
     <string name="panel_task_type_depot_maintain">库存保持</string>
 
@@ -843,13 +878,23 @@
     <string name="panel_operbox_tab_owned">已拥有 (%1$d)</string>
     <string name="panel_operbox_tab_not_owned">未拥有 (%1$d)</string>
     <string name="panel_operbox_copy_toast">已复制干员数据</string>
+    <string name="panel_operbox_card_detail">查看详情</string>
+    <string name="panel_operbox_elite_icon">精英化 %1$d</string>
+    <string name="panel_operbox_potential_icon">潜能 %1$d</string>
+    <string name="oper_role_caster">术师</string>
+    <string name="oper_role_medic">医疗</string>
+    <string name="oper_role_pioneer">先锋</string>
+    <string name="oper_role_sniper">狙击</string>
+    <string name="oper_role_special">特种</string>
+    <string name="oper_role_support">辅助</string>
+    <string name="oper_role_tank">重装</string>
+    <string name="oper_role_warrior">近卫</string>
     <string name="operbox_export_header_main_skill_level">技能等级</string>
     <string name="operbox_export_header_skills">技能专精</string>
     <string name="operbox_export_header_equips">模组</string>
     <string name="panel_operbox_title">干员识别</string>
     <string name="panel_operbox_hint_scan">点击下方「开始任务」扫描已拥有的干员信息。</string>
     <string name="panel_operbox_hint_results">识别完成后可查看已拥有 / 未拥有干员，支持导出。</string>
-    <string name="panel_operbox_owned_meta">E%1$d Lv%2$d 潜%3$d</string>
 
     <!-- 识别结果导出（通用） -->
     <string name="panel_export_copy">复制</string>
@@ -879,9 +924,21 @@
     <string name="panel_autobattle_read_single">读取作业</string>
     <string name="panel_autobattle_operator_header">干员</string>
     <string name="panel_autobattle_source_web">作业站 #%1$d</string>
+    <string name="panel_autobattle_source_web_unnumbered">作业站</string>
     <string name="panel_autobattle_source_local">本地作业</string>
-    <string name="panel_autobattle_group_header">干员组: %1$s</string>
-    <string name="panel_autobattle_summary_count">共 %1$d 名干员/组</string>
+    <string name="panel_autobattle_group_header">干员组 · %1$s</string>
+    <string name="panel_autobattle_oper_elite_0">精零</string>
+    <string name="panel_autobattle_oper_elite_1">精一</string>
+    <string name="panel_autobattle_oper_elite_2">精二</string>
+    <string name="panel_autobattle_oper_promotion">%1$s %2$d</string>
+    <string name="panel_autobattle_oper_skill">技能 %1$d</string>
+    <string name="panel_autobattle_oper_no_skill">不带技能</string>
+    <string name="panel_autobattle_oper_skill_level">Lv.%1$d</string>
+    <string name="panel_autobattle_oper_mastery_1">专一</string>
+    <string name="panel_autobattle_oper_mastery_2">专二</string>
+    <string name="panel_autobattle_oper_mastery_3">专三</string>
+    <string name="panel_autobattle_oper_module">模组 %1$s</string>
+    <string name="panel_autobattle_oper_no_module">无模组</string>
     <string name="panel_autobattle_auto_formation">自动编队</string>
     <string name="panel_autobattle_auto_formation_tip">自动编队可能无法识别带有 ｢特别关注｣ 标记的干员</string>
     <string name="panel_autobattle_use_formation">使用编队</string>
@@ -892,6 +949,15 @@
     <string name="panel_autobattle_support_fill_gaps">补漏</string>
     <string name="panel_autobattle_support_random">随机</string>
     <string name="panel_autobattle_add_trust">补充低信赖干员</string>
+    <string name="panel_autobattle_user_additional">追加自定干员</string>
+    <string name="panel_autobattle_user_additional_tip">自动编队完成后按列表顺序追加这些干员，已在编队中的会跳过，编队满员后不再追加。按住左侧把手可调整顺序；技能选「默认」时沿用游戏内的技能选择</string>
+    <string name="panel_autobattle_user_additional_search">搜索干员以追加</string>
+    <string name="panel_autobattle_user_additional_no_match">未找到匹配的干员</string>
+    <string name="panel_autobattle_user_additional_skill">技能</string>
+    <string name="panel_autobattle_user_additional_skill_default">默认</string>
+    <string name="panel_autobattle_operbox_assist">使用一图流数据辅助编队</string>
+    <string name="panel_autobattle_operbox_assist_tip">自动编队前，按一图流干员练度（含技能与模组）预匹配作业编队，配不齐时不开打\n需先在「设置 → 三方服务」填写一图流 Token、开启「干员识别从一图流获取」，并同步一次数据</string>
+    <string name="panel_autobattle_operbox_sync">同步</string>
     <string name="panel_autobattle_battle_list">多作业模式</string>
     <string name="panel_autobattle_battle_list_tip">仅支持以下模式:\n  1. 主线: 同一章节内导航\n  2. SideStory: 当前页面内导航（普通/EX/S 不能互跳）\n  3. 故事集: 当前页面内导航\n  4. 悖论模拟: 从干员列表启动\n请在对应界面启动，不支持跨章节导航\n\n当 ｢多作业模式｣ 启用后, 选择单个作业时会自动添加到 ｢作业列表｣</string>
     <string name="panel_autobattle_copilot_list">作业列表</string>
@@ -978,21 +1044,36 @@
     <string name="panel_fight_add_alternate_stage">添加备选关卡</string>
     <string name="panel_fight_remove_stage">删除该备选关卡</string>
     <string name="panel_fight_stage_group_permanent">常驻关卡</string>
+    <string name="panel_fight_stage_name_ce_6">龙门币-6/5</string>
+    <string name="panel_fight_stage_name_ap_5">红票-5</string>
+    <string name="panel_fight_stage_name_ca_5">技能-5</string>
+    <string name="panel_fight_stage_name_ls_6">经验-6/5</string>
+    <string name="panel_fight_stage_name_sk_5">碳-5</string>
+    <string name="panel_fight_stage_name_pr_a_1">奶/盾芯片</string>
+    <string name="panel_fight_stage_name_pr_a_2">奶/盾芯片组</string>
+    <string name="panel_fight_stage_name_pr_b_1">术/狙芯片</string>
+    <string name="panel_fight_stage_name_pr_b_2">术/狙芯片组</string>
+    <string name="panel_fight_stage_name_pr_c_1">先/辅芯片</string>
+    <string name="panel_fight_stage_name_pr_c_2">先/辅芯片组</string>
+    <string name="panel_fight_stage_name_pr_d_1">近/特芯片</string>
+    <string name="panel_fight_stage_name_pr_d_2">近/特芯片组</string>
+    <string name="panel_fight_stage_tip_ce">CE-6: 龙门币</string>
+    <string name="panel_fight_stage_tip_ap">AP-5: 红票</string>
+    <string name="panel_fight_stage_tip_ca">CA-5: 技能</string>
+    <string name="panel_fight_stage_tip_ls">LS-6: 经验</string>
+    <string name="panel_fight_stage_tip_sk">SK-5: 碳</string>
+    <string name="panel_fight_stage_tip_pr_a">PR-A-1/2: 奶&amp;盾芯片</string>
+    <string name="panel_fight_stage_tip_pr_b">PR-B-1/2: 术&amp;狙芯片</string>
+    <string name="panel_fight_stage_tip_pr_c">PR-C-1/2: 先&amp;辅芯片</string>
+    <string name="panel_fight_stage_tip_pr_d">PR-D-1/2: 近&amp;特芯片</string>
     <string name="panel_fight_use_custom_annihilation">使用自定义剿灭</string>
     <string name="panel_fight_annihilation_title">剿灭关卡</string>
     <string name="panel_fight_annihilation_current">当期剿灭</string>
     <string name="panel_fight_annihilation_chernobog">切尔诺伯格</string>
     <string name="panel_fight_annihilation_outskirts">龙门外环</string>
     <string name="panel_fight_annihilation_downtown">龙门市区</string>
-    <string name="panel_fight_weekday_monday">周一</string>
-    <string name="panel_fight_weekday_tuesday">周二</string>
-    <string name="panel_fight_weekday_wednesday">周三</string>
-    <string name="panel_fight_weekday_thursday">周四</string>
-    <string name="panel_fight_weekday_friday">周五</string>
-    <string name="panel_fight_weekday_saturday">周六</string>
-    <string name="panel_fight_weekday_sunday">周日</string>
-    <string name="panel_fight_weekly_schedule">启用周计划</string>
-    <string name="panel_fight_weekly_schedule_tip">启用后仅在勾选的日期执行该任务（使用游戏服务器时间，04:00 换日）</string>
+    <string name="panel_weekly_schedule">启用周计划</string>
+    <string name="panel_weekly_schedule_tip">启用后仅在勾选的日期执行该任务（使用游戏服务器时间，04:00 换日）</string>
 
     <!-- panel: stone -->
     <string name="panel_stone_allow_save">允许保存源石使用</string>
@@ -1043,6 +1124,7 @@
     <string name="panel_infrast_room_power">发电站</string>
     <string name="panel_infrast_room_reception">会客室</string>
     <string name="panel_infrast_room_office">办公室</string>
+    <string name="panel_infrast_room_recycle">回收站</string>
     <string name="panel_infrast_room_dorm">宿舍</string>
     <string name="panel_infrast_room_processing">加工站</string>
     <string name="panel_infrast_room_training">训练室</string>
@@ -1065,6 +1147,12 @@
     <string name="panel_infrast_fiammetta_target_shamare">巫恋</string>
     <string name="panel_infrast_fiammetta_target_tequila">龙舌兰</string>
     <string name="panel_infrast_fiammetta_target_gladiia">歌蕾蒂娅</string>
+    <string name="panel_infrast_fiammetta_target_saileach">琴柳</string>
+    <string name="panel_infrast_fiammetta_target_greyy2">承曦格雷伊</string>
+    <string name="panel_infrast_fiammetta_target_weedy">温蒂</string>
+    <string name="panel_infrast_fiammetta_target_waai_fu">槐琥</string>
+    <string name="panel_infrast_fiammetta_target_minimalist">至简</string>
+    <string name="panel_infrast_fiammetta_target_hbound">旅骨</string>
     <string name="panel_infrast_use_pinus_sylvestris">使用红松骑士团跨设施组合</string>
     <string name="panel_infrast_use_pinus_sylvestris_tip">必要干员：焰尾(精二)、薇薇安娜(精二)、野鬃(精二)/灰毫(精二)/远牙(精二)至少一个\n参与计算干员：砾</string>
     <string name="panel_infrast_use_perception_information">使用感知信息跨设施组合</string>
@@ -1209,6 +1297,9 @@
     <string name="panel_depot_format_toolbox">明日方舟工具箱</string>
     <string name="panel_depot_hint_scan">点击下方「开始任务」扫描当前仓库物品及数量。</string>
     <string name="panel_depot_hint_results">识别完成后支持导出企鹅物流刷图规划 / 明日方舟工具箱格式。</string>
+    <string name="panel_depot_delta_summary">较 %1$s：%2$d 种有变化</string>
+    <string name="panel_depot_delta_none">较 %1$s 无变化</string>
+    <string name="panel_depot_only_changed">仅看变化</string>
 
     <!-- panel: mini game -->
     <string name="panel_mini_game_title">牛杂</string>
@@ -1239,6 +1330,7 @@
     <string name="mini_game_name_ra_store">生息演算商店</string>
     <string name="mini_game_tip_ra_store">请在活动商店页面开始。</string>
     <string name="mini_game_name_secret_front">隐秘战线</string>
+    <string name="mini_game_name_reclamation">生息演算</string>
     <string name="mini_game_tip_secret_front">在选小队界面开始，如有存档须手动删除。\n第一次打自己看完把教程关了。\n推荐勾选游戏内 ｢继承上一支队伍发回的数据｣</string>
     <string name="mini_game_name_auto_raise_potential">自动提升潜能</string>
     <string name="mini_game_tip_auto_raise_potential">请先进入干员列表界面，再开始任务。自动提升所有带提示标记干员的潜能。\n完成后停留在最后一名干员档案；没有可提升目标时停留在干员列表</string>
@@ -1337,7 +1429,7 @@
 
     <!-- panel: depot maintain -->
     <string name="panel_depot_update_before_start">任务开始前更新库存数据</string>
-    <string name="panel_depot_update_before_start_tip">任务开始时先执行一次仓库识别刷新库存数据；每条计划开始时都会按最新库存重算缺口，本次识别结果立即生效</string>
+    <string name="panel_depot_update_before_start_tip">任务开始时先执行一次仓库识别刷新库存数据，已加入队列的计划开始时按最新库存重算缺口。开跑前就判定已充足的计划不会加入队列，识别后若实际不足只在日志提示，重新运行即可刷取</string>
     <string name="panel_depot_use_auto_series">AUTO 代理倍率</string>
     <string name="panel_depot_use_auto_series_tip">未勾选时以 1 倍代理；勾选后按当前理智允许的最大倍率代理，单次掉落可能超过目标库存上限。</string>
     <string name="panel_depot_skip_during_activity">活动期间跳过</string>
@@ -1352,6 +1444,8 @@
     <string name="panel_depot_preset_skill_summary">技巧概要·卷3</string>
     <string name="panel_depot_preset_plan_count">%1$d 条计划</string>
     <string name="panel_depot_preset_apply">添加</string>
+    <string name="panel_depot_preset_group_activity">当前活动</string>
+    <string name="panel_depot_preset_activity_skip_conflict">已开启「%1$s」，导入的计划在活动期间不会执行</string>
     <string name="panel_depot_clear_plans">清空</string>
     <string name="panel_depot_clear_plans_confirm">确认要清空全部 %1$d 条计划吗？此操作不可撤销</string>
     <string name="panel_depot_group_task_behavior">任务行为</string>
@@ -1424,9 +1518,9 @@
     <string name="panel_reclamation_no_save_line1">1. 点数刷满后会输出「任务完成」，自动停止任务</string>
     <string name="panel_reclamation_no_save_line2">2. 不要在生息演算的编队中有干员的情况下使用</string>
     <string name="panel_reclamation_no_save_line3">3. 手动确认存档情况并删除，以免 MAA 删除你的珍贵存档</string>
-    <string name="panel_reclamation_no_save_line4">4. 导航还没写，不能从生息演算以外的位置开始任务</string>
+    <string name="panel_reclamation_no_save_line4">4. 需要在主界面右下角有开始演算的界面开始任务</string>
     <string name="panel_reclamation_no_save_line5">5. 如果任务过程中报错、点数没刷满就任务完成，请前往 GitHub 提交 Issue</string>
-    <string name="panel_reclamation_with_save_title">有存档通过制造刷点数（高级设置）</string>
+    <string name="panel_reclamation_with_save_title">有存档通过制造刷点数</string>
     <string name="panel_reclamation_with_save_line1">1. 要求是结算后的第一天，且后续三天没有敌袭进入驻扎地</string>
     <string name="panel_reclamation_with_save_line2">2. 必须在进入大地图后的界面开始（能看到驻扎地的界面）</string>
     <string name="panel_reclamation_with_save_line3">3. 如果能制造的数量刚好是 99 的倍数会卡住，在存档前可以先用掉一点</string>
@@ -1513,7 +1607,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="panel_roguelike_theme_tip_sami">萨米推荐配置：\n\n开局分队: 特训分队 / 远程战术分队\n开局职业组: 稳扎稳打（重装、术师、狙击）\n开局干员: 维什戴尔\n\n当前难度 ≥6 时，6★ 干员希望消耗 +1，使用部分分队时可能无法在开局招募 6★ 干员，导致出错或失败</string>
     <string name="panel_roguelike_theme_tip_sarkaz">萨卡兹推荐配置：\n\n开局分队: 蓝图测绘分队 / 远程战术分队\n开局职业组: 稳扎稳打（重装、术师、狙击）\n开局干员: 维什戴尔\n\n1. 使用 ｢蓝图测绘分队｣ 时将完全采用避战策略，适合快速刷等级，不追求通关\n2. 使用 ｢点刺成锭分队｣ 可提升刷源石锭效率，但需要注意策略选择为 ｢刷源石锭｣\n3. 当前难度 ≥15 时，6★ 干员希望消耗 +1，使用部分分队时可能无法招募开局 6★ 干员，导致出错或失败</string>
     <string name="panel_roguelike_theme_tip_jiegarden">界园推荐配置：\n\n开局分队: 指挥分队 / 远程战术分队\n开局职业组: 稳扎稳打（重装、术师、狙击）\n开局干员: 维什戴尔\n\n1. 当策略选择 ｢刷源石锭｣，难度选择 ≥3 或 ｢MAX｣，开局分队选择 ｢指挥分队｣ 时将启用指挥避战策略\n2. 使用指挥避战策略将大幅提高刷源石锭效率，也可用于快速刷等级（不追求通关），但需要注意策略选择为 ｢刷源石锭｣\n3. 已解锁的最高难度 &lt;3 或未解锁相关科技时，请不要使用指挥避战策略，否则会导致出错\n4. 当前难度 ≥15 时，6★ 干员希望消耗 +1，使用部分分队时可能无法招募开局 6★ 干员，导致出错或失败</string>
-    <string name="panel_roguelike_theme_tip_blackflow">黑流树海推荐配置：\n\n开局干员：机械师（要精二）\n开局分队：｢特勤分队｣ / ｢堡垒战术分队｣\n开局职业组：｢稳扎稳打｣ / ｢坚不可摧｣\n\n1. 目前没有专用战斗策略，作战由招募评分自动决策；刷源石锭、刷等级、刷襁褓动物目前全部围绕精二机械师的飞展开。本次肉鸽机制繁多，不按上述配置开局就只能使用默认寻路与战斗，大概率失败，强烈推荐精二机械师开局（精二机械师只需通关一次 N1，相对简单）\n2. 机械师精二后，完成 ｢招募精通 II｣ ｢效果提升 II｣ 科技，开局即可携带 ｢结构性原理｣（全图任意飞 3 次）；解锁很简单，精二后累计卖出 10 个零件即可，强烈推荐。未解锁时只能向周围 8 格飞 3 次，虽然也能刷，但效率会低不少\n3. 刷等级时，机械师（要精二）+ 上述分队与职业组 + 重装券，可以快速飞完三层\n4. 没有精二机械师就不要选机械师，可以正常刷钱，但战斗大概率暴毙，其他策略待后续优化\n5. 刷等级 + 不勾选 ｢投资源石锭｣，即可跳过商店</string>
+    <string name="panel_roguelike_theme_tip_blackflow">黑流树海推荐配置：\n\n开局干员：机械师（要精二）\n开局分队：｢特勤分队｣ / ｢堡垒战术分队｣\n开局职业组：｢稳扎稳打｣ / ｢坚不可摧｣\n\n1. 目前没有专用战斗策略，作战由招募评分自动决策；刷源石锭和快速飞三层目前围绕精二机械师的飞展开。按上述配置开局时，招募到机械师后为保证效率不再检查精英化状态，直接按精二执行策略；快速飞三层时机械师未满天赋会飞不起来，必须使用满天赋精二机械师（精二机械师只需通关一次 N1，相对简单）\n2. 机械师精二后，完成 ｢招募精通 II｣ ｢效果提升 II｣ 科技，开局即可携带 ｢结构性原理｣（全图任意飞 3 次）；解锁很简单，精二后累计卖出 10 个零件即可，强烈推荐。未解锁时只能向周围 8 格飞 3 次，虽然也能刷，但效率会低不少\n3. 刷等级只有勾选 ｢快速飞三层｣ 才会飞，勾选后分队、职业组和开局干员自动换成上述配置；不勾选时按目标结局打，按上述配置开局也不会飞。刷开局时，准备局也可以勾选 ｢快速飞三层｣\n4. 没有满天赋精二机械师可以正常刷钱，但战斗大概率暴毙\n5. 刷等级勾选 ｢快速飞三层｣ + 不勾选 ｢投资源石锭｣，即可跳过商店</string>
     <string name="panel_roguelike_mode_exp">刷等级</string>
     <string name="panel_roguelike_mode_investment">刷源石锭</string>
     <string name="panel_roguelike_mode_collectible">刷开局</string>
@@ -1521,7 +1615,6 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="panel_roguelike_mode_exploration">深入调查</string>
     <string name="panel_roguelike_mode_clp_pds">刷坍缩</string>
     <string name="panel_roguelike_mode_find_playtime">刷常乐</string>
-    <string name="panel_roguelike_mode_blackflow_baby_animal">刷襁褓动物</string>
     <string name="panel_roguelike_mode_desc_exp">刷等级，尽可能稳定地打更多层数</string>
     <string name="panel_roguelike_mode_desc_investment">刷源石锭，投资完成后自动退出</string>
     <string name="panel_roguelike_mode_desc_collectible">刷开局，刷取热水壶或精二干员开局</string>
@@ -1530,12 +1623,61 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="panel_roguelike_mode_desc_clp_pds">刷坍缩范式，遇到非稀有坍缩范式后直接重开</string>
     <string name="panel_roguelike_mode_desc_find_playtime">刷常乐节点，第一层进洞，找不到需要的节点就重开</string>
     <string name="panel_roguelike_mode_desc_exp_blackflow">刷等级，快速飞三层</string>
-    <string name="panel_roguelike_mode_desc_blackflow_baby_animal">刷襁褓动物，按所选品种定向培养</string>
-    <string name="panel_roguelike_blackflow_cultivation_target">目标襁褓动物</string>
     <string name="panel_roguelike_blackflow_target_cat">襁褓中的猫</string>
     <string name="panel_roguelike_blackflow_target_feathered_serpent">襁褓羽蛇</string>
     <string name="panel_roguelike_blackflow_target_dog">襁褓中的狗</string>
     <string name="panel_roguelike_blackflow_target_cerberus">襁褓三头犬</string>
+    <string name="panel_roguelike_mode_blackflow_start_run">刷开局</string>
+    <string name="panel_roguelike_mode_desc_blackflow_start_run">刷开局，刷到目标后退出并保留这一局</string>
+    <string name="panel_roguelike_blackflow_fast_flight">快速飞三层</string>
+    <string name="panel_roguelike_blackflow_flight_requirement">需满天赋机械师</string>
+    <string name="panel_roguelike_blackflow_flight_tip">固定用特勤分队、稳扎稳打和自己的机械师开局，只招机械师，第二层用自带的结构性原理直接飞到第三层，到达后重开。\n勾选后常规设置里的分队、职业组和开局干员不能修改，取消勾选后恢复。不勾选时按目标结局打，开局配置是这套组合也不会飞。\n机械师天赋没点满会飞不起来，请不要勾选。</string>
+    <string name="panel_roguelike_blackflow_prep_flight_tip">准备局固定用特勤分队、稳扎稳打和自己的机械师开局，只招机械师，第二层用自带的结构性原理直接飞到第三层。\n勾选后 ｢刷开局使用分队｣ 显示为特勤分队且不能修改，取消勾选后恢复原来的设置；常规设置里的职业组和开局干员不受影响。\n机械师天赋没点满会飞不起来，请不要勾选。</string>
+    <string name="panel_roguelike_blackflow_fast_flight_lock_tip">已勾选高级设置里的 ｢快速飞三层｣，分队、职业组和开局干员固定为特勤分队、稳扎稳打和机械师，取消勾选后恢复</string>
+    <string name="panel_roguelike_blackflow_ending_flight_tip">只有取消勾选 ｢快速飞三层｣ 才能选择结局</string>
+    <string name="panel_roguelike_blackflow_ending">目标结局</string>
+    <string name="panel_roguelike_blackflow_ending_1">一结局 · 强制重启</string>
+    <string name="panel_roguelike_blackflow_ending_2">二结局 · 维度重构</string>
+    <string name="panel_roguelike_blackflow_ending_3">三结局 · 纠缠，调和</string>
+    <string name="panel_roguelike_blackflow_start_animal_1">襁褓动物 · 第一只</string>
+    <string name="panel_roguelike_blackflow_start_animal_2">襁褓动物 · 第二只</string>
+    <string name="panel_roguelike_blackflow_start_animal_none">不要求</string>
+    <string name="panel_roguelike_blackflow_animal_tip_cat">下一局开局额外获得 5 源石锭。</string>
+    <string name="panel_roguelike_blackflow_animal_tip_dog">下一局开局额外获得 1 希望。</string>
+    <string name="panel_roguelike_blackflow_animal_tip_cerberus">下一局多一次支援选择机会。培育所在的这一局须至少通过两层。</string>
+    <string name="panel_roguelike_blackflow_animal_tip_feathered_serpent">下一局的支援选项里多一个随机的蓝色襁褓生灵。培育所在的这一局须至少通过两层。</string>
+    <string name="panel_roguelike_blackflow_start_rewards">期望奖励</string>
+    <string name="panel_roguelike_blackflow_start_rewards_tip">期望奖励和羽蛇奖励里勾选的全部算候选，开局出现任意一项就停下</string>
+    <string name="panel_roguelike_blackflow_serpent_rewards">羽蛇奖励</string>
+    <string name="panel_roguelike_blackflow_start_utopia">凹第一层实托邦</string>
+    <string name="panel_roguelike_blackflow_start_utopia_requirement">需难度 6 及以上</string>
+    <string name="panel_roguelike_blackflow_start_utopia_tip">目标局在支援页出现期望奖励后，按「开局奖励选择优先级」选卡并进入第一层。\n第一层是实托邦就退出并保留这一局，不是就放弃这一局，重新进行准备局。\n目标局用常规设置里的职业组和开局干员开局。\n需难度 6 及以上；难度选择不切换时不检查难度。</string>
+    <string name="panel_roguelike_blackflow_start_reward_priority">开局奖励选择优先级</string>
+    <string name="panel_roguelike_blackflow_start_reward_priority_tip">拖动调整顺序。支援页按从上到下的顺序，选在场的卡。\n顺序和上面的动物、奖励勾选无关：没要求「襁褓羽蛇」时也可能带上它，所以羽蛇奖励也排在里面。</string>
+    <string name="panel_roguelike_blackflow_reward_unnumbered_item">未编号物</string>
+    <string name="panel_roguelike_blackflow_reward_unnumbered_item_tip">获得 1 件普通收藏品。</string>
+    <string name="panel_roguelike_blackflow_reward_survey_advance">调查预付款</string>
+    <string name="panel_roguelike_blackflow_reward_survey_advance_tip">获得 8 源石锭。</string>
+    <string name="panel_roguelike_blackflow_reward_space_lease">空间租赁</string>
+    <string name="panel_roguelike_blackflow_reward_space_lease_tip">消耗 6 源石锭，零件箱容量 +2。</string>
+    <string name="panel_roguelike_blackflow_reward_regression_compensation">退行补偿</string>
+    <string name="panel_roguelike_blackflow_reward_regression_compensation_tip">消耗 2 目标生命值上限，获得 1 件随机收藏品。</string>
+    <string name="panel_roguelike_blackflow_reward_forest_ride">林间代步</string>
+    <string name="panel_roguelike_blackflow_reward_forest_ride_tip">获得 1 件加工品。</string>
+    <string name="panel_roguelike_blackflow_reward_nest_parasitism">巢寄生</string>
+    <string name="panel_roguelike_blackflow_reward_nest_parasitism_tip">零件箱容量 -1，获得 1 件稀有收藏品。</string>
+    <string name="panel_roguelike_blackflow_reward_pegasus">襁褓天马</string>
+    <string name="panel_roguelike_blackflow_reward_pegasus_tip">每一层额外获得 1 行动力。</string>
+    <string name="panel_roguelike_blackflow_reward_hippogriff">襁褓骏鹰</string>
+    <string name="panel_roguelike_blackflow_reward_hippogriff_tip">初始额外获得 1 希望，前 2 层初始揭露全部视野。</string>
+    <string name="panel_roguelike_blackflow_reward_dragon">襁褓巨龙</string>
+    <string name="panel_roguelike_blackflow_reward_dragon_tip" formatted="false">前 2 层中所有敌人的最大生命值 -50%。</string>
+    <string name="panel_roguelike_blackflow_reward_hydra">襁褓九头蛇</string>
+    <string name="panel_roguelike_blackflow_reward_hydra_tip" formatted="false">所有敌人的攻击和生命值 +30%；每次进入新层，我方单位攻击力和生命值 +10%。</string>
+    <string name="panel_roguelike_blackflow_reward_bai_ze">襁褓白泽</string>
+    <string name="panel_roguelike_blackflow_reward_bai_ze_tip">临时招募干员的出现概率提升。</string>
+    <string name="panel_roguelike_blackflow_reward_golden_crow">襁褓金乌</string>
+    <string name="panel_roguelike_blackflow_reward_golden_crow_tip">进入第三层血色空脉时获得 3 个随机收藏品。</string>
     <string name="panel_roguelike_role_first_move_advantage">先手必胜（先锋、狙击、特种）</string>
     <string name="panel_roguelike_role_slow_and_steady">稳扎稳打（重装、术师、狙击）</string>
     <string name="panel_roguelike_role_overcoming_weaknesses">取长补短（近卫、辅助、医疗）</string>
@@ -1597,6 +1739,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="panel_roguelike_squad_multilateral_trade">多边贸易分队</string>
     <string name="panel_roguelike_squad_geological_survey">地质调查分队</string>
 
+    <string name="panel_roguelike_squad_united_front">团结阵线分队</string>
+    <string name="panel_roguelike_squad_traversal">踏足遍历分队</string>
     <!-- i18n: shared helpers -->
     <string name="common_enumeration_separator">、</string>
 
@@ -1708,6 +1852,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="notification_event_task_error">任务出错</string>
     <string name="notification_event_task_stopped">任务已停止</string>
     <string name="notification_event_task_stopped_text">任务已手动停止</string>
+    <string name="notification_event_task_aborted_text">任务因异常中止，原因见上一条通知或运行日志</string>
+    <string name="notification_event_task_time_limit_text">已达到单次运行时长上限，任务已停止</string>
     <string name="notification_event_service_died">服务异常</string>
     <string name="notification_event_service_died_text">MAA 服务意外终止</string>
     <string name="notification_event_recruit_tip">招募提示</string>
@@ -1715,6 +1861,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="notification_event_recruit_robot_tag">发现小车 Tag: %1$s</string>
     <string name="notification_event_recruit_high_rarity">发现 %1$d ★ 组合</string>
     <string name="notification_event_subtask_failure">子任务异常</string>
+    <string name="notification_game_gone_aborted">游戏进程已退出，已中止剩余任务</string>
     <string name="notification_test_title">测试通知</string>
     <string name="notification_test_message_full">这是一条来自 MaaMeow 的测试通知</string>
     <string name="notification_feedback_no_channel">请先启用至少一个通知渠道</string>
@@ -1785,10 +1932,15 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="virtual_display_idle">待机</string>
 
     <!-- i18n: task start -->
-    <string name="task_start_warning_game_not_running">检测到游戏未运行，且未启用「开始唤醒」任务，继续执行可能直接失败。请启用「开始唤醒」任务后再启动，是否仍然启动？</string>
+    <string name="task_start_warning_game_not_running">检测到游戏未运行，且本次任务不会自动启动游戏。请启用「开始唤醒」任务并勾选其中的「启动游戏」后再启动，否则任务可能失败。是否仍然启动？</string>
     <string name="task_start_warning_wake_up_skipped">检测到游戏未运行，且本次从中途开始、跳过了「开始唤醒」任务，继续执行可能直接失败。是否仍然启动？</string>
     <string name="task_start_warning_game_not_installed">未检测到当前客户端类型对应的游戏安装包，请检查「开始唤醒」中的客户端类型设置是否正确。是否仍要启动？</string>
     <string name="task_start_warning_eye_protection_enabled">检测到设备已开启护眼/夜光模式，可能会影响图像色彩识别准确度。是否仍然启动？</string>
+    <string name="task_start_warning_adb_input_restricted">检测到未开启「USB 调试（安全设置）」，系统会拦截 MaaMeow 的触控输入。请在开发者选项中开启（未生效可重启手机）。是否仍然启动？</string>
+    <string name="task_start_enable_adb_input_with_root">用 Root 开启</string>
+    <string name="task_start_fix_open_developer_settings">打开开发者选项</string>
+    <string name="task_start_fix_open_display_settings">打开显示设置</string>
+    <string name="task_start_enable_adb_input_failed">Root 开启失败，请在开发者选项中手动开启「USB 调试（安全设置）」</string>
     <string name="task_start_warning_smart_resolution_enabled">检测到系统已开启「智能分辨率」，后台模式下会导致识别出错，请先在系统显示设置中关闭。是否仍然启动？</string>
     <string name="task_start_error_no_task_selected">请先选择要执行的任务</string>
     <string name="task_start_error_conflicting_client_types">任务链中存在多个不同的客户端类型，请保持一致</string>
@@ -1807,9 +1959,9 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="task_start_error_invalid_aspect_ratio">当前分辨率不是 16:9，请调整分辨率或改用后台模式</string>
     <string name="task_start_error_display_mode">显示模式设置失败，请重试</string>
     <string name="task_start_error_virtual_display">虚拟屏幕启动失败，请检查服务权限</string>
-    <string name="task_start_error_virtual_display_shizuku_as_root">虚拟屏幕启动失败：Shizuku 正以 Root 身份运行，请改用内置 Root 模式，不要使用 Root 授权 Shizuku 的形式</string>
     <string name="task_start_error_connect_timeout">启动 MaaCore 超时，请重试</string>
     <string name="task_start_error_start_failed">MaaCore 启动失败，请检查任务配置</string>
+    <string name="task_start_error_remote_call_stuck">服务无响应，已自动重启，请重新启动任务</string>
     <string name="task_start_success">Maa启动成功</string>
     <string name="task_start_dialog_failed_title">启动失败</string>
     <string name="task_start_dialog_view_log">查看日志</string>
@@ -1823,7 +1975,9 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="task_start_device_memory_low"> [系统已处于低内存]</string>
     <string name="task_start_device_memory_unavailable">设备内存: 读取失败</string>
     <string name="task_start_eye_protection_warning_log">设备当前处于护眼/夜光模式 (%1$s)，可能影响正常图像识别，请手动关闭</string>
+    <string name="task_start_adb_input_restricted_warning_log">未开启「USB 调试（安全设置）」，系统会拦截触控输入，请在开发者选项中开启（未生效可重启手机）</string>
     <string name="task_start_smart_resolution_warning_log">系统已开启「智能分辨率」，后台模式下会导致识别出错，请在系统显示设置中手动关闭</string>
+    <string name="task_start_virtual_display_compat_warning_log">当前系统缺少后台虚拟屏所需权限，已改用兼容方式创建：熄屏或锁屏时任务会暂停，运行期间主屏可能失去输入焦点</string>
 
     <!-- i18n: toolbox / mini game -->
     <string name="toolbox_status_starting">正在启动…</string>
@@ -1842,6 +1996,13 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_trigger_log_title">触发日志</string>
     <string name="schedule_wake_unlock_title">唤醒解锁</string>
     <string name="schedule_wake_unlock_desc">定时任务触发时若设备已锁屏，会按下面的方式自动解锁；手动启动的任务不受影响</string>
+    <string name="schedule_alarm_section">定时闹钟</string>
+    <string name="schedule_use_alarm_clock">以系统闹钟方式注册定时</string>
+    <string name="schedule_use_alarm_clock_desc">可能影响勿扰模式；关闭后定时可能不够准时</string>
+    <string name="schedule_app_blacklist_title">应用黑名单</string>
+    <string name="schedule_app_blacklist_desc">仅后台模式生效。定时触发时正在使用勾选的应用，则跳过本次执行并通知</string>
+    <string name="schedule_app_blacklist_foreground_inactive">当前运行模式为前台，黑名单不生效</string>
+    <string name="schedule_app_blacklist_selected">已选（%1$d）</string>
     <string name="schedule_create_strategy">新建策略</string>
     <string name="schedule_empty_state">暂无定时策略</string>
     <string name="schedule_empty_hint_add">点击右上角添加</string>
@@ -1884,20 +2045,33 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_no_profiles">请先在操作面板中创建任务配置</string>
     <string name="schedule_enabled_tasks">已启用: %1$s</string>
     <string name="schedule_section_advanced">高级选项</string>
+    <string name="schedule_advanced_tab_trigger">触发时</string>
+    <string name="schedule_advanced_tab_running">运行期间</string>
+    <string name="schedule_advanced_tab_finish">结束后</string>
     <string name="schedule_force_start">强制启动</string>
     <string name="schedule_force_start_tip">强制启动任务，会中断正在运行的游戏和任务</string>
-    <string name="schedule_auto_screen_saver">运行期间启用屏保</string>
-    <string name="schedule_auto_screen_saver_tip">仅后台模式生效。倒计时开始前就启用屏保遮住画面并把亮度压到最低，任务结束后自动关闭。触发时你正在用手机（已亮屏且已解锁）则不启用</string>
-    <string name="schedule_auto_sleep_after_task">任务结束后自动熄屏</string>
+    <string name="schedule_auto_screen_saver">熄屏挂机</string>
+    <string name="schedule_auto_screen_saver_tip">仅后台模式生效，触发时设备处于待机状态才启用。默认在倒计时开始前显示屏保并将亮度降至最低，任务结束后自动关闭；开启「关闭屏幕电源」后，改为在倒计时结束后关闭屏幕电源。触发时设备正在使用（已亮屏且已解锁）则不启用</string>
+    <string name="schedule_hardware_screen_off">关闭屏幕电源</string>
+    <string name="schedule_hardware_screen_off_tip">倒计时结束后关闭屏幕电源，不显示屏保，无需悬浮窗权限。任务结束后屏幕保持关闭，已开启「自动熄屏」时锁屏并休眠</string>
+    <string name="schedule_hardware_screen_off_confirm_body">开启后，本策略触发时不显示屏保，倒计时结束后关闭屏幕电源，手机与任务照常运行\n\n开启前请了解：\n• 屏幕关闭期间无法查看任务进度，需按两次电源键唤醒：先亮起锁屏，再解锁\n• 任务结束后屏幕保持关闭；已开启「自动熄屏」时锁屏并休眠\n• 倒计时期间屏幕保持点亮，可取消或立即开始\n• 部分设备因兼容性原因可能不生效，开启后请自行确认是否正常工作</string>
+    <string name="schedule_silent_start">静默启动</string>
+    <string name="schedule_silent_start_tip">仅后台模式生效。触发时你正在用手机（已亮屏且已解锁）则不弹出界面，改在通知栏倒计时；设备待机时仍照常拉起界面。MaaMeow 不在前台时无法保持亮屏，运行中自动锁屏会中断任务</string>
+    <string name="schedule_silent_start_risk_title">开启静默启动？</string>
+    <string name="schedule_silent_start_risk_body">触发时若你正在用手机（已亮屏且已解锁），本策略不再弹出 MaaMeow 界面，只在通知栏倒计时，可在通知里取消或立即开始。设备待机时仍照常拉起界面\n\n开启前请了解：\n• 只有 MaaMeow 在前台时才能保持屏幕常亮。任务运行中手机若自动熄屏锁屏，锁屏会占住后台虚拟显示器，任务会中断或识别出错\n• 游戏会和你正在用的应用同时运行，可能卡顿、发热、耗电增加\n• 没有弹窗提醒，倒计时只在通知栏，容易错过；关闭通知权限后无法在倒计时内取消\n\n建议调长系统自动锁屏时间；中途要放下手机时，打开 MaaMeow 即可保持亮屏</string>
+    <string name="schedule_silent_start_risk_confirm">我已了解，开启</string>
+    <string name="schedule_auto_sleep_after_task">自动熄屏</string>
     <string name="schedule_auto_sleep_tip">定时任务执行完成后自动熄屏，节省电量</string>
     <string name="schedule_skip_auto_sleep_if_awake">启动时已亮屏则不熄屏</string>
     <string name="schedule_skip_auto_sleep_if_awake_tip">触发时屏幕已亮且不在锁屏界面，视为你正在用手机，任务结束后不熄屏</string>
-    <string name="schedule_close_game_after_task">任务结束后关闭游戏</string>
+    <string name="schedule_close_game_after_task">关闭游戏</string>
     <string name="schedule_close_game_tip">仅后台模式生效。若「任务 → 快捷选项 → 任务自动结束时关闭游戏」已开启，以该开关为准；未开启时才按本策略执行。手动停止任务不会关闭游戏</string>
     <string name="schedule_close_game_effect_foreground">当前效果：运行模式为前台，本项不生效</string>
     <string name="schedule_close_game_effect_global">当前效果：全局开关已开启，任务结束后会关闭游戏</string>
     <string name="schedule_close_game_effect_strategy">当前效果：任务自然结束后会按本策略关闭游戏</string>
     <string name="schedule_close_game_effect_inactive">当前效果：任务结束后不会关闭游戏</string>
+    <string name="schedule_exit_app_after_task">退出应用</string>
+    <string name="schedule_exit_app_tip">任务结束后关闭 Shizuku / Root 服务并退出 MaaMeow，在关闭游戏、自动熄屏之后执行，外部通知发送完再退出。后台模式下游戏随虚拟屏一并关闭。手动停止任务不会退出</string>
     <string name="schedule_permission_tip_battery_optimization">关闭电池优化</string>
     <string name="schedule_permission_tip_exact_alarm">允许精确闹钟</string>
     <string name="schedule_permission_tip_notification">开启通知权限</string>
@@ -1916,7 +2090,10 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_health_title">调度环境检查</string>
     <string name="schedule_health_fix">去修复</string>
     <string name="schedule_health_backend">%1$s未授权</string>
-    <string name="schedule_health_backend_desc">定时触发的唤醒、拉起界面与执行都依赖它，请先启动对应服务并完成授权</string>
+    <string name="schedule_health_backend_desc">定时触发的唤醒、拉起界面与执行都依赖它，请先完成授权</string>
+    <string name="schedule_health_backend_not_running">%1$s未运行</string>
+    <string name="schedule_health_backend_unavailable">%1$s不可用</string>
+    <string name="schedule_health_backend_down_desc">定时触发的唤醒、拉起界面与执行都依赖它，请先启动对应服务</string>
     <string name="schedule_health_battery">未忽略电池优化</string>
     <string name="schedule_health_battery_desc">后台触发可能被系统延迟或拦截</string>
     <string name="schedule_health_notification">通知权限未开启</string>
@@ -1971,6 +2148,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_result_failed_ui_launch">拉起界面失败</string>
     <string name="schedule_result_skipped_busy">系统繁忙</string>
     <string name="schedule_result_skipped_locked">锁屏跳过</string>
+    <string name="schedule_result_skipped_blacklist">黑名单跳过</string>
     <string name="schedule_result_cancelled">已取消</string>
     <string name="schedule_interval_every_days_hours">每 %1$d 天 %2$d 小时</string>
     <string name="schedule_interval_every_days">每 %1$d 天</string>
@@ -1998,15 +2176,27 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="notification_channel_schedule">定时任务</string>
     <string name="notification_channel_schedule_desc">定时任务执行与结果通知</string>
     <string name="notification_schedule_title">定时任务</string>
+    <string name="notification_schedule_skipped">定时任务已跳过</string>
+    <string name="notification_schedule_failed">定时任务未能启动</string>
+    <string name="notification_schedule_silent_countdown">「%1$s」即将在后台静默启动，可在此取消或立即开始</string>
     <string name="notification_schedule_preparing">正在准备拉起界面…</string>
     <string name="notification_schedule_device_locked">设备处于锁屏状态</string>
     <string name="notification_schedule_pin_required">已跳过：设备有锁屏密码。请在「定时 → 唤醒解锁」中配置 PIN 或录制解锁手势，或用「任务 → 快捷选项 → 熄屏挂机」代替系统锁屏</string>
     <string name="notification_schedule_detail">「%1$s」: %2$s</string>
+    <string name="notification_action_open_shizuku">打开 Shizuku</string>
+    <string name="notification_shizuku_down_title">Shizuku 未运行</string>
+    <string name="notification_shizuku_down_after_boot">手机重启后需要重新启动 Shizuku，否则定时任务无法执行</string>
+    <string name="notification_shizuku_down_stopped">Shizuku 已停止，重新启动前定时任务无法执行</string>
 
     <!-- i18n: schedule trigger journal (pipeline) -->
     <string name="schedule_log_received">收到启动请求: %1$s</string>
     <string name="schedule_log_skipped_busy">已有定时任务正在处理中</string>
+    <string name="schedule_log_silent_start">正在使用手机，静默启动：不拉起界面，改在通知栏倒计时</string>
+    <string name="schedule_log_blacklist_hit">前台应用「%1$s」在黑名单中，已跳过</string>
+    <string name="schedule_log_blacklist_unknown">无法判断前台应用，黑名单未生效</string>
     <string name="schedule_log_task_running_busy">有任务正在运行</string>
+    <string name="schedule_log_backend_connecting">连接服务…</string>
+    <string name="schedule_log_backend_connect_cause">服务启动失败原因: %1$s</string>
     <string name="schedule_log_force_stop_running">强制启动: 停止当前运行任务</string>
     <string name="schedule_log_wake_start">执行唤醒解锁…</string>
     <string name="schedule_log_wake_ok">唤醒解锁成功</string>
@@ -2014,8 +2204,24 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_log_auto_sleep_skipped_screensaver">熄屏挂机仍开启，跳过结束熄屏</string>
     <string name="schedule_log_screen_saver_on">已启用屏保</string>
     <string name="schedule_log_screen_saver_kept">沿用已开启的熄屏挂机</string>
+    <string name="schedule_log_screen_off_kept">沿用已关闭的屏幕电源</string>
+    <string name="schedule_log_hardware_screen_off_sent">已关闭屏幕电源</string>
+    <string name="schedule_log_hardware_screen_off_failed">关闭屏幕电源失败</string>
     <string name="schedule_log_screen_saver_failed">屏保启用失败，可能缺少悬浮窗权限</string>
     <string name="schedule_log_wake_failed">唤醒解锁失败: %1$s</string>
+    <string name="schedule_log_wake_config">解锁配置: %1$s；需要密码: %2$s；唤醒前: %3$s、%4$s</string>
+    <string name="schedule_log_wake_config_pin_set">%1$s（已填写）</string>
+    <string name="schedule_log_wake_config_pin_empty">%1$s（未填写）</string>
+    <string name="schedule_log_wake_config_gesture">%1$s（录制于 %2$s）</string>
+    <string name="schedule_log_wake_config_gesture_missing">%1$s（未录制，按无密码处理）</string>
+    <string name="schedule_log_wake_config_unknown">未知</string>
+    <string name="schedule_log_wake_yes">是</string>
+    <string name="schedule_log_wake_no">否</string>
+    <string name="schedule_log_wake_screen_on">亮屏</string>
+    <string name="schedule_log_wake_screen_off">熄屏</string>
+    <string name="schedule_log_wake_keyguard_locked">已锁屏</string>
+    <string name="schedule_log_wake_keyguard_unlocked">未锁屏</string>
+    <string name="schedule_log_wake_trace">解锁过程:\n%1$s</string>
     <string name="schedule_log_wake_pin_required">系统有锁屏密码但未配置 PIN，已跳过</string>
     <string name="schedule_log_wake_skipped_screensaver">屏保常亮中，跳过系统锁屏</string>
     <string name="schedule_log_keyguard_skipped">已跳过锁屏检查</string>
@@ -2104,7 +2310,6 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="task_type_mall">信用收支</string>
     <string name="task_type_mission">领取奖励</string>
     <string name="task_type_auto_roguelike">自动肉鸽</string>
-    <string name="task_type_reclamation">生息演算</string>
     <string name="task_type_user_data_update">更新数据</string>
     <string name="task_type_depot_maintain">库存保持</string>
 
@@ -2125,8 +2330,9 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="onboarding_next">下一步</string>
     <string name="onboarding_done">开始使用</string>
     <string name="onboarding_step_counter">%1$d / %2$d</string>
+    <string name="onboarding_button_countdown">%1$s（%2$d）</string>
     <string name="onboarding_welcome_title">欢迎使用 MaaMeow</string>
-    <string name="onboarding_welcome_body">《明日方舟》小助手 Android 版，全日常一键长草。\n\n运行前需要 Shizuku 或 Root 提供权限。接下来花一分钟了解首页的几个关键区域，随时可以跳过</string>
+    <string name="onboarding_welcome_body">《明日方舟》小助手 Android 版，全日常一键长草。\n\n运行前需要 Shizuku 或 Root 提供权限。接下来花一分钟了解首页的几个关键区域</string>
     <string name="onboarding_status_title">状态总览</string>
     <string name="onboarding_status_body">这里显示屏幕分辨率、资源与应用版本，以及服务的连接状态。\n服务连接成功后才能正常开始任务</string>
     <string name="onboarding_run_mode_title">运行模式</string>
@@ -2149,6 +2355,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="onboarding_schedule_trigger_log_body">定时没跑？来这里看每次触发的结果和原因</string>
     <string name="onboarding_tab_settings_title">设置与帮助</string>
     <string name="onboarding_tab_settings_body">公告、更新日志、日志导出和 QQ 交流群都在设置页。\n随时可以在「关于」中重新查看本引导</string>
+    <string name="onboarding_runtime_backend_title">Shizuku / Root 切换</string>
+    <string name="onboarding_runtime_backend_body">默认通过 Shizuku 获取权限；设备已 Root 的可以在「运行环境 → 启动模式」改为 Root，不需要再装 Shizuku。\n切换后首页的授权项会跟着变，按新方式重新授权即可</string>
     <string name="onboarding_about_help_title">常见问题与问题反馈</string>
     <string name="onboarding_about_help_body">遇到问题先看「常见问题」，连接失败、任务卡住、识别出错等常见情况都有现成解答。\n确认不在其中后，再到「日志 → 导出日志压缩包」生成日志包，连同复现步骤通过「问题反馈」提交，没有日志很难定位原因</string>
 
@@ -2454,17 +2662,23 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <!-- 首参可能是计划序号也可能是任务名，编号前缀由调用方给 -->
     <string name="runlog_depot_plan_inventory_enough">%1$s：%2$s 已充足 %3$d/%4$d</string>
     <string name="runlog_depot_plan_inventory_insufficient">%1$s：%2$s 不足 %3$d/%4$d，需刷取 %5$d</string>
-    <string name="runlog_fight_inventory_unavailable">任务「%1$s」启用了目标库存，但当前没有可用的库存数据，已跳过。可通过「工具箱 - 仓库识别」更新库存</string>
+    <string name="runlog_fight_inventory_unavailable">任务「%1$s」启用了目标库存，但当前没有可用的库存数据，已跳过。可通过「更新数据」任务或「工具箱 - 仓库识别」更新库存</string>
     <string name="runlog_fight_stage_unavailable">%1$s：无今日开放的关卡（首选 %2$s），已跳过理智作战</string>
     <string name="runlog_depot_set_params_failed">%1$s：更新任务参数失败，将按原参数执行</string>
     <string name="runlog_depot_plan_sanity_insufficient">%1$s：理智不足（预估 %2$d，低于关卡消耗 %3$d），已跳过</string>
+    <string name="runlog_depot_plan_inventory_unavailable">%1$s：当前没有可用的库存数据，已跳过刷取。可通过「更新数据」任务或「工具箱 - 仓库识别」更新库存</string>
+    <string name="runlog_depot_plan_stale_skipped">%1$s #%2$d：%3$s 实际 %4$d/%5$d 不足，预检时已跳过的计划无法在运行中补上，重新运行即可刷取</string>
+    <string name="runlog_depot_delta_summary">仓库较 %1$s 有 %2$d 种物品变化，可在「小工具 → 仓库识别」查看</string>
+    <string name="runlog_depot_delta_none">仓库无变化（较 %1$s）</string>
     <string name="runlog_depot_skipped_activity">当前有活动进行中，已跳过库存保持</string>
     <string name="runlog_depot_skipped_resource">当前处于资源收集限时全天开放期间，已跳过库存保持</string>
+    <string name="runlog_depot_sorted_by_progress">已按库存达成率从低到高排序执行</string>
     <string name="runlog_copilot_start">开始执行自动战斗</string>
     <string name="runlog_copilot_started">自动战斗开始运行</string>
     <string name="runlog_service_connecting">服务正在启动中，请稍后再试</string>
     <string name="runlog_backend_unavailable">%1$s 不可用，已取消启动</string>
     <string name="runlog_backend_not_granted">%1$s 未授权，已取消启动</string>
+    <string name="runlog_backend_connect_failed">经 %1$s 启动服务失败，已取消启动</string>
     <string name="runlog_resource_load_failed">资源加载失败</string>
     <string name="runlog_portrait_orientation">当前为竖屏，无法在前台模式运行</string>
     <string name="runlog_invalid_aspect_ratio">当前分辨率 %1$dx%2$d 不是 16:9，无法在前台模式运行</string>
@@ -2473,9 +2687,9 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="runlog_maa_connect_failed">启动 MaaCore 超时或失败</string>
     <string name="runlog_display_mode_failed">设置显示模式失败</string>
     <string name="runlog_virtual_display_failed">启动虚拟显示失败</string>
-    <string name="runlog_virtual_display_failed_shizuku_as_root">启动虚拟显示失败：检测到 Shizuku 以 Root 身份运行（uid 0），请改用内置 Root 模式，不要使用 Root 授权 Shizuku 的形式</string>
     <string name="runlog_maa_start_failed">MaaCore 启动失败</string>
     <string name="runlog_remote_connect_failed">无法连接远程服务：%1$s</string>
+    <string name="runlog_remote_call_stuck">远程服务无响应，已自动重启服务，本次启动取消</string>
     <string name="runlog_task_stopping">正在停止任务...</string>
     <string name="runlog_task_stopped">任务停止，状态: %1$s</string>
     <string name="runlog_run_duration_limit_reached">已达到运行时长上限（%1$d 分钟），停止任务</string>
@@ -2500,10 +2714,10 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="wake_result_no_keyguard">未设置锁屏，无需解锁</string>
     <string name="wake_result_unsupported">当前系统不支持该操作</string>
     <string name="wake_result_lock_failed">无法进入锁屏</string>
-    <string name="wake_result_ipc_failed">提权服务未连接</string>
+    <string name="wake_result_ipc_failed">服务未连接</string>
     <string name="wake_result_task_running">任务运行中，请先停止任务再测试或录制</string>
     <string name="wake_result_record_busy">上一次录制还在收尾，请稍后再试</string>
-    <string name="wake_result_unknown">提权服务返回了无法识别的结果，请重启提权服务后再试</string>
+    <string name="wake_result_unknown">服务返回了无法识别的结果，请重启服务后再试</string>
     <string name="wake_result_gesture_empty">尚未录制解锁手势</string>
     <string name="wake_result_gesture_screen_mismatch">屏幕方向或分辨率与录制时不一致，请重新录制</string>
     <string name="wake_result_record_no_device">读不到触摸屏输入设备，当前系统不允许；可改用 Root 启动方式或 PIN</string>
@@ -2528,16 +2742,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="settings_wake_gesture_test_hint">先锁屏，约 1 秒后回放录制的手势</string>
     <!-- 黑流树海肉鸽运行日志文案 -->
     <string name="blackflow_routing_decision">第 %1$d 层｜行动力 %2$d→%3$d｜%4$s至 %5$s｜安全余量 %6$d</string>
-    <string name="blackflow_routing_reason">原因：%1$s｜说明：%2$s</string>
     <string name="blackflow_movement_walk">徒步移动</string>
     <string name="blackflow_movement_processing">加工品移动</string>
-    <string name="blackflow_reason_mandatory_goal">强制目标</string>
-    <string name="blackflow_reason_resource_reserve">资源保留</string>
-    <string name="blackflow_reason_preferred_goal">偏好目标</string>
-    <string name="blackflow_reason_development">发育</string>
-    <string name="blackflow_reason_risk_avoidance">风险规避</string>
-    <string name="blackflow_reason_safety_fallback">安全退路</string>
-    <string name="blackflow_reason_tie_break">次级比较</string>
     <string name="blackflow_warning_map_rebuild_failed">地图重建失败</string>
     <string name="blackflow_warning_page_recovery_failed">无法从节点页面返回地图</string>
     <string name="blackflow_warning_preview_cost_changed">移动预览显示的行动力消耗发生变化，正在重新规划</string>
@@ -2553,13 +2759,30 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="blackflow_strategy_result">肉鸽策略结束：%1$s（%2$s）</string>
     <string name="blackflow_strategy_started">黑流策略已启动：%1$s</string>
     <string name="blackflow_strategy_unknown">未知策略</string>
+    <string name="blackflow_start_run_preparing">正在进行准备局</string>
+    <string name="blackflow_start_run_target_run">已切换到目标局，等待检查开局奖励</string>
+    <string name="blackflow_start_run_reward_missed">开局奖励未命中，重新进行准备局</string>
+    <string name="blackflow_start_run_reward_picked">开局奖励已选取，进入第一层检查实托邦</string>
+    <string name="blackflow_start_run_completed">开局目标已满足，已退出并保留这一局</string>
+    <string name="blackflow_start_run_reward_recognition_failed">开局奖励识别失败，已停止任务</string>
+    <string name="blackflow_start_run_reward_page_missing">未识别到开局奖励页，已停止任务</string>
+    <string name="blackflow_start_run_reward_unrecognized">选择支援页有奖励没认出来，已停在该页面并停止任务</string>
+    <string name="blackflow_start_run_rewards_seen">本次支援页：%1$s</string>
+    <string name="blackflow_outcome_start_run_prepared">开局准备已完成</string>
+    <string name="blackflow_outcome_start_run_utopia_missed">第一层不是实托邦</string>
+    <string name="blackflow_termination_start_run_prepared">已到达第三层，将按目标难度和分队开启下一局</string>
+    <string name="blackflow_termination_first_floor_without_utopia">将放弃这一局，重新进行准备局</string>
     <string name="blackflow_inventory_cleanup_started">零件箱超载，开始清理</string>
     <string name="blackflow_inventory_cleanup_discarded">已丢弃零件：%1$s</string>
     <string name="blackflow_inventory_cleanup_completed">零件箱清理完成</string>
     <string name="blackflow_inventory_cleanup_failed">零件箱清理失败</string>
-    <string name="blackflow_decision_probe_unknown_node">探测路线前方最近的未分类节点</string>
-    <string name="blackflow_decision_policy_order">按照策略设定的优先顺序选择</string>
-    <string name="blackflow_decision_detail_unknown">决策依据未知</string>
+    <string name="blackflow_scrap_trade_aborted_market_unavailable">秘境行商的物品数据不可用，跳过交易并离店</string>
+    <string name="blackflow_scrap_trade_aborted_inventory_incomplete">秘境行商持有物清点失败，停止交易并离店</string>
+    <string name="blackflow_scrap_trade_aborted_page_switch_failed">秘境行商买入与出售页面切换失败，停止交易并离店</string>
+    <string name="blackflow_scrap_trade_aborted_sale_search_failed">秘境行商出售列表查找失败，停止交易并离店</string>
+    <string name="blackflow_scrap_trade_aborted_sell_back_search_failed">秘境行商未能找到要卖回的「%1$s」，停止交易并离店</string>
+    <string name="blackflow_scrap_trade_aborted_sale_failed">秘境行商出售「%1$s」未得到确认，停止交易并离店</string>
+    <string name="blackflow_scrap_trade_aborted_unknown">秘境行商交易出现异常，停止交易并离店</string>
     <string name="blackflow_milestone_unknown">未知阶段目标</string>
     <string name="blackflow_milestone_status_available">可以执行</string>
     <string name="blackflow_milestone_status_satisfied">已经完成</string>
@@ -2591,26 +2814,14 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="blackflow_node_evacuate">撤离点</string>
     <string name="blackflow_node_teleporter">传送点</string>
     <string name="blackflow_node_other">其他节点</string>
-    <string name="blackflow_rule_avoid_empty_scrap_shop">没有源石锭、种子及可出售零件时避开秘境行商</string>
-    <string name="blackflow_rule_preserve_white_model_bird">保留白模鸟，避开需要加工品移动的可选战斗</string>
-    <string name="blackflow_rule_trigger_boss_processing_bonus">使用加工品进入首领节点并触发战斗加成</string>
-    <string name="blackflow_rule_exit_when_required">发育已经完成或安全余量不足，前往出口</string>
-    <string name="blackflow_rule_ending1_avoid_late_combat">已经形成基本精二队伍，避开非必要战斗</string>
-    <string name="blackflow_rule_baby_use_processing_item_for_floor1_shop">第一层使用加工品前往普通商店</string>
-    <string name="blackflow_rule_baby_walk_after_floor1_shop">第一层检查普通商店后徒步探索并保留加工品</string>
-    <string name="blackflow_rule_baby_delay_exit_before_floor3">第三层前仍有发育空间，暂缓前往出口</string>
-    <string name="blackflow_rule_baby_exit_before_floor3_when_required">第三层前发育已经完成或安全余量不足，前往出口</string>
-    <string name="blackflow_rule_baby_avoid_combat">仍有其他安全走法，避开作战节点</string>
-    <string name="blackflow_rule_light_reveals_three">羽瞰点预计可以揭示至少三个未知大节点</string>
-    <string name="blackflow_rule_investment_keep_short_walk">商店距离不超过两格时保持徒步</string>
-    <string name="blackflow_rule_investment_use_m11_for_direct_shop">没有短途徒步方案时使用结构性原理直达商店</string>
-    <string name="blackflow_rule_burn_require_shop_when_flight_guaranteed">开局配置保证精二机械师时，第一层路线必须经过商店</string>
-    <string name="blackflow_rule_burn_require_flight_on_floor2">该开局配置下第二层直接用结构性原理飞向出口</string>
     <string name="blackflow_milestone_ending1_floor1_battles">第一层优先作战</string>
     <string name="blackflow_milestone_ending1_floor1_hidden">第一层尽量探索未知的诡秘</string>
+    <string name="blackflow_milestone_ending1_floor1_scrap_shop">第一层顺路进入秘境行商交易</string>
     <string name="blackflow_milestone_ending1_floor2_expedition">第二层优先先行一步</string>
     <string name="blackflow_milestone_ending1_floor2_scrap_shop">第二层优先秘境行商</string>
     <string name="blackflow_milestone_ending1_floor2_hidden">第二层尽量探索未知的诡秘</string>
+    <string name="blackflow_milestone_ending1_floor2_incident">第二层尽量经过不期而遇</string>
+    <string name="blackflow_milestone_ending1_informant">第二、三层优先经过带线人角标的不期而遇</string>
     <string name="blackflow_milestone_ending1_floor2_employ">第二层顺路经过应急助力</string>
     <string name="blackflow_milestone_ending1_floor2_light">第二层顺路经过羽瞰点</string>
     <string name="blackflow_milestone_ending1_floor2_wish">第二层顺路经过得偿所愿</string>
@@ -2634,7 +2845,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="blackflow_milestone_baby_explore_hidden">尚未发现秘境行商时尽量多开未知的诡秘</string>
     <string name="blackflow_milestone_baby_visit_incident">顺路进入不期而遇</string>
     <string name="blackflow_milestone_baby_floor2_shops">第二层经过普通商店时继续获取种子</string>
-    <string name="blackflow_milestone_baby_floor3_shops">第三层经过普通商店时卖货、刷新并尽量购买种子</string>
+    <string name="blackflow_milestone_baby_floor3_shops">第三层经过普通商店时继续获取种子</string>
     <string name="blackflow_milestone_ending2_sandtable_a">获得沙盘 A</string>
     <string name="blackflow_milestone_ending2_sandtable_b">获得沙盘 B</string>
     <string name="blackflow_milestone_ending2_fate">第五层进入命运所指并完成二结局</string>
@@ -2699,7 +2910,13 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="blackflow_termination_unknown">如需反馈请前往「设置 → 关于 → 问题反馈」</string>
     <string name="panel_depot_only_first_insufficient_plan">仅执行第一个库存不足的计划</string>
     <string name="panel_depot_only_first_insufficient_plan_tip">按启动时已有库存，选择第一个库存不足且关卡开放的计划。本次只执行此计划，后续计划留到下次运行。</string>
+    <string name="panel_depot_sort_by_progress">按库存达成率排序执行</string>
+    <string name="panel_depot_sort_by_progress_tip">按启动时已有库存计算达成率（当前/目标），从低到高执行，缺口比例最大的计划优先获得理智；列表显示顺序不变。与「仅执行第一个库存不足的计划」同时开启时，只执行达成率最低且关卡开放的计划。</string>
+    <string name="panel_depot_count_dual_chip">芯片组计入双芯片折算</string>
+    <string name="panel_depot_count_dual_chip_tip">统计芯片组库存时，对应职业的双芯片按合成配方折算计入，每个双芯片折算为 2 个芯片组。\n计划概览以「原始 (+折算)」形式显示，达标判定与缺口计算使用折算后数量。\n仅改变计数口径，不会自动合成。</string>
     <string name="runlog_append_task_failed">任务加入队列失败：%1$s</string>
+    <string name="runlog_weekly_schedule_skipped">%1$s：周计划今日未勾选，已跳过</string>
+    <string name="runlog_no_task_appended">没有任务成功加入队列，已取消启动</string>
     <string name="runlog_task_with_detail">%1$s（%2$s）</string>
     <string name="task_type_switch_theme">更换主题</string>
     <string name="panel_task_type_switch_theme">更换主题</string>
@@ -2752,4 +2969,55 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="live_update_icon_pick_failed">图片不可用，图标未更改</string>
     <string name="live_update_hint_island">提示：本机以小米超级岛实况展示，上述内容与图标会应用到超级岛与状态栏；岛内文本过长时系统会按空间截断。\"最新日志\"将显示当前执行的最新日志行。</string>
     <string name="live_update_hint_plain">提示：标准通知栏不显示状态栏短文本，这里只列出会生效的项。</string>
+    <string name="task_type_oper_progress">干员培养</string>
+    <string name="panel_task_type_oper_progress">干员培养</string>
+    <string name="maa_oper_progress">干员培养</string>
+    <string name="oper_progress_tip">按计划顺序进行精英化、技能升级和专精，缺料时会尝试合成材料、制造双芯片并用红票补购芯片助剂。专精每次只启动下一级训练，下次运行再确认进度。可拖动卡片左侧手柄排序。</string>
+    <string name="oper_progress_online_editor">在明日方舟工具箱中编辑培养计划</string>
+    <string name="oper_progress_running">任务已加入队列，执行结束后可编辑计划</string>
+    <string name="oper_progress_collapse">全部折叠</string>
+    <string name="oper_progress_clear">清空计划</string>
+    <string name="oper_progress_clear_confirm">将删除本任务中的全部培养计划</string>
+    <string name="oper_progress_import">导入计划</string>
+    <string name="oper_progress_plans">培养计划 (%1$d)</string>
+    <string name="oper_progress_order">第 %1$d 项计划</string>
+    <string name="oper_progress_mastery_summary">专精 %1$s</string>
+    <string name="oper_progress_empty_title">添加第一位干员</string>
+    <string name="oper_progress_remove_plan">移除计划</string>
+    <string name="oper_progress_add">添加干员</string>
+    <string name="oper_progress_search">搜索干员名称</string>
+    <string name="oper_progress_no_operators">未找到可培养的干员，请检查名称或更新资源</string>
+    <string name="oper_progress_added">已添加</string>
+    <string name="oper_progress_reorder">拖动排序</string>
+    <string name="oper_progress_remove">移除 %1$s 的培养计划</string>
+    <string name="oper_progress_expand">展开或折叠培养计划</string>
+    <string name="oper_progress_no_targets">请选择至少一个培养目标</string>
+    <string name="oper_progress_not_set">不设置</string>
+    <string name="oper_progress_elite">精英化</string>
+    <string name="oper_progress_skill">基础技能等级</string>
+    <string name="oper_progress_mastery">技能 %1$d 专精</string>
+    <string name="oper_progress_elite_target">精英化 %1$d</string>
+    <string name="oper_progress_skill_target">技能等级 %1$d</string>
+    <string name="oper_progress_mastery_target">技能 %1$d 专精 %2$d</string>
+    <string name="oper_progress_training">上次已启动技能 %1$d 的专精 %2$d 训练，下次运行确认进度</string>
+    <string name="oper_progress_empty">培养计划为空，添加干员或导入计划后再运行</string>
+    <string name="oper_progress_duplicate">同一干员不能重复添加，请检查现有培养计划</string>
+    <string name="oper_progress_invalid_plan">%1$s 的培养目标无效，请检查精英化、技能等级和专精设置</string>
+    <string name="oper_progress_import_invalid">培养计划格式有误，请复制明日方舟工具箱（arkntools）导出的计划数组</string>
+    <string name="oper_progress_import_empty">剪贴板为空，请先复制培养计划</string>
+    <string name="oper_progress_import_unknown">无法确定或暂不支持干员 %1$s，请检查名称和职业</string>
+    <string name="oper_progress_result_training">已启动专精训练</string>
+    <string name="oper_progress_result_satisfied">已达到目标</string>
+    <string name="oper_progress_result_completed">培养完成</string>
+    <string name="oper_progress_result_resources">材料不足，无法补齐</string>
+    <string name="oper_progress_result_not_found">未找到干员</string>
+    <string name="oper_progress_result_prerequisite">精英化或技能等级未满足前置条件</string>
+    <string name="oper_progress_result_chip">所需芯片无法制造</string>
+    <string name="oper_progress_result_formula">材料配方未解锁</string>
+    <string name="oper_progress_result_busy">训练室已被占用，跳过专精</string>
+    <string name="oper_progress_result_interrupted">培养已中断</string>
+    <string name="oper_progress_result_skipped">本次跳过</string>
+    <string name="oper_progress_result_recognition">识别或操作失败</string>
+    <string name="oper_progress_log_detail">%1$s：%2$s%3$s</string>
+    <string name="oper_progress_log_summary">干员培养本轮处理结果：成功 %1$d，失败 %2$d，跳过 %3$d（专精启动也计入成功）</string>
 </resources>

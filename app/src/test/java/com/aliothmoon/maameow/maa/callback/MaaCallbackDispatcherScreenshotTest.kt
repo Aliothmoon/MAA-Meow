@@ -26,6 +26,7 @@ class MaaCallbackDispatcherScreenshotTest {
         notificationCenter = notificationCenter,
         gameDataReporter = mockk(relaxed = true),
         telemetry = mockk(relaxed = true),
+        setParamsErrors = SetParamsErrorSignal(),
     )
 
     private fun completeWhile(state: MaaExecutionState, captured: NotificationImage?) {

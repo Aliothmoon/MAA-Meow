@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.domain.service
 
+import android.os.SystemClock
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.constant.WakeUnlockResult
@@ -79,12 +80,19 @@ class WakeUnlockEngine {
         }
     }
 
+    /** 最近一次 [unlock] 的发起时刻，[lastTrace] 只认这之后开始的解锁 */
+    @Volatile
+    private var unlockStartedAtMs = 0L
+
     /** 亮屏并解锁 */
-    suspend fun unlock(credential: UnlockCredential): WakeResult = when (credential) {
-        UnlockCredential.Swipe -> call("unlock") { it.unlock("") }
-        is UnlockCredential.Pin -> call("unlock") { it.unlock(credential.digits) }
-        is UnlockCredential.Gesture ->
-            call("unlockWithGesture") { it.unlockWithGesture(credential.json) }
+    suspend fun unlock(credential: UnlockCredential): WakeResult {
+        unlockStartedAtMs = SystemClock.elapsedRealtime()
+        return when (credential) {
+            UnlockCredential.Swipe -> call("unlock") { it.unlock("") }
+            is UnlockCredential.Pin -> call("unlock") { it.unlock(credential.digits) }
+            is UnlockCredential.Gesture ->
+                call("unlockWithGesture") { it.unlockWithGesture(credential.json) }
+        }
     }
 
     /** 设置页自测：先锁屏息屏再解锁 */
@@ -97,6 +105,18 @@ class WakeUnlockEngine {
 
     /** 锁屏并息屏（任务结束后自动休眠） */
     suspend fun lockAndSleep(): WakeResult = call("lockAndSleep") { it.lockAndSleep() }
+
+    /**
+     * 提权侧本次 [unlock] 的步骤与耗时
+     * 只问已有连接；没连上、调用没到提权侧或提权进程是旧版本返回 null
+     */
+    suspend fun lastTrace(): String? = withContext(Dispatchers.IO) {
+        val service = RemoteServiceManager.getInstanceOrNull() ?: return@withContext null
+        runCatching { service.getLastWakeTrace(unlockStartedAtMs) }
+            .onFailure { Timber.w(it, "lastWakeTrace failed") }
+            .getOrNull()
+            ?.takeIf { it.isNotBlank() }
+    }
 
     /** 提权侧返回的都是 [WakeUnlockResult] 码，IPC 失败统一落到 [WakeResult.IPC_FAILED] */
     private suspend fun call(

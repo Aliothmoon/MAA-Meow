@@ -6,35 +6,36 @@ import com.aliothmoon.maameow.R
 /**
  * 黑流树海（BlackFlow）回调里的裸 code -> 本地化文案，对齐 WPF RoguelikeSettingsUserControlModel
  *
- * 只覆盖 core 定义的有限枚举；rule/milestone 这类随策略配置增长的 id 查不到时返回 null，
+ * 只覆盖 core 定义的有限枚举；milestone 这类随策略配置增长的 id 查不到时返回 null，
  * 调用方回落到原始 id——比显示「未知」更有排查价值
  */
 object BlackFlowLogText {
 
     @StringRes
     fun profile(code: String?): Int = when (code) {
+        "ending1" -> R.string.panel_roguelike_blackflow_ending_1
+        "ending2" -> R.string.panel_roguelike_blackflow_ending_2
+        "ending3" -> R.string.panel_roguelike_blackflow_ending_3
         "investment" -> R.string.panel_roguelike_mode_desc_investment
         "burn", "burn_with_investment" -> R.string.panel_roguelike_mode_desc_exp_blackflow
-        "baby_animal", "baby_animal_floor3" -> R.string.panel_roguelike_mode_blackflow_baby_animal
+        "baby_animal", "baby_animal_floor3", "start_run_animals", "start_run_rewards",
+        "start_run_rewards_with_investment" -> R.string.panel_roguelike_mode_desc_blackflow_start_run
+
         else -> R.string.blackflow_strategy_unknown
     }
 
+    /** 刷开局进度，未知状态返回 null 不打日志 */
     @StringRes
-    fun reasonCategory(code: String?): Int = when (code) {
-        "mandatory_goal" -> R.string.blackflow_reason_mandatory_goal
-        "resource_reserve" -> R.string.blackflow_reason_resource_reserve
-        "preferred_goal" -> R.string.blackflow_reason_preferred_goal
-        "development" -> R.string.blackflow_reason_development
-        "risk_avoidance" -> R.string.blackflow_reason_risk_avoidance
-        "safety_fallback" -> R.string.blackflow_reason_safety_fallback
-        else -> R.string.blackflow_reason_tie_break
-    }
-
-    @StringRes
-    fun reasonDetail(code: String?): Int = when (code) {
-        "selected unclassified frontier probe" -> R.string.blackflow_decision_probe_unknown_node
-        "selected by lexicographic policy order" -> R.string.blackflow_decision_policy_order
-        else -> R.string.blackflow_decision_detail_unknown
+    fun startRunStatus(code: String?): Int? = when (code) {
+        "preparing" -> R.string.blackflow_start_run_preparing
+        "target_run" -> R.string.blackflow_start_run_target_run
+        "reward_missed" -> R.string.blackflow_start_run_reward_missed
+        "reward_picked" -> R.string.blackflow_start_run_reward_picked
+        "completed" -> R.string.blackflow_start_run_completed
+        "reward_recognition_failed" -> R.string.blackflow_start_run_reward_recognition_failed
+        "reward_page_missing" -> R.string.blackflow_start_run_reward_page_missing
+        "reward_unrecognized" -> R.string.blackflow_start_run_reward_unrecognized
+        else -> null
     }
 
     @StringRes
@@ -56,6 +57,18 @@ object BlackFlowLogText {
         "post_move_mismatch" -> R.string.blackflow_warning_post_move_mismatch
         "identity_conflict" -> R.string.blackflow_warning_identity_conflict
         else -> R.string.blackflow_warning_unknown
+    }
+
+    /** 秘境行商交易中止原因，带物品名的两种由调用方传入 item */
+    @StringRes
+    fun scrapTradeAborted(reason: String?): Int = when (reason) {
+        "market_unavailable" -> R.string.blackflow_scrap_trade_aborted_market_unavailable
+        "inventory_incomplete" -> R.string.blackflow_scrap_trade_aborted_inventory_incomplete
+        "page_switch_failed" -> R.string.blackflow_scrap_trade_aborted_page_switch_failed
+        "sale_search_failed" -> R.string.blackflow_scrap_trade_aborted_sale_search_failed
+        "sell_back_search_failed" -> R.string.blackflow_scrap_trade_aborted_sell_back_search_failed
+        "sale_failed" -> R.string.blackflow_scrap_trade_aborted_sale_failed
+        else -> R.string.blackflow_scrap_trade_aborted_unknown
     }
 
     @StringRes
@@ -98,6 +111,8 @@ object BlackFlowLogText {
 
     @StringRes
     fun outcome(code: String?): Int = when (code) {
+        "start_run_prepared" -> R.string.blackflow_outcome_start_run_prepared
+        "start_run_utopia_missed" -> R.string.blackflow_outcome_start_run_utopia_missed
         "investment_completed" -> R.string.blackflow_outcome_investment_completed
         "investment_missed" -> R.string.blackflow_outcome_investment_missed
         "burn_completed" -> R.string.blackflow_outcome_floor3_route_completed
@@ -136,6 +151,8 @@ object BlackFlowLogText {
 
     @StringRes
     fun terminationReason(code: String?): Int = when (code) {
+        "start_run_prepared" -> R.string.blackflow_termination_start_run_prepared
+        "first_floor_without_utopia" -> R.string.blackflow_termination_first_floor_without_utopia
         "investment_finished" -> R.string.blackflow_termination_investment_finished
         "investment_shop_window_closed" ->
             R.string.blackflow_termination_investment_shop_window_closed
@@ -180,43 +197,17 @@ object BlackFlowLogText {
         else -> R.string.blackflow_termination_unknown
     }
 
-    /** 策略配置里的规则 id，查不到返回 null */
-    @StringRes
-    fun rule(code: String?): Int? = when (code) {
-        "avoid_empty_scrap_shop" -> R.string.blackflow_rule_avoid_empty_scrap_shop
-        "preserve_white_model_bird" -> R.string.blackflow_rule_preserve_white_model_bird
-        "trigger_boss_processing_bonus" -> R.string.blackflow_rule_trigger_boss_processing_bonus
-        "exit_when_required" -> R.string.blackflow_rule_exit_when_required
-        "ending1_avoid_late_combat" -> R.string.blackflow_rule_ending1_avoid_late_combat
-        "baby_use_processing_item_for_floor1_shop" ->
-            R.string.blackflow_rule_baby_use_processing_item_for_floor1_shop
-
-        "baby_walk_after_floor1_shop" -> R.string.blackflow_rule_baby_walk_after_floor1_shop
-        "baby_delay_exit_before_floor3" -> R.string.blackflow_rule_baby_delay_exit_before_floor3
-        "baby_exit_before_floor3_when_required" ->
-            R.string.blackflow_rule_baby_exit_before_floor3_when_required
-
-        "baby_avoid_combat" -> R.string.blackflow_rule_baby_avoid_combat
-        "light_reveals_three" -> R.string.blackflow_rule_light_reveals_three
-        "investment_keep_short_walk" -> R.string.blackflow_rule_investment_keep_short_walk
-        "investment_use_m11_for_direct_shop" ->
-            R.string.blackflow_rule_investment_use_m11_for_direct_shop
-
-        "burn_require_shop_when_flight_guaranteed" ->
-            R.string.blackflow_rule_burn_require_shop_when_flight_guaranteed
-
-        "burn_require_flight_on_floor2" -> R.string.blackflow_rule_burn_require_flight_on_floor2
-        else -> null
-    }
-
     /** 策略配置里的阶段目标 id，查不到返回 null */
     @StringRes
     fun milestone(code: String?): Int? = when (code) {
         "ending1_floor1_battles" -> R.string.blackflow_milestone_ending1_floor1_battles
         "ending1_floor1_hidden" -> R.string.blackflow_milestone_ending1_floor1_hidden
+        "ending1_floor1_scrap_shop" -> R.string.blackflow_milestone_ending1_floor1_scrap_shop
         "ending1_floor2_expedition" -> R.string.blackflow_milestone_ending1_floor2_expedition
         "ending1_floor2_scrap_shop" -> R.string.blackflow_milestone_ending1_floor2_scrap_shop
         "ending1_floor2_hidden" -> R.string.blackflow_milestone_ending1_floor2_hidden
+        "ending1_floor2_incident" -> R.string.blackflow_milestone_ending1_floor2_incident
+        "ending1_informant" -> R.string.blackflow_milestone_ending1_informant
         "ending1_floor2_employ" -> R.string.blackflow_milestone_ending1_floor2_employ
         "ending1_floor2_light" -> R.string.blackflow_milestone_ending1_floor2_light
         "ending1_floor2_wish" -> R.string.blackflow_milestone_ending1_floor2_wish

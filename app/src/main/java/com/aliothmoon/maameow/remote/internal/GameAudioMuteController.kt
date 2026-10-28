@@ -37,7 +37,7 @@ object GameAudioMuteController {
             return false
         }
 
-        if (AppOpsHelper.setPlayAudioMode(pkg, uid, AppOpsManager.MODE_IGNORED)) {
+        if (AppOpsHelper.set(AppOps.PLAY_AUDIO, pkg, uid, AppOpsManager.MODE_IGNORED)) {
             muted[pkg] = MuteRecord(uid, playerFallback = false)
             Ln.i("$TAG: muted $pkg via appops (uid=$uid)")
             return true

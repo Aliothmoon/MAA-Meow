@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.manager
 
 import android.content.pm.PackageManager
+import android.os.SystemClock
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
@@ -25,6 +26,20 @@ object ShizukuManager : RemoteAccessPermissionBackend {
     var isSui: Boolean = false
         private set
 
+    /** 本进程最近一次收到 / 失去 binder 的 elapsedRealtime */
+    @Volatile
+    var binderReceivedAt: Long? = null
+        private set
+
+    @Volatile
+    var binderDeadAt: Long? = null
+        private set
+
+    /** 最近一次连上时服务端的 uid，死后不清 */
+    @Volatile
+    var lastServerUid: Int? = null
+        private set
+
     fun initSui(packageName: String) {
         if (!suiInitialized.compareAndSet(false, true)) return
         isSui = try {
@@ -37,14 +52,14 @@ object ShizukuManager : RemoteAccessPermissionBackend {
 
     fun isShizukuAvailable(): Boolean = isAvailable()
 
-    /** Shizuku 服务是否以 root 身份运行（uid 0，如 Root 授权启动的 Shizuku 或 Sui） */
-    fun isRunningAsRoot(): Boolean {
-        if (!isAvailable()) return false
+    /** Shizuku 服务的 uid，即经它起的进程的身份；不可用返回 null */
+    fun serverUid(): Int? {
+        if (!isAvailable()) return null
         return try {
-            Shizuku.getUid() == 0
+            Shizuku.getUid()
         } catch (e: Exception) {
             Timber.w(e, "Shizuku.getUid failed")
-            false
+            null
         }
     }
 
@@ -140,10 +155,13 @@ object ShizukuManager : RemoteAccessPermissionBackend {
         }
         Shizuku.addBinderReceivedListenerSticky {
             Timber.d("Shizuku binder received")
+            binderReceivedAt = SystemClock.elapsedRealtime()
+            lastServerUid = serverUid()
             notifyStateChanged()
         }
         Shizuku.addBinderDeadListener {
-            Timber.d("Shizuku binder dead")
+            Timber.i("Shizuku binder dead")
+            binderDeadAt = SystemClock.elapsedRealtime()
             notifyStateChanged()
         }
     }

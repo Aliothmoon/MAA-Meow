@@ -8,7 +8,10 @@ package com.aliothmoon.maameow.schedule.model
 
 /** 检查项，枚举顺序即展示/引导顺序（仅未通过项会出现在结果里） */
 enum class ScheduleHealthIssue {
-    /** 当前启动模式(Shizuku/Root)未授权：定时触发的唤醒、拉起界面、执行都依赖它 */
+    /** 当前启动模式(Shizuku/Root)没在运行：定时触发的唤醒、拉起界面、执行都依赖它 */
+    BACKEND_DOWN,
+
+    /** 在运行但未授权 */
     BACKEND,
 
     /** 未忽略电池优化：后台触发可能被系统延迟或拦截 */
@@ -35,6 +38,8 @@ enum class ScheduleHealthIssue {
  */
 data class ScheduleHealthSnapshot(
     val backendGranted: Boolean,
+    /** 没在运行也就谈不上授权，两者分开报 */
+    val backendAvailable: Boolean = true,
     val batteryWhitelist: Boolean,
     val notification: Boolean,
     val exactAlarmAllowed: Boolean,
@@ -54,13 +59,20 @@ object ScheduleHealthLogic {
         strategies: List<ScheduleStrategy>,
     ): Boolean = deviceSecure && !credentialReady && strategies.any { it.enabled }
 
-    /** 是否需要悬浮窗：存在启用且勾选屏保的策略 */
+    /** 熄屏挂机走屏保才要悬浮窗，硬件熄屏不用 */
+    fun usesOverlay(autoScreenSaver: Boolean, hardwareScreenOff: Boolean): Boolean =
+        autoScreenSaver && !hardwareScreenOff
+
+    /** 是否需要悬浮窗：存在启用且用屏保的策略 */
     fun overlayNeeded(strategies: List<ScheduleStrategy>): Boolean =
-        strategies.any { it.enabled && it.autoScreenSaver }
+        strategies.any { it.enabled && usesOverlay(it.autoScreenSaver, it.hardwareScreenOff) }
 
     /** 推导未通过项；空列表 = 全部通过（健康卡应隐藏、向导无需弹出） */
     fun failingIssues(snapshot: ScheduleHealthSnapshot): List<ScheduleHealthIssue> = buildList {
-        if (!snapshot.backendGranted) add(ScheduleHealthIssue.BACKEND)
+        when {
+            !snapshot.backendAvailable -> add(ScheduleHealthIssue.BACKEND_DOWN)
+            !snapshot.backendGranted -> add(ScheduleHealthIssue.BACKEND)
+        }
         if (!snapshot.batteryWhitelist) add(ScheduleHealthIssue.BATTERY)
         if (!snapshot.exactAlarmAllowed) add(ScheduleHealthIssue.EXACT_ALARM)
         if (!snapshot.notification) add(ScheduleHealthIssue.NOTIFICATION)
@@ -68,9 +80,13 @@ object ScheduleHealthLogic {
         if (snapshot.unlockCredentialMissing) add(ScheduleHealthIssue.UNLOCK_CREDENTIAL)
     }
 
-    /** 后端授权、解锁凭证都当场处理不完，留给健康卡 */
+    /** 后端启动与授权、解锁凭证都当场处理不完，留给健康卡 */
     fun wizardItems(snapshot: ScheduleHealthSnapshot): List<ScheduleHealthIssue> =
-        failingIssues(snapshot).filterNot {
-            it == ScheduleHealthIssue.BACKEND || it == ScheduleHealthIssue.UNLOCK_CREDENTIAL
-        }
+        failingIssues(snapshot).filterNot { it in NOT_IN_WIZARD }
+
+    private val NOT_IN_WIZARD = setOf(
+        ScheduleHealthIssue.BACKEND_DOWN,
+        ScheduleHealthIssue.BACKEND,
+        ScheduleHealthIssue.UNLOCK_CREDENTIAL,
+    )
 }

@@ -1,12 +1,14 @@
 package com.aliothmoon.maameow.remote.internal
 
 import android.os.Build
+import androidx.annotation.VisibleForTesting
 import com.aliothmoon.maameow.constant.AndroidVersions
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.wrappers.DisplayControl
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
 import com.aliothmoon.maameow.third.wrappers.SurfaceControl
+import com.aliothmoon.maameow.utils.device.Manufacturer
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -20,6 +22,12 @@ object PowerController {
     private val keepAliveDisplayId = AtomicInteger(DefaultDisplayConfig.DISPLAY_NONE)
     private val keepAliveRunning = AtomicBoolean(false)
 
+    // 判不出按醒着处理，宁可点亮
+    @VisibleForTesting
+    internal var systemAwake: () -> Boolean = {
+        runCatching { ServiceManager.getPowerManager().isScreenOnOrNull(0) }.getOrNull() ?: true
+    }
+
     fun setDisplayPower(on: Boolean): Boolean {
         poweredOff.set(!on)
         return setDisplayPowerInternal(on)
@@ -30,10 +38,7 @@ object PowerController {
             Build.VERSION.SDK_INT >= AndroidVersions.API_29_ANDROID_10
 
         if (applyToMultiPhysicalDisplays
-            && Build.VERSION.SDK_INT >= AndroidVersions.API_34_ANDROID_14 && Build.BRAND.equals(
-                "honor",
-                ignoreCase = true
-            )
+            && Build.VERSION.SDK_INT >= AndroidVersions.API_34_ANDROID_14 && Manufacturer.isHonorBrand()
             && SurfaceControl.hasGetBuildInDisplayMethod()
         ) {
             applyToMultiPhysicalDisplays = false
@@ -103,6 +108,12 @@ object PowerController {
     fun destroy() {
         stopUserActivityKeepAlive()
         if (poweredOff.get()) {
+            // 系统已休眠就别点亮，下次唤醒由系统恢复面板
+            if (!systemAwake()) {
+                Ln.i("$TAG: System asleep, leave display power to the system")
+                poweredOff.set(false)
+                return
+            }
             Ln.i("$TAG: Emergency recovering screen power...")
             runCatching {
                 setDisplayPower(true)

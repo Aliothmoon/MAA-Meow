@@ -9,8 +9,14 @@ import timber.log.Timber
  */
 object SuSpawner : ProcessSpawner {
 
+    /**
+     * su 默认继承 App 的挂载命名空间，降权后的 shell 在部分存储栈下进不了 Android/data；
+     * 进 init 的命名空间，与 Shizuku（adbd 拉起）同一环境。nsenter 不可用时照旧
+     */
     override fun wrapCommand(launcherPath: String, invocation: String): String =
-        "$invocation >/dev/null 2>&1 &"
+        "if nsenter -t 1 -m -- true 2>/dev/null; then " +
+                "nsenter -t 1 -m -- $invocation >/dev/null 2>&1 & " +
+                "else $invocation >/dev/null 2>&1 & fi"
 
     override fun spawn(command: String): SpawnHandle? {
         val result = Shell.cmd(command).exec()
@@ -23,5 +29,15 @@ object SuSpawner : ProcessSpawner {
     override fun killResidual(processName: String) {
         runCatching { Shell.cmd(killByNameCommand(processName)).exec() }
             .onFailure { Timber.w(it, "kill residual %s failed", processName) }
+    }
+
+    override fun findProcesses(processName: String): List<ResidualProcess> =
+        runCatching { parseProcesses(Shell.cmd(findProcessesCommand(processName)).exec().out) }
+            .onFailure { Timber.w(it, "find %s failed", processName) }
+            .getOrDefault(emptyList())
+
+    override fun forceKill(pids: List<Int>) {
+        runCatching { Shell.cmd(forceKillCommand(pids)).exec() }
+            .onFailure { Timber.w(it, "force kill %s failed", pids) }
     }
 }

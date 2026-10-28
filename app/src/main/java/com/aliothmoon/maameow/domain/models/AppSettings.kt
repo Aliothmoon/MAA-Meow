@@ -5,6 +5,8 @@ import com.aliothmoon.preferences.PrefKey
 import com.aliothmoon.preferences.PrefSchema
 import kotlinx.serialization.Serializable
 
+enum class VirtualDisplayBackend { LEGACY, VDM }
+
 @Serializable
 @PrefSchema
 data class AppSettings(
@@ -55,6 +57,10 @@ data class AppSettings(
     /** 非空表示该包可能残留 MaaMeow 设置的静音，需要在关闭或重连时恢复。 */
     @PrefKey(default = "")
     val mutedGamePackage: String = "",
+
+    /** 自定义游戏包名，客户端 → 包名的 JSON，空即全用默认 */
+    @PrefKey(default = "")
+    val gamePackages: String = "",
 
     @PrefKey(default = "false")
     val closeAppOnTaskEnd: String = "false",
@@ -112,6 +118,10 @@ data class AppSettings(
     @PrefKey(default = "P720")
     val backgroundResolution: String = "P720",
 
+    /** 后台虚拟屏创建方式；VDM 仅在 Android 14+ 设置页展示 */
+    @PrefKey(default = "LEGACY")
+    val virtualDisplayBackend: String = "LEGACY",
+
     @PrefKey(default = "SYSTEM")
     val language: String = "SYSTEM",
 
@@ -138,6 +148,10 @@ data class AppSettings(
     /** 已看过的首启引导版本，小于当前版本则展示 */
     @PrefKey(default = "0")
     val onboardingSeenVersion: String = "0",
+
+    /** 首启强制引导自动弹出过几次，没走完再弹时放开跳过 */
+    @PrefKey(default = "0")
+    val onboardingAutoStarts: String = "0",
 
     @PrefKey(default = "false")
     val forceFullscreenOnVirtualDisplay: String = "false",
@@ -212,6 +226,10 @@ data class AppSettings(
     @PrefKey(default = "")
     val wakeCredential: String = "",
 
+    /** 定时黑名单，包名逗号分隔 */
+    @PrefKey(default = "")
+    val scheduleAppBlacklist: String = "",
+
     @PrefKey(default = "true")
     val reportToPenguin: String = "true",
 
@@ -230,6 +248,10 @@ data class AppSettings(
     @PrefKey(default = "false")
     val operBoxUseYituliuApi: String = "false",
 
+    /** 自动战斗用一图流练度辅助编队，自动战斗页与设置页共用 */
+    @PrefKey(default = "false")
+    val operBoxAssistEnabled: String = "false",
+
     /** 牛杂活动商店黑名单：勾选的常用商品物品 id，逗号分隔 */
     @PrefKey(default = "")
     val eventShopBlacklistPresets: String = "",
@@ -237,6 +259,10 @@ data class AppSettings(
     /** 牛杂活动商店黑名单：自定义商品关键词，分号分隔 */
     @PrefKey(default = "")
     val eventShopBlacklistCustom: String = "",
+
+    /** 牛杂生息演算设置 JSON；空串表示从未保存，可接收旧任务链迁入 */
+    @PrefKey(default = "")
+    val reclamationConfig: String = "",
 
     /** 帮助改进本项目：匿名上报崩溃、任务统计与失败现场 */
     @PrefKey(default = "true")

@@ -90,6 +90,8 @@ fun AdaptiveTaskPromptDialog(
     onConfirm: () -> Unit,
     confirmText: String? = null,
     dismissText: String? = null,
+    /** 文字按钮单独的回调；不给则同 [onDismissRequest]，点外面和返回键始终走后者 */
+    onDismissClick: (() -> Unit)? = null,
     neutralText: String? = null,
     onNeutralClick: () -> Unit = {},
     icon: ImageVector? = null, // 仅支持 ImageVector
@@ -108,6 +110,7 @@ fun AdaptiveTaskPromptDialog(
         val resolvedIconTint = iconTint ?: resolvedConfirmColor
         val resolvedConfirmText = confirmText ?: stringResource(R.string.common_confirm)
         val resolvedDismissText = dismissText ?: stringResource(R.string.common_cancel)
+        val resolvedDismissClick = onDismissClick ?: onDismissRequest
 
         if (LocalFloatingWindowContext.current) {
             FloatingTaskPromptDialog(
@@ -117,6 +120,7 @@ fun AdaptiveTaskPromptDialog(
                 onConfirm = onConfirm,
                 confirmText = resolvedConfirmText,
                 dismissText = resolvedDismissText,
+                onDismissClick = resolvedDismissClick,
                 neutralText = neutralText,
                 onNeutralClick = onNeutralClick,
                 icon = icon,
@@ -135,6 +139,7 @@ fun AdaptiveTaskPromptDialog(
                 onConfirm = onConfirm,
                 confirmText = resolvedConfirmText,
                 dismissText = resolvedDismissText,
+                onDismissClick = resolvedDismissClick,
                 neutralText = neutralText,
                 onNeutralClick = onNeutralClick,
                 icon = icon,
@@ -157,6 +162,7 @@ private fun FloatingTaskPromptDialog(
     onConfirm: () -> Unit,
     confirmText: String,
     dismissText: String?,
+    onDismissClick: () -> Unit,
     neutralText: String?,
     onNeutralClick: () -> Unit,
     icon: ImageVector?,
@@ -203,6 +209,7 @@ private fun FloatingTaskPromptDialog(
                     onConfirm = onConfirm,
                     confirmText = confirmText,
                     dismissText = dismissText,
+                    onDismissClick = onDismissClick,
                     neutralText = neutralText,
                     onNeutralClick = onNeutralClick,
                     icon = icon,
@@ -233,6 +240,7 @@ private fun MaterialTaskPromptDialog(
     onConfirm: () -> Unit,
     confirmText: String,
     dismissText: String?,
+    onDismissClick: () -> Unit,
     neutralText: String?,
     onNeutralClick: () -> Unit,
     icon: ImageVector?,
@@ -277,6 +285,7 @@ private fun MaterialTaskPromptDialog(
                 onConfirm = onConfirm,
                 confirmText = confirmText,
                 dismissText = dismissText,
+                onDismissClick = onDismissClick,
                 neutralText = neutralText,
                 onNeutralClick = onNeutralClick,
                 icon = icon,
@@ -304,6 +313,7 @@ private fun TaskPromptCard(
     onConfirm: () -> Unit,
     confirmText: String,
     dismissText: String?,
+    onDismissClick: () -> Unit,
     neutralText: String?,
     onNeutralClick: () -> Unit,
     icon: ImageVector?,
@@ -408,10 +418,10 @@ private fun TaskPromptCard(
             if (inLandscape && landscapeAdaptive) {
                 Spacer(modifier = Modifier.height(12.dp))
                 TaskPromptLandscapeActions(
-                    onDismissRequest = onDismissRequest,
                     onConfirm = onConfirm,
                     confirmText = confirmText,
                     dismissText = dismissText,
+                    onDismissClick = onDismissClick,
                     neutralText = neutralText,
                     onNeutralClick = onNeutralClick,
                     confirmColor = confirmColor,
@@ -419,10 +429,10 @@ private fun TaskPromptCard(
             } else {
                 Spacer(modifier = Modifier.height(24.dp))
                 TaskPromptButtons(
-                    onDismissRequest = onDismissRequest,
                     onConfirm = onConfirm,
                     confirmText = confirmText,
                     dismissText = dismissText,
+                    onDismissClick = onDismissClick,
                     neutralText = neutralText,
                     onNeutralClick = onNeutralClick,
                     confirmColor = confirmColor,
@@ -435,10 +445,10 @@ private fun TaskPromptCard(
 
 @Composable
 private fun TaskPromptLandscapeActions(
-    onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
     confirmText: String,
     dismissText: String?,
+    onDismissClick: () -> Unit,
     neutralText: String?,
     onNeutralClick: () -> Unit,
     confirmColor: Color,
@@ -450,7 +460,7 @@ private fun TaskPromptLandscapeActions(
     ) {
         dismissText?.takeIf { it.isNotBlank() }?.let {
             TextButton(
-                onClick = onDismissRequest,
+                onClick = onDismissClick,
                 modifier = Modifier.weight(1f),
                 shape = MaterialTheme.shapes.large,
             ) {
@@ -487,10 +497,10 @@ private fun TaskPromptLandscapeActions(
 
 @Composable
 private fun TaskPromptButtons(
-    onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
     confirmText: String,
     dismissText: String?,
+    onDismissClick: () -> Unit,
     neutralText: String?,
     onNeutralClick: () -> Unit,
     confirmColor: Color,
@@ -528,7 +538,7 @@ private fun TaskPromptButtons(
         // 取消/辅助按钮：Text
         dismissText?.takeIf { it.isNotBlank() }?.let {
             TextButton(
-                onClick = onDismissRequest,
+                onClick = onDismissClick,
                 shape = MaterialTheme.shapes.large
             ) {
                 Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -51,7 +51,7 @@ class ScheduleReceiverTest {
             modules(module {
                 single { repository }
                 single { alarms }
-                single { ScheduleFailureReporter(triggerLogger, repository, settings) }
+                single { ScheduleFailureReporter(triggerLogger, repository, settings, mockk(relaxed = true)) }
             })
         }
         try {

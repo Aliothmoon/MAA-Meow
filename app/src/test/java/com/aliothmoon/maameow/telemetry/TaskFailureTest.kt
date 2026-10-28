@@ -59,21 +59,41 @@ class TaskFailureTest {
         assertEquals(SentryLevel.ERROR, event.level)
         assertEquals(TASK_FAILURE_TRANSACTION, event.transaction)
         assertEquals(
-            listOf("maameow-task-failure", "Depot", "DepotRecognitionTask", "DepotBegin", "", "", ""),
+            listOf("maameow-task-failure", "Depot", "DepotRecognitionTask", "DepotBegin", "", ""),
             event.fingerprints,
         )
     }
 
     @Test
-    fun `节点卡在某个任务之后时标题带上它`() {
+    fun `卡在哪一步之后只进 tag，不拆组也不进标题`() {
         val stuck = node.copy(preTask = "DepotAllTab")
         val event = failure.copy(node = stuck).toSentryEvent()
 
-        assertEquals(
-            "Maa task failed: Depot at DepotRecognitionTask (DepotBegin, after DepotAllTab)",
-            event.message?.formatted,
-        )
+        assertEquals(failure.toSentryEvent().fingerprints, event.fingerprints)
+        assertEquals("Maa task failed: Depot at DepotRecognitionTask (DepotBegin)", event.message?.formatted)
         assertEquals("DepotAllTab", event.tags?.get("failure.pre_task"))
+    }
+
+    @Test
+    fun `连锁失败标出本轮先失败的任务链，决定流程的参数进 tag`() {
+        val event = failure.copy(
+            priorFailure = "StartUp",
+            options = mapOf("stage" to "1-7", "medicine" to "999"),
+        ).toSentryEvent()
+
+        assertEquals("StartUp", event.tags?.get("run.prior_failure"))
+        assertEquals("1-7", event.tags?.get("option.stage"))
+        assertNull(event.tags?.get("option.medicine"))
+        // 全量参数仍在 extra
+        assertEquals("1-7", event.extras?.get("option.stage"))
+        assertEquals("999", event.extras?.get("option.medicine"))
+    }
+
+    @Test
+    fun `任务名去掉实例地址，普通任务名不动`() {
+        assertEquals("SSSBegin", stripTaskAddress("0xb400007401ddbb10@SSSBegin"))
+        assertEquals("Sarkaz@Roguelike@Begin", stripTaskAddress("Sarkaz@Roguelike@Begin"))
+        assertEquals("", stripTaskAddress(""))
     }
 
     @Test
@@ -87,6 +107,7 @@ class TaskFailureTest {
                 "task.chain" to "Depot",
                 "failure.subtask" to "DepotRecognitionTask",
                 "failure.node" to "DepotBegin",
+                "run.prior_failure" to "none",
                 "result" to "failure",
             ),
             event.tags,
@@ -213,6 +234,77 @@ class TaskFailureTest {
         assertEquals("启动异常：boom", event.extras?.get("launch.message"))
         assertEquals(1_500L, event.extras?.get("launch.delay_ms"))
         assertEquals(LAUNCH_FAILURE_TRANSACTION, event.transaction)
+        assertEquals(SentryLevel.ERROR, event.level)
+    }
+
+    @Test
+    fun `锁屏跳过不论文案都归一组，记为警告，原因留在标签里`() {
+        fun skipped(reason: String) = LaunchFailure(
+            result = "skipped_locked",
+            launchReason = reason,
+            message = null,
+            delayMs = 0,
+            logFile = "schedule/trigger_20261002_110000_000.log",
+        ).toSentryEvent()
+
+        val pinRequired = skipped("Skipped: a device lock password is set")
+        val locked = skipped("Device is locked")
+
+        assertEquals(pinRequired.fingerprints, locked.fingerprints)
+        assertEquals(listOf("maameow-launch-failure", "skipped_locked"), locked.fingerprints)
+        assertEquals("Maa launch skipped: skipped_locked", locked.message?.formatted)
+        assertEquals(SentryLevel.WARNING, locked.level)
+        assertEquals("Device is locked", locked.tags?.get("launch.reason"))
+    }
+
+    @Test
+    fun `Shizuku 未运行按开机后没起与中途停了分组，记为警告`() {
+        val event = ShizukuDown(
+            afterBoot = false,
+            enabledSchedules = 3,
+            tags = mapOf("shizuku.binder" to "dead"),
+            extras = mapOf("shizuku.dead_ago_s" to 60L),
+        ).toSentryEvent()
+
+        assertEquals("Shizuku not running with schedules enabled (stopped)", event.message?.formatted)
+        assertEquals(listOf("maameow-shizuku-down", "stopped"), event.fingerprints)
+        assertEquals(SentryLevel.WARNING, event.level)
+        assertEquals("dead", event.tags?.get("shizuku.binder"))
+        assertEquals("stopped", event.tags?.get("shizuku.down"))
+        assertEquals(3, event.extras?.get("schedules.enabled"))
+        assertEquals(60L, event.extras?.get("shizuku.dead_ago_s"))
+        assertEquals(SHIZUKU_DOWN_TRANSACTION, event.transaction)
+    }
+
+    @Test
+    fun `提权侧调用卡死按调用名分组，线程栈进 extra`() {
+        val event = RemoteCallStuck(
+            runId = null,
+            call = "stopVirtualDisplay",
+            threadDump = "\"Binder:1_2\" RUNNABLE",
+            tags = emptyMap(),
+        ).toSentryEvent()
+
+        assertEquals("Maa remote call stuck: stopVirtualDisplay", event.message?.formatted)
+        assertEquals(listOf("maameow-remote-call-stuck", "stopVirtualDisplay"), event.fingerprints)
+        assertEquals(SentryLevel.ERROR, event.level)
+        assertEquals("stopVirtualDisplay", event.tags?.get("stuck.call"))
+        assertEquals("\"Binder:1_2\" RUNNABLE", event.extras?.get("remote.thread_dump"))
+        assertEquals(REMOTE_CALL_STUCK_TRANSACTION, event.transaction)
+    }
+
+    @Test
+    fun `启动时卡死带上线程栈，其余启动失败不带`() {
+        fun start(dump: String?) = StartFailure(
+            runId = "r1",
+            code = "REMOTE_CALL_STUCK",
+            what = "setUseVirtualDeviceDisplay",
+            threadDump = dump,
+            tags = emptyMap(),
+        ).toSentryEvent()
+
+        assertEquals("native: frame_buffers for 15000ms", start("native: frame_buffers for 15000ms").extras?.get("remote.thread_dump"))
+        assertFalse(start(null).extras.orEmpty().containsKey("remote.thread_dump"))
     }
 
     private fun evidenceExtras(evidence: Evidence): Map<String, Any?> =

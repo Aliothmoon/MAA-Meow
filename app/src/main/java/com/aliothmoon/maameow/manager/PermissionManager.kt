@@ -13,6 +13,7 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.remote.PermissionGrantRequest
 import com.aliothmoon.maameow.remote.PermissionGrantRequest.Companion.PERM_ACCESSIBILITY
 import com.aliothmoon.maameow.service.AccessibilityHelperService
+import com.aliothmoon.maameow.utils.device.XiaomiAdbInput
 import com.hjq.permissions.XXPermissions
 import com.hjq.permissions.permission.PermissionLists
 import kotlinx.coroutines.CoroutineScope
@@ -310,8 +311,7 @@ class PermissionManager(
     }
 
     suspend fun quickGrantAccessibility(): Boolean {
-        if (!permissions.remoteAccessGranted) return false
-        return try {
+        return permissions.remoteAccessGranted && try {
             val result = RemoteServiceManager.useRemoteService { srv ->
                 srv.grantPermissions(
                     PermissionGrantRequest(
@@ -324,9 +324,7 @@ class PermissionManager(
             }
             if (result.accessibilityPermission) {
                 withTimeoutOrNull(3000L) {
-                    AccessibilityHelperService.isConnected
-                        .filter { it }
-                        .first()
+                    AccessibilityHelperService.isConnected.first { it }
                 }
                 refresh()
             }
@@ -351,29 +349,39 @@ class PermissionManager(
 
             Timber.i("grantAll: packageName=$packageName, uid=$uid, isForeground=$isForeground")
 
+            // 后台模式用不到按键，开着是借系统绑定抬高进程优先级
             val result = srv.grantPermissions(
                 PermissionGrantRequest(
                     packageName = packageName,
                     uid = uid,
-                    accessibilityServiceId = if (isForeground)
-                        AccessibilityHelperService.SERVICE_ID else ""
+                    accessibilityServiceId = AccessibilityHelperService.SERVICE_ID,
                 )
             )
 
+            // 只有前台的组合键要等服务连上
             if (isForeground && result.accessibilityPermission) {
                 withTimeoutOrNull(3000L) {
-                    AccessibilityHelperService.isConnected
-                        .filter { it }
-                        .first()
+                    AccessibilityHelperService.isConnected.first { it }
                 }
             }
 
             Timber.i("grantAll result: $result")
+            enableXiaomiAdbInputIfRoot()
             refresh()
         } catch (e: Exception) {
             Timber.e(e, "grantAll failed")
         } finally {
             _isGranting.value = false
         }
+    }
+
+    /** 服务以 shell 运行，小米没开「USB 调试（安全设置）」时触控输入全被拦；Root 后端连上时直接开掉，定时任务也就不受影响 */
+    private suspend fun enableXiaomiAdbInputIfRoot() {
+        if (RemoteAccessCoordinator.configuredBackend() != RemoteBackend.ROOT || !XiaomiAdbInput.isRestricted()) return
+        val enabled = MiuiAdbInputEnabler.enable()
+        Timber.w(
+            "小米「USB 调试（安全设置）」未开启，shell 身份的触控输入会被系统拦截，已用 Root 自动开启：%s",
+            if (enabled) "成功" else "失败，需手动开启",
+        )
     }
 }

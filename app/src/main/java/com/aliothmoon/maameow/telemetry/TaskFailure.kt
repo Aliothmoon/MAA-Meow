@@ -28,6 +28,12 @@ internal data class FailureSignal(
         }
 }
 
+/** Core 给部分任务名带的实例地址前缀，如 SSS 的 `0xb4000074…@SSSBegin`，每次运行都不一样 */
+private val TASK_ADDRESS_PREFIX = Regex("0x[0-9a-fA-F]+@")
+
+/** 去掉实例地址，同一个任务跨运行才对得上 */
+internal fun stripTaskAddress(name: String): String = TASK_ADDRESS_PREFIX.replace(name, "")
+
 internal sealed interface Incident {
     val runId: String?
     val tags: Map<String, String>
@@ -66,23 +72,24 @@ internal data class TaskFailure(
     override val tags: Map<String, String>,
     /** 事件靠它的上下文挂回所在的 Trace */
     val span: ISpan,
+    /** 本轮在它之前第一条失败的任务链；有的话它多半是被连累的 */
+    val priorFailure: String? = null,
 ) : Incident {
 
     override val reason: String get() = "task_failure"
 
     private val subtask: String get() = terminal?.subtask ?: UNOBSERVED_SUBTASK
 
-    private val nodeLabel: String?
-        get() = node?.let { if (it.preTask.isNullOrBlank()) it.first else "${it.first}, after ${it.preTask}" }
-
-    /** Sentry 归组用的指纹；同一轮里也靠它认是不是同一个失败 */
+    /**
+     * Sentry 归组用的指纹；同一轮里也靠它认是不是同一个失败
+     * 不带 `pre_task`：卡住前走到哪一步每次都可能不同，带上会把同一个失败拆成一堆，它留在 tag 里筛
+     */
     val fingerprint: List<String>
         get() = listOf(
             TASK_FAILURE_FINGERPRINT,
             taskChain,
             subtask,
             node?.first.orEmpty(),
-            node?.preTask.orEmpty(),
             terminal?.what.orEmpty(),
             exception.orEmpty(),
         )
@@ -104,7 +111,8 @@ internal data class TaskFailure(
                 append("Maa task failed: ").append(taskChain)
                 // 异常没有子任务可指，不硬凑一个占位
                 if (terminal != null || exception == null) append(" at ").append(subtask)
-                (exception ?: nodeLabel ?: terminal?.what)?.let { append(" (").append(it).append(')') }
+                // 不带 pre_task，同组事件标题一致
+                (exception ?: node?.first ?: terminal?.what)?.let { append(" (").append(it).append(')') }
             }
         }
         event.fingerprints = fingerprint
@@ -117,8 +125,9 @@ internal data class TaskFailure(
                 "failure.pre_task" to node?.preTask.orEmpty(),
                 "failure.what" to terminal?.what.orEmpty(),
                 "failure.exception" to exception.orEmpty(),
+                PRIOR_FAILURE_KEY to (priorFailure ?: NO_PRIOR_FAILURE),
                 "result" to "failure",
-            )
+            ) + options.filterKeys { it in TAGGED_OPTIONS }.mapKeys { "option.${it.key}" }
         )
 
         event.setExtra("task.id", taskId)
@@ -143,6 +152,7 @@ internal data class StartFailure(
     /** 同一环节下再细分的原因，目前是异常类名 */
     val what: String? = null,
     val cause: String? = null,
+    val threadDump: String? = null,
     override val tags: Map<String, String>,
 ) : Incident {
 
@@ -160,6 +170,30 @@ internal data class StartFailure(
         event.fingerprints = listOf(START_FAILURE_FINGERPRINT, code, what.orEmpty())
         event.putTags(tags + mapOf("failure.code" to code, "failure.what" to what.orEmpty(), "result" to "failure"))
         cause?.let { event.setExtra("failure.cause", it) }
+        threadDump?.let { event.setExtra(THREAD_DUMP_KEY, it) }
+    }
+}
+
+/** 启动以外的提权侧调用卡死 */
+internal data class RemoteCallStuck(
+    override val runId: String?,
+    val call: String,
+    val threadDump: String?,
+    override val tags: Map<String, String>,
+) : Incident {
+
+    override val reason: String get() = "remote_call_stuck"
+
+    override val logAttributes: Map<String, String> get() = mapOf("stuck.call" to call)
+
+    override fun toSentryEvent(): SentryEvent = SentryEvent().also { event ->
+        event.level = SentryLevel.ERROR
+        event.logger = RUN_LOGGER
+        event.transaction = REMOTE_CALL_STUCK_TRANSACTION
+        event.message = Message().apply { formatted = "Maa remote call stuck: $call" }
+        event.fingerprints = listOf(REMOTE_CALL_STUCK_FINGERPRINT, call)
+        event.putTags(tags + mapOf("stuck.call" to call))
+        threadDump?.let { event.setExtra(THREAD_DUMP_KEY, it) }
     }
 }
 
@@ -173,6 +207,8 @@ internal data class ServiceDeath(
     /** 当时在跑的任务链，还没开跑或已跑完为 null */
     val taskChain: String?,
     override val tags: Map<String, String>,
+    val servicePid: Int? = null,
+    val diedAtMs: Long = 0L,
 ) : Incident {
 
     override val reason: String get() = "service_died"
@@ -203,6 +239,9 @@ internal data class LaunchFailure(
     /** 触发日志相对 debug 目录的路径，整份当证据带上 */
     val logFile: String,
     override val tags: Map<String, String> = emptyMap(),
+    val extras: Map<String, Long> = emptyMap(),
+    /** 再带启动诊断日志尾巴，连不上的根因在那里 */
+    val withBootLogs: Boolean = false,
 ) : Incident {
 
     override val runId: String? get() = null
@@ -211,19 +250,61 @@ internal data class LaunchFailure(
 
     override val logAttributes: Map<String, String> get() = mapOf("launch.result" to result)
 
+    /** 跳过多在预期内：不按文案拆组，降为警告 */
+    private val skipped: Boolean get() = result.startsWith(SKIPPED_PREFIX)
+
     override fun toSentryEvent(): SentryEvent = SentryEvent().also { event ->
-        event.level = SentryLevel.ERROR
+        event.level = if (skipped) SentryLevel.WARNING else SentryLevel.ERROR
         event.logger = RUN_LOGGER
         event.transaction = LAUNCH_FAILURE_TRANSACTION
         event.message = Message().apply {
-            formatted = "Maa launch failed: $result" + (launchReason?.let { " ($it)" } ?: "")
+            formatted = if (skipped) {
+                "Maa launch skipped: $result"
+            } else {
+                "Maa launch failed: $result" + (launchReason?.let { " ($it)" } ?: "")
+            }
         }
-        event.fingerprints = listOf(LAUNCH_FAILURE_FINGERPRINT, result, launchReason.orEmpty())
+        event.fingerprints = if (skipped) {
+            listOf(LAUNCH_FAILURE_FINGERPRINT, result)
+        } else {
+            listOf(LAUNCH_FAILURE_FINGERPRINT, result, launchReason.orEmpty())
+        }
         event.putTags(
             tags + mapOf("launch.result" to result, "launch.reason" to launchReason.orEmpty(), "result" to "failure")
         )
         message?.let { event.setExtra("launch.message", it) }
         delayMs?.let { event.setExtra("launch.delay_ms", it) }
+        extras.forEach { (key, value) -> event.setExtra(key, value) }
+    }
+}
+
+/** 看 Shizuku 未运行多常见、多是开机后没起还是中途停了 */
+internal data class ShizukuDown(
+    val afterBoot: Boolean,
+    val enabledSchedules: Int,
+    override val tags: Map<String, String>,
+    val extras: Map<String, Long>,
+) : Incident {
+
+    private val cause: String get() = if (afterBoot) "boot" else "stopped"
+
+    override val runId: String? get() = null
+
+    override val reason: String get() = "shizuku_down"
+
+    override val logAttributes: Map<String, String> get() = mapOf("shizuku.down" to cause)
+
+    override fun toSentryEvent(): SentryEvent = SentryEvent().also { event ->
+        event.level = SentryLevel.WARNING
+        event.logger = RUN_LOGGER
+        event.transaction = SHIZUKU_DOWN_TRANSACTION
+        event.message = Message().apply {
+            formatted = "Shizuku not running with schedules enabled ($cause)"
+        }
+        event.fingerprints = listOf(SHIZUKU_DOWN_FINGERPRINT, cause)
+        event.putTags(tags + mapOf("shizuku.down" to cause))
+        event.setExtra("schedules.enabled", enabledSchedules)
+        extras.forEach { (key, value) -> event.setExtra(key, value) }
     }
 }
 
@@ -278,15 +359,28 @@ internal const val TASK_FAILURE_TRANSACTION = "maameow.task.failure"
 internal const val START_FAILURE_TRANSACTION = "maameow.start.failure"
 internal const val SERVICE_DEATH_TRANSACTION = "maameow.service.died"
 internal const val LAUNCH_FAILURE_TRANSACTION = "maameow.launch.failure"
+internal const val SHIZUKU_DOWN_TRANSACTION = "maameow.shizuku.down"
+internal const val REMOTE_CALL_STUCK_TRANSACTION = "maameow.remote.stuck"
 private const val TASK_LOGGER = "maameow.task"
 private const val RUN_LOGGER = "maameow.run"
 private const val TASK_FAILURE_FINGERPRINT = "maameow-task-failure"
 private const val START_FAILURE_FINGERPRINT = "maameow-start-failure"
 private const val SERVICE_DEATH_FINGERPRINT = "maameow-service-died"
 private const val LAUNCH_FAILURE_FINGERPRINT = "maameow-launch-failure"
+private const val SKIPPED_PREFIX = "skipped_"
+private const val SHIZUKU_DOWN_FINGERPRINT = "maameow-shizuku-down"
+private const val REMOTE_CALL_STUCK_FINGERPRINT = "maameow-remote-call-stuck"
+private const val THREAD_DUMP_KEY = "remote.thread_dump"
 
 /** 任务链没报过子任务错误就失败时的占位，与 MaaFwApp 同名 */
 internal const val UNOBSERVED_SUBTASK = "terminal_failure"
+
+/** 本轮先失败的任务链，失败事件与任务 Span 上同名；筛 [NO_PRIOR_FAILURE] 只看根因 */
+internal const val PRIOR_FAILURE_KEY = "run.prior_failure"
+internal const val NO_PRIOR_FAILURE = "none"
+
+/** 决定走哪条流程的参数提成 tag，好在 Issues 里筛和看分布；全量参数仍在 extra */
+private val TAGGED_OPTIONS = setOf("stage", "theme", "mode")
 
 /** Sentry 对 tag 值的长度上限 */
 private const val MAX_TAG_VALUE_LENGTH = 200

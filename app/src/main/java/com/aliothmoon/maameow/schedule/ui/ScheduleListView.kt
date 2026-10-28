@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Alarm
+import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.LockOpen
@@ -32,7 +33,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,11 +78,12 @@ import org.koin.compose.koinInject
 fun ScheduleListView(
     navController: NavController,
     viewModel: ScheduleListViewModel = koinViewModel(),
+    isActivePage: () -> Boolean = { true },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var deleteConfirmId by remember { mutableStateOf<String?>(null) }
-    var autoStartTarget by remember { mutableStateOf<AutoStartTarget?>(null) }
+    val pageActive = isActivePage()
 
     val permissionManager: PermissionManager = koinInject()
     val scope = rememberCoroutineScope()
@@ -101,23 +102,25 @@ fun ScheduleListView(
     val hasEnabledStrategy = state.strategies.any { it.enabled }
     // 引导期间不弹，也不标记本次开机已提醒
     val onboardingBlocking = onboardingBlocksStartupDialogs()
-    LaunchedEffect(hasEnabledStrategy, onboardingBlocking) {
-        if (!hasEnabledStrategy || onboardingBlocking) return@LaunchedEffect
-        // prefs 与 resolveActivity 都是跨进程，整段留在 IO 上
-        val target = withContext(Dispatchers.IO) {
-            if (!AutoStartHelper.shouldRemindThisBoot(
-                    context,
-                    schedulePrefs
-                )
-            ) return@withContext null
-            AutoStartHelper.resolveTarget(context)
-                ?.also { AutoStartHelper.markRemindedThisBoot(context, schedulePrefs) }
-        }
-        autoStartTarget = target
-    }
+    var autoStartTarget by rememberAutoStartReminder(
+        active = pageActive && !onboardingBlocking,
+        enabled = hasEnabledStrategy,
+        load = {
+            withContext(Dispatchers.IO) {
+                if (AutoStartHelper.shouldRemindThisBoot(context, schedulePrefs)) {
+                    AutoStartHelper.resolveTarget(context)
+                } else null
+            }
+        },
+        onShown = {
+            withContext(Dispatchers.IO) {
+                AutoStartHelper.markRemindedThisBoot(context, schedulePrefs)
+            }
+        },
+    )
 
     val backendFix = rememberBackendReadyFixState()
-    BackendReadyFixHost(backendFix)
+    if (pageActive) BackendReadyFixHost(backendFix)
 
     fun openExactAlarmSettings() {
         ExactAlarmSettings.open(context)
@@ -126,6 +129,7 @@ fun ScheduleListView(
 
     fun fixHealthIssue(issue: ScheduleHealthIssue) {
         when (issue) {
+            ScheduleHealthIssue.BACKEND_DOWN,
             ScheduleHealthIssue.BACKEND -> backendFix.request()
             ScheduleHealthIssue.EXACT_ALARM -> openExactAlarmSettings()
             ScheduleHealthIssue.BATTERY ->
@@ -160,6 +164,12 @@ fun ScheduleListView(
                         Icon(
                             imageVector = Icons.Outlined.LockOpen,
                             contentDescription = stringResource(R.string.schedule_wake_unlock_title),
+                        )
+                    }
+                    IconButton(onClick = { navController.navigate(Routes.SCHEDULE_APP_BLACKLIST) }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Block,
+                            contentDescription = stringResource(R.string.schedule_app_blacklist_title),
                         )
                     }
                     IconButton(
@@ -237,7 +247,7 @@ fun ScheduleListView(
             }
         }
 
-        if (deleteConfirmId != null) {
+        if (pageActive && deleteConfirmId != null) {
             OpaqueTheme {
                 AlertDialog(
                     onDismissRequest = { deleteConfirmId = null },
@@ -263,7 +273,7 @@ fun ScheduleListView(
             }
         }
 
-        autoStartTarget?.let { target ->
+        autoStartTarget?.takeIf { pageActive && hasEnabledStrategy && !onboardingBlocking }?.let { target ->
             OpaqueTheme {
                 AlertDialog(
                     onDismissRequest = { autoStartTarget = null },
@@ -439,6 +449,7 @@ private fun formatExecutionResult(result: ExecutionResult, message: String?): St
         ExecutionResult.FAILED_START,
         ExecutionResult.FAILED_UI_LAUNCH,
         ExecutionResult.SKIPPED_BUSY,
+        ExecutionResult.SKIPPED_BLACKLIST,
         ExecutionResult.CANCELLED -> {
             stringResource(R.string.schedule_last_result, scheduleExecutionResultLabel(result))
         }
@@ -457,6 +468,7 @@ private fun executionResultColor(
     return when (result) {
         ExecutionResult.STARTED -> successColor
         ExecutionResult.SKIPPED_BUSY,
+        ExecutionResult.SKIPPED_BLACKLIST,
         ExecutionResult.CANCELLED -> warningColor
 
         ExecutionResult.FAILED_VALIDATION,

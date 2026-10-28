@@ -57,7 +57,6 @@ typedef struct {
     const char *debug_name;
     const char *log_file;
     int uid;
-    bool keep_root;
 } LauncherArgs;
 
 /* ── 文件日志 ── */
@@ -116,7 +115,7 @@ static bool parse_args(int argc, char **argv, LauncherArgs *out) {
                 LOGE("Invalid uid: %s", argv[i] + 6);
                 return false;
             }
-        } else if (strcmp(argv[i], "--keep-root") == 0) out->keep_root = true;
+        }
     }
 
     return out->apk_path != NULL
@@ -139,6 +138,21 @@ static char *format_arg(const char *prefix, const char *value) {
     }
     snprintf(out, size, "%s%s", prefix, value);
     return out;
+}
+
+/* 是否与 init 同一挂载命名空间：Root 拉起经 nsenter 进 init 的，与 Shizuku 一致；shell 身份读不到 init 的 */
+static void log_mount_ns(void) {
+    char self[64] = {0};
+    char init[64] = {0};
+    if (readlink("/proc/self/ns/mnt", self, sizeof(self) - 1) < 0) {
+        LOGFW("readlink self mnt ns failed: %s", strerror(errno));
+        return;
+    }
+    if (readlink("/proc/1/ns/mnt", init, sizeof(init) - 1) < 0) {
+        LOGFI("mnt ns: self=%s init=unreadable", self);
+        return;
+    }
+    LOGFI("mnt ns: self=%s same_as_init=%s", self, strcmp(self, init) == 0 ? "yes" : "no");
 }
 
 static void exec_app_process(const LauncherArgs *args) {
@@ -226,6 +240,7 @@ int main(int argc, char **argv) {
     }
 
     LOGFI("launcher start: apk=%s uid=%d", args.apk_path, args.uid);
+    log_mount_ns();
 
     /* 始终 fork：Shizuku newProcess 在 App 死亡时会对其追踪的进程发 SIGTERM，
        ART 收到信号直接退出不跑 shutdown hook；让 launcher 承受信号，
@@ -240,7 +255,7 @@ int main(int argc, char **argv) {
         /* 已是 shell 身份（Shizuku adb 模式）：非 root 下 setgroups 会 EPERM，跳过降权 */
         if (getuid() == kShellUid) {
             LOGFI("already shell uid, skip demotion");
-        } else if (!args.keep_root) {
+        } else {
             static const size_t kGidCount =
                     sizeof(kRequiredShellGids) / sizeof(kRequiredShellGids[0]);
 

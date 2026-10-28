@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
+import com.aliothmoon.maameow.schedule.service.ShizukuDownMonitor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filter
@@ -29,6 +30,10 @@ class BootReceiver : BroadcastReceiver() {
 
         val repository: ScheduleStrategyRepository = GlobalContext.get().get()
         val alarmManager: ScheduleAlarmManager = GlobalContext.get().get()
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+            // adb 模式的 Shizuku 重启即失效
+            GlobalContext.get().get<ShizukuDownMonitor>().armAfterBoot()
+        }
 
         CoroutineScope(Dispatchers.IO).launch {
             try {

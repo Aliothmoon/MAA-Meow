@@ -42,12 +42,33 @@ class OperBoxSnapshotSerializationTest {
         )
         val encoded = json.encodeToString(
             OperBoxSnapshot.serializer(),
-            OperBoxSnapshot(owned = listOf(fromYituliu), syncTimeMillis = 1L),
+            OperBoxSnapshot(
+                owned = listOf(fromYituliu),
+                syncTimeMillis = 1L,
+                version = OperBoxSnapshot.CURRENT_VERSION,
+            ),
         )
         assertTrue(encoded.contains("skchr_amiya_2"))
 
         val decoded = json.decodeFromString(OperBoxSnapshot.serializer(), encoded)
         assertEquals(fromYituliu, decoded.owned.single())
+        assertTrue(decoded.canAssistFormation)
+    }
+
+    @Test
+    fun oldShardWithTrainingFieldsKeepsDataButRequiresResync() {
+        val legacy = """
+            {"owned":[{"id":"char_002_amiya","name":"阿米娅","rarity":5,"elite":2,"level":80,
+            "potential":3,"own":true,"skills":[{"id":"skchr_amiya_2","level":3}]}],
+            "notOwned":[],"syncTimeMillis":1}
+        """.trimIndent()
+
+        val decoded = json.decodeFromString(OperBoxSnapshot.serializer(), legacy)
+
+        assertEquals(0, decoded.version)
+        assertTrue(decoded.hasSynced)
+        assertEquals(listOf(OperBoxSkill("skchr_amiya_2", 3)), decoded.owned.single().skills)
+        assertFalse(decoded.canAssistFormation)
     }
 
     @Test

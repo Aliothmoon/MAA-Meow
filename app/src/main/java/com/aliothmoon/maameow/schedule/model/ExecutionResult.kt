@@ -10,5 +10,9 @@ enum class ExecutionResult {
     FAILED_UI_LAUNCH,
     SKIPPED_BUSY,
     SKIPPED_LOCKED,
-    CANCELLED,
+    SKIPPED_BLACKLIST,
+    CANCELLED;
+
+    val isSkipped: Boolean
+        get() = this == SKIPPED_BUSY || this == SKIPPED_LOCKED || this == SKIPPED_BLACKLIST
 }

@@ -239,7 +239,7 @@ data class FightConfig(
      * 迁移自 WPF FightTask.UseWeeklySchedule
      * 启用后仅在 weeklySchedule 中勾选的日期执行该任务
      */
-    val useWeeklySchedule: Boolean = false,
+    override val useWeeklySchedule: Boolean = false,
 
     /**
      * 周计划配置
@@ -247,16 +247,8 @@ data class FightConfig(
      * 迁移自 WPF FightTask.WeeklySchedule
      * key 为 DayOfWeek 枚举名（MONDAY~SUNDAY），value 为是否启用
      */
-    val weeklySchedule: Map<String, Boolean> = mapOf(
-        "MONDAY" to true,
-        "TUESDAY" to true,
-        "WEDNESDAY" to true,
-        "THURSDAY" to true,
-        "FRIDAY" to true,
-        "SATURDAY" to true,
-        "SUNDAY" to true,
-    )
-) : TaskParamProvider {
+    override val weeklySchedule: Map<String, Boolean> = WeeklyScheduled.ALL_DAYS,
+) : TaskParamProvider, WeeklyScheduled {
     /**
      * 获取实际使用的关卡
      *
@@ -294,6 +286,14 @@ data class FightConfig(
         return candidates.firstOrNull { code -> activityManager.isStageOpen(code, day) }
     }
 
+    /** 自定义剿灭时「当期剿灭」换成所选剿灭 */
+    fun resolveAnnihilation(stage: String): String =
+        if (stage == "Annihilation" && useCustomAnnihilation) annihilationStage else stage
+
+    /** 实际下发 Core 的关卡，下发与「当前执行」显示共用；null = 无可用关卡 */
+    fun getExecutingStage(activityManager: ActivityManager): String? =
+        getActiveStage(activityManager)?.let(::resolveAnnihilation)
+
     /**
      * 验证配置有效性
      */
@@ -308,19 +308,18 @@ data class FightConfig(
     }
 
     override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
-        var stage = getActiveStage(ctx.activityManager)
+        val stage = getExecutingStage(ctx.activityManager)
             ?: run {
                 ctx.appendLog(
-                    uiTextOf(R.string.runlog_fight_stage_unavailable, ctx.node.name, stage1),
+                    uiTextOf(
+                        R.string.runlog_fight_stage_unavailable,
+                        ctx.node.name,
+                        ctx.activityManager.getStageDisplayName(stage1),
+                    ),
                     LogLevel.WARNING,
                 )
                 return emptyList()
             }
-
-        // 自定义剿灭替换
-        if (stage == "Annihilation" && useCustomAnnihilation) {
-            stage = annihilationStage
-        }
 
         // 理智药和碎石独立判断 (WPF line 721-722)
         val actualMedicine = if (useMedicine) medicineNumber else 0
@@ -338,7 +337,7 @@ data class FightConfig(
         // 目标库存：未识别 skip；need≤0 直接不 append，省掉一次空任务往返
         // times 双轨（预期）：append 用 actualTimes 兜底；Start 刷新改 MAX + drops 收束。
         val need = if (isSpecifiedDrops && isInventoryTarget && dropsItemId.isNotBlank()) {
-            if (ctx.depotRepository.snapshot.value.syncTimeMillis <= 0L) {
+            if (!ctx.depotRepository.snapshot.value.hasSynced) {
                 ctx.appendLog(
                     uiTextOf(R.string.runlog_fight_inventory_unavailable, ctx.node.name),
                     LogLevel.WARNING,

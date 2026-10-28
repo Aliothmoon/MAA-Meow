@@ -8,6 +8,10 @@
 #include <media/NdkImage.h>
 #include <media/NdkImageReader.h>
 
+#include <atomic>
+#include <chrono>
+#include <cstdio>
+
 struct NativeCapturer {
     AImageReader *reader = nullptr;
     ANativeWindow *window = nullptr;
@@ -17,6 +21,33 @@ struct NativeCapturer {
 };
 
 static NativeCapturer *g_capturer = nullptr;
+
+// 顺序同 kReleaseStageNames
+enum ReleaseStage : int {
+    RELEASE_IDLE = 0,
+    RELEASE_DRAIN_PREVIEW,
+    RELEASE_DETACH_LISTENER,
+    RELEASE_DELETE_READER,
+    RELEASE_BLANK_PREVIEW,
+    RELEASE_FRAME_BUFFERS,
+};
+
+static constexpr const char *kReleaseStageNames[] = {
+        "idle", "drain_preview", "detach_listener", "delete_reader", "blank_preview", "frame_buffers",
+};
+
+static std::atomic<int> g_release_stage{RELEASE_IDLE};
+static std::atomic<int64_t> g_release_stage_since_ms{0};
+
+static int64_t NowMs() {
+    using namespace std::chrono;
+    return duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
+}
+
+static void EnterReleaseStage(ReleaseStage stage) {
+    g_release_stage_since_ms.store(NowMs(), std::memory_order_relaxed);
+    g_release_stage.store(stage, std::memory_order_release);
+}
 
 static void onImageAvailable(void *context, AImageReader *reader) {
     (void) context;
@@ -89,13 +120,14 @@ jobject SetupNativeCapturer(JNIEnv *env, int width, int height) {
 }
 
 void ReleaseNativeCapturer() {
+    EnterReleaseStage(RELEASE_DRAIN_PREVIEW);
     DrainPreviewQueue();
 
     if (g_capturer) {
         if (g_capturer->reader) {
+            EnterReleaseStage(RELEASE_DETACH_LISTENER);
             AImageReader_setImageListener(g_capturer->reader, nullptr);
-        }
-        if (g_capturer->reader) {
+            EnterReleaseStage(RELEASE_DELETE_READER);
             AImageReader_delete(g_capturer->reader);
         }
 
@@ -105,6 +137,27 @@ void ReleaseNativeCapturer() {
     }
 
     // 那块屏没了，预览上留着的是它的最后一帧；listener 已摘，帧计数不会再变
+    EnterReleaseStage(RELEASE_BLANK_PREVIEW);
     BlankPreview(GetFrameCount());
+    EnterReleaseStage(RELEASE_FRAME_BUFFERS);
     ReleaseFrameBuffers();
+    EnterReleaseStage(RELEASE_IDLE);
+}
+
+std::string DescribeReleaseStage() {
+    const int stage = g_release_stage.load(std::memory_order_acquire);
+    // InitFrameBuffers 也会单独调 ReleaseFrameBuffers，不经收尾阶段
+    const std::string buffers = DescribeFrameBufferRelease();
+    if (stage == RELEASE_IDLE) {
+        return buffers.empty() ? std::string() : "frame_buffers " + buffers;
+    }
+    char buf[96];
+    snprintf(buf, sizeof(buf), "%s for %lldms", kReleaseStageNames[stage],
+             static_cast<long long>(NowMs() - g_release_stage_since_ms.load(std::memory_order_relaxed)));
+    std::string out(buf);
+    if (!buffers.empty()) {
+        out += " ";
+        out += buffers;
+    }
+    return out;
 }

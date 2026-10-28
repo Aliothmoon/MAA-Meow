@@ -12,6 +12,7 @@ import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.Tab
 import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material.icons.rounded.VerifiedUser
@@ -20,8 +21,9 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
 
 /**
- * @param tab    该步所在的主 Tab，切到这一步时 pager 先切过去
- * @param target 高亮靶点，null = 不挖洞、卡片居中
+ * @param tab      该步所在的主 Tab，切到这一步时 pager 先切过去
+ * @param target   高亮靶点，null = 不挖洞、卡片居中
+ * @param cooldown 关键步骤，首启强制引导时「下一步」先冷却
  */
 data class OnboardingStep(
     val tab: BottomNavTab,
@@ -29,6 +31,7 @@ data class OnboardingStep(
     val icon: ImageVector,
     @param:StringRes val titleRes: Int,
     @param:StringRes val bodyRes: Int,
+    val cooldown: Boolean = false,
 )
 
 object OnboardingSteps {
@@ -122,13 +125,22 @@ object OnboardingSteps {
             titleRes = R.string.onboarding_tab_settings_title,
             bodyRes = R.string.onboarding_tab_settings_body,
         ),
-        // 设置页：遇到问题先看常见问题，再反馈
+        // 设置页：Shizuku / Root 切换
+        OnboardingStep(
+            tab = BottomNavTab.SETTINGS,
+            target = OnboardingTarget.RUNTIME_BACKEND,
+            icon = Icons.Rounded.SwapHoriz,
+            titleRes = R.string.onboarding_runtime_backend_title,
+            bodyRes = R.string.onboarding_runtime_backend_body,
+        ),
+        // 遇到问题先看常见问题，再反馈
         OnboardingStep(
             tab = BottomNavTab.SETTINGS,
             target = OnboardingTarget.ABOUT_HELP,
             icon = Icons.AutoMirrored.Rounded.HelpOutline,
             titleRes = R.string.onboarding_about_help_title,
             bodyRes = R.string.onboarding_about_help_body,
+            cooldown = true,
         ),
     )
 }

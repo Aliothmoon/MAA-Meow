@@ -11,6 +11,8 @@ import androidx.core.app.NotificationCompat
 import androidx.core.graphics.drawable.IconCompat
 import com.aliothmoon.maameow.MainActivity
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
+import com.aliothmoon.maameow.domain.notification.LiveAction
 import com.aliothmoon.maameow.domain.notification.LiveCategory
 import com.aliothmoon.maameow.domain.notification.LiveNotifyIds
 import com.aliothmoon.maameow.domain.notification.LiveSession
@@ -171,8 +173,26 @@ class LiveNotificationFactory(
         if (requestPromoted && session.ongoing && !hyperIsland) {
             builder.setRequestPromotedOngoing(true)
         }
+        session.actions.forEach { action -> actionOf(action)?.let(builder::addAction) }
         extras?.let { builder.addExtras(it) }
         return builder.build()
+    }
+
+    private fun actionOf(action: LiveAction): NotificationCompat.Action? {
+        val (title, intent) = when (action) {
+            LiveAction.OpenShizuku -> {
+                // Sui 等非官方 Shizuku 没有可打开的界面
+                val launch = appContext.packageManager
+                    .getLaunchIntentForPackage(OFFICIAL_SHIZUKU_PACKAGE) ?: return null
+                appContext.getString(R.string.notification_action_open_shizuku) to PendingIntent.getActivity(
+                    appContext,
+                    OPEN_SHIZUKU_REQUEST_CODE,
+                    launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                )
+            }
+        }
+        return NotificationCompat.Action.Builder(null as IconCompat?, title, intent).build()
     }
 
     fun contentIntent(notifyId: Int): PendingIntent {
@@ -216,4 +236,8 @@ class LiveNotificationFactory(
 
     private fun trackerIconCompat(): IconCompat =
         customIconCompat() ?: IconCompat.createWithResource(appContext, R.drawable.ic_progress_tracker)
+
+    private companion object {
+        const val OPEN_SHIZUKU_REQUEST_CODE = 9100
+    }
 }

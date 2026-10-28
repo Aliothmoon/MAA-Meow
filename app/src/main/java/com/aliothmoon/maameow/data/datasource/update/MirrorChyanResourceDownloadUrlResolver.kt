@@ -27,7 +27,7 @@ class MirrorChyanResourceDownloadUrlResolver(
                 "user_agent" to "MAA-Meow",
                 "cdk" to cdk
             )
-        ).map { data ->
+        ).mapCatching { data ->
             data.url ?: throw LocalizedException(uiTextOf(R.string.update_error_empty_download_url))
         }
     }

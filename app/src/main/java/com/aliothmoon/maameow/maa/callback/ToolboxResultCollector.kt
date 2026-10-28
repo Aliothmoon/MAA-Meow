@@ -8,8 +8,8 @@ import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.data.model.toolbox.RecruitCalcResult
 import com.aliothmoon.maameow.data.model.toolbox.RecruitOperator
 import com.aliothmoon.maameow.data.repository.DepotRepository
+import com.aliothmoon.maameow.data.repository.DepotSnapshot
 import com.aliothmoon.maameow.data.repository.OperBoxRepository
-import com.aliothmoon.maameow.data.resource.CanonicalOperId
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 /** 像素画填色进度 */
 data class PixelPaintProgress(val done: Int, val total: Int, val color: Int)
@@ -87,17 +88,23 @@ class ToolboxResultCollector(
         _recruitResults.value = emptyList()
     }
 
-    fun onDepotResult(details: JSONObject?) {
-        details ?: return
-        if (!details.getBooleanValue("done")) return
+    /** @return 落库后的快照，未落库为 null */
+    fun onDepotResult(details: JSONObject?): DepotSnapshot? {
+        details ?: return null
+        if (!details.getBooleanValue("done")) return null
 
-        val dataStr = details.getString("data") ?: return
-        val dataObj = com.alibaba.fastjson2.JSON.parseObject(dataStr) ?: return
+        val dataStr = details.getString("data") ?: return null
+        val dataObj = com.alibaba.fastjson2.JSON.parseObject(dataStr) ?: return null
         val items = dataObj.entries.mapNotNull { (id, value) ->
             val count = (value as? Number)?.toInt() ?: return@mapNotNull null
             if (count > 0) DepotItem(id, count) else null
         }
-        depotRepository.set(items)
+        // 空结果多半是识别失败，不覆盖旧数据
+        if (items.isEmpty()) {
+            Timber.w("仓库识别结果为空，跳过落库")
+            return null
+        }
+        val stored = depotRepository.set(items) ?: return null
         achievement.onDepotSuccess()
         ioScope.launch {
             achievementRepository.report {
@@ -106,6 +113,7 @@ class ToolboxResultCollector(
                 "maxCount" to (items.maxOfOrNull { it.count } ?: 0)
             }
         }
+        return stored
     }
 
     fun onOperBoxResult(details: JSONObject?) {
@@ -131,19 +139,15 @@ class ToolboxResultCollector(
     /** 落库 + 成就，Core 识别与一图流拉取共用 */
     fun applyOperBoxResult(rawOwnOpers: List<OperBoxOperator>) {
         val roster = resourceDataManager.operators.value
-        // 升变形态先归一到基础形态，拥有去重、未拥有差集与落盘统一用同一 ID
-        // 归一后同名重复只留首条（对齐 WPF _tempOperHaveSet），并换成基础形态的花名册名字
-        val ownOpers = rawOwnOpers
-            .map { oper ->
-                val canonicalId = CanonicalOperId.of(oper.id)
-                if (canonicalId == oper.id) oper
-                else oper.copy(id = canonicalId, name = roster[canonicalId]?.name ?: oper.name)
-            }
-            .distinctBy { it.id }
-        val ownedIds = ownOpers.map { it.id }.toSet()
+        // 升变形态保留原 ID：core 编队预检按形态 ID 对位，一图流也会给全部形态
+        val ownOpers = rawOwnOpers.distinctBy { it.id }
+        // 未拥有按基准名判，对齐上游：升变形态同名不同 ID，本地识别只回当前形态，按 ID 判会把基础形态算成未拥有
+        val ownedNames = ownOpers.mapTo(HashSet()) {
+            resourceDataManager.getCharacterById(it.id)?.name ?: it.name
+        }
 
         val notOwned = roster
-            .filter { (id, _) -> id !in ownedIds }
+            .filter { (_, info) -> info.name !in ownedNames }
             .map { (id, info) ->
                 OperBoxOperator(
                     id = id,
@@ -170,9 +174,8 @@ class ToolboxResultCollector(
             achievementRepository.report {
                 event = AchievementEvents.TOOLBOX_RESULT
                 "tool" to "OperBox"
-                "hasPallas" to ownOpers.any {
-                    it.name == "帕拉斯" || it.name.equals("Pallas", ignoreCase = true)
-                }
+                // 按 ID 判，名字随客户端和显示语言变
+                "hasPallas" to ownOpers.any { it.isPallas }
             }
         }
     }

@@ -1,0 +1,115 @@
+name: Feature Request (English)
+description: Suggest a new feature or an improvement in English
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an improvement to MAA Meow. Describe the concrete use case so maintainers can assess its value and scope.
+
+        ## Title
+
+        Write only the **concrete request** as the title. After submission it is automatically prefixed with the area selected below, becoming `[Feature][Area] Concrete request`.
+
+        - Recommended: `Filter copilot operations by operator class`, `Attach a result screenshot to the completion notification`
+        - Not recommended: `Please improve this`, `Add something`
+
+        See the [Issue Guidelines](https://github.com/Aliothmoon/MAA-Meow/blob/main/docs/en-us/develop/ISSUE_GUIDELINES.md) for the complete convention and area descriptions.
+
+  - type: dropdown
+    id: request-type
+    attributes:
+      label: Request type
+      description: "Select the closest request type"
+      options:
+        - New feature
+        - Improvement to an existing feature
+        - Interaction or usability improvement
+        - Performance improvement
+        - Other
+    validations:
+      required: true
+
+  # label 与选项被 .github/workflows/issue-title.yml 用来补标题，改动需同步
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: "Pick the primary area: for a specific task, pick that task; for Home, Settings, or overlay UI, pick UI & Settings"
+      options:
+        - Login
+        - Combat
+        - Auto Recruit
+        - Base
+        - Credit Store
+        - Collect Rewards
+        - Auto I.S.
+        - Reclamation Algorithm
+        - Other Tasks
+        - Copilot
+        - Tools
+        - Schedule
+        - Foreground Mode
+        - Background Mode
+        - Permissions & Service
+        - Notifications
+        - Installation & Updates
+        - UI & Settings
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Use case and current problem
+      description: "Explain under which conditions you run into the problem and why the current workflow is insufficient"
+      placeholder: "When ..., I need to ...; currently I can only ..., which causes ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: "Describe the desired behavior or interaction; attach a sketch or reference screenshot when useful"
+      placeholder: "Add ... to ...; after the user does ..., the app should ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: "Optional: what would count as this request being done"
+      placeholder: |
+        - Users can ...
+        - After ..., the app ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: "Describe any workaround or alternative considered and why it is insufficient"
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: "Add related issues, product references, screenshots, recordings, or other context"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submit checklist
+      options:
+        - label: I searched existing issues and confirmed this is not a duplicate
+          required: true
+        - label: This issue contains one primary request and does not mix unrelated requirements
+          required: true

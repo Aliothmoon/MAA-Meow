@@ -3,7 +3,9 @@ package com.aliothmoon.maameow.presentation.view.panel.roguelike
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.aliothmoon.maameow.R
-import com.aliothmoon.maameow.domain.enums.RoguelikeBlackFlowCultivationTarget
+import com.aliothmoon.maameow.domain.enums.RoguelikeBlackFlowEnding
+import com.aliothmoon.maameow.domain.enums.RoguelikeBlackFlowStartAnimal
+import com.aliothmoon.maameow.domain.enums.RoguelikeBlackFlowStartReward
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants.Roguelike as RoguelikeUi
 
@@ -18,24 +20,17 @@ fun localizedRoguelikeModeOptionsForTheme(theme: String): List<Pair<String, Stri
 }
 
 @Composable
-fun localizedRoguelikeModeDescription(mode: RoguelikeMode, theme: String): String {
-    val isBlackFlow = theme == RoguelikeUi.THEME_BLACK_FLOW
+fun localizedRoguelikeModeDescription(mode: RoguelikeMode): String {
     return when (mode) {
-        // 黑流树海刷等级是飞三层，跟其他主题的稳扎稳打不是一回事
-        RoguelikeMode.Exp -> if (isBlackFlow) {
-            stringResource(R.string.panel_roguelike_mode_desc_exp_blackflow)
-        } else {
-            stringResource(R.string.panel_roguelike_mode_desc_exp)
-        }
-
+        RoguelikeMode.Exp -> stringResource(R.string.panel_roguelike_mode_desc_exp)
         RoguelikeMode.Investment -> stringResource(R.string.panel_roguelike_mode_desc_investment)
         RoguelikeMode.Collectible -> stringResource(R.string.panel_roguelike_mode_desc_collectible)
         RoguelikeMode.Squad -> stringResource(R.string.panel_roguelike_mode_desc_squad)
         RoguelikeMode.Exploration -> stringResource(R.string.panel_roguelike_mode_desc_exploration)
         RoguelikeMode.CLP_PDS -> stringResource(R.string.panel_roguelike_mode_desc_clp_pds)
         RoguelikeMode.FindPlaytime -> stringResource(R.string.panel_roguelike_mode_desc_find_playtime)
-        RoguelikeMode.BlackFlowBabyAnimal ->
-            stringResource(R.string.panel_roguelike_mode_desc_blackflow_baby_animal)
+        RoguelikeMode.BlackFlowStartRun, RoguelikeMode.BlackFlowBabyAnimal ->
+            stringResource(R.string.panel_roguelike_mode_desc_blackflow_start_run)
     }
 }
 
@@ -54,27 +49,86 @@ fun localizedRoguelikeThemeTip(theme: String): String? = when (theme) {
 }
 
 @Composable
-fun localizedRoguelikeCultivationTargetOptions(): List<Pair<String, String>> =
-    RoguelikeUi.BLACK_FLOW_CULTIVATION_TARGETS.map {
-        it.name to localizedRoguelikeCultivationTargetLabel(it)
+fun localizedBlackFlowEndingOptions(): List<Pair<RoguelikeBlackFlowEnding, String>> =
+    RoguelikeUi.BLACK_FLOW_ENDINGS.map {
+        it to when (it) {
+            RoguelikeBlackFlowEnding.Ending1 -> stringResource(R.string.panel_roguelike_blackflow_ending_1)
+            RoguelikeBlackFlowEnding.Ending2 -> stringResource(R.string.panel_roguelike_blackflow_ending_2)
+            RoguelikeBlackFlowEnding.Ending3 -> stringResource(R.string.panel_roguelike_blackflow_ending_3)
+        }
     }
 
 @Composable
-private fun localizedRoguelikeCultivationTargetLabel(
-    target: RoguelikeBlackFlowCultivationTarget
-): String = when (target) {
-    RoguelikeBlackFlowCultivationTarget.Cat ->
-        stringResource(R.string.panel_roguelike_blackflow_target_cat)
+fun localizedBlackFlowStartAnimalOptions(): List<Pair<RoguelikeBlackFlowStartAnimal, String>> =
+    RoguelikeBlackFlowStartAnimal.entries.map {
+        it to when (it) {
+            RoguelikeBlackFlowStartAnimal.None ->
+                stringResource(R.string.panel_roguelike_blackflow_start_animal_none)
 
-    RoguelikeBlackFlowCultivationTarget.FeatheredSerpent ->
-        stringResource(R.string.panel_roguelike_blackflow_target_feathered_serpent)
+            RoguelikeBlackFlowStartAnimal.Cat ->
+                stringResource(R.string.panel_roguelike_blackflow_target_cat)
 
-    RoguelikeBlackFlowCultivationTarget.Dog ->
-        stringResource(R.string.panel_roguelike_blackflow_target_dog)
+            RoguelikeBlackFlowStartAnimal.Dog ->
+                stringResource(R.string.panel_roguelike_blackflow_target_dog)
 
-    RoguelikeBlackFlowCultivationTarget.Cerberus ->
-        stringResource(R.string.panel_roguelike_blackflow_target_cerberus)
+            RoguelikeBlackFlowStartAnimal.Cerberus ->
+                stringResource(R.string.panel_roguelike_blackflow_target_cerberus)
+
+            RoguelikeBlackFlowStartAnimal.FeatheredSerpent ->
+                stringResource(R.string.panel_roguelike_blackflow_target_feathered_serpent)
+        }
+    }
+
+/** 培育出该动物后下一局的效果 */
+@Composable
+fun localizedBlackFlowStartAnimalTip(animal: RoguelikeBlackFlowStartAnimal): String? = when (animal) {
+    RoguelikeBlackFlowStartAnimal.None -> null
+    RoguelikeBlackFlowStartAnimal.Cat -> stringResource(R.string.panel_roguelike_blackflow_animal_tip_cat)
+    RoguelikeBlackFlowStartAnimal.Dog -> stringResource(R.string.panel_roguelike_blackflow_animal_tip_dog)
+    RoguelikeBlackFlowStartAnimal.Cerberus ->
+        stringResource(R.string.panel_roguelike_blackflow_animal_tip_cerberus)
+
+    RoguelikeBlackFlowStartAnimal.FeatheredSerpent ->
+        stringResource(R.string.panel_roguelike_blackflow_animal_tip_feathered_serpent)
 }
+
+@Composable
+fun localizedBlackFlowStartRewardLabel(reward: RoguelikeBlackFlowStartReward): String =
+    stringResource(
+        when (reward) {
+            RoguelikeBlackFlowStartReward.UnnumberedItem -> R.string.panel_roguelike_blackflow_reward_unnumbered_item
+            RoguelikeBlackFlowStartReward.SurveyAdvance -> R.string.panel_roguelike_blackflow_reward_survey_advance
+            RoguelikeBlackFlowStartReward.SpaceLease -> R.string.panel_roguelike_blackflow_reward_space_lease
+            RoguelikeBlackFlowStartReward.RegressionCompensation -> R.string.panel_roguelike_blackflow_reward_regression_compensation
+            RoguelikeBlackFlowStartReward.ForestRide -> R.string.panel_roguelike_blackflow_reward_forest_ride
+            RoguelikeBlackFlowStartReward.NestParasitism -> R.string.panel_roguelike_blackflow_reward_nest_parasitism
+            RoguelikeBlackFlowStartReward.Pegasus -> R.string.panel_roguelike_blackflow_reward_pegasus
+            RoguelikeBlackFlowStartReward.Hippogriff -> R.string.panel_roguelike_blackflow_reward_hippogriff
+            RoguelikeBlackFlowStartReward.Dragon -> R.string.panel_roguelike_blackflow_reward_dragon
+            RoguelikeBlackFlowStartReward.Hydra -> R.string.panel_roguelike_blackflow_reward_hydra
+            RoguelikeBlackFlowStartReward.BaiZe -> R.string.panel_roguelike_blackflow_reward_bai_ze
+            RoguelikeBlackFlowStartReward.GoldenCrow -> R.string.panel_roguelike_blackflow_reward_golden_crow
+        }
+    )
+
+@Composable
+fun localizedBlackFlowStartRewardTip(reward: RoguelikeBlackFlowStartReward): String =
+    stringResource(
+        when (reward) {
+            RoguelikeBlackFlowStartReward.UnnumberedItem -> R.string.panel_roguelike_blackflow_reward_unnumbered_item_tip
+            RoguelikeBlackFlowStartReward.SurveyAdvance -> R.string.panel_roguelike_blackflow_reward_survey_advance_tip
+            RoguelikeBlackFlowStartReward.SpaceLease -> R.string.panel_roguelike_blackflow_reward_space_lease_tip
+            RoguelikeBlackFlowStartReward.RegressionCompensation -> R.string.panel_roguelike_blackflow_reward_regression_compensation_tip
+            RoguelikeBlackFlowStartReward.ForestRide -> R.string.panel_roguelike_blackflow_reward_forest_ride_tip
+            RoguelikeBlackFlowStartReward.NestParasitism -> R.string.panel_roguelike_blackflow_reward_nest_parasitism_tip
+            RoguelikeBlackFlowStartReward.Pegasus -> R.string.panel_roguelike_blackflow_reward_pegasus_tip
+            RoguelikeBlackFlowStartReward.Hippogriff -> R.string.panel_roguelike_blackflow_reward_hippogriff_tip
+            RoguelikeBlackFlowStartReward.Dragon -> R.string.panel_roguelike_blackflow_reward_dragon_tip
+            RoguelikeBlackFlowStartReward.Hydra -> R.string.panel_roguelike_blackflow_reward_hydra_tip
+            RoguelikeBlackFlowStartReward.BaiZe -> R.string.panel_roguelike_blackflow_reward_bai_ze_tip
+            RoguelikeBlackFlowStartReward.GoldenCrow -> R.string.panel_roguelike_blackflow_reward_golden_crow_tip
+        }
+    )
 
 @Composable
 fun localizedRoguelikeRoleOptionsForTheme(theme: String): List<Pair<String, String>> {
@@ -134,8 +188,8 @@ private fun localizedRoguelikeModeLabel(modeKey: String): String {
         "Exploration" -> stringResource(R.string.panel_roguelike_mode_exploration)
         "CLP_PDS" -> stringResource(R.string.panel_roguelike_mode_clp_pds)
         "FindPlaytime" -> stringResource(R.string.panel_roguelike_mode_find_playtime)
-        "BlackFlowBabyAnimal" ->
-            stringResource(R.string.panel_roguelike_mode_blackflow_baby_animal)
+        "BlackFlowStartRun" ->
+            stringResource(R.string.panel_roguelike_mode_blackflow_start_run)
 
         else -> modeKey
     }
@@ -225,6 +279,8 @@ private fun localizedRoguelikeSquadLabel(squad: String): String {
         "开拓者分队" -> stringResource(R.string.panel_roguelike_squad_pioneer)
         "多边贸易分队" -> stringResource(R.string.panel_roguelike_squad_multilateral_trade)
         "地质调查分队" -> stringResource(R.string.panel_roguelike_squad_geological_survey)
+        "团结阵线分队" -> stringResource(R.string.panel_roguelike_squad_united_front)
+        "踏足遍历分队" -> stringResource(R.string.panel_roguelike_squad_traversal)
         else -> squad
     }
 }

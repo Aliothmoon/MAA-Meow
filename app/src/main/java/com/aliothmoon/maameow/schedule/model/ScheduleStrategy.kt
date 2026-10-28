@@ -71,12 +71,18 @@ data class ScheduleStrategy(
     val forceStart: Boolean = false,
     /** 运行期间屏保；仅后台，在用时不盖 */
     val autoScreenSaver: Boolean = false,
+    /** 熄屏挂机改为关物理屏 */
+    val hardwareScreenOff: Boolean = false,
+    /** 在用手机时不拉界面，改通知倒计时；仅后台 */
+    val silentStartWhenInUse: Boolean = false,
     /** 任务结束后自动熄屏 */
     val autoSleepAfterTask: Boolean = false,
     /** 启动时已亮屏未锁屏则不熄屏 */
     val skipAutoSleepIfAwake: Boolean = false,
     /** 自然结束后关游戏；仅后台，全局开关优先 */
     val closeGameAfterTask: Boolean = false,
+    /** 自然结束后关 RemoteService 与 App */
+    val exitAppAfterTask: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val lastExecutedAt: Long? = null,
     val lastResult: ExecutionResult? = null,

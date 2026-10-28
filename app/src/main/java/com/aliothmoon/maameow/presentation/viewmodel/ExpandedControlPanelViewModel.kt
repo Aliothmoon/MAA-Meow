@@ -304,7 +304,7 @@ class ExpandedControlPanelViewModel(
                 is TaskStartDecision.RequiresConfirmation -> {
                     pendingStartContext = context.acknowledged(decision.acknowledgement)
                     showDialog(
-                        application.createStartWarningDialog(decision.message)
+                        application.createStartWarningDialog(decision.acknowledgement, decision.message)
                     )
                     return@launch
                 }

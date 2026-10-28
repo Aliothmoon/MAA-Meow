@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
 import com.aliothmoon.maameow.data.model.EventShopPreset
+import com.aliothmoon.maameow.data.model.ReclamationConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.maa.task.MaaTaskType
@@ -21,6 +22,7 @@ class MiniGameEventShopBlacklistTest {
 
     private val presets = MutableStateFlow(emptySet<EventShopPreset>())
     private val custom = MutableStateFlow("")
+    private val reclamation = MutableStateFlow(ReclamationConfig())
     private var clientType = "Official"
 
     private val delegate = MiniGameDelegate(
@@ -38,6 +40,7 @@ class MiniGameEventShopBlacklistTest {
         appSettingsManager = mockk<AppSettingsManager> {
             every { eventShopBlacklistPresets } returns presets
             every { eventShopBlacklistCustom } returns custom
+            every { reclamationConfig } returns reclamation
         },
         clientType = { clientType },
     )
@@ -48,6 +51,20 @@ class MiniGameEventShopBlacklistTest {
         .getValue("event_shop").jsonObject
         .getValue("blacklist").jsonArray
         .map { it.jsonPrimitive.content }
+
+    @Test
+    fun reclamation_isSubmittedAsOwnTaskType_withClientDefaultTool() {
+        reclamation.value = ReclamationConfig(theme = "Tales", mode = ReclamationConfig.MODE_PROSPERITY_IN_SAVE)
+        clientType = "YoStarEN"
+        delegate.onTaskSelected("Reclamation")
+
+        val task = delegate.buildTaskParams()
+
+        assertEquals(MaaTaskType.RECLAMATION, task.type)
+        val json = Json.parseToJsonElement(task.params).jsonObject
+        assertEquals("Tales", json.getValue("theme").jsonPrimitive.content)
+        assertEquals(listOf("Glow Stick"), json.getValue("tools_to_craft").jsonArray.map { it.jsonPrimitive.content })
+    }
 
     @Test
     fun emptyBlacklist_sendsNoParams() {

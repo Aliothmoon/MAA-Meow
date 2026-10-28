@@ -9,9 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -25,31 +22,25 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import com.aliothmoon.maameow.presentation.LocalInputFocusManager
-import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.components.PanelPromptDialog
 import com.aliothmoon.maameow.presentation.components.LocalPageVisible
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
 import com.aliothmoon.maameow.presentation.components.clearFocusOnBlankTap
 import com.aliothmoon.maameow.presentation.components.collectWhilePageVisible
 import com.aliothmoon.maameow.presentation.components.rememberPageVisible
 import com.aliothmoon.maameow.presentation.state.UiEffect
-import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType.ERROR
-import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType.SUCCESS
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.ExpandedControlPanelViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
-import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.utils.i18n.resolve
 import org.koin.compose.koinInject
 
@@ -244,31 +235,9 @@ fun ExpandedControlPanel(
             ResourceLoadingOverlay()
         }
 
-        val dialog = uiState.dialog
-        val dialogTitle = dialog?.title.asString()
-        val dialogMessage = dialog?.message.asString()
-        val dialogConfirmText = dialog?.confirmText.asString()
-        val dialogDismissText = dialog?.dismissText.asString()
-        val confirmColor = when (dialog?.type) {
-            SUCCESS -> MaterialTheme.colorScheme.primary
-            ERROR -> MaterialTheme.colorScheme.error
-            else -> MaterialTheme.colorScheme.tertiary
-        }
-        AdaptiveTaskPromptDialog(
-            visible = dialog != null,
-            onDismissRequest = viewModel::onDialogDismiss,
-            title = dialogTitle,
-            message = AnnotatedString(dialogMessage),
-            icon = when (dialog?.type) {
-                SUCCESS -> Icons.Filled.CheckCircle
-                else -> Icons.Filled.Warning
-            },
-            iconTint = confirmColor,
-            confirmColor = confirmColor,
-            confirmText = dialogConfirmText.takeIf { it.isNotBlank() }
-                ?: stringResource(R.string.common_confirm),
-            dismissText = dialogDismissText.takeIf { it.isNotBlank() }
-                ?: stringResource(R.string.common_close),
+        PanelPromptDialog(
+            uiState.dialog,
+            onDismiss = viewModel::onDialogDismiss,
             onConfirm = viewModel::onDialogConfirm,
         )
     }

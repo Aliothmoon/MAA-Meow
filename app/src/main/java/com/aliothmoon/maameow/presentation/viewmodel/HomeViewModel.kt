@@ -70,8 +70,7 @@ class HomeViewModel(
     val showCoreDirInaccessibleDialog: StateFlow<Boolean> = combine(
         resourceLoader.state, _coreDirDialogDismissed
     ) { state, dismissed ->
-        !dismissed && !pathConfig.isCoreSeparated
-                && state is MaaResourceLoader.State.Failed
+        !dismissed && state is MaaResourceLoader.State.Failed
                 && state.reason == MaaResourceLoader.State.FailReason.STORAGE_INACCESSIBLE
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
@@ -79,9 +78,14 @@ class HomeViewModel(
         _coreDirDialogDismissed.value = true
     }
 
-    fun switchCoreDataToLocalTmp() {
+    /** 独立目录也进不去时引导切回应用目录：多半是 Root 建的目录归 root，Shizuku 修不了 */
+    val isCoreSeparated: Boolean get() = pathConfig.isCoreSeparated
+
+    /** 换到另一种数据目录并重启 */
+    fun switchCoreDataLocationForAccess() {
         _coreDirDialogDismissed.value = true
-        viewModelScope.launch { switchCoreDataLocation(CoreDataLocation.LOCAL_TMP) }
+        val target = if (pathConfig.isCoreSeparated) CoreDataLocation.APP_DIR else CoreDataLocation.LOCAL_TMP
+        viewModelScope.launch { switchCoreDataLocation(target) }
     }
 
     init {
@@ -213,7 +217,7 @@ class HomeViewModel(
 
     fun onTryResourceInit() {
         viewModelScope.launch {
-            resourceInitService.doExtractFromAssets()
+            resourceInitService.reInitialize()
         }
     }
 

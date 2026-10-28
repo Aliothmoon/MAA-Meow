@@ -11,10 +11,12 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
+import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.EventShopBlacklist
 import com.aliothmoon.maameow.data.model.EventShopPreset
+import com.aliothmoon.maameow.data.model.ReclamationConfig
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager.Companion.FONT_SIZE_SCALE_AUTO
@@ -27,6 +29,8 @@ import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunDurationLimit
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.models.UnlockCredential
+import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
+import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -36,8 +40,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.util.concurrent.CopyOnWriteArrayList
+import timber.log.Timber
 
 
 /** 构造不等待读盘；启动时读取 .value 前须先 awaitLoaded */
@@ -63,6 +70,16 @@ class AppSettingsManager internal constructor(
 
         /** 纯数字 PIN 最大位数 */
         const val MAX_PIN_LENGTH = 16
+
+        fun parsePackageList(raw: String): Set<String> =
+            raw.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+
+        fun parseGamePackages(raw: String): Map<String, String> {
+            if (raw.isBlank()) return emptyMap()
+            val map = runCatching { JsonUtils.common.decodeFromString<Map<String, String>>(raw) }
+                .getOrDefault(emptyMap())
+            return map.filter { (type, pkg) -> Packages.isValidOverride(type, pkg) }
+        }
 
         /** 首启引导版本，内容大改需全员重看时 +1 */
         const val ONBOARDING_VERSION = 1
@@ -268,6 +285,24 @@ class AppSettingsManager internal constructor(
         with(AppSettingsSchema) {
             context.dataStore.edit {
                 it[shizukuLaunchPackage] = trimmedPackageName
+            }
+        }
+    }
+
+    // 自定义游戏包名
+    val gamePackages: StateFlow<Map<String, String>> = setting { parseGamePackages(it.gamePackages) }
+
+    /** [packageName] 为 null 或等于默认即恢复默认 */
+    suspend fun setGamePackage(clientType: String, packageName: String?) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                val current = parseGamePackages(it[gamePackages].orEmpty())
+                val next = if (packageName != null && Packages.isValidOverride(clientType, packageName)) {
+                    current + (clientType to packageName)
+                } else {
+                    current - clientType
+                }
+                it[gamePackages] = if (next.isEmpty()) "" else JsonUtils.common.encodeToString(next)
             }
         }
     }
@@ -516,19 +551,35 @@ class AppSettingsManager internal constructor(
         }
     }
 
+    val virtualDisplayBackend: StateFlow<VirtualDisplayBackend> = setting {
+        runCatching { VirtualDisplayBackend.valueOf(it.virtualDisplayBackend) }
+            .getOrDefault(VirtualDisplayBackend.LEGACY)
+    }
+
+    suspend fun setVirtualDisplayBackend(backend: VirtualDisplayBackend) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[virtualDisplayBackend] = backend.name }
+        }
+    }
+
     // 应用语言
     enum class AppLanguage(val tag: String) {
         // 仅用于兼容旧数据；启动时会被收敛成显式语言。
         SYSTEM(""),
         ZH("zh"),
         EN("en"),
+        KO("ko"),
     }
 
     /** 资源与干员名用的语言码，system 收敛成显式语言 */
     val displayLanguage: String
-        get() = ResourceDataManager.displayLanguageCode(
-            LocaleBootstrap.resolveSelectedLanguage(language.value)
-        )
+        get() = displayLanguageOf(language.value)
+
+    val displayLanguageFlow: Flow<String>
+        get() = language.map(::displayLanguageOf).distinctUntilChanged()
+
+    private fun displayLanguageOf(language: AppLanguage): String =
+        ResourceDataManager.displayLanguageCode(LocaleBootstrap.resolveSelectedLanguage(language))
 
     val language: StateFlow<AppLanguage> = setting {
         runCatching { AppLanguage.valueOf(it.language) }
@@ -609,6 +660,27 @@ class AppSettingsManager internal constructor(
         (raw.toIntOrNull() ?: 0) < ONBOARDING_VERSION
 
     val needsOnboarding: StateFlow<Boolean> = setting { parseNeedsOnboarding(it.onboardingSeenVersion) }
+
+    /** 从没看完过引导，只有这时强制 */
+    val onboardingNeverSeen: StateFlow<Boolean> =
+        setting { (it.onboardingSeenVersion.toIntOrNull() ?: 0) == 0 }
+
+    @Volatile
+    private var onboardingAutoStartCount: Int? = null
+
+    /** 记一次首启引导自动弹出，返回累计次数；同进程只记一次，Activity 重建不算 */
+    suspend fun countOnboardingAutoStart(): Int {
+        onboardingAutoStartCount?.let { return it }
+        var count = 0
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                count = (it[onboardingAutoStarts]?.toIntOrNull() ?: 0) + 1
+                it[onboardingAutoStarts] = count.toString()
+            }
+        }
+        onboardingAutoStartCount = count
+        return count
+    }
 
     suspend fun markOnboardingSeen() {
         with(AppSettingsSchema) {
@@ -739,6 +811,20 @@ class AppSettingsManager internal constructor(
         }
     }
 
+    val scheduleAppBlacklist: StateFlow<Set<String>> = setting { parsePackageList(it.scheduleAppBlacklist) }
+
+    suspend fun setScheduleAppBlacklisted(packageName: String, blacklisted: Boolean) {
+        if (packageName.isBlank()) return
+        with(AppSettingsSchema) {
+            // 读改写放在同一个 edit 里，连点不丢
+            context.dataStore.edit { prefs ->
+                val current = parsePackageList(prefs[scheduleAppBlacklist].orEmpty())
+                val next = if (blacklisted) current + packageName else current - packageName
+                prefs[scheduleAppBlacklist] = next.joinToString(",")
+            }
+        }
+    }
+
     val reportToPenguin: StateFlow<Boolean> = setting { it.reportToPenguin.toBooleanStrictOrNull() ?: true }
 
     suspend fun setReportToPenguin(enabled: Boolean) {
@@ -780,6 +866,15 @@ class AppSettingsManager internal constructor(
         }
     }
 
+    val operBoxAssistEnabled: StateFlow<Boolean> =
+        setting { it.operBoxAssistEnabled.toBooleanStrictOrNull() ?: false }
+
+    suspend fun setOperBoxAssistEnabled(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[operBoxAssistEnabled] = enabled.toString() }
+        }
+    }
+
     val telemetryEnabled: StateFlow<Boolean> = setting { it.telemetryEnabled.toBooleanStrictOrNull() ?: true }
 
     suspend fun setTelemetryEnabled(enabled: Boolean) {
@@ -808,6 +903,38 @@ class AppSettingsManager internal constructor(
         with(AppSettingsSchema) {
             context.dataStore.edit { it[eventShopBlacklistCustom] = custom }
         }
+    }
+
+    val reclamationConfig: StateFlow<ReclamationConfig> = setting { parseReclamationConfig(it.reclamationConfig) }
+
+    /** 在事务内读改写，连续修改不会互相覆盖 */
+    suspend fun updateReclamationConfig(transform: (ReclamationConfig) -> ReclamationConfig) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                val current = parseReclamationConfig(it[reclamationConfig].orEmpty())
+                it[reclamationConfig] = JsonUtils.common.encodeToString(transform(current))
+            }
+        }
+    }
+
+    /** 旧任务链里的生息演算迁入工具箱；已保存过则不覆盖 */
+    suspend fun adoptReclamationConfig(config: ReclamationConfig) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                if (it[reclamationConfig].isNullOrBlank()) {
+                    it[reclamationConfig] = JsonUtils.common.encodeToString(config)
+                }
+            }
+        }
+    }
+
+    private fun parseReclamationConfig(raw: String): ReclamationConfig {
+        val config = raw.takeIf { it.isNotBlank() }?.let {
+            runCatching { JsonUtils.common.decodeFromString<ReclamationConfig>(it) }
+                .onFailure { e -> Timber.w(e, "生息演算设置解析失败") }
+                .getOrNull()
+        } ?: ReclamationConfig()
+        return config.copy(mode = config.sanitizedMode())
     }
 
     // 放在类体末尾，启动收集器时 setting() 已全部注册

@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.schedule.ui
 
 import android.os.Build
 import android.text.format.DateFormat
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.BasicAlertDialog
@@ -56,6 +58,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -66,12 +71,15 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.presentation.LocalToaster
+import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.components.WheelTimeFormatToggle
 import com.aliothmoon.maameow.presentation.components.WheelTimePicker
+import com.aliothmoon.maameow.presentation.components.dayOfWeekLabel
 import com.aliothmoon.maameow.presentation.components.rememberWheelTimePickerState
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
@@ -79,6 +87,7 @@ import com.aliothmoon.maameow.schedule.model.ScheduleHealthIssue
 import com.aliothmoon.maameow.schedule.model.ScheduleType
 import com.aliothmoon.maameow.schedule.service.ExactAlarmSettings
 import com.aliothmoon.maameow.schedule.service.OemPowerHints
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.theme.OpaqueTheme
 import com.aliothmoon.maameow.utils.i18n.asString
@@ -105,6 +114,11 @@ fun ScheduleEditView(
     val toaster = LocalToaster.current
     var showTimePicker by remember { mutableStateOf(false) }
     var editingTime by remember { mutableStateOf<LocalTime?>(null) }
+    var showSilentStartRisk by remember { mutableStateOf(false) }
+    var showScreenPowerRisk by remember { mutableStateOf(false) }
+    var advancedTab by rememberSaveable { mutableStateOf(AdvancedTab.TRIGGER) }
+    val closeEffect by viewModel.closeGameEffect.collectAsStateWithLifecycle()
+    val runMode by viewModel.runMode.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     var use24HourPicker by rememberSaveable { mutableStateOf(DateFormat.is24HourFormat(context)) }
@@ -141,7 +155,9 @@ fun ScheduleEditView(
                 ScheduleHealthIssue.NOTIFICATION -> permissionManager.requestNotification(context)
                 ScheduleHealthIssue.OVERLAY -> permissionManager.requestOverlay(context)
                 // 进不了向导，由健康卡负责
-                ScheduleHealthIssue.BACKEND, ScheduleHealthIssue.UNLOCK_CREDENTIAL -> Unit
+                ScheduleHealthIssue.BACKEND_DOWN,
+                ScheduleHealthIssue.BACKEND,
+                ScheduleHealthIssue.UNLOCK_CREDENTIAL -> Unit
             }
             viewModel.refreshPermissionChecks()
         }
@@ -286,7 +302,7 @@ fun ScheduleEditView(
                                 FilterChip(
                                     selected = day in state.daysOfWeek,
                                     onClick = { viewModel.onToggleDay(day) },
-                                    label = { Text(scheduleDayChipLabel(day)) },
+                                    label = { Text(dayOfWeekLabel(day)) },
                                     colors = chipColors
                                 )
                             }
@@ -528,177 +544,18 @@ fun ScheduleEditView(
                 }
             }
 
-            item(key = "force-start") {
+            item(key = "advanced") {
                 Spacer(Modifier.height(MaaDesignTokens.Spacing.sectionGap))
                 SectionHeader(stringResource(R.string.schedule_section_advanced))
-                val (expanded, setExpanded) = remember { mutableStateOf(false) }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            stringResource(R.string.schedule_force_start),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        ExpandableTipIcon(
-                            modifier = Modifier.padding(start = 8.dp),
-                            expanded = expanded,
-                            onExpandedChange = { setExpanded(it) })
-                    }
-                    Switch(
-                        checked = state.forceStart,
-                        onCheckedChange = { viewModel.onForceStartChanged(it) }
-                    )
-                }
-                ExpandableTipContent(
-                    visible = expanded,
-                    tipText = stringResource(R.string.schedule_force_start_tip),
-                )
-            }
-
-            item(key = "screen-saver") {
-                val (saverExpanded, setSaverExpanded) = remember { mutableStateOf(false) }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            stringResource(R.string.schedule_auto_screen_saver),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        ExpandableTipIcon(
-                            modifier = Modifier.padding(start = 8.dp),
-                            expanded = saverExpanded,
-                            onExpandedChange = { setSaverExpanded(it) })
-                    }
-                    Switch(
-                        checked = state.autoScreenSaver,
-                        onCheckedChange = { viewModel.onAutoScreenSaverChanged(it) }
-                    )
-                }
-                ExpandableTipContent(
-                    visible = saverExpanded,
-                    tipText = stringResource(R.string.schedule_auto_screen_saver_tip),
-                )
-            }
-
-            item(key = "auto-sleep") {
-                val (sleepExpanded, setSleepExpanded) = remember { mutableStateOf(false) }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            stringResource(R.string.schedule_auto_sleep_after_task),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        ExpandableTipIcon(
-                            modifier = Modifier.padding(start = 8.dp),
-                            expanded = sleepExpanded,
-                            onExpandedChange = { setSleepExpanded(it) })
-                    }
-                    Switch(
-                        checked = state.autoSleepAfterTask,
-                        onCheckedChange = { viewModel.onAutoSleepAfterTaskChanged(it) }
-                    )
-                }
-                ExpandableTipContent(
-                    visible = sleepExpanded,
-                    tipText = stringResource(R.string.schedule_auto_sleep_tip),
-                )
-                // 从属于上面的开关，关掉就没有意义，直接隐藏
-                if (state.autoSleepAfterTask) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 24.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                stringResource(R.string.schedule_skip_auto_sleep_if_awake),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Text(
-                                stringResource(R.string.schedule_skip_auto_sleep_if_awake_tip),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = state.skipAutoSleepIfAwake,
-                            onCheckedChange = { viewModel.onSkipAutoSleepIfAwakeChanged(it) }
-                        )
-                    }
-                }
-            }
-
-            item(key = "close-game") {
-                // 优先级规则容易踩坑，默认展开
-                val (closeExpanded, setCloseExpanded) = remember { mutableStateOf(true) }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            stringResource(R.string.schedule_close_game_after_task),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        ExpandableTipIcon(
-                            modifier = Modifier.padding(start = 8.dp),
-                            expanded = closeExpanded,
-                            onExpandedChange = { setCloseExpanded(it) })
-                    }
-                    Switch(
-                        checked = state.closeGameAfterTask,
-                        onCheckedChange = { viewModel.onCloseGameAfterTaskChanged(it) }
-                    )
-                }
-                val closeEffect by viewModel.closeGameEffect.collectAsStateWithLifecycle()
-                val willClose = closeEffect == CloseGameEffect.GlobalOverride
-                        || closeEffect == CloseGameEffect.StrategyActive
-                Text(
-                    text = stringResource(
-                        when (closeEffect) {
-                            CloseGameEffect.ForegroundInactive -> R.string.schedule_close_game_effect_foreground
-                            CloseGameEffect.GlobalOverride -> R.string.schedule_close_game_effect_global
-                            CloseGameEffect.StrategyActive -> R.string.schedule_close_game_effect_strategy
-                            CloseGameEffect.Inactive -> R.string.schedule_close_game_effect_inactive
-                        }
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (willClose) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = MaaDesignTokens.Spacing.sm)
-                )
-                ExpandableTipContent(
-                    visible = closeExpanded,
-                    tipText = stringResource(R.string.schedule_close_game_tip),
+                AdvancedOptions(
+                    state = state,
+                    tab = advancedTab,
+                    onTabChange = { advancedTab = it },
+                    foreground = runMode == RunMode.FOREGROUND,
+                    closeEffect = closeEffect,
+                    viewModel = viewModel,
+                    onSilentStartRequest = { showSilentStartRisk = true },
+                    onScreenPowerRequest = { showScreenPowerRisk = true },
                 )
             }
         }
@@ -722,6 +579,32 @@ fun ScheduleEditView(
         )
     }
 
+    AdaptiveTaskPromptDialog(
+        visible = showSilentStartRisk,
+        title = stringResource(R.string.schedule_silent_start_risk_title),
+        message = stringResource(R.string.schedule_silent_start_risk_body),
+        onConfirm = {
+            showSilentStartRisk = false
+            viewModel.onSilentStartWhenInUseChanged(true)
+        },
+        onDismissRequest = { showSilentStartRisk = false },
+        confirmText = stringResource(R.string.schedule_silent_start_risk_confirm),
+        icon = Icons.Rounded.Warning,
+    )
+
+    AdaptiveTaskPromptDialog(
+        visible = showScreenPowerRisk,
+        title = stringResource(R.string.dialog_hardware_screen_off_title),
+        message = stringResource(R.string.schedule_hardware_screen_off_confirm_body),
+        onConfirm = {
+            showScreenPowerRisk = false
+            viewModel.onHardwareScreenOffChanged(true)
+        },
+        onDismissRequest = { showScreenPowerRisk = false },
+        confirmText = stringResource(R.string.dialog_hardware_screen_off_confirm),
+        icon = Icons.Rounded.Warning,
+    )
+
     if (showWizard) {
         val current = state.wizardPending.first()
         PermissionWizardDialog(
@@ -734,6 +617,196 @@ fun ScheduleEditView(
                 navController.popBackStack()
             },
         )
+    }
+}
+
+private enum class AdvancedTab(@StringRes val label: Int) {
+    TRIGGER(R.string.schedule_advanced_tab_trigger),
+    RUNNING(R.string.schedule_advanced_tab_running),
+    FINISH(R.string.schedule_advanced_tab_finish),
+}
+
+@Composable
+private fun AdvancedOptions(
+    state: ScheduleEditUiState,
+    tab: AdvancedTab,
+    onTabChange: (AdvancedTab) -> Unit,
+    foreground: Boolean,
+    closeEffect: CloseGameEffect,
+    viewModel: ScheduleEditViewModel,
+    onSilentStartRequest: () -> Unit,
+    onScreenPowerRequest: () -> Unit,
+) {
+    // 只在后台生效的项，前台模式下补一行
+    val foregroundNote = if (foreground) stringResource(R.string.schedule_close_game_effect_foreground) else null
+
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        AdvancedTab.entries.forEachIndexed { index, item ->
+            SegmentedButton(
+                selected = tab == item,
+                onClick = { onTabChange(item) },
+                shape = SegmentedButtonDefaults.itemShape(
+                    index = index,
+                    count = AdvancedTab.entries.size,
+                    baseShape = RoundedCornerShape(4.dp)
+                ),
+                icon = {},
+            ) {
+                Text(stringResource(item.label))
+            }
+        }
+    }
+
+    TallestPage(selected = tab.ordinal, modifier = Modifier.padding(top = MaaDesignTokens.Spacing.sm)) {
+        Column {
+            OptionSwitchRow(
+                title = stringResource(R.string.schedule_force_start),
+                tip = stringResource(R.string.schedule_force_start_tip),
+                checked = state.forceStart,
+                onCheckedChange = viewModel::onForceStartChanged,
+            )
+            OptionSwitchRow(
+                title = stringResource(R.string.schedule_silent_start),
+                tip = stringResource(R.string.schedule_silent_start_tip),
+                checked = state.silentStartWhenInUse,
+                onCheckedChange = { checked ->
+                    if (checked) onSilentStartRequest()
+                    else viewModel.onSilentStartWhenInUseChanged(false)
+                },
+                note = foregroundNote,
+            )
+        }
+        Column {
+            OptionSwitchRow(
+                title = stringResource(R.string.schedule_auto_screen_saver),
+                tip = stringResource(R.string.schedule_auto_screen_saver_tip),
+                checked = state.autoScreenSaver,
+                onCheckedChange = viewModel::onAutoScreenSaverChanged,
+                note = foregroundNote,
+            )
+            SubOption(visible = state.autoScreenSaver) {
+                OptionSwitchRow(
+                    title = stringResource(R.string.schedule_hardware_screen_off),
+                    tip = stringResource(R.string.schedule_hardware_screen_off_tip),
+                    checked = state.hardwareScreenOff,
+                    onCheckedChange = { checked ->
+                        if (checked) onScreenPowerRequest()
+                        else viewModel.onHardwareScreenOffChanged(false)
+                    },
+                )
+            }
+        }
+        Column {
+            OptionSwitchRow(
+                title = stringResource(R.string.schedule_auto_sleep_after_task),
+                tip = stringResource(R.string.schedule_auto_sleep_tip),
+                checked = state.autoSleepAfterTask,
+                onCheckedChange = viewModel::onAutoSleepAfterTaskChanged,
+            )
+            SubOption(visible = state.autoSleepAfterTask) {
+                OptionSwitchRow(
+                    title = stringResource(R.string.schedule_skip_auto_sleep_if_awake),
+                    tip = stringResource(R.string.schedule_skip_auto_sleep_if_awake_tip),
+                    checked = state.skipAutoSleepIfAwake,
+                    onCheckedChange = viewModel::onSkipAutoSleepIfAwakeChanged,
+                )
+            }
+            // 被全局开关接管或前台不生效时才提示，其余看开关即可
+            OptionSwitchRow(
+                title = stringResource(R.string.schedule_close_game_after_task),
+                tip = stringResource(R.string.schedule_close_game_tip),
+                checked = state.closeGameAfterTask,
+                onCheckedChange = viewModel::onCloseGameAfterTaskChanged,
+                note = when (closeEffect) {
+                    CloseGameEffect.GlobalOverride -> stringResource(R.string.schedule_close_game_effect_global)
+                    CloseGameEffect.ForegroundInactive -> foregroundNote
+                    else -> null
+                },
+                noteHighlighted = closeEffect == CloseGameEffect.GlobalOverride,
+            )
+            OptionSwitchRow(
+                title = stringResource(R.string.schedule_exit_app_after_task),
+                tip = stringResource(R.string.schedule_exit_app_tip),
+                checked = state.exitAppAfterTask,
+                onCheckedChange = viewModel::onExitAppAfterTaskChanged,
+            )
+        }
+    }
+}
+
+/** 各页都量一遍按最高的定高，切页时下方内容不跳 */
+@Composable
+private fun TallestPage(
+    selected: Int,
+    modifier: Modifier = Modifier,
+    pages: @Composable () -> Unit,
+) {
+    Layout(content = pages, modifier = modifier) { measurables, constraints ->
+        val placeables = measurables.map { it.measure(constraints.copy(minHeight = 0)) }
+        layout(constraints.maxWidth, placeables.maxOf { it.height }) {
+            placeables[selected].place(0, 0)
+        }
+    }
+}
+
+@Composable
+private fun OptionSwitchRow(
+    title: String,
+    tip: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    note: String? = null,
+    noteHighlighted: Boolean = false,
+) {
+    var tipExpanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(title, style = MaterialTheme.typography.bodyLarge)
+                ExpandableTipIcon(
+                    modifier = Modifier.padding(start = 8.dp),
+                    expanded = tipExpanded,
+                    onExpandedChange = { tipExpanded = it },
+                )
+            }
+            if (note != null) {
+                Text(
+                    note,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (noteHighlighted) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+    ExpandableTipContent(visible = tipExpanded, tipText = tip)
+}
+
+/** 从属开关：左侧竖线标出层级，父项关掉就收起 */
+@Composable
+private fun SubOption(visible: Boolean, content: @Composable () -> Unit) {
+    val lineColor = MaterialTheme.colorScheme.outlineVariant
+    MaaAnimatedVisibility(visible = visible) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 8.dp)
+                .drawBehind {
+                    drawLine(
+                        color = lineColor,
+                        start = Offset.Zero,
+                        end = Offset(0f, size.height),
+                        strokeWidth = 2.dp.toPx(),
+                    )
+                }
+                .padding(start = 16.dp)
+        ) {
+            content()
+        }
     }
 }
 

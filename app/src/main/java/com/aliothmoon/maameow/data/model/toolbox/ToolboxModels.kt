@@ -50,6 +50,13 @@ data class OperBoxOperator(
 ) {
     val hasTrainingData: Boolean
         get() = mainSkillLevel != null || skills.isNotEmpty() || equips.isNotEmpty()
+
+    /** 帕拉斯在干员识别里有彩蛋显示，对齐上游 ToolboxViewModel.Operator.IsPallas */
+    val isPallas: Boolean get() = id == PALLAS_ID
+
+    companion object {
+        const val PALLAS_ID = "char_485_pallas"
+    }
 }
 
 /** 技能专精，[level] 0–3 */

@@ -47,9 +47,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.RecruitConfig
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.INumericField
 import com.aliothmoon.maameow.presentation.components.RecruitTimeSelector
+import com.aliothmoon.maameow.presentation.components.rememberStagedBeyondViewportCount
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import kotlinx.coroutines.launch
@@ -79,6 +81,7 @@ fun RecruitConfigPanel(
             pageCount = { 2 }
         )
         val coroutineScope = rememberCoroutineScope()
+        val inputFocus = LocalInputFocusManager.current
 
         // Tab 行
         Row(
@@ -92,6 +95,7 @@ fun RecruitConfigPanel(
                 color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
                 modifier = Modifier.clickable(interactionSource = null, indication = null) {
+                    inputFocus.clear()
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(0)
                     }
@@ -103,6 +107,7 @@ fun RecruitConfigPanel(
                 color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
                 modifier = Modifier.clickable(interactionSource = null, indication = null) {
+                    inputFocus.clear()
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(1)
                     }
@@ -119,13 +124,14 @@ fun RecruitConfigPanel(
         HorizontalPager(
             pageSize = PageSize.Fill,
             state = pagerState,
+            beyondViewportPageCount = rememberStagedBeyondViewportCount(pagerState, 1),
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),  // 使用 weight(1f) 让 Pager 占据剩余空间
             userScrollEnabled = true
         ) { page ->
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(if (page == 0) 8.dp else 12.dp),
                 modifier = Modifier
                     .fillMaxSize()  // LazyColumn 填充 Pager 的全部空间
             ) {
@@ -141,38 +147,35 @@ fun RecruitConfigPanel(
                     }
 
                     else -> {
-                        // 高级设置：使用单个 item 包含所有内容，避免 LazyColumn 对 AndroidView 的频繁重组
-                        item {
-                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                // 自动公招选择策略
-                                SelectExtraTagsSection(config, onConfigChange)
-
-                                // 高优先级Tag列表
-                                AutoRecruitFirstListSection(config, onConfigChange)
-
-                                // 自动刷新3星tags
-                                RefreshLevel3Section(config, onConfigChange)
-
-                                // 无招聘许可时继续尝试刷新Tags
-                                ForceRefreshSection(config, onConfigChange)
-
-                                // 保留指定词条
-                                PreserveTagSection(config, onConfigChange)
-
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant,
-                                    thickness = 1.dp
-                                )
-
-                                // 自动选择三星
-                                ChooseLevel3Section(config, onConfigChange)
-
-                                // 自动选择四星
-                                ChooseLevel4Section(config, onConfigChange)
-
-                                // 自动选择五星
-                                ChooseLevel5Section(config, onConfigChange)
-                            }
+                        item(key = "select_strategy", contentType = "strategy") {
+                            SelectExtraTagsSection(config, onConfigChange)
+                        }
+                        item(key = "first_tags", contentType = "tags") {
+                            AutoRecruitFirstListSection(config, onConfigChange)
+                        }
+                        item(key = "refresh", contentType = "checkbox") {
+                            RefreshLevel3Section(config, onConfigChange)
+                        }
+                        item(key = "force_refresh", contentType = "checkbox") {
+                            ForceRefreshSection(config, onConfigChange)
+                        }
+                        item(key = "preserve_tags", contentType = "tags") {
+                            PreserveTagSection(config, onConfigChange)
+                        }
+                        item(key = "divider", contentType = "divider") {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant,
+                                thickness = 1.dp
+                            )
+                        }
+                        item(key = "choose3", contentType = "confirmation") {
+                            ChooseLevel3Section(config, onConfigChange)
+                        }
+                        item(key = "choose4", contentType = "confirmation") {
+                            ChooseLevel4Section(config, onConfigChange)
+                        }
+                        item(key = "choose5", contentType = "confirmation") {
+                            ChooseLevel5Section(config, onConfigChange)
                         }
                     }
                 }

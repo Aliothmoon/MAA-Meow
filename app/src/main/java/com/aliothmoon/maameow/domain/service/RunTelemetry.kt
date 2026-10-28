@@ -6,13 +6,16 @@ import com.aliothmoon.maameow.maa.AsstMsg
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 
-/** 全部方法可在任意线程调用且不阻塞；开关关着或构建没带 DSN 时空转 */
+/** 除 [onAppExit] 外全部方法可在任意线程调用且不阻塞；开关关着或构建没带 DSN 时空转 */
 interface RunTelemetry {
 
     /** 会话开启之后、追加任务之前调用；返回本轮的关联 ID，未启用时为 null */
     fun onRunStarted(kind: RunKind, tasks: List<MaaTaskParams>): String?
 
     fun onTaskRegistered(taskId: Int, params: String)
+
+    /** 后台虚拟屏建好后调，[vdm] 为 VirtualDevice 后端，[flagTier] 为 0 即完整权限 */
+    fun onVirtualDisplayStarted(vdm: Boolean, flagTier: Int)
 
     fun onCallback(message: AsstMsg, details: JSONObject?)
 
@@ -22,8 +25,17 @@ interface RunTelemetry {
     /** [state] 须是置 ERROR 之前的执行状态 */
     fun onServiceDied(state: MaaExecutionState)
 
+    /** 启动以外的提权侧调用卡死；启动时的走 [onStartFailed] */
+    fun onRemoteCallStuck(call: String, threadDump: String?)
+
     /** 定时或外部触发的一次启动收尾，成功与否都调；哪些结果算故障由实现筛 */
     fun onLaunchFinished(outcome: LaunchOutcome)
+
+    /** 发出 Shizuku 未运行提醒时调 */
+    fun onShizukuDown(afterBoot: Boolean, enabledSchedules: Int)
+
+    /** 进程马上要退出：挂起到在途上报发完，再关 SDK 把队列发出去 */
+    suspend fun onAppExit()
 }
 
 data class LaunchOutcome(
@@ -37,6 +49,18 @@ data class LaunchOutcome(
     val runMode: String,
     /** 触发日志相对 debug 目录的路径 */
     val logFile: String,
+    /** 唤醒解锁没成时才有 */
+    val unlock: UnlockAttempt? = null,
+)
+
+/** 一次没成的唤醒解锁；不带凭证本身 */
+data class UnlockAttempt(
+    /** 设置里选的解锁方式 */
+    val type: String,
+    /** 凭证是否配好：PIN 已填或手势已录 */
+    val ready: Boolean,
+    /** 提权侧结果，[WakeUnlockEngine.WakeResult] 的小写名 */
+    val result: String,
 )
 
 enum class RunKind(val value: String) {

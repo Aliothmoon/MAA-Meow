@@ -3,6 +3,8 @@ package com.aliothmoon.maameow.koin
 import android.app.KeyguardManager
 import android.content.Context
 import android.os.PowerManager
+import android.view.Display
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.announcement.AnnouncementManager
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.achievement.PallasDrunkState
@@ -53,11 +55,15 @@ import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.data.resource.CopilotResourceProvider
+import com.aliothmoon.maameow.data.resource.GameMetadataLoader
+import com.aliothmoon.maameow.data.resource.HotUpdateSync
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.data.resource.OperAvatarLoader
+import com.aliothmoon.maameow.data.resource.OperRoleIconLoader
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.data.resource.StageApCostHelper
+import com.aliothmoon.maameow.domain.launch.BackendBlock
 import com.aliothmoon.maameow.domain.launch.CountdownUI
 import com.aliothmoon.maameow.domain.launch.LaunchMutex
 import com.aliothmoon.maameow.domain.launch.LaunchPipeline
@@ -68,15 +74,20 @@ import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.AppAliveChecker
+import com.aliothmoon.maameow.domain.service.AppTerminator
 import com.aliothmoon.maameow.domain.service.AppWatchdog
 import com.aliothmoon.maameow.domain.service.CopilotManager
+import com.aliothmoon.maameow.domain.service.CopilotOperBoxAssist
 import com.aliothmoon.maameow.domain.service.CoreDataPusher
+import com.aliothmoon.maameow.domain.service.CoreFilesGate
 import com.aliothmoon.maameow.domain.service.ExternalNotificationService
 import com.aliothmoon.maameow.domain.service.FightDropsRefresher
+import com.aliothmoon.maameow.domain.service.ForegroundScreenGate
 import com.aliothmoon.maameow.domain.service.FrameSnapshotter
 import com.aliothmoon.maameow.domain.service.GameDataReporter
 import com.aliothmoon.maameow.domain.service.GameFpsReader
 import com.aliothmoon.maameow.domain.service.GameFpsWatcher
+import com.aliothmoon.maameow.domain.service.GameMetadataGate
 import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
 import com.aliothmoon.maameow.domain.service.LogExportService
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
@@ -90,10 +101,13 @@ import com.aliothmoon.maameow.domain.service.RemoteFrameSnapshotter
 import com.aliothmoon.maameow.domain.service.RemoteGameFpsReader
 import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.service.RunTelemetry
+import com.aliothmoon.maameow.domain.service.ScreenPowerController
 import com.aliothmoon.maameow.domain.service.ScreenSaverController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.ToolboxExportService
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
+import com.aliothmoon.maameow.domain.service.ProcessExitJournal
+import com.aliothmoon.maameow.data.log.ProcessExitRecorder
 import com.aliothmoon.maameow.domain.service.UnlockGestureReader
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.service.update.UpdateService
@@ -103,12 +117,16 @@ import com.aliothmoon.maameow.maa.callback.ConnectionInfoHandler
 import com.aliothmoon.maameow.maa.callback.CopilotRuntimeStateStore
 import com.aliothmoon.maameow.maa.callback.MaaCallbackDispatcher
 import com.aliothmoon.maameow.maa.callback.MaaExecutionStateHolder
+import com.aliothmoon.maameow.maa.callback.OperProgressHandler
+import com.aliothmoon.maameow.maa.callback.SetParamsErrorSignal
 import com.aliothmoon.maameow.maa.callback.SubTaskHandler
 import com.aliothmoon.maameow.maa.callback.TaskChainHandler
 import com.aliothmoon.maameow.maa.callback.TaskChainStatusTracker
 import com.aliothmoon.maameow.maa.callback.ToolboxResultCollector
 import com.aliothmoon.maameow.manager.PermissionManager
+import com.aliothmoon.maameow.manager.RemoteAccessCoordinator
 import com.aliothmoon.maameow.manager.RemoteGameAudioAdapter
+import com.aliothmoon.maameow.manager.RemoteScreenPowerController
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.ShizukuReadinessProvider
 import com.aliothmoon.maameow.overlay.OverlayController
@@ -124,8 +142,11 @@ import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
 import com.aliothmoon.maameow.schedule.service.ScheduleFailureReporter
 import com.aliothmoon.maameow.schedule.service.ScheduleTriggerHandler
 import com.aliothmoon.maameow.schedule.service.ScheduleTriggerLogger
+import com.aliothmoon.maameow.schedule.service.ShizukuDownMonitor
 import com.aliothmoon.maameow.telemetry.TelemetryController
 import com.aliothmoon.maameow.utils.CrashHandler
+import com.aliothmoon.maameow.utils.LauncherApps
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import com.aliothmoon.maameow.utils.log.LogTreeHolder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -139,6 +160,7 @@ import org.koin.core.module.dsl.singleOf
 import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.module
+import timber.log.Timber
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
 
@@ -166,6 +188,8 @@ val appModule = module {
     }
     singleOf(::ETagCacheManager)
     singleOf(::MaaApiService)
+    // 与 MaaCompositionService 循环依赖，只能懒取
+    single { HotUpdateSync(get(), get(), inject()) }
     singleOf(::YituliuApiService)
     singleOf(::AnnouncementManager)
     singleOf(::PermissionManager)
@@ -184,6 +208,7 @@ val appModule = module {
     singleOf(::ScheduleTriggerLogger)
     singleOf(::ScheduleFailureReporter)
     singleOf(::ScheduleAlarmManager)
+    singleOf(::ShizukuDownMonitor)
     single { ScheduleTriggerHandler(get(), get(), get(), get(), get()) }
     singleOf(::LaunchMutex)
     singleOf(::StartTaskChainUseCase)
@@ -211,7 +236,9 @@ val appModule = module {
             startTaskChain = get(),
             countdownUI = get(),
             screenSaver = get(),
+            screenPower = get(),
             taskEndRegistry = get(),
+            notificationCenter = get(),
             keyguardLocked = {
                 val km = appContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
                 km.isKeyguardLocked
@@ -233,8 +260,42 @@ val appModule = module {
                     }.getOrDefault(false)
                 } ?: false
             },
+            // 与 MaaCompositionService 启动前检查同口径，免得倒计时走完才被拒
+            remoteAccessBlocker = {
+                var access = RemoteAccessCoordinator.refresh()
+                val backend = access.configuredBackend
+                // 冷启动时 Root shell 还在异步申请，快照会误报未授权；和 useRemoteService 一样先申请一次
+                if (access.isAvailable(backend) && !access.isGranted(backend)) {
+                    RemoteAccessCoordinator.request(backend)
+                    access = RemoteAccessCoordinator.refresh()
+                }
+                when {
+                    !access.isAvailable(backend) ->
+                        BackendBlock(uiTextOf(R.string.runlog_backend_unavailable, backend.display))
+
+                    !access.isGranted(backend) ->
+                        BackendBlock(uiTextOf(R.string.runlog_backend_not_granted, backend.display))
+
+                    // 先连上，否则拉起失败会被报成锁屏或拉起界面失败
+                    else -> RemoteServiceManager.awaitConnected()?.let {
+                        Timber.w(it, "launch: elevated service connect failed")
+                        BackendBlock(
+                            reason = uiTextOf(R.string.runlog_backend_connect_failed, backend.display),
+                            detail = RemoteServiceManager.shortCause(it),
+                        )
+                    }
+                }
+            },
+            foregroundPackage = {
+                RemoteServiceManager.useRemoteService(timeoutMs = 3_000L) {
+                    it.getTopPackage(Display.DEFAULT_DISPLAY)
+                }
+            },
+            appLabel = { LauncherApps.label(appContext, it) ?: it },
+            terminateApp = { sleep -> get<AppTerminator>().exit(sleep) },
         )
     }
+    singleOf(::AppTerminator)
     singleOf(::TaskChainState)
     singleOf(::ConfigBackupManager)
     singleOf(::MaaPathConfig)
@@ -253,8 +314,16 @@ val appModule = module {
 
     singleOf(::UpdateService)
 
-    singleOf(::ResourceInitService)
+    // 与 MaaCompositionService 循环依赖，只能懒取
+    single { ResourceInitService(get(), get(), get(), inject()) }
     singleOf(::MaaResourceLoader)
+    // scope 走构造默认值
+    single {
+        GameMetadataLoader(
+            get(), get(), get(), get(), get(), get(), get(),
+            templateImageLoaders = listOf(get<ItemIconLoader>(), get<OperAvatarLoader>(), get<OperRoleIconLoader>()),
+        )
+    } bind GameMetadataGate::class
     singleOf(::MaaSessionLogger)
 
     // 外部通知
@@ -296,6 +365,7 @@ val appModule = module {
     singleOf(::CopilotRuntimeStateStore)
     singleOf(::ToolboxResultCollector)
     singleOf(::OperBoxYituliuSync)
+    singleOf(::CopilotOperBoxAssist)
     single { PlanSideTaskRunner(androidContext(), get(), get()) }
     singleOf(::TaskChainStatusTracker)
     singleOf(::FightDropsRefresher)
@@ -306,24 +376,37 @@ val appModule = module {
     single<GameFpsReader> { RemoteGameFpsReader() }
     single { GameFpsWatcher(reader = get(), sessionLogger = get(), context = androidApplication()) }
     singleOf(::TelemetryController) { bind<RunTelemetry>() }
+    // 调用时才取 OverlayController：它依赖 MaaCompositionService，构造期取会成环
+    single<ForegroundScreenGate> { ForegroundScreenGate { get<OverlayController>().awaitPanelCleared() } }
     singleOf(::MaaCompositionService)
     single<MaaExecutionStateHolder> { get<MaaCompositionService>() }
+    single<CoreFilesGate> { get<MaaCompositionService>() }
     single { GameMuteCoordinator(get(), RemoteGameAudioAdapter) }
     single<FrameSnapshotter> { RemoteFrameSnapshotter() }
     singleOf(::MaaCallbackDispatcher)
+    singleOf(::SetParamsErrorSignal)
+    single { OperProgressHandler(get(), get(), get(), get(), get(), get()) }
 
     // 定时唤醒 + 解锁
     singleOf(::WakeUnlockEngine)
 
     singleOf(::UnifiedStateDispatcher)
+    singleOf(::ProcessExitRecorder) { bind<ProcessExitJournal>() }
     // scope 走构造默认值，singleOf 会试图解析它
-    single { TaskEndRegistry(compositionService = get()) }
+    single {
+        val settings = get<AppSettingsManager>()
+        TaskEndRegistry(
+            compositionService = get(),
+            closeGameOnEnd = { settings.closeAppOnTaskEnd.value },
+        )
+    }
     singleOf(::LogExportService)
     singleOf(::ToolboxExportService)
 
 
     singleOf(::BorderOverlayManager)
     singleOf(::ScreenSaverOverlayManager) { bind<ScreenSaverController>() }
+    singleOf(::RemoteScreenPowerController) { bind<ScreenPowerController>() }
     singleOf(::OverlayViewModelOwner)
     singleOf(::OverlayController)
 
@@ -332,6 +415,7 @@ val appModule = module {
     singleOf(::StageApCostHelper)
     singleOf(::ItemIconLoader)
     singleOf(::OperAvatarLoader)
+    singleOf(::OperRoleIconLoader)
     singleOf(::ActivityManager)
     singleOf(::ResourceDataManager)
     // Copilot (自动战斗)

@@ -34,9 +34,11 @@ class RunTracerTest {
     private val failures = mutableListOf<TaskFailure>()
     private var taskStarts = 0
     private var now = 1_000L
+    private val environment = mutableMapOf<String, String>()
     private val tracer = RunTracer(
         startTransaction = { name, op -> SpanRecord(op, name).also(transactions::add).span },
         clock = { now },
+        environment = { environment.toMap() },
         onTaskStarted = { taskStarts++ },
         onTaskFailure = failures::add,
     )
@@ -134,6 +136,54 @@ class RunTracerTest {
         assertEquals("ProcessTask", failure.terminal?.subtask)
         assertEquals(failure.terminal, failure.node)
         assertEquals("ReturnButton", failure.node?.preTask)
+    }
+
+    @Test
+    fun `后续失败标上本轮第一条失败的任务链，成功的不算`() {
+        start(1, "StartUp")
+        processError(1, "StartUp", first = "StartUpBegin")
+        emit(AsstMsg.TaskChainError, """{"taskchain":"StartUp","taskid":1}""")
+        start(2, "Recruit")
+        emit(AsstMsg.TaskChainCompleted, """{"taskchain":"Recruit","taskid":2}""")
+        start(3, "Fight")
+        processError(3, "Fight", first = "StageBegin")
+        emit(AsstMsg.TaskChainError, """{"taskchain":"Fight","taskid":3}""")
+        start(4, "Mall")
+        processError(4, "Mall", first = "MallBegin")
+        emit(AsstMsg.TaskChainError, """{"taskchain":"Mall","taskid":4}""")
+
+        assertEquals(listOf(null, "StartUp", "StartUp"), failures.map { it.priorFailure })
+        assertEquals(
+            listOf(NO_PRIOR_FAILURE, "StartUp", "StartUp", "StartUp"),
+            transaction.children.map { it.data[PRIOR_FAILURE_KEY] },
+        )
+    }
+
+    @Test
+    fun `任务 Span 抄上开跑时的环境 tag`() {
+        environment["maacore.version"] = "v6.19.0"
+        start(1, "StartUp")
+        emit(AsstMsg.TaskChainCompleted, """{"taskchain":"StartUp","taskid":1}""")
+        // 资源中途更新，后面的任务按新版本记
+        environment["resource.version"] = "2026-10-09 23:31:13.000"
+        start(2, "Fight")
+
+        val (startUp, fight) = transaction.children
+        assertEquals("v6.19.0", startUp.data["maacore.version"])
+        assertNull(startUp.data["resource.version"])
+        assertEquals("2026-10-09 23:31:13.000", fight.data["resource.version"])
+    }
+
+    @Test
+    fun `SSS 任务名里的实例地址在入口就去掉`() {
+        start(1, "SSSCopilot")
+        processError(1, "SSSCopilot", first = "0xb400007401ddbb10@SSSBegin", preTask = "0xb40000784f028880@SSSStart")
+        emit(AsstMsg.TaskChainError, """{"taskchain":"SSSCopilot","taskid":1}""")
+
+        val failure = failures.single()
+        assertEquals("SSSBegin", failure.node?.first)
+        assertEquals("SSSStart", failure.node?.preTask)
+        assertEquals("SSSBegin", transaction.children.single().children.single().data["first"])
     }
 
     @Test

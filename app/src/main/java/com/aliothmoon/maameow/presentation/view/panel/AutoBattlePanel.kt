@@ -10,12 +10,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -39,6 +41,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -48,29 +51,39 @@ import androidx.compose.material.icons.filled.PlaylistRemove
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalDensity
@@ -79,13 +92,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.model.UserAdditionalOper
 import com.aliothmoon.maameow.data.model.copilot.CopilotDocumentation
 import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
+import com.aliothmoon.maameow.data.resource.CharacterInfo
 import com.aliothmoon.maameow.data.resource.CopilotResourceProvider
+import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.OperatorDisplayItem
 import com.aliothmoon.maameow.domain.service.OperatorSummaryData
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -93,7 +110,9 @@ import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.ITextField
-import com.aliothmoon.maameow.presentation.components.OperAvatarByName
+import com.aliothmoon.maameow.presentation.components.MasteryBadge
+import com.aliothmoon.maameow.presentation.components.OperAvatar
+import com.aliothmoon.maameow.presentation.components.operRarityColor
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotTabs
@@ -102,6 +121,8 @@ import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.asString
+import com.aliothmoon.maameow.utils.i18n.formatToolboxSyncTime
+import com.aliothmoon.maameow.utils.readTextAtMost
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -109,6 +130,7 @@ import org.koin.compose.koinInject
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import timber.log.Timber
 
 private data class CopilotTabUiSpec(
     val index: Int,
@@ -144,15 +166,19 @@ fun AutoBattlePanel(
                         val name = Misc.queryFileName(context, uri)
                             ?: uri.lastPathSegment
                             ?: "copilot_${System.currentTimeMillis()}.json"
-                        val json = context.contentResolver.openInputStream(uri)?.use {
-                            it.bufferedReader().readText()
+                        val json = try {
+                            context.contentResolver.openInputStream(uri)?.use {
+                                it.readTextAtMost(MAX_COPILOT_FILE_BYTES)
+                            }
+                        } catch (e: Exception) {
+                            Timber.w(e, "read copilot file failed: $name")
+                            null
                         } ?: return@mapNotNull null
                         name to json
                     }
                 }
-                if (files.isNotEmpty()) {
-                    viewModel.onImportLocalFiles(files)
-                }
+                // 全部读失败也要交给 ViewModel 提示导入失败
+                viewModel.onImportLocalFiles(files)
             }
         }
     } else null
@@ -185,7 +211,21 @@ fun AutoBattlePanel(
         // 非列表项的 key 在 VM 里查不到 id，直接忽略
         val fromId = from.key as? String ?: return@rememberReorderableLazyListState
         val toId = to.key as? String ?: return@rememberReorderableLazyListState
-        viewModel.onReorderList(fromId, toId)
+        if (fromId.startsWith(USER_ADDITIONAL_KEY_PREFIX)) {
+            viewModel.onReorderUserAdditional(
+                fromId.removePrefix(USER_ADDITIONAL_KEY_PREFIX),
+                toId.removePrefix(USER_ADDITIONAL_KEY_PREFIX)
+            )
+        } else {
+            viewModel.onReorderList(fromId, toId)
+        }
+    }
+    // 拖一组时另一组退出换位，跨组 onMove 落空会让拖拽项跳位
+    var draggingUserAdditional by remember { mutableStateOf(false) }
+    val resourceDataManager: ResourceDataManager = koinInject()
+    val metadata by resourceDataManager.snapshot.collectAsStateWithLifecycle()
+    val operDisplayName: (CharacterInfo) -> String = { info ->
+        resourceDataManager.getLocalizedCharacterName(info, metadata.key?.language ?: "zh-cn") ?: info.name
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -393,7 +433,8 @@ fun AutoBattlePanel(
 
             val currentCopilot = state.currentCopilot
             if (currentCopilot != null) {
-                item(key = "copilot_detail") {
+                // 按载入实例区分，换作业不沿用上一份的展开状态
+                item(key = "copilot_detail_${System.identityHashCode(currentCopilot)}") {
                     CopilotDetailCard(
                         stageLabel = state.copilotTaskName,
                         doc = currentCopilot.doc,
@@ -525,6 +566,110 @@ fun AutoBattlePanel(
                                 },
                                 label = stringResource(R.string.panel_autobattle_add_trust)
                             )
+
+                            CheckBoxWithExpandableTip(
+                                checked = state.config.addUserAdditional,
+                                onCheckedChange = {
+                                    viewModel.onConfigChanged(state.config.copy(addUserAdditional = it))
+                                },
+                                label = stringResource(R.string.panel_autobattle_user_additional),
+                                tipText = stringResource(R.string.panel_autobattle_user_additional_tip)
+                            )
+                        }
+                    }
+                }
+
+                if (state.config.formation && state.config.addUserAdditional) {
+                    // 手改配置可能重名，key 重复会崩；后续编辑顺带写回去重结果
+                    val opers = state.config.userAdditionalOpers.distinctBy { it.name }
+                    items(opers, key = { USER_ADDITIONAL_KEY_PREFIX + it.name }) { oper ->
+                        val info = remember(oper.name, metadata) {
+                            resourceDataManager.getCharacterByNameOrAlias(oper.name)
+                        }
+                        ReorderableItem(
+                            reorderableState,
+                            key = USER_ADDITIONAL_KEY_PREFIX + oper.name,
+                            enabled = !reorderableState.isAnyItemDragging || draggingUserAdditional
+                        ) { isDragging ->
+                            UserAdditionalRow(
+                                operId = info?.id.orEmpty(),
+                                displayName = info?.let(operDisplayName) ?: oper.name,
+                                skill = oper.skill,
+                                isDragging = isDragging,
+                                onDragStarted = {
+                                    draggingUserAdditional = true
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                },
+                                onDragStopped = viewModel::onUserAdditionalReorderSettled,
+                                onSkillChange = { skill ->
+                                    viewModel.onConfigChanged(
+                                        state.config.copy(
+                                            userAdditionalOpers = opers.map {
+                                                if (it.name == oper.name) it.copy(skill = skill) else it
+                                            }
+                                        )
+                                    )
+                                },
+                                onRemove = {
+                                    viewModel.onConfigChanged(
+                                        state.config.copy(userAdditionalOpers = opers - oper)
+                                    )
+                                },
+                            )
+                        }
+                    }
+                    item(key = "user_additional_search") {
+                        UserAdditionalSearch(
+                            added = remember(opers) { opers.mapTo(HashSet()) { it.name } },
+                            clientType = metadata.key?.clientType ?: "Official",
+                            displayName = operDisplayName,
+                            onAdd = { info ->
+                                viewModel.onConfigChanged(
+                                    state.config.copy(userAdditionalOpers = opers + UserAdditionalOper(info.name))
+                                )
+                            },
+                            resourceDataManager = resourceDataManager,
+                        )
+                    }
+                }
+
+                if (state.config.formation) {
+                    item(key = "operbox_assist") {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            val assist = state.operBoxAssist
+                            CheckBoxWithExpandableTip(
+                                checked = assist.active,
+                                onCheckedChange = viewModel::onToggleOperBoxAssist,
+                                label = stringResource(R.string.panel_autobattle_operbox_assist),
+                                tipText = stringResource(R.string.panel_autobattle_operbox_assist_tip),
+                                enabled = assist.available,
+                            )
+                            // 数据不可用时也露出同步入口，免得勾不上又找不到去哪拉数据
+                            if (assist.yituliuEnabled && (assist.enabled || !assist.dataUsable)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = if (assist.syncTimeMillis > 0L) {
+                                            stringResource(
+                                                R.string.panel_toolbox_last_sync,
+                                                formatToolboxSyncTime(assist.syncTimeMillis),
+                                            )
+                                        } else {
+                                            stringResource(R.string.panel_toolbox_never_synced)
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    OutlinedButton(
+                                        onClick = viewModel::onSyncOperBox,
+                                        enabled = !state.syncingOperBox,
+                                        shape = compactButtonShape,
+                                        contentPadding = compactButtonPadding,
+                                    ) { Text(stringResource(R.string.panel_autobattle_operbox_sync)) }
+                                }
+                            }
                         }
                     }
                 }
@@ -630,11 +775,16 @@ fun AutoBattlePanel(
                     state.taskList,
                     key = { _, item -> item.id }
                 ) { index, item ->
-                    ReorderableItem(reorderableState, key = item.id) { isDragging ->
+                    ReorderableItem(
+                        reorderableState,
+                        key = item.id,
+                        enabled = !reorderableState.isAnyItemDragging || !draggingUserAdditional
+                    ) { isDragging ->
                         BattleListRow(
                             item = item,
                             isDragging = isDragging,
                             onDragStarted = {
+                                draggingUserAdditional = false
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             },
                             onDragStopped = viewModel::onReorderSettled,
@@ -888,180 +1038,87 @@ private fun CopilotDetailCard(
     summary: OperatorSummaryData?,
     onOpenVideo: () -> Unit,
 ) {
-    val dividerColor = MaterialTheme.colorScheme.outlineVariant
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+                .padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                if (stageLabel.isNotBlank()) {
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer
-                    ) {
-                        Text(
-                            text = stageLabel,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                        )
-                    }
-                }
-                SelectionContainer(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = doc.title.ifBlank { stageLabel },
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                if (videoUrl.isNotBlank()) {
-                    Surface(
-                        onClick = onOpenVideo,
-                        shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.primary
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(start = 4.dp, end = 6.dp, top = 2.dp, bottom = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = stringResource(R.string.common_video),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
-                    }
-                }
+            SelectionContainer {
+                Text(
+                    text = doc.title.ifBlank { stageLabel },
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
-            Text(
-                text = if (fromWeb && copilotId > 0) {
-                    stringResource(R.string.panel_autobattle_source_web, copilotId)
-                } else {
-                    stringResource(R.string.panel_autobattle_source_local)
+            CopilotMetaRow(
+                // 无标题时标题位已是关卡名
+                stageLabel = stageLabel.takeIf { doc.title.isNotBlank() }.orEmpty(),
+                source = when {
+                    !fromWeb -> stringResource(R.string.panel_autobattle_source_local)
+                    copilotId > 0 -> stringResource(R.string.panel_autobattle_source_web, copilotId)
+                    // 列表里被校正过的作业站条目不带 id
+                    else -> stringResource(R.string.panel_autobattle_source_web_unnumbered)
                 },
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                fromWeb = fromWeb,
+                hasVideo = videoUrl.isNotBlank(),
+                onOpenVideo = onOpenVideo,
             )
 
             if (doc.details.isNotBlank()) {
-                HorizontalDivider(color = dividerColor)
-                var expanded by remember(doc.details) { mutableStateOf(false) }
-                var overflowed by remember(doc.details) { mutableStateOf(false) }
-                SelectionContainer {
-                    Text(
-                        text = doc.details,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = if (expanded) Int.MAX_VALUE else DETAIL_COLLAPSED_LINES,
-                        overflow = TextOverflow.Ellipsis,
-                        onTextLayout = { if (!expanded) overflowed = it.hasVisualOverflow }
-                    )
-                }
-                if (overflowed || expanded) {
-                    Text(
-                        text = stringResource(if (expanded) R.string.common_collapse else R.string.common_expand),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clip(RoundedCornerShape(4.dp)).clickable { expanded = !expanded }
-                    )
-                }
+                CopilotDetails(doc.details)
             }
 
             if (warnings.isNotEmpty()) {
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        warnings.forEach { warning ->
-                            Text(
-                                text = warning.asString(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                            )
-                        }
-                    }
-                }
+                CopilotWarnings(warnings)
             }
 
             if (summary != null && !summary.isEmpty) {
-                HorizontalDivider(color = dividerColor)
-                val textMeasurer = rememberTextMeasurer()
-                val labelStyle = MaterialTheme.typography.labelSmall
-                val density = LocalDensity.current
-                val nameWidth = remember(summary) {
-                    val allNames = summary.operators.map { it.name } +
-                            summary.groups.flatMap { (_, opers) -> opers.map { it.name } }
-                    val maxTextWidth = allNames.maxOfOrNull { name ->
-                        textMeasurer.measure(name, labelStyle).size.width
-                    } ?: 0
-                    with(density) { (maxTextWidth + 8.dp.roundToPx()).toDp() }
+                val resourceDataManager: ResourceDataManager = koinInject()
+                // 整张卡查一次干员表，不让每格各自订阅
+                val nameIndex by resourceDataManager.nameIndex.collectAsStateWithLifecycle()
+                val characters = remember(summary, nameIndex) {
+                    (summary.operators + summary.groups.flatMap { it.second })
+                        .associate { it.name to resourceDataManager.getCharacterByNameOrAlias(it.name) }
                 }
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(
+                    modifier = Modifier.padding(top = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
                             text = stringResource(R.string.panel_autobattle_operator_header),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Text(
-                            text = stringResource(
-                                R.string.panel_autobattle_summary_count,
-                                summary.totalCount
-                            ),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    summary.operators.forEach { oper ->
-                        OperatorRow(oper, nameWidth = nameWidth)
-                    }
-                    summary.groups.forEach { (groupName, opers) ->
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = MaterialTheme.colorScheme.surface
+                        ) {
                             Text(
-                                text = stringResource(
-                                    R.string.panel_autobattle_group_header,
-                                    groupName
-                                ),
+                                text = summary.totalCount.toString(),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 1.dp)
                             )
-                            opers.forEach { oper ->
-                                OperatorRow(oper, nameWidth = nameWidth)
-                            }
                         }
+                    }
+                    if (summary.operators.isNotEmpty()) {
+                        OperatorGrid { OperatorCells(summary.operators, characters) }
+                    }
+                    summary.groups.forEach { (groupName, opers) ->
+                        OperatorGroup(groupName, opers, characters)
                     }
                 }
             }
@@ -1069,55 +1126,447 @@ private fun CopilotDetailCard(
     }
 }
 
-private const val DETAIL_COLLAPSED_LINES = 3
-
+/** 组内按序取首个可用干员，默认只露首选 */
 @Composable
-private fun OperatorRow(
-    item: OperatorDisplayItem,
-    nameWidth: Dp,
-    modifier: Modifier = Modifier
+private fun OperatorGroup(
+    name: String,
+    opers: List<OperatorDisplayItem>,
+    characters: Map<String, CharacterInfo?>,
 ) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
+    var expanded by rememberSaveable(opers) { mutableStateOf(false) }
+    val hidden = opers.size - 1
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color.Transparent,
+        // outlineVariant 贴近卡片底色看不见
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        OperAvatarByName(name = item.name, modifier = Modifier.size(24.dp))
-        Surface(
-            shape = RoundedCornerShape(4.dp),
-            color = MaterialTheme.colorScheme.primaryContainer
+        Column(
+            modifier = Modifier.padding(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = item.name,
+                text = stringResource(R.string.panel_autobattle_group_header, name),
                 style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier
-                    .width(nameWidth)
-                    .padding(horizontal = 4.dp, vertical = 1.dp),
-                textAlign = TextAlign.Start
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(horizontal = 2.dp)
             )
-        }
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-            itemVerticalAlignment = Alignment.CenterVertically
-        ) {
-            item.tags.forEach { tag ->
-                Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = MaterialTheme.colorScheme.surface
-                ) {
-                    Text(
-                        text = tag,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                    )
+            OperatorGrid {
+                OperatorCells(if (expanded) opers else opers.take(1), characters)
+                if (hidden > 0) {
+                    GroupToggleTile(expanded = expanded, hidden = hidden) { expanded = !expanded }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun GroupToggleTile(expanded: Boolean, hidden: Int, onClick: () -> Unit) {
+    val tint = MaterialTheme.colorScheme.primary
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(6.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+    ) {
+        Row(
+            modifier = Modifier.padding(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (!expanded) {
+                Text(
+                    text = "+$hidden",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = tint
+                )
+            }
+            Icon(
+                imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = stringResource(if (expanded) R.string.common_collapse else R.string.common_expand),
+                style = MaterialTheme.typography.labelSmall,
+                color = tint
+            )
+        }
+    }
+}
+
+private const val DETAIL_COLLAPSED_LINES = 3
+
+/** 作业 JSON 正常只有几十 KB，超限多半是选错了文件（ANDROID-13W） */
+private const val MAX_COPILOT_FILE_BYTES = 4 * 1024 * 1024
+
+@Composable
+private fun CopilotMetaRow(
+    stageLabel: String,
+    source: String,
+    fromWeb: Boolean,
+    hasVideo: Boolean,
+    onOpenVideo: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (stageLabel.isNotBlank()) {
+                MetaChip(
+                    text = stageLabel,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    bold = true,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+            }
+            MetaChip(
+                text = source,
+                icon = if (fromWeb) Icons.Default.Public else Icons.Default.Description,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+        }
+        if (hasVideo) {
+            // 免得最小触控尺寸把整行撑高
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                Surface(
+                    onClick = onOpenVideo,
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) {
+                    Row(
+                        modifier = Modifier.padding(start = 6.dp, end = 8.dp, top = 3.dp, bottom = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.common_video),
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MetaChip(
+    text: String,
+    containerColor: Color,
+    contentColor: Color,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    bold: Boolean = false,
+) {
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = containerColor,
+        contentColor = contentColor,
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            if (icon != null) {
+                Icon(icon, contentDescription = null, modifier = Modifier.size(12.dp))
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = if (bold) FontWeight.Bold else null,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun CopilotDetails(details: String) {
+    var expanded by rememberSaveable(details) { mutableStateOf(false) }
+    var overflowed by remember(details) { mutableStateOf(false) }
+    val accent = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                val bar = 3.dp.toPx()
+                drawRoundRect(
+                    color = accent,
+                    size = Size(bar, size.height),
+                    cornerRadius = CornerRadius(bar / 2)
+                )
+            }
+            .padding(start = 10.dp)
+    ) {
+        SelectionContainer {
+            Text(
+                text = details,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = if (expanded) Int.MAX_VALUE else DETAIL_COLLAPSED_LINES,
+                overflow = TextOverflow.Ellipsis,
+                onTextLayout = { if (!expanded) overflowed = it.hasVisualOverflow }
+            )
+        }
+        if (overflowed || expanded) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .clip(RoundedCornerShape(4.dp))
+                    .clickable { expanded = !expanded }
+                    .padding(start = 6.dp, end = 2.dp, top = 2.dp, bottom = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(if (expanded) R.string.common_collapse else R.string.common_expand),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CopilotWarnings(warnings: List<UiText>) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                Icons.Default.WarningAmber,
+                contentDescription = null,
+                modifier = Modifier
+                    .padding(top = 1.dp)
+                    .size(16.dp)
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                warnings.forEach { warning ->
+                    Text(text = warning.asString(), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
+
+private val OPER_CELL_MIN_WIDTH = 140.dp
+private val OPER_GRID_GAP = 6.dp
+private val OPER_RARITY_BAR = 3.dp
+
+/** 下标为 module - 1 */
+private val MODULE_NAMES = arrayOf("χ", "γ", "α", "Δ", "β")
+
+@Composable
+private fun OperatorCells(items: List<OperatorDisplayItem>, characters: Map<String, CharacterInfo?>) {
+    items.forEach { item ->
+        val info = characters[item.name]
+        OperatorCell(item, operId = info?.id.orEmpty(), rarity = info?.rarity ?: 0)
+    }
+}
+
+/** 放得下两格就排双列，同行取较高者对齐；不用 BoxWithConstraints 免子组合 */
+@Composable
+private fun OperatorGrid(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Layout(content = content, modifier = modifier) { measurables, constraints ->
+        val gap = OPER_GRID_GAP.roundToPx()
+        val minCell = OPER_CELL_MIN_WIDTH.roundToPx()
+        val width = if (constraints.hasBoundedWidth) constraints.maxWidth else minCell
+        val columns = if (width >= minCell * 2 + gap) 2 else 1
+        val cellWidth = (width - gap * (columns - 1)) / columns
+        val rows = measurables.chunked(columns).map { row ->
+            val height = row.maxOf { it.minIntrinsicHeight(cellWidth) }
+            row.map { it.measure(Constraints.fixed(cellWidth, height)) }
+        }
+        val totalHeight = rows.sumOf { it.first().height } + gap * (rows.size - 1).coerceAtLeast(0)
+        layout(width, totalHeight) {
+            var y = 0
+            rows.forEach { row ->
+                row.forEachIndexed { column, placeable ->
+                    placeable.placeRelative(column * (cellWidth + gap), y)
+                }
+                y += row.first().height + gap
+            }
+        }
+    }
+}
+
+@Composable
+private fun OperatorCell(item: OperatorDisplayItem, operId: String, rarity: Int) {
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier.padding(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val rarityColor = if (rarity > 0) operRarityColor(rarity) else Color.Transparent
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    // 查不到头像时留底色占位
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .drawWithContent {
+                        drawContent()
+                        val bar = OPER_RARITY_BAR.toPx()
+                        drawRect(
+                            color = rarityColor,
+                            topLeft = Offset(0f, size.height - bar),
+                            size = Size(size.width, bar)
+                        )
+                    }
+            ) {
+                OperAvatar(operId = operId, modifier = Modifier.fillMaxSize())
+            }
+            // 不加 weight 时 Row 按不换行求固有高度，属性折行会被裁掉
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                OperatorAttributes(item)
+            }
+        }
+    }
+}
+
+@Composable
+private fun OperatorAttributes(item: OperatorDisplayItem) {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(1.dp),
+        itemVerticalAlignment = Alignment.CenterVertically
+    ) {
+        item.promotion?.let { promotion ->
+            val elite = stringResource(
+                when (promotion.elite) {
+                    0 -> R.string.panel_autobattle_oper_elite_0
+                    1 -> R.string.panel_autobattle_oper_elite_1
+                    else -> R.string.panel_autobattle_oper_elite_2
+                }
+            )
+            // 校正器只补精英化不补等级，0 级不显示
+            OperAttrText(
+                text = if (promotion.level > 0) {
+                    stringResource(R.string.panel_autobattle_oper_promotion, elite, promotion.level)
+                } else {
+                    elite
+                },
+                color = muted
+            )
+        }
+        if (item.skill > 0) {
+            // 技能号与等级不拆行
+            Row(
+                modifier = Modifier.width(IntrinsicSize.Max),
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OperAttrText(
+                    text = stringResource(R.string.panel_autobattle_oper_skill, item.skill),
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+                val skillLevel = item.skillLevel
+                if (skillLevel != null && skillLevel > 7) {
+                    val mastery = skillLevel - 7
+                    MasteryBadge(level = mastery, modifier = Modifier.size(10.dp))
+                    val res = when (mastery) {
+                        1 -> R.string.panel_autobattle_oper_mastery_1
+                        2 -> R.string.panel_autobattle_oper_mastery_2
+                        else -> R.string.panel_autobattle_oper_mastery_3
+                    }
+                    OperAttrText(stringResource(res), muted)
+                } else if (skillLevel != null) {
+                    OperAttrText(
+                        stringResource(R.string.panel_autobattle_oper_skill_level, skillLevel),
+                        muted
+                    )
+                }
+            }
+        } else {
+            OperAttrText(
+                stringResource(R.string.panel_autobattle_oper_no_skill),
+                MaterialTheme.colorScheme.outline
+            )
+        }
+        item.module?.let { module ->
+            OperAttrText(
+                text = if (module == 0) {
+                    stringResource(R.string.panel_autobattle_oper_no_module)
+                } else {
+                    stringResource(R.string.panel_autobattle_oper_module, MODULE_NAMES[module - 1])
+                },
+                color = muted
+            )
+        }
+    }
+}
+
+@Composable
+private fun OperAttrText(
+    text: String,
+    color: Color,
+    fontWeight: FontWeight? = null,
+) {
+    // FlowRow 按最小固有宽度估行数，中文只算一个字宽，不钉住会少算行高
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = fontWeight,
+        color = color,
+        maxLines = 1,
+        modifier = Modifier.width(IntrinsicSize.Max)
+    )
 }
 
 /**

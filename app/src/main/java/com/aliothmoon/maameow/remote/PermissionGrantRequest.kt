@@ -18,8 +18,9 @@ data class PermissionGrantRequest(
         const val PERM_NOTIFICATION = 1 shl 4
         const val PERM_BACKGROUND = 1 shl 5
         const val PERM_FGS_SPECIAL_USE = 1 shl 6
+        const val PERM_SCHEDULE = 1 shl 7
         const val PERM_ALL = PERM_FLOATING_WINDOW or PERM_STORAGE or
                 PERM_BATTERY or PERM_ACCESSIBILITY or PERM_NOTIFICATION or PERM_BACKGROUND or
-                PERM_FGS_SPECIAL_USE
+                PERM_FGS_SPECIAL_USE or PERM_SCHEDULE
     }
 }

@@ -2,6 +2,10 @@ package com.aliothmoon.maameow.data.model
 
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.utils.i18n.UiText
+import io.mockk.every
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -109,5 +113,63 @@ class FightStageAvailabilityTest {
         )
 
         assertEquals(1, params.size)
+    }
+
+    // ---- 剿灭替换：下发与「当前执行」显示同一关 ----
+
+    @Test
+    fun executingStage_substitutesCustomAnnihilation() {
+        val am = stagedActivityManager(setOf("Annihilation"))
+        assertEquals(
+            "LungmenOutskirts@Annihilation",
+            FightConfig(
+                stage1 = "Annihilation",
+                useCustomAnnihilation = true,
+                annihilationStage = "LungmenOutskirts@Annihilation",
+            ).getExecutingStage(am),
+        )
+        assertEquals("Annihilation", FightConfig(stage1 = "Annihilation").getExecutingStage(am))
+    }
+
+    @Test
+    fun executingStage_substitutesAnnihilationPickedFromAlternates() {
+        assertEquals(
+            "Chernobog@Annihilation",
+            FightConfig(
+                stage1 = "UR-5",
+                useAlternateStage = true,
+                stageResetMode = StageResetMode.IGNORE,
+                alternateStages = listOf("Annihilation"),
+                useCustomAnnihilation = true,
+                annihilationStage = "Chernobog@Annihilation",
+            ).getExecutingStage(stagedActivityManager(setOf("Annihilation"))),
+        )
+    }
+
+    @Test
+    fun toTaskParams_sendsTheExecutingStage() {
+        val config = FightConfig(
+            stage1 = "Annihilation",
+            useCustomAnnihilation = true,
+            annihilationStage = "LungmenDowntown@Annihilation",
+        )
+        val am = stagedActivityManager(setOf("Annihilation"))
+        val sent = Json.parseToJsonElement(
+            config.toTaskParams(testTaskParamContext(activityManager = am)).single().params
+        ).jsonObject["stage"]?.jsonPrimitive?.content
+
+        assertEquals(config.getExecutingStage(am), sent)
+    }
+
+    @Test
+    fun skipLog_namesPrimaryStageByDisplayName() {
+        val am = stagedActivityManager(emptySet())
+        every { am.getStageDisplayName("Annihilation") } returns "当期剿灭"
+        val log = CollectingPreflightLogSink()
+        FightConfig(stage1 = "Annihilation").toTaskParams(
+            testTaskParamContext(activityManager = am, logSink = log)
+        )
+
+        assertEquals("当期剿灭", (log.entries.single().first as UiText.Resource).args[1])
     }
 }

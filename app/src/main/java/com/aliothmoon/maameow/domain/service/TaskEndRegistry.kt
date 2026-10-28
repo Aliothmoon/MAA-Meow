@@ -17,6 +17,8 @@ import java.util.concurrent.atomic.AtomicReference
 class TaskEndRegistry(
     private val compositionService: MaaCompositionService,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    /** 全局「任务自动结束时关闭游戏」；放进程级，没拉起界面的轮次也要关 */
+    private val closeGameOnEnd: () -> Boolean = { false },
 ) {
     enum class Reason {
         /** RUNNING → IDLE/ERROR */
@@ -44,13 +46,21 @@ class TaskEndRegistry(
     private val pending = AtomicReference<PendingAction?>(null)
     private val started = AtomicBoolean(false)
 
+    /** 收集协程处理到的状态与最近一次结束原因，补跑据此判断 */
+    @Volatile
+    private var observed: MaaExecutionState? = null
+
+    @Volatile
+    private var lastReason = Reason.NATURAL
+
     /** 登记本次收尾；重复登记覆盖前一次 */
     fun armOnce(action: PendingAction) {
         pending.set(action)
-        // 边沿可能已过，补跑一次；与 dispatch 共用 getAndSet
+        // 边沿已过：收集协程处理过的按那次原因补跑，没处理到的交给 dispatch；与 dispatch 共用 getAndSet
         val now = compositionService.state.value
-        if (now == MaaExecutionState.IDLE || now == MaaExecutionState.ERROR) {
-            scope.launch { runPending(Reason.NATURAL) }
+        if (isTerminal(now) && (observed == now || !started.get())) {
+            val reason = lastReason
+            scope.launch { runPending(reason) }
         }
     }
 
@@ -61,18 +71,26 @@ class TaskEndRegistry(
 
     fun start() {
         if (!started.compareAndSet(false, true)) return
+        var prev = compositionService.state.value
+        observed = prev
         scope.launch {
-            var prev = compositionService.state.value
             compositionService.state.collect { cur ->
-                reasonFor(prev, cur)?.let { dispatch(it) }
+                val reason = reasonFor(prev, cur)
+                // 先记下再 dispatch，armOnce 才不会漏补跑
+                if (isTerminal(cur) && !isTerminal(prev)) lastReason = reason ?: Reason.NATURAL
+                observed = cur
                 prev = cur
+                reason?.let { dispatch(it) }
             }
         }
         Timber.i("TaskEndRegistry: started observing task end")
     }
 
+    private fun isTerminal(state: MaaExecutionState) =
+        state == MaaExecutionState.IDLE || state == MaaExecutionState.ERROR
+
     private fun reasonFor(prev: MaaExecutionState, cur: MaaExecutionState): Reason? {
-        if (cur != MaaExecutionState.IDLE && cur != MaaExecutionState.ERROR) return null
+        if (!isTerminal(cur)) return null
         return when (prev) {
             MaaExecutionState.RUNNING -> Reason.NATURAL
             MaaExecutionState.STOPPING -> when (compositionService.lastStopOrigin) {
@@ -87,6 +105,17 @@ class TaskEndRegistry(
     private suspend fun dispatch(reason: Reason) {
         Timber.i("TaskEndRegistry: task ended, reason=%s", reason)
         runPending(reason)
+        // 手动停止不关游戏，其余结束（自然完成 / 掉线中止 / 到达时长上限）都关
+        if (reason != Reason.MANUAL && closeGameOnEnd()) {
+            Timber.i("TaskEndRegistry: auto closing game")
+            try {
+                compositionService.stopVirtualDisplay()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.e(e, "TaskEndRegistry: close game failed")
+            }
+        }
         _taskEnded.tryEmit(reason)
     }
 

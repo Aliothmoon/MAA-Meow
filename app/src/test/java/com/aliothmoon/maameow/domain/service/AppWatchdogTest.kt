@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -141,12 +142,48 @@ class AppWatchdogTest {
         fixture.close()
     }
 
+    // MAA 重启游戏时进程会短暂消失，单次 DEAD 中止整轮就是误杀
+    @Test
+    fun singleDeadPollIsNotReported() = runBlocking {
+        val fixture = fixture()
+
+        assertTrue(fixture.watchdog.onAliveStatus(GAME_PACKAGE, AppAliveStatus.DEAD))
+
+        assertTrue(fixture.died.isEmpty())
+        fixture.close()
+    }
+
+    @Test
+    fun consecutiveDeadPollsReportOnceAndStop() = runBlocking {
+        val fixture = fixture()
+
+        fixture.watchdog.onAliveStatus(GAME_PACKAGE, AppAliveStatus.DEAD)
+        val keepPolling = fixture.watchdog.onAliveStatus(GAME_PACKAGE, AppAliveStatus.DEAD)
+
+        assertFalse(keepPolling)
+        assertEquals(listOf(GAME_PACKAGE), fixture.died)
+        fixture.close()
+    }
+
+    @Test
+    fun alivePollResetsDeadStreak() = runBlocking {
+        val fixture = fixture()
+
+        fixture.watchdog.onAliveStatus(GAME_PACKAGE, AppAliveStatus.DEAD)
+        fixture.watchdog.onAliveStatus(GAME_PACKAGE, AppAliveStatus.ALIVE)
+        fixture.watchdog.onAliveStatus(GAME_PACKAGE, AppAliveStatus.DEAD)
+
+        assertTrue(fixture.died.isEmpty())
+        fixture.close()
+    }
+
     private fun fixture(): Fixture {
         val checker = FakeAppAliveChecker()
         val watchdog = AppWatchdog(mockk<TaskChainState>(), checker)
         val fixture = Fixture(checker, watchdog)
         watchdog.clock = { fixture.now }
         fixture.scope.launch { watchdog.displayDriftEvent.collect { fixture.events += it } }
+        fixture.scope.launch { watchdog.appDiedEvent.collect { fixture.died += it } }
         return fixture
     }
 
@@ -156,6 +193,7 @@ class AppWatchdogTest {
     ) {
         var now = 100_000L
         val events = mutableListOf<String>()
+        val died = mutableListOf<String>()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
 
         fun advance(ms: Long) {

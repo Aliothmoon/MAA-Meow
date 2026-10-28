@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.domain.service
 import com.aliothmoon.maameow.MaaCoreService
 import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.data.repository.DepotRepository
+import com.aliothmoon.maameow.data.repository.DepotSnapshot
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemInfo
 import com.aliothmoon.maameow.data.resource.StageApCostHelper
@@ -15,6 +16,7 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -57,6 +59,8 @@ class FightDropsRefresherTest {
             lastParamsJson = secondArg()
             true
         }
+
+        withSynced(true)
 
         // 默认无理智快照 → 理智判定整体关闭，老用例行为不变
         every { subTaskHandler.lastSanitySnapshot } returns null
@@ -109,6 +113,10 @@ class FightDropsRefresherTest {
         val slot = TaskSlot(nodeId, index)
         refresher.stage(slot, target)
         refresher.bind(slot, taskId)
+    }
+
+    private fun withSynced(synced: Boolean) {
+        every { depotRepository.snapshot } returns MutableStateFlow(DepotSnapshot(syncTimeMillis = if (synced) 1L else 0L))
     }
 
     private fun withInventory(inventory: Map<String, Int>) {
@@ -211,6 +219,27 @@ class FightDropsRefresherTest {
         assertTrue(outcome is FightDropsRefresher.RefreshOutcome.Updated)
         assertEquals(40, (outcome as FightDropsRefresher.RefreshOutcome.Updated).need)
         assertEquals(40, json["drops"]!!.jsonObject[ITEM]!!.jsonPrimitive.content.toInt())
+    }
+
+    @Test
+    fun countDualChips_addsConvertedDualChips() {
+        stageAndBind(1, target(dropId = "3212", dropCount = 20).copy(countDualChips = true))
+        withInventory(mapOf("3212" to 6, "3213" to 4))
+        val outcome = refresher.onTaskStarted(1)
+
+        assertTrue(outcome is FightDropsRefresher.RefreshOutcome.Updated)
+        assertEquals(6, (outcome as FightDropsRefresher.RefreshOutcome.Updated).need)
+    }
+
+    @Test
+    fun noInventoryData_skipsWholeTask() {
+        withSynced(false)
+        stageAndBind(1, target(dropCount = 40))
+        val outcome = refresher.onTaskStarted(1)
+        val json = Json.parseToJsonElement(lastParamsJson!!).jsonObject
+
+        assertEquals(FightDropsRefresher.RefreshOutcome.InventoryUnavailable("1", applied = true), outcome)
+        assertEquals(0, json["times"]!!.jsonPrimitive.content.toInt())
     }
 
     @Test
@@ -405,6 +434,20 @@ class FightDropsRefresherTest {
         refresher.onTaskCompleted(1)
 
         withInventory(mapOf(ITEM to 0))
+        stageAndBind(2, budgetlessTarget(expireDays = 2), index = 1)
+        assertTrue(refresher.onTaskStarted(2) is FightDropsRefresher.RefreshOutcome.Updated)
+    }
+
+    @Test
+    fun completedWithoutInventoryData_doesNotProveExhaustion() {
+        every { stageApCostHelper.getApCost(STAGE) } returns 21
+        sanity(current = 0)
+        withInventory(emptyMap())
+        withSynced(false)
+        stageAndBind(1, budgetlessTarget(expireDays = 2))
+        refresher.onTaskCompleted(1)
+
+        withSynced(true)
         stageAndBind(2, budgetlessTarget(expireDays = 2), index = 1)
         assertTrue(refresher.onTaskStarted(2) is FightDropsRefresher.RefreshOutcome.Updated)
     }

@@ -13,6 +13,7 @@ class ScheduleHealthLogicTest {
 
     private fun snapshot(
         backendGranted: Boolean = true,
+        backendAvailable: Boolean = true,
         batteryWhitelist: Boolean = true,
         notification: Boolean = true,
         exactAlarmAllowed: Boolean = true,
@@ -21,6 +22,7 @@ class ScheduleHealthLogicTest {
         unlockCredentialMissing: Boolean = false,
     ) = ScheduleHealthSnapshot(
         backendGranted = backendGranted,
+        backendAvailable = backendAvailable,
         batteryWhitelist = batteryWhitelist,
         notification = notification,
         exactAlarmAllowed = exactAlarmAllowed,
@@ -32,6 +34,18 @@ class ScheduleHealthLogicTest {
     @Test
     fun `all green - no issues`() {
         assertTrue(ScheduleHealthLogic.failingIssues(snapshot()).isEmpty())
+    }
+
+    // 没运行时授权也查不到，只报没运行，免得把「去启动」说成「去授权」
+    @Test
+    fun `backend down is reported instead of not granted`() {
+        assertEquals(
+            listOf(ScheduleHealthIssue.BACKEND_DOWN),
+            ScheduleHealthLogic.failingIssues(snapshot(backendAvailable = false, backendGranted = false)),
+        )
+        assertTrue(
+            ScheduleHealthLogic.wizardItems(snapshot(backendAvailable = false, backendGranted = false)).isEmpty()
+        )
     }
 
     @Test
@@ -152,11 +166,16 @@ class ScheduleHealthLogicTest {
 
     // ===== overlayNeeded: 策略推导 =====
 
-    private fun strategy(enabled: Boolean, autoScreenSaver: Boolean) = ScheduleStrategy(
+    private fun strategy(
+        enabled: Boolean,
+        autoScreenSaver: Boolean,
+        hardwareScreenOff: Boolean = false,
+    ) = ScheduleStrategy(
         name = "test",
         profileId = "p",
         enabled = enabled,
         autoScreenSaver = autoScreenSaver,
+        hardwareScreenOff = hardwareScreenOff,
     )
 
     @Test
@@ -176,5 +195,12 @@ class ScheduleHealthLogicTest {
             strategy(enabled = true, autoScreenSaver = true),
         )
         assertTrue(ScheduleHealthLogic.overlayNeeded(strategies))
+    }
+
+    @Test
+    fun `overlayNeeded - hardware screen off needs no overlay`() {
+        val hardware = strategy(enabled = true, autoScreenSaver = true, hardwareScreenOff = true)
+        assertFalse(ScheduleHealthLogic.overlayNeeded(listOf(hardware)))
+        assertTrue(ScheduleHealthLogic.overlayNeeded(listOf(hardware.copy(hardwareScreenOff = false))))
     }
 }

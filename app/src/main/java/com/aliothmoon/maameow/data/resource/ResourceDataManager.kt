@@ -2,13 +2,18 @@ package com.aliothmoon.maameow.data.resource
 
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.models.ClientResourceProfile
+import com.aliothmoon.maameow.domain.models.GameMetadataKey
 import com.aliothmoon.maameow.utils.JsonUtils
+import com.aliothmoon.maameow.utils.mapState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.contentOrNull
@@ -26,24 +31,36 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
 
     private val json = JsonUtils.common
 
-    private val _characters = MutableStateFlow<Map<String, CharacterInfo>>(emptyMap())
-    private val _nameIndex = MutableStateFlow<Map<String, CharacterInfo>>(emptyMap())
-    private val _characterNames = MutableStateFlow<Set<String>>(emptySet())
-    private val _roguelikeCoreCharacters = MutableStateFlow<Map<String, List<String>>>(emptyMap())
-    private val _operators = MutableStateFlow<Map<String, CharacterInfo>>(emptyMap())
-    private val _recruitTags = MutableStateFlow<Map<String, Pair<String, String>>>(emptyMap())
-    private val _mapData = MutableStateFlow<List<MapInfo>>(emptyList())
+    private val _snapshot = MutableStateFlow(GameMetadata.EMPTY)
 
-    val characters: StateFlow<Map<String, CharacterInfo>> = _characters.asStateFlow()
-    val operators: StateFlow<Map<String, CharacterInfo>> = _operators.asStateFlow()
+    /** 整档快照；同时读多张表、或要知道数据属于哪一档时用它 */
+    val snapshot: StateFlow<GameMetadata> = _snapshot.asStateFlow()
+
+    val characters: StateFlow<Map<String, CharacterInfo>> = _snapshot.mapState { it.characters }
+    val operators: StateFlow<Map<String, CharacterInfo>> = _snapshot.mapState { it.operators }
 
     /** [getCharacterByNameOrAlias] 查的索引；界面按名查干员时观察它，表重建后跟着重查 */
-    val nameIndex: StateFlow<Map<String, CharacterInfo>> = _nameIndex.asStateFlow()
+    val nameIndex: StateFlow<Map<String, CharacterInfo>> = _snapshot.mapState { it.nameIndex }
 
-    /** 当前语言与客户端类型下的干员名集合, see WPF: DataHelper.CharacterNames */
-    val characterNames: StateFlow<Set<String>> = _characterNames.asStateFlow()
-    val recruitTags: StateFlow<Map<String, Pair<String, String>>> = _recruitTags.asStateFlow()
-    val mapData: StateFlow<List<MapInfo>> = _mapData.asStateFlow()
+    val characterNames: StateFlow<Set<String>> = _snapshot.mapState { it.characterNames }
+    val recruitTags: StateFlow<Map<String, Pair<String, String>>> = _snapshot.mapState { it.recruitTags }
+    val mapData: StateFlow<List<MapInfo>> = _snapshot.mapState { it.mapData }
+    val roguelikeCoreCharacters: StateFlow<Map<String, List<String>>> =
+        _snapshot.mapState { it.roguelikeCoreCharacters }
+
+    /** 只随资源版本变的部分，切客户端或语言时复用，不再重读大 JSON */
+    private class Base(
+        val revision: Int,
+        val characters: Map<String, CharacterInfo>,
+        val operators: Map<String, CharacterInfo>,
+        val nameIndex: Map<String, CharacterInfo>,
+        val mapData: List<MapInfo>,
+    )
+
+    private val loadMutex = Mutex()
+
+    // 只在 loadMutex 内读写
+    private var cachedBase: Base? = null
 
     companion object {
         private const val BATTLE_DATA_FILE = "battle_data.json"
@@ -107,7 +124,7 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
             "char_615_acspec", // Misery 6★
             "char_616_pithst", // 盟约·辅助干员
             "char_617_sharp2", // 领主·Sharp
-        ) + CanonicalOperId.promotedIds  // 阿米娅升变形态，与归一表共用一份清单
+        ) + PromotedOperIds.ids  // 阿米娅升变形态
 
         // 语言代码 → 资源子目录
         val CLIENT_DIRECTORY_MAPPER = mapOf(
@@ -131,38 +148,52 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
         fun displayLanguageCode(appLanguage: AppSettingsManager.AppLanguage): String =
             when (appLanguage) {
                 AppSettingsManager.AppLanguage.EN -> "en-us"
+                AppSettingsManager.AppLanguage.KO -> "ko-kr"
                 else -> "zh-cn"
             }
     }
 
-    suspend fun load(clientType: String = "Official", displayLanguage: String = "zh-cn") {
-        withContext(Dispatchers.IO) {
-            listOf(
-                async {
-                    doLoadRecruitTags(clientType = clientType, displayLanguage = displayLanguage)
-                },
-                async {
-                    doLoadCharacters(displayLanguage = displayLanguage, clientType = clientType)
-                },
-                async {
-                    doLoadRoguelikeThemes(clientType = clientType)
-                },
-                async {
-                    doLoadMapData()
-                }
-            )
-        }.awaitAll()
-    }
-
-    suspend fun refreshDisplayLanguage(
+    /** 装载一档并整体发布；同一 [revision] 的干员表与地图只解析一次 */
+    suspend fun load(
         clientType: String = "Official",
-        displayLanguage: String = "zh-cn"
-    ) {
+        displayLanguage: String = "zh-cn",
+        revision: Int = 0,
+    ) = loadMutex.withLock {
         withContext(Dispatchers.IO) {
-            doLoadRecruitTags(clientType = clientType, displayLanguage = displayLanguage)
-            doLoadCharacters(displayLanguage = displayLanguage, clientType = clientType)
+            val base = cachedBase?.takeIf { it.revision == revision }
+                ?: doLoadBase(revision).also { base ->
+                    // 读空可能是文件缺失，不缓存，下一档再试
+                    cachedBase = base.takeIf { it.characters.isNotEmpty() }
+                }
+            _snapshot.value = doProject(base, GameMetadataKey(clientType, displayLanguage, revision))
+            // 干员表读空多半是文件缺失或损坏：其余部分照常发布，但不能算就绪，否则进程内不再重试
+            check(base.characters.isNotEmpty()) { "$BATTLE_DATA_FILE missing or unparsable" }
         }
     }
+
+    private suspend fun doLoadBase(revision: Int): Base = coroutineScope {
+        val mapData = async { doLoadMapData() }
+        val characters = doLoadCharacters()
+        Base(
+            revision = revision,
+            characters = characters,
+            operators = characters.filter { (id, info) -> info.isOperator && id !in VIRTUAL_OPERATORS },
+            nameIndex = doBuildNameIndex(characters),
+            mapData = mapData.await(),
+        )
+    }
+
+    /** 随客户端与语言变的部分，都是小文件 */
+    private fun doProject(base: Base, key: GameMetadataKey) = GameMetadata(
+        key = key,
+        characters = base.characters,
+        operators = base.operators,
+        nameIndex = base.nameIndex,
+        characterNames = doBuildCharacterNames(base.characters, key.language, key.clientType),
+        roguelikeCoreCharacters = doLoadRoguelikeThemes(key.clientType, base.nameIndex),
+        recruitTags = doLoadRecruitTags(key.clientType, key.language),
+        mapData = base.mapData,
+    )
 
     fun isValidCharacterName(name: String): Boolean {
         if (name.isBlank()) return true
@@ -175,9 +206,10 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
         return getCharacterByNameOrAlias(name)?.id?.startsWith("char_") == true
     }
 
-    fun getCharacterByNameOrAlias(name: String): CharacterInfo? {
+    fun getCharacterByNameOrAlias(name: String): CharacterInfo? = lookup(_snapshot.value.nameIndex, name)
+
+    private fun lookup(index: Map<String, CharacterInfo>, name: String): CharacterInfo? {
         if (name.isBlank()) return null
-        val index = _nameIndex.value
         index[name.lowercase()]?.let { return it }
         // 带职业后缀的升变干员名视作本体的别名：上游 #18190 把后缀从 battle_data 去掉改用 role 区分，
         // core 已无法按名区分，旧配置与第三方作业里的「阿米娅-WARRIOR」只能落到本体上
@@ -193,13 +225,13 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
         getCharacterByNameOrAlias(name)?.name ?: name
 
     fun getCharacterById(id: String): CharacterInfo? {
-        return _characters.value[id]
+        return _snapshot.value.characters[id]
     }
 
     fun getCharacterByCodeName(codeName: String): CharacterInfo? {
         if (codeName.isBlank()) return null
         val lowerCode = codeName.lowercase()
-        return _characters.value.values.firstOrNull { it.codeName == lowerCode }
+        return _snapshot.value.characters.values.firstOrNull { it.codeName == lowerCode }
     }
 
     /**
@@ -247,7 +279,7 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
         if (query.isBlank()) return emptyList()
 
         val q = query.lowercase()
-        val index = _nameIndex.value
+        val index = _snapshot.value.nameIndex
 
         // 先找精确匹配，再找包含匹配
         val exactMatch = index[q]?.name
@@ -262,15 +294,11 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
         }
     }
 
-    fun getRoguelikeCoreCharList(theme: String): List<String> {
-        return _roguelikeCoreCharacters.value[theme] ?: emptyList()
-    }
-
     /** 复用 WPF CharacterNames 对应集合，仅搜索当前界面和客户端语言的干员名 */
     fun searchOperatorNames(query: String, limit: Int = 20): List<String> {
         if (query.isBlank() || limit <= 0) return emptyList()
 
-        return _characterNames.value.asSequence()
+        return _snapshot.value.characterNames.asSequence()
             .filter { it.contains(query, ignoreCase = true) }
             .sortedBy { !it.equals(query, ignoreCase = true) }
             .take(limit)
@@ -282,38 +310,31 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
      */
     fun findMap(mapId: String): MapInfo? {
         if (mapId.isBlank()) return null
-        val maps = _mapData.value
+        val maps = _snapshot.value.mapData
         return maps.firstOrNull { it.code == mapId } ?: maps.firstOrNull { it.name == mapId }
         ?: maps.firstOrNull { it.stageId == mapId } ?: maps.firstOrNull { it.levelId == mapId }
     }
 
     // ---- 数据加载 ----
 
-    private fun doLoadCharacters(
-        displayLanguage: String = "zh-cn", clientType: String = "Official"
-    ) {
-        val characters = try {
-            val file = File(pathConfig.resourceDir, BATTLE_DATA_FILE)
-            if (!file.exists()) {
-                Timber.w("$BATTLE_DATA_FILE 不存在: ${file.absolutePath}")
-                emptyMap()
-            } else {
-                doParseBattleDataJson(file.readText())
-            }
-        } catch (e: Exception) {
-            Timber.e(e, "加载 battle_data.json 失败")
+    private fun doLoadCharacters(): Map<String, CharacterInfo> = try {
+        val file = File(pathConfig.resourceDir, BATTLE_DATA_FILE)
+        if (!file.exists()) {
+            Timber.w("$BATTLE_DATA_FILE 不存在: ${file.absolutePath}")
             emptyMap()
+        } else {
+            doParseBattleDataJson(file.readText())
         }
-        _characters.value = characters
-        _operators.value = characters.filter { (id, info) ->
-            info.isOperator && id !in VIRTUAL_OPERATORS
-        }
-        _nameIndex.value = doBuildNameIndex(characters)
-        _characterNames.value = doBuildCharacterNames(characters, displayLanguage, clientType)
+    } catch (e: Exception) {
+        Timber.e(e, "加载 battle_data.json 失败")
+        emptyMap()
     }
 
-    private fun doLoadRoguelikeThemes(clientType: String = "Official") {
-        _roguelikeCoreCharacters.value = try {
+    private fun doLoadRoguelikeThemes(
+        clientType: String,
+        nameIndex: Map<String, CharacterInfo>,
+    ): Map<String, List<String>> {
+        return try {
             val dir = File(pathConfig.resourceDir, ROGUELIKE_DIR)
             if (!dir.isDirectory) {
                 emptyMap()
@@ -327,7 +348,7 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
                             val rawNames = doParseRecruitmentJson(file.readText())
                             // 过滤: 干员在当前客户端可用 + 获取本地化名称
                             result[theme.name] = rawNames.mapNotNull { name ->
-                                val info = getCharacterByNameOrAlias(name) ?: return@mapNotNull name
+                                val info = lookup(nameIndex, name) ?: return@mapNotNull name
                                 if (!isCharacterAvailableInClient(info, clientType)) {
                                     return@mapNotNull null
                                 }
@@ -353,14 +374,12 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
      * @return Map<标签中文名, Pair<显示名, 客户端名>>
      */
     private fun doLoadRecruitTags(
-        clientType: String = "Official", displayLanguage: String = "zh-cn"
-    ) {
-        _recruitTags.value = try {
+        clientType: String, displayLanguage: String
+    ): Map<String, Pair<String, String>> {
+        return try {
             // 客户端标签路径
-            val clientSubPath = when (clientType) {
-                "", "Official", "Bilibili" -> ""
-                else -> "global/$clientType/resource"
-            }
+            val clientSubPath = ClientResourceProfile.of(clientType)
+                .let { if (it.isEmpty()) "" else "global/$it/resource" }
             // 显示语言标签路径
             val displaySubPath = when (displayLanguage) {
                 "zh-tw", "en-us", "ja-jp", "ko-kr" -> {
@@ -401,8 +420,8 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
         }
     }
 
-    private fun doLoadMapData() {
-        _mapData.value = try {
+    private fun doLoadMapData(): List<MapInfo> {
+        return try {
             val file = File(pathConfig.resourceDir, MAP_DATA_FILE)
             if (!file.exists()) {
                 Timber.w("地图数据文件不存在: ${file.absolutePath}")

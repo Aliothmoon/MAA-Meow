@@ -28,7 +28,6 @@ public class NativeBridgeLib {
 
     public static native void releaseNativeCapturer();
 
-    @FastNative
     public static native void setPreviewSurface(Object surface);
 
     /** 停掉预览渲染线程并断开 Surface，阻塞到线程退出 */
@@ -47,5 +46,8 @@ public class NativeBridgeLib {
      * expectedFrameCount 为判定时读到的帧计数，之后来过新帧就不换
      */
     public static native boolean blankFrame(long expectedFrameCount);
+
+    /** 采集收尾停在哪一步，没在收尾返回空串 */
+    public static native String describeReleaseStage();
 
 }

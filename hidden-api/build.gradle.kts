@@ -2,12 +2,12 @@ plugins {
     alias(libs.plugins.android.library)
 }
 android{
-    compileSdk = 36
+    compileSdk = 37
 
     namespace = "com.aliothmoon.hidden_api"
 
     defaultConfig {
-        minSdk = 27
+        minSdk = 28
     }
 
     compileOptions {

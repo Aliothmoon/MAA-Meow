@@ -43,6 +43,10 @@ class AppWatchdog(
         // 无限重试等于每个 tick 都向游戏投放一次启动请求）
         @VisibleForTesting
         internal const val MAX_REPIN_ATTEMPTS = 3
+
+        /** MAA 登录失败重启游戏时进程会消失一两秒，连续这么多次 DEAD 才算真退出 */
+        @VisibleForTesting
+        internal const val DEAD_CONFIRM_POLLS = 2
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -63,6 +67,8 @@ class AppWatchdog(
     // 本次漂移中连续拉回失败的次数；回到虚拟屏或拉回成功后清零
     private var driftRepinAttempts = 0
 
+    private var deadPolls = 0
+
     /**
      * 游戏离开虚拟显示器的首次检测时间戳（[SystemClock.elapsedRealtime]，单调时钟，
      * 不受 NTP 校时/手动改时间影响）。
@@ -79,6 +85,7 @@ class AppWatchdog(
         driftNotified = false
         driftFirstSeenMs = 0L
         driftRepinAttempts = 0
+        deadPolls = 0
 
         val clientType = chainState.clientType
         val packageName = Packages[clientType]
@@ -97,35 +104,43 @@ class AppWatchdog(
             while (isActive) {
                 delay(POLL_INTERVAL_MS)
                 val appAliveStatus = checkAppAliveStatus(packageName)
-                if (!isActive) {
+                if (!isActive || !onAliveStatus(packageName, appAliveStatus)) {
                     return@launch
-                }
-                when (appAliveStatus) {
-                    AppAliveStatus.ALIVE -> checkDisplayPinned(packageName)
-                    AppAliveStatus.UNKNOWN -> {
-                        Timber.w(
-                            "AppWatchdog: unable to determine whether %s is alive",
-                            packageName
-                        )
-                    }
-
-                    AppAliveStatus.DEAD -> {
-                        Timber.w("AppWatchdog: app %s is no longer alive", packageName)
-                        _state.value = WatchdogState.APP_DIED
-                        _appDiedEvent.tryEmit(packageName)
-                        return@launch
-                    }
-
-                    else -> {
-                        Timber.w(
-                            "AppWatchdog: unexpected app status %s for %s",
-                            appAliveStatus,
-                            packageName
-                        )
-                    }
                 }
             }
         }
+    }
+
+    /** 处理一次轮询结果；判定退出后返回 false，停止轮询 */
+    @VisibleForTesting
+    internal suspend fun onAliveStatus(packageName: String, status: Int): Boolean {
+        when (status) {
+            AppAliveStatus.ALIVE -> {
+                deadPolls = 0
+                checkDisplayPinned(packageName)
+            }
+
+            AppAliveStatus.UNKNOWN -> {
+                Timber.w("AppWatchdog: unable to determine whether %s is alive", packageName)
+            }
+
+            AppAliveStatus.DEAD -> {
+                deadPolls++
+                if (deadPolls < DEAD_CONFIRM_POLLS) {
+                    Timber.i("AppWatchdog: %s not found, confirming on next poll", packageName)
+                    return true
+                }
+                Timber.w("AppWatchdog: app %s is no longer alive", packageName)
+                _state.value = WatchdogState.APP_DIED
+                _appDiedEvent.tryEmit(packageName)
+                return false
+            }
+
+            else -> {
+                Timber.w("AppWatchdog: unexpected app status %s for %s", status, packageName)
+            }
+        }
+        return true
     }
 
     fun stopWatching() {

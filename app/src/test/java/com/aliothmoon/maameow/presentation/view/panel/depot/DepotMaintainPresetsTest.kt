@@ -29,14 +29,14 @@ class DepotMaintainPresetsTest {
         assertPreset(
             preset = DepotMaintainPreset.CHIP_2,
             expected = listOf(
-                Triple("PR-A-2", "3262", 20),
-                Triple("PR-A-2", "3232", 20),
-                Triple("PR-B-2", "3252", 20),
-                Triple("PR-B-2", "3242", 20),
-                Triple("PR-C-2", "3212", 20),
-                Triple("PR-C-2", "3272", 20),
-                Triple("PR-D-2", "3222", 20),
-                Triple("PR-D-2", "3282", 20),
+                Triple("PR-A-2", "3262", 32),
+                Triple("PR-A-2", "3232", 32),
+                Triple("PR-B-2", "3252", 32),
+                Triple("PR-B-2", "3242", 32),
+                Triple("PR-C-2", "3212", 32),
+                Triple("PR-C-2", "3272", 32),
+                Triple("PR-D-2", "3222", 32),
+                Triple("PR-D-2", "3282", 32),
             ),
         )
     }
@@ -45,15 +45,15 @@ class DepotMaintainPresetsTest {
     fun resourcePresets_matchUpstreamTargets() {
         assertPreset(
             DepotMaintainPreset.LMD,
-            listOf(Triple("CE-6", "4001", 2_000_000)),
+            listOf(Triple("CE-6", "4001", 5_000_000)),
         )
         assertPreset(
             DepotMaintainPreset.PURCHASE_CERTIFICATE,
-            listOf(Triple("AP-5", "4006", 5_000)),
+            listOf(Triple("AP-5", "4006", 8_000)),
         )
         assertPreset(
             DepotMaintainPreset.SKILL_SUMMARY_3,
-            listOf(Triple("CA-5", "3303", 200)),
+            listOf(Triple("CA-5", "3303", 400)),
         )
     }
 
@@ -78,8 +78,8 @@ class DepotMaintainPresetsTest {
         assertEquals(
             listOf(
                 Triple("1-7", "30011", 100),
-                Triple("CE-6", "4001", 2_000_000),
-                Triple("CE-6", "4001", 2_000_000),
+                Triple("CE-6", "4001", 5_000_000),
+                Triple("CE-6", "4001", 5_000_000),
             ),
             twice.map { Triple(it.stage, it.dropId, it.dropCount) },
         )

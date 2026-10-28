@@ -12,13 +12,17 @@ import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.model.RecruitCombination
 import com.aliothmoon.maameow.data.model.RecruitOper
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.repository.DepotDelta
 import com.aliothmoon.maameow.data.repository.DepotRepository
+import com.aliothmoon.maameow.data.repository.delta
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.data.resource.ServerTimezone
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
+import com.aliothmoon.maameow.utils.i18n.formatToolboxSyncTime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -48,6 +52,9 @@ class SubTaskHandler(
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val resources = applicationContext.resources
     private val packageName = applicationContext.packageName
+    private val operProgressHandler: OperProgressHandler
+            by inject(OperProgressHandler::class.java)
+    private val appSettings: AppSettingsManager by inject(AppSettingsManager::class.java)
 
     // 懒取：实现方 MaaCompositionService 反过来依赖本类，构造注入会成环
     private val executionStateHolder: MaaExecutionStateHolder
@@ -64,6 +71,9 @@ class SubTaskHandler(
 
     private var pendingFight = PendingFightState()
     private val themeTargets = ConcurrentHashMap<Int, String>()
+
+    // 最近一条设施行的 facility#序号，同房间的原因提示据此省掉重复的设施行
+    private var lastFacilityKey: String? = null
 
     // 本次会话累计用药数（跨战斗累计，session 开始时重置）
     private var medicineUsedTotal = 0
@@ -87,6 +97,13 @@ class SubTaskHandler(
         medicineUsedTotal = 0
         expiringMedicineUsedTotal = 0
         lastSanitySnapshot = null
+        lastFacilityKey = null
+    }
+
+    /** 新任务链开始，上一链的主题目标与设施行标识不再有效 */
+    fun onTaskChainStart(taskId: Int) {
+        clearThemeTarget(taskId)
+        lastFacilityKey = null
     }
 
     fun clearThemeTarget(taskId: Int) {
@@ -143,50 +160,65 @@ class SubTaskHandler(
                     }
                     append(sb.trimEnd().toString(), LogLevel.ERROR)
                 }
-                ioScope.launch {
-                    achievementRepository.report {
-                        event = AchievementEvents.SUB_TASK_ERROR
-                        "subtask" to subtask
-                    }
-                }
+                reportSubTaskError(subtask)
             }
 
             "CopilotTask" -> {
-                ioScope.launch {
-                    achievementRepository.report {
-                        event = AchievementEvents.SUB_TASK_ERROR
-                        "subtask" to subtask
-                    }
-                }
+                reportSubTaskError(subtask)
+                // what 与 details 同级，details 里只有附加字段
                 val innerDetails = details.getJSONObject("details")
-                val what = innerDetails?.getString("what")
-                if (what == "UserAdditionalOperInvalid") {
-                    val name = innerDetails.getString("name") ?: ""
-                    append(str("CopilotUserAdditionalNameInvalid", name), LogLevel.ERROR)
+                when (details.getString("what")) {
+                    "UserAdditionalOperInvalid" -> {
+                        val name = innerDetails?.getString("name") ?: ""
+                        append(str("CopilotUserAdditionalNameInvalid", name), LogLevel.ERROR)
+                    }
+
+                    "CopilotFileReadError" -> append(
+                        resources.getString(R.string.copilot_file_read_error),
+                        LogLevel.ERROR
+                    )
+
+                    "CopilotStageNotSupported" -> {
+                        val stage = innerDetails?.getString("stage_name") ?: ""
+                        append(
+                            resources.getString(R.string.copilot_unsupported_stage, stage),
+                            LogLevel.ERROR
+                        )
+                    }
+
+                    "OperboxDataParseFailed" -> append(
+                        str("CopilotOperboxDataParseFailed"),
+                        LogLevel.ERROR
+                    )
                 }
+            }
+
+            "DepotRecognitionTask" -> {
+                if (details.getString("what") == "DepotTemplateLoadError") {
+                    stopForBrokenResource(str("DepotTemplateLoadError", detailNames(details, "item_ids")))
+                }
+                reportSubTaskError(subtask)
+            }
+
+            "ProcessTask" -> {
+                // 匹配列表引用了未定义任务，说明资源与 core 不匹配，按资源损坏处理
+                if (details.getString("what") == "UnknownTask") {
+                    stopForBrokenResource(str("UnknownTaskInChain", detailNames(details, "tasks")))
+                }
+                reportSubTaskError(subtask)
             }
 
             "InfrastInfoTask" -> {
                 // 常规模式下布局识别失败会中止整个基建任务
-                val what = details.getJSONObject("details")?.getString("what")
+                val what = details.getString("what")
                 if (what == "FacilityLayoutRecognitionFailed") {
                     append(str("InfrastFacilityLayoutRecognitionFailed"), LogLevel.ERROR)
                 }
-                ioScope.launch {
-                    achievementRepository.report {
-                        event = AchievementEvents.SUB_TASK_ERROR
-                        "subtask" to subtask
-                    }
-                }
+                reportSubTaskError(subtask)
             }
 
             else -> {
-                ioScope.launch {
-                    achievementRepository.report {
-                        event = AchievementEvents.SUB_TASK_ERROR
-                        "subtask" to subtask
-                    }
-                }
+                reportSubTaskError(subtask)
                 Timber.d("SubTaskError unhandled subtask=$subtask")
             }
         }
@@ -523,13 +555,20 @@ class SubTaskHandler(
         val subDetails = details.getJSONObject("details")
         when (taskchain) {
             "Depot" -> {
-                toolboxResultCollector.onDepotResult(subDetails)
+                toolboxResultCollector.onDepotResult(subDetails)?.delta()?.let(::appendDepotDelta)
                 return
             }
 
             "OperBox" -> {
                 toolboxResultCollector.onOperBoxResult(subDetails)
                 return
+            }
+
+            "OperProgress" -> {
+                if (details.getString("what") in setOf("OperProgressDetail", "OperProgressSummary")) {
+                    operProgressHandler.onExtraInfo(details)
+                    return
+                }
             }
         }
 
@@ -618,8 +657,17 @@ class SubTaskHandler(
                 )
             }
 
+            "BlackFlowStartRun" -> handleBlackFlowStartRun(subDetails)
             "BlackFlowMilestoneChanged" -> handleBlackFlowMilestoneChanged(subDetails)
             "BlackFlowInventoryCleanup" -> handleBlackFlowInventoryCleanup(subDetails)
+            "BlackFlowScrapTradeAborted" -> {
+                val item = subDetails?.getString("item").orEmpty()
+                val reason = subDetails?.getString("reason")
+                append(
+                    resources.getString(BlackFlowLogText.scrapTradeAborted(reason), item),
+                    LogLevel.WARNING,
+                )
+            }
 
             "StageDrops" -> handleStageDrops(subDetails)
             "AccountSwitch" -> {
@@ -642,16 +690,8 @@ class SubTaskHandler(
             "EnterFacility" -> {
                 val facility = subDetails?.getString("facility") ?: ""
                 val index = (subDetails?.getIntValue("index") ?: 0) + 1
-                append(
-                    "${str("ThisFacility")}${str(facility)} ${
-                        String.format(
-                            Locale.US,
-                            "%02d",
-                            index
-                        )
-                    }",
-                    LogLevel.TRACE
-                )
+                append(facilityLine(facility, index), LogLevel.TRACE)
+                lastFacilityKey = "$facility#$index"
             }
 
             "ProductIncorrect" -> append(str("ProductIncorrect"), LogLevel.ERROR)
@@ -664,13 +704,34 @@ class SubTaskHandler(
             }
 
             "CustomInfrastRoomGroupsMatchFailed" -> {
-                val groups = subDetails?.getJSONArray("groups")?.joinToString(", ") ?: ""
-                append("${str("RoomGroupsMatchFailed")}$groups", LogLevel.TRACE)
+                // 识别失败时 core 不带组名列表
+                if (subDetails?.getString("reason") == "recognition_failed") {
+                    append(str("RoomGroupsMatchRecogFailed"), LogLevel.TRACE)
+                } else {
+                    val groups = subDetails?.getJSONArray("groups")?.joinToString(", ") ?: ""
+                    append("${str("RoomGroupsMatchFailed")}$groups", LogLevel.TRACE)
+                }
             }
 
             "CustomInfrastRoomOperators" -> {
                 val names = subDetails?.getJSONArray("names")?.joinToString(", ") ?: ""
                 append("${str("RoomOperators")}$names", LogLevel.TRACE)
+            }
+
+            "CustomInfrastTraineeNotFound" -> {
+                val names = localizedOperNames(subDetails?.getJSONArray("candidates"))
+                append(str("InfrastTraineeNotFound", names.joinToString(", ")), LogLevel.WARNING)
+            }
+
+            "CustomInfrastAssistantNotFound" -> handleInfrastAssistantNotFound(subDetails)
+            "CustomInfrastRoomKeptUnchanged" -> handleInfrastRoomKeptUnchanged(subDetails)
+            "CustomInfrastRoomsNotConfigured" -> {
+                val index = subDetails?.getIntValue("index") ?: 0
+                appendFacilityReason(
+                    subDetails?.getString("facility").orEmpty(),
+                    index,
+                    str("InfrastRoomsNotConfigured", String.format(Locale.US, "%02d", index + 1)),
+                )
             }
 
             "InfrastTrainingIdle" -> append(str("TrainingIdle"), LogLevel.TRACE)
@@ -767,6 +828,13 @@ class SubTaskHandler(
                 append("${str("AlgorithmDoneSmeltGold")} $times ${str("UnitTime")}", LogLevel.TRACE)
             }
 
+            // 多作业模式辅助编队预匹配前报一次，core 传的是绝对路径，只显示文件名
+            "CopilotPrecheckFile" -> {
+                val navName = subDetails?.getString("nav_name").orEmpty()
+                val filename = subDetails?.getString("filename").orEmpty().substringAfterLast('/')
+                append("$navName - $filename", LogLevel.INFO)
+            }
+
             "BattleFormation" -> {
                 val formation = subDetails?.getJSONArray("formation")?.joinToString(", ") ?: ""
                 append("${str("BattleFormation")}\n[$formation]", LogLevel.TRACE)
@@ -794,6 +862,24 @@ class SubTaskHandler(
                 }
                 append(str("BattleFormationOperUnavailable", name, reason), LogLevel.ERROR)
                 copilotRuntimeStateStore.markRequirementIgnored()
+            }
+
+            // 一图流数据辅助编队的预检结果，set_params 阶段发出
+            "BattleFormationOperboxMatched" -> {
+                val lines = subDetails?.getJSONArray("matched_groups").orEmpty().mapNotNull {
+                    val group = it as? JSONObject ?: return@mapNotNull null
+                    "${group.getString("group_name").orEmpty()} => ${group.getString("oper_name").orEmpty()}"
+                }
+                append(
+                    (listOf(str("BattleFormationOperboxMatched")) + lines).joinToString("\n"),
+                    LogLevel.INFO
+                )
+            }
+
+            "BattleFormationOperbox1Unmatched" -> {
+                val group = subDetails?.getString("group_name").orEmpty()
+                val borrow = subDetails?.getString("may_borrow_oper").orEmpty()
+                append(str("BattleFormationOperbox1Unmatched", group, borrow), LogLevel.WARNING)
             }
 
             "CopilotAction" -> handleCopilotAction(subDetails)
@@ -882,6 +968,16 @@ class SubTaskHandler(
             // 同步写穿内存，下一关 TaskChainStart 立刻能 countOf 到本场掉落
             depotRepository.merge(drops)
         }
+    }
+
+    private fun appendDepotDelta(delta: DepotDelta) {
+        val since = formatToolboxSyncTime(delta.fromMillis)
+        val text = if (delta.changes.isEmpty()) {
+            resources.getString(R.string.runlog_depot_delta_none, since)
+        } else {
+            resources.getString(R.string.runlog_depot_delta_summary, since, delta.changes.size)
+        }
+        append(text, LogLevel.TRACE)
     }
 
     private fun handleInfrastTrainingCompleted(subDetails: JSONObject?) {
@@ -1226,33 +1322,34 @@ class SubTaskHandler(
         // 节点有具名就用具名，没有才退回类型
         val nodeName = subDetails?.getString("node_name")?.takeIf { it.isNotBlank() }
             ?: resources.getString(BlackFlowLogText.nodeType(subDetails?.getString("node_type")))
-        val route = resources.getString(
-            R.string.blackflow_routing_decision,
-            subDetails?.getIntValue("floor") ?: 0,
-            subDetails?.getIntValue("action_points_before") ?: 0,
-            subDetails?.getIntValue("action_points_after") ?: 0,
-            movement,
-            nodeName,
-            subDetails?.getIntValue("safety_margin") ?: 0,
+        // 上游不再显示决策原因，core 也不再上报 reason_detail
+        append(
+            resources.getString(
+                R.string.blackflow_routing_decision,
+                subDetails?.getIntValue("floor") ?: 0,
+                subDetails?.getIntValue("action_points_before") ?: 0,
+                subDetails?.getIntValue("action_points_after") ?: 0,
+                movement,
+                nodeName,
+                subDetails?.getIntValue("safety_margin") ?: 0,
+            ),
+            LogLevel.INFO,
         )
-        val category = resources.getString(
-            BlackFlowLogText.reasonCategory(subDetails?.getString("reason_category"))
-        )
-        val detail = blackFlowDecisionDetail(subDetails)
-        val reason = resources.getString(R.string.blackflow_routing_reason, category, detail)
-        append("$route\n$reason", LogLevel.INFO)
     }
 
-    private fun blackFlowDecisionDetail(subDetails: JSONObject?): String {
-        subDetails?.getString("decisive_rule_id")?.takeIf { it.isNotBlank() }?.let { id ->
-            return BlackFlowLogText.rule(id)?.let { resources.getString(it) } ?: id
+    // 支援页认出的奖励名随状态一起显示，方便看出有没有认错
+    private fun handleBlackFlowStartRun(subDetails: JSONObject?) {
+        val status = subDetails?.getString("status")
+        val textRes = BlackFlowLogText.startRunStatus(status) ?: return
+        val rewards = subDetails?.getJSONArray("rewards")?.joinToString("、").orEmpty()
+        val message = resources.getString(textRes) + if (rewards.isEmpty()) "" else
+            "\n" + resources.getString(R.string.blackflow_start_run_rewards_seen, rewards)
+        val level = when (status) {
+            "completed" -> LogLevel.SUCCESS
+            "reward_recognition_failed", "reward_page_missing", "reward_unrecognized" -> LogLevel.ERROR
+            else -> LogLevel.INFO
         }
-        subDetails?.getString("decisive_milestone_id")?.takeIf { it.isNotBlank() }?.let { id ->
-            return BlackFlowLogText.milestone(id)?.let { resources.getString(it) } ?: id
-        }
-        return resources.getString(
-            BlackFlowLogText.reasonDetail(subDetails?.getString("reason_detail"))
-        )
+        append(message, level)
     }
 
     private fun handleBlackFlowMilestoneChanged(subDetails: JSONObject?) {
@@ -1264,11 +1361,68 @@ class SubTaskHandler(
             ?: id.takeIf { it.isNotBlank() }
             ?: resources.getString(R.string.blackflow_milestone_unknown)
         val status = resources.getString(BlackFlowLogText.milestoneStatus(statusCode))
-        append(
-            resources.getString(R.string.blackflow_milestone_changed, milestone, status),
-            LogLevel.INFO,
-        )
+        val level = when (statusCode) {
+            "satisfied" -> LogLevel.SUCCESS
+            "missed", "impossible" -> LogLevel.WARNING
+            else -> LogLevel.INFO
+        }
+        append(resources.getString(R.string.blackflow_milestone_changed, milestone, status), level)
     }
+
+    // ==================== 基建自定义排班提示 ====================
+
+    /** 命中但在班/心情不足被排除时 core 单独带名单，有名单就提示计划内排除，不误报成名单错误 */
+    private fun handleInfrastAssistantNotFound(subDetails: JSONObject?) {
+        val working = localizedOperNames(subDetails?.getJSONArray("working_excluded"))
+        val lowMood = localizedOperNames(subDetails?.getJSONArray("low_mood_excluded"))
+        val (key, names) = when {
+            working.isNotEmpty() -> "InfrastAssistantWorkingExcluded" to working
+            lowMood.isNotEmpty() -> "InfrastAssistantLowMood" to lowMood
+            else -> "InfrastAssistantNotFound" to
+                    localizedOperNames(subDetails?.getJSONArray("candidates"))
+        }
+        append(str(key, names.joinToString(", ")), LogLevel.WARNING)
+    }
+
+    private fun handleInfrastRoomKeptUnchanged(subDetails: JSONObject?) {
+        val facility = subDetails?.getString("facility").orEmpty()
+        val reason = subDetails?.getString("reason")
+        // 整设施未配置房间，没有有意义的房间序号
+        if (reason == "facility_empty") {
+            append(facilityLine(facility, null), LogLevel.TRACE)
+            append(str("InfrastFacilityKeptUnchanged"), LogLevel.TRACE)
+            return
+        }
+        val reasonKey = when (reason) {
+            "candidates_working" -> "InfrastCandidatesWorking"
+            "candidates_low_mood" -> "InfrastCandidatesLowMood"
+            "candidates_unavailable" -> "InfrastCandidatesUnavailable"
+            else -> "InfrastRoomKeptUnchanged"
+        }
+        appendFacilityReason(facility, subDetails?.getIntValue("index") ?: 0, str(reasonKey))
+    }
+
+    /** 同房间已打过设施行时只追加原因，进设施前的拦截没有设施行，先补一行 */
+    private fun appendFacilityReason(facility: String, index: Int, reason: String) {
+        val displayIndex = index + 1
+        val key = "$facility#$displayIndex"
+        if (key != lastFacilityKey) {
+            append(facilityLine(facility, displayIndex), LogLevel.TRACE)
+            lastFacilityKey = key
+        }
+        append(reason, LogLevel.TRACE)
+    }
+
+    private fun facilityLine(facility: String, displayIndex: Int?): String {
+        val head = "${str("ThisFacility")}${str(facility)}"
+        return displayIndex?.let { "$head ${String.format(Locale.US, "%02d", it)}" } ?: head
+    }
+
+    /** 未收录的干员保留配置原名 */
+    private fun localizedOperNames(names: JSONArray?): List<String> =
+        names.orEmpty().mapNotNull { it?.toString()?.takeIf(String::isNotBlank) }.map {
+            resourceDataManager.getLocalizedCharacterName(it, appSettings.displayLanguage) ?: it
+        }
 
     // ==================== 字符串资源辅助方法 ====================
 
@@ -1288,6 +1442,29 @@ class SubTaskHandler(
 
     private fun str(key: String, vararg args: Any): String =
         MaaStringRes.getString(resources, packageName, key, *args)
+
+    /** 资源损坏：队列剩余任务一并停下，并推送通知，同掉线停机 */
+    private fun stopForBrokenResource(message: String) {
+        append(message, LogLevel.ERROR)
+        notificationCenter.notifySubTaskFailure(message, sendExternal = true)
+        executionStateHolder.requestStopFromCallback()
+    }
+
+    /** details.details.<key> 字符串数组，跳过空项后逗号拼接 */
+    private fun detailNames(details: JSONObject, key: String): String =
+        details.getJSONObject("details")?.getJSONArray(key)
+            ?.mapNotNull { (it as? String)?.ifEmpty { null } }
+            .orEmpty()
+            .joinToString(", ")
+
+    private fun reportSubTaskError(subtask: String) {
+        ioScope.launch {
+            achievementRepository.report {
+                event = AchievementEvents.SUB_TASK_ERROR
+                "subtask" to subtask
+            }
+        }
+    }
 
     private fun append(content: String, level: LogLevel) {
         sessionLogger.append(content, level)

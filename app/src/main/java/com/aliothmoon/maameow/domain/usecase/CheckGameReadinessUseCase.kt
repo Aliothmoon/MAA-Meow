@@ -21,6 +21,7 @@ class CheckGameReadinessUseCase(
     private val isPackageInstalled: suspend (String) -> Boolean = { true },
     private val isEyeProtectionEnabled: () -> Boolean = { false },
     private val isSmartResolutionEnabled: suspend () -> Boolean = { false },
+    private val isAdbInputRestricted: suspend () -> Boolean = { false },
 ) {
     /**
      * @param clientType   游戏客户端类型(用于解析包名)
@@ -38,7 +39,7 @@ class CheckGameReadinessUseCase(
                 "CheckGameReadiness: cannot resolve package name for clientType=%s",
                 clientType
             )
-            return checkEyeProtectionOrReady(context, gameAliveBeforeStart = null)
+            return checkDeviceWarningsOrReady(context, gameAliveBeforeStart = null)
         }
 
         // 1) 安装检查
@@ -60,7 +61,7 @@ class CheckGameReadinessUseCase(
             || runMode == RunMode.FOREGROUND
             || context.acknowledgements.contains(TaskStartAcknowledgement.GAME_NOT_RUNNING_WITHOUT_WAKE_UP)
         ) {
-            return checkEyeProtectionOrReady(context, gameAliveBeforeStart = aliveStatus == AppAliveStatus.ALIVE)
+            return checkDeviceWarningsOrReady(context, gameAliveBeforeStart = aliveStatus == AppAliveStatus.ALIVE)
         }
 
         // 3) 存活检查
@@ -83,7 +84,7 @@ class CheckGameReadinessUseCase(
                 ) {
                     GameReadiness.Blocked(TaskStartDecisionReason.GAME_NOT_ON_BACKGROUND_DISPLAY)
                 } else {
-                    checkEyeProtectionOrReady(context, gameAliveBeforeStart = true)
+                    checkDeviceWarningsOrReady(context, gameAliveBeforeStart = true)
                 }
             }
 
@@ -94,29 +95,35 @@ class CheckGameReadinessUseCase(
                     aliveStatus,
                     packageName
                 )
-                checkEyeProtectionOrReady(context, gameAliveBeforeStart = null)
+                checkDeviceWarningsOrReady(context, gameAliveBeforeStart = null)
             }
         }
     }
 
-    private suspend fun checkEyeProtectionOrReady(
+    /** 设备侧的警告只在手动启动时问，按顺序问一条确认一条 */
+    private suspend fun checkDeviceWarningsOrReady(
         context: TaskStartContext,
         gameAliveBeforeStart: Boolean?,
     ): GameReadiness {
-        if (context.mode == TaskStartMode.MANUAL
-            && appSettings.runMode.value == RunMode.BACKGROUND
-            && !context.acknowledgements.contains(TaskStartAcknowledgement.SMART_RESOLUTION_ENABLED)
-            && isSmartResolutionEnabled()
-        ) {
-            return GameReadiness.RequiresConfirmation(TaskStartAcknowledgement.SMART_RESOLUTION_ENABLED)
+        val ready = GameReadiness.Ready(gameAliveBeforeStart = gameAliveBeforeStart)
+        if (context.mode != TaskStartMode.MANUAL) return ready
+
+        suspend fun asks(ack: TaskStartAcknowledgement, probe: suspend () -> Boolean) =
+            ack !in context.acknowledgements && probe()
+
+        return when {
+            asks(TaskStartAcknowledgement.ADB_INPUT_RESTRICTED, isAdbInputRestricted) ->
+                GameReadiness.RequiresConfirmation(TaskStartAcknowledgement.ADB_INPUT_RESTRICTED)
+
+            appSettings.runMode.value == RunMode.BACKGROUND
+                    && asks(TaskStartAcknowledgement.SMART_RESOLUTION_ENABLED, isSmartResolutionEnabled) ->
+                GameReadiness.RequiresConfirmation(TaskStartAcknowledgement.SMART_RESOLUTION_ENABLED)
+
+            asks(TaskStartAcknowledgement.EYE_PROTECTION_ENABLED) { isEyeProtectionEnabled() } ->
+                GameReadiness.RequiresConfirmation(TaskStartAcknowledgement.EYE_PROTECTION_ENABLED)
+
+            else -> ready
         }
-        if (context.mode == TaskStartMode.MANUAL
-            && !context.acknowledgements.contains(TaskStartAcknowledgement.EYE_PROTECTION_ENABLED)
-            && isEyeProtectionEnabled()
-        ) {
-            return GameReadiness.RequiresConfirmation(TaskStartAcknowledgement.EYE_PROTECTION_ENABLED)
-        }
-        return GameReadiness.Ready(gameAliveBeforeStart = gameAliveBeforeStart)
     }
 
     private fun confirmOrBlock(

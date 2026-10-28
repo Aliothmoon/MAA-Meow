@@ -53,6 +53,8 @@ class LivePublisherRouter(
 
     override fun publish(session: LiveSession) = current().publish(session)
 
+    override fun publishPlain(session: LiveSession) = plain.publish(session)
+
     override fun prepareProgress() = current().prepareProgress()
 
     override fun publishForeground(session: LiveSession): Notification =

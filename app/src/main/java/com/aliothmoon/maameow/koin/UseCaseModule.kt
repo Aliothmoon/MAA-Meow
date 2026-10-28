@@ -1,12 +1,14 @@
 package com.aliothmoon.maameow.koin
 
 import com.aliothmoon.maameow.data.config.MaaPathConfig
+import com.aliothmoon.maameow.data.resource.HotUpdateSync
 import com.aliothmoon.maameow.domain.usecase.AnalyzeTaskChainUseCase
 import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
 import com.aliothmoon.maameow.domain.usecase.SwitchCoreDataLocationUseCase
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.utils.EyeProtectionDetector
+import com.aliothmoon.maameow.utils.device.XiaomiAdbInput
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.android.ext.koin.androidContext
@@ -18,6 +20,7 @@ val useCaseModule = module {
     factory { SwitchCoreDataLocationUseCase(get(), get()) }
 
     factory {
+        val hotUpdate = get<HotUpdateSync>()
         AnalyzeTaskChainUseCase(
             taskChainState = get(),
             resourceDataManager = get(),
@@ -27,7 +30,9 @@ val useCaseModule = module {
             itemHelper = get(),
             dropsRefresher = get(),
             appSettingsManager = get(),
+            metadataGate = get(),
             relocatePath = get<MaaPathConfig>()::toCorePath,
+            awaitHotUpdate = { hotUpdate.awaitFresh(it) },
         )
     }
     factory {
@@ -57,6 +62,7 @@ val useCaseModule = module {
                     }
                 }
             },
+            isAdbInputRestricted = XiaomiAdbInput::isRestricted,
         )
     }
     factory {

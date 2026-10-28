@@ -4,9 +4,12 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Parcel;
+import android.os.ParcelFileDescriptor;
 
-import com.aliothmoon.maameow.RemoteService;
 import com.aliothmoon.maameow.third.Ln;
+
+import java.io.IOException;
+import java.io.InputStream;
 
 /** Shizuku / Root 共用的提权服务入口 */
 public final class RemoteServiceStarter {
@@ -59,41 +62,44 @@ public final class RemoteServiceStarter {
             return false;
         }
 
-        primeHeartbeat(createdService.service(), result.appPid());
-
+        IBinder service = createdService.service();
         try {
-            IBinder.DeathRecipient recipient = () -> {
-                Ln.i(TAG + ": app process died, destroying remote service");
-                destroyService(createdService.service());
-                Ln.i(TAG + ": remote service destroy signal sent, exiting");
-                System.exit(0);
-            };
+            IBinder.DeathRecipient recipient = () -> onAppGone("app binder died", service);
             IBinder lifecycleBinder = result.lifecycleBinder();
             lifecycleBinder.linkToDeath(recipient, 0);
             appLifecycleBinder = lifecycleBinder;
             appDeathRecipient = recipient;
-            return true;
         } catch (Throwable tr) {
             Ln.e(TAG + ": failed to link app lifecycle binder", tr);
             return false;
         }
+        watchLifeline(result.lifeline(), service);
+        return true;
     }
 
-    /**
-     * 提前武装 RemoteServiceImpl 的 /proc 看门狗；
-     * 本 Starter 也用于启动 logcat 服务，非 RemoteService 的本地 binder 跳过
-     */
-    private static void primeHeartbeat(IBinder service, int appPid) {
-        if (appPid <= 0) {
+    /** 两路死讯先到先走：binder 通知要等线程池，被卡住的调用占满时送不到，lifeline 独占线程不受影响 */
+    private static void onAppGone(String reason, IBinder service) {
+        ProcessExit.exit(reason, () -> destroyService(service));
+    }
+
+    private static void watchLifeline(ParcelFileDescriptor lifeline, IBinder service) {
+        if (lifeline == null) {
+            Ln.w(TAG + ": no lifeline, relying on binder death only");
             return;
         }
-        try {
-            if (service.queryLocalInterface(RemoteService.class.getName()) instanceof RemoteService remote) {
-                remote.heartbeat(appPid);
+        Thread watcher = new Thread(() -> {
+            try (InputStream in = new ParcelFileDescriptor.AutoCloseInputStream(lifeline)) {
+                // App 从不写，阻塞到它退出、内核关掉写端时的 EOF
+                while (in.read() >= 0) {
+                }
+            } catch (IOException e) {
+                Ln.w(TAG + ": lifeline read failed, relying on binder death only", e);
+                return;
             }
-        } catch (Throwable tr) {
-            Ln.w(TAG + ": prime heartbeat failed", tr);
-        }
+            onAppGone("app lifeline closed", service);
+        }, "app-lifeline");
+        watcher.setDaemon(true);
+        watcher.start();
     }
 
     private static void destroyService(IBinder service) {

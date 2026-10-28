@@ -4,7 +4,6 @@ import android.content.ClipData
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,16 +15,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,8 +36,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.toClipEntry
@@ -46,14 +43,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxExportFormatter
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxExportLabels
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
+import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.ToolboxExportFileType
-import com.aliothmoon.maameow.presentation.components.OperAvatar
+import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
+import com.aliothmoon.maameow.presentation.view.panel.operbox.OperBoxCard
+import com.aliothmoon.maameow.presentation.view.panel.operbox.OperBoxDetailDialog
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.utils.i18n.asString
@@ -64,7 +63,8 @@ import org.koin.compose.koinInject
 @Composable
 fun OperBoxPanel(
     modifier: Modifier = Modifier,
-    viewModel: ToolboxViewModel = koinInject()
+    viewModel: ToolboxViewModel = koinInject(),
+    resourceDataManager: ResourceDataManager = koinInject(),
 ) {
     val snapshot by viewModel.operBoxRepository.snapshot.collectAsStateWithLifecycle()
     val statusMessage by viewModel.statusMessage.collectAsStateWithLifecycle()
@@ -79,23 +79,38 @@ fun OperBoxPanel(
     // 0 = 已拥有, 1 = 未拥有
     var selectedTab by remember { mutableIntStateOf(0) }
     var exportExpanded by remember { mutableStateOf(false) }
+    var detail by remember { mutableStateOf<OperBoxOperator?>(null) }
+    // 前台模式悬浮窗弹不了 Dialog，不提供详情
+    val detailEnabled = !LocalFloatingWindowContext.current
 
     if (!snapshot.hasSynced) {
         OperBoxEmptyState(modifier, resolvedStatusMessage)
         return
     }
 
-    val operators = if (selectedTab == 0) snapshot.owned else snapshot.notOwned
+    // 已拥有的帕拉斯置顶，对齐上游 SortOperBoxList；稳定排序，其余顺序不变
+    val owned = remember(snapshot.owned) { snapshot.owned.sortedByDescending { it.isPallas } }
+    val operators = if (selectedTab == 0) owned else snapshot.notOwned
 
-    LazyColumn(
+    detail?.let { oper ->
+        OperBoxDetailDialog(
+            oper = oper,
+            profession = resourceDataManager.getCharacterById(oper.id)?.profession,
+            onDismiss = { detail = null },
+        )
+    }
+
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(72.dp),
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 12.dp),
         contentPadding = PaddingValues(top = 6.dp, bottom = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         // 顶部：Tab 切换 + 导出（复制 / 导出文件可展开选格式）
-        item {
+        item(span = { GridItemSpan(maxLineSpan) }) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 if (resolvedStatusMessage.isNotEmpty()) {
                     Text(
@@ -236,9 +251,12 @@ fun OperBoxPanel(
             }
         }
 
-        // 干员列表
         items(operators, key = { it.id }) { oper ->
-            OperatorRow(oper)
+            OperBoxCard(
+                oper = oper,
+                profession = resourceDataManager.getCharacterById(oper.id)?.profession,
+                onClick = if (detailEnabled) ({ detail = oper }) else null,
+            )
         }
     }
 }
@@ -314,133 +332,6 @@ private fun OperBoxHintRow(text: String) {
             text = text,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun OperatorRow(oper: OperBoxOperator) {
-    val rarityColor = when (oper.rarity) {
-        6 -> Color(0xFFFF6B35)
-        5 -> Color(0xFFFFD700)
-        4 -> Color(0xFF9C7CFF)
-        3 -> Color(0xFF4FC3F7)
-        2 -> Color(0xFFA5D6A7)
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    Surface(
-        shape = RoundedCornerShape(6.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.weight(1f, fill = false)
-                ) {
-                    OperAvatar(
-                        operId = oper.id,
-                        modifier = Modifier.size(32.dp),
-                        desaturated = !oper.own,
-                    )
-                    Text(
-                        text = "${oper.rarity}★",
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                        fontWeight = FontWeight.Bold,
-                        color = rarityColor
-                    )
-                    Text(
-                        text = oper.name,
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                if (oper.own) {
-                    Text(
-                        text = stringResource(
-                            R.string.panel_operbox_owned_meta,
-                            oper.elite,
-                            oper.level,
-                            oper.potential
-                        ),
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-            OperTrainingBadges(oper)
-        }
-    }
-}
-
-/** 模组分支到显示名，对齐上游 ToolboxViewModel.ModTypeDisplay */
-private val MOD_TYPE_DISPLAY = mapOf(
-    "A" to "α", "B" to "β", "X" to "χ", "Y" to "γ", "D" to "Δ"
-)
-
-/**
- * 技能练度与模组，只有一图流数据带主技能等级，core 识别路径整块不显示
- * 一个专精都没有（含未满 7 级与 7 级未专精）时只给一个 RANK 徽章
- */
-@Composable
-private fun OperTrainingBadges(oper: OperBoxOperator) {
-    val mainSkillLevel = oper.mainSkillLevel ?: return
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (oper.skills.none { it.level >= 1 }) {
-            BadgeText("RANK $mainSkillLevel")
-        } else {
-            oper.skills.forEach { MasteryBadge(it.level) }
-        }
-        oper.equips.filter { it.level > 0 }.forEach { equip ->
-            BadgeText("${MOD_TYPE_DISPLAY[equip.type] ?: equip.type}${equip.level}")
-        }
-    }
-}
-
-@Composable
-private fun BadgeText(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-}
-
-/** 单技能格的品字三圆：专 1 亮上圆，专 2 加亮右下圆，专 3 全亮 */
-@Composable
-private fun MasteryBadge(level: Int) {
-    val on = MaterialTheme.colorScheme.primary
-    val off = MaterialTheme.colorScheme.outlineVariant
-    Canvas(modifier = Modifier.size(12.dp)) {
-        val radius = size.minDimension / 5f
-        drawCircle(
-            if (level >= 1) on else off, radius, Offset(size.width / 2f, radius)
-        )
-        drawCircle(
-            if (level >= 2) on else off, radius, Offset(size.width - radius, size.height - radius)
-        )
-        drawCircle(
-            if (level >= 3) on else off, radius, Offset(radius, size.height - radius)
         )
     }
 }

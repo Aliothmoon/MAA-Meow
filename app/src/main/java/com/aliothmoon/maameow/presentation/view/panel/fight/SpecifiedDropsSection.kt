@@ -97,9 +97,9 @@ fun SpecifiedDropsSection(
 
             // 已选材料时展示缓存库存（与库存保持汇总一致：未识别过用「--」而非 0）
             if (config.dropsItemId.isNotBlank()) {
-                val hasDepotData = depotSnapshot.syncTimeMillis > 0L
+                val hasDepotData = depotSnapshot.hasSynced
                 val currentHave = if (hasDepotData) {
-                    (depotSnapshot.items[config.dropsItemId] ?: 0).toString()
+                    depotSnapshot.countOf(config.dropsItemId).toString()
                 } else {
                     "--"
                 }
@@ -110,7 +110,7 @@ fun SpecifiedDropsSection(
                 )
                 if (config.isInventoryTarget && hasDepotData) {
                     val need =
-                        (config.dropsQuantity - (depotSnapshot.items[config.dropsItemId] ?: 0))
+                        (config.dropsQuantity - depotSnapshot.countOf(config.dropsItemId))
                             .coerceAtLeast(0)
                     Text(
                         text = if (need <= 0) {

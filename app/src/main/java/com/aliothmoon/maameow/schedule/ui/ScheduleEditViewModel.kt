@@ -49,9 +49,12 @@ data class ScheduleEditUiState(
     val selectedProfileId: String? = null,
     val forceStart: Boolean = false,
     val autoScreenSaver: Boolean = false,
+    val hardwareScreenOff: Boolean = false,
+    val silentStartWhenInUse: Boolean = false,
     val autoSleepAfterTask: Boolean = false,
     val skipAutoSleepIfAwake: Boolean = false,
     val closeGameAfterTask: Boolean = false,
+    val exitAppAfterTask: Boolean = false,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
     /** 空列表 = 无需向导 */
@@ -92,6 +95,8 @@ class ScheduleEditViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CloseGameEffect.Inactive)
 
+    val runMode: StateFlow<RunMode> = appSettings.runMode
+
     private var strategyId: String? = null
     private var existingStrategy: ScheduleStrategy? = null
     private var loadStarted = false
@@ -128,9 +133,12 @@ class ScheduleEditViewModel(
                         selectedProfileId = strategy.profileId,
                         forceStart = strategy.forceStart,
                         autoScreenSaver = strategy.autoScreenSaver,
+                        hardwareScreenOff = strategy.hardwareScreenOff,
+                        silentStartWhenInUse = strategy.silentStartWhenInUse,
                         autoSleepAfterTask = strategy.autoSleepAfterTask,
                         skipAutoSleepIfAwake = strategy.skipAutoSleepIfAwake,
                         closeGameAfterTask = strategy.closeGameAfterTask,
+                        exitAppAfterTask = strategy.exitAppAfterTask,
                     )
                     return@launch
                 }
@@ -216,6 +224,14 @@ class ScheduleEditViewModel(
         _state.update { it.copy(autoScreenSaver = value) }
     }
 
+    fun onHardwareScreenOffChanged(value: Boolean) {
+        _state.update { it.copy(hardwareScreenOff = value) }
+    }
+
+    fun onSilentStartWhenInUseChanged(value: Boolean) {
+        _state.update { it.copy(silentStartWhenInUse = value) }
+    }
+
     fun onAutoSleepAfterTaskChanged(value: Boolean) {
         _state.update { it.copy(autoSleepAfterTask = value) }
     }
@@ -226,6 +242,10 @@ class ScheduleEditViewModel(
 
     fun onCloseGameAfterTaskChanged(value: Boolean) {
         _state.update { it.copy(closeGameAfterTask = value) }
+    }
+
+    fun onExitAppAfterTaskChanged(value: Boolean) {
+        _state.update { it.copy(exitAppAfterTask = value) }
     }
 
     fun onReplaceTime(old: LocalTime, new: LocalTime) {
@@ -290,9 +310,12 @@ class ScheduleEditViewModel(
                     profileId = current.selectedProfileId,
                     forceStart = current.forceStart,
                     autoScreenSaver = current.autoScreenSaver,
+                    hardwareScreenOff = current.hardwareScreenOff,
+                    silentStartWhenInUse = current.silentStartWhenInUse,
                     autoSleepAfterTask = current.autoSleepAfterTask,
                     skipAutoSleepIfAwake = current.skipAutoSleepIfAwake,
                     closeGameAfterTask = current.closeGameAfterTask,
+                    exitAppAfterTask = current.exitAppAfterTask,
                 ) ?: ScheduleStrategy(
                     id = strategyId ?: UUID.randomUUID().toString(),
                     name = current.name.trim(),
@@ -305,9 +328,12 @@ class ScheduleEditViewModel(
                     profileId = current.selectedProfileId,
                     forceStart = current.forceStart,
                     autoScreenSaver = current.autoScreenSaver,
+                    hardwareScreenOff = current.hardwareScreenOff,
+                    silentStartWhenInUse = current.silentStartWhenInUse,
                     autoSleepAfterTask = current.autoSleepAfterTask,
                     skipAutoSleepIfAwake = current.skipAutoSleepIfAwake,
                     closeGameAfterTask = current.closeGameAfterTask,
+                    exitAppAfterTask = current.exitAppAfterTask,
                 )
 
                 if (current.isNew) {
@@ -342,7 +368,7 @@ class ScheduleEditViewModel(
         }
     }
 
-    /** 悬浮窗仅在策略勾选屏保时纳入，免得向导走完又被健康卡 nag 一遍 */
+    /** 悬浮窗仅在策略实际用屏保时纳入，免得向导走完又被健康卡 nag 一遍 */
     fun refreshPermissionChecks() {
         // 先刷新，避免依赖 onResume 回调顺序
         permissionManager.refresh()
@@ -352,11 +378,12 @@ class ScheduleEditViewModel(
                 wizardPending = ScheduleHealthLogic.wizardItems(
                     ScheduleHealthSnapshot(
                         backendGranted = permissions.remoteAccessGranted,
+                        backendAvailable = permissions.isStartupBackendAvailable(permissions.startupBackend),
                         batteryWhitelist = permissions.batteryWhitelist,
                         notification = permissions.notification,
                         exactAlarmAllowed = scheduleAlarmManager.canScheduleExact(),
                         overlayGranted = permissions.overlay,
-                        overlayNeeded = it.autoScreenSaver,
+                        overlayNeeded = ScheduleHealthLogic.usesOverlay(it.autoScreenSaver, it.hardwareScreenOff),
                     )
                 )
             )

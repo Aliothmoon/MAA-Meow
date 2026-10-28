@@ -6,8 +6,11 @@ import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.models.UnlockCredential
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
+import com.aliothmoon.maameow.domain.service.ScreenPowerController
 import com.aliothmoon.maameow.domain.service.ScreenSaverController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
+import com.aliothmoon.maameow.domain.service.UnlockAttempt
 import com.aliothmoon.maameow.domain.service.UnlockGestureReader
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -22,13 +25,11 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -55,18 +56,24 @@ class LaunchPipeline(
     private val startTaskChain: StartTaskChainUseCase,
     private val countdownUI: CountdownUI,
     private val screenSaver: ScreenSaverController,
+    private val screenPower: ScreenPowerController,
     private val taskEndRegistry: TaskEndRegistry,
+    private val notificationCenter: MaaNotificationCenter,
     private val keyguardLocked: () -> Boolean,
     /** 此刻要密码才能进桌面；不是 isDeviceSecure（只说明设过密码） */
     private val deviceLocked: () -> Boolean,
     private val screenInteractive: () -> Boolean,
     private val activityLauncher: suspend (LaunchRequest) -> Boolean,
+    /** 提权后端用不了的原因，null = 已连上；会申请授权、等连接 */
+    private val remoteAccessBlocker: suspend () -> BackendBlock?,
+    /** 主屏顶层应用包名，判不出为 null */
+    private val foregroundPackage: suspend () -> String?,
+    private val appLabel: (String) -> String,
+    /** 参数为关服务前是否锁屏休眠 */
+    private val terminateApp: suspend (sleep: Boolean) -> Unit,
 ) {
     private val _session = MutableStateFlow<LaunchSession>(LaunchSession.Idle)
     val session: StateFlow<LaunchSession> = _session.asStateFlow()
-
-    private val _effects = Channel<LaunchEffect>(capacity = Channel.BUFFERED)
-    val effects: Flow<LaunchEffect> = _effects.receiveAsFlow()
 
     private val executeLock = Any()
     private val jobs = ConcurrentHashMap<String, Job>()
@@ -110,12 +117,33 @@ class LaunchPipeline(
         }
     }
 
+    /** 通知按钮用：留在通知栏的旧按钮不能误伤下一轮 */
+    fun submit(event: LaunchUserEvent, requestId: String) {
+        if (activeRequestId.get() != requestId) {
+            Timber.i("LaunchPipeline: stale %s for %s", event, requestId)
+            return
+        }
+        submit(event)
+    }
+
     private suspend fun runPipeline(request: LaunchRequest) {
         cancelRequested.set(false)
         startNowRequested.set(false)
 
         if (!mutex.tryAcquire(request.requestId)) {
             if (request.forceStart) {
+                // 后端用不了还抢占，只会把别人停了、自己也起不来
+                remoteAccessBlocker()?.let {
+                    finishWithoutHold(request, ExecutionResult.FAILED_START, it.reason)
+                    return
+                }
+                // 命中黑名单也别抢占在途的
+                if (isBackgroundSchedule(request) && !deviceIdle()) {
+                    (checkForeground() as? ForegroundCheck.Blacklisted)?.let {
+                        finishWithoutHold(request, ExecutionResult.SKIPPED_BLACKLIST, it.message)
+                        return
+                    }
+                }
                 preemptInFlight(request)
                 mutex.forceAcquire(request.requestId)
             } else {
@@ -131,7 +159,7 @@ class LaunchPipeline(
         activeRequestId.set(request.requestId)
         var terminalResult: ExecutionResult? = null
         var terminalMessage: UiText? = null
-        var presentUi = true
+        var presentation = LaunchPresentation.DIALOG
         // finally 要用，声明在 try 外
         val outcome = RunOutcome()
         val log = triggerLogger.open(
@@ -142,28 +170,55 @@ class LaunchPipeline(
         )
 
         try {
-            setPhase(request, LaunchSession.Phase.DevicePrep, presentUi = true)
+            setPhase(request, LaunchSession.Phase.DevicePrep, presentation)
             log.append(uiTextOf(R.string.schedule_log_received, request.displayName))
 
             val state = compositionService.state.value
-            if (state == MaaExecutionState.RUNNING
-                || state == MaaExecutionState.STARTING
-                || state == MaaExecutionState.STOPPING
-            ) {
-                if (request.forceStart) {
-                    log.append(uiTextOf(R.string.schedule_log_force_stop_running))
-                    takeOverFromPreviousRun()
-                    compositionService.stop()
-                    compositionService.stopVirtualDisplay()
-                } else {
-                    terminalResult = ExecutionResult.SKIPPED_BUSY
-                    terminalMessage = uiTextOf(R.string.schedule_log_task_running_busy)
-                    return
+            val busy = state == MaaExecutionState.RUNNING
+                    || state == MaaExecutionState.STARTING
+                    || state == MaaExecutionState.STOPPING
+            if (busy && !request.forceStart) {
+                terminalResult = ExecutionResult.SKIPPED_BUSY
+                terminalMessage = uiTextOf(R.string.schedule_log_task_running_busy)
+                return
+            }
+
+            // 解锁、拉起界面、跑任务都靠提权进程，后端没起来就别往下走，否则会被报成锁屏或拉起失败
+            // 强制启动也得先查，免得把在跑的停了、自己又起不来
+            log.append(uiTextOf(R.string.schedule_log_backend_connecting))
+            remoteAccessBlocker()?.let { block ->
+                block.detail?.let { log.append(uiTextOf(R.string.schedule_log_backend_connect_cause, it)) }
+                terminalResult = ExecutionResult.FAILED_START
+                terminalMessage = block.reason
+                return
+            }
+
+            // 须在唤醒前采样；解锁失败时也要报这一刻的状态
+            val beforeWake = screenSnapshot()
+            outcome.tookOverIdleDevice = deviceIdle(beforeWake)
+            val isForeground = appSettingsManager.runMode.value == RunMode.FOREGROUND
+            val inUseSchedule = isBackgroundSchedule(request) && !outcome.tookOverIdleDevice
+
+            // 先于强制启动的接管，命中就别把在跑的停了
+            if (inUseSchedule) {
+                when (val check = checkForeground()) {
+                    is ForegroundCheck.Blacklisted -> {
+                        terminalResult = ExecutionResult.SKIPPED_BLACKLIST
+                        terminalMessage = check.message
+                        return
+                    }
+
+                    ForegroundCheck.Unknown -> log.append(uiTextOf(R.string.schedule_log_blacklist_unknown))
+                    ForegroundCheck.Clear -> Unit
                 }
             }
 
-            // 须在唤醒前采样；无锁屏时熄屏也不上锁，亮屏与 keyguard 都看
-            outcome.tookOverIdleDevice = !screenInteractive() || keyguardLocked()
+            if (busy) {
+                log.append(uiTextOf(R.string.schedule_log_force_stop_running))
+                takeOverFromPreviousRun()
+                compositionService.stop()
+                compositionService.stopVirtualDisplay()
+            }
 
             if (request.source == LaunchSource.Schedule) {
                 val unlockType = appSettingsManager.wakeUnlockType.value
@@ -189,6 +244,12 @@ class LaunchPipeline(
                         log.append(uiTextOf(R.string.schedule_log_wake_ok))
                     } else {
                         log.append(uiTextOf(R.string.schedule_log_wake_failed, wake.message))
+                        outcome.unlock = UnlockAttempt(
+                            type = unlockType,
+                            ready = credential.isReady,
+                            result = wake.name.lowercase(),
+                        )
+                        recordWakeDiagnostics(log, unlockType, credential, beforeWake)
                         if (keyguardLocked()) {
                             terminalResult = ExecutionResult.SKIPPED_LOCKED
                             terminalMessage = if (deviceLocked() && !credential.isReady) {
@@ -224,24 +285,37 @@ class LaunchPipeline(
             }
 
             // 前台无倒计时；后台 Dialog 倒计时，控制层需用户曾手动启动
-            val isForeground = appSettingsManager.runMode.value == RunMode.FOREGROUND
-            presentUi = !isForeground
+            // 静默只在用手机时：待机没人碰屏幕，要靠拉起的界面保持常亮
+            presentation = when {
+                isForeground -> LaunchPresentation.NONE
+                inUseSchedule && request.silentStartWhenInUse -> LaunchPresentation.NOTIFICATION
+                else -> LaunchPresentation.DIALOG
+            }
             outcome.backgroundRun = !isForeground
-            val needsActivityLaunch = request.source == LaunchSource.Schedule && presentUi
+            val needsActivityLaunch = request.source == LaunchSource.Schedule
+                    && presentation == LaunchPresentation.DIALOG
+            if (presentation == LaunchPresentation.NOTIFICATION) {
+                log.append(uiTextOf(R.string.schedule_log_silent_start))
+            }
 
             // 后台 + 待机才盖；用户已开的熄屏挂机不收走，好连跑多轮
+            var screenOffPending = false
             if (request.autoScreenSaver && outcome.backgroundRun && outcome.tookOverIdleDevice) {
-                if (screenSaver.isShowing()) {
-                    log.append(uiTextOf(R.string.schedule_log_screen_saver_kept))
-                } else {
-                    outcome.screenSaverEngaged = screenSaver.show()
-                    log.append(
-                        if (outcome.screenSaverEngaged) {
-                            uiTextOf(R.string.schedule_log_screen_saver_on)
-                        } else {
-                            uiTextOf(R.string.schedule_log_screen_saver_failed)
-                        },
-                    )
+                when {
+                    screenSaver.isShowing() -> log.append(uiTextOf(R.string.schedule_log_screen_saver_kept))
+                    screenPower.poweredOff != null -> log.append(uiTextOf(R.string.schedule_log_screen_off_kept))
+                    // 倒计时后再关，期间还能取消或立即开始
+                    request.hardwareScreenOff -> screenOffPending = true
+                    else -> {
+                        outcome.screenSaverEngaged = screenSaver.show()
+                        log.append(
+                            if (outcome.screenSaverEngaged) {
+                                uiTextOf(R.string.schedule_log_screen_saver_on)
+                            } else {
+                                uiTextOf(R.string.schedule_log_screen_saver_failed)
+                            },
+                        )
+                    }
                 }
             }
 
@@ -262,7 +336,7 @@ class LaunchPipeline(
                 val startNow = countdownUI.await(
                     request = request,
                     onTick = { remaining ->
-                        setPhase(request, LaunchSession.Phase.Counting(remaining), presentUi)
+                        setPhase(request, LaunchSession.Phase.Counting(remaining), presentation)
                     },
                     shouldAbort = {
                         cancelRequested.get() || startNowRequested.get()
@@ -282,8 +356,19 @@ class LaunchPipeline(
                 }
             }
 
-            setPhase(request, LaunchSession.Phase.Preparing, presentUi)
-            setPhase(request, LaunchSession.Phase.Starting, presentUi)
+            // 只关不恢复，同手动熄屏挂机；倒计时里已休眠就不关
+            if (screenOffPending && screenInteractive()) {
+                log.append(
+                    if (screenPower.powerOff(ScreenPowerController.Origin.SCHEDULE)) {
+                        uiTextOf(R.string.schedule_log_hardware_screen_off_sent)
+                    } else {
+                        uiTextOf(R.string.schedule_log_hardware_screen_off_failed)
+                    },
+                )
+            }
+
+            setPhase(request, LaunchSession.Phase.Preparing, presentation)
+            setPhase(request, LaunchSession.Phase.Starting, presentation)
             log.append(uiTextOf(R.string.schedule_log_starting_tasks, enabled.size))
 
             when (
@@ -308,6 +393,7 @@ class LaunchPipeline(
                 }
 
                 is StartTaskChainUseCase.Result.Failed -> {
+                    outcome.startFailureNotified = result.startFailureNotified
                     terminalResult = result.executionResult
                     terminalMessage = result.message
                     log.append(uiTextOf(R.string.schedule_log_start_failed, result.message))
@@ -342,6 +428,7 @@ class LaunchPipeline(
         val skipSleep = request.skipAutoSleepIfAwake && !outcome.tookOverIdleDevice
         // 用户熄屏挂机还在就别 lockAndSleep，否则拆掉后面几轮
         val userSaverHang = screenSaver.isShowing() && !outcome.screenSaverEngaged
+                || screenPower.poweredOff == ScreenPowerController.Origin.MANUAL
         val autoSleep = request.autoSleepAfterTask && !skipSleep && !userSaverHang
         try {
             if (result == ExecutionResult.STARTED && request.autoSleepAfterTask && skipSleep) {
@@ -349,7 +436,7 @@ class LaunchPipeline(
             } else if (result == ExecutionResult.STARTED && request.autoSleepAfterTask && userSaverHang) {
                 log.append(uiTextOf(R.string.schedule_log_auto_sleep_skipped_screensaver))
             }
-            log.end(result, terminalMessage)
+            log.end(result, terminalMessage, outcome.unlock)
             if (request.strategyId.isNotEmpty()) {
                 scheduleRepository.recordExecutionResult(
                     strategyId = request.strategyId,
@@ -358,14 +445,9 @@ class LaunchPipeline(
                 )
             }
             if (result != ExecutionResult.STARTED && result != ExecutionResult.CANCELLED) {
-                _effects.trySend(
-                    LaunchEffect.Feedback(
-                        uiTextOf(
-                            R.string.notification_schedule_detail,
-                            request.displayName,
-                            terminalMessage ?: uiTextOf(R.string.schedule_result_failed_start),
-                        ),
-                    ),
+                notificationCenter.notifyLaunchNotStarted(
+                    request.displayName, result, terminalMessage,
+                    replacesStartFailure = outcome.startFailureNotified,
                 )
             }
         } finally {
@@ -381,17 +463,18 @@ class LaunchPipeline(
                     cur
                 }
             }
-            // 全局关游戏由后台任务页处理，这里不重复
+            // 全局关游戏由 TaskEndRegistry 处理，这里不重复
             val closeGame = outcome.backgroundRun
                     && request.closeGameAfterTask
                     && !appSettingsManager.closeAppOnTaskEnd.value
             val screenSaverEngaged = outcome.screenSaverEngaged
+            val exitApp = request.exitAppAfterTask
             // Core 未起时 armOnce 看到 IDLE 会当场补跑，不能整段跳过，否则息屏锁屏不执行
             if (result != ExecutionResult.STARTED) {
                 if (screenSaverEngaged) screenSaver.hide()
-            } else if (closeGame || autoSleep || screenSaverEngaged) {
+            } else if (closeGame || autoSleep || screenSaverEngaged || exitApp) {
                 taskEndRegistry.armOnce { reason ->
-                    onTaskEnd(reason, closeGame, autoSleep, screenSaverEngaged)
+                    onTaskEnd(reason, closeGame, autoSleep, screenSaverEngaged, exitApp)
                 }
             }
         }
@@ -414,6 +497,78 @@ class LaunchPipeline(
         compositionService.stopVirtualDisplay()
         mutex.releaseAny()
         Timber.i("LaunchPipeline: force preempt for %s", incoming.requestId)
+    }
+
+    /**
+     * 解锁没成：配置摘要与提权侧过程写进触发日志；不带 PIN 与轨迹
+     * 只是取证，出错也不能改掉这一轮的结局
+     */
+    private suspend fun recordWakeDiagnostics(
+        log: ScheduleTriggerLogger.Session,
+        unlockType: String,
+        credential: UnlockCredential,
+        before: WakeSnapshot,
+    ) {
+        try {
+            log.append(
+                wakeConfigText(
+                    unlockType = unlockType,
+                    credential = credential,
+                    gestureRecordedAtMs = (credential as? UnlockCredential.Gesture)
+                        ?.let { unlockGestures.recordedAtMs() },
+                    passwordRequired = deviceLocked(),
+                    before = before,
+                ),
+            )
+            wakeUnlockEngine.lastTrace()?.let {
+                log.append(uiTextOf(R.string.schedule_log_wake_trace, it))
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "LaunchPipeline: record wake failure diagnostics failed")
+        }
+    }
+
+    private fun isBackgroundSchedule(request: LaunchRequest): Boolean =
+        request.source == LaunchSource.Schedule
+                && appSettingsManager.runMode.value != RunMode.FOREGROUND
+
+    private fun screenSnapshot() = WakeSnapshot(screenOn = screenInteractive(), keyguardLocked = keyguardLocked())
+
+    /** 熄屏、锁屏或被熄屏挂机关着屏；无锁屏时熄屏不上锁，两者都看 */
+    private fun deviceIdle(screen: WakeSnapshot = screenSnapshot()): Boolean =
+        !screen.screenOn || screen.keyguardLocked || screenPower.poweredOff != null
+
+    private sealed interface ForegroundCheck {
+        data object Clear : ForegroundCheck
+        data object Unknown : ForegroundCheck
+        data class Blacklisted(val message: UiText) : ForegroundCheck
+    }
+
+    private suspend fun checkForeground(): ForegroundCheck {
+        val blacklist = appSettingsManager.scheduleAppBlacklist.value
+        if (blacklist.isEmpty()) return ForegroundCheck.Clear
+        val pkg = try {
+            foregroundPackage()
+        } catch (e: TimeoutCancellationException) {
+            // 探测超时不是被抢占，按判不出处理
+            Timber.w(e, "LaunchPipeline: foreground probe timed out")
+            null
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "LaunchPipeline: foreground probe failed")
+            null
+        }
+        return when (pkg) {
+            null -> ForegroundCheck.Unknown
+            in blacklist -> ForegroundCheck.Blacklisted(
+                uiTextOf(R.string.schedule_log_blacklist_hit, appLabel(pkg)),
+            )
+
+            else -> ForegroundCheck.Clear
+        }
     }
 
     /** 抢占前撤掉上一轮收尾与屏保，避免 stop 边沿触发旧 autoSleep */
@@ -444,11 +599,7 @@ class LaunchPipeline(
                     message = triggerLogger.resolveMessage(message),
                 )
             }
-            _effects.trySend(
-                LaunchEffect.Feedback(
-                    uiTextOf(R.string.notification_schedule_detail, request.displayName, message),
-                ),
-            )
+            notificationCenter.notifyLaunchNotStarted(request.displayName, result, message)
             lastCompletedRequestId.set(request.requestId)
         }
     }
@@ -456,16 +607,16 @@ class LaunchPipeline(
     private fun setPhase(
         request: LaunchRequest,
         phase: LaunchSession.Phase,
-        presentUi: Boolean,
+        presentation: LaunchPresentation,
     ) {
         _session.update { cur ->
             when {
                 cur is LaunchSession.Idle ->
-                    LaunchSession.InFlight(request, phase, presentUi)
+                    LaunchSession.InFlight(request, phase, presentation)
 
                 cur is LaunchSession.InFlight
                         && cur.request.requestId == request.requestId ->
-                    LaunchSession.InFlight(request, phase, presentUi)
+                    LaunchSession.InFlight(request, phase, presentation)
 
                 else -> cur
             }
@@ -477,10 +628,11 @@ class LaunchPipeline(
         closeGame: Boolean,
         autoSleep: Boolean,
         releaseScreenSaver: Boolean,
+        exitApp: Boolean,
     ) {
         Timber.i(
-            "LaunchPipeline: task end reason=%s closeGame=%s autoSleep=%s saver=%s",
-            reason, closeGame, autoSleep, releaseScreenSaver,
+            "LaunchPipeline: task end reason=%s closeGame=%s autoSleep=%s saver=%s exitApp=%s",
+            reason, closeGame, autoSleep, releaseScreenSaver, exitApp,
         )
         // 手动停止不关游戏，其余结束（自然完成 / 掉线中止 / 到达时长上限）都关
         if (closeGame && reason != TaskEndRegistry.Reason.MANUAL) {
@@ -489,6 +641,11 @@ class LaunchPipeline(
         // 屏保有 KEEP_SCREEN_ON，须先关再熄屏
         if (releaseScreenSaver) {
             screenSaver.hide()
+        }
+        // 手动停止说明有人在用，不退；退出要等通知发完，不占 TaskEndRegistry 的收集协程，熄屏也交给它排在关服务前
+        if (exitApp && reason != TaskEndRegistry.Reason.MANUAL) {
+            scope.launch { terminateApp(autoSleep) }
+            return
         }
         if (autoSleep) {
             wakeUnlockEngine.lockAndSleep()
@@ -501,6 +658,10 @@ class LaunchPipeline(
         /** 启动采样：熄屏或锁屏 */
         var tookOverIdleDevice = false
         var screenSaverEngaged = false
+        var startFailureNotified = false
+
+        /** 唤醒解锁没成时记下，收尾随结果交给遥测 */
+        var unlock: UnlockAttempt? = null
     }
 
     companion object {

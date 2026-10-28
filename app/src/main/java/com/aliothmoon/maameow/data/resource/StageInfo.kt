@@ -1,5 +1,8 @@
 package com.aliothmoon.maameow.data.resource
 
+import android.content.Context
+import androidx.annotation.StringRes
+import com.aliothmoon.maameow.R
 import java.time.DayOfWeek
 
 /**
@@ -11,15 +14,12 @@ data class StageInfo(
     val apCost: Int = 0,       // 理智消耗
     val openDays: List<DayOfWeek> = emptyList(),  // 开放日期（空表示每天开放）
     val category: StageCategory = StageCategory.OTHER,  // 关卡分类
-    val tip: String = "",      // 关卡提示信息（迁移自 WPF TipKey）
+    @StringRes val tipRes: Int? = null,  // 关卡提示信息（迁移自 WPF TipKey）
     val dropGroups: List<List<String>> = emptyList()  // 芯片本掉落组 (迁移自 WPF DropGroups)
 ) {
-    /**
-     * 获取用于 UI 显示的名称
-     * 迁移自 WPF zh-cn.xaml 第740-770行的本地化映射
-     */
-    val displayName: String
-        get() = STAGE_DISPLAY_NAMES[code] ?: code
+    /** UI 显示名，迁移自 WPF 以关卡代码为 key 的本地化项；没有映射的直接显示代码 */
+    fun displayName(context: Context): String =
+        displayNameRes(code)?.let(context::getString) ?: code
 
     /**
      * 检查关卡在指定日期是否开放
@@ -37,55 +37,43 @@ data class StageInfo(
     }
 
     companion object {
-        /**
-         * 关卡代码到显示名称的映射
-         */
-        private val STAGE_DISPLAY_NAMES = mapOf(
-            // 主线关卡
-            "1-7" to "1-7",
-            "R8-11" to "R8-11",
-            "12-17-HARD" to "12-17-HARD",
-
-            // 资源本
-            "CE-6" to "龙门币-6/5",
-            "AP-5" to "红票-5",
-            "CA-5" to "技能-5",
-            "LS-6" to "经验-6/5",
-            "SK-5" to "碳-5",
-
-            // 芯片本
-            "PR-A-1" to "奶/盾芯片",
-            "PR-A-2" to "奶/盾芯片组",
-            "PR-B-1" to "术/狙芯片",
-            "PR-B-2" to "术/狙芯片组",
-            "PR-C-1" to "先/辅芯片",
-            "PR-C-2" to "先/辅芯片组",
-            "PR-D-1" to "近/特芯片",
-            "PR-D-2" to "近/特芯片组",
-
-            // 剿灭模式
-            "Annihilation" to "当期剿灭",
-            "Chernobog@Annihilation" to "切尔诺伯格",
-            "Lungmen@Annihilation" to "龙门外环",
-            "LungmenOutskirts@Annihilation" to "龙门外环",
-            "LungmenDowntown@Annihilation" to "龙门市区"
+        /** 自定义剿灭的可选关卡，顺序即选项顺序 */
+        val ANNIHILATION_CODES = listOf(
+            "Annihilation",
+            "Chernobog@Annihilation",
+            "LungmenOutskirts@Annihilation",
+            "LungmenDowntown@Annihilation",
         )
 
-        /**
-         * 关卡提示信息映射
-         * 迁移自 WPF Localizations/zh-cn.xaml 第762-770行
-         */
-        val STAGE_TIPS = mapOf(
-            "CE-6" to "CE-6: 龙门币",
-            "AP-5" to "AP-5: 红票",
-            "CA-5" to "CA-5: 技能",
-            "LS-6" to "LS-6: 经验",
-            "SK-5" to "SK-5: 碳",
-            // PR-X-2 不单独出提示，同上游，免得与 PR-X-1 重复
-            "PR-A-1" to "PR-A-1/2: 奶&盾芯片",
-            "PR-B-1" to "PR-B-1/2: 术&狙芯片",
-            "PR-C-1" to "PR-C-1/2: 先&辅芯片",
-            "PR-D-1" to "PR-D-1/2: 近&特芯片"
+        /** 常驻与剿灭关卡的显示名资源，所有关卡显示名都经这里兜底 */
+        @StringRes
+        fun displayNameRes(code: String): Int? = STAGE_DISPLAY_NAMES[code]
+
+        /** 关卡代码到显示名称资源的映射 */
+        private val STAGE_DISPLAY_NAMES = mapOf(
+            // 资源本
+            "CE-6" to R.string.panel_fight_stage_name_ce_6,
+            "AP-5" to R.string.panel_fight_stage_name_ap_5,
+            "CA-5" to R.string.panel_fight_stage_name_ca_5,
+            "LS-6" to R.string.panel_fight_stage_name_ls_6,
+            "SK-5" to R.string.panel_fight_stage_name_sk_5,
+
+            // 芯片本
+            "PR-A-1" to R.string.panel_fight_stage_name_pr_a_1,
+            "PR-A-2" to R.string.panel_fight_stage_name_pr_a_2,
+            "PR-B-1" to R.string.panel_fight_stage_name_pr_b_1,
+            "PR-B-2" to R.string.panel_fight_stage_name_pr_b_2,
+            "PR-C-1" to R.string.panel_fight_stage_name_pr_c_1,
+            "PR-C-2" to R.string.panel_fight_stage_name_pr_c_2,
+            "PR-D-1" to R.string.panel_fight_stage_name_pr_d_1,
+            "PR-D-2" to R.string.panel_fight_stage_name_pr_d_2,
+
+            // 剿灭模式
+            "Annihilation" to R.string.panel_fight_annihilation_current,
+            "Chernobog@Annihilation" to R.string.panel_fight_annihilation_chernobog,
+            "Lungmen@Annihilation" to R.string.panel_fight_annihilation_outskirts,
+            "LungmenOutskirts@Annihilation" to R.string.panel_fight_annihilation_outskirts,
+            "LungmenDowntown@Annihilation" to R.string.panel_fight_annihilation_downtown,
         )
     }
 }

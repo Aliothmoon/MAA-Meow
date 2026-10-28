@@ -28,7 +28,7 @@ class AppModuleVerifyTest {
             ),
             // 构造器里的 lambda 参数由模块内联提供，静态校验需显式放行
             injections = injectedParameters(
-                definition<LaunchPipeline>(Function0::class, Function2::class),
+                definition<LaunchPipeline>(Function0::class, Function1::class, Function2::class),
                 // 彩蛋触发参数按构建类型内联，不进依赖图
                 definition<PallasDrunkState>(PallasDebugEasterEgg::class),
             ),

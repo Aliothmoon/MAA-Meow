@@ -11,8 +11,10 @@ import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemInfo
+import com.aliothmoon.maameow.domain.models.SkippedDepotPlans
 import com.aliothmoon.maameow.domain.models.TaskCandidate
 import com.aliothmoon.maameow.domain.models.TaskFallbackChain
+import com.aliothmoon.maameow.domain.service.FightDropsRefresher
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.utils.i18n.UiText
@@ -38,11 +40,13 @@ class DepotMaintainExpansionTest {
     private val depotRepository: DepotRepository = mockk()
     private val activityManager: ActivityManager = mockk()
     private val itemHelper: ItemHelper = mockk()
+    private val dropsRefresher: FightDropsRefresher = mockk(relaxed = true)
 
     private data class Expansion(
         val params: List<MaaTaskParams>,
         val logs: List<Pair<UiText, LogLevel>>,
         val fallbacks: Map<Int, TaskFallbackChain> = emptyMap(),
+        val skipped: SkippedDepotPlans? = null,
     )
 
     private fun DepotMaintainConfig.expand(
@@ -56,6 +60,9 @@ class DepotMaintainExpansionTest {
         every { activityManager.isActivityOpen() } returns activityOpen
         every { activityManager.isResourceCollectionOpen() } returns resourceCollectionOpen
         every { activityManager.isStageOpen(any()) } answers { firstArg<String>() in openStages }
+        every { activityManager.getStageDisplayName(any()) } answers {
+            if (firstArg<String>() == "CE-6") "龙门币-6/5" else firstArg()
+        }
         every { itemHelper.getItemInfo(any()) } answers {
             if (firstArg<String>() == ITEM) ItemInfo(id = ITEM, name = "源岩") else null
         }
@@ -66,10 +73,13 @@ class DepotMaintainExpansionTest {
             activityManager = activityManager,
             depotRepository = depotRepository,
             itemHelper = itemHelper,
+            dropsRefresher = dropsRefresher,
             logSink = sink,
         )
+        val staged = mutableListOf<SkippedDepotPlans>()
+        every { dropsRefresher.stageSkipped(capture(staged)) } returns Unit
         val params = toTaskParams(context)
-        return Expansion(params, sink.entries, context.fallbacks)
+        return Expansion(params, sink.entries, context.fallbacks, staged.singleOrNull())
     }
 
     private fun plan(
@@ -362,8 +372,9 @@ class DepotMaintainExpansionTest {
         assertTrue(result.params.isEmpty())
         assertEquals(listOf(R.string.runlog_depot_plan_stage_not_open), result.logs.resIds())
         assertEquals(LogLevel.TRACE, result.logs.planLogs()[0].second)
+        // 日志写显示名，不露关卡代码
         assertEquals(
-            listOf<Any?>(1, "CE-6"),
+            listOf<Any?>(1, "龙门币-6/5"),
             logArgsOf(result.logs, R.string.runlog_depot_plan_stage_not_open),
         )
     }
@@ -599,6 +610,160 @@ class DepotMaintainExpansionTest {
     fun logNumbering_usesOneBasedOriginalPosition() {
         val result = config(plan(), plan(), plan(dropId = "")).expand()
         assertEquals(listOf<Any?>(3), logArgsOf(result.logs, R.string.runlog_depot_plan_invalid_drop))
+    }
+
+    // ---- 预检跳过的计划登记复查（上游 70d1f06bb8） ----
+
+    @Test
+    fun enoughPlans_withPlayableStage_areStagedForReview() {
+        val result = config(
+            plan(dropCount = 10),               // #1 够 → 登记
+            plan(),                             // #2 不够 → 下发，不登记
+            plan(stage = "", dropCount = 10),   // #3 够但没关卡 → 不登记
+            plan(stage = "9-9", dropCount = 10), // #4 够但没开放 → 不登记
+        ).expand(inventory = mapOf(ITEM to 20))
+
+        assertEquals(
+            SkippedDepotPlans(
+                taskName = "材料补货",
+                plans = listOf(SkippedDepotPlans.Plan(no = 1, dropId = ITEM, dropCount = 10)),
+                firstOnly = false,
+            ),
+            result.skipped,
+        )
+    }
+
+    /** 登记不随日志截断，排在主计划前后由复查按主计划判断 */
+    @Test
+    fun onlyFirstMode_stagesEveryEnoughPlan_withTheChosenOneAsCutoff() {
+        val result = config(
+            plan(dropCount = 10),               // #1 够 → 登记
+            plan(stage = "4-4"),                // #2 不够 → 主任务
+            plan(stage = "5-5", dropCount = 10), // #3 够 → 登记，复查时排在主任务后不提示
+        ).copy(onlyFirstInsufficientPlan = true)
+            .expand(inventory = mapOf(ITEM to 20), openStages = setOf(STAGE, "4-4", "5-5"))
+
+        assertEquals(listOf(1, 3), result.skipped?.plans?.map { it.no })
+        assertEquals(SkippedDepotPlans.Plan(no = 2, dropId = ITEM, dropCount = 100), result.skipped?.chosen)
+        assertEquals(true, result.skipped?.firstOnly)
+    }
+
+    @Test
+    fun allPlansMode_stagesWithoutCutoff() {
+        val result = config(plan(dropCount = 10), plan())
+            .expand(inventory = mapOf(ITEM to 20))
+
+        assertEquals(null, result.skipped?.chosen)
+    }
+
+    // ---- 按库存达成率排序（上游 a7ee2c2bf7） ----
+
+    @Test
+    fun sortByProgress_queuesLowestProgressFirst_andKeepsOriginalNumbers() {
+        val result = config(
+            plan(dropId = "A"), // #1 50/100
+            plan(dropId = "B"), // #2 10/100
+            plan(dropId = "C"), // #3 90/100
+        ).copy(sortByProgress = true)
+            .expand(inventory = mapOf("A" to 50, "B" to 10, "C" to 90))
+
+        assertEquals(
+            listOf("#2", "#1", "#3").map { UiText.Dynamic("材料补货 $it") },
+            result.params.map { it.logName },
+        )
+        assertEquals(
+            listOf(R.string.runlog_depot_sorted_by_progress) +
+                    List(3) { R.string.runlog_depot_plan_inventory_insufficient },
+            result.logs.resIds(),
+        )
+        assertEquals(
+            listOf("#2", "#1", "#3"),
+            result.logs.planLogs().drop(1).map { (it.first as UiText.Resource).args.first() },
+        )
+    }
+
+    @Test
+    fun sortByProgress_putsInvalidPlansLast_inListOrder() {
+        val result = config(
+            plan(dropId = ""),   // #1 无效
+            plan(dropCount = 0), // #2 无效
+            plan(),              // #3 可执行
+        ).copy(sortByProgress = true).expand()
+
+        assertEquals(
+            listOf(
+                R.string.runlog_depot_sorted_by_progress,
+                R.string.runlog_depot_plan_inventory_insufficient,
+                R.string.runlog_depot_plan_invalid_drop,
+                R.string.runlog_depot_plan_zero_count,
+            ),
+            result.logs.resIds(),
+        )
+    }
+
+    @Test
+    fun sortByProgress_singlePlan_logsNoSortNotice() {
+        val result = config(plan()).copy(sortByProgress = true).expand()
+        assertEquals(listOf(R.string.runlog_depot_plan_inventory_insufficient), result.logs.resIds())
+    }
+
+    @Test
+    fun sortByProgress_withOnlyFirst_runsLowestProgressAndFallsBackInSortedOrder() {
+        val result = config(
+            plan(dropId = "A"),                // #1 50/100 → 后备二
+            plan(dropId = "B", stage = "4-4"), // #2 10/100 → 主任务
+            plan(dropId = "C", stage = "5-5"), // #3 30/100 → 后备一
+        ).copy(sortByProgress = true, onlyFirstInsufficientPlan = true).expand(
+            inventory = mapOf("A" to 50, "B" to 10, "C" to 30),
+            openStages = setOf(STAGE, "4-4", "5-5"),
+        )
+
+        assertEquals(listOf(UiText.Dynamic("材料补货 #2")), result.params.map { it.logName })
+        assertEquals(
+            listOf(
+                R.string.runlog_depot_sorted_by_progress,
+                R.string.runlog_depot_plan_inventory_insufficient,
+            ),
+            result.logs.resIds(),
+        )
+        assertEquals(
+            listOf("5-5", STAGE),
+            result.fallbacks.getValue(0).candidates.map { it.stage() },
+        )
+    }
+
+    @Test
+    fun sortByProgress_stagesEnoughPlansInExecutionOrder() {
+        val result = config(
+            plan(dropId = "A"), // #1 150/100
+            plan(dropId = "B"), // #2 120/100
+        ).copy(sortByProgress = true)
+            .expand(inventory = mapOf("A" to 150, "B" to 120))
+
+        assertEquals(listOf(2, 1), result.skipped?.plans?.map { it.no })
+    }
+
+    /** 已充足的计划达成率 ≥ 1，排序后必在主计划之后，仍须登记，识别后可能翻到前面 */
+    @Test
+    fun sortByProgress_withOnlyFirst_stillStagesEnoughPlansBehindTheChosenOne() {
+        val result = config(
+            plan(dropId = "A", dropCount = 10), // #1 20/10 够
+            plan(dropId = "B"),                 // #2 0/100 → 主任务
+        ).copy(sortByProgress = true, onlyFirstInsufficientPlan = true)
+            .expand(inventory = mapOf("A" to 20))
+
+        assertEquals(listOf(UiText.Dynamic("材料补货 #2")), result.params.map { it.logName })
+        // 日志仍止于主计划
+        assertEquals(
+            listOf(
+                R.string.runlog_depot_sorted_by_progress,
+                R.string.runlog_depot_plan_inventory_insufficient,
+            ),
+            result.logs.resIds(),
+        )
+        assertEquals(listOf(1), result.skipped?.plans?.map { it.no })
+        assertEquals(2, result.skipped?.chosen?.no)
+        assertEquals(true, result.skipped?.sortByProgress)
     }
 
     private companion object {

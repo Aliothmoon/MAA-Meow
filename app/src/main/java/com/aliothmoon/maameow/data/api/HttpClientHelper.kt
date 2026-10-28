@@ -1,6 +1,8 @@
 package com.aliothmoon.maameow.data.api
 
 import com.aliothmoon.maameow.utils.JsonUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
@@ -55,8 +57,8 @@ class HttpClientHelper(
         url: String,
         query: Map<String, String?> = emptyMap(),
         headers: Map<String, String> = emptyMap()
-    ): T {
-        return get(url, query, headers).use {
+    ): T = withContext(Dispatchers.IO) {
+        get(url, query, headers).use {
             JsonUtils.common.decodeFromString<T>(it.body.string())
         }
     }

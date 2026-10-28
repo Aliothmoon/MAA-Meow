@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.config
 
 import android.content.Context
+import android.os.Environment
 import com.aliothmoon.maameow.constant.MaaFiles.APP_VERSION_FILE
 import com.aliothmoon.maameow.constant.MaaFiles.ASSET_VERSION_FILE
 import com.aliothmoon.maameow.constant.MaaFiles.CACHE
@@ -50,12 +51,22 @@ class MaaPathConfig(
     fun toCorePath(path: String): String =
         if (isCoreSeparated) toCorePath(path, rootDir, CoreDataDir.ROOT) else path
 
-    /** Maa 根目录 */
+    /**
+     * Maa 根目录
+     * 存储没就绪时 getExternalFilesDir 返回 null，File(null, "Maa") 是 /Maa 且会被 lazy 缓存住；
+     * 退回它本该返回的路径，存储就绪后照常可用
+     */
     val rootDir: String by lazy {
         val ext = context.getExternalFilesDir(null)
+            ?: expectedExternalFilesDir().also { Timber.w("getExternalFilesDir returned null, falling back to $it") }
         Timber.i("context.getExternalFilesDir $ext")
         File(ext, MAA).absolutePath
     }
+
+    /** 只拼路径不碰存储，取不到真实目录时用 */
+    @Suppress("DEPRECATION")
+    private fun expectedExternalFilesDir() =
+        File(Environment.getExternalStorageDirectory(), "Android/data/${context.packageName}/files")
 
     /** 资源目录 */
     val resourceDir: String by lazy {

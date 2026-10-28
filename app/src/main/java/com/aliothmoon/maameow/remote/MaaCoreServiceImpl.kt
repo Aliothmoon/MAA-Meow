@@ -10,12 +10,12 @@ import com.aliothmoon.maameow.maa.CallbackJsonAbbreviator
 import com.aliothmoon.maameow.maa.CallbackLogPolicy
 import com.aliothmoon.maameow.maa.MaaCoreLibrary
 import com.aliothmoon.maameow.remote.internal.StaleFrameGuard
+import com.aliothmoon.maameow.root.ProcessExit
 import com.aliothmoon.maameow.third.Ln
 import com.sun.jna.Memory
 import com.sun.jna.Pointer
 import java.io.FileDescriptor
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.system.exitProcess
 
 
 class MaaCoreServiceImpl(private val ctx: MaaCoreLibrary?) : MaaCoreService.Stub() {
@@ -48,10 +48,9 @@ class MaaCoreServiceImpl(private val ctx: MaaCoreLibrary?) : MaaCoreService.Stub
         }
     }
 
+    // 和 RemoteService.destroy 同一套收尾，MaaCore 实例在其末项销毁
     override fun destroy() {
-        Ln.i("$TAG: destroy()")
-        DestroyInstance()
-        exitProcess(0)
+        ProcessExit.exit("maa core destroy requested") { RemoteServiceImpl.performEmergencyCleanup() }
     }
 
     override fun SetUserDir(path: String?): Boolean {

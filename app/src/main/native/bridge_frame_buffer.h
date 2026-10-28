@@ -5,6 +5,8 @@
 
 #include <android/hardware_buffer.h>
 
+#include <string>
+
 typedef enum {
     FRAME_STATE_FREE = 0,
     FRAME_STATE_WRITING = 2
@@ -24,6 +26,8 @@ typedef struct {
 void InitFrameBuffers(int width, int height);
 
 void ReleaseFrameBuffers();
+
+std::string DescribeFrameBufferRelease();
 
 bool WriteHardwareBufferToFrame(AHardwareBuffer *buffer);
 

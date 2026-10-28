@@ -270,6 +270,50 @@ class IncidentReporterTest {
     }
 
     @Test
+    fun `启动失败再带绑定与拉起日志的最近一段`() = runTest(dispatcher) {
+        val reporter = reporter()
+        write("schedule/trigger_20261002_110000_000.log", "{\"type\":\"header\"}\n")
+        // 绑定日志不分轮次，只要最后那段
+        val old = "old line\n".repeat(4_000)
+        write("service_bind_debug.log", old + "BIND_DENIED\n")
+        write("shizuku_launch_debug.log", "[E] child exited with status=9\n")
+        reporter.report(
+            LaunchFailure(
+                result = "failed_start",
+                launchReason = "Failed to start the elevated service via %1\$s; start canceled (%2\$s)",
+                message = null,
+                delayMs = 0,
+                logFile = "schedule/trigger_20261002_110000_000.log",
+                withBootLogs = true,
+            )
+        )
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf(
+                "schedule/trigger_20261002_110000_000.log",
+                "service_bind_debug.log",
+                "shizuku_launch_debug.log",
+            ),
+            sources(),
+        )
+        val bind = evidence.logs!!.entries.single { it.source == "service_bind_debug.log" }
+        assertTrue(bind.content.endsWith("BIND_DENIED\n"))
+        assertTrue(bind.rawBytes < old.length)
+    }
+
+    @Test
+    fun `Shizuku 未运行不带日志`() = runTest(dispatcher) {
+        val reporter = reporter()
+        write("service_bind_debug.log", "BIND\n")
+        reporter.report(ShizukuDown(afterBoot = true, enabledSchedules = 2, tags = emptyMap(), extras = emptyMap()))
+        advanceUntilIdle()
+
+        assertNull(evidence.logs)
+        assertEquals(AttachmentOutcome.NotSelected, evidence.attachment)
+    }
+
+    @Test
     fun `一次任务失败用掉这个任务的快照`() = runTest(dispatcher) {
         val reporter = reporter()
         write("asst.log", "")

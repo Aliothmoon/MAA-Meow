@@ -23,6 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 
 /**
  * 面板标题栏
@@ -37,6 +38,7 @@ fun PanelHeader(
     onHome: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val inputFocus = LocalInputFocusManager.current
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -59,7 +61,10 @@ fun PanelHeader(
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
-                        ) { onTabSelected(tab) }
+                        ) {
+                            if (selectedTab != tab) inputFocus.clear()
+                            onTabSelected(tab)
+                        }
                 )
             }
         }

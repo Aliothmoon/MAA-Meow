@@ -2,7 +2,6 @@ package com.aliothmoon.maameow.presentation.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Build
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
@@ -70,20 +69,6 @@ fun ShizukuReadinessDialog(
                 neutralText = switchToRootText,
                 onNeutralClick = onSwitchToRoot,
                 dismissText = skipText,
-                onDismissRequest = onDismiss,
-                dismissOnOutsideClick = false,
-            )
-        }
-
-        ShizukuReadinessStage.SuiAvailable -> {
-            AdaptiveTaskPromptDialog(
-                visible = true,
-                title = stringResource(R.string.dialog_sui_detected_title),
-                message = stringResource(R.string.dialog_sui_detected_message),
-                icon = Icons.Rounded.Info,
-                confirmText = stringResource(R.string.common_got_it),
-                onConfirm = onDismiss,
-                dismissText = null,
                 onDismissRequest = onDismiss,
                 dismissOnOutsideClick = false,
             )

@@ -1,0 +1,156 @@
+name: Bug Report (English)
+description: Report a reproducible problem in English
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug. Please provide enough detail for maintainers to reproduce and diagnose it.
+
+        ## Title
+
+        Write only the **concrete symptom** as the title. After submission it is automatically prefixed with the area selected below, becoming `[Bug][Area] Concrete symptom`.
+
+        - Recommended: `App crashes after starting a task`, `Task stops right after the boss fight`
+        - Not recommended: `Something is wrong`, `Does not work`, `Help`
+
+        See the [Issue Guidelines](https://github.com/Aliothmoon/MAA-Meow/blob/main/docs/en-us/develop/ISSUE_GUIDELINES.md) for the complete convention and area descriptions.
+
+  # label 与选项被 .github/workflows/issue-title.yml 用来补标题，改动需同步
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: "Pick where the failure first appears: for a task that misbehaves, pick that task; for Home, Settings, or overlay UI problems, pick UI & Settings"
+      options:
+        - Login
+        - Combat
+        - Auto Recruit
+        - Base
+        - Credit Store
+        - Collect Rewards
+        - Auto I.S.
+        - Reclamation Algorithm
+        - Other Tasks
+        - Copilot
+        - Tools
+        - Schedule
+        - Foreground Mode
+        - Background Mode
+        - Permissions & Service
+        - Notifications
+        - Installation & Updates
+        - UI & Settings
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: android-version
+    attributes:
+      label: Android version
+      description: "The device's Android version, optionally with the ROM version"
+      placeholder: "Android 14 / One UI 6.1"
+    validations:
+      required: true
+
+  - type: input
+    id: device-model
+    attributes:
+      label: Device model
+      description: "Device brand and model"
+      placeholder: "Google Pixel 8 / Samsung Galaxy S24"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Permission backend
+      description: "Settings → Runtime Environment → Startup Mode"
+      options:
+        - Shizuku
+        - Root
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Run mode
+      description: "The mode used when the problem occurred"
+      options:
+        - Foreground mode (floating panel)
+        - Background mode (virtual display)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem description
+      description: "Add trigger conditions, actual behavior, and impact not already clear from the title"
+      placeholder: "Under which conditions did you perform which action, what happened, and what was the impact?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: "List the exact steps needed to reproduce the problem"
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: "Describe the result you expected"
+    validations:
+      required: false
+
+  - type: textarea
+    id: log-file
+    attributes:
+      label: Log file
+      description: |
+        Export logs using these steps:
+        1. Enable **Debug mode** in the app settings
+        2. Reproduce the problem
+        3. Export and upload the log archive
+
+        > Logs are essential for diagnosis. Please upload them.
+      placeholder: "Drag the exported .zip log file here"
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or screen recordings
+      description: "Upload relevant screenshots or recordings when available"
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: "Add anything else that may help diagnose the problem"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submit checklist
+      options:
+        - label: I searched existing issues and confirmed this is not a duplicate
+          required: true
+        - label: I reproduced the problem with Debug mode enabled and uploaded the exported logs
+          required: true

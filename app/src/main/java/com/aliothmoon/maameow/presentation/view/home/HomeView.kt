@@ -71,10 +71,11 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.components.BackendReadyFixHost
 import com.aliothmoon.maameow.presentation.components.ChangelogDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
-import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
 import com.aliothmoon.maameow.presentation.components.UpdateCard
+import com.aliothmoon.maameow.presentation.components.rememberBackendReadyFixState
 import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
 import com.aliothmoon.maameow.presentation.onboarding.OnboardingTarget
 import com.aliothmoon.maameow.presentation.onboarding.onboardingBlocksStartupDialogs
@@ -169,6 +170,10 @@ fun HomeView(
         }
     }
 
+    // Shizuku 没装 / 没运行时与启动任务同一套引导
+    val backendFix = rememberBackendReadyFixState()
+    BackendReadyFixHost(backendFix)
+
     // 资源初始化完成后刷新版本号
     LaunchedEffect(uiState.resourceInitState) {
         if (uiState.resourceInitState is ResourceInitState.Ready) {
@@ -250,11 +255,14 @@ fun HomeView(
         AdaptiveTaskPromptDialog(
             visible = true,
             title = stringResource(R.string.dialog_core_dir_inaccessible_title),
-            message = stringResource(R.string.dialog_core_dir_inaccessible_message),
+            message = stringResource(
+                if (viewModel.isCoreSeparated) R.string.dialog_core_dir_local_tmp_inaccessible_message
+                else R.string.dialog_core_dir_inaccessible_message
+            ),
             icon = Icons.Rounded.Warning,
             confirmText = stringResource(R.string.dialog_core_data_location_switch_confirm),
             dismissText = stringResource(R.string.common_cancel),
-            onConfirm = { viewModel.switchCoreDataToLocalTmp() },
+            onConfirm = { viewModel.switchCoreDataLocationForAccess() },
             onDismissRequest = { viewModel.dismissCoreDirInaccessibleDialog() }
         )
     }
@@ -333,7 +341,14 @@ fun HomeView(
                         permissionState = permissionState,
                         isShowAccessibility = uiState.runMode == RunMode.FOREGROUND && uiState.overlayControlMode == OverlayControlMode.ACCESSIBILITY,
                         isGranting = uiState.isGranting,
-                        onRequestRemoteAccess = { viewModel.onRequestRemoteAccess() },
+                        onRequestRemoteAccess = {
+                            // Root 各家管理器不同，引导不了，照旧直接请求
+                            if (permissionState.startupBackend == RemoteBackend.SHIZUKU) {
+                                backendFix.request(authDirectly = true)
+                            } else {
+                                viewModel.onRequestRemoteAccess()
+                            }
+                        },
                         onRequestOverlay = { viewModel.onRequestOverlay(context) },
                         onRequestStorage = { viewModel.onRequestStorage(context) },
                         onRequestBatteryWhitelist = { viewModel.onRequestBatteryWhitelist(context) },
@@ -378,9 +393,6 @@ fun HomeView(
             }
         }
 
-        if (!startupDialogsBlocked) {
-            ShizukuReadinessGate()
-        }
     }
 }
 

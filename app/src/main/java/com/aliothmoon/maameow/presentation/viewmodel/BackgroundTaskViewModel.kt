@@ -13,6 +13,7 @@ import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.launch.LaunchPipeline
+import com.aliothmoon.maameow.domain.launch.LaunchPresentation
 import com.aliothmoon.maameow.domain.launch.PlanSideTaskRunner
 import com.aliothmoon.maameow.domain.launch.LaunchRequest
 import com.aliothmoon.maameow.domain.launch.LaunchSession
@@ -23,6 +24,7 @@ import com.aliothmoon.maameow.domain.service.GameFpsWatcher
 import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
+import com.aliothmoon.maameow.domain.service.ScreenPowerController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
@@ -73,23 +75,23 @@ class BackgroundTaskViewModel(
     private val taskEndRegistry: TaskEndRegistry,
     private val application: Context,
     private val sideTaskRunner: PlanSideTaskRunner,
+    private val screenPower: ScreenPowerController,
 ) : ViewModel() {
 
     val launchSession: StateFlow<LaunchSession> = launchPipeline.session
-    val launchEffects = launchPipeline.effects
     val countdownState: StateFlow<CountdownState> = launchPipeline.session
         .map { it.toCountdownState() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, CountdownState.Idle)
 
     /**
-     * 导航用：仅 [LaunchSession.InFlight.presentUi] 为 true（后台 Dialog 倒计时）时置位
+     * 导航用：仅后台 Dialog 倒计时时置位
      * 前台无倒计时不导航，避免强行拉回主 Tab
      */
     val pendingNavigateRequestId: StateFlow<String?> = launchPipeline.session
         .map { session ->
             when (session) {
                 is LaunchSession.InFlight -> {
-                    if (!session.presentUi) null
+                    if (session.presentation != LaunchPresentation.DIALOG) null
                     else when (session.phase) {
                         is LaunchSession.Phase.Counting,
                         LaunchSession.Phase.Preparing,
@@ -200,13 +202,11 @@ class BackgroundTaskViewModel(
     private fun observeTaskEnd() {
         viewModelScope.launch {
             taskEndRegistry.taskEnded.collect { reason ->
-                // 手动停止不关游戏，其余结束（自然完成 / 掉线中止 / 到达时长上限）都关
+                // 关游戏由 TaskEndRegistry 做，这里只提示
                 if (reason != TaskEndRegistry.Reason.MANUAL
                     && appSettingsManager.closeAppOnTaskEnd.value
                 ) {
-                    Timber.i("Task ended (%s), auto closing app", reason)
                     _effects.send(UiEffect.toast(R.string.bg_toast_auto_closed_on_end))
-                    compositionService.stopVirtualDisplay()
                 }
             }
         }
@@ -284,16 +284,10 @@ class BackgroundTaskViewModel(
     }
 
     fun onScreenOff() {
-        // 硬件熄屏：仅下发一次关闭物理屏幕的指令，无状态、幂等（再点必发，不会卡死）。
-        // 启用该功能时 MainActivity 始终持有 FLAG_KEEP_SCREEN_ON 保持系统唤醒、不锁屏；
-        // 屏幕恢复由系统在用户唤醒时处理，会话结束/服务销毁时由 PowerController 兜底恢复
-        val service = RemoteServiceManager.getInstanceOrNull()
-        if (service == null) {
-            Timber.w("onScreenOff skipped: remote service unavailable")
-            return
+        // 开关开启时 MainActivity 常亮，系统不会休眠；同步 binder，首次还要加载 DisplayControl，不放主线程
+        viewModelScope.launch(Dispatchers.IO) {
+            screenPower.powerOff(ScreenPowerController.Origin.MANUAL)
         }
-        runCatching { service.setDisplayPower(false) }
-            .onFailure { Timber.e(it, "onScreenOff failed") }
     }
 
     // ==================== Task Chain ====================
@@ -485,7 +479,7 @@ class BackgroundTaskViewModel(
             is TaskStartDecision.RequiresConfirmation -> {
                 pendingStart = PendingStart(context.acknowledged(decision.acknowledgement))
                 val message = decision.message
-                showDialog(application.createStartWarningDialog(message))
+                showDialog(application.createStartWarningDialog(decision.acknowledgement, message))
                 return message
             }
         }

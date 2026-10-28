@@ -89,7 +89,7 @@ class ShizukuProcessPathContractTest {
             ctorSection.contains("MaaCoreManager"),
         )
         assertFalse(
-            "ctor 禁止 XmsfFirewall 清理（spawn iptables 有 IO 开销，已后置 setup）",
+            "ctor 禁止 XmsfFirewall 清理（cmd connectivity 要起进程，已后置 setup）",
             ctorSection.contains("XmsfFirewall"),
         )
         val setupSection = source.substringAfter("override fun setup").substringBefore("override fun test")

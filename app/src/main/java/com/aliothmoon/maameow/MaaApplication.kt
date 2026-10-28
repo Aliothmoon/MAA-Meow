@@ -1,12 +1,16 @@
 package com.aliothmoon.maameow
 
 import android.app.Application
+import android.content.res.Configuration
+import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.datasource.AppDownloader
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
+import com.aliothmoon.maameow.data.resource.GameMetadataLoader
+import com.aliothmoon.maameow.data.resource.HotUpdateSync
 import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
@@ -19,11 +23,13 @@ import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
+import com.aliothmoon.maameow.schedule.service.ShizukuDownMonitor
 import com.aliothmoon.maameow.telemetry.TelemetryController
 import com.aliothmoon.maameow.utils.CrashHandler
 import com.aliothmoon.maameow.utils.NightModeBootstrap
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap
 import com.aliothmoon.maameow.utils.log.LogTreeHolder
+import com.aliothmoon.maameow.data.log.ProcessExitRecorder
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -61,12 +67,15 @@ class MaaApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // 重启中转等子进程不初始化
+        if (getProcessName() != packageName) return
         val app = this
         startKoin {
             androidLogger(if (BuildConfig.DEBUG) Level.DEBUG else Level.NONE)
             androidContext(app)
             modules(appModule, useCaseModule, viewModelModule, floatingWindowModule)
         }
+        Packages.bindOverrides(appSettingsManager.gamePackages)
         // 不等设置读盘，冷启动 receiver / FGS 的日志与崩溃才接得住
         treeHolder.setup()
         crashHandler.init(this)
@@ -74,7 +83,7 @@ class MaaApplication : Application() {
 
         applicationScope.launch(Dispatchers.Main) {
             appSettingsManager.awaitLoaded()
-            LocaleBootstrap.applyPersisted(appSettingsManager)
+            LocaleBootstrap.applyPersisted(app, appSettingsManager)
             NightModeBootstrap.follow(app, applicationScope, appSettingsManager)
             // 背景图解码与后续初始化并行，首帧就能带上
             if (appSettingsManager.customBackgroundEnabled.value) get<BackgroundImageStore>()
@@ -85,16 +94,26 @@ class MaaApplication : Application() {
         }
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // 系统配置变化会重置回系统语言
+        LocaleBootstrap.syncApplicationResources(this)
+    }
+
     private fun postCreateApplication() {
         telemetry.setup()
+        applicationScope.launch { get<ProcessExitRecorder>().recordSelf() }
         RemoteServiceManager.initialize(this, appSettingsManager, pathConfig)
         overlayController.setup()
         unifiedStateDispatcher.start()
+        get<GameMetadataLoader>().start()
+        get<HotUpdateSync>().start()
         taskEndRegistry.start()
         gameMuteCoordinator.startAutoRestore()
         depotRepository.start()
         operBoxRepository.start()
         cleanCachedUpdateApks()
+        get<ShizukuDownMonitor>().start(applicationScope)
         applicationScope.launch {
             crashHandler.cleanOldCrashLogs()
             get<MaaSessionLogger>().cleanupOldLogs()

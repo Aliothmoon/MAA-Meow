@@ -25,6 +25,7 @@ class MaaCallbackDispatcher(
     private val notificationCenter: MaaNotificationCenter,
     private val gameDataReporter: GameDataReporter,
     private val telemetry: RunTelemetry,
+    private val setParamsErrors: SetParamsErrorSignal,
 ) {
 
     fun onEvent(msg: Int, json: String?) {
@@ -142,7 +143,10 @@ class MaaCallbackDispatcher(
     }
 
     private fun handleSubTaskError(details: JSONObject?) {
-        details?.let { subTaskHandler.onSubTaskError(it) }
+        details ?: return
+        subTaskHandler.onSubTaskError(details)
+        // 拒收原因入日志后才唤醒收尾
+        if (details.getIntValue("taskid", -1) == 0) setParamsErrors.mark()
     }
 
     private fun handleSubTaskStart(details: JSONObject?) {

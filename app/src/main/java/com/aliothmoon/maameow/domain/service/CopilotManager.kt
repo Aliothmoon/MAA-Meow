@@ -4,7 +4,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.CopilotApiService
 import com.aliothmoon.maameow.data.model.CopilotConfig
 import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
-import com.aliothmoon.maameow.data.model.copilot.CopilotOperatorRequirements
+import com.aliothmoon.maameow.data.model.copilot.CopilotOperator
 import com.aliothmoon.maameow.data.model.copilot.CopilotTaskData
 import com.aliothmoon.maameow.data.repository.CopilotRepository
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
@@ -13,7 +13,6 @@ import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.LocalizedException
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -63,9 +62,21 @@ sealed class CopilotRequestException(message: String, cause: Throwable? = null) 
         CopilotRequestException(detail ?: "json error", cause)
 }
 
+data class OperatorPromotion(
+    val elite: Int,
+    val level: Int,
+)
+
 data class OperatorDisplayItem(
     val name: String,
-    val tags: List<String>,
+    /** 组内干员与无练度要求时为空 */
+    val promotion: OperatorPromotion?,
+    /** 0 为不带技能 */
+    val skill: Int,
+    /** 1..7 技能等级，8..10 专精 1..3；不带技能时为空 */
+    val skillLevel: Int?,
+    /** 0 为不带模组，1..5 依次对应 χ γ α Δ β */
+    val module: Int?,
 )
 
 data class OperatorSummaryData(
@@ -95,6 +106,9 @@ class CopilotManager(
         /** 同 WPF BVRegex；\b 防止命中 nav12 之类 */
         private val BILIBILI_VIDEO_ID_REGEX =
             Regex("""\b(?:av\d+|bv[a-z0-9]{10})(?:/\?p=\d+)?""", RegexOption.IGNORE_CASE)
+
+        /** χ γ α Δ β */
+        private const val MODULE_COUNT = 5
     }
 
     // ===== 作业解析 =====
@@ -225,10 +239,12 @@ class CopilotManager(
 
     // ===== 任务参数构建 =====
 
+    /** [operBoxDataPath] 为 core 侧路径，非空即启用一图流数据辅助编队 */
     fun buildSingleTask(
         taskType: MaaTaskType,
         filePath: String,
-        config: CopilotConfig
+        config: CopilotConfig,
+        operBoxDataPath: String? = null,
     ): MaaTaskParams {
         if (taskType == MaaTaskType.PARADOX_COPILOT) {
             return MaaTaskParams(
@@ -252,7 +268,8 @@ class CopilotManager(
                     // 与 WPF 一致：1~4 直接透传，0 表示不指定
                     put("formation_index", config.formationIndex)
                 }
-                put("user_additional", parseUserAdditional(config))
+                operBoxDataPath?.let { put("operbox_data_path", it) }
+                userAdditionalParam(config)?.let { put("user_additional", it) }
             }.toString()
         )
     }
@@ -260,7 +277,8 @@ class CopilotManager(
     fun buildListTask(
         tabIndex: Int,
         items: List<CopilotListItem>,
-        config: CopilotConfig
+        config: CopilotConfig,
+        operBoxDataPath: String? = null,
     ): List<MaaTaskParams> {
         // 上游 #16985: 每个作业项携带其在完整列表中的稳定下标 id(从0起), core 据此回传当前执行项,
         // 用于跳过失败作业后仍能把"成功"归属到正确项。坐标系须与 onCopilotTaskSuccess 对全列表取下标一致。
@@ -312,7 +330,8 @@ class CopilotManager(
                     if (config.useFormation) {
                         put("formation_index", config.formationIndex)
                     }
-                    put("user_additional", parseUserAdditional(config))
+                    operBoxDataPath?.let { put("operbox_data_path", it) }
+                    userAdditionalParam(config)?.let { put("user_additional", it) }
                 }.toString()
             )
         )
@@ -378,23 +397,9 @@ class CopilotManager(
      * 对齐 WPF CopilotModel.Output() 的展示逻辑
      */
     fun getOperatorSummary(data: CopilotTaskData): OperatorSummaryData {
-        val operators = data.opers.map { oper ->
-            val req = oper.requirements
-            OperatorDisplayItem(
-                name = oper.name,
-                tags = buildOperatorTags(req, skill = oper.skill, showLevel = true)
-            )
-        }
-
+        val operators = data.opers.map { toDisplayItem(it, showPromotion = true) }
         val groups = data.groups.map { group ->
-            val groupOpers = group.opers.map { oper ->
-                val req = oper.requirements
-                OperatorDisplayItem(
-                    name = oper.name,
-                    tags = buildOperatorTags(req, skill = oper.skill, showLevel = false)
-                )
-            }
-            group.name to groupOpers
+            group.name to group.opers.map { toDisplayItem(it, showPromotion = false) }
         }
 
         return OperatorSummaryData(
@@ -404,32 +409,30 @@ class CopilotManager(
         )
     }
 
-    private fun buildOperatorTags(
-        req: CopilotOperatorRequirements?,
-        skill: Int,
-        showLevel: Boolean
-    ): List<String> {
-        val tags = mutableListOf<String>()
-        if (showLevel && req != null && (req.elite > 0 || req.level > 0)) {
-            tags.add("精 ${req.elite} ${req.level}")
-        }
-        tags.add("技能 $skill")
-        if (req != null && req.skillLevel in 1..10) {
-            tags.add("技能 Lv.${req.skillLevel}")
-        }
-        if (req != null && req.module >= 0) {
-            val moduleNames = arrayOf("χ", "γ", "α", "Δ", "β")
-            when (req.module) {
-                0 -> tags.add("无模组")
-                in 1..moduleNames.size -> tags.add("模组 ${moduleNames[req.module - 1]}")
-            }
-        }
-        return tags
+    private fun toDisplayItem(oper: CopilotOperator, showPromotion: Boolean): OperatorDisplayItem {
+        val req = oper.requirements
+        return OperatorDisplayItem(
+            name = oper.name,
+            promotion = req?.takeIf { showPromotion && (it.elite > 0 || it.level > 0) }
+                ?.let { OperatorPromotion(it.elite, it.level) },
+            skill = oper.skill,
+            skillLevel = req?.skillLevel?.takeIf { oper.skill > 0 && it in 1..10 },
+            module = req?.module?.takeIf { it in 0..MODULE_COUNT },
+        )
     }
 
-    private fun parseUserAdditional(config: CopilotConfig): JsonElement {
-        // TODO: 恢复并重构“追加自定义干员”逻辑
-        //  接线时记得补 getCharacterByNameOrAlias 归一化，上游 #18180 起干员名可能是外服名
-        return JsonArray(emptyList())
+    /** core 只认 name 与 skill，且仅在自动编队时生效；名字由调用方归一化为简中名 */
+    private fun userAdditionalParam(config: CopilotConfig): JsonArray? {
+        if (!config.formation || !config.addUserAdditional) return null
+        val opers = config.userAdditionalOpers.filter { it.name.isNotBlank() }
+        if (opers.isEmpty()) return null
+        return buildJsonArray {
+            opers.forEach { oper ->
+                add(buildJsonObject {
+                    put("name", oper.name)
+                    put("skill", oper.skill.coerceIn(0, 3))
+                })
+            }
+        }
     }
 }

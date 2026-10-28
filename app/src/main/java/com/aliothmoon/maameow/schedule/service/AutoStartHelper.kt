@@ -6,10 +6,10 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.SystemClock
 import android.provider.Settings
 import androidx.core.content.edit
+import com.aliothmoon.maameow.utils.device.Manufacturer
 
 /**
  * 国产 ROM 自启动设置页面引导
@@ -21,6 +21,7 @@ import androidx.core.content.edit
  */
 object AutoStartHelper {
 
+    /** [id] 须唯一：同厂商多个候选页要分开取 id，[intentFor] 按 id 取回 */
     data class OemEntry(val id: String, val intent: Intent)
 
     private val AUTOSTART_INTENTS = listOf(
@@ -54,6 +55,16 @@ object AutoStartHelper {
                 )
             ),
         ),
+        // OnePlus 并入 ColorOS 前
+        OemEntry(
+            "oneplus",
+            Intent().setComponent(
+                ComponentName(
+                    "com.oneplus.security",
+                    "com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity"
+                )
+            ),
+        ),
         // Vivo OriginOS / FuntouchOS
         OemEntry(
             "vivo",
@@ -64,6 +75,16 @@ object AutoStartHelper {
                 )
             ),
         ),
+        // Vivo 旧版 i管家
+        OemEntry(
+            "vivo_iqoo",
+            Intent().setComponent(
+                ComponentName(
+                    "com.iqoo.secure",
+                    "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager"
+                )
+            ),
+        ),
         // Huawei EMUI / HarmonyOS
         OemEntry(
             "huawei",
@@ -71,6 +92,25 @@ object AutoStartHelper {
                 ComponentName(
                     "com.huawei.systemmanager",
                     "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"
+                )
+            ),
+        ),
+        // Huawei 旧版 EMUI
+        OemEntry(
+            "huawei_appcontrol",
+            Intent().setComponent(
+                ComponentName(
+                    "com.huawei.systemmanager",
+                    "com.huawei.systemmanager.appcontrol.activity.StartupAppControlActivity"
+                )
+            ),
+        ),
+        OemEntry(
+            "huawei_protect",
+            Intent().setComponent(
+                ComponentName(
+                    "com.huawei.systemmanager",
+                    "com.huawei.systemmanager.optimize.process.ProtectActivity"
                 )
             ),
         ),
@@ -114,20 +154,18 @@ object AutoStartHelper {
                 )
             ),
         ),
+        OemEntry(
+            "zte_autorun",
+            Intent().setComponent(
+                ComponentName(
+                    "com.zte.heartyservice",
+                    "com.zte.heartyservice.autorun.AppAutoRunManager"
+                )
+            ),
+        ),
     )
 
-    private val RESTRICTIVE_MANUFACTURERS = setOf(
-        "xiaomi", "redmi", "oppo", "realme", "oneplus",
-        "vivo", "iqoo", "huawei", "honor", "samsung",
-        "meizu", "smartisan", "letv", "zte", "nubia",
-    )
-
-    fun isKnownRestrictiveManufacturer(): Boolean {
-        val manufacturer = Build.MANUFACTURER.lowercase()
-        return manufacturer in RESTRICTIVE_MANUFACTURERS
-    }
-
-    /** 命中即停：一台设备只会属于一家厂商，全扫要白做 8 次跨进程 resolveActivity */
+    /** 命中即停：一台设备只会属于一家厂商，全扫要白做多次跨进程 resolveActivity */
     fun resolvableOemIds(context: Context): List<String> = listOfNotNull(
         AUTOSTART_INTENTS.firstOrNull { canLaunch(context, it.intent) }?.id
     )
@@ -150,7 +188,7 @@ object AutoStartHelper {
 
     /** null = 无需引导 */
     fun resolveTarget(context: Context): AutoStartTarget? =
-        AutoStartResolution.select(resolvableOemIds(context), isKnownRestrictiveManufacturer())
+        AutoStartResolution.select(resolvableOemIds(context), Manufacturer.isKnownRestrictive())
 
     private fun intentFor(context: Context, target: AutoStartTarget): Intent? = when (target) {
         is AutoStartTarget.Oem -> AUTOSTART_INTENTS.firstOrNull { it.id == target.id }?.intent

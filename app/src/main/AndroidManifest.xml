@@ -91,6 +91,12 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".utils.RestartActivity"
+            android:exported="false"
+            android:process=":restart"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <service
             android:name=".service.AccessibilityHelperService"
             android:exported="false"
@@ -123,6 +129,16 @@
                 <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
+
+        <!-- ShizukuDownMonitor 排的检查闹钟，显式投递 -->
+        <receiver
+            android:name=".schedule.receiver.ShizukuCheckReceiver"
+            android:exported="false" />
+
+        <!-- 静默启动通知倒计时的按钮，显式投递 -->
+        <receiver
+            android:name=".schedule.receiver.ScheduleCountdownActionReceiver"
+            android:exported="false" />
 
 
         <!-- 定时任务执行服务 -->
@@ -180,7 +196,9 @@
         <package android:name="com.miui.securitycenter" />
         <package android:name="com.coloros.safecenter" />
         <package android:name="com.oppo.safe" />
+        <package android:name="com.oneplus.security" />
         <package android:name="com.vivo.permissionmanager" />
+        <package android:name="com.iqoo.secure" />
         <package android:name="com.huawei.systemmanager" />
         <package android:name="com.hihonor.systemmanager" />
         <package android:name="com.samsung.android.lool" />

@@ -1,15 +1,18 @@
 package com.aliothmoon.maameow
 
+import android.os.IBinder
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
-import com.aliothmoon.maameow.data.resource.ActivityManager
-import com.aliothmoon.maameow.data.resource.ItemHelper
+import com.aliothmoon.maameow.data.resource.HotUpdateSync
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.domain.models.ClientResourceProfile
 import com.aliothmoon.maameow.domain.service.CoreDataPusher
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
+import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.remote.SetupResult
+import com.aliothmoon.maameow.utils.JsonUtils
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -20,6 +23,9 @@ import io.mockk.unmockkObject
 import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -37,14 +43,48 @@ class MaaResourceLoaderTest {
     }
 
     @Test
-    fun load_usesSelectedDisplayLanguage_forClientResources() = runBlocking {
-        withEnv(AppSettingsManager.AppLanguage.EN) { env ->
-            val result = env.loader.load("YoStarEN")
+    fun ensureLoaded_reloads_afterHotUpdateCommitted() = runBlocking {
+        withEnv { env ->
+            assertTrue(env.loader.load("Official").isSuccess)
+            env.loadedDirs.clear()
+            assertTrue(env.loader.ensureLoaded("Official").isSuccess)
+            assertTrue(env.loadedDirs.isEmpty())
 
-            assertTrue(result.isSuccess)
-            coVerify(exactly = 1) { env.resourceDataManager.load("YoStarEN", "en-us") }
-            coVerify(exactly = 1) { env.activityManager.load("YoStarEN") }
-            coVerify(exactly = 1) { env.itemHelper.load() }
+            env.hotUpdateRevision.value++
+            assertTrue(env.loader.ensureLoaded("Official").isSuccess)
+            assertTrue(env.loadedDirs.isNotEmpty())
+            verify(exactly = 0) { RemoteServiceManager.unbind() }
+        }
+    }
+
+    @Test
+    fun permanentFailure_retriesOnlyAfterFilesChange() = runBlocking {
+        withEnv { env ->
+            env.resourceReady.set(false)
+            assertTrue(env.loader.load("Official").isFailure)
+            assertTrue((env.loader.state.value as MaaResourceLoader.State.Failed).permanent)
+
+            // 文件没动过，不白重试
+            env.resourceReady.set(true)
+            assertTrue(env.loader.ensureLoaded("Official").isFailure)
+            assertTrue(env.loadedDirs.isEmpty())
+
+            // 重新初始化或资源更新后再试
+            env.resourceRevision.value++
+            assertTrue(env.loader.ensureLoaded("Official").isSuccess)
+            assertTrue(env.loadedDirs.isNotEmpty())
+        }
+    }
+
+    @Test
+    fun ensureLoaded_reloads_afterResourceUpdated() = runBlocking {
+        withEnv { env ->
+            assertTrue(env.loader.load("Official").isSuccess)
+            env.loadedDirs.clear()
+
+            env.resourceRevision.value++
+            assertTrue(env.loader.ensureLoaded("Official").isSuccess)
+            assertTrue(env.loadedDirs.isNotEmpty())
         }
     }
 
@@ -108,13 +148,77 @@ class MaaResourceLoaderTest {
     }
 
     @Test
+    fun load_addsGamePackageLayerRightAfterMain_whenCustomized() = runBlocking {
+        withEnv(gamePackages = mapOf("YoStarJP" to "com.example.jp")) { env ->
+            assertTrue(env.loader.load("YoStarJP").isSuccess)
+            // 必须紧跟主资源，后面的层才能照常覆盖 options
+            assertEquals("game_package", File(env.loadedDirs[1]).name)
+            assertTrue(File(env.loadedDirs[1], "resource/config.json").isFile)
+        }
+    }
+
+    @Test
+    fun load_skipsAndClearsGamePackageLayer_whenNotCustomized() = runBlocking {
+        withEnv { env ->
+            val stale = File(env.rootDir, "game_package/resource/config.json")
+            stale.parentFile!!.mkdirs()
+            stale.writeText("{}")
+
+            assertTrue(env.loader.load("Official").isSuccess)
+            assertTrue(env.loadedDirs.none { it.contains("game_package") })
+            assertFalse(stale.exists())
+        }
+    }
+
+    @Test
+    fun load_mapsGamePackageLayer_whenCoreSeparated() = runBlocking {
+        withEnv(coreSeparated = true, gamePackages = mapOf("Official" to "com.example.cn")) { env ->
+            assertTrue(env.loader.load("Official").isSuccess)
+            assertEquals("/data/local/tmp/maameow/game_package", env.loadedDirs[1].replace(File.separatorChar, '/'))
+        }
+    }
+
+    @Test
+    fun ensureLoaded_reloads_afterGamePackagesChanged() = runBlocking {
+        withEnv { env ->
+            assertTrue(env.loader.load("Official").isSuccess)
+            env.loadedDirs.clear()
+
+            // 不经 invalidate，Ready 状态下改包名也要重载
+            env.gamePackages.value = mapOf("Official" to "com.example.cn")
+            assertTrue(env.loader.ensureLoaded("Official").isSuccess)
+            assertEquals("game_package", File(env.loadedDirs[1]).name)
+            verify(exactly = 0) { RemoteServiceManager.unbind() }
+
+            env.loadedDirs.clear()
+            assertTrue(env.loader.ensureLoaded("Official").isSuccess)
+            assertTrue(env.loadedDirs.isEmpty())
+        }
+    }
+
+    @Test
+    fun gamePackageConfig_keepsRequiredFields_andOnlyOverridesPackageName() {
+        val config = JsonUtils.common.parseToJsonElement(
+            MaaResourceLoader.gamePackageConfig(BASE_CONFIG, mapOf("YoStarKR" to "com.example.kr"))
+        ).jsonObject
+
+        assertEquals(setOf("version", "options", "packageName", "connection"), config.keys)
+        assertEquals(JsonUtils.common.parseToJsonElement(BASE_CONFIG).jsonObject["options"], config["options"])
+        assertEquals(
+            mapOf("YoStarKR" to "com.example.kr"),
+            config.getValue("packageName").jsonObject.mapValues { it.value.jsonPrimitive.content },
+        )
+        assertTrue(config.getValue("connection").jsonArray.isEmpty())
+    }
+
+    @Test
     fun resourceProfile_groupsBaseOnlyClientsTogether() {
-        assertEquals("", MaaResourceLoader.resourceProfileOf(""))
-        assertEquals("", MaaResourceLoader.resourceProfileOf("Official"))
-        assertEquals("", MaaResourceLoader.resourceProfileOf("Bilibili"))
-        assertEquals("YoStarJP", MaaResourceLoader.resourceProfileOf("YoStarJP"))
-        assertEquals("YoStarEN", MaaResourceLoader.resourceProfileOf("YoStarEN"))
-        assertEquals("txwy", MaaResourceLoader.resourceProfileOf("txwy"))
+        assertEquals("", ClientResourceProfile.of(""))
+        assertEquals("", ClientResourceProfile.of("Official"))
+        assertEquals("", ClientResourceProfile.of("Bilibili"))
+        assertEquals("YoStarJP", ClientResourceProfile.of("YoStarJP"))
+        assertEquals("YoStarEN", ClientResourceProfile.of("YoStarEN"))
+        assertEquals("txwy", ClientResourceProfile.of("txwy"))
     }
 
     @Test
@@ -254,35 +358,82 @@ class MaaResourceLoaderTest {
         }
     }
 
+    // Shizuku 重启后直接 Connected -> Connecting -> Connected，新进程没加载过资源
+    @Test
+    fun ensureLoaded_reloads_whenServiceReplacedWithoutDisconnect() = runBlocking {
+        withEnv { env ->
+            assertTrue(env.loader.load("Official").isSuccess)
+            env.replaceService()
+            env.loadedDirs.clear()
+
+            assertTrue(env.loader.ensureLoaded("Official").isSuccess)
+            assertTrue(env.loadedDirs.isNotEmpty())
+            // 新进程是干净的，不该再换一次
+            verify(exactly = 0) { RemoteServiceManager.unbind() }
+        }
+    }
+
+    @Test
+    fun resetIfStale_keepsReady_forSameService() = runBlocking {
+        withEnv { env ->
+            assertTrue(env.loader.load("Official").isSuccess)
+            assertFalse(env.loader.resetIfStale(RemoteServiceManager.getInstanceOrNull()!!))
+            assertTrue(env.loader.state.value is MaaResourceLoader.State.Ready)
+        }
+    }
+
+    @Test
+    fun resetIfStale_dropsReady_whenServiceReplaced() = runBlocking {
+        withEnv { env ->
+            assertTrue(env.loader.load("YoStarJP").isSuccess)
+            val fresh = env.replaceService()
+
+            assertTrue(env.loader.resetIfStale(fresh))
+            assertTrue(env.loader.state.value is MaaResourceLoader.State.NotLoaded)
+            // 旧进程的资源档也一并作废，换客户端不该多重启
+            assertTrue(env.loader.load("Official").isSuccess)
+            verify(exactly = 0) { RemoteServiceManager.unbind() }
+        }
+    }
+
     private class Env(
+        val rootDir: File,
         val loader: MaaResourceLoader,
+        val gamePackages: MutableStateFlow<Map<String, String>>,
         val loadedDirs: MutableList<String>,
-        val resourceDataManager: ResourceDataManager,
-        val itemHelper: ItemHelper,
-        val activityManager: ActivityManager,
+        val hotUpdateRevision: MutableStateFlow<Int>,
+        val resourceRevision: MutableStateFlow<Int>,
+        val resourceReady: AtomicBoolean,
         /** 置 true 模拟换进程后服务没能回来 */
         val rebindFails: AtomicBoolean,
         val coreDataPusher: CoreDataPusher,
+        /** 换一个新提权进程并直接置 Connected，不经过 Disconnected */
+        val replaceService: () -> RemoteService,
     )
 
     private suspend fun withEnv(
         appLanguage: AppSettingsManager.AppLanguage = AppSettingsManager.AppLanguage.ZH,
         setupCode: Int = SetupResult.OK,
         coreSeparated: Boolean = false,
+        gamePackages: Map<String, String> = emptyMap(),
         block: suspend (Env) -> Unit,
     ) {
         val rootDir = Files.createTempDirectory("maa-resource-loader-test").toFile()
         try {
             File(rootDir, "resource").mkdirs()
+            File(rootDir, "resource/config.json").writeText(BASE_CONFIG)
             File(rootDir, "cache/resource").mkdirs()
             listOf("YoStarJP", "YoStarEN").forEach {
                 File(rootDir, "resource/global/$it/resource").mkdirs()
                 File(rootDir, "cache/resource/global/$it/resource").mkdirs()
             }
 
+            val resourceReady = AtomicBoolean(true)
+            val gamePackagesFlow = MutableStateFlow(gamePackages)
             val pathConfig = mockk<MaaPathConfig> {
                 every { this@mockk.rootDir } returns rootDir.absolutePath
-                every { isResourceReady } returns true
+                every { resourceDir } returns File(rootDir, "resource").absolutePath
+                every { isResourceReady } answers { resourceReady.get() }
                 every { cacheDir } returns File(rootDir, "cache").absolutePath
                 every { cacheResourceDir } returns File(rootDir, "cache/resource").absolutePath
                 every { overridesDir } returns File(rootDir, "overrides").absolutePath
@@ -299,14 +450,15 @@ class MaaResourceLoaderTest {
                 every { displayLanguage } returns ResourceDataManager.displayLanguageCode(appLanguage)
                 every { forceFullscreenOnVirtualDisplay } returns MutableStateFlow(false)
                 every { tasksOverrideEnabled } returns MutableStateFlow(false)
+                every { this@mockk.gamePackages } returns gamePackagesFlow
             }
             val chainState = mockk<TaskChainState> {
                 every { clientType } returns "Official"
             }
-            val itemHelper = mockk<ItemHelper>()
-            val resourceDataManager = mockk<ResourceDataManager>()
-            val activityManager = mockk<ActivityManager>()
-            val service = mockk<RemoteService>()
+            val hotUpdateRevision = MutableStateFlow(0)
+            val hotUpdateSync = mockk<HotUpdateSync> { every { revision } returns hotUpdateRevision }
+            val resourceRevision = MutableStateFlow(0)
+            val resourceInitService = mockk<ResourceInitService> { every { revision } returns resourceRevision }
             every { pathConfig.isCoreSeparated } returns coreSeparated
             every { pathConfig.coreRootDir } answers {
                 if (coreSeparated) "/data/local/tmp/maameow" else rootDir.absolutePath
@@ -319,19 +471,22 @@ class MaaResourceLoaderTest {
             val coreDataPusher = mockk<CoreDataPusher> {
                 coEvery { prepare(any()) } returns true
             }
-            val maaCore = mockk<MaaCoreService>()
             val loadedDirs = mutableListOf<String>()
 
-            coEvery { resourceDataManager.load(any(), any()) } returns Unit
-            coEvery { itemHelper.load() } returns Unit
-            coEvery { activityManager.load(any()) } returns Unit
-            every { service.setup(any(), any()) } returns setupCode
-            justRun { service.setForceFullscreenOnVirtualDisplay(any()) }
-            every { service.maaCoreService } returns maaCore
-            every { maaCore.LoadResource(any()) } answers {
-                loadedDirs += firstArg<String>()
-                true
+            fun newService(): RemoteService {
+                val maaCore = mockk<MaaCoreService>()
+                every { maaCore.LoadResource(any()) } answers {
+                    loadedDirs += firstArg<String>()
+                    true
+                }
+                return mockk<RemoteService> {
+                    every { asBinder() } returns mockk<IBinder>()
+                    every { setup(any(), any()) } returns setupCode
+                    justRun { setForceFullscreenOnVirtualDisplay(any()) }
+                    every { maaCoreService } returns maaCore
+                }
             }
+            var service = newService()
 
             // 解绑置 Disconnected，取到服务即视为 Connected
             val serviceState = MutableStateFlow<RemoteServiceManager.ServiceState>(
@@ -344,6 +499,9 @@ class MaaResourceLoaderTest {
             every { RemoteServiceManager.unbind() } answers {
                 serviceState.value = RemoteServiceManager.ServiceState.Disconnected
             }
+            every { RemoteServiceManager.getInstanceOrNull() } answers {
+                (serviceState.value as? RemoteServiceManager.ServiceState.Connected)?.service
+            }
             coEvery { RemoteServiceManager.useRemoteService<Result<Unit>>(any(), any()) } coAnswers {
                 if (rebindFails.get()) error("elevated service gone")
                 serviceState.value = RemoteServiceManager.ServiceState.Connected(service)
@@ -352,25 +510,42 @@ class MaaResourceLoaderTest {
 
             block(
                 Env(
+                    rootDir = rootDir,
+                    gamePackages = gamePackagesFlow,
                     loader = MaaResourceLoader(
                         pathConfig = pathConfig,
                         appSettings = appSettings,
                         chainState = chainState,
-                        itemHelper = itemHelper,
-                        resourceDataManager = resourceDataManager,
-                        activityManager = activityManager,
+                        hotUpdateSync = hotUpdateSync,
+                        resourceInitService = resourceInitService,
                         coreDataPusher = coreDataPusher,
                     ),
                     loadedDirs = loadedDirs,
-                    resourceDataManager = resourceDataManager,
-                    itemHelper = itemHelper,
-                    activityManager = activityManager,
+                    hotUpdateRevision = hotUpdateRevision,
+                    resourceRevision = resourceRevision,
+                    resourceReady = resourceReady,
                     rebindFails = rebindFails,
                     coreDataPusher = coreDataPusher,
+                    replaceService = {
+                        service = newService()
+                        serviceState.value = RemoteServiceManager.ServiceState.Connected(service)
+                        service
+                    },
                 )
             )
         } finally {
             rootDir.deleteRecursively()
         }
+    }
+
+    private companion object {
+        val BASE_CONFIG = """
+            {
+              "version": "1.0",
+              "options": { "taskDelay": 500, "controlDelayRange": [0, 0] },
+              "packageName": { "Official": "com.hypergryph.arknights", "YoStarKR": "com.YoStarKR.Arknights" },
+              "connection": [ { "configName": "General" } ]
+            }
+        """.trimIndent()
     }
 }

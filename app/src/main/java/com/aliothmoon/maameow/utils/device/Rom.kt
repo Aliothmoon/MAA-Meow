@@ -1,18 +1,23 @@
-package com.aliothmoon.maameow.telemetry
+package com.aliothmoon.maameow.utils.device
 
-internal data class Rom(val name: String, val version: String)
+internal data class Rom(val name: String, val version: String) {
+    val isXiaomi: Boolean get() = name == "hyperos" || name == "miui"
+}
 
 /**
- * 厂商 ROM 的类型与版本
+ * 厂商 ROM 的类型与版本，两个进程共用
  *
- * 连接提权服务失败、定时任务不触发、后台被杀多半跟 ROM 有关，Android 版本号分不出是哪家
+ * 提权失败、定时不触发、后台被杀多半跟 ROM 有关，Android 版本号分不出是哪家
  */
-internal object TelemetryRom {
+internal object RomDetector {
 
     private const val OTHER = "other"
 
+    /** 系统属性开机后不变，查一次就够 */
+    val current: Rom by lazy { detect() }
+
     /** 顺序有讲究：HyperOS 仍带着 MIUI 的属性，鸿蒙仍带着 EMUI 的属性 */
-    fun detect(prop: (String) -> String = ::systemProperty): Rom {
+    fun detect(prop: (String) -> String = SystemProps::get): Rom {
         prop("ro.mi.os.version.name").ifNotBlank { return Rom("hyperos", it.removePrefix("OS")) }
         prop("ro.miui.ui.version.name").ifNotBlank { return Rom("miui", it) }
         // vivo 的 os.name 在 OriginOS 上仍报 Funtouch，以 display id 为准
@@ -47,11 +52,4 @@ internal object TelemetryRom {
     private inline fun String.ifNotBlank(block: (String) -> Unit) {
         if (isNotBlank()) block(trim())
     }
-
-    private val getter by lazy {
-        runCatching { Class.forName("android.os.SystemProperties").getMethod("get", String::class.java) }.getOrNull()
-    }
-
-    private fun systemProperty(key: String): String =
-        runCatching { getter?.invoke(null, key) as? String }.getOrNull().orEmpty()
 }

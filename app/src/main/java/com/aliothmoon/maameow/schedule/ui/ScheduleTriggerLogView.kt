@@ -39,7 +39,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -169,6 +173,7 @@ fun ScheduleTriggerLogView(
             }
 
             else -> {
+                val resultLabelWidth = rememberResultLabelWidth(MaterialTheme.typography.labelMedium)
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -182,6 +187,7 @@ fun ScheduleTriggerLogView(
                     items(summaries, key = { it.fileName }) { summary ->
                         SummaryCard(
                             summary = summary,
+                            resultLabelWidth = resultLabelWidth,
                             onClick = { viewModel.onLoadDetail(summary.fileName) },
                             onDelete = { deleteConfirmFileName = summary.fileName }
                         )
@@ -246,9 +252,22 @@ fun ScheduleTriggerLogView(
 
 // ==================== 列表卡片 ====================
 
+/** 结果标签占同样宽度才能逐条左对齐，按当前语言下最长的那个量 */
+@Composable
+private fun rememberResultLabelWidth(style: TextStyle): Dp {
+    val labels = ExecutionResult.entries.map { scheduleExecutionResultLabel(it) } +
+            stringResource(R.string.schedule_result_in_progress)
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    return remember(labels, style, density) {
+        with(density) { labels.maxOf { measurer.measure(it, style, maxLines = 1).size.width }.toDp() }
+    }
+}
+
 @Composable
 private fun SummaryCard(
     summary: TriggerLogSummary,
+    resultLabelWidth: Dp,
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -269,17 +288,20 @@ private fun SummaryCard(
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = summary.header.strategyName,
-                        style = MaterialTheme.typography.titleSmall
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.weight(1f)
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = resultLabel,
                         style = MaterialTheme.typography.labelMedium,
-                        color = resultColor
+                        color = resultColor,
+                        maxLines = 1,
+                        modifier = Modifier.width(resultLabelWidth)
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
@@ -468,6 +490,7 @@ private fun resultColor(result: ExecutionResult) = when (result) {
     ExecutionResult.STARTED -> MaterialTheme.colorScheme.primary
     ExecutionResult.SKIPPED_BUSY,
     ExecutionResult.SKIPPED_LOCKED,
+    ExecutionResult.SKIPPED_BLACKLIST,
     ExecutionResult.CANCELLED -> MaterialTheme.colorScheme.tertiary
 
     ExecutionResult.FAILED_VALIDATION,

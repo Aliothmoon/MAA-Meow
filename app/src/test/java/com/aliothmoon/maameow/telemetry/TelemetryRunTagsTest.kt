@@ -13,4 +13,13 @@ class TelemetryRunTagsTest {
         assertEquals("root", TelemetryRunTags.shizukuIdentity(available = true, granted = true, uid = 0))
         assertEquals("adb", TelemetryRunTags.shizukuIdentity(available = true, granted = true, uid = 2000))
     }
+
+    @Test
+    fun `Shizuku binder 按本进程收到与断开的先后判`() {
+        assertEquals("never_received", TelemetryShizuku.binderState(receivedAt = null, deadAt = null))
+        assertEquals("alive", TelemetryShizuku.binderState(receivedAt = 100, deadAt = null))
+        assertEquals("dead", TelemetryShizuku.binderState(receivedAt = 100, deadAt = 200))
+        // 断过又回来了
+        assertEquals("alive", TelemetryShizuku.binderState(receivedAt = 300, deadAt = 200))
+    }
 }

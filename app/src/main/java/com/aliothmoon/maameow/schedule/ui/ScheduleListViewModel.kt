@@ -97,6 +97,7 @@ class ScheduleListViewModel(
                 ScheduleHealthLogic.failingIssues(
                     ScheduleHealthSnapshot(
                         backendGranted = permissions.remoteAccessGranted,
+                        backendAvailable = permissions.isStartupBackendAvailable(permissions.startupBackend),
                         batteryWhitelist = permissions.batteryWhitelist,
                         notification = permissions.notification,
                         exactAlarmAllowed = exactAlarm,

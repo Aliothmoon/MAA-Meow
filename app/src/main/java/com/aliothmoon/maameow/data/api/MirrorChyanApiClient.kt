@@ -4,6 +4,9 @@ import com.aliothmoon.maameow.data.api.model.MirrorChyanData
 import com.aliothmoon.maameow.data.api.model.MirrorChyanResponse
 import com.aliothmoon.maameow.data.model.update.UpdateError
 import com.aliothmoon.maameow.utils.JsonUtils
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
@@ -22,8 +25,8 @@ class MirrorChyanApiClient(private val httpClient: HttpClientHelper) {
         api: String,
         query: Map<String, String>,
         fetchVersion: Boolean = false
-    ): Result<MirrorChyanData> {
-        return runCatching {
+    ): Result<MirrorChyanData> = withContext(Dispatchers.IO) {
+        runCatching {
             val response = httpClient.get(api, query = query)
 
             response.use { resp ->
@@ -42,6 +45,7 @@ class MirrorChyanApiClient(private val httpClient: HttpClientHelper) {
                 body.data ?: throw MirrorChyanBizException(-1, "数据为空")
             }
         }.onFailure { e ->
+            if (e is CancellationException) throw e
             Timber.e(e, "MirrorChyan API 请求失败: $api")
         }
     }

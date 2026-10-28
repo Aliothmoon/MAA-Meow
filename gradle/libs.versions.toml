@@ -2,7 +2,7 @@
 # Build Tools
 agp = "9.4.1"
 bom = "0.23.6"
-kotlin = "2.4.20"
+kotlin = "2.4.21"
 ksp = "2.3.12"
 
 # AndroidX Core
@@ -24,34 +24,34 @@ navigationCompose = "2.10.2"
 koin = "4.2.2"
 
 # Data & Storage
-datastore = "1.2.1"
+datastore = "1.3.0"
 
 # UI & Window
 window = "1.5.1"
 
 # Third-party libraries
-jna = "5.18.1" # new version uses reflection instead of handle keep 5.18.1
-fastjson2 = "2.0.65"
+jna = "5.18.1" # 5.19.x 只动了桌面平台绑定，Android 没收益
+fastjson2 = "2.0.66.android8"
 shizuku = "13.1.5"
 libsu = "6.0.0"
 floatingX = "2.3.7"
 sonner = "0.4.0"
 timber = "5.0.1"
-okhttp = "5.5.0"
+okhttp = "5.5.1"
 angusMail = "2.0.5"
 angusActivation = "2.0.3"
 jakartaActivationApi = "2.1.4"
-sentry = "8.59.0"
+sentry = "8.61.1"
 
 # GitHub libraries
-composeMarkdown = "0.7.2"
+composeMarkdown = "0.7.3"
 deviceCompat = "2.6"
 xxPermissions = "28.3"
 reorderable = "3.1.0"
 
 # Kotlin libraries
 kotlinxCoroutines = "1.11.0"
-kotlinxSerializationJson = "1.11.0"
+kotlinxSerializationJson = "1.12.0"
 hyperNotification = "1.4"
 
 # Testing

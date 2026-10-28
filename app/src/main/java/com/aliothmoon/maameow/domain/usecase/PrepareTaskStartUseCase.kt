@@ -85,6 +85,7 @@ enum class TaskStartAcknowledgement(val message: UiText) {
     GAME_NOT_INSTALLED(uiTextOf(R.string.task_start_warning_game_not_installed)),
     EYE_PROTECTION_ENABLED(uiTextOf(R.string.task_start_warning_eye_protection_enabled)),
     SMART_RESOLUTION_ENABLED(uiTextOf(R.string.task_start_warning_smart_resolution_enabled)),
+    ADB_INPUT_RESTRICTED(uiTextOf(R.string.task_start_warning_adb_input_restricted)),
 }
 
 /** 拦截原因，文案随枚举走，定时与手动入口共用 */

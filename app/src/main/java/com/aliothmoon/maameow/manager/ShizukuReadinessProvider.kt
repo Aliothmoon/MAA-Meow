@@ -80,10 +80,6 @@ class ShizukuReadinessProvider(
             remoteState.configuredBackend != RemoteBackend.SHIZUKU ->
                 ShizukuReadinessStage.Ready
 
-            // Sui 在启动时已 init：优先告知兼容性，避免被下面的 shizukuAvailable 抢占成 NeedAuth
-            ShizukuManager.isSui ->
-                ShizukuReadinessStage.SuiAvailable
-
             remoteState.shizukuGranted ->
                 ShizukuReadinessStage.Ready
 
@@ -95,8 +91,9 @@ class ShizukuReadinessProvider(
                     ShizukuInstallHelper.checkStatus(appContext, launchPackage)
                 }
                 when (status) {
+                    // Sui 的服务已在，差授权
                     ShizukuInstallHelper.ShizukuStatus.SUI_AVAILABLE ->
-                        ShizukuReadinessStage.SuiAvailable
+                        ShizukuReadinessStage.NeedAuth
 
                     ShizukuInstallHelper.ShizukuStatus.APP_NOT_RUNNING ->
                         ShizukuReadinessStage.NotRunning

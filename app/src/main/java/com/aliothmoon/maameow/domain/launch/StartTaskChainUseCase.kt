@@ -38,6 +38,8 @@ class StartTaskChainUseCase(
         data class Failed(
             val executionResult: ExecutionResult,
             val message: UiText,
+            /** Core 启动阶段失败，「任务出错」通知已经发过 */
+            val startFailureNotified: Boolean = false,
         ) : Result
     }
 
@@ -111,6 +113,7 @@ class StartTaskChainUseCase(
                 executionResult = ExecutionResult.FAILED_START,
                 message = resolveStartResultMessage(startResult)
                     ?: uiTextOf(R.string.task_start_error_start_failed),
+                startFailureNotified = true,
             )
         }
     }

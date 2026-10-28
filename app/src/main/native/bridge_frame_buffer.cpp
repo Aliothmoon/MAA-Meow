@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
@@ -23,6 +24,8 @@ static std::atomic<int> g_reader_counts[FRAME_BUFFER_COUNT] = {0, 0, 0};
 static std::atomic<FrameBuffer *> g_read_buffer{nullptr};
 static std::atomic<int64_t> g_frame_count{0};
 static std::atomic<bool> g_frame_buffers_initialized{false};
+// ReleaseFrameBuffers 正在等的槽位，-1 为没在等
+static std::atomic<int> g_release_slot{-1};
 // 写者有两个：采集线程与 BlankFrame。CommitWriteBuffer 先放开状态再发布，两步之间
 // 另一个写者能把这块刚写好的缓冲抢去改写，所以写者之间串行；读者不拿这把锁
 static std::mutex g_write_mutex;
@@ -253,6 +256,7 @@ void ReleaseFrameBuffers() {
     g_read_buffer.store(nullptr, std::memory_order_release);
 
     for (int i = 0; i < FRAME_BUFFER_COUNT; ++i) {
+        g_release_slot.store(i, std::memory_order_release);
         while (g_buffer_states[i].load(std::memory_order_acquire) == FRAME_STATE_WRITING ||
                g_reader_counts[i].load(std::memory_order_acquire) > 0) {
             std::this_thread::yield();
@@ -262,9 +266,22 @@ void ReleaseFrameBuffers() {
         g_buffer_states[i].store(FRAME_STATE_FREE, std::memory_order_release);
         g_reader_counts[i].store(0, std::memory_order_release);
     }
+    g_release_slot.store(-1, std::memory_order_release);
 
     g_read_buffer.store(nullptr, std::memory_order_release);
     g_frame_count.store(0, std::memory_order_release);
+}
+
+std::string DescribeFrameBufferRelease() {
+    const int slot = g_release_slot.load(std::memory_order_acquire);
+    if (slot < 0 || slot >= FRAME_BUFFER_COUNT) {
+        return {};
+    }
+    char buf[96];
+    snprintf(buf, sizeof(buf), "slot=%d state=%d readers=%d", slot,
+             g_buffer_states[slot].load(std::memory_order_acquire),
+             g_reader_counts[slot].load(std::memory_order_acquire));
+    return buf;
 }
 
 bool WriteHardwareBufferToFrame(AHardwareBuffer *buffer) {

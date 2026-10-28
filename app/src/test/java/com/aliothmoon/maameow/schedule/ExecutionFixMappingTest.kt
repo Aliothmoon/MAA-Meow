@@ -34,6 +34,7 @@ class ExecutionFixMappingTest {
         assertNull(ExecutionFixMapping.fixActionFor(ExecutionResult.STARTED))
         assertNull(ExecutionFixMapping.fixActionFor(ExecutionResult.FAILED_VALIDATION))
         assertNull(ExecutionFixMapping.fixActionFor(ExecutionResult.SKIPPED_BUSY))
+        assertNull(ExecutionFixMapping.fixActionFor(ExecutionResult.SKIPPED_BLACKLIST))
         assertNull(ExecutionFixMapping.fixActionFor(ExecutionResult.CANCELLED))
     }
 }

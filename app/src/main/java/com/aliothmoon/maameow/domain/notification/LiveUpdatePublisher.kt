@@ -14,6 +14,9 @@ interface LiveUpdatePublisher {
     fun build(session: LiveSession): Notification
     fun publish(session: LiveSession)
 
+    /** 不走超级岛 / 实时更新，只发普通通知 */
+    fun publishPlain(session: LiveSession) = publish(session)
+
     /** 影响渲染结果的配置变化（样式、后端选择），不含会话内容 */
     val renderChanges: Flow<Unit>
         get() = emptyFlow()

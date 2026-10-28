@@ -61,6 +61,7 @@ The PR description should include at least the following sections.
 ### Related Issue
 
 - Link the issue with `Closes #123`, `Fixes #123`, or `Related #123`
+- When opening a related issue, follow the [Issue Guidelines](ISSUE_GUIDELINES.md) for its title
 - If there is no issue, explain the source of the request, reproduction steps, or why the change is needed
 
 ### Summary

@@ -1,6 +1,5 @@
-name: Bug 反馈
-description: 提交一个 Bug 报告
-title: "[Bug] "
+name: Bug 反馈（中文）
+description: 使用中文提交可复现的 Bug 报告
 labels: ["bug"]
 body:
   - type: markdown
@@ -8,12 +7,50 @@ body:
       value: |
         感谢您提交 Bug 反馈！请尽量详细地填写以下信息，以帮助我们快速定位和修复问题。
 
+        ## 标题
+
+        标题只需写清**具体故障现象**，提交后会按下方「功能模块」自动补成 `[Bug][模块] 具体故障现象`。
+
+        - 推荐：`启动任务后应用闪退`、`Boss 战结束后任务直接停止`
+        - 不推荐：`有问题`、`无法使用`、`求助`
+
+        完整规则与模块说明见 [Issue 规范](https://github.com/Aliothmoon/MAA-Meow/blob/main/docs/zh-cn/develop/ISSUE_GUIDELINES.md)。
+
+  # label 与选项被 .github/workflows/issue-title.yml 用来补标题，改动需同步
+  - type: dropdown
+    id: module
+    attributes:
+      label: 功能模块
+      description: "选最先出现异常的位置：任务执行出错选对应任务；首页、设置、悬浮窗等界面问题选「界面与设置」"
+      options:
+        - 开始唤醒
+        - 理智作战
+        - 自动公招
+        - 基建换班
+        - 信用收支
+        - 领取奖励
+        - 自动肉鸽
+        - 生息演算
+        - 其他长草任务
+        - 自动战斗
+        - 小工具
+        - 定时任务
+        - 前台模式
+        - 后台模式
+        - 权限与服务连接
+        - 通知
+        - 安装与更新
+        - 界面与设置
+        - 其他
+    validations:
+      required: true
+
   - type: input
     id: android-version
     attributes:
       label: Android 版本
-      description: "设备的 Android 系统版本（如 Android 14 / API 34）"
-      placeholder: "Android 14"
+      description: "设备的 Android 系统版本，可附 ROM 版本"
+      placeholder: "Android 14 / HyperOS 2"
     validations:
       required: true
 
@@ -26,12 +63,14 @@ body:
     validations:
       required: true
 
-  - type: input
-    id: app-version
+  - type: dropdown
+    id: backend
     attributes:
-      label: MAA Meow 版本
-      description: "当前使用的 App 版本号"
-      placeholder: "v0.1.1"
+      label: 权限方案
+      description: "设置 → 运行环境 → 启动模式"
+      options:
+        - Shizuku
+        - Root
     validations:
       required: true
 
@@ -50,8 +89,8 @@ body:
     id: description
     attributes:
       label: 问题描述
-      description: "简要描述遇到的问题"
-      placeholder: "执行某个任务时 App 崩溃 / 某功能无法正常工作..."
+      description: "补充标题未能说明的触发条件、实际结果和影响；不要只重复标题"
+      placeholder: "在什么情况下执行了什么操作，实际发生了什么，以及问题造成了什么影响"
     validations:
       required: true
 
@@ -60,10 +99,10 @@ body:
     attributes:
       label: 复现步骤
       description: "请详细描述如何复现此问题"
-      value: |
-        1. 
-        2. 
-        3. 
+      placeholder: |
+        1. 打开……
+        2. 点击……
+        3. 观察到……
     validations:
       required: true
 

@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.domain.service
 
 import com.aliothmoon.maameow.data.model.CopilotConfig
+import com.aliothmoon.maameow.data.model.UserAdditionalOper
 import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.utils.JsonUtils
@@ -62,5 +63,50 @@ class CopilotManagerBuildListTaskTest {
 
         assertEquals(1, tasks.size)
         assertEquals(MaaTaskType.COPILOT, tasks.single().type)
+    }
+
+    @Test
+    fun operBoxDataPath_isSentOnlyWhenGiven() {
+        fun params(path: String?) = JsonUtils.common.parseToJsonElement(
+            manager.buildListTask(tabIndex = 0, items = items, config = CopilotConfig(), operBoxDataPath = path)
+                .single().params
+        ).jsonObject
+        fun singleParams(path: String?) = JsonUtils.common.parseToJsonElement(
+            manager.buildSingleTask(MaaTaskType.COPILOT, "/c/1.json", CopilotConfig(), path).params
+        ).jsonObject
+
+        assertEquals("/m/operbox/OperBoxData.json", params("/m/operbox/OperBoxData.json").getValue("operbox_data_path").jsonPrimitive.content)
+        assertEquals("/m/operbox/OperBoxData.json", singleParams("/m/operbox/OperBoxData.json").getValue("operbox_data_path").jsonPrimitive.content)
+        // 不启用时不带该字段，core 缺省为空串
+        assertEquals(false, "operbox_data_path" in params(null))
+        assertEquals(false, "operbox_data_path" in singleParams(null))
+    }
+
+    @Test
+    fun userAdditional_sentInOrderOnlyWhenEnabledWithFormation() {
+        val enabled = CopilotConfig(
+            addUserAdditional = true,
+            userAdditionalOpers = listOf(
+                UserAdditionalOper("能天使", 3),
+                UserAdditionalOper("", 1),
+                UserAdditionalOper("史尔特尔", 5),
+            ),
+        )
+        fun listParams(config: CopilotConfig) = JsonUtils.common.parseToJsonElement(
+            manager.buildListTask(tabIndex = 0, items = items, config = config).single().params
+        ).jsonObject
+        fun singleParams(config: CopilotConfig) = JsonUtils.common.parseToJsonElement(
+            manager.buildSingleTask(MaaTaskType.COPILOT, "/c/1.json", config).params
+        ).jsonObject
+
+        listOf(listParams(enabled), singleParams(enabled)).forEach { params ->
+            val opers = params.getValue("user_additional").jsonArray.map { it.jsonObject }
+            assertEquals(listOf("能天使", "史尔特尔"), opers.map { it.getValue("name").jsonPrimitive.content })
+            // 越界技能收到 0..3
+            assertEquals(listOf(3, 3), opers.map { it.getValue("skill").jsonPrimitive.int })
+        }
+        assertEquals(false, "user_additional" in listParams(enabled.copy(addUserAdditional = false)))
+        assertEquals(false, "user_additional" in listParams(enabled.copy(formation = false)))
+        assertEquals(false, "user_additional" in singleParams(enabled.copy(userAdditionalOpers = emptyList())))
     }
 }

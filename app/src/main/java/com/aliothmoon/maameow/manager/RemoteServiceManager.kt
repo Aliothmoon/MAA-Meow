@@ -2,15 +2,16 @@ package com.aliothmoon.maameow.manager
 
 import android.content.Context
 import android.os.IBinder
-import android.os.Process
 import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,12 +20,31 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import java.io.File
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.milliseconds
+
+class RemoteCallStuckException(val call: String, val threadDump: String?) :
+    Exception("$call did not return, elevated service restarted")
+
+/** binder 阻塞取消不掉：超时只是不再等，交给 [onStuck] 善后 */
+internal suspend fun <R> awaitOrAbandon(
+    scope: CoroutineScope,
+    timeoutMs: Long,
+    block: () -> R,
+    onStuck: suspend () -> Nothing,
+): R {
+    val pending = scope.async { block() }
+    return try {
+        withTimeout(timeoutMs.milliseconds) { pending.await() }
+    } catch (_: TimeoutCancellationException) {
+        onStuck()
+    }
+}
 
 object RemoteServiceManager {
 
@@ -42,6 +62,10 @@ object RemoteServiceManager {
     // 调用方默认等待须晚于兜底：先于连接器超时就只剩裸超时，launcher 日志尾部等根因全被截胡
     private const val CALLER_WAIT_MARGIN_MS = 1_000L
 
+    private const val SHORT_CAUSE_MAX = 120
+
+    private const val DUMP_TIMEOUT_MS = 3_000L
+
     // 状态迁移（boundBackend / currentBinder / _state）统一在此锁内完成
     private val lock = Any()
 
@@ -50,6 +74,9 @@ object RemoteServiceManager {
     private val _state = MutableStateFlow<ServiceState>(ServiceState.Disconnected)
 
     private val timeoutScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    // 卡住的调用挂在这，不拖住调用方
+    private val callScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val connectAttempt = AtomicInteger(0)
 
     private val connectors: Map<RemoteBackend, RemoteServiceConnectorBackend> = mapOf(
@@ -59,7 +86,15 @@ object RemoteServiceManager {
 
     @Volatile
     private var boundBackend: RemoteBackend? = null
+
+    // 起进程时的身份（uid），guarded by lock
+    private var boundIdentity: Int? = null
     val state: StateFlow<ServiceState> = _state.asStateFlow()
+
+    /** 最近连上的提权进程 pid，死后不清 */
+    @Volatile
+    var lastServicePid: Int? = null
+        private set
 
     // 携带绑定时的 binder，迟到的死亡通知靠身份比对丢弃
     private class BindingDeathRecipient(val binder: IBinder) : IBinder.DeathRecipient {
@@ -76,6 +111,8 @@ object RemoteServiceManager {
                         "backend=$backend bound=$boundBackend"
                     )
                     Timber.w("Ignoring stale %s connection", backend)
+                    // 没人认领的进程不收就成了孤儿
+                    runCatching { RemoteService.Stub.asInterface(binder).destroy() }
                     return
                 }
                 ServiceBootLogger.event("CB_ON_CONNECTED", "backend=$backend")
@@ -97,8 +134,12 @@ object RemoteServiceManager {
                 _state.value = ServiceState.Connected(service)
                 ServiceBootLogger.event("BINDER_CONNECTED", "backend=$backend linkToDeath ok")
             }
-            runCatching { service.heartbeat(Process.myPid()) }
-                .onFailure { Timber.w(it, "heartbeat failed") }
+            runCatching { service.pid() }
+                .onSuccess {
+                    lastServicePid = it
+                    ServiceBootLogger.event("SERVICE_PID", "pid=$it")
+                }
+                .onFailure { Timber.w(it, "query service pid failed") }
         }
 
         override fun onDisconnected(backend: RemoteBackend) {
@@ -195,10 +236,20 @@ object RemoteServiceManager {
             return
         }
 
+        val identity = spawnIdentity(backend)
         val attempt: Int
         synchronized(lock) {
             if (_state.value is ServiceState.Connecting && boundBackend == backend) {
                 ServiceBootLogger.event("BIND_SKIP", "already connecting backend=$backend")
+                return
+            }
+            // Shizuku / su 重启不影响已起的进程，身份没变就别杀了重起
+            if (_state.value is ServiceState.Connected && boundBackend == backend &&
+                currentBinder.get()?.isBinderAlive == true &&
+                identity != null && identity == boundIdentity
+            ) {
+                ServiceBootLogger.event("BIND_SKIP", "already connected backend=$backend uid=$identity")
+                Timber.i("Keep connected %s service (uid=%d)", backend, identity)
                 return
             }
 
@@ -208,6 +259,7 @@ object RemoteServiceManager {
             }
 
             boundBackend = backend
+            boundIdentity = identity
             attempt = connectAttempt.incrementAndGet()
             ServiceBootLogger.event("BIND", "backend=$backend attempt=$attempt")
             _state.value = ServiceState.Connecting
@@ -215,6 +267,12 @@ object RemoteServiceManager {
             connectors.getValue(backend).connect(connectorCallbacks)
         }
         startConnectTimeout(attempt, backend)
+    }
+
+    /** 现在新起的进程会是什么身份，adb ↔ root 切换后旧进程不能沿用 */
+    private fun spawnIdentity(backend: RemoteBackend): Int? = when (backend) {
+        RemoteBackend.SHIZUKU -> ShizukuManager.serverUid()
+        RemoteBackend.ROOT -> 0
     }
 
     private fun startConnectTimeout(attempt: Int, backend: RemoteBackend) {
@@ -265,6 +323,29 @@ object RemoteServiceManager {
                 _state.value = ServiceState.Disconnected
             }
         }
+    }
+
+    private fun unbindIf(binder: IBinder) {
+        synchronized(lock) {
+            if (currentBinder.get() !== binder) return
+            unbind()
+        }
+    }
+
+    /** 超时就重启提权进程，把卡住的线程放出来；重启前先取线程栈 */
+    suspend fun <R> callOrRestart(
+        service: RemoteService,
+        call: String,
+        timeoutMs: Long,
+        block: (RemoteService) -> R,
+    ): R = awaitOrAbandon(callScope, timeoutMs, { block(service) }) {
+        val dump = withTimeoutOrNull(DUMP_TIMEOUT_MS.milliseconds) {
+            callScope.async { runCatching { service.dumpThreads() }.getOrNull() }.await()
+        }
+        ServiceBootLogger.event("CALL_STUCK", "call=$call after ${timeoutMs}ms")
+        Timber.e("Remote call %s stuck for %dms, restarting elevated service", call, timeoutMs)
+        unbindIf(service.asBinder())
+        throw RemoteCallStuckException(call, dump)
     }
 
     private fun fallbackTimeoutMs(backend: RemoteBackend): Long =
@@ -319,6 +400,11 @@ object RemoteServiceManager {
         timeoutMs: Long? = null,
         action: suspend (RemoteService) -> R
     ): R = withContext(Dispatchers.IO) {
+        // 已连着当前后端就直接用：Shizuku / su 挂了，已起的进程照样能用
+        if (boundBackend == RemoteAccessCoordinator.configuredBackend()) {
+            getInstanceOrNull()?.let { return@withContext action(it) }
+        }
+
         var accessState = RemoteAccessCoordinator.refresh()
         var backend = accessState.configuredBackend
         if (!accessState.isGranted(backend)) {
@@ -338,4 +424,21 @@ object RemoteServiceManager {
         val service = getInstance(timeoutMs)
         action(service)
     }
+
+    /** 连不上返回原因而不抛；调用方被取消照常抛 */
+    suspend fun awaitConnected(): Throwable? = try {
+        useRemoteService { }
+        null
+    } catch (e: TimeoutCancellationException) {
+        e
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        e
+    }
+
+    /** 去掉 launcher 日志尾巴，全文已进 Timber 与 bind 日志 */
+    fun shortCause(e: Throwable): String =
+        e.message?.substringBefore(';')?.trim()?.takeIf { it.isNotEmpty() }?.take(SHORT_CAUSE_MAX)
+            ?: e.javaClass.simpleName
 }

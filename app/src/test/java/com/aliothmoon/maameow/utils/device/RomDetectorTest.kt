@@ -1,13 +1,13 @@
-package com.aliothmoon.maameow.telemetry
+package com.aliothmoon.maameow.utils.device
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class TelemetryRomTest {
+class RomDetectorTest {
 
     private fun detect(vararg props: Pair<String, String>): Rom {
         val map = props.toMap()
-        return TelemetryRom.detect { map[it].orEmpty() }
+        return RomDetector.detect { map[it].orEmpty() }
     }
 
     /** 真机 Xiaomi 12X：HyperOS 上 MIUI 的属性还在 */

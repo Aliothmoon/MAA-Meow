@@ -1,6 +1,9 @@
 package com.aliothmoon.maameow.domain.enums
 
-enum class InfrastRoomType {
+/**
+ * @param minCoreVersion 首个认识该设施名的 core 版本，旧 core 收到不认识的设施名会拒掉整个基建任务
+ */
+enum class InfrastRoomType(val minCoreVersion: String? = null) {
     /** 制造站 */
     Mfg,
 
@@ -19,6 +22,9 @@ enum class InfrastRoomType {
     /** 办公室(+速公招那个) */
     Office,
 
+    /** 回收站 */
+    Recycle("v6.20.0-beta.1"),
+
     /** 宿舍 */
     Dorm,
 
@@ -28,8 +34,8 @@ enum class InfrastRoomType {
     /** 训练室 */
     Training,
 
-    /** 副手换人(core ≥ v6.18.0-beta.1，旧 core 会拒掉整个基建任务) */
-    AssistantChange;
+    /** 副手换人 */
+    AssistantChange("v6.18.0-beta.1");
 
     companion object {
         val values = InfrastRoomType.entries

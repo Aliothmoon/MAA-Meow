@@ -5,8 +5,8 @@ import android.graphics.Bitmap
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.Process
-import android.system.Os
 import android.view.Surface
+import androidx.core.graphics.scale
 import com.aliothmoon.maameow.ITouchEventCallback
 import com.aliothmoon.maameow.MaaCoreService
 import com.aliothmoon.maameow.RemoteService
@@ -16,6 +16,7 @@ import com.aliothmoon.maameow.constant.DisplayMode
 import com.aliothmoon.maameow.constant.MaaFiles
 import com.aliothmoon.maameow.maa.InputControlUtils
 import com.aliothmoon.maameow.remote.internal.ActivityUtils
+import com.aliothmoon.maameow.remote.internal.BackgroundDisplay
 import com.aliothmoon.maameow.remote.internal.CoreDataStore
 import com.aliothmoon.maameow.remote.internal.GameAudioMuteController
 import com.aliothmoon.maameow.remote.internal.GameFpsMonitor
@@ -24,14 +25,17 @@ import com.aliothmoon.maameow.remote.internal.LogcatRetention
 import com.aliothmoon.maameow.remote.internal.PermissionGrantHelper
 import com.aliothmoon.maameow.remote.internal.PowerController
 import com.aliothmoon.maameow.remote.internal.PrimaryDisplayManager
+import com.aliothmoon.maameow.remote.internal.ProcessExitQuery
 import com.aliothmoon.maameow.remote.internal.ProcessLiveness
 import com.aliothmoon.maameow.remote.internal.RemoteUtils
 import com.aliothmoon.maameow.remote.internal.ScreenManager
 import com.aliothmoon.maameow.remote.internal.StaleFrameGuard
+import com.aliothmoon.maameow.remote.internal.SystemLogDump
+import com.aliothmoon.maameow.remote.internal.ThreadDump
 import com.aliothmoon.maameow.remote.internal.UserDirProbe
-import com.aliothmoon.maameow.remote.internal.VirtualDisplayManager
 import com.aliothmoon.maameow.remote.internal.WakeUnlockController
 import com.aliothmoon.maameow.remote.internal.XmsfFirewall
+import com.aliothmoon.maameow.root.ProcessExit
 import com.aliothmoon.maameow.third.Command
 import com.aliothmoon.maameow.third.FakeContext
 import com.aliothmoon.maameow.third.Ln
@@ -42,68 +46,62 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.system.exitProcess
 
 class RemoteServiceImpl : RemoteService.Stub() {
 
     companion object {
         private const val TAG = "RemoteService"
-        private const val HEARTBEAT_INTERVAL_MS = 5_000L
         private const val JPEG_MAX_EDGE = 1280
         private const val PREVIEW_SHUTDOWN_TIMEOUT_MS = 1_000L
 
+        /**
+         * 逐项兜错，一项失败不连累后面的；退出期限可能截断，用户看得见又不会自愈的排前面
+         * xmsf 下次 setup 会兜底，MaaCore 最可能卡住且随进程释放，垫底
+         */
         @JvmStatic
         fun performEmergencyCleanup() {
             Ln.i("$TAG: performEmergencyCleanup triggered")
-            runCatching {
-                GameAudioMuteController.restoreAll()
-                XmsfFirewall.restoreIfNeeded()
-                PowerController.destroy()
-                ScreenManager.destroy()
-                MaaCoreManager.destroy()
-            }.onFailure {
-                Ln.e("$TAG: Emergency cleanup failed: ${it.message}")
-            }
+            cleanupStep("display size") { ScreenManager.destroy() }
+            cleanupStep("display power") { PowerController.destroy() }
+            cleanupStep("game audio") { GameAudioMuteController.restoreAll() }
+            cleanupStep("xmsf firewall") { XmsfFirewall.restoreIfNeeded() }
+            cleanupStep("maa core") { MaaCoreManager.destroy() }
+        }
+
+        private inline fun cleanupStep(name: String, block: () -> Unit) {
+            runCatching(block).onFailure { Ln.e("$TAG: cleanup $name failed: ${it.message}") }
         }
     }
 
     init {
         RemoteBootTrace.mark("CTOR_START")
+        // 正常退出走 ProcessExit 的 halt 不经这里，只兜直接 System.exit 的路径
         Runtime.getRuntime().addShutdownHook(Thread {
             runCatching { performEmergencyCleanup() }
         }.apply { name = "remote-shutdown-hook" })
     }
 
     private val virtualDisplayMode = AtomicInteger(DisplayMode.PRIMARY)
-    private val appPid = AtomicInteger(0)
-    private val destroyed = AtomicBoolean(false)
     /** 同一进程内 setup 幂等：成功后再调直接返回 OK，失败则下次重试 */
     private var setup = false
     private val coreData = CoreDataStore()
 
     init {
         // ctor 必须轻量：重活放 setup()，attach 前零阻塞
-        // Root 下放开 umask，core 与本进程写的文件对 shell 可读写（切回 Shizuku 后还能追加）；父目录 0771 挡住其他 App
-        if (Process.myUid() != Process.SHELL_UID) runCatching { Os.umask(0) }
         Workarounds.apply()
-        startHeartbeatWatchdog()
         Ln.i("$TAG: RemoteServiceImpl created (lightweight ctor)")
         RemoteBootTrace.mark("CTOR_DONE")
     }
 
     override fun destroy() {
-        if (!destroyed.compareAndSet(false, true)) {
-            return
+        ProcessExit.exit("destroy requested") {
+            InputControlUtils.setTouchCallback(null)
+            GameFpsMonitor.stop()
+            StaleFrameGuard.stop()
+            shutdownPreview()
+            performEmergencyCleanup()
         }
-        Ln.i("$TAG: destroy()")
-        InputControlUtils.setTouchCallback(null)
-        GameFpsMonitor.stop()
-        StaleFrameGuard.stop()
-        shutdownPreview()
-        performEmergencyCleanup()
-        exitProcess(0)
     }
 
     /**
@@ -249,7 +247,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
         // 前台模式是原生分辨率，缩到长边 1280 免得撑爆 binder 缓冲
         val scale = JPEG_MAX_EDGE.toFloat() / maxOf(frame.width, frame.height)
         val bitmap = if (scale < 1f) {
-            Bitmap.createScaledBitmap(frame, (frame.width * scale).toInt(), (frame.height * scale).toInt(), true)
+            frame.scale((frame.width * scale).toInt(), (frame.height * scale).toInt())
         } else {
             frame
         }
@@ -304,40 +302,41 @@ class RemoteServiceImpl : RemoteService.Stub() {
         val p = request.permissions
 
         with(PermissionGrantHelper) {
-            // 结果不进 PermissionStateInfo 免改 AIDL；放开失败由 App 侧预检兜底
             if (p and PermissionGrantRequest.PERM_FGS_SPECIAL_USE != 0) {
-                grantForegroundServiceSpecialUse(packageName)
+                grantForegroundServiceSpecialUse(packageName, uid)
+            }
+            if (p and PermissionGrantRequest.PERM_SCHEDULE != 0) {
+                grantScheduleOps(packageName, uid)
             }
             return PermissionStateInfo(
-                accessibilityPermission = if (p and PermissionGrantRequest.PERM_ACCESSIBILITY != 0) grantAccessibilityService(
+                accessibilityPermission = p and PermissionGrantRequest.PERM_ACCESSIBILITY != 0 && grantAccessibilityService(
                     request.accessibilityServiceId
-                ) else false,
-                floatingWindowPermission = if (p and PermissionGrantRequest.PERM_FLOATING_WINDOW != 0) grantFloatingWindowPermission(
+                ),
+                floatingWindowPermission = p and PermissionGrantRequest.PERM_FLOATING_WINDOW != 0 && grantFloatingWindowPermission(
                     packageName,
                     uid
-                ) else false,
-                notificationPermission = if (p and PermissionGrantRequest.PERM_NOTIFICATION != 0) grantNotificationPermission(
+                ),
+                notificationPermission = p and PermissionGrantRequest.PERM_NOTIFICATION != 0 && grantNotificationPermission(
                     packageName,
                     uid
-                ) else false,
-                batteryOptimizationExempt = if (p and PermissionGrantRequest.PERM_BATTERY != 0) grantBatteryOptimizationExemption(
+                ),
+                batteryOptimizationExempt = p and PermissionGrantRequest.PERM_BATTERY != 0 && grantBatteryOptimizationExemption(
                     packageName
-                ) else false,
-                storagePermission = if (p and PermissionGrantRequest.PERM_STORAGE != 0) grantStoragePermission(
+                ),
+                storagePermission = p and PermissionGrantRequest.PERM_STORAGE != 0 && grantStoragePermission(
                     packageName,
                     uid
-                ) else false,
-                backgroundUnrestricted = if (p and PermissionGrantRequest.PERM_BACKGROUND != 0) grantBackgroundUnrestricted(
+                ),
+                backgroundUnrestricted = p and PermissionGrantRequest.PERM_BACKGROUND != 0 && grantBackgroundUnrestricted(
                     packageName,
                     uid
-                ) else false,
+                ),
             )
         }
     }
 
     override fun setMonitorSurface(surface: Surface?) {
         Ln.i("$TAG: setMonitorSurface(${surface != null})")
-        VirtualDisplayManager.setMonitorSurface(surface)
         NativeBridgeLib.setPreviewSurface(surface)
     }
 
@@ -348,7 +347,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun touchDown(x: Int, y: Int, contact: Int) {
         if (virtualDisplayMode.get() == DisplayMode.PRIMARY) return
-        val displayId = VirtualDisplayManager.getDisplayId()
+        val displayId = BackgroundDisplay.displayId()
         if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
             InputControlUtils.down(x, y, contact, displayId)
         }
@@ -356,7 +355,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun touchMove(x: Int, y: Int, contact: Int) {
         if (virtualDisplayMode.get() == DisplayMode.PRIMARY) return
-        val displayId = VirtualDisplayManager.getDisplayId()
+        val displayId = BackgroundDisplay.displayId()
         if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
             InputControlUtils.move(x, y, contact, displayId)
         }
@@ -364,7 +363,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun touchUp(x: Int, y: Int, contact: Int) {
         if (virtualDisplayMode.get() == DisplayMode.PRIMARY) return
-        val displayId = VirtualDisplayManager.getDisplayId()
+        val displayId = BackgroundDisplay.displayId()
         if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
             InputControlUtils.up(x, y, contact, displayId)
         }
@@ -372,21 +371,20 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun touchCancel() {
         if (virtualDisplayMode.get() == DisplayMode.PRIMARY) return
-        val displayId = VirtualDisplayManager.getDisplayId()
+        val displayId = BackgroundDisplay.displayId()
         if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
             InputControlUtils.cancel(displayId)
         }
     }
 
-    override fun setDisplayPower(on: Boolean) {
-        PowerController.setDisplayPower(on)
-    }
+    override fun setDisplayPower(on: Boolean): Boolean = PowerController.setDisplayPower(on)
 
+    @Synchronized
     override fun startVirtualDisplay(): Int {
         Ln.i("$TAG: startVirtualDisplay() ${virtualDisplayMode.get()}")
         return when (virtualDisplayMode.get()) {
             DisplayMode.PRIMARY -> PrimaryDisplayManager.start()
-            DisplayMode.BACKGROUND -> VirtualDisplayManager.start().also { displayId ->
+            DisplayMode.BACKGROUND -> BackgroundDisplay.start().also { displayId ->
                 if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
                     PowerController.startUserActivityKeepAlive(displayId)
                 }
@@ -396,6 +394,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
         }
     }
 
+    @Synchronized
     override fun stopVirtualDisplay() {
         Ln.i("$TAG: stopVirtualDisplay() ${virtualDisplayMode.get()}")
         when (virtualDisplayMode.get()) {
@@ -404,13 +403,17 @@ class RemoteServiceImpl : RemoteService.Stub() {
                 GameFpsMonitor.stop()
                 StaleFrameGuard.stop()
                 PowerController.stopUserActivityKeepAlive()
-                VirtualDisplayManager.stop()
+                BackgroundDisplay.stop()
             }
         }
         GameAudioMuteController.restoreAll()
     }
 
     override fun getGameFps(): Float = GameFpsMonitor.currentFps()
+
+    override fun getVirtualDisplayFlagTier(): Int = BackgroundDisplay.flagTier()
+
+    override fun dumpThreads(): String = ThreadDump.capture()
 
     override fun setPlayAudioOpAllowed(packageName: String?, isAllowed: Boolean): Boolean {
         if (packageName.isNullOrBlank()) return false
@@ -421,28 +424,28 @@ class RemoteServiceImpl : RemoteService.Stub() {
         return ok
     }
 
+    // 只认游戏主进程：probe 会把常驻的 包名:pushcore 这类子进程算成活着，游戏崩了也判不出
     override fun isAppAlive(packageName: String): Int = when (ProcessLiveness.pidof(packageName)) {
         ProcessLiveness.ALIVE -> AppAliveStatus.ALIVE
         ProcessLiveness.DEAD -> AppAliveStatus.DEAD
         ProcessLiveness.UNKNOWN -> AppAliveStatus.UNKNOWN
     }
 
-    override fun heartbeat(pid: Int) {
-        appPid.set(pid)
-        Ln.i("$TAG: heartbeat received, app pid=$pid")
-    }
-
     override fun isAppOnVirtualDisplay(packageName: String): Boolean {
-        val targetDisplayId = VirtualDisplayManager.getDisplayId()
+        val targetDisplayId = BackgroundDisplay.displayId()
         if (targetDisplayId == DefaultDisplayConfig.DISPLAY_NONE) return true
         val onDisplay = ActivityUtils.isAppOnDisplay(packageName, targetDisplayId)
         // 游戏不是 MaaMeow 拉起的（未启用自动启动）时，这里是首次得知它在虚拟屏上
-        if (onDisplay) GameFpsMonitor.ensureStarted(packageName)
+        if (onDisplay) {
+            GameFpsMonitor.ensureStarted(packageName)
+            // 拉回 / 重启后换了新任务也靠巡检补上
+            ActivityUtils.excludeFromRecents(packageName, targetDisplayId)
+        }
         return onDisplay
     }
 
     override fun moveAppToVirtualDisplay(packageName: String): Boolean {
-        val targetDisplayId = VirtualDisplayManager.getDisplayId()
+        val targetDisplayId = BackgroundDisplay.displayId()
         if (targetDisplayId == DefaultDisplayConfig.DISPLAY_NONE) {
             Ln.w("$TAG: moveAppToVirtualDisplay: no active virtual display")
             return false
@@ -470,6 +473,9 @@ class RemoteServiceImpl : RemoteService.Stub() {
     override fun testUnlockGesture(gestureJson: String?): Int =
         WakeUnlockController.testUnlockGesture(gestureJson.orEmpty())
 
+    override fun getLastWakeTrace(sinceElapsedMs: Long): String =
+        WakeUnlockController.lastTrace(sinceElapsedMs)
+
     override fun startGestureRecord(timeoutMs: Int) = GestureRecorder.start(timeoutMs)
 
     /** @return [com.aliothmoon.maameow.domain.models.GestureRecordResult] 的 JSON */
@@ -487,6 +493,15 @@ class RemoteServiceImpl : RemoteService.Stub() {
         }
     }
 
+    override fun dumpSystemLog(sinceMs: Long, untilMs: Long, pid: Int, processPrefix: String?): String {
+        // 空前缀行行命中，会把整份系统日志带出设备
+        if (processPrefix.isNullOrEmpty()) return "# missing process prefix"
+        return SystemLogDump.dump(sinceMs, untilMs, pid, processPrefix)
+    }
+
+    override fun getProcessExitRecords(packageName: String?, sinceMs: Long, maxNum: Int): List<ProcessExitRecord> =
+        ProcessExitQuery.query(packageName, sinceMs, maxNum)
+
     override fun isSmartResolutionEnabled(): Boolean {
         return try {
             Command.execReadLine("settings", "get", "global", "low_resolution_switch")?.trim() == "1"
@@ -500,25 +515,46 @@ class RemoteServiceImpl : RemoteService.Stub() {
         return ActivityUtils.startActivity(intent)
     }
 
+    override fun getTopPackage(displayId: Int): String? =
+        (ActivityUtils.probeDisplay(displayId) as? ActivityUtils.DisplayOccupancy.Occupied)?.topPackage
+
     override fun setForceFullscreenOnVirtualDisplay(enabled: Boolean) {
         Ln.i("$TAG: setForceFullscreenOnVirtualDisplay($enabled)")
         ActivityUtils.forceFullscreenOnVirtualDisplay = enabled
     }
 
     override fun setPackageNetworkingEnabled(packageName: String?, enabled: Boolean): Boolean {
-        if (packageName.isNullOrBlank()) return false
-        return XmsfFirewall.setNetworkingEnabled(packageName, enabled)
+        return !packageName.isNullOrBlank() && XmsfFirewall.setNetworkingEnabled(
+            packageName,
+            enabled
+        )
     }
 
     override fun setVirtualDisplayResolution(width: Int, height: Int, dpi: Int) {
         Ln.i("$TAG: setVirtualDisplayResolution(${width}x${height}, dpi=$dpi)")
-        VirtualDisplayManager.setResolution(width, height, dpi)
+        BackgroundDisplay.setResolution(width, height, dpi)
     }
 
+    @Synchronized
+    override fun setUseVirtualDeviceDisplay(enabled: Boolean): Boolean {
+        if (enabled && Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
+        if (BackgroundDisplay.useVdm == enabled) return true
+        // 不在运行时换后端：上一轮的屏还在就拒绝，由 App 侧先关屏
+        val activeId = BackgroundDisplay.displayId()
+        if (activeId != DefaultDisplayConfig.DISPLAY_NONE) {
+            Ln.w("$TAG: refuse backend switch while displayId=$activeId is active")
+            return false
+        }
+        BackgroundDisplay.useVdm = enabled
+        Ln.i("$TAG: virtual display backend=${if (enabled) "VDM" else "LEGACY"}")
+        return true
+    }
+
+    @Synchronized
     override fun setVirtualDisplayMode(mode: Int): Boolean {
         when (mode) {
             DisplayMode.PRIMARY -> {
-                VirtualDisplayManager.stop()
+                BackgroundDisplay.stop()
                 virtualDisplayMode.set(mode)
                 return true
             }
@@ -530,29 +566,5 @@ class RemoteServiceImpl : RemoteService.Stub() {
             }
         }
         return false
-    }
-
-    private fun startHeartbeatWatchdog() {
-        Thread {
-            while (!destroyed.get()) {
-                try {
-                    Thread.sleep(HEARTBEAT_INTERVAL_MS)
-                } catch (_: InterruptedException) {
-                    return@Thread
-                }
-                val pid = appPid.get()
-                if (pid <= 0) {
-                    continue
-                }
-                if (!File("/proc/$pid").exists()) {
-                    Ln.w("$TAG: app process (pid=$pid) no longer exists, destroying remote service")
-                    destroy()
-                    return@Thread
-                }
-            }
-        }.apply {
-            name = "remote-heartbeat-watchdog"
-            isDaemon = true
-        }.start()
     }
 }

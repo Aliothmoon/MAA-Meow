@@ -18,7 +18,8 @@ class RootServiceBootstrapProvider : ContentProvider() {
             return super.call(method, arg, extras)
         }
         val callingUid = Binder.getCallingUid()
-        if (callingUid != Process.SHELL_UID && callingUid != 0) {
+        // launcher 两种后端都降到 shell，回投方只会是 2000
+        if (callingUid != Process.SHELL_UID) {
             Timber.w("Rejecting root bootstrap caller uid=%s", callingUid)
             return null
         }
@@ -35,7 +36,7 @@ class RootServiceBootstrapProvider : ContentProvider() {
 
         return Bundle().apply {
             putBinder(RootServiceBootstrapRegistry.KEY_APP_BINDER, appBinder)
-            putInt(RootServiceBootstrapRegistry.KEY_APP_PID, Process.myPid())
+            putParcelable(RootServiceBootstrapRegistry.KEY_LIFELINE, RootServiceBootstrapRegistry.lifelineReadEnd())
         }
     }
 
