@@ -167,8 +167,8 @@ data class AppSettings(
      * 是否启用 Android 特化任务覆盖（overrides/resource/tasks/tasks.json）
      * 启用后该目录作为最高优先级覆盖层，在加载链末位加载
      */
-    @PrefKey(default = "false")
-    val tasksOverrideEnabled: String = "false",
+    @PrefKey(default = "true")
+    val tasksOverrideEnabled: String = "true",
 
     /**
      * 是否启用系统莫奈主题色（Android 12+ Material You）
@@ -263,6 +263,18 @@ data class AppSettings(
     /** 牛杂生息演算设置 JSON；空串表示从未保存，可接收旧任务链迁入 */
     @PrefKey(default = "")
     val reclamationConfig: String = "",
+
+    /** 界园·电表倒转：进入残识地图上第几个「常乐」节点（从上往下、从左往右数，1~4） */
+    @PrefKey(default = "1")
+    val meterRewindChangleIndex: String = "1",
+
+    /** 界园·电表倒转：每次启动要连跑几轮（一轮 = 5 衡 + 1 厉，约 6 次投钱） */
+    @PrefKey(default = "10")
+    val meterRewindRounds: String = "10",
+
+    /** 界园·电表倒转：换藏品次数（全部投厉如锋，奖励选『要兵器一对』拿 6 件随机收藏品，0 = 不跑） */
+    @PrefKey(default = "0")
+    val meterRewindRelicRounds: String = "0",
 
     /** 帮助改进本项目：匿名上报崩溃、任务统计与失败现场 */
     @PrefKey(default = "true")

@@ -1241,6 +1241,7 @@
     <string name="pixel_art_status_decoding">이미지 분석 중…</string>
     <string name="pixel_art_status_decode_failed">이미지 분석에 실패했습니다</string>
     <string name="pixel_art_status_started">픽셀 아트 시작: %1$d칸, %2$d색</string>
+    <string name="meter_rewind_status_started">전력계 역전: %1$d번째 상락 | 파밍 %2$d회 (형 %3$d / 려 %4$d) | 유물 %5$d회 + 촛불 %6$d회 | 총 %7$d개 작업</string>
     <string name="pixel_art_hint">게임의 픽셀 아트 편집 화면에서 캔버스를 최소로 축소해 두세요. 실행 중에는 화면을 터치하지 마세요</string>
     <string name="toolbox_status_starting_gacha">헤드헌팅 시작 중…</string>
     <string name="toolbox_status_gacha_started">헤드헌팅이 시작되었습니다</string>
@@ -1306,6 +1307,13 @@
     <string name="panel_mini_game_title">편의 기능</string>
     <string name="panel_mini_game_ending">엔딩</string>
     <string name="panel_mini_game_use_normal_token">커널 증표가 부족할 때 일반 증표 사용</string>
+    <string name="panel_mini_game_meter_rewind_title">「상락」노드 설정</string>
+    <string name="panel_mini_game_meter_rewind_index">진입할 「상락」 노드 번호</string>
+    <string name="panel_mini_game_meter_rewind_index_tip">지도에서 위에서 아래로, 왼쪽에서 오른쪽으로 세어 몇 번째 상락인지 입력하세요(1~4). 지도 화면에서 작업을 시작하세요.</string>
+    <string name="panel_mini_game_meter_rewind_rounds">파밍 횟수 (형 5 + 려 1, 보상=촛불)</string>
+    <string name="panel_mini_game_meter_rewind_rounds_tip">입력한 횟수만큼 베팅합니다. 6번째마다(6, 12, 18…) 려를, 나머지는 형을 겁니다. 형은 원석정(「收下」), 려는 보상 화면에서 「要酒一壶」를 골라 촛불 6개를 받습니다. 베팅 후 지도로 돌아가 같은 상락 노드에 다시 진입합니다.</string>
+    <string name="panel_mini_game_meter_rewind_relic">유물 횟수 (유물 5회 + 촛불 1회)</string>
+    <string name="panel_mini_game_meter_rewind_relic_tip">입력한 횟수만큼 「려」를 걸고, 보상 화면에서 「要兵器一对」를 골라 무작위 수집품 6개를 받습니다. 려는 촛불을 소모하므로 5회마다 「要酒一壶」로 촛불 6개를 회복합니다(6, 12, 18…회차). 실패하면 같은 보상을 받기 위해 한 번 더 걸어야 하므로 유물은 실질적으로 1회 적습니다. 0 = 실행 안 함. 두 모드를 함께 예약할 수 있습니다(파밍 후 유물).</string>
     <string name="panel_mini_game_event_shop_blacklist">상품 무시 목록 (체크하거나 입력한 상품은 구매하지 않음)</string>
     <string name="panel_mini_game_event_shop_data_supplement_instrument">데이터 리더기</string>
     <string name="panel_mini_game_event_shop_data_supplement_stick">데이터 메모리</string>
@@ -1337,6 +1345,8 @@
     <string name="mini_game_tip_auto_raise_potential">오퍼레이터 목록 화면에 들어간 뒤 시작하세요. 강화 가능 표시가 있는 모든 오퍼레이터의 잠재능력을 자동으로 강화합니다.\n완료 후 마지막 오퍼레이터 상세 화면에 머물며, 대상이 없으면 오퍼레이터 목록에 머뭅니다</string>
     <string name="mini_game_name_material_synthesis">부족 재료 합성</string>
     <string name="mini_game_tip_material_synthesis">육성 화면(정예화, 마스터리, 모듈 업그레이드 등)의 부족 재료 팝업에서 가공소 합성 화면으로 직접 이동한 뒤 시작하세요.\n합성 가능한 하위 재료를 재귀적으로 합성하며, 재료가 부족하면 중지합니다</string>
+    <string name="mini_game_name_meter_rewind">JieGarden Tourist Squad Rewind</string>
+    <string name="mini_game_tip_meter_rewind"></string>
     <string name="mini_game_name_cursed_relic">팬텀 빅토리아 왕관 리롤</string>
     <string name="mini_game_tip_cursed_relic">팬텀 통합 전략 메인 메뉴에서 「탐험 시작」 버튼이 보이는 상태에서 시작하세요.\n탐험을 반복 시작하며 시작 소장품을 확인하고, 「빅토리아 왕관」이 나오지 않으면 포기 후 쿨타임을 기다려 다시 시도하며, 나오면 자동으로 중지합니다</string>
     <string name="mini_game_category_permanent_feature">상시 기능</string>
@@ -3022,4 +3032,6 @@
     <string name="oper_progress_result_recognition">인식 또는 조작 실패</string>
     <string name="oper_progress_log_detail">%1$s: %2$s%3$s</string>
     <string name="oper_progress_log_summary">오퍼레이터 육성 이번 라운드 결과: 성공 %1$d, 실패 %2$d, 건너뜀 %3$d (마스터리 시작도 성공으로 집계)</string>
+
+    <!-- JieGarden Meter Rewind (keys kept in English to stay in sync with zh/en) -->
 </resources>

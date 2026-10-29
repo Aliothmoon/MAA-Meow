@@ -37,6 +37,7 @@ import com.aliothmoon.maameow.data.model.EventShopPreset
 import com.aliothmoon.maameow.data.model.activity.MiniGame
 import com.aliothmoon.maameow.data.resource.MiniGameTextRegistry
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
+import com.aliothmoon.maameow.presentation.components.INumericField
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.components.ItemIcon
 import com.aliothmoon.maameow.presentation.components.SelectableCardButton
@@ -54,6 +55,9 @@ fun MiniGamePanel(
 ) {
     val state by delegate.state.collectAsStateWithLifecycle()
     val miniGames by delegate.miniGames.collectAsStateWithLifecycle()
+    val changleIndex by delegate.changleIndex.collectAsStateWithLifecycle()
+    val meterRewindRounds by delegate.meterRewindRounds.collectAsStateWithLifecycle()
+    val meterRewindRelicRounds by delegate.meterRewindRelicRounds.collectAsStateWithLifecycle()
 
     val reclamationConfig by delegate.reclamationConfig.collectAsStateWithLifecycle()
 
@@ -107,6 +111,20 @@ fun MiniGamePanel(
                     }
                 }
             }
+        }
+
+        // 界园·电表倒转：只在选中该玩法时显示（与其他模块一致），避免常驻一大段说明把页面撑长
+        if (delegate.isMeterRewind(state.selectedTaskName)) {
+            item { HorizontalDivider() }
+            item {
+                MeterRewindSection(
+                    delegate = delegate,
+                    changleIndex = changleIndex,
+                    rounds = meterRewindRounds,
+                    relicRounds = meterRewindRelicRounds,
+                )
+            }
+            item { HorizontalDivider() }
         }
 
         // Tip 提示，生息演算的说明随设置展示
@@ -240,6 +258,65 @@ fun MiniGamePanel(
         }
 
     }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MeterRewindSection(
+    delegate: MiniGameDelegate,
+    changleIndex: Int,
+    rounds: Int,
+    relicRounds: Int,
+) {
+    // 与其他模块（战斗/仓库/招募）完全一致，直接用 INumericField：失焦时才校验、夹紧并提交。
+    // 点「开始任务」前焦点会先被 clearFocusOnBlankTap 清掉（PointerEventPass.Initial，
+    // 先于按钮收到点击），失焦提交同步完成后按钮 onClick 读到的就是提交后的新值。
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.panel_mini_game_meter_rewind_title),
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        INumericField(
+            value = changleIndex,
+            onValueChange = delegate::onChangleIndexChanged,
+            label = stringResource(R.string.panel_mini_game_meter_rewind_index),
+            hint = "1",
+            minimum = 1,
+            maximum = 4,
+        )
+        TipText(stringResource(R.string.panel_mini_game_meter_rewind_index_tip))
+        INumericField(
+            value = rounds,
+            onValueChange = delegate::onMeterRewindRoundsChanged,
+            label = stringResource(R.string.panel_mini_game_meter_rewind_rounds),
+            hint = "10",
+            minimum = 1,
+            maximum = 999,
+        )
+        TipText(stringResource(R.string.panel_mini_game_meter_rewind_rounds_tip))
+        // 换藏品：默认投厉如锋 + 奖励选「要兵器一对」；每 5 次后插 1 次「要酒一壶」回烛火。
+        // 与上面的刷钱次数可以同时填，下发队列是「先刷钱 N 次，再换藏品 M 次」，填 0 就跳过。
+        INumericField(
+            value = relicRounds,
+            onValueChange = delegate::onMeterRewindRelicRoundsChanged,
+            label = stringResource(R.string.panel_mini_game_meter_rewind_relic),
+            hint = "0",
+            minimum = 0,
+            maximum = 999,
+        )
+        TipText(stringResource(R.string.panel_mini_game_meter_rewind_relic_tip))
+    }
+}
+
+@Composable
+private fun TipText(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)

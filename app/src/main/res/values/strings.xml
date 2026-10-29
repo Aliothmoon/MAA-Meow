@@ -864,6 +864,7 @@
     <string name="panel_task_type_mall">信用收支</string>
     <string name="panel_task_type_mission">领取奖励</string>
     <string name="panel_task_type_auto_roguelike">自动肉鸽</string>
+    <string name="panel_task_type_reclamation">生息演算</string>
     <string name="panel_task_type_user_data_update">更新数据</string>
     <string name="panel_task_type_depot_maintain">库存保持</string>
 
@@ -1240,6 +1241,7 @@
     <string name="pixel_art_status_decoding">正在解析图片…</string>
     <string name="pixel_art_status_decode_failed">图片解析失败</string>
     <string name="pixel_art_status_started">开始像素画：%1$d 格，%2$d 色</string>
+    <string name="meter_rewind_status_started">电表倒转：第 %1$d 个常乐｜刷钱 %2$d 次（衡 %3$d / 厉 %4$d）｜换藏品 %5$d 次 + 回烛火 %6$d 次｜共 %7$d 个任务</string>
     <string name="pixel_art_hint">需要停在游戏的像素画编辑页，画布缩放拉到最小；执行期间请勿触摸屏幕</string>
     <string name="toolbox_status_starting_gacha">正在启动牛牛抽卡…</string>
     <string name="toolbox_status_gacha_started">牛牛抽卡已启动</string>
@@ -1305,6 +1307,13 @@
     <string name="panel_mini_game_title">牛杂</string>
     <string name="panel_mini_game_ending">结局</string>
     <string name="panel_mini_game_use_normal_token">中坚信物不足时使用普通信物</string>
+    <string name="panel_mini_game_meter_rewind_title">「常乐」节点设置</string>
+    <string name="panel_mini_game_meter_rewind_index">进入第几个「常乐」节点</string>
+    <string name="panel_mini_game_meter_rewind_index_tip">在残识地图上按「从上往下、从左往右」数，第几个常乐就填几（1~4）。启动任务时请站在残识地图上。</string>
+    <string name="panel_mini_game_meter_rewind_rounds">刷钱次数（5 衡 1 厉，奖励拿烛火）</string>
+    <string name="panel_mini_game_meter_rewind_rounds_tip">填几就投几次钱。按 5 衡 1 厉循环：第 6、12、18… 次投「厉如锋」，其余投「衡如常」。投衡拿源石锭（点「收下」），投厉在奖励界面选「要酒一壶」拿 6 烛火。每次投完自动回地图、重新进同一个常乐继续。</string>
+    <string name="panel_mini_game_meter_rewind_relic">换藏品次数（5 次藏品 + 1 次烛火）</string>
+    <string name="panel_mini_game_meter_rewind_relic_tip">填几就投几次「厉如锋」，奖励默认选「要兵器一对」拿 6 件随机收藏品。因为投厉要消耗烛火，所以每 5 次藏品后会插 1 次「要酒一壶」回 6 烛火（第 6、12、18… 次），避免烛火被耗干；炸火要多投一次才拿到同一份奖励，等于少换一次藏品。填 0 = 不跑。两种玩法可以同时排：先刷钱，再换藏品。</string>
     <string name="panel_mini_game_event_shop_blacklist">商品黑名单（勾选或填写的商品不购买）</string>
     <string name="panel_mini_game_event_shop_data_supplement_instrument">数据增补仪</string>
     <string name="panel_mini_game_event_shop_data_supplement_stick">数据增补条</string>
@@ -1338,6 +1347,8 @@
     <string name="mini_game_tip_material_synthesis">请先手动从培养页面(如精英化、专精、模组升级)缺少的材料弹窗跳转到加工站合成页，再开始任务。\n会递归合成可加工的下级材料，材料不足时停止</string>
     <string name="mini_game_name_cursed_relic">刷傀影维多利亚皇冠</string>
     <string name="mini_game_tip_cursed_relic">请从傀影肉鸽主菜单中「探索」按钮可见的状态开始。\n反复开始探索并检查开局收藏品，未刷到「维多利亚王冠」时放弃重开并等待冷却，刷到后自动停止</string>
+    <string name="mini_game_name_meter_rewind">界园游客分队倒转</string>
+    <string name="mini_game_tip_meter_rewind"></string>
     <string name="mini_game_category_permanent_feature">常驻功能</string>
     <string name="mini_game_category_permanent">常驻活动</string>
     <string name="mini_game_category_current_event">当前活动</string>
@@ -2310,6 +2321,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="task_type_mall">信用收支</string>
     <string name="task_type_mission">领取奖励</string>
     <string name="task_type_auto_roguelike">自动肉鸽</string>
+    <string name="task_type_reclamation">生息演算</string>
     <string name="task_type_user_data_update">更新数据</string>
     <string name="task_type_depot_maintain">库存保持</string>
 

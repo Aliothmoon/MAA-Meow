@@ -937,6 +937,36 @@ class AppSettingsManager internal constructor(
         return config.copy(mode = config.sanitizedMode())
     }
 
+    /** 界面电表倒转：第几个「常乐」节点（1~4），越界一律夹到合法区间 */
+    val meterRewindChangleIndex: StateFlow<Int> =
+        setting { it.meterRewindChangleIndex.toIntOrNull()?.coerceIn(1, 4) ?: 1 }
+
+    suspend fun setMeterRewindChangleIndex(index: Int) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[meterRewindChangleIndex] = index.coerceIn(1, 4).toString() }
+        }
+    }
+
+    /** 界面电表倒转：一次启动连跑的轮数 */
+    val meterRewindRounds: StateFlow<Int> =
+        setting { it.meterRewindRounds.toIntOrNull()?.coerceIn(1, 999) ?: 10 }
+
+    suspend fun setMeterRewindRounds(rounds: Int) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[meterRewindRounds] = rounds.coerceIn(1, 999).toString() }
+        }
+    }
+
+    /** 界面电表倒转：换藏品次数（全投厉如锋，奖励选收藏品；0 = 不跑） */
+    val meterRewindRelicRounds: StateFlow<Int> =
+        setting { it.meterRewindRelicRounds.toIntOrNull()?.coerceIn(0, 999) ?: 0 }
+
+    suspend fun setMeterRewindRelicRounds(rounds: Int) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[meterRewindRelicRounds] = rounds.coerceIn(0, 999).toString() }
+        }
+    }
+
     // 放在类体末尾，启动收集器时 setting() 已全部注册
     init {
         // 单次收集统一更新，避免就绪标记早于各字段的 stateIn

@@ -810,6 +810,7 @@
     <string name="panel_task_type_mall">Credit Store</string>
     <string name="panel_task_type_mission">Collect Rewards</string>
     <string name="panel_task_type_auto_roguelike">Auto I.S.</string>
+    <string name="panel_task_type_reclamation">Reclamation Algorithm</string>
     <string name="panel_task_type_user_data_update">Update doctor data</string>
     <string name="panel_task_type_depot_maintain">Depot Maintain</string>
 
@@ -1186,6 +1187,7 @@
     <string name="pixel_art_status_decoding">Decoding image…</string>
     <string name="pixel_art_status_decode_failed">Failed to decode image</string>
     <string name="pixel_art_status_started">Pixel art started: %1$d cells, %2$d colors</string>
+    <string name="meter_rewind_status_started">Meter rewind: Changle #%1$d | money %2$d (Heng %3$d / Li %4$d) | relics %5$d + candle %6$d | %7$d tasks</string>
     <string name="pixel_art_hint">Stay on the in-game pixel art editor with the canvas zoomed all the way out. Do not touch the screen while it runs</string>
     <string name="toolbox_status_starting_gacha">Starting gacha…</string>
     <string name="toolbox_status_gacha_started">Gacha started</string>
@@ -1251,6 +1253,13 @@
     <string name="panel_mini_game_title">Useful Tasks</string>
     <string name="panel_mini_game_ending">Ending</string>
     <string name="panel_mini_game_use_normal_token">Use regular tokens when Kernel Tokens run out</string>
+    <string name="panel_mini_game_meter_rewind_title">Changle node settings</string>
+    <string name="panel_mini_game_meter_rewind_index">Which Changle node to enter</string>
+    <string name="panel_mini_game_meter_rewind_index_tip">Count the Changle nodes on the Congealed Consciousness map from top to bottom, then left to right, and enter that number (1-4). Start the task while standing on the map.</string>
+    <string name="panel_mini_game_meter_rewind_rounds">Money bets (5 Heng + 1 Li, reward = candlelight)</string>
+    <string name="panel_mini_game_meter_rewind_rounds_tip">One bet per count. Every 6th bet (6, 12, 18…) places Li; the rest place Heng. Heng pays Originite Prime (tap 收下); Li opens the reward screen where 要酒一壶 is picked for 6 candlelight. It returns to the map after each bet and re-enters the same Changle node.</string>
+    <string name="panel_mini_game_meter_rewind_relic">Relic runs (5 relics + 1 candlelight)</string>
+    <string name="panel_mini_game_meter_rewind_relic_tip">One count = one Li bet; the reward screen picks 要兵器一对 for 6 random collectibles. Since Li bets consume candlelight, every 5 relic runs is followed by one 要酒一壶 run that restores 6 candlelight (bets 6, 12, 18…). A failed bet costs an extra Li bet for the same reward, so it effectively yields one fewer relic set. 0 = skip. Both modes can be queued together: money first, then relics.</string>
     <string name="panel_mini_game_event_shop_blacklist">Item blacklist (checked or listed items are not bought)</string>
     <string name="panel_mini_game_event_shop_data_supplement_instrument">Data Supplement Instrument</string>
     <string name="panel_mini_game_event_shop_data_supplement_stick">Data Supplement Stick</string>
@@ -1282,6 +1291,8 @@
     <string name="mini_game_tip_auto_raise_potential">Enter the operator list screen before starting. Raises the potential of every operator with a notice badge.\nStops on the profile of the last processed operator; stays on the operator list when there is nothing to raise.</string>
     <string name="mini_game_name_material_synthesis">Missing material synthesis</string>
     <string name="mini_game_tip_material_synthesis">Open the missing-material popup from a training page (elite promotion, mastery, module upgrade) and jump to the workshop synthesis page before starting.\nRecursively synthesizes craftable sub-materials and stops when materials run out.</string>
+    <string name="mini_game_name_meter_rewind">JieGarden Tourist Squad Rewind</string>
+    <string name="mini_game_tip_meter_rewind"></string>
     <string name="mini_game_name_cursed_relic">Phantom Victoria Crown reroll</string>
     <string name="mini_game_tip_cursed_relic">Please start from the Phantom roguelike main menu where the EXPLORE button is visible.\nRepeatedly starts an exploration and checks the starting relic; abandons and waits for the cooldown until the Victoria Crown shows up, then stops.</string>
     <string name="mini_game_category_permanent_feature">Permanent features</string>
@@ -2254,6 +2265,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="task_type_mall">Credit</string>
     <string name="task_type_mission">Rewards</string>
     <string name="task_type_auto_roguelike">Auto I.S.</string>
+    <string name="task_type_reclamation">Recl. Alg.</string>
     <string name="task_type_user_data_update">Update doctor data</string>
     <string name="task_type_depot_maintain">Depot Maintain</string>
 

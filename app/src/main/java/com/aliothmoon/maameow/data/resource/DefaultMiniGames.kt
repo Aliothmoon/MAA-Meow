@@ -63,6 +63,11 @@ object DefaultMiniGames {
             R.string.mini_game_name_cursed_relic,
             "MiniGame@CursedRelic@Begin",
             R.string.mini_game_tip_cursed_relic
+        ),
+        DefaultMiniGameEntry(
+            R.string.mini_game_name_meter_rewind,
+            "JieGarden@Roguelike@MeterRewind",
+            R.string.mini_game_tip_meter_rewind
         )
     )
 }
