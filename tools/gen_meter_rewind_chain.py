@@ -83,7 +83,6 @@ MAA 的 OCR 读不出来（实测整条链全落空）。模板从实机 1280x72
 
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -723,15 +722,26 @@ def main() -> int:
         for short, node in build_scan(v).items():
             data[full(v, short)] = node
 
-    TASKS.write_text(json.dumps(data, ensure_ascii=False, indent=4) + "\n", encoding="utf-8")
+    # 缩进/换行与上游一致：2 空格 + LF。否则每次重跑都会把整个文件重写一遍，
+    # 让 diff 淹没真正的改动（Windows 下文本模式默认会把 \n 翻成 \r\n，这里显式指定）。
+    with TASKS.open("w", encoding="utf-8", newline="\n") as f:
+        f.write(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
 
     counts = {v: sum(1 for k in data if k.startswith(PREFIX + v)) for v in VARIANTS}
     print(f"nodes={len(data)}  grid={GRID}  maxIndex={MAX_INDEX}  " +
           "  ".join(f"{v}={c}" for v, c in counts.items()))
 
     # 4) 生成完立刻自检：非法 algorithm/action 或缺模板会被 Core 在加载期**静默丢弃**
-    checker = Path(__file__).with_name("validate_overrides_tasks.py")
-    return subprocess.call([sys.executable, str(checker), str(TASKS)])
+    # 用进程内 import 调用，不起外部进程（外部进程 + 变量路径会被判为命令注入风险）
+    return _run_checker(TASKS)
+
+
+def _run_checker(tasks_path):
+    tools_dir = str(Path(__file__).resolve().parent)
+    if tools_dir not in sys.path:
+        sys.path.insert(0, tools_dir)
+    import validate_overrides_tasks  # noqa: E402  (同目录脚本，运行时才插入 sys.path)
+    return validate_overrides_tasks.main(str(tasks_path))
 
 
 if __name__ == "__main__":

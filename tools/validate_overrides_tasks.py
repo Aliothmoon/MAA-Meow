@@ -88,8 +88,11 @@ def template_exists(name):
     return os.path.basename(name) in TEMPLATES
 
 
-def main():
-    path = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_TASKS
+def main(path=None):
+    """path 为空时取命令行第一个参数，再退回默认路径。
+    这样既能给命令行用，也能被 gen_meter_rewind_chain.py 直接 import 调用。"""
+    if not path:
+        path = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_TASKS
     tasks = load(path)
     errors, warnings = [], []
 
