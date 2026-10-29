@@ -864,6 +864,7 @@
     <string name="panel_task_type_mall">크레딧 수급 및 상점</string>
     <string name="panel_task_type_mission">보상 수령</string>
     <string name="panel_task_type_auto_roguelike">통합 전략</string>
+    <string name="panel_task_type_reclamation">생존 연산</string>
     <string name="panel_task_type_user_data_update">사용자 데이터 업데이트</string>
     <string name="panel_task_type_depot_maintain">재고 유지</string>
 
@@ -2310,6 +2311,7 @@
     <string name="task_type_mall">크레딧 수급 및 상점</string>
     <string name="task_type_mission">보상 수령</string>
     <string name="task_type_auto_roguelike">통합 전략</string>
+    <string name="task_type_reclamation">생존 연산</string>
     <string name="task_type_user_data_update">사용자 데이터 업데이트</string>
     <string name="task_type_depot_maintain">재고 유지</string>
 
