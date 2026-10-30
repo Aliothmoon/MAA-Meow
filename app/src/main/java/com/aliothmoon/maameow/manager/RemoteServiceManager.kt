@@ -31,19 +31,29 @@ import kotlin.time.Duration.Companion.milliseconds
 class RemoteCallStuckException(val call: String, val threadDump: String?) :
     Exception("$call did not return, elevated service restarted")
 
-/** binder 阻塞取消不掉：超时只是不再等，交给 [onStuck] 善后 */
-internal suspend fun <R> awaitOrAbandon(
+/**
+ * binder 阻塞取消不掉：超时只是不再等，交给 [onStuck] 善后
+ * 判卡在 [scope] 里进行，调用方中途取消也照样善后，此时结果交给 [onAbandoned]
+ */
+internal suspend fun <R, E : Throwable> awaitOrAbandon(
     scope: CoroutineScope,
     timeoutMs: Long,
     block: () -> R,
-    onStuck: suspend () -> Nothing,
+    onAbandoned: (E) -> Unit,
+    onStuck: suspend () -> E,
 ): R {
     val pending = scope.async { block() }
-    return try {
-        withTimeout(timeoutMs.milliseconds) { pending.await() }
-    } catch (_: TimeoutCancellationException) {
-        onStuck()
+    val verdict = scope.async {
+        if (withTimeoutOrNull(timeoutMs.milliseconds) { pending.join() } == null) onStuck() else null
     }
+    val stuck = try {
+        verdict.await()
+    } catch (e: CancellationException) {
+        scope.launch { runCatching { verdict.await()?.let(onAbandoned) } }
+        throw e
+    }
+    if (stuck != null) throw stuck
+    return pending.await()
 }
 
 object RemoteServiceManager {
@@ -337,15 +347,16 @@ object RemoteServiceManager {
         service: RemoteService,
         call: String,
         timeoutMs: Long,
+        onAbandoned: (RemoteCallStuckException) -> Unit,
         block: (RemoteService) -> R,
-    ): R = awaitOrAbandon(callScope, timeoutMs, { block(service) }) {
+    ): R = awaitOrAbandon(callScope, timeoutMs, { block(service) }, onAbandoned) {
         val dump = withTimeoutOrNull(DUMP_TIMEOUT_MS.milliseconds) {
             callScope.async { runCatching { service.dumpThreads() }.getOrNull() }.await()
         }
         ServiceBootLogger.event("CALL_STUCK", "call=$call after ${timeoutMs}ms")
         Timber.e("Remote call %s stuck for %dms, restarting elevated service", call, timeoutMs)
         unbindIf(service.asBinder())
-        throw RemoteCallStuckException(call, dump)
+        RemoteCallStuckException(call, dump)
     }
 
     private fun fallbackTimeoutMs(backend: RemoteBackend): Long =

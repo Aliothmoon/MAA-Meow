@@ -956,7 +956,11 @@ class MaaCompositionService(
         call: String,
         timeoutMs: Long = DISPLAY_CALL_TIMEOUT_MS,
         block: (RemoteService) -> R,
-    ): R = RemoteServiceManager.callOrRestart(this, call, timeoutMs, block)
+    ): R = RemoteServiceManager.callOrRestart(
+        this, call, timeoutMs,
+        onAbandoned = { telemetry.onRemoteCallStuck(it.call, it.threadDump) },
+        block = block,
+    )
 }
 
 // 正常毫秒级，15s 没回就是卡死

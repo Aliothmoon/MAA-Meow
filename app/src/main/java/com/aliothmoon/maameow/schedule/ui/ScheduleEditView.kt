@@ -380,6 +380,7 @@ fun ScheduleEditView(
                             value = displayText,
                             onValueChange = {},
                             readOnly = true,
+                            singleLine = true,
                             label = { Text(stringResource(R.string.schedule_first_execution_time)) },
                             modifier = Modifier
                                 .fillMaxWidth(),

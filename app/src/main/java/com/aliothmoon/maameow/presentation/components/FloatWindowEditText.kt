@@ -245,6 +245,8 @@ private class ExtractModeEditText(context: Context) : AppCompatEditText(context)
     fun applySingleLine(singleLine: Boolean) {
         singleLineApplied = singleLine
         setSingleLine(singleLine)
+        // setSingleLine(false) 会放开行数，LazyColumn 里高度无约束
+        if (!singleLine) maxLines = MULTI_LINE_MAX_LINES
         imeOptions = if (singleLine) EditorInfo.IME_ACTION_DONE else EditorInfo.IME_ACTION_NONE
     }
 

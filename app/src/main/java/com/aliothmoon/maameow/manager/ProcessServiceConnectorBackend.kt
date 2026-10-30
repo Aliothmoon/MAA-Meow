@@ -73,7 +73,8 @@ abstract class ProcessServiceConnectorBackend(
     /** 拉起进行中（binder 尚未回投） */
     val isConnecting: Boolean get() = activeLaunch?.job?.isActive == true
 
-    private val processName: String get() = "${appContext.packageName}:$processNameSuffix"
+    private val processName: String
+        get() = elevatedProcessName(appContext.packageName, processNameSuffix, appContext.applicationInfo.uid)
 
     fun initialize(context: Context, debugDir: File) {
         appContext = context.applicationContext
@@ -310,3 +311,14 @@ abstract class ProcessServiceConnectorBackend(
         const val LOG_TAIL_LINES = 5
     }
 }
+
+/**
+ * 分身等非主用户的实例共用同一个 Shizuku，同名进程会被对方当残留硬杀
+ * 主用户保持原名，升级前的残留照清
+ */
+internal fun elevatedProcessName(packageName: String, suffix: String, uid: Int): String {
+    val userId = uid / PER_USER_RANGE
+    return if (userId == 0) "$packageName:$suffix" else "$packageName:${suffix}_u$userId"
+}
+
+private const val PER_USER_RANGE = 100_000

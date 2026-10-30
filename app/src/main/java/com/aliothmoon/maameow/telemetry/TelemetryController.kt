@@ -18,6 +18,7 @@ import com.aliothmoon.maameow.domain.service.RunKind
 import com.aliothmoon.maameow.domain.service.RunTelemetry
 import com.aliothmoon.maameow.domain.service.ScreenPowerController
 import com.aliothmoon.maameow.domain.service.UnlockAttempt
+import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.maa.AsstMsg
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
@@ -212,6 +213,11 @@ class TelemetryController(
 
     override fun onLaunchFinished(outcome: LaunchOutcome) {
         if (!active || outcome.result !in REPORTED_LAUNCH_RESULTS) return
+        // 设了锁屏密码却没配凭证，是用户侧条件；配了却被判不可用的照报
+        val unlock = outcome.unlock
+        if (outcome.result == ExecutionResult.SKIPPED_LOCKED &&
+            unlock?.result == UNLOCK_CREDENTIAL_REQUIRED && !unlock.ready
+        ) return
         // 没走到开跑，tag 还是上次刷的；取证要等半秒，赶得上
         scope.launch { runCatching { refreshRunTags() } }
         // 不动追踪状态：这时任务还没开跑，没有哪一轮可收
@@ -297,6 +303,7 @@ class TelemetryController(
     /** 由 [reporter] 在后台取完证之后调用，不在锁里 */
     private fun send(incident: Incident, evidence: Evidence) {
         val event = incident.toSentryEvent().apply { setEvidence(evidence) }
+        if (incident is ServiceDeath && incident.backend == SHIZUKU_BACKEND) TelemetryShizuku.enrich(event, context)
         val logContext = event.diagnosticLogContext(incident)
         evidence.logs?.let { emitLogs(it.entries, logContext) }
         val attachments = (evidence.attachment as? AttachmentOutcome.Attached)?.images.orEmpty()
@@ -403,6 +410,8 @@ class TelemetryController(
             options.beforeSend = SentryOptions.BeforeSendCallback { event, hint ->
                 runCatching { TelemetryAnr.enrich(context, event, hint) }
                     .onFailure { Timber.w(it, "[telemetry] ANR 原因补充失败") }
+                runCatching { TelemetryFgs.enrich(event) }
+                    .onFailure { Timber.w(it, "[telemetry] 前台服务耗时补充失败") }
                 event
             }
             // 不关的话每条消息事件都会附上发送线程的调用栈
@@ -499,6 +508,10 @@ class TelemetryController(
             MaaExecutionState.RUNNING,
             MaaExecutionState.STOPPING,
         )
+
+        private val UNLOCK_CREDENTIAL_REQUIRED = WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED.name.lowercase()
+
+        private val SHIZUKU_BACKEND = RemoteBackend.SHIZUKU.name.lowercase()
 
         /** 正忙跳过与用户取消是正常结果，不报 */
         val REPORTED_LAUNCH_RESULTS = setOf(

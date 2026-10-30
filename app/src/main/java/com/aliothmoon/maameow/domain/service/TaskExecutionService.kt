@@ -57,12 +57,27 @@ class TaskExecutionService : Service() {
         // 抢在服务创建前到达，系统会因 startForeground 未调用直接杀进程；
         // 终态退出由服务观察状态流自行 stopSelf 完成
         fun start(context: Context) {
+            startRequestedAt = SystemClock.elapsedRealtime()
             val intent = Intent(context, TaskExecutionService::class.java)
             context.startForegroundService(intent)
         }
 
         /** 本进程没开过任务：进程被杀后系统按未投递完的 start 重建的（#302） */
         internal fun isSystemRestart(runToken: Long): Boolean = runToken == 0L
+
+        @Volatile
+        private var startRequestedAt = 0L
+        @Volatile
+        private var enteredAt = 0L
+        @Volatile
+        private var foregroundAt = 0L
+
+        /** 最近一次 start 请求、进入服务回调、挂上前台各距今多久；本进程没到过的不给 */
+        fun fgsTimeline(now: Long = SystemClock.elapsedRealtime()): Map<String, Long> = buildMap {
+            if (startRequestedAt > 0) put("since_start_ms", now - startRequestedAt)
+            if (enteredAt > 0) put("since_entered_ms", now - enteredAt)
+            if (foregroundAt > 0) put("since_foreground_ms", now - foregroundAt)
+        }
     }
 
     private val compositionService: MaaCompositionService by inject()
@@ -83,6 +98,7 @@ class TaskExecutionService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        enteredAt = SystemClock.elapsedRealtime()
         bindToken()
         if (isSystemRestart(boundToken)) {
             stopRestarted()
@@ -103,6 +119,7 @@ class TaskExecutionService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        enteredAt = SystemClock.elapsedRealtime()
         if (foregroundDenied) return START_NOT_STICKY
         bindToken()
         if (isSystemRestart(boundToken)) {
@@ -137,9 +154,18 @@ class TaskExecutionService : Service() {
         boundToken = liveCoordinator.currentToken()
     }
 
-    /** 重建的服务没有进度可展示；后台起前台服务在 12+ 可能被拒，不发通知直接退 */
+    /** 重建的服务没有进度可展示；按前台服务重投时不先 startForeground 就停会崩，挂上即撤 */
     private fun stopRestarted() {
         Timber.i("TaskExecutionService: restarted by system without a run, stopping")
+        try {
+            val notification = liveCoordinator.fallbackBuild(toSession(currentSnapshot(), firstFloat = false))
+            SpecialUseFgsGate.startForeground(this, LiveNotifyIds.PROGRESS, notification)
+            foregroundAt = SystemClock.elapsedRealtime()
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } catch (e: RuntimeException) {
+            // 12+ 后台可能被拒，抛出前系统已清 fgRequired，直接停不会崩
+            Timber.w(e, "TaskExecutionService: restarted startForeground denied")
+        }
         stopSelf()
     }
 
@@ -247,6 +273,7 @@ class TaskExecutionService : Service() {
     private fun startAsForeground(notification: Notification): Boolean {
         try {
             SpecialUseFgsGate.startForeground(this, LiveNotifyIds.PROGRESS, notification)
+            foregroundAt = SystemClock.elapsedRealtime()
             return true
         } catch (e: SecurityException) {
             // 预检放行但系统仍拒（如 appop 为 FOREGROUND）；AOSP 抛出前已清 fgRequired，stopSelf 不会触发未启动超时

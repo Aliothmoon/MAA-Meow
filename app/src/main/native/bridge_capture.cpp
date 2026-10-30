@@ -11,6 +11,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdio>
+#include <thread>
 
 struct NativeCapturer {
     AImageReader *reader = nullptr;
@@ -25,19 +26,26 @@ static NativeCapturer *g_capturer = nullptr;
 // 顺序同 kReleaseStageNames
 enum ReleaseStage : int {
     RELEASE_IDLE = 0,
-    RELEASE_DRAIN_PREVIEW,
     RELEASE_DETACH_LISTENER,
+    RELEASE_WAIT_CALLBACK,
+    RELEASE_DRAIN_PREVIEW,
     RELEASE_DELETE_READER,
     RELEASE_BLANK_PREVIEW,
     RELEASE_FRAME_BUFFERS,
 };
 
 static constexpr const char *kReleaseStageNames[] = {
-        "idle", "drain_preview", "detach_listener", "delete_reader", "blank_preview", "frame_buffers",
+        "idle", "detach_listener", "wait_callback", "drain_preview", "delete_reader", "blank_preview",
+        "frame_buffers",
 };
 
 static std::atomic<int> g_release_stage{RELEASE_IDLE};
 static std::atomic<int64_t> g_release_stage_since_ms{0};
+
+// AImageReader_delete 持 reader 锁等回调线程退出，回调里 acquire 也要这把锁
+// 关闭前须让进行中的回调放完，之后到来的回调不再碰 reader
+static std::atomic<bool> g_closing{false};
+static std::atomic<int> g_callbacks_in_flight{0};
 
 static int64_t NowMs() {
     using namespace std::chrono;
@@ -49,9 +57,7 @@ static void EnterReleaseStage(ReleaseStage stage) {
     g_release_stage.store(stage, std::memory_order_release);
 }
 
-static void onImageAvailable(void *context, AImageReader *reader) {
-    (void) context;
-
+static void ConsumeLatestImage(AImageReader *reader) {
     AImage *image = nullptr;
     if (AImageReader_acquireLatestImage(reader, &image) != AMEDIA_OK || !image) {
         return;
@@ -70,6 +76,16 @@ static void onImageAvailable(void *context, AImageReader *reader) {
     if (!handedOver) {
         AImage_delete(image);
     }
+}
+
+static void onImageAvailable(void *context, AImageReader *reader) {
+    (void) context;
+    // 先登记再看标志，与 Release 的先置标志再等归零配对
+    g_callbacks_in_flight.fetch_add(1);
+    if (!g_closing.load()) {
+        ConsumeLatestImage(reader);
+    }
+    g_callbacks_in_flight.fetch_sub(1);
 }
 
 jobject SetupNativeCapturer(JNIEnv *env, int width, int height) {
@@ -92,6 +108,7 @@ jobject SetupNativeCapturer(JNIEnv *env, int width, int height) {
         return nullptr;
     }
 
+    g_closing.store(false);
     g_capturer->listener.context = g_capturer;
     g_capturer->listener.onImageAvailable = onImageAvailable;
     status = AImageReader_setImageListener(g_capturer->reader, &g_capturer->listener);
@@ -120,13 +137,22 @@ jobject SetupNativeCapturer(JNIEnv *env, int width, int height) {
 }
 
 void ReleaseNativeCapturer() {
+    if (g_capturer && g_capturer->reader) {
+        g_closing.store(true);
+        EnterReleaseStage(RELEASE_DETACH_LISTENER);
+        AImageReader_setImageListener(g_capturer->reader, nullptr);
+        EnterReleaseStage(RELEASE_WAIT_CALLBACK);
+        while (g_callbacks_in_flight.load() != 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    }
+
+    // 回调已放完，不会再往队里塞图
     EnterReleaseStage(RELEASE_DRAIN_PREVIEW);
     DrainPreviewQueue();
 
     if (g_capturer) {
         if (g_capturer->reader) {
-            EnterReleaseStage(RELEASE_DETACH_LISTENER);
-            AImageReader_setImageListener(g_capturer->reader, nullptr);
             EnterReleaseStage(RELEASE_DELETE_READER);
             AImageReader_delete(g_capturer->reader);
         }

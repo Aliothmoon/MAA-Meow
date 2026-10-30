@@ -32,6 +32,13 @@ class RootSpawnCommandTest {
     }
 
     @Test
+    fun elevatedProcessName_carriesUserIdOutsideMainUser() {
+        assertEquals("pkg:svc", elevatedProcessName("pkg", "svc", 10343))
+        // 分身与主用户同名会互相当残留杀
+        assertEquals("pkg:svc_u999", elevatedProcessName("pkg", "svc", 99910343))
+    }
+
+    @Test
     fun parseProcesses_skipsHeaderAndKeepsElapsed() {
         assertEquals(
             listOf(ResidualProcess(42, "00:17"), ResidualProcess(7, "1-02:03:04")),
