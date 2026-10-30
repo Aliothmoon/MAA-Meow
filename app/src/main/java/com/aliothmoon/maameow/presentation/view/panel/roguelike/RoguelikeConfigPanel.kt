@@ -50,6 +50,7 @@ import org.koin.compose.koinInject
 @Composable
 fun RoguelikeConfigPanel(
     config: RoguelikeConfig,
+    clientType: String,
     onConfigChange: (RoguelikeConfig) -> Unit,
 ) {
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
@@ -109,7 +110,7 @@ fun RoguelikeConfigPanel(
                 ) {
                     when (page) {
                         0 -> {
-                            item { BasicRoguelikeSettings(config, onConfigChange) }
+                            item { BasicRoguelikeSettings(config, clientType, onConfigChange) }
                         }
 
                         1 -> {
@@ -125,6 +126,7 @@ fun RoguelikeConfigPanel(
 @Composable
 private fun BasicRoguelikeSettings(
     config: RoguelikeConfig,
+    clientType: String,
     onConfigChange: (RoguelikeConfig) -> Unit,
     resourceDataManager: ResourceDataManager = koinInject()
 ) {
@@ -133,7 +135,7 @@ private fun BasicRoguelikeSettings(
         RoguelikeButtonGroup(
             label = stringResource(R.string.panel_roguelike_theme),
             selectedValue = config.theme,
-            options = localizedRoguelikeThemeOptions(),
+            options = localizedRoguelikeThemeOptions(clientType),
             onValueChange = { newTheme ->
                 // 切换主题时重置分队和模式（如果当前值不在新主题支持列表中）
                 // WPF: UpdateRoguelikeSquadList (line 244-275)

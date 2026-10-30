@@ -10,8 +10,12 @@ import com.aliothmoon.maameow.domain.enums.RoguelikeMode
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants.Roguelike as RoguelikeUi
 
 @Composable
-fun localizedRoguelikeThemeOptions(): List<Pair<String, String>> {
-    return RoguelikeUi.THEMES.map { it to localizedRoguelikeThemeLabel(it) }
+fun localizedRoguelikeThemeOptions(clientType: String): List<Pair<String, String>> {
+    return RoguelikeUi.THEMES.map { theme ->
+        val label = localizedRoguelikeThemeLabel(theme)
+        theme to if (RoguelikeUi.isThemeAdapted(theme, clientType)) label
+        else stringResource(R.string.common_theme_not_adapted, label)
+    }
 }
 
 @Composable

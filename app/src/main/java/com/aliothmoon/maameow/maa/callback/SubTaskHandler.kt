@@ -694,6 +694,7 @@ class SubTaskHandler(
                 lastFacilityKey = "$facility#$index"
             }
 
+            "InfrastRecycleProduct" -> handleInfrastRecycleProduct(subDetails)
             "ProductIncorrect" -> append(str("ProductIncorrect"), LogLevel.ERROR)
             "ProductUnknown" -> append(str("ProductUnknown"), LogLevel.ERROR)
             "ProductChanged" -> append(str("ProductChanged"), LogLevel.INFO)
@@ -978,6 +979,14 @@ class SubTaskHandler(
             resources.getString(R.string.runlog_depot_delta_summary, since, delta.changes.size)
         }
         append(text, LogLevel.TRACE)
+    }
+
+    // 对齐 WPF 只记日志不入库
+    private fun handleInfrastRecycleProduct(subDetails: JSONObject?) {
+        val lines = subDetails?.getJSONArray("drops").orEmpty().mapNotNull { drop ->
+            (drop as? JSONObject)?.let { "${it.getString("itemName").orEmpty()} : ${it.getIntValue("quantity")}" }
+        }
+        append((listOf(str("InfrastRecycleProduct")) + lines).joinToString("\n"), LogLevel.TRACE)
     }
 
     private fun handleInfrastTrainingCompleted(subDetails: JSONObject?) {

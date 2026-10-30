@@ -123,6 +123,7 @@
     <string name="maa_product_unknown">无法识别的产物</string>
     <string name="maa_product_changed">产物已切换</string>
     <string name="maa_product_change_fail">产物切换失败</string>
+    <string name="maa_infrast_recycle_product">回收站产出</string>
     <string name="maa_room_groups_match">匹配编组: </string>
     <string name="maa_room_groups_match_failed">匹配干员编组失败，编组列表: </string>
     <string name="maa_room_groups_match_recog_failed">编组干员识别失败，房间保持原样</string>
@@ -1593,6 +1594,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="panel_roguelike_start_with_seed">使用指定种子开局</string>
     <string name="panel_roguelike_seed_placeholder">格式: xxx,rogue_x,x</string>
     <string name="common_not_switch">不切换</string>
+    <string name="common_theme_not_adapted">%1$s（未适配）</string>
     <string name="panel_roguelike_difficulty_max">MAX (%1$d)</string>
     <string name="panel_roguelike_difficulty_min">MIN (0)</string>
     <string name="panel_roguelike_theme_phantom">傀影</string>

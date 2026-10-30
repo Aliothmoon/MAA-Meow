@@ -174,7 +174,7 @@ fun TaskConfigPanel(
                         )
 
                         is RoguelikeConfig -> RoguelikeConfigPanel(
-                            config = cfg, onConfigChange = onConfigChange
+                            config = cfg, clientType = clientType, onConfigChange = onConfigChange
                         )
 
                         // 已迁到工具箱，载入时移出任务链

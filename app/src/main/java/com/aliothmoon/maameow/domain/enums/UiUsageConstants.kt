@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.domain.enums
 
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants.USER_DEFINED_INFRAST
+import com.aliothmoon.maameow.domain.models.ClientResourceProfile
 
 
 object UiUsageConstants {
@@ -79,6 +80,10 @@ object UiUsageConstants {
         val THEMES = listOf("Phantom", "Mizuki", "Sami", "Sarkaz", "JieGarden", "BlackFlow")
 
         const val THEME_BLACK_FLOW = "BlackFlow"
+
+        // 仅国服适配
+        fun isThemeAdapted(theme: String, clientType: String): Boolean =
+            theme != THEME_BLACK_FLOW || ClientResourceProfile.of(clientType).isEmpty()
 
         const val DEFAULT_SQUAD = "指挥分队"
         const val DEFAULT_ROLE = "稳扎稳打"

@@ -69,7 +69,7 @@ class MiniGameDelegate(
     private val pixelArt: PixelArtDelegate,
     private val sessionLogger: MaaSessionLogger,
     private val appSettingsManager: AppSettingsManager,
-    private val clientType: () -> String,
+    val clientType: StateFlow<String>,
 ) {
 
     private val _state = MutableStateFlow(MiniGameUiState())
@@ -143,7 +143,7 @@ class MiniGameDelegate(
 
     internal fun buildTaskParams(): MaaTaskParams {
         if (isReclamation(_state.value.selectedTaskName)) {
-            return reclamationConfig.value.toTaskParams(clientType())
+            return reclamationConfig.value.toTaskParams(clientType.value)
         }
         val taskName = buildTaskName()
         val params = buildJsonObject {
@@ -160,7 +160,7 @@ class MiniGameDelegate(
         return when {
             // 黑名单为空时 Core 走原流程全买
             isEventShop(selected) ->
-                EventShopBlacklist.keywords(eventShopPresets.value, eventShopCustom.value, clientType())
+                EventShopBlacklist.keywords(eventShopPresets.value, eventShopCustom.value, clientType.value)
                     .takeIf { it.isNotEmpty() }
                     ?.let { blacklist ->
                         buildJsonObject {

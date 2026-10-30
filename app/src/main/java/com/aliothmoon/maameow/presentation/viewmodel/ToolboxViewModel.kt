@@ -107,7 +107,8 @@ class ToolboxViewModel(
         pixelArt,
         sessionLogger,
         appSettingsManager,
-        clientType = { chainState.clientType },
+        clientType = chainState.clientTypeFlow
+            .stateIn(viewModelScope, SharingStarted.Eagerly, chainState.clientType),
     )
 
     private val _currentTab = MutableStateFlow(ToolboxTab.MINI_GAME)

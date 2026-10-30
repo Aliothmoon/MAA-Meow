@@ -23,7 +23,7 @@ class MiniGameEventShopBlacklistTest {
     private val presets = MutableStateFlow(emptySet<EventShopPreset>())
     private val custom = MutableStateFlow("")
     private val reclamation = MutableStateFlow(ReclamationConfig())
-    private var clientType = "Official"
+    private val clientType = MutableStateFlow("Official")
 
     private val delegate = MiniGameDelegate(
         appContext = mockk(relaxed = true),
@@ -42,7 +42,7 @@ class MiniGameEventShopBlacklistTest {
             every { eventShopBlacklistCustom } returns custom
             every { reclamationConfig } returns reclamation
         },
-        clientType = { clientType },
+        clientType = clientType,
     )
 
     private fun params() = Json.parseToJsonElement(delegate.buildTaskParams().params).jsonObject
@@ -55,7 +55,7 @@ class MiniGameEventShopBlacklistTest {
     @Test
     fun reclamation_isSubmittedAsOwnTaskType_withClientDefaultTool() {
         reclamation.value = ReclamationConfig(theme = "Tales", mode = ReclamationConfig.MODE_PROSPERITY_IN_SAVE)
-        clientType = "YoStarEN"
+        clientType.value = "YoStarEN"
         delegate.onTaskSelected("Reclamation")
 
         val task = delegate.buildTaskParams()
@@ -87,11 +87,11 @@ class MiniGameEventShopBlacklistTest {
     fun presetKeywords_followGameClientLanguage() {
         presets.value = setOf(EventShopPreset.DATA_SUPPLEMENT_INSTRUMENT, EventShopPreset.DATA_SUPPLEMENT_STICK)
 
-        clientType = "YoStarEN"
+        clientType.value = "YoStarEN"
         assertEquals(listOf("Data Supplement Instrument", "Data Supplement Stick"), blacklist())
-        clientType = "txwy"
+        clientType.value = "txwy"
         assertEquals(listOf("數據增補儀", "數據增補條"), blacklist())
-        clientType = "Bilibili"
+        clientType.value = "Bilibili"
         assertEquals(listOf("数据增补仪", "数据增补条"), blacklist())
     }
 

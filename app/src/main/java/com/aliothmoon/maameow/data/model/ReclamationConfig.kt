@@ -44,6 +44,9 @@ data class ReclamationConfig(
 
         val INCREMENT_MODE_VALUES = listOf(0, 1)
 
+        fun isThemeAdapted(theme: String, clientType: String): Boolean =
+            theme != "RelaunchAnchor" || clientType != "txwy"
+
         // 对应 WPF ReclamationToolToCraftPlaceholder 各语言版本,按 clientType 取
         private val DEFAULT_TOOL_BY_CLIENT = mapOf(
             "Official" to "荧光棒",

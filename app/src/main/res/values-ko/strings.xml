@@ -123,6 +123,7 @@
     <string name="maa_product_unknown">인식할 수 없는 생산품</string>
     <string name="maa_product_changed">생산품이 변경됨</string>
     <string name="maa_product_change_fail">생산품 전환 실패</string>
+    <string name="maa_infrast_recycle_product">재활용 시설 산출물</string>
     <string name="maa_room_groups_match">그룹에 일치: </string>
     <string name="maa_room_groups_match_failed">오퍼레이터 그룹 매칭 실패, 그룹 목록: </string>
     <string name="maa_room_groups_match_recog_failed">그룹 오퍼레이터 인식에 실패하여 방을 그대로 유지합니다</string>
@@ -1526,10 +1527,10 @@
     <string name="panel_reclamation_with_save_line3">3. 제작 가능한 수량이 정확히 99의 배수이면 멈출 수 있으니, 저장하기 전에 재료를 조금 사용해 두세요</string>
     <string name="panel_reclamation_theme_tales">사막 이야기</string>
     <string name="panel_reclamation_theme_fire">모래 속의 불 (종료됨)</string>
-    <string name="panel_reclamation_theme_relaunch_anchor">Relaunch Anchor</string>
-    <string name="panel_reclamation_relaunch_anchor_tip_ra1">Relaunch Anchor RA-1\n\n수익 참고: 회당 약 159 토큰 + 통괄 포인트, 1회 소요 시간 약 2분 10초\n\n오퍼레이터 요구 사항: 없음\n\n사전 조건: 메인 스토리에서 RA-1을 클리어한 상태여야 합니다\n\n맵에서 RA-1을 열고 오른쪽 아래에 「건설 시작」이 나타났을 때 작업을 시작하면 자동으로 반복됩니다\n\n참고: 시작 시 추가 아이템을 지참하는 관련 기술을 해금했다면, 기지에서 시작 시 추가 아이템을 지참하게 만드는 시설(식품 공급소, 음료 공급소, 축사 등)을 철거하세요\n\n작업 흐름: 정경세작, 건설, 자원 납품, 결산을 자동으로 반복</string>
-    <string name="panel_reclamation_relaunch_anchor_tip_ra4">Relaunch Anchor RA-4\n\n수익 참고: 회당 약 417 토큰 + 통괄 포인트, 1회 소요 시간 약 1분 40초\n\n오퍼레이터 요구 사항: 위셔델 (지원 유닛 사용 가능)\n\n사전 조건:\n1. 메인 스토리에서 RA-4를 클리어한 상태여야 합니다\n2. 경영 계획 전략을 해금합니다\n3. 위셔델을 보유한 경우, 직접 스테이지를 열고 한 번 편성합니다. 위셔델보다 코스트가 낮은 오퍼레이터 5명 + 위셔델로 구성하고 위셔델을 6번째 슬롯(마지막으로 선택하는 자리)에 둔 뒤 모집을 확정하고, 이번 건설을 포기한 후 건설 시작 지점에서 시작합니다\n4. 지원 유닛 위셔델을 사용하는 경우, 위셔델이 스나이퍼 지원 첫 페이지에 있어야 합니다(친구 추가 권장). 직접 스테이지를 열어 위셔델보다 코스트가 낮은 오퍼레이터 5명을 편성하고, 6번째 슬롯에 지원 유닛 위셔델을 선택한 뒤 모집을 확정합니다. 그 후 이번 건설을 포기하고 건설 시작 지점에서 시작합니다(앞의 5개 슬롯에는 오퍼레이터가 있고 6번째 슬롯은 비어 있어야 함)\n\n맵에서 RA-4를 열고 오른쪽 아래에 「건설 시작」이 나타났을 때 작업을 시작하면 자동으로 반복됩니다\n\n참고: 시작 시 추가 아이템을 지참하는 관련 기술을 해금했다면, 기지에서 시작 시 추가 아이템을 지참하게 만드는 시설(식품 공급소, 음료 공급소, 축사 등)을 철거하세요\n\n작업 흐름: 경영 계획 전략으로 얻은 순금으로 지역을 해금하고, 위셔델로 보스 처치 임무를 완료</string>
-    <string name="panel_reclamation_relaunch_anchor_tip_ra15">수익 참고: 회당 약 500 토큰 + 통괄 포인트, 1회 소요 시간 약 3분\n\n오퍼레이터 요구 사항: 프라마닉스 더 프레리타 (지원 유닛 사용 가능)\n\n사전 조건:\n1. 메인 스토리에서 RA-15를 클리어한 상태여야 합니다\n2. 프라마닉스 더 프레리타를 보유한 경우, 직접 스테이지를 열고 한 번 편성합니다. 뱅가드 5명(육성 요구 없음) + 프라마닉스 더 프레리타로 구성하고 프라마닉스 더 프레리타를 6번째 슬롯(마지막으로 선택하는 자리)에 둔 뒤 편성을 저장하고 스테이지를 나갑니다\n3. 지원 유닛 프라마닉스 더 프레리타를 사용하는 경우, 프라마닉스 더 프레리타가 캐스터 지원 첫 페이지에 있어야 합니다(친구 추가 권장)\n\n맵에서 RA-15를 열고 오른쪽 아래에 「건설 시작」이 나타났을 때 작업을 시작하면 자동으로 반복됩니다\n\n참고: 시작 시 추가 아이템을 지참하는 관련 기술을 해금했다면, 기지에서 시작 시 추가 아이템을 지참하게 만드는 시설(식품 공급소, 음료 공급소, 축사 등)을 철거하세요\n\n작업 흐름: 프라마닉스 더 프레리타로 60킬 임무를 완료</string>
+    <string name="panel_reclamation_theme_relaunch_anchor">리런치 앵커</string>
+    <string name="panel_reclamation_relaunch_anchor_tip_ra1">리런치 앵커 RA-1\n\n수익 참고: 회당 약 159 토큰 + 통합 포인트, 소요 시간 약 2분 10초\n\n오퍼레이터 요구 사항: 없음\n\n사전 조건: 메인 스토리에서 RA-1을 클리어해야 합니다\n\n맵에서 RA-1을 열고 오른쪽 아래에 ｢시작하기｣가 나타나면 작업을 시작하여 자동 순환할 수 있습니다\n\n참고: 초기 추가 아이템 휴대 관련 기술을 해제한 경우, 기지 내에서 초기 추가 아이템을 휴대하게 하는 시설(식품 공급소, 음료 공급소, 축사 등)을 철거하세요\n\n작업 흐름: 정밀농경, 건설, 자원 납품, 정산을 자동 실행</string>
+    <string name="panel_reclamation_relaunch_anchor_tip_ra4">리런치 앵커 RA-4\n\n수익 참고: 회당 약 417 토큰 + 통합 포인트, 소요 시간 약 1분 40초\n\n오퍼레이터 요구 사항: 위셔델 (지원 유닛 사용 가능)\n\n사전 조건:\n1. 메인 스토리에서 RA-4를 클리어해야 합니다\n2. ｢경영기획｣을 해금합니다\n3. 자신이 위셔델을 보유한 경우, 수동으로 스테이지를 열고 한 번 편성합니다. 위셔델보다 코스트가 낮은 임의의 5명의 오퍼레이터 + 위셔델로 하고, 위셔델을 6번째 슬롯(마지막으로 선택하는 자리)에 배치합니다. 그 후 ｢모집 확인｣을 누르고, 이번 건설을 포기한 후 ｢건설 시작｣에서 시작합니다\n4. 지원 유닛 위셔델을 사용하는 경우, 위셔델이 스나이퍼 지원 첫 페이지에 있는지 확인합니다(절친 우선 고려). 수동으로 스테이지를 열어 위셔델보다 코스트가 낮은 임의의 5명의 오퍼레이터를 편성하고, 6번째 슬롯에 지원 유닛 위셔델을 선택한 후 ｢모집 확인｣을 누릅니다. 그 후 이번 건설을 포기하고 ｢건설 시작｣에서 시작합니다 (앞의 5개 슬롯에 오퍼레이터가 있고 6번째는 비어 있는지 확인)\n\n맵에서 RA-4를 열고 오른쪽 아래에 ｢시작하기｣가 나타나면 작업을 시작하여 자동 순환할 수 있습니다\n\n참고: 초기 추가 아이템 휴대 관련 기술을 해제한 경우, 기지 내에서 초기 추가 아이템을 휴대하게 하는 시설(식품 공급소, 음료 공급소, 축사 등)을 철거하세요\n\n작업 흐름: ｢경영기획｣으로 얻은 순금 원석을 사용하여 지역을 해금하고, 위셔델로 보스 처치 임무를 완료합니다</string>
+    <string name="panel_reclamation_relaunch_anchor_tip_ra15">수익 참고: 회당 약 500 토큰 + 통합 포인트, 소요 시간 약 3분\n\n오퍼레이터 요구 사항: 프라마닉스 더 프레리타 (지원 유닛 사용 가능)\n\n사전 조건:\n1. 메인 스토리에서 RA-15를 클리어해야 합니다\n2. 프라마닉스 더 프레리타를 보유한 경우, 직접 RA-15를 열고 한 번 편성합니다. 뱅가드 5명(육성 요구 없음) + 프라마닉스 더 프레리타로 하고, 프라마닉스 더 프레리타를 6번째 슬롯(마지막으로 선택하는 자리)에 배치합니다. 그 후 편성을 저장하고 스테이지를 나갑니다\n3. 지원 유닛 프라마닉스 더 프레리타를 사용하는 경우, 프라마닉스 더 프레리타가 캐스터 지원 첫 페이지에 있는지 확인합니다 (절친 우선 고려)\n\n맵에서 RA-15를 열고 오른쪽 아래에 ｢시작하기｣가 나타나면 작업을 시작하여 자동 순환할 수 있습니다\n\n참고: 초기 추가 아이템 휴대 관련 기술을 해제한 경우, 기지 내에서 초기 추가 아이템을 휴대하게 하는 시설(식품 공급소, 음료 공급소, 축사 등)을 철거하세요\n\n작업 흐름: 프라마닉스 더 프레리타로 ｢적 60명 처치｣ 임무를 완료합니다</string>
     <string name="panel_reclamation_mode_no_save">세이브 X (스테이지 반복으로 점수 획득)</string>
     <string name="panel_reclamation_mode_with_save">세이브 O (도구 제작으로 점수 획득)</string>
     <string name="panel_reclamation_relaunch_anchor_stage">스테이지</string>
@@ -1593,6 +1594,7 @@
     <string name="panel_roguelike_start_with_seed">지정 시드로 시작</string>
     <string name="panel_roguelike_seed_placeholder">형식: xxx,rogue_x,x</string>
     <string name="common_not_switch">미변경</string>
+    <string name="common_theme_not_adapted">%1$s (미지원)</string>
     <string name="panel_roguelike_difficulty_max">MAX (%1$d)</string>
     <string name="panel_roguelike_difficulty_min">MIN (0)</string>
     <string name="panel_roguelike_theme_phantom">팬텀</string>
