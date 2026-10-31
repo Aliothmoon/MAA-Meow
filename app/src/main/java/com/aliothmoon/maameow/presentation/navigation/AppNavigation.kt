@@ -60,6 +60,7 @@ import com.aliothmoon.maameow.presentation.view.settings.LogHistoryView
 import com.aliothmoon.maameow.presentation.view.settings.LiveUpdateSettingsView
 import com.aliothmoon.maameow.presentation.view.settings.TaskOverrideEditorView
 import com.aliothmoon.maameow.presentation.view.settings.WallpaperSettingsView
+import com.aliothmoon.maameow.presentation.view.settings.WebUiSettingsView
 import com.aliothmoon.maameow.presentation.viewmodel.AppEventsViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.model.CountdownState
@@ -243,6 +244,9 @@ fun AppNavigation(
                     }
                     composable(Routes.WALLPAPER) {
                         WallpaperSettingsView(navController = navController)
+                    }
+                    composable(Routes.WEB_UI) {
+                        WebUiSettingsView(navController = navController)
                     }
                     composable(Routes.ACHIEVEMENT) {
                         AchievementView(navController = navController)

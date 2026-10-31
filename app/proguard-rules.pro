@@ -74,6 +74,9 @@
 -dontwarn org.joni.**
 -dontwarn org.jcodings.**
 
+# 网页控制台：Ktor 的调试器检测引用 JVM 独有的 java.lang.management，Android 上走不到
+-dontwarn java.lang.management.**
+
 # FakeContext / ShellContentResolver：acquireProvider 等对编译期不可见，R8 当死代码删掉
 -keep class com.aliothmoon.maameow.third.FakeContext { *; }
 -keep class com.aliothmoon.maameow.third.FakeContext$* { *; }

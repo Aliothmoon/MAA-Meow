@@ -2965,4 +2965,35 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="oper_progress_result_recognition">Recognition or operation failed</string>
     <string name="oper_progress_log_detail">%1$s: %2$s%3$s</string>
     <string name="oper_progress_log_summary">Operator training results: %1$d successful, %2$d failed, %3$d skipped (starting mastery also counts as success).</string>
+
+    <!-- 网页控制台 -->
+    <string name="webui_notification_channel">Web console</string>
+    <string name="webui_notification_title">Web console running</string>
+    <string name="webui_notification_text">Open %1$s in a browser</string>
+    <string name="webui_notification_starting">Starting</string>
+    <string name="webui_notification_no_lan">Not connected to a LAN</string>
+    <string name="webui_notification_turn_off">Turn off</string>
+    <string name="settings_webui_title">Web console</string>
+    <string name="settings_webui_desc">View task status and logs from a browser on your LAN</string>
+    <string name="search_keywords_webui">web browser remote lan webui console</string>
+    <string name="webui_enable">Enable web console</string>
+    <string name="webui_status_running">Running · port %1$d</string>
+    <string name="webui_status_failed">Failed to start: %1$s</string>
+    <string name="webui_status_stopped">Off</string>
+    <string name="webui_address_title">Address</string>
+    <string name="webui_address_empty">No LAN address. Connect to Wi-Fi or turn on the hotspot</string>
+    <string name="webui_address_copied">Copied</string>
+    <string name="webui_pair_title">Pair a browser</string>
+    <string name="webui_pair_desc">Enter the code in the web page. A paired browser stays signed in until you remove it</string>
+    <string name="webui_pair_generate">Generate code</string>
+    <string name="webui_pair_expires">Expires in %1$ds</string>
+    <string name="webui_pair_cancel">Discard</string>
+    <string name="webui_sessions_title">Paired browsers</string>
+    <string name="webui_sessions_empty">No paired browsers yet</string>
+    <string name="webui_session_meta">Paired %1$s · last seen %2$s</string>
+    <string name="webui_session_remove">Remove</string>
+    <string name="webui_sessions_remove_all">Remove all</string>
+    <string name="webui_port_title">Port</string>
+    <string name="webui_port_invalid">Port must be between %1$d and %2$d</string>
+    <string name="webui_security_note">Traffic on the LAN is plain HTTP, so only turn this on in a trusted network. For access from outside, use an encrypted tunnel such as Tailscale.</string>
 </resources>

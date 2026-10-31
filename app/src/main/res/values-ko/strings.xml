@@ -3022,4 +3022,35 @@
     <string name="oper_progress_result_recognition">인식 또는 조작 실패</string>
     <string name="oper_progress_log_detail">%1$s: %2$s%3$s</string>
     <string name="oper_progress_log_summary">오퍼레이터 육성 이번 라운드 결과: 성공 %1$d, 실패 %2$d, 건너뜀 %3$d (마스터리 시작도 성공으로 집계)</string>
+
+    <!-- 网页控制台 -->
+    <string name="webui_notification_channel">웹 콘솔</string>
+    <string name="webui_notification_title">웹 콘솔 실행 중</string>
+    <string name="webui_notification_text">브라우저에서 %1$s 접속</string>
+    <string name="webui_notification_starting">시작 중</string>
+    <string name="webui_notification_no_lan">LAN에 연결되지 않음</string>
+    <string name="webui_notification_turn_off">끄기</string>
+    <string name="settings_webui_title">웹 콘솔</string>
+    <string name="settings_webui_desc">LAN 내 브라우저에서 작업 상태와 로그를 확인합니다</string>
+    <string name="search_keywords_webui">웹 브라우저 원격 LAN 로컬 네트워크 WebUI 콘솔</string>
+    <string name="webui_enable">웹 콘솔 사용</string>
+    <string name="webui_status_running">실행 중 · 포트 %1$d</string>
+    <string name="webui_status_failed">시작 실패: %1$s</string>
+    <string name="webui_status_stopped">꺼짐</string>
+    <string name="webui_address_title">접속 주소</string>
+    <string name="webui_address_empty">LAN 주소가 없습니다. Wi-Fi에 연결하거나 핫스팟을 켜세요</string>
+    <string name="webui_address_copied">복사했습니다</string>
+    <string name="webui_pair_title">브라우저 페어링</string>
+    <string name="webui_pair_desc">웹 페이지에 페어링 코드를 입력하세요. 페어링된 브라우저는 제거하기 전까지 계속 로그인 상태로 유지됩니다</string>
+    <string name="webui_pair_generate">페어링 코드 생성</string>
+    <string name="webui_pair_expires">%1$d초 후 만료</string>
+    <string name="webui_pair_cancel">폐기</string>
+    <string name="webui_sessions_title">페어링된 브라우저</string>
+    <string name="webui_sessions_empty">페어링된 브라우저가 없습니다</string>
+    <string name="webui_session_meta">페어링 %1$s · 최근 접속 %2$s</string>
+    <string name="webui_session_remove">제거</string>
+    <string name="webui_sessions_remove_all">모두 제거</string>
+    <string name="webui_port_title">포트</string>
+    <string name="webui_port_invalid">포트는 %1$d–%2$d 사이여야 합니다</string>
+    <string name="webui_security_note">LAN 내 통신은 암호화되지 않은 HTTP이므로 신뢰할 수 있는 네트워크에서만 켜세요. 외부에서 접속하려면 Tailscale 같은 암호화 터널을 사용하세요.</string>
 </resources>
