@@ -33,6 +33,7 @@ object MiniGameTextRegistry {
         "Toolbox.MiniGame.All.IvyVine" -> R.string.mini_game_name_all_ivy_vine
         "Toolbox.MiniGame.PF" -> R.string.mini_game_name_pf
         "Toolbox.MiniGame.InteractiveExhibition" -> R.string.mini_game_name_interactive_exhibition
+        "Toolbox.MiniGame.TL.WartimePressCommittee" -> R.string.mini_game_name_tl_wartime_press_committee
         else -> null
     }
 
@@ -58,6 +59,7 @@ object MiniGameTextRegistry {
         "Toolbox.MiniGame.All.IvyVine.Tip" -> R.string.mini_game_tip_all_duel_channel
         "Toolbox.MiniGame.PF.Tip" -> R.string.mini_game_tip_pf
         "Toolbox.MiniGame.InteractiveExhibition.Tip" -> R.string.mini_game_tip_interactive_exhibition
+        "Toolbox.MiniGame.TL.WartimePressCommittee.Tip" -> R.string.mini_game_tip_tl_wartime_press_committee
         else -> null
     }
 
@@ -90,6 +92,9 @@ object MiniGameTextRegistry {
         "MiniGame@InteractiveExhibition", "MiniGame@InteractiveExhibition@Begin" ->
             R.string.mini_game_name_interactive_exhibition
 
+        "MiniGame@WartimePressCommittee", "MiniGame@WartimePressCommittee@Begin" ->
+            R.string.mini_game_name_tl_wartime_press_committee
+
         else -> null
     }
 
@@ -121,6 +126,9 @@ object MiniGameTextRegistry {
         "MiniGame@PF", "MiniGame@PF@Begin" -> R.string.mini_game_tip_pf
         "MiniGame@InteractiveExhibition", "MiniGame@InteractiveExhibition@Begin" ->
             R.string.mini_game_tip_interactive_exhibition
+
+        "MiniGame@WartimePressCommittee", "MiniGame@WartimePressCommittee@Begin" ->
+            R.string.mini_game_tip_tl_wartime_press_committee
 
         else -> null
     }

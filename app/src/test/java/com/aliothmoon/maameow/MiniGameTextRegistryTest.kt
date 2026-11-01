@@ -162,6 +162,37 @@ class MiniGameTextRegistryTest {
     }
 
     @Test
+    fun resolveWartimePressCommittee_liveOfficialEntry() {
+        // 上游 v6.21.1 新增，线上条目只带 DisplayKey + 内联 Tip，无 TipKey
+        val display = MiniGameTextRegistry.resolveDisplay(
+            display = "TL-战时新闻委员会",
+            displayKey = "Toolbox.MiniGame.TL.WartimePressCommittee",
+            value = "MiniGame@WartimePressCommittee@Begin"
+        )
+        assertEquals(UiText.Resource(R.string.mini_game_name_tl_wartime_press_committee), display)
+        assertEquals(
+            UiText.Dynamic("API 内联中文提示"),
+            MiniGameTextRegistry.resolveTip(
+                tip = "API 内联中文提示",
+                tipKey = null,
+                display = display,
+                displayKey = "Toolbox.MiniGame.TL.WartimePressCommittee",
+                value = "MiniGame@WartimePressCommittee@Begin"
+            )
+        )
+        assertEquals(
+            UiText.Resource(R.string.mini_game_tip_tl_wartime_press_committee),
+            MiniGameTextRegistry.resolveTip(
+                tip = null,
+                tipKey = null,
+                display = display,
+                displayKey = "Toolbox.MiniGame.TL.WartimePressCommittee",
+                value = "MiniGame@WartimePressCommittee@Begin"
+            )
+        )
+    }
+
+    @Test
     fun resolveTip_noTipKey_usesDisplayKeyDotTipConvention() {
         assertEquals(
             UiText.Resource(R.string.mini_game_tip_rm_1),

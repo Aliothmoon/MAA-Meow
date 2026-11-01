@@ -1309,6 +1309,8 @@
     <string name="mini_game_tip_pf">After manually clearing the tutorial stage, enter PF-1 to manually form a squad. Only ｢Kroos｣ should be deployed as the sole operator, then return to the event stage screen and tap PF-1 to start the task.</string>
     <string name="mini_game_name_interactive_exhibition">Interactive Exhibition - Find Unrecorded Wonders</string>
     <string name="mini_game_tip_interactive_exhibition">Start the task at the bottom right of the grass in the advanced zone of the selected map.\nWander back and forth across the grass to find unrecorded creatures; the task stops automatically once one is found.\nCreatures can only be found on grass.</string>
+    <string name="mini_game_name_tl_wartime_press_committee">Wartime Press Committee</string>
+    <string name="mini_game_tip_tl_wartime_press_committee">Please start from the event newspaper selection screen where the paper name is visible.</string>
     <string name="runlog_exhibition_uncollected_title">Interactive Exhibition: Unrecorded Wonder Found</string>
     <string name="runlog_exhibition_uncollected_content">Exploration stopped. Return to the game and complete the battle manually.</string>
 

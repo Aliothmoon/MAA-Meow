@@ -1363,6 +1363,8 @@
     <string name="mini_game_tip_pf">튜토리얼 스테이지를 수동으로 클리어한 후, PF-1에 진입하여 수동으로 편성하세요. ｢크루스｣만 단독으로 편성하고, 이벤트 스테이지 화면으로 돌아가 PF-1을 탭하여 임무를 시작하세요.</string>
     <string name="mini_game_name_interactive_exhibition">기상 순회전 - 미수록 기상 찾기</string>
     <string name="mini_game_tip_interactive_exhibition">선택한 맵의 고급 구역 초원 오른쪽 아래에서 작업을 시작합니다.\n초원을 왔다 갔다 하며 미수록 생물을 찾고, 발견하면 자동으로 중지됩니다.\n생물은 초원에서만 만날 수 있습니다.</string>
+    <string name="mini_game_name_tl_wartime_press_committee">전시 신문 위원회</string>
+    <string name="mini_game_tip_tl_wartime_press_committee">이벤트 신문 선택 화면이 표시된 상태에서 시작하세요</string>
     <string name="runlog_exhibition_uncollected_title">기상 순회전: 미수록 기상 발견</string>
     <string name="runlog_exhibition_uncollected_content">자동 탐색을 중지했습니다. 게임으로 돌아가 전투를 완료하세요.</string>
 
