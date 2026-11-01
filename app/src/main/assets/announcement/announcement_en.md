@@ -1,3 +1,11 @@
+## ⚠️ Game Update Broke Home Screen Recognition (NEW!!!)
+
+The November 1, 2026 game update redesigned the home screen. On versions before v0.25.0, every task entered from the home screen fails.
+
+v0.25.0 includes the fix. Update to v0.25.0 or later in `Settings → Update`.
+
+---
+
 ## Black Forest Money Farming
 
 ~~The map is too complex, so here is a quick money-farming script first.~~ The auto-roguelike money-farming strategy is out now, but this one is still handy, so it stays.
@@ -16,7 +24,7 @@ Some Android 11 devices report "storage directory inaccessible". Follow the prom
 
 ---
 
-## User Guide (NEW!!!)
+## User Guide
 
 **📖 Docs & FAQ**  
 When something goes wrong, check `Settings → About → FAQ` first. Most issues already have an answer there.
