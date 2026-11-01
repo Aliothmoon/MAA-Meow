@@ -1,8 +1,7 @@
 package com.aliothmoon.maameow.domain.models
 
 /**
- * 库存保持「芯片组计入双芯片折算」：每个双芯片消耗 2 个同职业芯片组
- * 上游反查全部合成配方，会把普通材料的上级合成品也算进来，这里只认八种芯片组
+ * 库存保持「芯片组计入双芯片折算」：每个双芯片消耗 2 个同职业芯片组，只认八种芯片组
  */
 object DualChipConversion {
     private const val PACKS_PER_DUAL_CHIP = 2
