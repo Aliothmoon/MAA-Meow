@@ -1,8 +1,10 @@
-## ⚠️ Game Update Broke Home Screen Recognition (NEW!!!)
+## ⚠️ Please Update to v0.25.1 (NEW!!!)
+
+The TL event stages (TL-4/7/8/9) only appear in the stage list on v0.25.1 or later. On older versions, entering them manually marks them as not open.
 
 The November 1, 2026 game update redesigned the home screen. On versions before v0.25.0, every task entered from the home screen fails.
 
-v0.25.0 includes the fix. Update to v0.25.0 or later in `Settings → Update`.
+Update to v0.25.1 or later in `Settings → Update`.
 
 ---
 
