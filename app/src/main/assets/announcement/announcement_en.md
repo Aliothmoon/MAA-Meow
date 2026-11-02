@@ -8,11 +8,21 @@ Update to v0.25.1 or later in `Settings → Update`.
 
 ---
 
+## Reclamation Algorithm Has Moved (NEW!!!)
+
+Starting with v0.25.0, Reclamation Algorithm has moved into Tools along with upstream MAA and is no longer in the task list.
+
+Location: Tools → Useful Tasks → Reclamation Algorithm
+
+After updating, Reclamation Algorithm is removed from every task profile and its settings carry over to the new location. Scheduled runs no longer include it; start it manually from Tools when needed.
+
+---
+
 ## Black Forest Money Farming
 
 ~~The map is too complex, so here is a quick money-farming script first.~~ The auto-roguelike money-farming strategy is out now, but this one is still handy, so it stays.
 
-Location: Toolbox → Mini-games → Black Forest money farming
+Location: Tools → Useful Tasks → Black Forest money farming
 
 ---
 
