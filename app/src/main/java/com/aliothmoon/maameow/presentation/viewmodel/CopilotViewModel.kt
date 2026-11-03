@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.util.UUID
 
 private const val TAB_MAIN = CopilotTabs.MAIN
 private const val TAB_SSS = CopilotTabs.SSS
@@ -768,46 +769,18 @@ class CopilotViewModel(
                 emptyList()
             } else {
                 val displayName = resolveStageNavigation(data).navigateName.ifBlank { stageName }
-                val difficulty = if (data.difficulty == DifficultyFlags.NONE) {
-                    DifficultyFlags.NORMAL
-                } else {
-                    data.difficulty
-                }
-                val items = mutableListOf<CopilotListItem>()
-                if ((difficulty and DifficultyFlags.NORMAL) != 0) {
-                    items.add(
-                        CopilotListItem(
-                            name = displayName,
-                            filePath = filePath,
-                            isRaid = false,
-                            copilotId = copilotId,
-                            source = source
-                        )
+                // 只标了突袭才默认突袭；两种都要就在列表里复制一份
+                val raidOnly = (data.difficulty and DifficultyFlags.NORMAL) == 0 &&
+                        (data.difficulty and DifficultyFlags.RAID) != 0
+                listOf(
+                    CopilotListItem(
+                        name = displayName,
+                        filePath = filePath,
+                        isRaid = raidOnly,
+                        copilotId = copilotId,
+                        source = source
                     )
-                }
-                if ((difficulty and DifficultyFlags.RAID) != 0) {
-                    items.add(
-                        CopilotListItem(
-                            name = displayName,
-                            filePath = filePath,
-                            isRaid = true,
-                            copilotId = copilotId,
-                            source = source
-                        )
-                    )
-                }
-                if (items.isEmpty()) {
-                    items.add(
-                        CopilotListItem(
-                            name = displayName,
-                            filePath = filePath,
-                            isRaid = false,
-                            copilotId = copilotId,
-                            source = source
-                        )
-                    )
-                }
-                items
+                )
             }
         }
     }
@@ -1103,6 +1076,31 @@ class CopilotViewModel(
                     if (i == index) item.copy(isChecked = !item.isChecked) else item
                 }
             )
+        }
+        persistTaskList()
+    }
+
+    fun onSetListItemRaid(id: String, isRaid: Boolean) {
+        _state.update {
+            it.copy(taskList = it.taskList.map { item ->
+                if (item.id == id) item.copy(isRaid = isRaid) else item
+            })
+        }
+        persistTaskList()
+    }
+
+    /** 插到下方并换成另一难度 */
+    fun onDuplicateListItem(id: String) {
+        _state.update {
+            val index = it.taskList.indexOfFirst { item -> item.id == id }
+            if (index < 0) return@update it
+            val source = it.taskList[index]
+            val copy = source.copy(
+                id = UUID.randomUUID().toString(),
+                isRaid = !source.isRaid,
+                isChecked = true,
+            )
+            it.copy(taskList = it.taskList.toMutableList().apply { add(index + 1, copy) })
         }
         persistTaskList()
     }

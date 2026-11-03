@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,10 +35,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
@@ -54,6 +57,7 @@ import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -88,6 +92,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
@@ -788,16 +793,16 @@ fun AutoBattlePanel(
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             },
                             onDragStopped = viewModel::onReorderSettled,
+                            showDifficulty = state.tabIndex != CopilotTabs.PARADOX,
                             onToggle = { viewModel.onToggleListItem(index) },
                             onLoad = { viewModel.onSelectListItem(index) },
+                            onRaidChange = { viewModel.onSetListItemRaid(item.id, it) },
+                            onDuplicate = { viewModel.onDuplicateListItem(item.id) },
                             onRemove = { viewModel.onRemoveFromList(index) },
-                            buttonShape = compactButtonShape,
-                            buttonPadding = compactButtonPadding,
                         )
                     }
                 }
                 item(key = "battle_list_actions") {
-                    // TODO: 恢复手动输入关卡名 + 添加普通/添加突袭功能
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -965,11 +970,12 @@ private fun ReorderableCollectionItemScope.BattleListRow(
     isDragging: Boolean,
     onDragStarted: () -> Unit,
     onDragStopped: () -> Unit,
+    showDifficulty: Boolean,
     onToggle: () -> Unit,
     onLoad: () -> Unit,
+    onRaidChange: (Boolean) -> Unit,
+    onDuplicate: () -> Unit,
     onRemove: () -> Unit,
-    buttonShape: RoundedCornerShape,
-    buttonPadding: PaddingValues,
 ) {
     Surface(
         shadowElevation = if (isDragging) 4.dp else 0.dp,
@@ -997,21 +1003,37 @@ private fun ReorderableCollectionItemScope.BattleListRow(
                     )
                     .padding(6.dp)
             )
-            CheckBoxWithLabel(
+            Checkbox(
                 checked = item.isChecked,
                 onCheckedChange = { onToggle() },
-                label = item.name + if (item.isRaid) {
-                    stringResource(R.string.panel_autobattle_raid_suffix)
-                } else {
-                    ""
-                },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.size(20.dp)
             )
-            OutlinedButton(
-                onClick = onLoad,
-                shape = buttonShape,
-                contentPadding = buttonPadding
-            ) { Text(stringResource(R.string.common_load)) }
+            // 点关卡名载入详情
+            Text(
+                text = item.name,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(4.dp))
+                    .clickable(onClick = onLoad)
+                    .padding(horizontal = 4.dp, vertical = 6.dp)
+            )
+            if (showDifficulty) {
+                DifficultyToggle(isRaid = item.isRaid, onChange = onRaidChange)
+                IconButton(
+                    onClick = onDuplicate,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.ContentCopy,
+                        contentDescription = stringResource(R.string.panel_autobattle_duplicate_item),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
             IconButton(
                 onClick = onRemove,
                 modifier = Modifier.size(32.dp)
@@ -1023,6 +1045,38 @@ private fun ReorderableCollectionItemScope.BattleListRow(
                     modifier = Modifier.size(18.dp)
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun DifficultyToggle(isRaid: Boolean, onChange: (Boolean) -> Unit) {
+    val shape = RoundedCornerShape(6.dp)
+    Row(
+        modifier = Modifier
+            .clip(shape)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
+    ) {
+        listOf(
+            false to R.string.panel_autobattle_difficulty_normal,
+            true to R.string.panel_autobattle_difficulty_raid,
+        ).forEach { (raid, labelRes) ->
+            val selected = raid == isRaid
+            Text(
+                text = stringResource(labelRes),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                color = if (selected) {
+                    MaterialTheme.colorScheme.onPrimary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                maxLines = 1,
+                modifier = Modifier
+                    .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
+                    .selectable(selected = selected, role = Role.RadioButton) { onChange(raid) }
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            )
         }
     }
 }
