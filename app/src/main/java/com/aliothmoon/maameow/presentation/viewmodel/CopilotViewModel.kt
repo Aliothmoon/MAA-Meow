@@ -104,6 +104,8 @@ data class CopilotUiState(
     val copilotTaskName: String = "",
     val config: CopilotConfig = CopilotConfig(),
     val taskList: List<CopilotListItem> = emptyList(),
+    /** 详情卡载入的列表行；载入列表外的作业时清空 */
+    val selectedListItemId: String? = null,
     val hasRequirementIgnored: Boolean = false,
     val isLoading: Boolean = false,
     val statusMessage: UiText = UiText.Empty,
@@ -224,6 +226,14 @@ class CopilotViewModel(
         viewModelScope.launch {
             runtimeStateStore.hasRequirementIgnored.collect { ignored ->
                 _state.update { it.copy(hasRequirementIgnored = ignored) }
+            }
+        }
+        viewModelScope.launch {
+            // 下标是整张列表的坐标，与 buildListTask 下发的 id 一致
+            runtimeStateStore.currentCopilotIndex.collect { index ->
+                if (index >= 0 && _state.value.listModeActive) {
+                    onSelectListItem(index, followRun = true)
+                }
             }
         }
         viewModelScope.launch {
@@ -397,6 +407,7 @@ class CopilotViewModel(
 
     /** 进入「开始解析」时对 UI 状态的统一重置。 */
     private fun CopilotUiState.startingParse(): CopilotUiState = copy(
+        selectedListItemId = null,
         isLoading = true,
         statusMessage = text(R.string.copilot_status_parsing),
         currentCopilot = null,
@@ -736,7 +747,11 @@ class CopilotViewModel(
             text(R.string.copilot_status_added_multi, newItems.size)
         }
         _state.update {
-            it.copy(taskList = it.taskList + newItems, statusMessage = status)
+            it.copy(
+                taskList = it.taskList + newItems,
+                selectedListItemId = newItems.first().id,
+                statusMessage = status,
+            )
         }
         persistTaskList()
     }
@@ -1002,7 +1017,8 @@ class CopilotViewModel(
         persistTaskList()
     }
 
-    fun onSelectListItem(index: Int, disableListMode: Boolean = false) {
+    /** [followRun] 为运行中跟随 core 进度自动载入，不覆盖运行状态文案 */
+    fun onSelectListItem(index: Int, disableListMode: Boolean = false, followRun: Boolean = false) {
         val item = _state.value.taskList.getOrNull(index) ?: return
         viewModelScope.launch {
             val result = copilotManager.parseFromFile(item.filePath)
@@ -1020,6 +1036,7 @@ class CopilotViewModel(
                             operatorSummary = copilotManager.getOperatorSummary(data),
                             // 列表文件已校正过，清掉上一份的提示
                             requirementWarnings = emptyList(),
+                            selectedListItemId = item.id,
                             copilotId = item.copilotId,
                             canLike = item.copilotId > 0,
                             isDataFromWeb = item.source == "web",
@@ -1031,10 +1048,11 @@ class CopilotViewModel(
                             } else {
                                 base.config
                             },
-                            statusMessage = text(
-                                R.string.copilot_status_selected_list_item,
-                                item.name
-                            )
+                            statusMessage = if (followRun) {
+                                base.statusMessage
+                            } else {
+                                text(R.string.copilot_status_selected_list_item, item.name)
+                            }
                         )
                     }
                     if (previousTabIndex != targetTabIndex || disableListMode) {
@@ -1042,8 +1060,8 @@ class CopilotViewModel(
                     }
                 },
                 onFailure = { e ->
-                    _state.update {
-                        it.copy(statusMessage = fileReadErrorMessage(e))
+                    if (!followRun) {
+                        _state.update { it.copy(statusMessage = fileReadErrorMessage(e)) }
                     }
                 }
             )
@@ -1076,6 +1094,29 @@ class CopilotViewModel(
                     if (i == index) item.copy(isChecked = !item.isChecked) else item
                 }
             )
+        }
+        persistTaskList()
+    }
+
+    /** 搜索结果只有摘要，按 id 拉完整作业；列表模式下随载入自动入列表 */
+    fun onPickFromSearch(copilotId: Int) {
+        if (_state.value.isLoading) return
+        viewModelScope.launch {
+            _state.update { it.startingParse() }
+            parseSingleCopilot(copilotId.toString())
+        }
+    }
+
+    fun onRemovePrtsCopilot(copilotId: Int) {
+        _state.update {
+            it.copy(taskList = it.taskList.filter { item -> item.prtsId != copilotId })
+        }
+        persistTaskList()
+    }
+
+    fun onRemoveListItem(id: String) {
+        _state.update {
+            it.copy(taskList = it.taskList.filter { item -> item.id != id })
         }
         persistTaskList()
     }

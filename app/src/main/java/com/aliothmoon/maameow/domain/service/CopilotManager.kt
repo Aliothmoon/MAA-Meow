@@ -6,6 +6,7 @@ import com.aliothmoon.maameow.data.model.CopilotConfig
 import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
 import com.aliothmoon.maameow.data.model.copilot.CopilotOperator
 import com.aliothmoon.maameow.data.model.copilot.CopilotTaskData
+import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotPage
 import com.aliothmoon.maameow.data.repository.CopilotRepository
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
@@ -224,6 +225,15 @@ class CopilotManager(
 
     suspend fun getCopilotSetIds(idString: String): Result<List<Int>> {
         return getCopilotSetInfo(idString).map { it.copilotIds }
+    }
+
+    suspend fun searchCopilots(query: Map<String, String>): Result<PrtsCopilotPage> {
+        val response = apiService.queryCopilots(query).getOrElse { return Result.failure(it) }
+        val page = response.data
+        if (response.statusCode != 200 || page == null) {
+            return Result.failure(IllegalStateException(response.message.ifBlank { "HTTP ${response.statusCode}" }))
+        }
+        return Result.success(page)
     }
 
     // ===== PRTS Plus 评分 =====

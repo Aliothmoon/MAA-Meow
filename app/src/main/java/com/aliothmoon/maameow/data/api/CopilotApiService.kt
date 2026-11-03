@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.data.api
 
+import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotQueryResponse
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotResponse
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotSetResponse
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,15 @@ class CopilotApiService(
             Timber.e(it, "$TAG: 获取作业失败: id=$id")
         }
     }
+
+    suspend fun queryCopilots(query: Map<String, String>): Result<PrtsCopilotQueryResponse> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                httpClient.getEntity<PrtsCopilotQueryResponse>("${BASE_URL}copilot/query", query = query)
+            }.onFailure {
+                Timber.e(it, "$TAG: 搜索作业失败: $query")
+            }
+        }
 
     /**
      * 获取作业集

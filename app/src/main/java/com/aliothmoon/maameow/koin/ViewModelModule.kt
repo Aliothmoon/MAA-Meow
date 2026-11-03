@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.koin
 import com.aliothmoon.maameow.presentation.viewmodel.AchievementViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.AppEventsViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
+import com.aliothmoon.maameow.presentation.viewmodel.CopilotSearchViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.ErrorLogViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.ExpandedControlPanelViewModel
@@ -45,5 +46,6 @@ val viewModelModule = module {
 val floatingWindowModule = module {
     singleOf(::ExpandedControlPanelViewModel)
     singleOf(::CopilotViewModel)
+    singleOf(::CopilotSearchViewModel)
     singleOf(::ToolboxViewModel)
 }

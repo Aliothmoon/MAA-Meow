@@ -24,6 +24,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaDesignTokens
+
+// 面板与按钮同用内层圆角，与面板里的紧凑按钮一致
+private val InlineShape = RoundedCornerShape(MaaDesignTokens.CornerRadius.inner)
 
 /**
  * 内嵌二次确认面板
@@ -50,7 +54,7 @@ fun InlineConfirmPanel(
         Surface(
             modifier = modifier.fillMaxWidth(),
             color = MaterialTheme.colorScheme.errorContainer,
-            shape = RoundedCornerShape(8.dp),
+            shape = InlineShape,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
         ) {
             Column(
@@ -103,6 +107,7 @@ fun InlineActionRow(
         OutlinedButton(
             onClick = onDismiss,
             modifier = Modifier.height(32.dp),
+            shape = InlineShape,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
         ) {
             Text(dismissText, style = MaterialTheme.typography.bodySmall)
@@ -110,6 +115,7 @@ fun InlineActionRow(
         Button(
             onClick = onConfirm,
             modifier = Modifier.height(32.dp),
+            shape = InlineShape,
             enabled = confirmEnabled,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
             colors = ButtonDefaults.buttonColors(containerColor = confirmContainerColor),

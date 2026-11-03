@@ -642,6 +642,7 @@
     <string name="panel_autobattle_station">Copilot 홈페이지 열기</string>
     <string name="panel_autobattle_clear_unchecked">미선택 항목 삭제</string>
     <string name="panel_autobattle_clear_list">목록 비우기</string>
+    <string name="panel_autobattle_clear_list_confirm">목록의 작업 %1$d개를 모두 삭제합니다</string>
     <string name="copilot_navigation_name_mismatch">현재 작업의 스테이지 이름이 탐색 스테이지 이름과 일치하지 않습니다. 올바르게 탐색되는지 확인해 주세요</string>
     <string name="copilot_tab_main_story_side_story">메인/에피소드/사이드</string>
     <string name="copilot_status_parsing">분석 중…</string>
@@ -976,6 +977,25 @@
     <string name="panel_autobattle_difficulty_normal">일반</string>
     <string name="panel_autobattle_difficulty_raid">하드</string>
     <string name="panel_autobattle_duplicate_item">다른 난이도로 복제</string>
+    <string name="panel_autobattle_toggle_checked">선택 전환</string>
+    <string name="panel_autobattle_current_item">%1$s · %2$s</string>
+    <string name="panel_autobattle_switch_difficulty">%1$s(으)로 전환</string>
+    <string name="copilot_search_title">작업 검색</string>
+    <string name="copilot_search_keyword">키워드 (제목, 오퍼레이터, 작성자)</string>
+    <string name="copilot_search_stage">스테이지</string>
+    <string name="copilot_search_action">검색</string>
+    <string name="copilot_search_order_hot">인기</string>
+    <string name="copilot_search_order_latest">최신</string>
+    <string name="copilot_search_order_views">조회수</string>
+    <string name="copilot_search_add">추가</string>
+    <string name="copilot_search_added">추가됨</string>
+    <string name="copilot_search_pick">사용</string>
+    <string name="copilot_search_load_more">더 보기</string>
+    <string name="copilot_search_total">총 %1$d개</string>
+    <string name="copilot_search_empty">작업을 찾을 수 없습니다</string>
+    <string name="copilot_search_selected">선택 %1$d</string>
+    <string name="copilot_search_single_hint">｢다중 작업 모드｣가 꺼져 있어 선택한 작업을 단일 작업으로 불러옵니다</string>
+    <string name="copilot_search_failed">검색 실패: %1$s</string>
     <string name="panel_autobattle_tips_title">팁</string>
     <string name="panel_autobattle_tips_body">1. 사용하기 전에 작업 파일이 선택한 스테이지 유형과 일치하는지 확인하세요.\n2. 메인, 에피소드, 사이드: 스테이지 화면 우측 하단에 ｢작전 개시｣ 버튼이 있는 화면에서 시작하세요.\n3. 보안 파견: resource/copilot 폴더에 여러 작업 파일이 내장되어 있습니다. 먼저 수동으로 편성한 후, 우측 하단에 ｢배치 시작｣ 버튼이 있는 화면에서 시작하세요. ｢반복 횟수｣와 함께 사용할 수 있습니다.\n4. 패러독스: 스킬을 선택한 후 ｢시뮬레이션 시작｣ 버튼이 있는 스킬 선택 화면에서 시작하세요. ½성 오퍼레이터(스킬 없음)는 우측 하단에 ｢시뮬레이션 시작｣ 버튼이 있는 화면에서 시작하세요. ｢다중 작업 모드｣를 사용하는 경우 오퍼레이터 목록의 ｢레벨/레어도｣ 정렬 상태에서 시작하세요.\n5. 기타 이벤트: 단일 작업 파일과 일반 자동지휘 설정만 지원합니다. 대상 이벤트 스테이지 화면에서 바로 시작하세요. 작업 세트와 다중 작업 모드는 지원되지 않습니다.\n6. ｢선호｣로 표시된 오퍼레이터는 ｢자동 편성｣의 인식 및 선택에 영향을 줄 수 있습니다. ｢자동 편성｣ 사용 시 선호 표시를 해제하거나, 오류 발생 후 ｢자동 편성｣을 끄고 안내에 따라 누락된 오퍼레이터를 수동으로 편성하세요.\n7. Copilot 작업 사이트의 작업 코드는 입력란 오른쪽의 붙여넣기 버튼으로 붙여넣거나, 입력 후 ｢작업 불러오기｣를 탭하면 형식이 자동으로 인식됩니다:\n• prts://s = 작업 세트 prts:// = 단일 작업\n• 작업 세트는 메인/에피소드/사이드와 패러독스만 지원합니다.\n8. 다중 작업 모드:\n• 작업 선택 후 아래의 스테이지 이름이 올바른지 확인하세요 (예: CV-EX-1).\n• ｢미선택 항목 삭제/목록 비우기｣ 버튼으로 작업을 빠르게 정리할 수 있습니다.\n• 목표 스테이지 이름이 보이는 화면에서 시작하세요. 챕터 간 이동은 지원되지 않습니다.\n• 이성 부족, 작전 실패, 3성 클리어 실패 시 자동으로 중지됩니다.</string>
 
