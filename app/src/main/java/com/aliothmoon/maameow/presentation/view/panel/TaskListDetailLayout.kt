@@ -73,7 +73,7 @@ fun TaskListDetailLayout(
                 .fillMaxWidth()
         }
 
-        Row(modifier = contentModifier) {
+        Row(modifier = contentModifier.padding(horizontal = TabPanelHorizontalInset)) {
             TaskListPanel(
                 nodes = nodes,
                 selectedNodeId = selectedNodeId,

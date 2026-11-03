@@ -1878,6 +1878,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="virtual_display_game_running">Game running</string>
     <string name="virtual_display_game_stopped">Game stopped</string>
     <string name="virtual_display_idle">Idle</string>
+    <string name="bg_preview_collapse">Collapse preview</string>
+    <string name="bg_preview_expand">Expand preview</string>
 
     <!-- i18n: task start -->
     <string name="task_start_warning_game_not_running">The game is not running, and this run will not launch it automatically. Please enable the Login task and select \"Launch Game\" before starting, or the task may fail. Start anyway?</string>

@@ -204,6 +204,8 @@ fun BackgroundTaskView(
 ) {
 
     val coroutineScope = rememberCoroutineScope()
+    // 不记忆，每次进来都展开
+    val previewCollapse = remember { PreviewCollapseState(coroutineScope) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val maaState by compositionService.state.collectAsStateWithLifecycle()
     val isTaskActive = maaState != MaaExecutionState.IDLE && maaState != MaaExecutionState.ERROR
@@ -383,7 +385,8 @@ fun BackgroundTaskView(
                         modifier = Modifier.fillMaxSize()
                     )
                     val gameFps by viewModel.gameFps.collectAsStateWithLifecycle()
-                    gameFps?.let { fps ->
+                    // 缩略图太小放不下
+                    if (!LocalPreviewCompact.current) gameFps?.let { fps ->
                         Text(
                             text = "${fps.roundToInt()} FPS",
                             color = Color.White.copy(alpha = 0.85f),
@@ -453,19 +456,23 @@ fun BackgroundTaskView(
             modifier = Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(MaaWindowInsets.topBar)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 18.dp)
                 .padding(top = 8.dp, bottom = 8.dp)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(3f)
+                    .previewHeight(previewCollapse)
+                    // 直接拖画面也能收起展开，点击仍是全屏
+                    .previewDrag(previewCollapse, reduceMotion)
                     .onboardingTarget(OnboardingTarget.BG_PREVIEW)
             ) {
                 if (!state.isFullscreenMonitor) {
                     VirtualDisplayPreview(
-                        modifier = Modifier
-                            .fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        expandFraction = { previewCollapse.fraction.value },
+                        // 画中画从 16:9 画面卡片放大，收起时就是缩略图
+                        cardModifier = Modifier
                             .onGloballyPositioned { coords ->
                                 val bounds = coords.boundsInWindow()
                                 val next = Rect(
@@ -488,12 +495,12 @@ fun BackgroundTaskView(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            PreviewHandle(previewCollapse, reduceMotion)
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(7f)
+                    .weight(1f)
             ) {
                 PanelHeader(
                     selectedTab = state.current,

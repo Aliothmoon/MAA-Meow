@@ -233,7 +233,7 @@ fun AutoBattlePanel(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp)),
+                .padding(TabPanelPadding),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item(key = "copilot_tabs") {

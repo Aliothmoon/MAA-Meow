@@ -104,7 +104,7 @@ fun OperBoxPanel(
         columns = GridCells.Adaptive(72.dp),
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = TabPanelHorizontalInset),
         contentPadding = PaddingValues(top = 6.dp, bottom = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)

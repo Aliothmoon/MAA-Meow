@@ -71,7 +71,7 @@ fun MiniGamePanel(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp)),
+            .padding(TabPanelPadding),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item {

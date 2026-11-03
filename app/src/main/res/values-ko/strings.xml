@@ -1934,6 +1934,8 @@
     <string name="virtual_display_game_running">게임 실행 중</string>
     <string name="virtual_display_game_stopped">게임 종료됨</string>
     <string name="virtual_display_idle">대기 중</string>
+    <string name="bg_preview_collapse">미리보기 접기</string>
+    <string name="bg_preview_expand">미리보기 펼치기</string>
 
     <!-- i18n: task start -->
     <string name="task_start_warning_game_not_running">게임이 실행 중이 아니며, 이번 실행에서는 게임을 자동으로 시작하지 않습니다. 「로그인」 작업을 활성화하고 「게임 실행」을 선택한 후 시작하세요. 그렇지 않으면 작업이 실패할 수 있습니다. 그래도 시작하시겠습니까?</string>

@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.presentation.view.panel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,7 +52,7 @@ fun RecruitCalcPanel(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp)),
+            .padding(TabPanelPadding),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         // 总开关：自动设置招募时间
