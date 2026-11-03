@@ -721,6 +721,10 @@
     <string name="bg_actions_title">快捷操作</string>
     <string name="bg_action_screen_off">熄屏挂机</string>
     <string name="bg_action_close_game">关闭游戏</string>
+    <string name="bg_action_start_game">启动游戏</string>
+    <string name="bg_action_game">游戏</string>
+    <string name="bg_action_start_game_failed">启动游戏失败</string>
+    <string name="bg_action_close_game_failed">关闭游戏失败</string>
     <string name="bg_action_game_muted">游戏已静音</string>
     <string name="bg_action_mute_game">关闭游戏声音</string>
     <string name="bg_action_screenshot">截图</string>

@@ -467,6 +467,10 @@
     <string name="bg_actions_title">Quick Actions</string>
     <string name="bg_action_screen_off">Screen Off</string>
     <string name="bg_action_close_game">Close Game</string>
+    <string name="bg_action_start_game">Start Game</string>
+    <string name="bg_action_game">Game</string>
+    <string name="bg_action_start_game_failed">Failed to start game</string>
+    <string name="bg_action_close_game_failed">Failed to close game</string>
     <string name="bg_action_game_muted">Game Muted</string>
     <string name="bg_action_mute_game">Mute Game</string>
     <string name="bg_action_screenshot">Screenshot</string>

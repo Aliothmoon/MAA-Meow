@@ -409,6 +409,27 @@ class RemoteServiceImpl : RemoteService.Stub() {
         GameAudioMuteController.restoreAll()
     }
 
+    override fun forceStopGame(packageName: String) {
+        require(packageName.isNotBlank())
+        val displayId = if (virtualDisplayMode.get() == DisplayMode.BACKGROUND) {
+            BackgroundDisplay.displayId()
+        } else {
+            PrimaryDisplayManager.DISPLAY_ID
+        }
+        ActivityUtils.forceStop(packageName, displayId)
+    }
+
+    override fun launchGame(packageName: String): Boolean {
+        if (packageName.isBlank()) return false
+        val displayId = if (virtualDisplayMode.get() == DisplayMode.BACKGROUND) {
+            BackgroundDisplay.displayId()
+        } else {
+            PrimaryDisplayManager.DISPLAY_ID
+        }
+        return displayId != DefaultDisplayConfig.DISPLAY_NONE &&
+            ActivityUtils.startApp(packageName, displayId, forceStop = false)
+    }
+
     override fun getGameFps(): Float = GameFpsMonitor.currentFps()
 
     override fun getVirtualDisplayFlagTier(): Int = BackgroundDisplay.flagTier()

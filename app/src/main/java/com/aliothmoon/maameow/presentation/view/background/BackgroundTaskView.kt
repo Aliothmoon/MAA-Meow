@@ -5,6 +5,7 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.graphics.Rect
+import android.os.Build
 import android.os.SystemClock
 import android.view.Surface
 import android.view.SurfaceHolder
@@ -46,6 +47,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NotificationsPaused
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Screenshot
@@ -118,13 +120,18 @@ import androidx.core.view.isInvisible
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
+import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.service.AppAliveChecker
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.models.RunDurationLimit
+import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.manager.PermissionManager
+import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
@@ -172,6 +179,7 @@ import com.aliothmoon.maameow.theme.MaaThemeAlphas
 import com.aliothmoon.maameow.theme.OpaqueTheme
 import com.aliothmoon.maameow.theme.PagerPageSpacing
 import com.aliothmoon.maameow.theme.rememberMaaPagerFling
+import com.aliothmoon.maameow.remote.AppAliveStatus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -201,6 +209,8 @@ fun BackgroundTaskView(
     screenSaverManager: ScreenSaverOverlayManager = koinInject(),
     appSettingsManager: AppSettingsManager = koinInject(),
     permissionManager: PermissionManager = koinInject(),
+    appAliveChecker: AppAliveChecker = koinInject(),
+    taskEndRegistry: TaskEndRegistry = koinInject(),
 ) {
 
     val coroutineScope = rememberCoroutineScope()
@@ -211,6 +221,8 @@ fun BackgroundTaskView(
     val gameOnDisplay by viewModel.gameOnDisplay.collectAsStateWithLifecycle()
     val isTaskActive = maaState != MaaExecutionState.IDLE && maaState != MaaExecutionState.ERROR
     val runMode by appSettingsManager.runMode.collectAsStateWithLifecycle()
+    val displayBackend by appSettingsManager.virtualDisplayBackend.collectAsStateWithLifecycle()
+    val backgroundResolution by appSettingsManager.backgroundResolution.collectAsStateWithLifecycle()
     val permissionState by permissionManager.state.collectAsStateWithLifecycle()
     val markers by viewModel.markers.collectAsStateWithLifecycle()
     val displayResolution by compositionService.displayResolution.collectAsStateWithLifecycle()
@@ -237,6 +249,40 @@ fun BackgroundTaskView(
     val profileId by viewModel.chainState.profileId.collectAsStateWithLifecycle()
     val selectedNode = nodes.find { it.id == state.selectedNodeId }
     val clientType = remember(nodes) { viewModel.chainState.clientType }
+    val gameClientType = if (isTaskActive) viewModel.chainState.lastUsedClientType ?: clientType else clientType
+    val gamePackage = Packages[gameClientType]
+    val context = LocalContext.current
+    val remoteServiceState by RemoteServiceManager.state.collectAsStateWithLifecycle()
+    var gameStatus by remember(gamePackage) { mutableStateOf(AppAliveStatus.UNKNOWN) }
+    var gameSwitchBusy by remember { mutableStateOf(false) }
+    var gameStatusRefresh by remember { mutableStateOf(0) }
+
+    LaunchedEffect(showMoreActions, gamePackage, maaState, remoteServiceState, gameStatusRefresh) {
+        gameStatus = gamePackage?.let { appAliveChecker.isAppAlive(it) } ?: AppAliveStatus.UNKNOWN
+    }
+    LaunchedEffect(showMoreActions) {
+        if (showMoreActions) {
+            taskEndRegistry.taskEnded.collect { gameStatusRefresh++ }
+        }
+    }
+    val performCloseGame: () -> Unit = {
+        val packageName = gamePackage
+        if (!gameSwitchBusy && packageName != null) {
+            gameSwitchBusy = true
+            coroutineScope.launch {
+                try {
+                    RemoteServiceManager.useRemoteService { it.forceStopGame(packageName) }
+                    compositionService.stopVirtualDisplay()
+                } catch (e: Exception) {
+                    Timber.e(e, "Close game failed: %s", packageName)
+                    Toast.makeText(context, R.string.bg_action_close_game_failed, Toast.LENGTH_SHORT).show()
+                } finally {
+                    gameSwitchBusy = false
+                    gameStatusRefresh++
+                }
+            }
+        }
+    }
 
     // 引导靶点在任务面板，重看时先切回去
     val onboarding = LocalOnboardingState.current
@@ -285,7 +331,6 @@ fun BackgroundTaskView(
             )
         }
     }
-    val context = LocalContext.current
     val serviceDiedMessage = stringResource(R.string.bg_toast_service_died)
 
 
@@ -854,11 +899,64 @@ fun BackgroundTaskView(
                     onScreenOff = viewModel::onScreenOff,
                     onShowScreenSaver = { coroutineScope.launch { screenSaverManager.show() } },
                     onCaptureScreenshot = viewModel::onCaptureScreenshot,
+                    gameRunning = gameStatus == AppAliveStatus.ALIVE,
+                    gameStatusKnown = gameStatus != AppAliveStatus.UNKNOWN,
+                    gameSwitchEnabled = gamePackage != null && !gameSwitchBusy &&
+                        (gameStatus == AppAliveStatus.ALIVE || !isTaskActive) &&
+                        maaState != MaaExecutionState.STARTING && maaState != MaaExecutionState.STOPPING,
+                    onStartGame = {
+                        val packageName = gamePackage
+                        if (!gameSwitchBusy && gameStatus != AppAliveStatus.ALIVE &&
+                            !isTaskActive && packageName != null
+                        ) {
+                            gameSwitchBusy = true
+                            coroutineScope.launch {
+                                var startedDisplay = false
+                                try {
+                                    when (RemoteServiceManager.useRemoteService { it.isAppAlive(packageName) }) {
+                                        AppAliveStatus.ALIVE -> gameStatus = AppAliveStatus.ALIVE
+                                        AppAliveStatus.UNKNOWN -> gameStatus = AppAliveStatus.UNKNOWN
+                                        else -> {
+                                            val launched = RemoteServiceManager.useRemoteService { service ->
+                                                val useVdm = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+                                                    displayBackend == VirtualDisplayBackend.VDM
+                                                check(service.setUseVirtualDeviceDisplay(useVdm))
+                                                check(service.setVirtualDisplayMode(runMode.displayMode))
+                                                if (runMode == RunMode.BACKGROUND) {
+                                                    val r = DefaultDisplayConfig.resolveResolution(
+                                                        clientType, backgroundResolution
+                                                    )
+                                                    service.setVirtualDisplayResolution(r.width, r.height, r.dpi)
+                                                    startedDisplay = service.startVirtualDisplay() !=
+                                                        DefaultDisplayConfig.DISPLAY_NONE
+                                                }
+                                                (runMode == RunMode.FOREGROUND || startedDisplay) &&
+                                                    service.launchGame(packageName)
+                                            }
+                                            if (!launched) {
+                                                if (startedDisplay) compositionService.stopVirtualDisplay()
+                                                Toast.makeText(context, R.string.bg_action_start_game_failed, Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                delay(750)
+                                            }
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    if (startedDisplay) runCatching { compositionService.stopVirtualDisplay() }
+                                    Timber.e(e, "Start game failed: %s", packageName)
+                                    Toast.makeText(context, R.string.bg_action_start_game_failed, Toast.LENGTH_SHORT).show()
+                                } finally {
+                                    gameSwitchBusy = false
+                                    gameStatusRefresh++
+                                }
+                            }
+                        }
+                    },
                     onCloseApp = {
                         if (maaState == MaaExecutionState.RUNNING) {
                             showCloseConfirm = true
                         } else {
-                            coroutineScope.launch { compositionService.stopVirtualDisplay() }
+                            performCloseGame()
                         }
                     },
                 )
@@ -993,7 +1091,7 @@ fun BackgroundTaskView(
                 onDismissRequest = { showCloseConfirm = false },
                 onConfirm = {
                     showCloseConfirm = false
-                    coroutineScope.launch { compositionService.stopVirtualDisplay() }
+                    performCloseGame()
                 },
                 confirmText = stringResource(R.string.dialog_close_app_confirm),
                 dismissText = stringResource(R.string.common_cancel),
@@ -1039,6 +1137,10 @@ private fun BackgroundMoreActionsOverlay(
     onScreenOff: () -> Unit,
     onShowScreenSaver: () -> Unit,
     onCaptureScreenshot: () -> Unit,
+    gameRunning: Boolean,
+    gameStatusKnown: Boolean,
+    gameSwitchEnabled: Boolean,
+    onStartGame: () -> Unit,
     onCloseApp: () -> Unit,
     appSettingsManager: AppSettingsManager = koinInject(),
 ) {
@@ -1109,12 +1211,22 @@ private fun BackgroundMoreActionsOverlay(
                                 contentColor = MaterialTheme.colorScheme.onSurface
                             )
                             ActionTile(
-                                icon = Icons.AutoMirrored.Filled.ExitToApp,
-                                label = stringResource(R.string.bg_action_close_game),
-                                onClick = onCloseApp,
+                                icon = if (gameRunning) Icons.AutoMirrored.Filled.ExitToApp
+                                    else Icons.Filled.PlayArrow,
+                                label = stringResource(
+                                    when {
+                                        !gameStatusKnown -> R.string.bg_action_game
+                                        gameRunning -> R.string.bg_action_close_game
+                                        else -> R.string.bg_action_start_game
+                                    }
+                                ),
+                                onClick = { if (gameRunning) onCloseApp() else onStartGame() },
                                 modifier = Modifier.weight(1f),
-                                containerColor = MaterialTheme.colorScheme.error,
-                                contentColor = MaterialTheme.colorScheme.error
+                                enabled = gameSwitchEnabled,
+                                containerColor = if (gameRunning) MaterialTheme.colorScheme.error
+                                    else MaterialTheme.colorScheme.primary,
+                                contentColor = if (gameRunning) MaterialTheme.colorScheme.error
+                                    else MaterialTheme.colorScheme.onSurface
                             )
                         }
 
@@ -1302,11 +1414,13 @@ private fun ActionTile(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     containerColor: Color,
     contentColor: Color
 ) {
     Surface(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier.height(36.dp),
         shape = RoundedCornerShape(4.dp),
         color = containerColor.copy(alpha = 0.08f),
