@@ -40,12 +40,6 @@ interface RemoteService {
 
     void stopVirtualDisplay() = 15;
 
-    // 停止当前游戏包；与释放虚拟屏分开，前台模式也能真正关闭游戏
-    void forceStopGame(String packageName) = 60;
-
-    // 在当前显示模式已创建的显示器上独立启动游戏，不运行 Maa 任务
-    boolean launchGame(String packageName) = 61;
-
     // contact: 手指 id 0..15，与 MotionEvent pointer id 一致
     oneway void touchDown(int x, int y, int contact) = 17;
 
@@ -149,4 +143,10 @@ interface RemoteService {
 
     // 卡死诊断用，不能加锁
     String dumpThreads() = 59;
+
+    // 强停游戏，与关虚拟屏分开：前台模式也能真正关掉
+    void forceStopGame(String packageName) = 60;
+
+    // 不跑任务单独拉起游戏，后台模式需先建好虚拟屏
+    boolean launchGame(String packageName) = 61;
 }

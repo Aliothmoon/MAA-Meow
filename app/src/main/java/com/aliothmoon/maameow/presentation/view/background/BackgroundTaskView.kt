@@ -5,7 +5,6 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.graphics.Rect
-import android.os.Build
 import android.os.SystemClock
 import android.view.Surface
 import android.view.SurfaceHolder
@@ -88,6 +87,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -120,18 +120,13 @@ import androidx.core.view.isInvisible
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
-import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
-import com.aliothmoon.maameow.domain.service.AppAliveChecker
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.models.RunDurationLimit
-import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
-import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.manager.PermissionManager
-import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
@@ -209,8 +204,6 @@ fun BackgroundTaskView(
     screenSaverManager: ScreenSaverOverlayManager = koinInject(),
     appSettingsManager: AppSettingsManager = koinInject(),
     permissionManager: PermissionManager = koinInject(),
-    appAliveChecker: AppAliveChecker = koinInject(),
-    taskEndRegistry: TaskEndRegistry = koinInject(),
 ) {
 
     val coroutineScope = rememberCoroutineScope()
@@ -221,8 +214,6 @@ fun BackgroundTaskView(
     val gameOnDisplay by viewModel.gameOnDisplay.collectAsStateWithLifecycle()
     val isTaskActive = maaState != MaaExecutionState.IDLE && maaState != MaaExecutionState.ERROR
     val runMode by appSettingsManager.runMode.collectAsStateWithLifecycle()
-    val displayBackend by appSettingsManager.virtualDisplayBackend.collectAsStateWithLifecycle()
-    val backgroundResolution by appSettingsManager.backgroundResolution.collectAsStateWithLifecycle()
     val permissionState by permissionManager.state.collectAsStateWithLifecycle()
     val markers by viewModel.markers.collectAsStateWithLifecycle()
     val displayResolution by compositionService.displayResolution.collectAsStateWithLifecycle()
@@ -249,93 +240,10 @@ fun BackgroundTaskView(
     val profileId by viewModel.chainState.profileId.collectAsStateWithLifecycle()
     val selectedNode = nodes.find { it.id == state.selectedNodeId }
     val clientType = remember(nodes) { viewModel.chainState.clientType }
-    val gameClientType = if (isTaskActive) viewModel.chainState.lastUsedClientType ?: clientType else clientType
-    val gamePackage = Packages[gameClientType]
-    val context = LocalContext.current
-    val remoteServiceState by RemoteServiceManager.state.collectAsStateWithLifecycle()
-    var gameStatus by remember(gamePackage) { mutableStateOf(AppAliveStatus.UNKNOWN) }
-    var gameSwitchBusy by remember { mutableStateOf(false) }
-    var gameStatusRefresh by remember { mutableStateOf(0) }
-
-    LaunchedEffect(showMoreActions, gamePackage, maaState, remoteServiceState, gameStatusRefresh) {
-        gameStatus = gamePackage?.let { appAliveChecker.isAppAlive(it) } ?: AppAliveStatus.UNKNOWN
-    }
+    val gameStatus by viewModel.gameStatus.collectAsStateWithLifecycle()
+    val gameSwitchBusy by viewModel.gameSwitchBusy.collectAsStateWithLifecycle()
     LaunchedEffect(showMoreActions) {
-        if (showMoreActions) {
-            taskEndRegistry.taskEnded.collect { gameStatusRefresh++ }
-        }
-    }
-
-    suspend fun launchGameOnCurrentDisplay(packageName: String): Boolean {
-        var startedDisplay = false
-        var launched = false
-        try {
-            launched = RemoteServiceManager.useRemoteService { service ->
-                val useVdm = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
-                    displayBackend == VirtualDisplayBackend.VDM
-                check(service.setUseVirtualDeviceDisplay(useVdm))
-                check(service.setVirtualDisplayMode(runMode.displayMode))
-                if (runMode == RunMode.BACKGROUND) {
-                    val resolution = DefaultDisplayConfig.resolveResolution(clientType, backgroundResolution)
-                    service.setVirtualDisplayResolution(resolution.width, resolution.height, resolution.dpi)
-                    startedDisplay = service.startVirtualDisplay() != DefaultDisplayConfig.DISPLAY_NONE
-                }
-                (runMode == RunMode.FOREGROUND || startedDisplay) && service.launchGame(packageName)
-            }
-            return launched
-        } finally {
-            if (startedDisplay && !launched) {
-                runCatching { compositionService.stopVirtualDisplay() }
-                    .onFailure { Timber.w(it, "Failed to clean up display after game launch") }
-            }
-        }
-    }
-
-    val performStartGame: () -> Unit = startGame@{
-        val packageName = gamePackage ?: return@startGame
-        if (gameSwitchBusy || gameStatus == AppAliveStatus.ALIVE || isTaskActive) return@startGame
-
-        gameSwitchBusy = true
-        coroutineScope.launch {
-            try {
-                when (RemoteServiceManager.useRemoteService { it.isAppAlive(packageName) }) {
-                    AppAliveStatus.ALIVE -> gameStatus = AppAliveStatus.ALIVE
-                    AppAliveStatus.UNKNOWN -> gameStatus = AppAliveStatus.UNKNOWN
-                    else -> {
-                        if (launchGameOnCurrentDisplay(packageName)) {
-                            delay(750)
-                        } else {
-                            Toast.makeText(context, R.string.bg_action_start_game_failed, Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Timber.e(e, "Start game failed: %s", packageName)
-                Toast.makeText(context, R.string.bg_action_start_game_failed, Toast.LENGTH_SHORT).show()
-            } finally {
-                gameSwitchBusy = false
-                gameStatusRefresh++
-            }
-        }
-    }
-
-    val performCloseGame: () -> Unit = {
-        val packageName = gamePackage
-        if (!gameSwitchBusy && packageName != null) {
-            gameSwitchBusy = true
-            coroutineScope.launch {
-                try {
-                    RemoteServiceManager.useRemoteService { it.forceStopGame(packageName) }
-                    compositionService.stopVirtualDisplay()
-                } catch (e: Exception) {
-                    Timber.e(e, "Close game failed: %s", packageName)
-                    Toast.makeText(context, R.string.bg_action_close_game_failed, Toast.LENGTH_SHORT).show()
-                } finally {
-                    gameSwitchBusy = false
-                    gameStatusRefresh++
-                }
-            }
-        }
+        if (showMoreActions) viewModel.refreshGameStatus()
     }
 
     // 引导靶点在任务面板，重看时先切回去
@@ -385,6 +293,7 @@ fun BackgroundTaskView(
             )
         }
     }
+    val context = LocalContext.current
     val serviceDiedMessage = stringResource(R.string.bg_toast_service_died)
 
 
@@ -955,15 +864,15 @@ fun BackgroundTaskView(
                     onCaptureScreenshot = viewModel::onCaptureScreenshot,
                     gameRunning = gameStatus == AppAliveStatus.ALIVE,
                     gameStatusKnown = gameStatus != AppAliveStatus.UNKNOWN,
-                    gameSwitchEnabled = gamePackage != null && !gameSwitchBusy &&
-                        (gameStatus == AppAliveStatus.ALIVE || !isTaskActive) &&
+                    gameSwitchBusy = gameSwitchBusy,
+                    gameSwitchEnabled = (gameStatus == AppAliveStatus.ALIVE || !isTaskActive) &&
                         maaState != MaaExecutionState.STARTING && maaState != MaaExecutionState.STOPPING,
-                    onStartGame = performStartGame,
+                    onStartGame = viewModel::startGame,
                     onCloseApp = {
                         if (maaState == MaaExecutionState.RUNNING) {
                             showCloseConfirm = true
                         } else {
-                            performCloseGame()
+                            viewModel.closeGame()
                         }
                     },
                 )
@@ -1098,7 +1007,7 @@ fun BackgroundTaskView(
                 onDismissRequest = { showCloseConfirm = false },
                 onConfirm = {
                     showCloseConfirm = false
-                    performCloseGame()
+                    viewModel.closeGame()
                 },
                 confirmText = stringResource(R.string.dialog_close_app_confirm),
                 dismissText = stringResource(R.string.common_cancel),
@@ -1146,6 +1055,7 @@ private fun BackgroundMoreActionsOverlay(
     onCaptureScreenshot: () -> Unit,
     gameRunning: Boolean,
     gameStatusKnown: Boolean,
+    gameSwitchBusy: Boolean,
     gameSwitchEnabled: Boolean,
     onStartGame: () -> Unit,
     onCloseApp: () -> Unit,
@@ -1230,6 +1140,7 @@ private fun BackgroundMoreActionsOverlay(
                                 onClick = { if (gameRunning) onCloseApp() else onStartGame() },
                                 modifier = Modifier.weight(1f),
                                 enabled = gameSwitchEnabled,
+                                loading = gameSwitchBusy,
                                 containerColor = if (gameRunning) MaterialTheme.colorScheme.error
                                     else MaterialTheme.colorScheme.primary,
                                 contentColor = if (gameRunning) MaterialTheme.colorScheme.error
@@ -1422,13 +1333,16 @@ private fun ActionTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    loading: Boolean = false,
     containerColor: Color,
     contentColor: Color
 ) {
     Surface(
         onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.height(36.dp),
+        enabled = enabled && !loading,
+        modifier = modifier
+            .height(36.dp)
+            .alpha(if (enabled || loading) 1f else MaaThemeAlphas.DISABLED),
         shape = RoundedCornerShape(4.dp),
         color = containerColor.copy(alpha = 0.08f),
         contentColor = contentColor,
@@ -1440,12 +1354,20 @@ private fun ActionTile(
                 .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = containerColor.copy(alpha = 0.8f)
-            )
+            if (loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    color = containerColor.copy(alpha = 0.8f),
+                    strokeWidth = 2.dp,
+                )
+            } else {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = containerColor.copy(alpha = 0.8f)
+                )
+            }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = label,

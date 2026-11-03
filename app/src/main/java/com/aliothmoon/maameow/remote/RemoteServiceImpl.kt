@@ -14,6 +14,7 @@ import com.aliothmoon.maameow.bridge.NativeBridgeLib
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.DisplayMode
 import com.aliothmoon.maameow.constant.MaaFiles
+import com.aliothmoon.maameow.maa.DriverClass
 import com.aliothmoon.maameow.maa.InputControlUtils
 import com.aliothmoon.maameow.remote.internal.ActivityUtils
 import com.aliothmoon.maameow.remote.internal.BackgroundDisplay
@@ -410,25 +411,20 @@ class RemoteServiceImpl : RemoteService.Stub() {
     }
 
     override fun forceStopGame(packageName: String) {
-        require(packageName.isNotBlank())
-        val displayId = if (virtualDisplayMode.get() == DisplayMode.BACKGROUND) {
-            BackgroundDisplay.displayId()
-        } else {
-            PrimaryDisplayManager.DISPLAY_ID
-        }
-        ActivityUtils.forceStop(packageName, displayId)
+        if (packageName.isBlank()) return
+        ActivityUtils.forceStop(packageName, gameDisplayId())
     }
 
+    // 与 MaaCore 拉起游戏同一条路：虚拟屏上要校验没漂走、排除出最近任务
     override fun launchGame(packageName: String): Boolean {
-        if (packageName.isBlank()) return false
-        val displayId = if (virtualDisplayMode.get() == DisplayMode.BACKGROUND) {
-            BackgroundDisplay.displayId()
-        } else {
-            PrimaryDisplayManager.DISPLAY_ID
-        }
-        return displayId != DefaultDisplayConfig.DISPLAY_NONE &&
-            ActivityUtils.startApp(packageName, displayId, forceStop = false)
+        val displayId = gameDisplayId()
+        if (packageName.isBlank() || displayId == DefaultDisplayConfig.DISPLAY_NONE) return false
+        return DriverClass.startApp(packageName, displayId, false)
     }
+
+    private fun gameDisplayId(): Int =
+        if (virtualDisplayMode.get() == DisplayMode.BACKGROUND) BackgroundDisplay.displayId()
+        else PrimaryDisplayManager.DISPLAY_ID
 
     override fun getGameFps(): Float = GameFpsMonitor.currentFps()
 

@@ -19,6 +19,7 @@ import com.aliothmoon.maameow.domain.launch.LaunchRequest
 import com.aliothmoon.maameow.domain.launch.LaunchSession
 import com.aliothmoon.maameow.domain.launch.LaunchUserEvent
 import com.aliothmoon.maameow.domain.launch.toCountdownState
+import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.AppAliveChecker
 import com.aliothmoon.maameow.domain.service.GameFpsWatcher
@@ -28,6 +29,7 @@ import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.ScreenPowerController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
+import com.aliothmoon.maameow.domain.state.isIdle
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
 import com.aliothmoon.maameow.domain.usecase.TaskStartDecision
@@ -36,6 +38,7 @@ import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.presentation.state.BackgroundTaskState
 import com.aliothmoon.maameow.presentation.state.PreviewTouchMarker
 import com.aliothmoon.maameow.presentation.state.UiEffect
+import com.aliothmoon.maameow.remote.AppAliveStatus
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogConfirmAction
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogUiState
 import com.aliothmoon.maameow.presentation.view.panel.PanelTab
@@ -54,6 +57,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -61,6 +65,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -151,6 +156,11 @@ class BackgroundTaskViewModel(
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    private val _gameStatus = MutableStateFlow(AppAliveStatus.UNKNOWN)
+    val gameStatus: StateFlow<Int> = _gameStatus.asStateFlow()
+    private val _gameSwitchBusy = MutableStateFlow(false)
+    val gameSwitchBusy: StateFlow<Boolean> = _gameSwitchBusy.asStateFlow()
+
     // 调试截图结果（已本地化的提示文案），供 UI 以 Toast 展示
     private val _screenshotMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val screenshotMessage: SharedFlow<String> = _screenshotMessage.asSharedFlow()
@@ -172,6 +182,69 @@ class BackgroundTaskViewModel(
         observeTaskEnd()
         observeTouchPreviewToggle()
         observeDefaultTaskSelection()
+        observeGameStatus()
+    }
+
+    private fun observeGameStatus() {
+        viewModelScope.launch {
+            merge(
+                compositionService.state.map { },
+                compositionService.backgroundDisplayPackage.map { },
+                RemoteServiceManager.state.map { },
+                taskEndRegistry.taskEnded.map { },
+            ).collectLatest { updateGameStatus() }
+        }
+    }
+
+    fun refreshGameStatus() {
+        viewModelScope.launch { updateGameStatus() }
+    }
+
+    // 启停进行中不刷新，免得拉起前的旧状态盖掉结果
+    private suspend fun updateGameStatus() {
+        val status = currentGamePackage()?.let { appAliveChecker.isAppAlive(it) } ?: AppAliveStatus.UNKNOWN
+        if (!_gameSwitchBusy.value) _gameStatus.value = status
+    }
+
+    private fun currentGamePackage(): String? = compositionService.backgroundDisplayPackage.value
+        ?: Packages[
+            if (compositionService.state.value.isIdle) chainState.clientType
+            else chainState.lastUsedClientType ?: chainState.clientType
+        ]
+
+    fun startGame() {
+        val clientType = chainState.clientType
+        val pkg = Packages[clientType] ?: return
+        if (!compositionService.state.value.isIdle || !_gameSwitchBusy.compareAndSet(false, true)) return
+        viewModelScope.launch {
+            var running = false
+            try {
+                // 判不出死活也照拉，已在跑时 startActivity 只是切到前台
+                running = appAliveChecker.isAppAlive(pkg) == AppAliveStatus.ALIVE ||
+                    compositionService.launchGame(clientType)
+                // 前台拉起不等进程起来，pidof 可能还查不到
+                if (running) _gameStatus.value = AppAliveStatus.ALIVE
+                else _effects.send(UiEffect.toast(R.string.bg_action_start_game_failed))
+            } finally {
+                _gameSwitchBusy.value = false
+            }
+            if (!running) updateGameStatus()
+        }
+    }
+
+    fun closeGame() {
+        val pkg = currentGamePackage() ?: return
+        if (!_gameSwitchBusy.compareAndSet(false, true)) return
+        viewModelScope.launch {
+            try {
+                if (!compositionService.closeGame(pkg)) {
+                    _effects.send(UiEffect.toast(R.string.bg_action_close_game_failed))
+                }
+            } finally {
+                _gameSwitchBusy.value = false
+            }
+            updateGameStatus()
+        }
     }
 
     /**
