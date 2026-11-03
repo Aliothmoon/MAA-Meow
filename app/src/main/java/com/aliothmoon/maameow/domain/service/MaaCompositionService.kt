@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.domain.service
 
 import android.content.Context
 import android.os.Build
+import android.os.IBinder
 import android.os.RemoteException
 import com.alibaba.fastjson2.JSON
 import com.aliothmoon.maameow.MaaCoreCallback
@@ -52,8 +53,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -174,6 +178,17 @@ class MaaCompositionService(
     private val callbackDispatcher: MaaCallbackDispatcher by inject(MaaCallbackDispatcher::class.java)
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // 虚拟屏归建它的特权进程，进程一换就没了
+    private class BackgroundGame(val binder: IBinder, val packageName: String)
+
+    private val backgroundGame = MutableStateFlow<BackgroundGame?>(null)
+
+    val backgroundDisplayPackage: StateFlow<String?> =
+        combine(backgroundGame, RemoteServiceManager.state) { game, remote ->
+            val binder = (remote as? RemoteServiceManager.ServiceState.Connected)?.service?.asBinder()
+            game?.takeIf { it.binder === binder }?.packageName
+        }.stateIn(scope, SharingStarted.Eagerly, null)
 
     private val connectDeferred = AtomicReference<CompletableDeferred<Boolean>?>()
 
@@ -508,6 +523,7 @@ class MaaCompositionService(
                 val r = resolveAndSetResolution(service, clientType)
                 val displayId = service.bounded("startVirtualDisplay", START_DISPLAY_TIMEOUT_MS) { it.startVirtualDisplay() }
                 if (displayId == -1) return failVirtualDisplayStart(useVdm)
+                backgroundGame.value = Packages[clientType]?.let { BackgroundGame(service.asBinder(), it) }
                 reportVirtualDisplayTier(service, useVdm)
                 buildConnectConfig(r.width, r.height, displayId)
             }
@@ -928,6 +944,7 @@ class MaaCompositionService(
     }
 
     suspend fun stopVirtualDisplay() {
+        backgroundGame.value = null
         try {
             stopBackgroundMonitors()
             _displayResolution.value = defaultResolution

@@ -1929,11 +1929,10 @@
     <string name="shizuku_auth_grant_now">지금 권한 부여</string>
 
     <!-- i18n: virtual display -->
-    <string name="virtual_display_pending">실행 대기</string>
-    <string name="virtual_display_waiting_surface">화면 대기 중…</string>
-    <string name="virtual_display_game_running">게임 실행 중</string>
+    <string name="virtual_display_task_running">작업 실행 중</string>
     <string name="virtual_display_game_stopped">게임 종료됨</string>
     <string name="virtual_display_idle">대기 중</string>
+    <string name="virtual_display_game_ready">준비됨</string>
     <string name="bg_preview_collapse">미리보기 접기</string>
     <string name="bg_preview_expand">미리보기 펼치기</string>
 

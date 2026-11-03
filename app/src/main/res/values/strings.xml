@@ -1929,11 +1929,10 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="shizuku_auth_grant_now">立即授权</string>
 
     <!-- i18n: virtual display -->
-    <string name="virtual_display_pending">待执行</string>
-    <string name="virtual_display_waiting_surface">等待画面中…</string>
-    <string name="virtual_display_game_running">游戏运行中</string>
+    <string name="virtual_display_task_running">任务运行中</string>
     <string name="virtual_display_game_stopped">游戏终止</string>
     <string name="virtual_display_idle">待机</string>
+    <string name="virtual_display_game_ready">就绪</string>
     <string name="bg_preview_collapse">收起预览</string>
     <string name="bg_preview_expand">展开预览</string>
 

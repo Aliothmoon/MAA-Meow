@@ -1873,11 +1873,10 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="shizuku_auth_grant_now">Grant now</string>
 
     <!-- i18n: virtual display -->
-    <string name="virtual_display_pending">Pending</string>
-    <string name="virtual_display_waiting_surface">Waiting for surface…</string>
-    <string name="virtual_display_game_running">Game running</string>
+    <string name="virtual_display_task_running">Task running</string>
     <string name="virtual_display_game_stopped">Game stopped</string>
     <string name="virtual_display_idle">Idle</string>
+    <string name="virtual_display_game_ready">Ready</string>
     <string name="bg_preview_collapse">Collapse preview</string>
     <string name="bg_preview_expand">Expand preview</string>
 

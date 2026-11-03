@@ -208,6 +208,7 @@ fun BackgroundTaskView(
     val previewCollapse = remember { PreviewCollapseState(coroutineScope) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val maaState by compositionService.state.collectAsStateWithLifecycle()
+    val gameOnDisplay by viewModel.gameOnDisplay.collectAsStateWithLifecycle()
     val isTaskActive = maaState != MaaExecutionState.IDLE && maaState != MaaExecutionState.ERROR
     val runMode by appSettingsManager.runMode.collectAsStateWithLifecycle()
     val permissionState by permissionManager.state.collectAsStateWithLifecycle()
@@ -486,7 +487,7 @@ fun BackgroundTaskView(
                                 }
                             },
                         isRunning = maaState == MaaExecutionState.RUNNING,
-                        isSurfaceAvailable = isSurfaceAvailable,
+                        gameOnDisplay = gameOnDisplay,
                         onClick = { viewModel.onToggleFullscreenMonitor() }) {
                         previewContent()
                     }

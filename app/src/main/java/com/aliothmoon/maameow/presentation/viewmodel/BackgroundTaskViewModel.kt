@@ -20,12 +20,14 @@ import com.aliothmoon.maameow.domain.launch.LaunchSession
 import com.aliothmoon.maameow.domain.launch.LaunchUserEvent
 import com.aliothmoon.maameow.domain.launch.toCountdownState
 import com.aliothmoon.maameow.domain.service.AchievementReporter
+import com.aliothmoon.maameow.domain.service.AppAliveChecker
 import com.aliothmoon.maameow.domain.service.GameFpsWatcher
 import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.ScreenPowerController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
+import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
 import com.aliothmoon.maameow.domain.usecase.TaskStartDecision
@@ -41,7 +43,9 @@ import com.aliothmoon.maameow.schedule.model.CountdownState
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.resolve
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,6 +57,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -76,7 +83,12 @@ class BackgroundTaskViewModel(
     private val application: Context,
     private val sideTaskRunner: PlanSideTaskRunner,
     private val screenPower: ScreenPowerController,
+    private val appAliveChecker: AppAliveChecker,
 ) : ViewModel() {
+
+    private companion object {
+        const val GAME_ON_DISPLAY_POLL_MS = 2_000L
+    }
 
     val launchSession: StateFlow<LaunchSession> = launchPipeline.session
     val countdownState: StateFlow<CountdownState> = launchPipeline.session
@@ -117,6 +129,27 @@ class BackgroundTaskViewModel(
 
     // 后台模式游戏实时帧率，null = 未监控
     val gameFps: StateFlow<Float?> = gameFpsWatcher.fps
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val gameOnDisplay: StateFlow<Boolean> = combine(
+        compositionService.backgroundDisplayPackage,
+        compositionService.state,
+    ) { pkg, maa -> pkg.takeIf { maa == MaaExecutionState.IDLE || maa == MaaExecutionState.ERROR } }
+        .distinctUntilChanged()
+        .flatMapLatest { pkg ->
+            if (pkg == null) {
+                flowOf(false)
+            } else {
+                flow {
+                    while (true) {
+                        emit(appAliveChecker.isAppOnBackgroundDisplay(pkg) == true)
+                        delay(GAME_ON_DISPLAY_POLL_MS)
+                    }
+                }
+            }
+        }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     // 调试截图结果（已本地化的提示文案），供 UI 以 Toast 展示
     private val _screenshotMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
