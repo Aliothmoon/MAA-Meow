@@ -43,7 +43,8 @@ fun WeeklyScheduleSection(
             checked = config.useWeeklySchedule,
             onCheckedChange = onEnabledChange,
             label = stringResource(R.string.panel_weekly_schedule),
-            tipText = stringResource(R.string.panel_weekly_schedule_tip)
+            tipText = stringResource(R.string.panel_weekly_schedule_tip),
+            modifier = Modifier.guideHighlight(GuideAnchor.WEEKLY_SWITCH, corner = 4.dp),
         )
         MaaAnimatedVisibility(
             visible = config.useWeeklySchedule,
@@ -85,7 +86,10 @@ fun WeeklyScheduleSection(
                             else
                                 MaterialTheme.colorScheme.onSurface,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            // 挂文字上，Surface 被最小触控撑到 48dp 框会偏大
+                            modifier = Modifier
+                                .guideHighlight(GuideAnchor.WEEKLY_DAY, key)
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
                         )
                     }
                 }

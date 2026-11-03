@@ -38,7 +38,10 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.StageAliasMapper
 import com.aliothmoon.maameow.data.resource.StageGroup
 import com.aliothmoon.maameow.data.resource.StageInfo
+import com.aliothmoon.maameow.presentation.components.GuideAnchor
 import com.aliothmoon.maameow.presentation.components.ITextFieldWithFocus
+import com.aliothmoon.maameow.presentation.components.LocalGuideHighlight
+import com.aliothmoon.maameow.presentation.components.guideHighlight
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 
 /**
@@ -97,10 +100,14 @@ internal fun GroupedStageButtonGroup(
     modifier: Modifier = Modifier,
     /** 选关到实际下发关卡的转换（如自定义剿灭），按钮与徽章都显示转换后的关卡 */
     resolveStage: (String) -> String = { it },
-    onRemove: (() -> Unit)? = null
+    onRemove: (() -> Unit)? = null,
+    /** 演示指到选关时，折叠描标题行，展开描目标关卡 */
+    guided: Boolean = false,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val selectedDisplay = stageDisplayName(resolveStage(selectedValue), stageGroups)
+    val guideKey = LocalGuideHighlight.current
+        ?.takeIf { guided && it.anchor == GuideAnchor.STAGE_ITEM }?.key
 
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -110,6 +117,7 @@ internal fun GroupedStageButtonGroup(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .guideHighlight(guideKey != null && !expanded, corner = 4.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .clickable { expanded = !expanded }
                 .padding(vertical = 2.dp),
@@ -170,6 +178,7 @@ internal fun GroupedStageButtonGroup(
                             val resolved = resolveStage(stage.code)
                             Surface(
                                 modifier = Modifier
+                                    .guideHighlight(guideKey == stage.code, corner = 16.dp)
                                     .clip(RoundedCornerShape(16.dp))
                                     .clickable { onItemSelected(stage.code) },
                                 color = when {

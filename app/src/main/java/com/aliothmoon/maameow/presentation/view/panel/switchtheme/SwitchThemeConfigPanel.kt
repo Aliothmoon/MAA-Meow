@@ -17,19 +17,26 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.SwitchThemeConfig
+import com.aliothmoon.maameow.presentation.components.GuideAnchor
+import com.aliothmoon.maameow.presentation.components.guideHighlight
+import com.aliothmoon.maameow.presentation.components.guideHighlighted
+import com.aliothmoon.maameow.presentation.components.outlinedFieldLabelInset
 
 @Composable
 fun SwitchThemeConfigPanel(
@@ -66,7 +73,14 @@ fun SwitchThemeConfigPanel(
                         },
                         label = { Text(stringResource(R.string.panel_switch_theme_candidate, index + 1)) },
                         singleLine = true,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .guideHighlight(
+                                GuideAnchor.THEME_FIELD,
+                                index.toString(),
+                                corner = 4.dp,
+                                insetTop = outlinedFieldLabelInset(),
+                            ),
                     )
                     IconButton(onClick = {
                         focusManager.clearFocus()
@@ -80,16 +94,24 @@ fun SwitchThemeConfigPanel(
                 }
             }
         }
-        OutlinedButton(
-            onClick = {
-                focusManager.clearFocus()
-                onConfigChange(config.copy(themes = config.themes + ""))
-            },
-            shape = RoundedCornerShape(8.dp),
+        // 描边时去掉最小触控留白让框贴着按钮，按钮在末尾变矮不挤别的
+        val addGuided = guideHighlighted(GuideAnchor.THEME_ADD)
+        CompositionLocalProvider(
+            LocalMinimumInteractiveComponentSize provides
+                if (addGuided) Dp.Unspecified else LocalMinimumInteractiveComponentSize.current,
         ) {
-            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(stringResource(R.string.panel_switch_theme_add))
+            OutlinedButton(
+                onClick = {
+                    focusManager.clearFocus()
+                    onConfigChange(config.copy(themes = config.themes + ""))
+                },
+                modifier = Modifier.guideHighlight(addGuided, corner = 8.dp),
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.panel_switch_theme_add))
+            }
         }
     }
 }

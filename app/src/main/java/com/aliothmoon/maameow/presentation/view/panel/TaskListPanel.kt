@@ -43,6 +43,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskChainNode
+import com.aliothmoon.maameow.presentation.components.GuideAnchor
+import com.aliothmoon.maameow.presentation.components.guideHighlight
+import com.aliothmoon.maameow.presentation.components.guideNodeBounds
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import sh.calvin.reorderable.ReorderableColumn
 
@@ -114,6 +117,7 @@ fun TaskListPanel(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
+                .guideHighlight(GuideAnchor.EDIT_TOGGLE, corner = 4.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .clickable { onToggleEditMode() },
             shape = RoundedCornerShape(4.dp),
@@ -157,6 +161,7 @@ fun TaskListPanel(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .guideHighlight(GuideAnchor.ADD_TASK, corner = 4.dp)
                         .clip(RoundedCornerShape(4.dp))
                         .clickable { onToggleAddingTask() },
                     shape = RoundedCornerShape(4.dp),
@@ -243,6 +248,8 @@ private fun TaskNodeRow(
 ) {
     Card(
         modifier = modifier
+            .guideNodeBounds(node.id)
+            .guideHighlight(GuideAnchor.NODE, node.id, corner = 4.dp)
             .fillMaxWidth(),
         shape = RoundedCornerShape(4.dp),
         colors = CardDefaults.cardColors(

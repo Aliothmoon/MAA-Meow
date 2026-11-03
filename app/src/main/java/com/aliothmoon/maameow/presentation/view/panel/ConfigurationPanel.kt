@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -32,6 +33,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -63,7 +65,10 @@ import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import com.aliothmoon.maameow.data.model.UserDataUpdateConfig
 import com.aliothmoon.maameow.data.model.WakeUpConfig
+import com.aliothmoon.maameow.presentation.components.GuideAnchor
 import com.aliothmoon.maameow.presentation.components.ITextField
+import com.aliothmoon.maameow.presentation.components.LocalGuideHighlight
+import com.aliothmoon.maameow.presentation.components.guideHighlight
 import com.aliothmoon.maameow.presentation.view.panel.depot.DepotMaintainConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.fight.FightConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.mall.MallConfigPanel
@@ -267,6 +272,14 @@ private fun HintItem(icon: androidx.compose.ui.graphics.vector.ImageVector, text
 
 @Composable
 private fun TaskGalleryView(onAddNode: (TaskTypeInfo) -> Unit) {
+    // 演示指到的类型可能在屏外，先滚过去
+    val gridState = rememberLazyGridState()
+    val guide = LocalGuideHighlight.current
+    LaunchedEffect(guide) {
+        if (guide?.anchor != GuideAnchor.GALLERY_ITEM) return@LaunchedEffect
+        val index = TaskTypeInfo.entries.indexOfFirst { it.name == guide.key }
+        if (index >= 0) gridState.animateScrollToItem(index)
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -281,6 +294,7 @@ private fun TaskGalleryView(onAddNode: (TaskTypeInfo) -> Unit) {
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
+            state = gridState,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(bottom = 12.dp)
@@ -290,7 +304,10 @@ private fun TaskGalleryView(onAddNode: (TaskTypeInfo) -> Unit) {
                     shape = RoundedCornerShape(8.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { onAddNode(typeInfo) }) {
+                    modifier = Modifier
+                        .guideHighlight(GuideAnchor.GALLERY_ITEM, typeInfo.name, corner = 8.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onAddNode(typeInfo) }) {
                     Box(
                         modifier = Modifier.padding(12.dp), contentAlignment = Alignment.Center
                     ) {

@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
@@ -31,11 +33,13 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,8 +60,11 @@ import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
+import com.aliothmoon.maameow.presentation.components.GuideAnchor
 import com.aliothmoon.maameow.presentation.components.INumericField
+import com.aliothmoon.maameow.presentation.components.LocalGuideHighlight
 import com.aliothmoon.maameow.presentation.components.WeeklyScheduleSection
+import com.aliothmoon.maameow.presentation.components.guideHighlight
 import com.aliothmoon.maameow.presentation.components.rememberStagedBeyondViewportCount
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
@@ -67,7 +74,10 @@ import com.aliothmoon.maameow.presentation.view.panel.common.StageInputField
 import com.aliothmoon.maameow.presentation.view.panel.common.StageRow
 import com.aliothmoon.maameow.presentation.view.panel.common.stageDisplayName
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 import org.koin.compose.koinInject
 
 
@@ -114,6 +124,23 @@ fun FightConfigPanel(
         )
         val coroutineScope = rememberCoroutineScope()
         val inputFocus = LocalInputFocusManager.current
+        val generalListState = rememberLazyListState()
+        val advancedListState = rememberLazyListState()
+
+        // 演示：目标在另一页时描页签，在本页时滚到页末区块
+        val guide = LocalGuideHighlight.current?.anchor
+        val stageGuide = guide == GuideAnchor.STAGE_ITEM
+        val weeklyGuide = guide == GuideAnchor.WEEKLY_SWITCH || guide == GuideAnchor.WEEKLY_DAY
+        LaunchedEffect(stageGuide, pagerState.currentPage) {
+            if (stageGuide && pagerState.currentPage == 0) generalListState.scrollToLast()
+        }
+        // 按 anchor 重跑，星期展开完再滚一次
+        LaunchedEffect(guide, pagerState.currentPage) {
+            if (!weeklyGuide || pagerState.currentPage != 1) return@LaunchedEffect
+            advancedListState.scrollToLast()
+            delay(280.milliseconds)
+            advancedListState.scrollToLast()
+        }
 
         // Tab 行
         Row(
@@ -126,7 +153,9 @@ fun FightConfigPanel(
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable(interactionSource = null, indication = null) {
+                modifier = Modifier
+                    .guideHighlight(stageGuide && pagerState.currentPage != 0, corner = 4.dp)
+                    .clickable(interactionSource = null, indication = null) {
                     inputFocus.clear()
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(0)
@@ -138,7 +167,9 @@ fun FightConfigPanel(
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable(interactionSource = null, indication = null) {
+                modifier = Modifier
+                    .guideHighlight(weeklyGuide && pagerState.currentPage != 1, corner = 4.dp)
+                    .clickable(interactionSource = null, indication = null) {
                     inputFocus.clear()
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(1)
@@ -165,6 +196,7 @@ fun FightConfigPanel(
             userScrollEnabled = true
         ) { page ->
             LazyColumn(
+                state = if (page == 0) generalListState else advancedListState,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
@@ -681,6 +713,7 @@ private fun GroupedStageSelectionSection(
                 stageGroups = stageGroups,
                 onItemSelected = { onConfigChange(config.copy(stage1 = it)) },
                 resolveStage = config::resolveAnnihilation,
+                guided = true,
             )
         }
 
@@ -834,3 +867,9 @@ private fun CustomAnnihilationSection(
 @Composable
 private fun localizedAnnihilationOptions(): List<Pair<String, String>> =
     StageInfo.ANNIHILATION_CODES.map { stageDisplayName(it, emptyList()) to it }
+
+/** 等首帧布局出来再滚，否则条目数为 0 */
+private suspend fun LazyListState.scrollToLast() {
+    val count = snapshotFlow { layoutInfo.totalItemsCount }.first { it > 0 }
+    animateScrollToItem(count - 1)
+}

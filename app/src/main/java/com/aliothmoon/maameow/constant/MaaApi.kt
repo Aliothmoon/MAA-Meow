@@ -29,6 +29,10 @@ object MaaApi {
     const val FAQ_URL = "https://docs.maameow.com/faq/getting-started/"
     const val FEEDBACK_URL = "https://github.com/Aliothmoon/MAA-Meow/issues"
 
+    // 上游用户协议，与 WPF MaaUrls.UserAgreement 一致
+    const val USER_AGREEMENT_URL =
+        "https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/dev-v2/terms-of-service.md"
+
     // MaaMeow 静态 API 基础地址
     const val MEOW_API_BASE = "https://maameow.com/api/"
 

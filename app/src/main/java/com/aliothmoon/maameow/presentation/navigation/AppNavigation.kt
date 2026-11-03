@@ -140,12 +140,15 @@ fun AppNavigation(
             cooldown = forced,
         )
     }
-    // 跳过或看完都算看过；重看再写一次是幂等的
+    // 跳过或看完都算看过，重看再写一次幂等；看完回首页，跳过留在原地
     LaunchedEffect(onboardingState) {
         snapshotFlow { onboardingState.active }
             .drop(1)
             .filter { !it }
-            .collect { appSettings.markOnboardingSeen() }
+            .collect {
+                if (onboardingState.completed) mainTabNavigator.navigateTo(BottomNavTab.HOME, animate = false)
+                appSettings.markOnboardingSeen()
+            }
     }
     val scheduledCountdownState by backgroundTaskViewModel.countdownState.collectAsStateWithLifecycle()
 

@@ -108,7 +108,7 @@ internal suspend fun runRainbowFlow(
         }
 }
 
-private val RainbowStops: Array<Pair<Float, Color>> = arrayOf(
+internal val RainbowStops: Array<Pair<Float, Color>> = arrayOf(
     0.000f to Color.Red,
     0.143f to Color(0xFFFFA500), // Orange
     0.286f to Color(0xFFFFD700), // Gold

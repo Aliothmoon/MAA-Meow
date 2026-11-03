@@ -15,9 +15,11 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -47,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -60,6 +63,7 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.LookaheadScope
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -68,13 +72,18 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.constant.MaaApi
 import com.aliothmoon.maameow.presentation.components.DialogIconBadge
+import com.aliothmoon.maameow.presentation.components.RainbowFlowText
 import com.aliothmoon.maameow.presentation.components.consumeAllPointerEvents
 import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
+import com.aliothmoon.maameow.presentation.onboarding.demo.TaskDemoStage
+import com.aliothmoon.maameow.presentation.onboarding.demo.TaskDemoState
 import com.aliothmoon.maameow.theme.LocalReduceMotion
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.theme.MaaMotion
 import com.aliothmoon.maameow.theme.OpaqueTheme
+import com.aliothmoon.maameow.utils.Misc
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -133,7 +142,30 @@ fun OnboardingOverlay(
         exit = MaaMotion.fadeOut(reduceMotion),
         label = "OnboardingOverlay",
     ) {
-        Spotlight(state = state, reduceMotion = reduceMotion, onRequestTab = onRequestTab)
+        // 随引导创建销毁，重看从头演示
+        val context = LocalContext.current
+        val demo = remember {
+            TaskDemoState(context.getString(R.string.onboarding_demo_night_theme)) { it.defaultName(context) }
+        }
+        // 从前一步进来从头演示，从后面退回保留进度，免得往后走要重做
+        LaunchedEffect(state, demo) {
+            var last = state.stepIndex
+            snapshotFlow { state.stepIndex }.collect { index ->
+                if (state.steps[index].demo && index > last) demo.reset()
+                last = index
+            }
+        }
+        Box(modifier = Modifier.fillMaxSize()) {
+            Spotlight(state = state, reduceMotion = reduceMotion, onRequestTab = onRequestTab)
+            MaaAnimatedVisibility(
+                visible = state.currentStep.demo,
+                enter = MaaMotion.fadeIn(reduceMotion),
+                exit = MaaMotion.fadeOut(reduceMotion),
+                label = "OnboardingDemo",
+            ) {
+                TaskDemoStage(state = state, demo = demo)
+            }
+        }
     }
 }
 
@@ -251,6 +283,12 @@ private fun Spotlight(
                 currentOnRequestTab(step.tab)
             }
             shownTab = step.tab
+
+            // 演示层整屏盖在上面，这边只收起
+            if (step.demo) {
+                blackout()
+                return@collectLatest
+            }
 
             val target = step.target
             if (target == null) {
@@ -467,6 +505,28 @@ private fun rememberNextCooldown(state: OnboardingState, index: Int, visible: Bo
 }
 
 @Composable
+private fun AgreementLine() {
+    val context = LocalContext.current
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.onboarding_agreement_prefix),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        RainbowFlowText(
+            text = stringResource(R.string.onboarding_agreement_link),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier
+                .clip(RoundedCornerShape(4.dp))
+                .clickable { Misc.openUriSafely(context, MaaApi.USER_AGREEMENT_URL) },
+        )
+    }
+}
+
+@Composable
 private fun OnboardingCardContent(
     state: OnboardingState,
     step: OnboardingStep,
@@ -511,6 +571,11 @@ private fun OnboardingCardContent(
                 .weight(1f, fill = false)
                 .verticalScroll(rememberScrollState()),
         )
+
+        if (step.agreement) {
+            Spacer(modifier = Modifier.height(12.dp))
+            AgreementLine()
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 

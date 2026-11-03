@@ -264,18 +264,9 @@ class TaskChainState(
             val idx = current.indexOfFirst { it.id == nodeId }
             if (idx >= 0) {
                 val src = current[idx]
-                // 去掉末尾 " N"（空格+数字）得到基础名
-                val baseName = src.name.replace(Regex(" \\d+$"), "")
-                // 收集链中所有以 "baseName N" 形式命名已占用的编号
-                val usedNumbers = current.mapNotNull { node ->
-                    Regex("^${Regex.escape(baseName)} (\\d+)$").matchEntire(node.name)?.groupValues?.get(
-                        1
-                    )?.toIntOrNull()
-                }.toSet()
-                // 取最小未占用的正整数（从 2 开始，1 留给源名称本身）
-                val nextNum = generateSequence(2) { it + 1 }.first { it !in usedNumbers }
                 val copy = src.copy(
-                    id = UUID.randomUUID().toString(), name = "$baseName $nextNum"
+                    id = UUID.randomUUID().toString(),
+                    name = duplicateTaskName(src.name, current.map { it.name }),
                 )
                 current.add(idx + 1, copy)
                 Timber.d("Duplicated node %s → %s (\"%s\")", nodeId, copy.id, copy.name)
@@ -680,4 +671,13 @@ internal fun List<TaskProfile>.extractReclamation(
         )
     }
     return profiles to legacy
+}
+
+/** 复制任务的名字：去掉末尾 " N" 得基础名，取最小未占用编号（从 2 起，1 留给源名称） */
+internal fun duplicateTaskName(name: String, existing: List<String>): String {
+    val baseName = name.replace(Regex(" \\d+$"), "")
+    val pattern = Regex("^${Regex.escape(baseName)} (\\d+)$")
+    val used = existing.mapNotNull { pattern.matchEntire(it)?.groupValues?.get(1)?.toIntOrNull() }.toSet()
+    val next = generateSequence(2) { it + 1 }.first { it !in used }
+    return "$baseName $next"
 }

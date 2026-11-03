@@ -23,6 +23,23 @@ class OnboardingStateTest {
     }
 
     @Test
+    fun nextOnLastStep_completes_skipDoesNot() {
+        val state = OnboardingState()
+        state.start()
+        state.finish()
+        assertFalse(state.completed)
+
+        state.start()
+        repeat(OnboardingSteps.all.size) { state.next() }
+        assertFalse(state.active)
+        assertTrue(state.completed)
+
+        // 重看从未完成开始
+        state.start()
+        assertFalse(state.completed)
+    }
+
+    @Test
     fun defaultStart_skippableWithoutCooldown() {
         val state = OnboardingState()
         state.start()

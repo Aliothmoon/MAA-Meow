@@ -337,15 +337,16 @@ class SubTaskHandler(
                 append(str("FightFailed"), LogLevel.ERROR)
             }
 
-            "StageTrader" -> {
+            // HD 已深化 / CR 可重建，萨卡兹专属
+            "StageTrader", "StageTraderHD", "StageTraderCR" -> {
                 append(str("Trader"), LogLevel.INFO)
             }
 
-            "StageSafeHouse" -> {
+            "StageSafeHouse", "StageSafeHouseHD", "StageSafeHouseCR" -> {
                 append(str("SafeHouse"), LogLevel.INFO)
             }
 
-            "StageFilterTruth" -> {
+            "StageFilterTruth", "StageFilterTruthHD", "StageFilterTruthCR" -> {
                 append(str("FilterTruth"), LogLevel.INFO)
             }
 

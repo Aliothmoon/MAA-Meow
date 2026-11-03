@@ -60,6 +60,10 @@ class OnboardingState(pending: Boolean = false) {
     var skippable by mutableStateOf(true)
         private set
 
+    /** 本轮是点「开始使用」走完的，跳过不算 */
+    var completed by mutableStateOf(false)
+        private set
+
     private var cooldown = false
     private val cooledDown = mutableSetOf<Int>()
 
@@ -83,6 +87,7 @@ class OnboardingState(pending: Boolean = false) {
         this.cooldown = cooldown
         cooledDown.clear()
         stepIndex = 0
+        completed = false
         active = true
     }
 
@@ -95,7 +100,12 @@ class OnboardingState(pending: Boolean = false) {
     }
 
     fun next() {
-        if (stepIndex < steps.lastIndex) stepIndex++ else finish()
+        if (stepIndex < steps.lastIndex) {
+            stepIndex++
+        } else {
+            completed = true
+            finish()
+        }
     }
 
     fun previous() {

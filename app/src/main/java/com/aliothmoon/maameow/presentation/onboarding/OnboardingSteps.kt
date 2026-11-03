@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.Tab
+import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -24,6 +25,8 @@ import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
  * @param tab      该步所在的主 Tab，切到这一步时 pager 先切过去
  * @param target   高亮靶点，null = 不挖洞、卡片居中
  * @param cooldown 关键步骤，首启强制引导时「下一步」先冷却
+ * @param agreement 正文下附用户协议链接，不强制点开
+ * @param demo     全屏任务设置演示
  */
 data class OnboardingStep(
     val tab: BottomNavTab,
@@ -32,6 +35,8 @@ data class OnboardingStep(
     @param:StringRes val titleRes: Int,
     @param:StringRes val bodyRes: Int,
     val cooldown: Boolean = false,
+    val agreement: Boolean = false,
+    val demo: Boolean = false,
 )
 
 object OnboardingSteps {
@@ -44,6 +49,7 @@ object OnboardingSteps {
             icon = Icons.Rounded.AutoAwesome,
             titleRes = R.string.onboarding_welcome_title,
             bodyRes = R.string.onboarding_welcome_body,
+            agreement = true,
         ),
         OnboardingStep(
             tab = BottomNavTab.HOME,
@@ -87,6 +93,15 @@ object OnboardingSteps {
             icon = Icons.Rounded.Checklist,
             titleRes = R.string.onboarding_bg_task_list_title,
             bodyRes = R.string.onboarding_bg_task_list_body,
+        ),
+        // 对齐上游设置指引的任务设置演示
+        OnboardingStep(
+            tab = BottomNavTab.BACKGROUND,
+            target = null,
+            icon = Icons.Rounded.TouchApp,
+            titleRes = R.string.onboarding_demo_title,
+            bodyRes = R.string.onboarding_demo_body,
+            demo = true,
         ),
         OnboardingStep(
             tab = BottomNavTab.BACKGROUND,
