@@ -132,6 +132,7 @@ private fun DetailHost(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
+    // 4dp + 面板顶部 2dp = 左栏按钮的 6dp 内边距，首行文字与「编辑配置」同高
     if (wrapInCard) {
         Card(
             modifier = modifier,
@@ -142,13 +143,13 @@ private fun DetailHost(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = 10.dp),
+                    .padding(top = 4.dp),
             ) {
                 content()
             }
         }
     } else {
-        Box(modifier = modifier) {
+        Box(modifier = modifier.padding(top = 4.dp)) {
             content()
         }
     }

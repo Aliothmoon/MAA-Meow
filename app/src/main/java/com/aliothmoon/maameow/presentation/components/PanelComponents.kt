@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -90,6 +91,7 @@ fun CheckBoxWithExpandableTip(
  * @param modifier 修饰符
  * @param enabled 是否启用
  * @param subtitle 副标题（可选）
+ * @param inlineSubtitle 副标题跟在标签后，放不下再换行
  */
 @Composable
 fun CheckBoxWithLabel(
@@ -98,8 +100,26 @@ fun CheckBoxWithLabel(
     label: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    subtitle: String? = null
+    subtitle: String? = null,
+    inlineSubtitle: Boolean = false,
 ) {
+    val labelText = @Composable { textModifier: Modifier ->
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface
+            else MaterialTheme.colorScheme.onSurface.copy(alpha = MaaThemeAlphas.DISABLED),
+            modifier = textModifier,
+        )
+    }
+    val subtitleText = @Composable { text: String, textModifier: Modifier ->
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = textModifier,
+        )
+    }
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
@@ -111,19 +131,15 @@ fun CheckBoxWithLabel(
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Column {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (enabled) MaterialTheme.colorScheme.onSurface
-                else MaterialTheme.colorScheme.onSurface.copy(alpha = MaaThemeAlphas.DISABLED)
-            )
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+        if (subtitle != null && inlineSubtitle) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                labelText(Modifier.alignByBaseline())
+                subtitleText(subtitle, Modifier.alignByBaseline())
+            }
+        } else {
+            Column {
+                labelText(Modifier)
+                if (subtitle != null) subtitleText(subtitle, Modifier)
             }
         }
     }

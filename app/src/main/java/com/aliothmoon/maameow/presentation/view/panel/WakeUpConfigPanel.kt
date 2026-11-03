@@ -51,7 +51,8 @@ fun WakeUpConfigPanel(
         modifier = Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .padding(PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp)),
+            // 首行是小号标签，比正文行矮 3dp，多下移一半才与左栏对齐
+            .padding(PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp)),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // 客户端类型选择

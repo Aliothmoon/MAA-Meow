@@ -73,7 +73,7 @@ fun UserDataUpdateConfigPanel(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(PaddingValues(horizontal = 12.dp, vertical = 8.dp)),
+            .padding(PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 8.dp)),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         CheckBoxWithLabel(
@@ -81,6 +81,7 @@ fun UserDataUpdateConfigPanel(
             onCheckedChange = { onConfigChange(config.copy(updateOperBox = it)) },
             label = stringResource(R.string.panel_userdata_update_oper_box),
             subtitle = operSyncText,
+            inlineSubtitle = true,
             modifier = Modifier.fillMaxWidth(),
         )
 
@@ -89,6 +90,7 @@ fun UserDataUpdateConfigPanel(
             onCheckedChange = { onConfigChange(config.copy(updateDepot = it)) },
             label = stringResource(R.string.panel_userdata_update_depot),
             subtitle = depotSyncText,
+            inlineSubtitle = true,
             modifier = Modifier.fillMaxWidth(),
         )
 
