@@ -265,6 +265,60 @@ fun BackgroundTaskView(
             taskEndRegistry.taskEnded.collect { gameStatusRefresh++ }
         }
     }
+
+    suspend fun launchGameOnCurrentDisplay(packageName: String): Boolean {
+        var startedDisplay = false
+        var launched = false
+        try {
+            launched = RemoteServiceManager.useRemoteService { service ->
+                val useVdm = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+                    displayBackend == VirtualDisplayBackend.VDM
+                check(service.setUseVirtualDeviceDisplay(useVdm))
+                check(service.setVirtualDisplayMode(runMode.displayMode))
+                if (runMode == RunMode.BACKGROUND) {
+                    val resolution = DefaultDisplayConfig.resolveResolution(clientType, backgroundResolution)
+                    service.setVirtualDisplayResolution(resolution.width, resolution.height, resolution.dpi)
+                    startedDisplay = service.startVirtualDisplay() != DefaultDisplayConfig.DISPLAY_NONE
+                }
+                (runMode == RunMode.FOREGROUND || startedDisplay) && service.launchGame(packageName)
+            }
+            return launched
+        } finally {
+            if (startedDisplay && !launched) {
+                runCatching { compositionService.stopVirtualDisplay() }
+                    .onFailure { Timber.w(it, "Failed to clean up display after game launch") }
+            }
+        }
+    }
+
+    val performStartGame: () -> Unit = startGame@{
+        val packageName = gamePackage ?: return@startGame
+        if (gameSwitchBusy || gameStatus == AppAliveStatus.ALIVE || isTaskActive) return@startGame
+
+        gameSwitchBusy = true
+        coroutineScope.launch {
+            try {
+                when (RemoteServiceManager.useRemoteService { it.isAppAlive(packageName) }) {
+                    AppAliveStatus.ALIVE -> gameStatus = AppAliveStatus.ALIVE
+                    AppAliveStatus.UNKNOWN -> gameStatus = AppAliveStatus.UNKNOWN
+                    else -> {
+                        if (launchGameOnCurrentDisplay(packageName)) {
+                            delay(750)
+                        } else {
+                            Toast.makeText(context, R.string.bg_action_start_game_failed, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Start game failed: %s", packageName)
+                Toast.makeText(context, R.string.bg_action_start_game_failed, Toast.LENGTH_SHORT).show()
+            } finally {
+                gameSwitchBusy = false
+                gameStatusRefresh++
+            }
+        }
+    }
+
     val performCloseGame: () -> Unit = {
         val packageName = gamePackage
         if (!gameSwitchBusy && packageName != null) {
@@ -904,54 +958,7 @@ fun BackgroundTaskView(
                     gameSwitchEnabled = gamePackage != null && !gameSwitchBusy &&
                         (gameStatus == AppAliveStatus.ALIVE || !isTaskActive) &&
                         maaState != MaaExecutionState.STARTING && maaState != MaaExecutionState.STOPPING,
-                    onStartGame = {
-                        val packageName = gamePackage
-                        if (!gameSwitchBusy && gameStatus != AppAliveStatus.ALIVE &&
-                            !isTaskActive && packageName != null
-                        ) {
-                            gameSwitchBusy = true
-                            coroutineScope.launch {
-                                var startedDisplay = false
-                                try {
-                                    when (RemoteServiceManager.useRemoteService { it.isAppAlive(packageName) }) {
-                                        AppAliveStatus.ALIVE -> gameStatus = AppAliveStatus.ALIVE
-                                        AppAliveStatus.UNKNOWN -> gameStatus = AppAliveStatus.UNKNOWN
-                                        else -> {
-                                            val launched = RemoteServiceManager.useRemoteService { service ->
-                                                val useVdm = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
-                                                    displayBackend == VirtualDisplayBackend.VDM
-                                                check(service.setUseVirtualDeviceDisplay(useVdm))
-                                                check(service.setVirtualDisplayMode(runMode.displayMode))
-                                                if (runMode == RunMode.BACKGROUND) {
-                                                    val r = DefaultDisplayConfig.resolveResolution(
-                                                        clientType, backgroundResolution
-                                                    )
-                                                    service.setVirtualDisplayResolution(r.width, r.height, r.dpi)
-                                                    startedDisplay = service.startVirtualDisplay() !=
-                                                        DefaultDisplayConfig.DISPLAY_NONE
-                                                }
-                                                (runMode == RunMode.FOREGROUND || startedDisplay) &&
-                                                    service.launchGame(packageName)
-                                            }
-                                            if (!launched) {
-                                                if (startedDisplay) compositionService.stopVirtualDisplay()
-                                                Toast.makeText(context, R.string.bg_action_start_game_failed, Toast.LENGTH_SHORT).show()
-                                            } else {
-                                                delay(750)
-                                            }
-                                        }
-                                    }
-                                } catch (e: Exception) {
-                                    if (startedDisplay) runCatching { compositionService.stopVirtualDisplay() }
-                                    Timber.e(e, "Start game failed: %s", packageName)
-                                    Toast.makeText(context, R.string.bg_action_start_game_failed, Toast.LENGTH_SHORT).show()
-                                } finally {
-                                    gameSwitchBusy = false
-                                    gameStatusRefresh++
-                                }
-                            }
-                        }
-                    },
+                    onStartGame = performStartGame,
                     onCloseApp = {
                         if (maaState == MaaExecutionState.RUNNING) {
                             showCloseConfirm = true
