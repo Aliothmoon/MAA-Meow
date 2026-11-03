@@ -515,6 +515,7 @@ fun BackgroundTaskView(
                     selectedTab = state.current,
                     onTabSelected = { tab -> viewModel.onTabChange(tab) },
                     showActions = false,
+                    pagePosition = { pagerState.currentPage + pagerState.currentPageOffsetFraction },
                     modifier = Modifier.onboardingTarget(OnboardingTarget.BG_PANEL_TABS),
                 )
 
