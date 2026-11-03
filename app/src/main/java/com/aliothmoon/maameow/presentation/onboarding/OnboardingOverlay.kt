@@ -64,6 +64,7 @@ import androidx.compose.ui.layout.LookaheadScope
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -143,9 +144,9 @@ fun OnboardingOverlay(
         label = "OnboardingOverlay",
     ) {
         // 随引导创建销毁，重看从头演示
-        val context = LocalContext.current
+        val resources = LocalResources.current
         val demo = remember {
-            TaskDemoState(context.getString(R.string.onboarding_demo_night_theme)) { it.defaultName(context) }
+            TaskDemoState(resources.getString(R.string.onboarding_demo_night_theme)) { resources.getString(it.nameRes) }
         }
         // 从前一步进来从头演示，从后面退回保留进度，免得往后走要重做
         LaunchedEffect(state, demo) {
