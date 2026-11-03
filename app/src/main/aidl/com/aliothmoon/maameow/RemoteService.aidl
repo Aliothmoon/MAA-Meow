@@ -143,4 +143,10 @@ interface RemoteService {
 
     // 卡死诊断用，不能加锁
     String dumpThreads() = 59;
+
+    // 强停游戏，与关虚拟屏分开：前台模式也能真正关掉
+    void forceStopGame(String packageName) = 60;
+
+    // 不跑任务单独拉起游戏，后台模式需先建好虚拟屏
+    boolean launchGame(String packageName) = 61;
 }

@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NotificationsPaused
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Screenshot
@@ -86,6 +87,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -172,6 +174,7 @@ import com.aliothmoon.maameow.theme.MaaThemeAlphas
 import com.aliothmoon.maameow.theme.OpaqueTheme
 import com.aliothmoon.maameow.theme.PagerPageSpacing
 import com.aliothmoon.maameow.theme.rememberMaaPagerFling
+import com.aliothmoon.maameow.remote.AppAliveStatus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -237,6 +240,11 @@ fun BackgroundTaskView(
     val profileId by viewModel.chainState.profileId.collectAsStateWithLifecycle()
     val selectedNode = nodes.find { it.id == state.selectedNodeId }
     val clientType = remember(nodes) { viewModel.chainState.clientType }
+    val gameStatus by viewModel.gameStatus.collectAsStateWithLifecycle()
+    val gameSwitchBusy by viewModel.gameSwitchBusy.collectAsStateWithLifecycle()
+    LaunchedEffect(showMoreActions) {
+        if (showMoreActions) viewModel.refreshGameStatus()
+    }
 
     // 引导靶点在任务面板，重看时先切回去
     val onboarding = LocalOnboardingState.current
@@ -854,11 +862,17 @@ fun BackgroundTaskView(
                     onScreenOff = viewModel::onScreenOff,
                     onShowScreenSaver = { coroutineScope.launch { screenSaverManager.show() } },
                     onCaptureScreenshot = viewModel::onCaptureScreenshot,
+                    gameRunning = gameStatus == AppAliveStatus.ALIVE,
+                    gameStatusKnown = gameStatus != AppAliveStatus.UNKNOWN,
+                    gameSwitchBusy = gameSwitchBusy,
+                    gameSwitchEnabled = (gameStatus == AppAliveStatus.ALIVE || !isTaskActive) &&
+                        maaState != MaaExecutionState.STARTING && maaState != MaaExecutionState.STOPPING,
+                    onStartGame = viewModel::startGame,
                     onCloseApp = {
                         if (maaState == MaaExecutionState.RUNNING) {
                             showCloseConfirm = true
                         } else {
-                            coroutineScope.launch { compositionService.stopVirtualDisplay() }
+                            viewModel.closeGame()
                         }
                     },
                 )
@@ -993,7 +1007,7 @@ fun BackgroundTaskView(
                 onDismissRequest = { showCloseConfirm = false },
                 onConfirm = {
                     showCloseConfirm = false
-                    coroutineScope.launch { compositionService.stopVirtualDisplay() }
+                    viewModel.closeGame()
                 },
                 confirmText = stringResource(R.string.dialog_close_app_confirm),
                 dismissText = stringResource(R.string.common_cancel),
@@ -1039,6 +1053,11 @@ private fun BackgroundMoreActionsOverlay(
     onScreenOff: () -> Unit,
     onShowScreenSaver: () -> Unit,
     onCaptureScreenshot: () -> Unit,
+    gameRunning: Boolean,
+    gameStatusKnown: Boolean,
+    gameSwitchBusy: Boolean,
+    gameSwitchEnabled: Boolean,
+    onStartGame: () -> Unit,
     onCloseApp: () -> Unit,
     appSettingsManager: AppSettingsManager = koinInject(),
 ) {
@@ -1109,12 +1128,23 @@ private fun BackgroundMoreActionsOverlay(
                                 contentColor = MaterialTheme.colorScheme.onSurface
                             )
                             ActionTile(
-                                icon = Icons.AutoMirrored.Filled.ExitToApp,
-                                label = stringResource(R.string.bg_action_close_game),
-                                onClick = onCloseApp,
+                                icon = if (gameRunning) Icons.AutoMirrored.Filled.ExitToApp
+                                    else Icons.Filled.PlayArrow,
+                                label = stringResource(
+                                    when {
+                                        !gameStatusKnown -> R.string.bg_action_game
+                                        gameRunning -> R.string.bg_action_close_game
+                                        else -> R.string.bg_action_start_game
+                                    }
+                                ),
+                                onClick = { if (gameRunning) onCloseApp() else onStartGame() },
                                 modifier = Modifier.weight(1f),
-                                containerColor = MaterialTheme.colorScheme.error,
-                                contentColor = MaterialTheme.colorScheme.error
+                                enabled = gameSwitchEnabled,
+                                loading = gameSwitchBusy,
+                                containerColor = if (gameRunning) MaterialTheme.colorScheme.error
+                                    else MaterialTheme.colorScheme.primary,
+                                contentColor = if (gameRunning) MaterialTheme.colorScheme.error
+                                    else MaterialTheme.colorScheme.onSurface
                             )
                         }
 
@@ -1302,12 +1332,17 @@ private fun ActionTile(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    loading: Boolean = false,
     containerColor: Color,
     contentColor: Color
 ) {
     Surface(
         onClick = onClick,
-        modifier = modifier.height(36.dp),
+        enabled = enabled && !loading,
+        modifier = modifier
+            .height(36.dp)
+            .alpha(if (enabled || loading) 1f else MaaThemeAlphas.DISABLED),
         shape = RoundedCornerShape(4.dp),
         color = containerColor.copy(alpha = 0.08f),
         contentColor = contentColor,
@@ -1319,12 +1354,20 @@ private fun ActionTile(
                 .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = containerColor.copy(alpha = 0.8f)
-            )
+            if (loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    color = containerColor.copy(alpha = 0.8f),
+                    strokeWidth = 2.dp,
+                )
+            } else {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = containerColor.copy(alpha = 0.8f)
+                )
+            }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = label,

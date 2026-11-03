@@ -498,34 +498,23 @@ class MaaCompositionService(
         clientType: String,
         displayBackend: VirtualDisplayBackend,
     ): StartResult? {
-        // 只跟设置走，前台模式也不翻转，免得撞上留着的后台屏
-        val useVdm = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
-            displayBackend == VirtualDisplayBackend.VDM
-        if (!service.bounded("setUseVirtualDeviceDisplay") { it.setUseVirtualDeviceDisplay(useVdm) })
-            return failStart(
+        val useVdm = useVdm(displayBackend)
+        val config = when (val display = startDisplay(service, mode, clientType, useVdm)) {
+            DisplayStart.BackendBlocked -> return failStart(
                 context.getString(R.string.runlog_display_backend_switch_blocked), "DISPLAY_BACKEND_ERROR",
                 StartResult.ConnectionError(StartResult.ConnectionError.ConnectPhase.DISPLAY_MODE)
             )
-        if (!service.bounded("setVirtualDisplayMode") { it.setVirtualDisplayMode(mode.displayMode) })
-            return failStart(
+
+            DisplayStart.ModeFailed -> return failStart(
                 context.getString(R.string.runlog_display_mode_failed), "DISPLAY_MODE_ERROR",
                 StartResult.ConnectionError(StartResult.ConnectionError.ConnectPhase.DISPLAY_MODE)
             )
-        val config = when (mode) {
-            RunMode.FOREGROUND -> {
-                val displayId = service.bounded("startVirtualDisplay", START_DISPLAY_TIMEOUT_MS) { it.startVirtualDisplay() }
-                if (displayId == -1) return failVirtualDisplayStart(useVdm = false)
-                val (w, h) = Misc.getScreenSize(context)
-                buildConnectConfig(w, h, displayId)
-            }
 
-            RunMode.BACKGROUND -> {
-                val r = resolveAndSetResolution(service, clientType)
-                val displayId = service.bounded("startVirtualDisplay", START_DISPLAY_TIMEOUT_MS) { it.startVirtualDisplay() }
-                if (displayId == -1) return failVirtualDisplayStart(useVdm)
-                backgroundGame.value = Packages[clientType]?.let { BackgroundGame(service.asBinder(), it) }
-                reportVirtualDisplayTier(service, useVdm)
-                buildConnectConfig(r.width, r.height, displayId)
+            DisplayStart.DisplayFailed -> return failVirtualDisplayStart(useVdm && mode == RunMode.BACKGROUND)
+
+            is DisplayStart.Ready -> {
+                if (mode == RunMode.BACKGROUND) reportVirtualDisplayTier(service, useVdm)
+                buildConnectConfig(display.width, display.height, display.displayId)
             }
         }
         // 在 MAA 连接（含 force_stop 重启游戏）之前提前授予电池优化豁免与后台不受限权限，
@@ -537,6 +526,96 @@ class MaaCompositionService(
             if (appSettings.deployWithPause.value) "1" else "0"
         )
         return asyncConnect(maa, config)
+    }
+
+    private sealed interface DisplayStart {
+        data object BackendBlocked : DisplayStart
+        data object ModeFailed : DisplayStart
+        data object DisplayFailed : DisplayStart
+        class Ready(val width: Int, val height: Int, val displayId: Int) : DisplayStart
+    }
+
+    // 只跟设置走，前台模式也不翻转，免得撞上留着的后台屏
+    private fun useVdm(backend: VirtualDisplayBackend): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && backend == VirtualDisplayBackend.VDM
+
+    private suspend fun startDisplay(
+        service: RemoteService,
+        mode: RunMode,
+        clientType: String,
+        useVdm: Boolean,
+    ): DisplayStart {
+        if (!service.bounded("setUseVirtualDeviceDisplay") { it.setUseVirtualDeviceDisplay(useVdm) })
+            return DisplayStart.BackendBlocked
+        if (!service.bounded("setVirtualDisplayMode") { it.setVirtualDisplayMode(mode.displayMode) })
+            return DisplayStart.ModeFailed
+        return when (mode) {
+            RunMode.FOREGROUND -> {
+                // 切主屏时远端已关掉留着的后台屏
+                backgroundGame.value = null
+                val displayId = service.bounded("startVirtualDisplay", START_DISPLAY_TIMEOUT_MS) { it.startVirtualDisplay() }
+                if (displayId == -1) return DisplayStart.DisplayFailed
+                val (w, h) = Misc.getScreenSize(context)
+                DisplayStart.Ready(w, h, displayId)
+            }
+
+            RunMode.BACKGROUND -> {
+                val r = resolveAndSetResolution(service, clientType)
+                val displayId = service.bounded("startVirtualDisplay", START_DISPLAY_TIMEOUT_MS) { it.startVirtualDisplay() }
+                if (displayId == -1) return DisplayStart.DisplayFailed
+                backgroundGame.value = Packages[clientType]?.let { BackgroundGame(service.asBinder(), it) }
+                DisplayStart.Ready(r.width, r.height, displayId)
+            }
+        }
+    }
+
+    suspend fun launchGame(clientType: String): Boolean = startMutex.withLock {
+        val pkg = Packages[clientType] ?: return@withLock false
+        if (!_state.value.isIdle) return@withLock false
+        val mode = appSettings.runMode.value
+        var displayStarted = false
+        val launched = try {
+            withContext(Dispatchers.IO) {
+                useRemoteService { service ->
+                    val ready = if (mode == RunMode.BACKGROUND) {
+                        val useVdm = useVdm(appSettings.virtualDisplayBackend.value)
+                        startDisplay(service, mode, clientType, useVdm) is DisplayStart.Ready
+                    } else {
+                        // 前台不起主屏采集，直接起在主屏
+                        backgroundGame.value = null
+                        service.bounded("setVirtualDisplayMode") { it.setVirtualDisplayMode(mode.displayMode) }
+                    }
+                    if (!ready) return@useRemoteService false
+                    displayStarted = mode == RunMode.BACKGROUND
+                    grantGameBatteryExemption(clientType)
+                    service.bounded("launchGame", LAUNCH_GAME_TIMEOUT_MS) { it.launchGame(pkg) }
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.e(e, "launchGame failed: %s", pkg)
+            false
+        }
+        if (displayStarted && !launched) stopVirtualDisplay()
+        launched
+    }
+
+    // 强停失败也照样关屏
+    suspend fun closeGame(packageName: String): Boolean {
+        val stopped = try {
+            withContext(Dispatchers.IO) {
+                useRemoteService { service -> service.bounded("forceStopGame") { it.forceStopGame(packageName) } }
+            }
+            true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.e(e, "closeGame failed: %s", packageName)
+            false
+        }
+        stopVirtualDisplay()
+        return stopped
     }
 
     private suspend fun reportVirtualDisplayTier(service: RemoteService, useVdm: Boolean) {
@@ -985,3 +1064,6 @@ private const val DISPLAY_CALL_TIMEOUT_MS = 15_000L
 
 // VDM 关联最长 17s，另加逐档回退
 private const val START_DISPLAY_TIMEOUT_MS = 30_000L
+
+// 虚拟屏上要等钉屏校验 10s 和首帧 5s
+private const val LAUNCH_GAME_TIMEOUT_MS = 30_000L

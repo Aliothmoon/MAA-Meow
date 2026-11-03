@@ -721,6 +721,10 @@
     <string name="bg_actions_title">빠른 동작</string>
     <string name="bg_action_screen_off">화면 꺼짐 모드</string>
     <string name="bg_action_close_game">게임 종료</string>
+    <string name="bg_action_start_game">게임 시작</string>
+    <string name="bg_action_game">게임</string>
+    <string name="bg_action_start_game_failed">게임 시작 실패</string>
+    <string name="bg_action_close_game_failed">게임 종료 실패</string>
     <string name="bg_action_game_muted">게임 음소거됨</string>
     <string name="bg_action_mute_game">게임 음소거</string>
     <string name="bg_action_screenshot">스크린샷</string>
