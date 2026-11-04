@@ -35,6 +35,7 @@ class CopilotViewModelSearchAddTest {
     private companion object {
         const val MAIN_ID = 1
         const val MAIN_ID_2 = 3
+        const val BOTH_ID = 4
         const val SSS_ID = 2
         const val MISSING_ID = 99
         const val SET_ID = 5
@@ -58,6 +59,7 @@ class CopilotViewModelSearchAddTest {
             val id = firstArg<Int>()
             val content = when (id) {
                 MAIN_ID, MAIN_ID_2 -> """{"stage_name":"main_01-0$id","doc":{"title":"t$id"}}"""
+                BOTH_ID -> """{"stage_name":"main_01-04","difficulty":3,"doc":{"title":"both"}}"""
                 SSS_ID -> """{"type":"SSS","stage_name":"lt_x","doc":{"title":"sss"}}"""
                 else -> null
             }
@@ -208,6 +210,26 @@ class CopilotViewModelSearchAddTest {
 
         assertEquals(listOf(MAIN_ID), vm.listedIds())
         assertNotNull(failure)
+    }
+
+    @Test
+    fun setAddSplitsNormalAndRaidLikeWpf() {
+        val vm = viewModel()
+
+        vm.addSet(MAIN_ID, BOTH_ID)
+
+        assertEquals(listOf(MAIN_ID, BOTH_ID, BOTH_ID), vm.listedIds())
+        assertEquals(listOf(false, false, true), vm.state.value.taskList.map { it.isRaid })
+    }
+
+    @Test
+    fun pickNormalAndRaidCopilotAddsSingleRow() {
+        val vm = viewModel()
+
+        vm.pick(BOTH_ID)
+
+        assertEquals(listOf(BOTH_ID), vm.listedIds())
+        assertEquals(listOf(false), vm.state.value.taskList.map { it.isRaid })
     }
 
     @Test

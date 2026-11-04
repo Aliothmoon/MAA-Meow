@@ -545,7 +545,8 @@ class CopilotViewModel(
                                         data = fixed.data,
                                         filePath = filePath,
                                         copilotId = fixed.copilotId,
-                                        source = "web"
+                                        source = "web",
+                                        splitDifficulty = true,
                                     )
                                 )
                                 workingTabIndex = resolvedTabIndex
@@ -776,7 +777,8 @@ class CopilotViewModel(
         data: CopilotTaskData,
         filePath: String,
         copilotId: Int,
-        source: String
+        source: String,
+        splitDifficulty: Boolean = false,
     ): List<CopilotListItem> {
         val isParadox = getCopilotType(data) == CopilotType.PARADOX
         return if (isParadox) {
@@ -801,19 +803,22 @@ class CopilotViewModel(
                 emptyList()
             } else {
                 val displayName = resolveStageNavigation(data).navigateName.ifBlank { stageName }
-                // 只标了突袭才默认突袭；两种都要就在列表里复制一份
-                val raidOnly = (data.difficulty and DifficultyFlags.NORMAL) == 0 &&
-                        (data.difficulty and DifficultyFlags.RAID) != 0
-                listOf(
-                    CopilotListItem(
-                        name = displayName,
-                        filePath = filePath,
-                        isRaid = raidOnly,
-                        copilotId = copilotId,
-                        source = source,
-                        title = data.doc.title
-                    )
+                val normal = (data.difficulty and DifficultyFlags.NORMAL) != 0
+                val raid = (data.difficulty and DifficultyFlags.RAID) != 0
+                fun item(isRaid: Boolean) = CopilotListItem(
+                    name = displayName,
+                    filePath = filePath,
+                    isRaid = isRaid,
+                    copilotId = copilotId,
+                    source = source,
+                    title = data.doc.title
                 )
+                when {
+                    // 作业集同 WPF 按难度位拆行
+                    splitDifficulty && normal && raid -> listOf(item(false), item(true))
+                    // 单个载入只加一行，只标了突袭才默认突袭
+                    else -> listOf(item(raid && !normal))
+                }
             }
         }
     }
