@@ -28,8 +28,6 @@ import urllib.error
 import zipfile
 from pathlib import Path
 
-import convert_ocr_ncnn
-
 # Fix Windows console encoding
 if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
@@ -48,12 +46,15 @@ ABI_MAP = {
 # Excluded from jniLibs copy.
 # - libc++_shared.so: provided by the NDK toolchain, never ship MAA's copy.
 # - libfastdeploy_ppocr.so: desktop OCR backend; Android uses OcrPackNcnn driven
-#   by the ncnn weights generated in convert_ocr_ncnn.py, so this ~tens-of-MB
+#   by the prebuilt ncnn weights shipped in the tarball, so this ~tens-of-MB
 #   so is dead weight in the APK.
 EXCLUDE_SO = {"libc++_shared.so", "libfastdeploy_ppocr.so"}
 
 # Ignored file extensions
 IGNORE_EXTENSIONS = {".h"}
+
+# Android OCR 只用 ncnn，tarball 自 v6.21.0-beta.3 起自带，v6.21.4 起不再带 det/rec onnx
+OCR_ONNX_RE = re.compile(r"(^|/)(det|rec)/inference\.onnx$")
 
 # MAA CI bundles libMaaAndroidNativeControlUnit.so from MaaFramework's *latest stable*
 # release, which can lag features the app relies on (e.g. multi-touch landed in
@@ -221,6 +222,9 @@ def extract_and_deploy(tarball: Path, abi: str, project_root: Path):
                 rel_parts = parts[res_idx + 1:]
                 if not rel_parts:
                     continue
+                if OCR_ONNX_RE.search("/".join(rel_parts)):
+                    stats["skipped"] += 1
+                    continue
                 dest = assets_dir / Path(*rel_parts)
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 with tar.extractfile(member) as src:
@@ -327,6 +331,23 @@ def select_deploy_tarballs(cache_dir: Path, target_abis: list, wanted_version: s
     return version, by_version[version]
 
 
+def verify_ocr_models(resource_dir: Path):
+    model_dirs = [d for d in resource_dir.rglob("*")
+                  if d.is_dir() and d.name in ("det", "rec") and d.parent.name.startswith("Paddle")]
+    missing = []
+    for d in model_dirs:
+        required = [f"{d.name}.ncnn.param", f"{d.name}.ncnn.bin"]
+        if d.name == "rec":
+            required.append("keys.txt")
+        missing += [d / f for f in required if not (d / f).is_file()]
+    if not model_dirs or missing:
+        for p in missing:
+            print(f"  [MISSING] {p.relative_to(resource_dir).as_posix()}")
+        print("[ERROR] OCR ncnn models missing; MAA Core tarballs ship them since v6.21.0-beta.3")
+        sys.exit(1)
+    print(f"  [OCR] {len(model_dirs)} ncnn model dirs ok")
+
+
 def write_version_file(version: str, project_root: Path):
     version_file = project_root / VERSION_FILE
     version_file.write_text(version + "\n", encoding="utf-8")
@@ -346,12 +367,6 @@ def main():
     parser.add_argument("--maafw-tag",
                         help=f"Replace {MAAFW_CONTROL_UNIT_SO} with the one from this MaaFramework "
                              "release tag (e.g. v5.13.0-beta.5); default keeps MAA's bundled copy")
-    parser.add_argument("--skip-ncnn", action="store_true",
-                        help="Skip OCR onnx->ncnn conversion (Android OCR needs ncnn; debug only)")
-    parser.add_argument("--keep-onnx", action="store_true",
-                        help="Keep OCR inference.onnx after conversion (default: delete, ~72MB unused on Android)")
-    parser.add_argument("--rec-fp16", action="store_true",
-                        help="Store rec ncnn weights as fp16 (smaller APK; det always stays fp32)")
     args = parser.parse_args()
 
     global API_BASE
@@ -410,6 +425,8 @@ def main():
     for tarball, abi in tarballs:
         extract_and_deploy(tarball, abi, project_root)
 
+    verify_ocr_models(assets_dir)
+
     if args.maafw_tag:
         override_maafw_control_unit(args.maafw_tag, target_abis, cache_dir, project_root,
                                     args.skip_download)
@@ -419,23 +436,6 @@ def main():
         write_version_file(deployed_version, project_root)
     else:
         print(f"[WARN] Could not parse version from tarball name, {VERSION_FILE} not updated")
-
-    # Convert OCR onnx -> ncnn in place. Android (OcrPackNcnn) needs ncnn; doing it here,
-    # from the just-deployed onnx, keeps ncnn always in lockstep with the onnx/keys it
-    # ships with, so the Android-only ncnn never has to live in MAA's shared resource.
-    if not args.skip_ncnn:
-        print("\n[NCNN] Converting OCR onnx -> ncnn (Android-only)...")
-        ncnn_cache = cache_dir / "ncnn"
-        stats = convert_ocr_ncnn.convert_tree(
-            resource_dir=assets_dir,
-            cache_dir=ncnn_cache,
-            keep_onnx=args.keep_onnx,
-            rec_fp16=args.rec_fp16,
-        )
-        print(f"[NCNN] converted={stats['converted']} cached={stats['cached']} "
-              f"onnx_removed={stats['onnx_removed']} skipped={stats['skipped']}")
-    else:
-        print("\n[SKIP] Skipping OCR ncnn conversion (--skip-ncnn)")
 
     # Summary
     print("\n" + "=" * 55)
