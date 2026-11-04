@@ -782,6 +782,10 @@
     <string name="update_cdk_show_cd">표시</string>
     <string name="update_cdk_hide_cd">숨기기</string>
     <string name="update_cdk_subscribe">CDK가 없나요? 지금 구독하기</string>
+    <string name="update_cdk_status_checking">CDK 확인 중…</string>
+    <string name="update_cdk_status_failed">CDK 검증에 실패했습니다. 네트워크 연결을 확인하세요</string>
+    <string name="update_cdk_status_remaining_days">CDK 만료까지 %1$s일 남았습니다</string>
+    <string name="update_cdk_status_expiration_unknown">CDK 만료 날짜를 가져오지 못했습니다</string>
 
     <!-- update progress -->
     <string name="update_progress_app_downloading">앱 다운로드 중 %1$s%%</string>

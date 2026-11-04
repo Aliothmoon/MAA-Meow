@@ -41,7 +41,7 @@ class UpdateApiThreadingTest {
     @Test
     fun mirrorSlowBodyDoesNotBlockCaller() {
         val version = assertNonBlockingBody(MIRROR_RESPONSE) { http ->
-            MirrorChyanApiClient(http).getLatest(TEST_URL, emptyMap()).getOrThrow().versionName
+            MirrorChyanApiClient(http, mockk(relaxed = true)).getLatest(TEST_URL, emptyMap()).getOrThrow().versionName
         }
         assertEquals("0.23.1", version)
     }
@@ -79,7 +79,7 @@ class UpdateApiThreadingTest {
     fun mirrorServiceFailureKeepsCodeAndClosesResponse() {
         val body = DelayedBody("{}").apply { release.countDown() }
         withResponse(body, code = 500) { http ->
-            val result = runBlocking { MirrorChyanApiClient(http).getLatest(TEST_URL, emptyMap()) }
+            val result = runBlocking { MirrorChyanApiClient(http, mockk(relaxed = true)).getLatest(TEST_URL, emptyMap()) }
             assertEquals(500, (result.exceptionOrNull() as MirrorChyanBizException).bizCode)
         }
         assertTrue(body.closed.get())
@@ -89,7 +89,7 @@ class UpdateApiThreadingTest {
     fun mirrorMalformedResponseKeepsUnknownError() {
         val body = DelayedBody("invalid json").apply { release.countDown() }
         withResponse(body) { http ->
-            val result = runBlocking { MirrorChyanApiClient(http).getLatest(TEST_URL, emptyMap()) }
+            val result = runBlocking { MirrorChyanApiClient(http, mockk(relaxed = true)).getLatest(TEST_URL, emptyMap()) }
             assertEquals(-1, (result.exceptionOrNull() as MirrorChyanBizException).bizCode)
         }
         assertTrue(body.closed.get())
@@ -99,7 +99,7 @@ class UpdateApiThreadingTest {
     fun mirrorDoesNotConvertCancellationToFailure() {
         val http = cancelledRequest()
         assertThrows(CancellationException::class.java) {
-            runBlocking { MirrorChyanApiClient(http).getLatest(TEST_URL, emptyMap()) }
+            runBlocking { MirrorChyanApiClient(http, mockk(relaxed = true)).getLatest(TEST_URL, emptyMap()) }
         }
     }
 

@@ -69,6 +69,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.api.MirrorChyanCdkStatus
+import com.aliothmoon.maameow.data.model.LogColorRole
 import com.aliothmoon.maameow.data.model.update.UpdateCheckResult
 import com.aliothmoon.maameow.data.model.update.UpdateInfo
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
@@ -76,8 +78,11 @@ import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.presentation.components.iconClickable
 import com.aliothmoon.maameow.presentation.viewmodel.UpdateViewModel
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
+import com.aliothmoon.maameow.theme.themedColor
 import com.aliothmoon.maameow.utils.Misc
+import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.utils.i18n.resolve
+import java.util.Locale
 
 /**
  * 更新管理卡片
@@ -96,6 +101,9 @@ fun UpdateCard(
     val appCheckResult by viewModel.appCheckResult.collectAsStateWithLifecycle()
     val updateSource by viewModel.updateSource.collectAsStateWithLifecycle()
     val mirrorChyanCdk by viewModel.mirrorChyanCdk.collectAsStateWithLifecycle()
+    val cdkExpiresAt by viewModel.cdkExpiresAt.collectAsStateWithLifecycle()
+    val cdkState by viewModel.cdkState.collectAsStateWithLifecycle()
+    val cdkChecking by viewModel.cdkChecking.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     val resourceUpToDateMessage = stringResource(R.string.update_toast_resource_up_to_date)
@@ -483,7 +491,15 @@ fun UpdateCard(
             MaaAnimatedVisibility(visible = updateSource == UpdateSource.MIRROR_CHYAN) {
                 CdkInputField(
                     cdk = mirrorChyanCdk,
-                    onCdkChange = { viewModel.setMirrorChyanCdk(it) }
+                    onCdkChange = { viewModel.setMirrorChyanCdk(it) },
+                    status = {
+                        CdkStatusLine(
+                            cdk = mirrorChyanCdk,
+                            checking = cdkChecking,
+                            state = cdkState,
+                            expiresAt = cdkExpiresAt,
+                        )
+                    },
                 )
             }
 
@@ -517,7 +533,8 @@ fun UpdateCard(
 @Composable
 private fun CdkInputField(
     cdk: String,
-    onCdkChange: (String) -> Unit
+    onCdkChange: (String) -> Unit,
+    status: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
     var passwordVisible by remember { mutableStateOf(false) }
@@ -631,6 +648,8 @@ private fun CdkInputField(
             )
         }
 
+        status()
+
         TextButton(
             onClick = { Misc.openUriSafely(context, "https://mirrorchyan.com/") }
         ) {
@@ -642,6 +661,49 @@ private fun CdkInputField(
     }
 }
 
+
+/** 规则对齐 WPF UpdateCredentialModel 的 StatusText / StatusBrush */
+@Composable
+private fun CdkStatusLine(
+    cdk: String,
+    checking: Boolean,
+    state: MirrorChyanCdkStatus.State,
+    expiresAt: Long,
+) {
+    if (cdk.isBlank()) return
+    val now = System.currentTimeMillis() / 1000
+    val (text, role) = when {
+        checking -> stringResource(R.string.update_cdk_status_checking) to LogColorRole.INFO
+        state is MirrorChyanCdkStatus.State.Invalid ->
+            stringResource(R.string.update_error_key_invalid) to LogColorRole.ERROR
+
+        state is MirrorChyanCdkStatus.State.Expired || expiresAt in 1..now ->
+            stringResource(R.string.update_error_key_expired) to LogColorRole.ERROR
+
+        state is MirrorChyanCdkStatus.State.Failed ->
+            (state.reason?.text?.asString()
+                ?: stringResource(R.string.update_cdk_status_failed)) to LogColorRole.ERROR
+
+        expiresAt > now -> {
+            val days = (expiresAt - now) / 86_400.0
+            stringResource(
+                R.string.update_cdk_status_remaining_days,
+                String.format(Locale.ROOT, "%.1f", days)
+            ) to if (days <= 7) LogColorRole.WARNING else LogColorRole.SUCCESS
+        }
+
+        state is MirrorChyanCdkStatus.State.Valid ->
+            stringResource(R.string.update_cdk_status_expiration_unknown) to LogColorRole.INFO
+
+        else -> return
+    }
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = role.themedColor(),
+        modifier = Modifier.padding(vertical = 4.dp),
+    )
+}
 
 @Composable
 private fun AppUpdateProgress(

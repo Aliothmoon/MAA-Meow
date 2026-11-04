@@ -14,6 +14,7 @@ import com.aliothmoon.maameow.data.api.GameDataReportService
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.api.MaaApiService
 import com.aliothmoon.maameow.data.api.MirrorChyanApiClient
+import com.aliothmoon.maameow.data.api.MirrorChyanCdkStatus
 import com.aliothmoon.maameow.data.api.YituliuApiService
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.datasource.AppDownloader
@@ -306,6 +307,7 @@ val appModule = module {
     singleOf(::AssetExtractor)
 
     // MirrorChyan API Client
+    single { MirrorChyanCdkStatus(get()) }
     singleOf(::MirrorChyanApiClient)
 
     // Version Checkers

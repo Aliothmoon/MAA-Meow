@@ -13,12 +13,15 @@ import timber.log.Timber
  * MirrorChyan API 通用客户端
  * 封装 HTTP 请求、响应解析和业务错误映射
  */
-class MirrorChyanApiClient(private val httpClient: HttpClientHelper) {
+class MirrorChyanApiClient(
+    private val httpClient: HttpClientHelper,
+    private val cdkStatus: MirrorChyanCdkStatus,
+) {
 
     private val json = JsonUtils.common
 
     /**
-     * 调用 MirrorChyan latest API
+     * 调用 MirrorChyan latest API，带 cdk 时顺带回写 [MirrorChyanCdkStatus]
      * @throws MirrorChyanBizException 业务错误（CDK 无效、资源不存在等）
      */
     suspend fun getLatest(
@@ -26,27 +29,32 @@ class MirrorChyanApiClient(private val httpClient: HttpClientHelper) {
         query: Map<String, String>,
         fetchVersion: Boolean = false
     ): Result<MirrorChyanData> = withContext(Dispatchers.IO) {
-        runCatching {
-            val response = httpClient.get(api, query = query)
-
-            response.use { resp ->
-                if (resp.code == 500) {
-                    throw MirrorChyanBizException(500, "更新服务不可用")
+        val cdk = query["cdk"]?.takeIf { cdkStatus.begin(it) }
+        try {
+            runCatching {
+                val body = httpClient.get(api, query = query).use { resp ->
+                    if (resp.code == 500) {
+                        MirrorChyanResponse(500, "更新服务不可用")
+                    } else {
+                        kotlin.runCatching {
+                            json.decodeFromString<MirrorChyanResponse>(resp.body.string())
+                        }.getOrDefault(MirrorChyanResponse.UNKNOWN_ERR)
+                    }
                 }
+                cdk?.let { cdkStatus.onResponse(it, body.code, body.data?.cdkExpiredTime) }
 
-                val body = kotlin.runCatching {
-                    json.decodeFromString<MirrorChyanResponse>(resp.body.string())
-                }.getOrDefault(MirrorChyanResponse.UNKNOWN_ERR)
-
-                if (body.code != 0 && !fetchVersion) {
+                if (body.code == 500 || (body.code != 0 && !fetchVersion)) {
                     throw MirrorChyanBizException(body.code, body.msg)
                 }
 
                 body.data ?: throw MirrorChyanBizException(-1, "数据为空")
+            }.onFailure { e ->
+                if (e is CancellationException) throw e
+                if (e !is MirrorChyanBizException) cdk?.let { cdkStatus.onNetworkFailure(it) }
+                Timber.e(e, "MirrorChyan API 请求失败: $api")
             }
-        }.onFailure { e ->
-            if (e is CancellationException) throw e
-            Timber.e(e, "MirrorChyan API 请求失败: $api")
+        } finally {
+            if (cdk != null) cdkStatus.end()
         }
     }
 }

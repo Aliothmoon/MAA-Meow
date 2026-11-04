@@ -11,5 +11,8 @@ data class MirrorChyanData(
     @SerialName("url")
     val url: String? = null,
     @SerialName("release_note")
-    val releaseNote: String? = null
+    val releaseNote: String? = null,
+    /** Unix 秒，仅带 cdk 请求时返回 */
+    @SerialName("cdk_expired_time")
+    val cdkExpiredTime: Long? = null
 )

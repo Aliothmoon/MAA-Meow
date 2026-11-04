@@ -7,6 +7,7 @@ import com.alibaba.fastjson2.JSON
 import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.MaaFiles.VERSION_FILE
+import com.aliothmoon.maameow.data.api.MirrorChyanCdkStatus
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.datasource.ResourceDownloader
 import com.aliothmoon.maameow.data.model.update.StartupUpdateResult
@@ -44,6 +45,7 @@ class UpdateViewModel(
     private val updateService: UpdateService,
     private val appSettingsManager: AppSettingsManager,
     private val pathConfig: MaaPathConfig,
+    private val cdkStatus: MirrorChyanCdkStatus,
 ) : ViewModel() {
 
     // ==================== 资源更新 ====================
@@ -56,6 +58,10 @@ class UpdateViewModel(
     val updateSource: StateFlow<UpdateSource> = appSettingsManager.updateSource
 
     val mirrorChyanCdk: StateFlow<String> = appSettingsManager.mirrorChyanCdk
+
+    val cdkExpiresAt: StateFlow<Long> = appSettingsManager.mirrorChyanCdkExpiresAt
+    val cdkState: StateFlow<MirrorChyanCdkStatus.State> = cdkStatus.state
+    val cdkChecking: StateFlow<Boolean> = cdkStatus.checking
 
     val updateChannel: StateFlow<UpdateChannel> = appSettingsManager.updateChannel
 
@@ -117,6 +123,7 @@ class UpdateViewModel(
     }
 
     fun setMirrorChyanCdk(cdk: String) {
+        cdkStatus.reset()
         viewModelScope.launch {
             appSettingsManager.setMirrorChyanCdk(cdk)
         }

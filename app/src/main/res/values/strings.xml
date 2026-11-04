@@ -782,6 +782,10 @@
     <string name="update_cdk_show_cd">显示</string>
     <string name="update_cdk_hide_cd">隐藏</string>
     <string name="update_cdk_subscribe">没有CDK? 立即订阅</string>
+    <string name="update_cdk_status_checking">正在验证 CDK……</string>
+    <string name="update_cdk_status_failed">CDK 验证失败，请检查网络</string>
+    <string name="update_cdk_status_remaining_days">CDK 还剩 %1$s 天到期</string>
+    <string name="update_cdk_status_expiration_unknown">未获取到 CDK 到期时间</string>
 
     <!-- update progress -->
     <string name="update_progress_app_downloading">应用下载中 %1$s%%</string>

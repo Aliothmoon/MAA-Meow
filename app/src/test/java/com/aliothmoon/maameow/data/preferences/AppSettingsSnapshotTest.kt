@@ -112,7 +112,8 @@ class AppSettingsSnapshotTest {
         // 掩码靠硬编码名单，新增凭证字段容易漏；这里兜底，命中关键字就必须已掩码
         val suspicious = Regex("(?i)cdk|credential|token|secret|key|password|pin")
         // 命中关键字但确非凭证的字段加进来，并在此说明理由
-        val allowlist = emptySet<String>()
+        // mirrorChyanCdkExpiresAt：CDK 到期时间，排障要看
+        val allowlist = setOf("mirrorChyanCdkExpiresAt")
         val descriptor = AppSettings.serializer().descriptor
         val leaked = (0 until descriptor.elementsCount)
             .map { descriptor.getElementName(it) }

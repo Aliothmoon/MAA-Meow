@@ -196,7 +196,21 @@ class AppSettingsManager internal constructor(
 
     suspend fun setMirrorChyanCdk(cdk: String) {
         with(AppSettingsSchema) {
-            context.dataStore.edit { it[mirrorChyanCdk] = cdk }
+            context.dataStore.edit {
+                // 换了 CDK，旧的到期时间作废
+                if (it[mirrorChyanCdk] != cdk) it[mirrorChyanCdkExpiresAt] = "0"
+                it[mirrorChyanCdk] = cdk
+            }
+        }
+    }
+
+    val mirrorChyanCdkExpiresAt: StateFlow<Long> = setting {
+        it.mirrorChyanCdkExpiresAt.toLongOrNull() ?: 0L
+    }
+
+    suspend fun setMirrorChyanCdkExpiresAt(seconds: Long) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[mirrorChyanCdkExpiresAt] = seconds.toString() }
         }
     }
 

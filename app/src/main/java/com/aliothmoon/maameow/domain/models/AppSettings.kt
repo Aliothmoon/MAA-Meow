@@ -22,6 +22,10 @@ data class AppSettings(
     @PrefKey(default = "")
     val mirrorChyanCdk: String = "",
 
+    /** Mirror酱 CDK 到期时间（Unix 秒），0 未知，1 已过期但时间未知 */
+    @PrefKey(default = "0")
+    val mirrorChyanCdkExpiresAt: String = "0",
+
     @PrefKey(default = "false")
     val debugMode: String = "false",
 

@@ -99,6 +99,7 @@ class ConfigBackupManager(
          */
         private fun AppSettings.sanitized() = copy(
             mirrorChyanCdk = "",
+            mirrorChyanCdkExpiresAt = "0",
             wakeCredential = "",
             yituliuOpenApiToken = "",
             operBoxUseYituliuApi = "false",

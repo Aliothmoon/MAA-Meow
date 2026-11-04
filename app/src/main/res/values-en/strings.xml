@@ -528,6 +528,10 @@
     <string name="update_cdk_show_cd">Show</string>
     <string name="update_cdk_hide_cd">Hide</string>
     <string name="update_cdk_subscribe">No CDK? Subscribe now</string>
+    <string name="update_cdk_status_checking">Validating CDK…</string>
+    <string name="update_cdk_status_failed">CDK validation failed. Check your network connection</string>
+    <string name="update_cdk_status_remaining_days">CDK expires in %1$s days</string>
+    <string name="update_cdk_status_expiration_unknown">CDK expiration date is unavailable</string>
 
     <!-- update progress -->
     <string name="update_progress_app_downloading">Downloading app %1$s%%</string>
