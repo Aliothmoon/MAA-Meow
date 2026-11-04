@@ -163,6 +163,17 @@
                 android:value="Background MAA task execution progress notification" />
         </service>
 
+        <!-- 网页控制台保活 -->
+        <service
+            android:name=".web.WebUiService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            tools:ignore="ForegroundServicePermission">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Local web console for viewing MAA task status on the LAN" />
+        </service>
+
         <provider
             android:name="rikka.shizuku.ShizukuProvider"
             android:authorities="${applicationId}.shizuku"

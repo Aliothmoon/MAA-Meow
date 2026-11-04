@@ -120,6 +120,10 @@ object SettingSearchIndex {
         SettingSearchEntry(R.string.settings_core_data_location_title, runtime, keywordsRes = R.string.search_keywords_data_location),
         SettingSearchEntry(R.string.settings_core_data_clear_title, runtime),
         SettingSearchEntry(R.string.settings_skip_shizuku_check, runtime),
+        SettingSearchEntry(
+            R.string.settings_webui_title, runtime,
+            R.string.settings_webui_desc, R.string.search_keywords_webui,
+        ),
 
         SettingSearchEntry(R.string.settings_background_resolution_title, backgroundRun, keywordsRes = R.string.search_keywords_resolution),
         SettingSearchEntry(

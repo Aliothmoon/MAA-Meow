@@ -122,6 +122,11 @@ import com.aliothmoon.maameow.maa.callback.SetParamsErrorSignal
 import com.aliothmoon.maameow.maa.callback.SubTaskHandler
 import com.aliothmoon.maameow.maa.callback.TaskChainHandler
 import com.aliothmoon.maameow.maa.callback.TaskChainStatusTracker
+import com.aliothmoon.maameow.web.WebUiController
+import com.aliothmoon.maameow.web.WebUiSettingsManager
+import com.aliothmoon.maameow.web.api.WebStateSource
+import com.aliothmoon.maameow.web.api.WebUiBackend
+import com.aliothmoon.maameow.web.auth.WebUiAuth
 import com.aliothmoon.maameow.maa.callback.ToolboxResultCollector
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.RemoteAccessCoordinator
@@ -425,6 +430,12 @@ val appModule = module {
     singleOf(::CopilotResourceProvider)
     singleOf(::ApplicationLogWriter)
     singleOf(::LogTreeHolder)
+
+    // 网页控制台
+    single { WebUiSettingsManager(androidContext()) } bind WebUiAuth.SessionStore::class
+    single { WebUiAuth(get()) }
+    single<WebUiBackend> { WebStateSource(get(), get(), get(), get(), get(), get()) }
+    single { WebUiController(androidContext(), get(), get(), get()) }
 
     // 前台模式自动任务
 }

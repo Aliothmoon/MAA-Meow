@@ -683,6 +683,16 @@ fun SettingsView(
                                     onCheckedChange = { viewModel.setSkipShizukuCheck(it) }
                                 )
                             }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_webui_title) {
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_webui_title),
+                                    description = stringResource(R.string.settings_webui_desc),
+                                    contentColor = contentColor
+                                ) {
+                                    navController.navigate(Routes.WEB_UI)
+                                }
+                            }
                         }
                     }
                 }

@@ -11,6 +11,7 @@ plugins {
     alias(libs.plugins.ksp)
     id("com.aliothmoon.maameow.asset-manifest")
     id("com.aliothmoon.maameow.i18n-verify")
+    id("com.aliothmoon.maameow.webui")
 }
 
 val localProperties = Properties().apply {
@@ -239,6 +240,11 @@ dependencies {
     implementation(libs.sonner)
     implementation(libs.timber)
     implementation(libs.okhttp)
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.cio)
+    implementation(libs.ktor.server.websockets)
+    implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.angus.mail)
     implementation(libs.angus.activation)
     implementation(libs.jakarta.activation.api)
@@ -261,6 +267,7 @@ dependencies {
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.koin.test)
+    testImplementation(libs.ktor.server.test.host)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
@@ -337,5 +344,16 @@ androidComponents {
             stringsFile.set(layout.projectDirectory.file("src/main/res/values/strings.xml"))
         }
         variant.sources.kotlin?.addGeneratedSourceDirectory(genTask) { it.outputDir }
+
+        val syncWebUi = tasks.register(
+            "sync${variantName}WebUiAssets",
+            com.aliothmoon.maameow.buildlogic.SyncWebUiAssetsTask::class.java,
+        ) {
+            distDir.set(
+                tasks.named("buildWebUi", com.aliothmoon.maameow.buildlogic.BuildWebUiTask::class.java)
+                    .flatMap { it.outputDir }
+            )
+        }
+        variant.sources.assets?.addGeneratedSourceDirectory(syncWebUi) { it.outputDir }
     }
 }

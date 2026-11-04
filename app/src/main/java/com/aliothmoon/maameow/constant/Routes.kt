@@ -16,6 +16,7 @@ object Routes {
     const val NOTIFICATION = "notification"
     const val LIVE_UPDATE = "live_update"
     const val WALLPAPER = "wallpaper"
+    const val WEB_UI = "web_ui"
     const val TASK_OVERRIDE_EDITOR = "task_override_editor"
     const val GAME_PACKAGE = "game_package"
 }
