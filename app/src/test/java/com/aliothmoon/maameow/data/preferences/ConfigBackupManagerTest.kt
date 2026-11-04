@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.preferences
 
 import com.aliothmoon.maameow.data.notification.NotificationSettings
+import com.aliothmoon.maameow.domain.models.AppSettings
 import com.aliothmoon.maameow.utils.InputTooLargeException
 import com.aliothmoon.maameow.utils.readTextAtMost
 import org.junit.Assert.assertEquals
@@ -87,6 +88,33 @@ class ConfigBackupManagerTest {
         assertEquals("""{"content": "{content}"}""", sanitized.customWebhookBody)
         assertEquals("kook-target-id", sanitized.kookTargetId)
         assertEquals("telegram-chat-id", sanitized.telegramChatId)
+    }
+
+    @Test
+    fun importKeepsLocalCredentials() {
+        val local = AppSettings(
+            mirrorChyanCdk = "local-cdk",
+            mirrorChyanCdkExpiresAt = "1800000000",
+            wakeUnlockType = "pin",
+            wakeCredential = "135790",
+            yituliuOpenApiToken = "local-token",
+            operBoxUseYituliuApi = "true",
+            operBoxAssistEnabled = "true",
+            runMode = "BACKGROUND",
+        )
+        val backup = AppSettings(wakeUnlockType = "swipe", runMode = "FOREGROUND")
+
+        val merged = backup.withLocalCredentials(local)
+
+        assertEquals("local-cdk", merged.mirrorChyanCdk)
+        assertEquals("1800000000", merged.mirrorChyanCdkExpiresAt)
+        assertEquals("pin", merged.wakeUnlockType)
+        assertEquals("135790", merged.wakeCredential)
+        assertEquals("local-token", merged.yituliuOpenApiToken)
+        assertEquals("true", merged.operBoxUseYituliuApi)
+        assertEquals("true", merged.operBoxAssistEnabled)
+        // 其余设置仍以备份为准
+        assertEquals("FOREGROUND", merged.runMode)
     }
 
     @Test

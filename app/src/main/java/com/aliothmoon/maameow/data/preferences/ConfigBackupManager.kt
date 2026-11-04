@@ -69,7 +69,7 @@ class ConfigBackupManager(
         // 游戏包名跟着本机装的版本走，也不随备份变
         val localSettings = appSettingsManager.settings.first()
         appSettingsManager.setSettings(
-            backup.appSettings.normalizedForImport().copy(
+            backup.appSettings.normalizedForImport().withLocalCredentials(localSettings).copy(
                 customBackgroundEnabled = localSettings.customBackgroundEnabled,
                 customBackgroundToken = localSettings.customBackgroundToken,
                 telemetryEnabled = localSettings.telemetryEnabled,
@@ -143,6 +143,20 @@ class ConfigBackupManager(
         )
     }
 }
+
+/**
+ * 导出时剥离的凭证连同配套开关沿用本机值，备份里是空的，直接覆盖会清掉本机已填的
+ * 解锁方式与 PIN 对应本机锁屏；一图流两个开关依赖 Token
+ */
+internal fun AppSettings.withLocalCredentials(local: AppSettings) = copy(
+    mirrorChyanCdk = local.mirrorChyanCdk,
+    mirrorChyanCdkExpiresAt = local.mirrorChyanCdkExpiresAt,
+    wakeUnlockType = local.wakeUnlockType,
+    wakeCredential = local.wakeCredential,
+    yituliuOpenApiToken = local.yituliuOpenApiToken,
+    operBoxUseYituliuApi = local.operBoxUseYituliuApi,
+    operBoxAssistEnabled = local.operBoxAssistEnabled,
+)
 
 // 导出脱敏：凭证清空，识别类字段（userId/chatId 等）保留
 internal fun NotificationSettings.sanitizedForExport() = copy(
