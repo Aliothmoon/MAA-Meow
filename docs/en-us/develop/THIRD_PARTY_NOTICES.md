@@ -47,6 +47,15 @@ The following are the main changes relative to the original scrcpy source:
 
 ---
 
+## Lucide
+
+- **Project**: [lucide-icons/lucide](https://github.com/lucide-icons/lucide)
+- **License**: [ISC License](https://github.com/lucide-icons/lucide/blob/main/LICENSE)
+- **Location in this project**: [`app/src/main/java/com/aliothmoon/maameow/presentation/components/LucideIcons.kt`](../../../app/src/main/java/com/aliothmoon/maameow/presentation/components/LucideIcons.kt)
+- **Usage**: Tab icons for Copilots / Copilot sets on the copilot search page (`swords`, `list-todo`), converted from the original SVG paths to Compose `ImageVector`
+
+---
+
 ## MaaAssistantArknights
 
 - **Project**: [MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights)

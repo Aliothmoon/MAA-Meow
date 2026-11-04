@@ -47,6 +47,15 @@
 
 ---
 
+## Lucide
+
+- **项目地址**：[lucide-icons/lucide](https://github.com/lucide-icons/lucide)
+- **许可证**：[ISC License](https://github.com/lucide-icons/lucide/blob/main/LICENSE)
+- **本项目中的位置**：[`app/src/main/java/com/aliothmoon/maameow/presentation/components/LucideIcons.kt`](../../../app/src/main/java/com/aliothmoon/maameow/presentation/components/LucideIcons.kt)
+- **用途**：搜索作业页「作业 / 作业集」页签图标（`swords`、`list-todo`），按原 SVG 路径转为 Compose `ImageVector`
+
+---
+
 ## MaaAssistantArknights
 
 - **项目地址**：[MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights)

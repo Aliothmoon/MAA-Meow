@@ -7,6 +7,8 @@ import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
 import com.aliothmoon.maameow.data.model.copilot.CopilotOperator
 import com.aliothmoon.maameow.data.model.copilot.CopilotTaskData
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotPage
+import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotSetPage
+import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotSummary
 import com.aliothmoon.maameow.data.repository.CopilotRepository
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
@@ -22,7 +24,8 @@ data class CopilotSetInfo(
     val id: Int,
     val name: String,
     val description: String,
-    val copilotIds: List<Int>
+    val copilotIds: List<Int>,
+    val creator: String
 )
 
 /** 作业站神秘代码类型 */
@@ -95,6 +98,9 @@ class CopilotManager(
     companion object {
         /** 旧格式前缀，长期保留解析兼容（见 parseCopilotCode） */
         private const val LEGACY_ID_PREFIX = "maa://"
+
+        /** copilot/query 单页上限 */
+        private const val ID_QUERY_LIMIT = 50
 
         /** 新格式前缀，prts://12345 为作业 */
         private const val NEW_ID_PREFIX = "prts://"
@@ -218,7 +224,8 @@ class CopilotManager(
                 id = data.id,
                 name = data.name,
                 description = data.description,
-                copilotIds = data.copilotIds
+                copilotIds = data.copilotIds,
+                creator = data.creator
             )
         )
     }
@@ -234,6 +241,32 @@ class CopilotManager(
             return Result.failure(IllegalStateException(response.message.ifBlank { "HTTP ${response.statusCode}" }))
         }
         return Result.success(page)
+    }
+
+    suspend fun searchCopilotSets(page: Int, limit: Int, keyword: String): Result<PrtsCopilotSetPage> {
+        val response = apiService.querySets(page, limit, keyword).getOrElse { return Result.failure(it) }
+        val data = response.data
+        if (response.statusCode != 200 || data == null) {
+            return Result.failure(IllegalStateException(response.message.ifBlank { "HTTP ${response.statusCode}" }))
+        }
+        return Result.success(data)
+    }
+
+    /** 查询结果不按集内顺序，这里还原；已删除或私有的丢掉 */
+    suspend fun getCopilotSummaries(ids: List<Int>): Result<List<PrtsCopilotSummary>> {
+        val unique = ids.filter { it > 0 }.distinct()
+        val found = HashMap<Int, PrtsCopilotSummary>()
+        for (chunk in unique.chunked(ID_QUERY_LIMIT)) {
+            val page = searchCopilots(
+                mapOf(
+                    "page" to "1",
+                    "limit" to ID_QUERY_LIMIT.toString(),
+                    "copilot_ids" to chunk.joinToString(","),
+                )
+            ).getOrElse { return Result.failure(it) }
+            page.data.forEach { found.putIfAbsent(it.id, it) }
+        }
+        return Result.success(unique.mapNotNull { found[it] })
     }
 
     // ===== PRTS Plus 评分 =====

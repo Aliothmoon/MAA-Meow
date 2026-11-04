@@ -444,10 +444,21 @@ class CopilotViewModel(
         }
     }
 
-    private suspend fun parseSingleCopilot(input: String) {
-        val result = copilotManager.parseFromId(input)
-        result.fold(
+    private fun failLoading(message: UiText): UiText {
+        _state.update { it.copy(isLoading = false, statusMessage = message) }
+        return message
+    }
+
+    /** 返回失败提示，成功为 null；[listOnly] 时不载入进不了列表的类型，免得切走页签 */
+    private suspend fun parseSingleCopilot(input: String, listOnly: Boolean = false): UiText? =
+        copilotManager.parseFromId(input).fold(
             onSuccess = { (id, data, json) ->
+                val targetTab = resolveLoadedTabIndex(data, _state.value.tabIndex)
+                if (listOnly && !supportsBattleList(targetTab)) {
+                    return@fold failLoading(
+                        text(R.string.copilot_battle_list_unsupported, currentTabDisplayName(targetTab))
+                    )
+                }
                 val fixed = correctRequirements(data, json, id)
                 val filePath = repository.saveCopilotJson(id, fixed.json)
                 // 对齐 WPF：单作业校正后仍用原 id
@@ -464,48 +475,51 @@ class CopilotViewModel(
                     copilotId = fixed.copilotId,
                     source = "web"
                 )
+                null
             },
             onFailure = { remoteErr ->
+                Timber.e(remoteErr, "$TAG: failed to parse Copilot")
                 // 仅当输入连神秘代码都解析不出、且形似路径时才提示本地路径不支持，
                 // 避免 maa:// / prts:// 代码的网络失败被误报
                 val unsupportedLocalPath = remoteErr is CopilotRequestException.InvalidInput &&
                         (input.contains("\\") || input.contains("/"))
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        statusMessage = if (unsupportedLocalPath) {
-                            text(R.string.copilot_local_path_unsupported)
-                        } else {
-                            mapSingleCopilotRequestError(input, remoteErr)
-                        }
-                    )
-                }
-                Timber.e(remoteErr, "$TAG: failed to parse Copilot")
+                failLoading(
+                    if (unsupportedLocalPath) {
+                        text(R.string.copilot_local_path_unsupported)
+                    } else {
+                        mapSingleCopilotRequestError(input, remoteErr)
+                    }
+                )
             }
         )
-    }
 
-    private suspend fun importCopilotSet(input: String) {
-        val result = copilotManager.getCopilotSetInfo(input)
-        result.fold(
+    /** 返回失败提示，全部成功为 null；[fromSearch] 时跳过已在列表的作业和进不了列表的类型 */
+    private suspend fun importCopilotSet(input: String, fromSearch: Boolean = false): UiText? =
+        copilotManager.getCopilotSetInfo(input).fold(
             onSuccess = { setInfo ->
-                val ids = setInfo.copilotIds
+                val listed: Set<Int> = if (fromSearch) {
+                    _state.value.taskList.mapNotNullTo(HashSet()) { it.prtsId }
+                } else {
+                    emptySet()
+                }
+                val ids = setInfo.copilotIds.filter { it !in listed }
                 _state.update {
                     it.copy(statusMessage = text(R.string.copilot_status_importing_set, ids.size))
                 }
 
-                if (ids.isEmpty()) {
+                if (setInfo.copilotIds.isEmpty()) {
+                    val empty = text(R.string.copilot_set_empty)
                     _state.update {
                         it.copy(
                             isLoading = false,
                             statusMessage = buildSetStatusMessage(
                                 setName = setInfo.name,
                                 setDescription = setInfo.description,
-                                summary = text(R.string.copilot_set_empty)
+                                summary = empty
                             )
                         )
                     }
-                    return@fold
+                    return@fold empty
                 }
 
                 var workingTabIndex = _state.value.tabIndex
@@ -516,19 +530,26 @@ class CopilotViewModel(
                     val copilotResult = copilotManager.parseFromId(id.toString())
                     copilotResult.fold(
                         onSuccess = { (copilotId, data, json) ->
-                            val fixed = correctRequirements(data, json, copilotId)
-                            val filePath = repository.saveCopilotJson(copilotId, fixed.json)
-                            val resolvedTabIndex =
-                                resolveLoadedTabIndex(fixed.data, workingTabIndex)
-                            newItems.addAll(
-                                createListItemsForLoadedCopilot(
-                                    data = fixed.data,
-                                    filePath = filePath,
-                                    copilotId = fixed.copilotId,
-                                    source = "web"
+                            val resolvedTabIndex = resolveLoadedTabIndex(data, workingTabIndex)
+                            if (fromSearch && !supportsBattleList(resolvedTabIndex)) {
+                                failedCount += 1
+                                firstFailureReason = firstFailureReason ?: text(
+                                    R.string.copilot_battle_list_unsupported,
+                                    currentTabDisplayName(resolvedTabIndex)
                                 )
-                            )
-                            workingTabIndex = resolvedTabIndex
+                            } else {
+                                val fixed = correctRequirements(data, json, copilotId)
+                                val filePath = repository.saveCopilotJson(copilotId, fixed.json)
+                                newItems.addAll(
+                                    createListItemsForLoadedCopilot(
+                                        data = fixed.data,
+                                        filePath = filePath,
+                                        copilotId = fixed.copilotId,
+                                        source = "web"
+                                    )
+                                )
+                                workingTabIndex = resolvedTabIndex
+                            }
                         },
                         onFailure = { e ->
                             failedCount += 1
@@ -572,18 +593,13 @@ class CopilotViewModel(
                 }
                 persistConfig()
                 persistTaskList()
+                summary.takeIf { failedCount > 0 }
             },
             onFailure = { e ->
                 Timber.e(e, "$TAG: failed to import Copilot set")
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        statusMessage = mapCopilotSetRequestError(input, e)
-                    )
-                }
+                failLoading(mapCopilotSetRequestError(input, e))
             }
         )
-    }
 
     private fun mapSingleCopilotRequestError(input: String, error: Throwable): UiText {
         return when (error) {
@@ -774,7 +790,8 @@ class CopilotViewModel(
                         filePath = filePath,
                         isRaid = false,
                         copilotId = copilotId,
-                        source = source
+                        source = source,
+                        title = data.doc.title
                     )
                 )
             }
@@ -793,7 +810,8 @@ class CopilotViewModel(
                         filePath = filePath,
                         isRaid = raidOnly,
                         copilotId = copilotId,
-                        source = source
+                        source = source,
+                        title = data.doc.title
                     )
                 )
             }
@@ -1002,7 +1020,8 @@ class CopilotViewModel(
             filePath = filePath,
             isRaid = if (tabIndex == TAB_PARADOX) false else isRaid,
             copilotId = _state.value.copilotId,
-            source = if (_state.value.isDataFromWeb) "web" else "local"
+            source = if (_state.value.isDataFromWeb) "web" else "local",
+            title = current.doc.title
         )
         _state.update {
             it.copy(
@@ -1099,11 +1118,20 @@ class CopilotViewModel(
     }
 
     /** 搜索结果只有摘要，按 id 拉完整作业；列表模式下随载入自动入列表 */
-    fun onPickFromSearch(copilotId: Int) {
+    fun onPickFromSearch(copilotId: Int, onFailure: (UiText) -> Unit) {
         if (_state.value.isLoading) return
         viewModelScope.launch {
             _state.update { it.startingParse() }
-            parseSingleCopilot(copilotId.toString())
+            parseSingleCopilot(copilotId.toString(), listOnly = _state.value.listModeActive)?.let(onFailure)
+        }
+    }
+
+    /** 与粘贴 s 前缀神秘代码同一路径，会自动切到多作业模式 */
+    fun onAddSetFromSearch(setId: Int, onFailure: (UiText) -> Unit) {
+        if (_state.value.isLoading) return
+        viewModelScope.launch {
+            _state.update { it.startingParse() }
+            importCopilotSet("s$setId", fromSearch = true)?.let(onFailure)
         }
     }
 

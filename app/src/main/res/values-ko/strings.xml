@@ -982,7 +982,7 @@
     <string name="panel_autobattle_switch_difficulty">%1$s(으)로 전환</string>
     <string name="copilot_search_title">작업 검색</string>
     <string name="copilot_search_keyword">키워드 (제목, 오퍼레이터, 작성자)</string>
-    <string name="copilot_search_stage">스테이지</string>
+    <string name="copilot_search_stage">스테이지 (예: 1-7)</string>
     <string name="copilot_search_action">검색</string>
     <string name="copilot_search_order_hot">인기</string>
     <string name="copilot_search_order_latest">최신</string>
@@ -991,9 +991,15 @@
     <string name="copilot_search_added">추가됨</string>
     <string name="copilot_search_pick">사용</string>
     <string name="copilot_search_load_more">더 보기</string>
-    <string name="copilot_search_total">총 %1$d개</string>
     <string name="copilot_search_empty">작업을 찾을 수 없습니다</string>
-    <string name="copilot_search_selected">선택 %1$d</string>
+    <string name="copilot_search_added_list">추가된 작업</string>
+    <string name="copilot_search_tab_copilot">작업</string>
+    <string name="copilot_search_tab_set">작업 세트</string>
+    <string name="copilot_search_set_keyword">키워드 (이름, 설명)</string>
+    <string name="copilot_search_set_count">작업 %1$d개</string>
+    <string name="copilot_search_set_add_all">모두 추가</string>
+    <string name="copilot_search_set_empty">작업 세트를 찾을 수 없습니다</string>
+    <string name="copilot_search_set_unavailable">세트의 작업이 모두 삭제되었거나 비공개입니다</string>
     <string name="copilot_search_single_hint">｢다중 작업 모드｣가 꺼져 있어 선택한 작업을 단일 작업으로 불러옵니다</string>
     <string name="copilot_search_failed">검색 실패: %1$s</string>
     <string name="panel_autobattle_tips_title">팁</string>

@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -68,6 +67,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -156,6 +156,7 @@ private data class CopilotTabUiSpec(
 @Composable
 fun AutoBattlePanel(
     modifier: Modifier = Modifier,
+    onSearchOpenChange: (Boolean) -> Unit = {},
     viewModel: CopilotViewModel = koinInject()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -170,6 +171,7 @@ fun AutoBattlePanel(
     val compactButtonPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
     val importFloatHint = stringResource(R.string.copilot_import_float_hint)
     var searchOpen by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(searchOpen) { onSearchOpenChange(searchOpen) }
 
     // SAF 文件选择器（浮窗环境下不可用）
     val filePicker = if (!isInFloatingWindow) {
@@ -437,13 +439,24 @@ fun AutoBattlePanel(
                                 }
                             },
                         )
-                        CopilotActionButton(
-                            text = stringResource(R.string.copilot_search_title),
-                            icon = Icons.AutoMirrored.Filled.ManageSearch,
-                            filled = false,
-                            enabled = true,
-                            onClick = { searchOpen = true },
-                        )
+                        // 浮窗不做站内搜索
+                        if (isInFloatingWindow) {
+                            CopilotActionButton(
+                                text = stringResource(R.string.panel_autobattle_station),
+                                icon = Icons.Default.Public,
+                                filled = false,
+                                enabled = true,
+                                onClick = { Misc.openUriSafely(context, PRTS_PLUS_URL) },
+                            )
+                        } else {
+                            CopilotActionButton(
+                                text = stringResource(R.string.copilot_search_title),
+                                icon = Icons.AutoMirrored.Filled.ManageSearch,
+                                filled = false,
+                                enabled = true,
+                                onClick = { searchOpen = true },
+                            )
+                        }
                     }
                 }
             }
@@ -836,13 +849,14 @@ fun AutoBattlePanel(
         }
 
         if (searchOpen) {
-            // 浮窗里没有 OnBackPressedDispatcher
-            if (!isInFloatingWindow) PageBackHandler { searchOpen = false }
+            PageBackHandler { searchOpen = false }
             CopilotSearchSheet(
                 copilotState = state,
                 onPick = viewModel::onPickFromSearch,
+                onAddSet = viewModel::onAddSetFromSearch,
                 onRemovePrts = viewModel::onRemovePrtsCopilot,
                 onRemoveListItem = viewModel::onRemoveListItem,
+                onClearList = viewModel::onClearList,
                 onClose = { searchOpen = false },
             )
         }
@@ -1206,90 +1220,113 @@ private fun CopilotDetailCard(
     summary: OperatorSummaryData?,
     onOpenVideo: () -> Unit,
 ) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val operators = summary?.takeUnless { it.isEmpty }
+    val resourceDataManager: ResourceDataManager = koinInject()
+    // 整张卡查一次干员表，不让每格各自订阅
+    val nameIndex by resourceDataManager.nameIndex.collectAsStateWithLifecycle()
+    val characters = remember(operators, nameIndex) {
+        operators?.let { resourceDataManager.charactersOf(it) }.orEmpty()
+    }
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            SelectionContainer {
-                Text(
-                    text = doc.title.ifBlank { stageLabel },
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // 点击区贴卡片边缘，波纹才铺满
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        onClickLabel = stringResource(
+                            if (expanded) R.string.common_collapse else R.string.common_expand
+                        )
+                    ) { expanded = !expanded }
+                    .padding(10.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    SelectionContainer(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = doc.title.ifBlank { stageLabel },
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = if (expanded) 2 else 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Icon(
+                        if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                CopilotMetaRow(
+                    // 无标题时标题位已是关卡名
+                    stageLabel = stageLabel.takeIf { doc.title.isNotBlank() }.orEmpty(),
+                    source = when {
+                        !fromWeb -> stringResource(R.string.panel_autobattle_source_local)
+                        copilotId > 0 -> stringResource(R.string.panel_autobattle_source_web, copilotId)
+                        // 列表里被校正过的作业站条目不带 id
+                        else -> stringResource(R.string.panel_autobattle_source_web_unnumbered)
+                    },
+                    fromWeb = fromWeb,
+                    hasVideo = videoUrl.isNotBlank(),
+                    onOpenVideo = onOpenVideo,
                 )
-            }
-            CopilotMetaRow(
-                // 无标题时标题位已是关卡名
-                stageLabel = stageLabel.takeIf { doc.title.isNotBlank() }.orEmpty(),
-                source = when {
-                    !fromWeb -> stringResource(R.string.panel_autobattle_source_local)
-                    copilotId > 0 -> stringResource(R.string.panel_autobattle_source_web, copilotId)
-                    // 列表里被校正过的作业站条目不带 id
-                    else -> stringResource(R.string.panel_autobattle_source_web_unnumbered)
-                },
-                fromWeb = fromWeb,
-                hasVideo = videoUrl.isNotBlank(),
-                onOpenVideo = onOpenVideo,
-            )
-
-            if (doc.details.isNotBlank()) {
-                CopilotDetails(doc.details)
+                if (operators != null && !expanded) {
+                    OperatorStrip(operators, characters, modifier = Modifier.fillMaxWidth())
+                }
             }
 
             if (warnings.isNotEmpty()) {
-                CopilotWarnings(warnings)
+                Box(modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp)) {
+                    CopilotWarnings(warnings)
+                }
             }
 
-            if (summary != null && !summary.isEmpty) {
-                val resourceDataManager: ResourceDataManager = koinInject()
-                // 整张卡查一次干员表，不让每格各自订阅
-                val nameIndex by resourceDataManager.nameIndex.collectAsStateWithLifecycle()
-                val characters = remember(summary, nameIndex) {
-                    (summary.operators + summary.groups.flatMap { it.second })
-                        .associate { it.name to resourceDataManager.getCharacterByNameOrAlias(it.name) }
-                }
+            MaaAnimatedVisibility(visible = expanded) {
                 Column(
-                    modifier = Modifier.padding(top = 2.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.panel_autobattle_operator_header),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Surface(
-                            shape = RoundedCornerShape(50),
-                            color = MaterialTheme.colorScheme.surface
-                        ) {
-                            Text(
-                                text = summary.totalCount.toString(),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 1.dp)
-                            )
-                        }
+                    if (doc.details.isNotBlank()) {
+                        CopilotDetails(doc.details)
                     }
-                    if (summary.operators.isNotEmpty()) {
-                        OperatorGrid { OperatorCells(summary.operators, characters) }
-                    }
-                    summary.groups.forEach { (groupName, opers) ->
-                        OperatorGroup(groupName, opers, characters)
-                    }
+                    operators?.let { CopilotOperatorSection(it, characters) }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CopilotOperatorSection(summary: OperatorSummaryData, characters: Map<String, CharacterInfo?>) {
+    Column(
+        modifier = Modifier.padding(top = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.panel_autobattle_operator_header),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            CountBadge(summary.totalCount)
+        }
+        if (summary.operators.isNotEmpty()) {
+            OperatorGrid { OperatorCells(summary.operators, characters) }
+        }
+        summary.groups.forEach { (groupName, opers) ->
+            OperatorGroup(groupName, opers, characters)
         }
     }
 }
@@ -1366,6 +1403,8 @@ private fun GroupToggleTile(expanded: Boolean, hidden: Int, onClick: () -> Unit)
         }
     }
 }
+
+internal const val PRTS_PLUS_URL = "https://prts.plus"
 
 private const val DETAIL_COLLAPSED_LINES = 2
 
@@ -1627,7 +1666,6 @@ private fun OperatorCell(item: OperatorDisplayItem, operId: String, rarity: Int)
             ) {
                 OperAvatar(operId = operId, modifier = Modifier.fillMaxSize())
             }
-            // 不加 weight 时 Row 按不换行求固有高度，属性折行会被裁掉
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -1646,75 +1684,68 @@ private fun OperatorCell(item: OperatorDisplayItem, operId: String, rarity: Int)
     }
 }
 
+/** 固定两行单行文本：网格按固有高度定格高，折行会被裁掉 */
 @Composable
 private fun OperatorAttributes(item: OperatorDisplayItem) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(1.dp),
-        itemVerticalAlignment = Alignment.CenterVertically
-    ) {
-        item.promotion?.let { promotion ->
-            val elite = stringResource(
-                when (promotion.elite) {
-                    0 -> R.string.panel_autobattle_oper_elite_0
-                    1 -> R.string.panel_autobattle_oper_elite_1
-                    else -> R.string.panel_autobattle_oper_elite_2
-                }
-            )
-            // 校正器只补精英化不补等级，0 级不显示
-            OperAttrText(
-                text = if (promotion.level > 0) {
-                    stringResource(R.string.panel_autobattle_oper_promotion, elite, promotion.level)
-                } else {
-                    elite
-                },
-                color = muted
-            )
+    val promotionText = item.promotion?.let { promotion ->
+        val elite = stringResource(
+            when (promotion.elite) {
+                0 -> R.string.panel_autobattle_oper_elite_0
+                1 -> R.string.panel_autobattle_oper_elite_1
+                else -> R.string.panel_autobattle_oper_elite_2
+            }
+        )
+        // 校正器只补精英化不补等级，0 级不显示
+        if (promotion.level > 0) {
+            stringResource(R.string.panel_autobattle_oper_promotion, elite, promotion.level)
+        } else {
+            elite
         }
+    }
+    val moduleText = item.module?.let { module ->
+        if (module == 0) {
+            stringResource(R.string.panel_autobattle_oper_no_module)
+        } else {
+            stringResource(R.string.panel_autobattle_oper_module, MODULE_NAMES[module - 1])
+        }
+    }
+    if (promotionText != null || moduleText != null) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            promotionText?.let { OperAttrText(it, muted) }
+            moduleText?.let { OperAttrText(it, muted) }
+        }
+    }
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         if (item.skill > 0) {
-            // 技能号与等级不拆行
-            Row(
-                modifier = Modifier.width(IntrinsicSize.Max),
-                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OperAttrText(
-                    text = stringResource(R.string.panel_autobattle_oper_skill, item.skill),
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
-                val skillLevel = item.skillLevel
-                if (skillLevel != null && skillLevel > 7) {
-                    val mastery = skillLevel - 7
-                    MasteryBadge(level = mastery, modifier = Modifier.size(10.dp))
-                    val res = when (mastery) {
-                        1 -> R.string.panel_autobattle_oper_mastery_1
-                        2 -> R.string.panel_autobattle_oper_mastery_2
-                        else -> R.string.panel_autobattle_oper_mastery_3
-                    }
-                    OperAttrText(stringResource(res), muted)
-                } else if (skillLevel != null) {
-                    OperAttrText(
-                        stringResource(R.string.panel_autobattle_oper_skill_level, skillLevel),
-                        muted
-                    )
+            OperAttrText(
+                text = stringResource(R.string.panel_autobattle_oper_skill, item.skill),
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+            val skillLevel = item.skillLevel
+            if (skillLevel != null && skillLevel > 7) {
+                val mastery = skillLevel - 7
+                MasteryBadge(level = mastery, modifier = Modifier.size(10.dp))
+                val res = when (mastery) {
+                    1 -> R.string.panel_autobattle_oper_mastery_1
+                    2 -> R.string.panel_autobattle_oper_mastery_2
+                    else -> R.string.panel_autobattle_oper_mastery_3
                 }
+                OperAttrText(stringResource(res), muted)
+            } else if (skillLevel != null) {
+                OperAttrText(stringResource(R.string.panel_autobattle_oper_skill_level, skillLevel), muted)
             }
         } else {
             OperAttrText(
                 stringResource(R.string.panel_autobattle_oper_no_skill),
                 MaterialTheme.colorScheme.outline
-            )
-        }
-        item.module?.let { module ->
-            OperAttrText(
-                text = if (module == 0) {
-                    stringResource(R.string.panel_autobattle_oper_no_module)
-                } else {
-                    stringResource(R.string.panel_autobattle_oper_module, MODULE_NAMES[module - 1])
-                },
-                color = muted
             )
         }
     }
@@ -1726,14 +1757,13 @@ private fun OperAttrText(
     color: Color,
     fontWeight: FontWeight? = null,
 ) {
-    // FlowRow 按最小固有宽度估行数，中文只算一个字宽，不钉住会少算行高
     Text(
         text = text,
         style = MaterialTheme.typography.labelSmall,
         fontWeight = fontWeight,
         color = color,
         maxLines = 1,
-        modifier = Modifier.width(IntrinsicSize.Max)
+        overflow = TextOverflow.Ellipsis
     )
 }
 

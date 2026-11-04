@@ -1,6 +1,27 @@
 package com.aliothmoon.maameow.presentation.components
 
 import android.text.InputType
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import com.aliothmoon.maameow.R
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -219,4 +240,76 @@ fun ITextFieldWithFocus(
             },
         )
     }
+}
+
+/** 40dp 单行搜索框，只用于应用内：浮窗里 Compose 输入框拿不到 IME */
+@Composable
+fun ISearchField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    leadingIcon: ImageVector,
+    onSearch: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val (bufferedValue, bufferedOnChange) = rememberBufferedTextState(value, onValueChange)
+    val inputFocusManager = LocalInputFocusManager.current
+    var focused by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(8.dp)
+    BasicTextField(
+        value = bufferedValue,
+        onValueChange = bufferedOnChange,
+        singleLine = true,
+        textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { onSearch(); inputFocusManager.clear() }),
+        modifier = modifier
+            .height(40.dp)
+            .onFocusChanged { focused = it.isFocused },
+        decorationBox = { innerTextField ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(shape)
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(
+                        width = if (focused) 2.dp else 1.dp,
+                        color = if (focused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                        shape = shape
+                    )
+                    .padding(start = 10.dp, end = if (bufferedValue.isEmpty()) 10.dp else 2.dp)
+            ) {
+                Icon(
+                    leadingIcon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                    if (bufferedValue.isEmpty()) {
+                        Text(
+                            text = placeholder,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    innerTextField()
+                }
+                if (bufferedValue.isNotEmpty()) {
+                    IconButton(onClick = { bufferedOnChange("") }, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = stringResource(R.string.common_clear),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+        }
+    )
 }

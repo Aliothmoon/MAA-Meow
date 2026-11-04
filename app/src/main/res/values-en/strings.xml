@@ -928,7 +928,7 @@
     <string name="panel_autobattle_switch_difficulty">Switch to %1$s</string>
     <string name="copilot_search_title">Search Copilots</string>
     <string name="copilot_search_keyword">Keyword (title, operator, author)</string>
-    <string name="copilot_search_stage">Stage</string>
+    <string name="copilot_search_stage">Stage, e.g. 1-7</string>
     <string name="copilot_search_action">Search</string>
     <string name="copilot_search_order_hot">Hot</string>
     <string name="copilot_search_order_latest">Latest</string>
@@ -937,9 +937,15 @@
     <string name="copilot_search_added">Added</string>
     <string name="copilot_search_pick">Use</string>
     <string name="copilot_search_load_more">Load more</string>
-    <string name="copilot_search_total">Results: %1$d</string>
     <string name="copilot_search_empty">No copilots found</string>
-    <string name="copilot_search_selected">Selected %1$d</string>
+    <string name="copilot_search_added_list">Added copilots</string>
+    <string name="copilot_search_tab_copilot">Copilots</string>
+    <string name="copilot_search_tab_set">Copilot sets</string>
+    <string name="copilot_search_set_keyword">Keyword (name, description)</string>
+    <string name="copilot_search_set_count">%1$d copilots</string>
+    <string name="copilot_search_set_add_all">Add all</string>
+    <string name="copilot_search_set_empty">No copilot sets found</string>
+    <string name="copilot_search_set_unavailable">All copilots in this set are deleted or hidden</string>
     <string name="copilot_search_single_hint">｢Multi-Job mode｣ is off; the picked copilot loads as a single job</string>
     <string name="copilot_search_failed">Search failed: %1$s</string>
     <string name="panel_autobattle_tips_title">Tips</string>

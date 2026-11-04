@@ -31,6 +31,8 @@ data class PrtsCopilotSetData(
     val description: String = "",
     @SerialName("creator_id")
     val creatorId: Int = 0,
+    @SerialName("creator")
+    val creator: String = "",
     @SerialName("create_time")
     val createTime: String = "",
     @SerialName("copilot_ids")

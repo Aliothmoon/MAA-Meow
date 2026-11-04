@@ -2,7 +2,9 @@ package com.aliothmoon.maameow.data.api
 
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotQueryResponse
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotResponse
+import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotSetQueryResponse
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotSetResponse
+import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.buildJsonObject
@@ -34,6 +36,22 @@ class CopilotApiService(
                 httpClient.getEntity<PrtsCopilotQueryResponse>("${BASE_URL}copilot/query", query = query)
             }.onFailure {
                 Timber.e(it, "$TAG: 搜索作业失败: $query")
+            }
+        }
+
+    suspend fun querySets(page: Int, limit: Int, keyword: String): Result<PrtsCopilotSetQueryResponse> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val body = buildJsonObject {
+                    put("page", page)
+                    put("limit", limit)
+                    if (keyword.isNotEmpty()) put("keyword", keyword)
+                }.toString()
+                httpClient.post("${BASE_URL}set/query", body).use {
+                    JsonUtils.common.decodeFromString<PrtsCopilotSetQueryResponse>(it.body.string())
+                }
+            }.onFailure {
+                Timber.e(it, "$TAG: 搜索作业集失败: keyword=$keyword, page=$page")
             }
         }
 

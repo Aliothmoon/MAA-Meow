@@ -982,7 +982,7 @@
     <string name="panel_autobattle_switch_difficulty">切换为%1$s</string>
     <string name="copilot_search_title">搜索作业</string>
     <string name="copilot_search_keyword">关键词（标题、干员、作者）</string>
-    <string name="copilot_search_stage">关卡</string>
+    <string name="copilot_search_stage">关卡，如 1-7</string>
     <string name="copilot_search_action">搜索</string>
     <string name="copilot_search_order_hot">热度</string>
     <string name="copilot_search_order_latest">最新</string>
@@ -991,9 +991,15 @@
     <string name="copilot_search_added">已添加</string>
     <string name="copilot_search_pick">使用</string>
     <string name="copilot_search_load_more">加载更多</string>
-    <string name="copilot_search_total">共 %1$d 个作业</string>
     <string name="copilot_search_empty">没有找到作业</string>
-    <string name="copilot_search_selected">已选 %1$d</string>
+    <string name="copilot_search_added_list">已添加作业</string>
+    <string name="copilot_search_tab_copilot">作业</string>
+    <string name="copilot_search_tab_set">作业集</string>
+    <string name="copilot_search_set_keyword">关键词（名称、描述）</string>
+    <string name="copilot_search_set_count">%1$d 个作业</string>
+    <string name="copilot_search_set_add_all">整集添加</string>
+    <string name="copilot_search_set_empty">没有找到作业集</string>
+    <string name="copilot_search_set_unavailable">集内作业都已删除或不可见</string>
     <string name="copilot_search_single_hint">未开启｢多作业模式｣，选择后作为单个作业载入</string>
     <string name="copilot_search_failed">搜索失败：%1$s</string>
     <string name="panel_autobattle_tips_title">小提示</string>

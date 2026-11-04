@@ -551,11 +551,13 @@ fun BackgroundTaskView(
                             pagerState, PanelTab.entries.size - 1,
                         )
                         val toolboxTab by toolboxViewModel.currentTab.collectAsStateWithLifecycle()
+                        var autoBattleSearchOpen by remember { mutableStateOf(false) }
                         val gachaDisclaimerOk by
                         toolboxViewModel.gachaDisclaimerAccepted.collectAsStateWithLifecycle()
                         val toolsHidesStartBar = toolboxTab == ToolboxTab.GACHA && !gachaDisclaimerOk
-                        val hideStartBar = state.current == PanelTab.TOOLS && toolsHidesStartBar
-                        val showStartBar = !hideStartBar
+                        fun hidesBar(tab: PanelTab) = (tab == PanelTab.TOOLS && toolsHidesStartBar) ||
+                                (tab == PanelTab.AUTO_BATTLE && autoBattleSearchOpen)
+                        val showStartBar = !hidesBar(state.current)
                         val isGachaActions = state.current == PanelTab.TOOLS &&
                                 toolboxTab == ToolboxTab.GACHA && gachaDisclaimerOk
                         BottomBarOverlay(
@@ -764,8 +766,7 @@ fun BackgroundTaskView(
                                 beyondViewportPageCount = retainedPages
                             ) { page ->
                                 CompositionLocalProvider(LocalPageVisible provides rememberPageVisible(pagerState, page)) {
-                                    val pageTab = PanelTab.entries[page]
-                                    val reserveBar = !(pageTab == PanelTab.TOOLS && toolsHidesStartBar)
+                                    val reserveBar = !hidesBar(PanelTab.entries[page])
                                     Box(Modifier.padding(bottom = if (reserveBar) actionBarHeight else 0.dp)) {
                                         when (page) {
                                             0 -> {
@@ -810,7 +811,10 @@ fun BackgroundTaskView(
                                                 )
                                             }
 
-                                            1 -> AutoBattlePanel(modifier = Modifier.fillMaxSize())
+                                            1 -> AutoBattlePanel(
+                                                modifier = Modifier.fillMaxSize(),
+                                                onSearchOpenChange = { autoBattleSearchOpen = it },
+                                            )
                                             2 -> CompositionLocalProvider(
                                                 LocalToolboxFileExporter provides rememberSafToolboxFileExporter()
                                             ) {

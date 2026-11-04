@@ -17,6 +17,8 @@ data class CopilotListItem(
     val copilotId: Int = 0,         // PRTS Plus 作业 ID
     val isChecked: Boolean = true,  // 是否勾选执行
     val source: String = "web",     // web / local / resource
+    /** 作业标题，旧数据没有 */
+    val title: String = "",
     /** 列表 key；普通/突袭两项 filePath 与 name 相同，不能拿它们当 key */
     val id: String = UUID.randomUUID().toString(),
 ) {
