@@ -10,10 +10,12 @@ import com.aliothmoon.maameow.maa.CallbackJsonAbbreviator
 import com.aliothmoon.maameow.maa.CallbackLogPolicy
 import com.aliothmoon.maameow.maa.MaaCoreLibrary
 import com.aliothmoon.maameow.remote.internal.StaleFrameGuard
+import com.aliothmoon.maameow.remote.internal.UserDirProbe
 import com.aliothmoon.maameow.root.ProcessExit
 import com.aliothmoon.maameow.third.Ln
 import com.sun.jna.Memory
 import com.sun.jna.Pointer
+import java.io.File
 import java.io.FileDescriptor
 import java.util.concurrent.atomic.AtomicReference
 
@@ -62,6 +64,11 @@ class MaaCoreServiceImpl(private val ctx: MaaCoreLibrary?) : MaaCoreService.Stub
 
     override fun LoadResource(path: String?): Boolean {
         val core = requireMaaCore() ?: return false
+        // 不可访问的嵌套资源进 AsstLoadResource 会 abort 整个进程（#298），这里只报告失败
+        UserDirProbe.resourceFailure(File(path.orEmpty()))?.let {
+            Ln.e("$TAG: LoadResource($path) skipped - resource inaccessible: $it")
+            return false
+        }
         return core.AsstLoadResource(path).also {
             Ln.i("$TAG: LoadResource($path) = $it")
         }
