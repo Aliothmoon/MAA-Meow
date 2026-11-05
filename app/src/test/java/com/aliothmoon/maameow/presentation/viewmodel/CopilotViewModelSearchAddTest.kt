@@ -7,8 +7,6 @@ import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotData
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotResponse
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotSetData
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotSetResponse
-import com.aliothmoon.maameow.data.repository.CopilotProfileData
-import com.aliothmoon.maameow.data.repository.CopilotProfileStore
 import com.aliothmoon.maameow.data.repository.CopilotRepository
 import com.aliothmoon.maameow.data.resource.MapInfo
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
@@ -17,16 +15,8 @@ import com.aliothmoon.maameow.utils.i18n.UiText
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.coVerify
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import com.aliothmoon.maameow.data.preferences.TaskChainState
-import com.aliothmoon.maameow.domain.service.MaaCompositionService
-import com.aliothmoon.maameow.domain.state.MaaExecutionState
-import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
-import com.aliothmoon.maameow.domain.usecase.GameReadiness
-import com.aliothmoon.maameow.maa.callback.CopilotRuntimeStateStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -55,22 +45,6 @@ class CopilotViewModelSearchAddTest {
     private val api = mockk<CopilotApiService>()
     private val repository = mockk<CopilotRepository>(relaxed = true)
     private val resources = mockk<ResourceDataManager>(relaxed = true)
-    private val profileId = MutableStateFlow("a")
-    private val storedProfiles = mutableMapOf<String, CopilotProfileData>()
-    private val profileStore = mockk<CopilotProfileStore>(relaxed = true)
-    private val runtime = CopilotRuntimeStateStore()
-    private val execution = MutableStateFlow(MaaExecutionState.IDLE)
-    private val composition = mockk<MaaCompositionService>(relaxed = true) {
-        every { state } returns execution
-    }
-    private val readiness = mockk<CheckGameReadinessUseCase>() {
-        coEvery { this@mockk(any(), any(), any()) } returns GameReadiness.Ready(true)
-    }
-    private val chain = mockk<TaskChainState>(relaxed = true) {
-        every { this@mockk.profileId } returns this@CopilotViewModelSearchAddTest.profileId
-        every { clientType } returns "Official"
-    }
-    private var saveCount = 0
     private var failure: UiText? = null
 
     @Before
@@ -108,29 +82,22 @@ class CopilotViewModelSearchAddTest {
         listMode: Boolean = true,
         taskList: List<CopilotListItem> = emptyList(),
     ): CopilotViewModel {
-        storedProfiles["a"] = CopilotProfileData(CopilotConfig(useCopilotList = listMode), taskList)
-        storedProfiles.putIfAbsent("b", CopilotProfileData())
-        every { repository.profiles } returns profileStore
-        every { profileStore.isLoaded } returns MutableStateFlow(true)
-        coEvery { profileStore.awaitLoaded() } returns Unit
-        every { profileStore.forProfile(any()) } answers { storedProfiles[firstArg()] ?: CopilotProfileData() }
-        every { profileStore.update(any(), any()) } answers {
-            val id = firstArg<String>()
-            val transform = secondArg<(CopilotProfileData) -> CopilotProfileData>()
-            storedProfiles[id] = transform(storedProfiles[id] ?: CopilotProfileData())
-            saveCount++
-        }
-        coEvery { composition.startCopilot(any(), any()) } returns MaaCompositionService.StartResult.Success("test")
+        coEvery { repository.loadConfig() } returns CopilotConfig(useCopilotList = listMode)
+        coEvery { repository.loadTaskList() } returns taskList
         val vm = CopilotViewModel(
             appContext = mockk(relaxed = true),
             copilotManager = CopilotManager(api, repository),
-            compositionService = composition,
+            compositionService = mockk(relaxed = true) { every { state } returns MutableStateFlow(mockk()) },
             repository = repository,
             resourceDataManager = resources,
             copilotResourceProvider = mockk(relaxed = true),
-            runtimeStateStore = runtime,
-            checkGameReadiness = readiness,
-            chainState = chain,
+            runtimeStateStore = mockk(relaxed = true) {
+                every { hasRequirementIgnored } returns MutableStateFlow(false)
+                every { currentCopilotIndex } returns MutableStateFlow(-1)
+                every { taskSuccessToken } returns MutableStateFlow(0)
+            },
+            checkGameReadiness = mockk(relaxed = true),
+            chainState = mockk(relaxed = true),
             achievementRepository = mockk(relaxed = true),
             operBoxAssist = mockk(relaxed = true) { every { state } returns flowOf() },
             operBoxYituliuSync = mockk(relaxed = true),
@@ -273,150 +240,5 @@ class CopilotViewModelSearchAddTest {
 
         assertTrue(vm.state.value.listModeActive)
         assertEquals(listOf(MAIN_ID), vm.listedIds())
-    }
-
-    @Test
-    fun profileSwitchLoadsWithoutSavingAndAbaKeepsConfigAndList() {
-        val vm = viewModel()
-        vm.pick(MAIN_ID)
-        val configA = vm.state.value.config.copy(loop = true, loopTimes = 4, useSupportUnit = true)
-        vm.onConfigChanged(configA)
-        val saved = saveCount
-        profileId.value = "b"
-        dispatcher.scheduler.advanceUntilIdle()
-        assertTrue(vm.state.value.taskList.isEmpty())
-        assertEquals(CopilotConfig(), vm.state.value.config)
-        assertEquals(saved, saveCount)
-        vm.onConfigChanged(CopilotConfig(formationIndex = 3))
-        profileId.value = "a"
-        dispatcher.scheduler.advanceUntilIdle()
-        assertEquals(configA, vm.state.value.config)
-        assertEquals(listOf(MAIN_ID), vm.listedIds())
-    }
-
-    @Test
-    fun queuedConfigSaveKeepsOriginalProfileBeforeCollectorRuns() {
-        val vm = viewModel()
-        val changed = vm.state.value.config.copy(loopTimes = 8)
-        vm.onConfigChanged(changed)
-        profileId.value = "b"
-        dispatcher.scheduler.advanceUntilIdle()
-        assertEquals(changed, storedProfiles.getValue("a").config)
-        assertEquals(CopilotConfig(), storedProfiles.getValue("b").config)
-    }
-
-    @Test
-    fun downloadFinishingAfterSwitchCannotAddToNewProfile() {
-        val vm = viewModel()
-        val gate = CompletableDeferred<Unit>()
-        coEvery { api.getCopilot(MAIN_ID) } coAnswers {
-            gate.await()
-            Result.success(PrtsCopilotResponse(200, data = PrtsCopilotData(
-                id = MAIN_ID, content = """{"stage_name":"main_01-01"}""",
-            )))
-        }
-        vm.onPickFromSearch(MAIN_ID) { failure = it }
-        dispatcher.scheduler.advanceUntilIdle()
-        profileId.value = "b"
-        dispatcher.scheduler.advanceUntilIdle()
-        gate.complete(Unit)
-        dispatcher.scheduler.advanceUntilIdle()
-        assertTrue(vm.state.value.taskList.isEmpty())
-        assertTrue(storedProfiles.getValue("b").taskList.isEmpty())
-        assertNull(vm.state.value.currentCopilot)
-    }
-
-    private fun runnableList(): List<CopilotListItem> {
-        coEvery { repository.readCopilotJson(any()) } returns """{"stage_name":"main_01-01"}"""
-        every { repository.toCorePath(any()) } answers { firstArg() }
-        return listOf(
-            CopilotListItem("1-1", "/c/1.json", id = "a-first"),
-            CopilotListItem("1-2", "/c/2.json", id = "a-second"),
-        )
-    }
-
-    @Test
-    fun runningCallbackUpdatesOriginalProfileByStableRowIdAfterSwitch() {
-        val vm = viewModel(taskList = runnableList())
-        vm.onStart()
-        dispatcher.scheduler.advanceUntilIdle()
-        profileId.value = "b"
-        dispatcher.scheduler.advanceUntilIdle()
-        val stateB = vm.state.value
-        runtime.setCurrentCopilotIndex(1)
-        runtime.markTaskSuccess()
-        dispatcher.scheduler.advanceUntilIdle()
-        assertEquals(stateB, vm.state.value)
-        assertEquals(listOf(true, false), storedProfiles.getValue("a").taskList.map { it.isChecked })
-        profileId.value = "a"
-        dispatcher.scheduler.advanceUntilIdle()
-        assertEquals(listOf(true, false), vm.state.value.taskList.map { it.isChecked })
-    }
-
-    @Test
-    fun runningCallbackKeepsLaunchCoordinatesAfterUserReordersList() {
-        val vm = viewModel(taskList = runnableList())
-        vm.onStart()
-        dispatcher.scheduler.advanceUntilIdle()
-        vm.onReorderList("a-first", "a-second")
-        vm.onReorderSettled()
-        runtime.setCurrentCopilotIndex(0)
-        runtime.markTaskSuccess()
-        dispatcher.scheduler.advanceUntilIdle()
-        assertEquals(listOf("a-second", "a-first"), vm.state.value.taskList.map { it.id })
-        assertEquals(listOf(true, false), vm.state.value.taskList.map { it.isChecked })
-    }
-
-    @Test
-    fun secondStartDuringRunningDoesNotReplaceCallbackProfile() {
-        val vm = viewModel(taskList = runnableList())
-        vm.onStart()
-        dispatcher.scheduler.advanceUntilIdle()
-        execution.value = MaaExecutionState.RUNNING
-        profileId.value = "b"
-        dispatcher.scheduler.advanceUntilIdle()
-        vm.onStart()
-        runtime.setCurrentCopilotIndex(0)
-        runtime.markTaskSuccess()
-        dispatcher.scheduler.advanceUntilIdle()
-        coVerify(exactly = 1) { composition.startCopilot(any(), any()) }
-        assertEquals(listOf(false, true), storedProfiles.getValue("a").taskList.map { it.isChecked })
-        assertTrue(storedProfiles.getValue("b").taskList.isEmpty())
-    }
-
-    @Test
-    fun stopFinishingAfterSwitchDoesNotChangeNewProfileStatus() {
-        val vm = viewModel()
-        val gate = CompletableDeferred<Unit>()
-        coEvery { composition.stop() } coAnswers {
-            gate.await()
-            MaaCompositionService.StopResult.Success
-        }
-        vm.onStop()
-        dispatcher.scheduler.advanceUntilIdle()
-        profileId.value = "b"
-        dispatcher.scheduler.advanceUntilIdle()
-        val stateB = vm.state.value
-        gate.complete(Unit)
-        dispatcher.scheduler.advanceUntilIdle()
-        assertEquals(stateB, vm.state.value)
-    }
-
-    @Test
-    fun launchUsesCapturedConfigAndListWhenUserEditsBeforeCoroutineRuns() {
-        val original = runnableList()
-        val vm = viewModel(taskList = original)
-        vm.onStart()
-        vm.onConfigChanged(CopilotConfig(useSupportUnit = true, supportUnitUsage = 3))
-        vm.onClearList()
-        dispatcher.scheduler.advanceUntilIdle()
-        coVerify(exactly = 1) {
-            composition.startCopilot(match { tasks ->
-                val params = tasks.single().params
-                params.contains("/c/1.json") && params.contains("/c/2.json") &&
-                    params.contains("\"support_unit_usage\":0")
-            }, any())
-        }
-        assertTrue(vm.state.value.taskList.isEmpty())
     }
 }

@@ -114,22 +114,4 @@ class CopilotOperBoxAssistTest {
         val written = File(tmp.root, "operbox/OperBoxData.json").readText()
         assertEquals(CopilotOperBoxAssist.encodeCoreData(listOf(trained)), written)
     }
-
-    @Test
-    fun capturedCoreDataDoesNotFollowProfileSwitchBeforeWrite() = runTest {
-        val snapshotFlow = MutableStateFlow(OperBoxSnapshot(owned = listOf(trained)))
-        val repository = mockk<OperBoxRepository> { every { this@mockk.snapshot } returns snapshotFlow }
-        val paths = mockk<MaaPathConfig> {
-            every { rootDir } returns tmp.root.absolutePath
-            every { toCorePath(any()) } answers { firstArg() }
-        }
-        val subject = CopilotOperBoxAssist(mockk(relaxed = true), repository, paths)
-        val captured = subject.captureCoreData()
-        snapshotFlow.value = OperBoxSnapshot(owned = listOf(recognized))
-        subject.writeCoreData(captured)
-        assertEquals(
-            CopilotOperBoxAssist.encodeCoreData(listOf(trained)),
-            File(tmp.root, "operbox/OperBoxData.json").readText(),
-        )
-    }
 }

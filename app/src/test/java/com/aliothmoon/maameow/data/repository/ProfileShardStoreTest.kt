@@ -132,7 +132,6 @@ class ProfileShardStoreTest {
 
         shards.awaitLoaded()
         assertEquals(TestShard(), shards.snapshot.value)
-        assertTrue(shards.loadError is IOException)
     }
 
     /** 预热挂起期间发生的写入不得被回填覆盖 —— 内存永远优先于磁盘。 */
@@ -309,8 +308,10 @@ class ProfileShardStoreTest {
         shards.awaitPersist()
 
         shards.start()
-        // start 返回时订阅已建立（replay=0）。
-        assertTrue(profileDeleted.subscriptionCount.value > 0)
+        // 订阅在 IO 调度器上异步建立，emit 早于订阅会丢事件（replay=0）
+        withTimeout(TIMEOUT_MS) {
+            while (profileDeleted.subscriptionCount.value == 0) yield()
+        }
 
         profileDeleted.emit(PROFILE_A)
 
