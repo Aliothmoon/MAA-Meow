@@ -1,42 +1,22 @@
 package com.aliothmoon.maameow.data.repository
 
 import com.aliothmoon.maameow.data.config.MaaPathConfig
-import com.aliothmoon.maameow.data.model.CopilotConfig
-import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
-import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
 
 class CopilotRepository(
     private val pathConfig: MaaPathConfig,
+    val profiles: CopilotProfileStore,
 ) {
     companion object {
         private const val TAG = "CopilotRepository"
         private const val COPILOT_DIR = "copilot"
-        private const val TASK_LIST_FILE = "task_list.json"
-        private const val CONFIG_FILE = "config.json"
     }
 
     private val copilotDir: File by lazy {
         File(pathConfig.rootDir, COPILOT_DIR).also { it.mkdirs() }
-    }
-
-    private val taskListFile: File by lazy { File(copilotDir, TASK_LIST_FILE) }
-    private val configFile: File by lazy { File(copilotDir, CONFIG_FILE) }
-
-    // 输入框逐字保存会并发写同一文件，串成按调用顺序、整文件替换
-    private val writeLock = Mutex()
-
-    private suspend fun writeReplacing(file: File, text: String) = writeLock.withLock {
-        withContext(Dispatchers.IO) {
-            val tmp = File(file.parentFile, "${file.name}.tmp")
-            tmp.writeText(text, Charsets.UTF_8)
-            check(tmp.renameTo(file)) { "重命名 ${tmp.name} 失败" }
-        }
     }
 
     /**
@@ -115,41 +95,4 @@ class CopilotRepository(
     /** 下发给 core 的作业路径：独立目录模式下要映射到提权进程那边 */
     fun toCorePath(filePath: String): String = pathConfig.toCorePath(filePath)
 
-    suspend fun loadTaskList(): List<CopilotListItem> = withContext(Dispatchers.IO) {
-        runCatching {
-            if (!taskListFile.exists()) {
-                return@runCatching emptyList()
-            }
-            JsonUtils.common.decodeFromString<List<CopilotListItem>>(taskListFile.readText(Charsets.UTF_8))
-        }.onFailure {
-            Timber.e(it, "$TAG: 加载战斗列表失败")
-        }.getOrDefault(emptyList())
-    }
-
-    suspend fun saveTaskList(items: List<CopilotListItem>) {
-        runCatching {
-            writeReplacing(taskListFile, JsonUtils.common.encodeToString(items))
-        }.onFailure {
-            Timber.e(it, "$TAG: 保存战斗列表失败")
-        }
-    }
-
-    suspend fun loadConfig(): CopilotConfig? = withContext(Dispatchers.IO) {
-        runCatching {
-            if (!configFile.exists()) {
-                return@runCatching null
-            }
-            JsonUtils.common.decodeFromString<CopilotConfig>(configFile.readText(Charsets.UTF_8))
-        }.onFailure {
-            Timber.e(it, "$TAG: 加载自动战斗配置失败")
-        }.getOrNull()
-    }
-
-    suspend fun saveConfig(config: CopilotConfig) {
-        runCatching {
-            writeReplacing(configFile, JsonUtils.common.encodeToString(config))
-        }.onFailure {
-            Timber.e(it, "$TAG: 保存自动战斗配置失败")
-        }
-    }
 }

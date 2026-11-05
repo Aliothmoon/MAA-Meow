@@ -50,6 +50,7 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.preferences.UnlockGestureStore
+import com.aliothmoon.maameow.data.repository.CopilotProfileStore
 import com.aliothmoon.maameow.data.repository.CopilotRepository
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.OperBoxRepository
@@ -422,6 +423,8 @@ val appModule = module {
     singleOf(::ResourceDataManager)
     // Copilot (自动战斗)
     singleOf(::CopilotApiService)
+    // 页面打开前注册 Profile 复制和删除处理。
+    single(createdAtStart = true) { CopilotProfileStore.create(get(), get(), get()) }
     singleOf(::CopilotRepository)
     singleOf(::CopilotManager)
     singleOf(::CopilotResourceProvider)

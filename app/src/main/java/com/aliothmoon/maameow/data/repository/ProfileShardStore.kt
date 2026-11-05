@@ -8,6 +8,7 @@ import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
@@ -32,6 +33,7 @@ class ProfileShardStore<T : Any>(
     private val keyPrefix: String,
     private val serializer: KSerializer<T>,
     private val empty: () -> T,
+    private val prepare: suspend () -> Unit = {},
 ) {
     private val json = JsonUtils.common
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -41,6 +43,11 @@ class ProfileShardStore<T : Any>(
 
     private val _isLoaded = MutableStateFlow(false)
     val isLoaded: StateFlow<Boolean> = _isLoaded.asStateFlow()
+
+    /** 读取失败原因；isLoaded 仅表示装载已结束。 */
+    @Volatile
+    var loadError: IOException? = null
+        private set
 
     val snapshot: StateFlow<T> = DerivedActiveSnapshot()
 
@@ -59,14 +66,19 @@ class ProfileShardStore<T : Any>(
 
     /** 订阅 [TaskChainState.profileDeleted] → [remove]。 */
     fun start() {
-        scope.launch {
-            taskChainState.profileDeleted.collect { remove(it) }
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            taskChainState.profileDeleted.collect {
+                isLoaded.first { loaded -> loaded }
+                remove(it)
+            }
         }
     }
 
     /** 同步改内存并排队落盘；返回写入值，没写返回 null */
-    fun mutate(transform: (T) -> T): T? {
-        val profileId = taskChainState.profileId.value
+    fun mutate(transform: (T) -> T): T? = mutate(taskChainState.profileId.value, transform)
+
+    /** 按操作开始时的 Profile ID 更新。 */
+    fun mutate(profileId: String, transform: (T) -> T): T? {
         if (profileId.isEmpty()) {
             Timber.w("活跃配置档为空，跳过写入: %s", keyPrefix)
             return null
@@ -83,6 +95,8 @@ class ProfileShardStore<T : Any>(
         return updated[profileId]
     }
 
+    fun forProfile(profileId: String): T = _shards.value[profileId] ?: empty()
+
     suspend fun remove(profileId: String) {
         if (profileId.isEmpty()) return
         _shards.update { it - profileId }
@@ -98,10 +112,17 @@ class ProfileShardStore<T : Any>(
     }
 
     private suspend fun load() {
+        try {
+            prepare()
+        } catch (e: IOException) {
+            // 迁移失败不影响已有分片的读取。
+            Timber.e(e, "准备分片失败: %s", keyPrefix)
+        }
         val prefs = try {
             store.data.first()
         } catch (e: IOException) {
             Timber.e(e, "读取分片失败: %s", keyPrefix)
+            loadError = e
             null
         }
         val fromDisk = buildMap {

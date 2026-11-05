@@ -83,6 +83,13 @@ class TaskChainState(
     private val _profileDeleted = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val profileDeleted: SharedFlow<String> = _profileDeleted.asSharedFlow()
 
+    // 新 Profile 发布前完成附属分片复制。
+    private val profileDuplicators = mutableListOf<suspend (String, String) -> Unit>()
+
+    fun registerProfileDuplicator(duplicate: suspend (String, String) -> Unit) {
+        profileDuplicators += duplicate
+    }
+
     private val _lastUsedClientType = MutableStateFlow<String?>(null)
 
     private sealed interface PersistOp {
@@ -521,7 +528,16 @@ class TaskChainState(
         val newProfile = TaskProfile(
             name = nextProfileName(savedProfiles), chain = duplicatedChain
         )
-        val updatedProfiles = savedProfiles + newProfile
+        try {
+            profileDuplicators.forEach { it(source.id, newProfile.id) }
+        } catch (e: IOException) {
+            Timber.e(e, "复制配置档分片失败: %s", source.id)
+            return null
+        }
+        // 复制期间可能有其他 Profile 变更，使用最新列表合并。
+        val updatedProfiles = _profiles.value.map { p ->
+            if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
+        } + newProfile
         _profiles.value = updatedProfiles
         doSync()
         Timber.d("Duplicated profile %s as: %s (%s)", profileId, newProfile.name, newProfile.id)

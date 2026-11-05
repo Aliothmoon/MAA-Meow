@@ -42,11 +42,14 @@ class CopilotOperBoxAssist(
 
     suspend fun setEnabled(enabled: Boolean) = appSettings.setOperBoxAssistEnabled(enabled)
 
-    suspend fun writeCoreData(): String? = withContext(Dispatchers.IO) {
+    /** 捕获本次启动的干员数据。 */
+    fun captureCoreData(): List<OperBoxOperator> = operBoxRepository.snapshot.value.owned.toList()
+
+    suspend fun writeCoreData(owned: List<OperBoxOperator> = captureCoreData()): String? = withContext(Dispatchers.IO) {
         val file = File(pathConfig.rootDir, "${MaaFiles.OPER_BOX_DATA_DIR}/${MaaFiles.OPER_BOX_DATA_FILE}")
         try {
             file.parentFile?.mkdirs()
-            file.writeText(encodeCoreData(operBoxRepository.snapshot.value.owned), Charsets.UTF_8)
+            file.writeText(encodeCoreData(owned), Charsets.UTF_8)
             pathConfig.toCorePath(file.absolutePath)
         } catch (e: IOException) {
             Timber.e(e, "write operbox data failed")
