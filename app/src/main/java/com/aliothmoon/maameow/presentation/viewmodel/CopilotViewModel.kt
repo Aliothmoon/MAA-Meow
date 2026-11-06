@@ -26,6 +26,7 @@ import com.aliothmoon.maameow.domain.service.OperBoxYituliuSync
 import com.aliothmoon.maameow.domain.service.OperatorSummaryData
 import com.aliothmoon.maameow.domain.service.copilot.CopilotRequirementCorrector
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
+import com.aliothmoon.maameow.domain.state.isIdle
 import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
 import com.aliothmoon.maameow.domain.usecase.GameReadiness
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
@@ -41,6 +42,11 @@ import com.aliothmoon.maameow.utils.i18n.uiTextDynamic
 import com.aliothmoon.maameow.utils.i18n.uiTextJoin
 import com.aliothmoon.maameow.utils.i18n.uiTextLines
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,6 +54,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.io.IOException
 import java.util.UUID
 
 private const val TAB_MAIN = CopilotTabs.MAIN
@@ -93,6 +100,7 @@ private data class ResolvedStageNavigation(
 }
 
 data class CopilotUiState(
+    val profileId: String = "",
     val tabIndex: Int = TAB_MAIN,
     val currentCopilot: CopilotTaskData? = null,
     val currentTaskType: MaaTaskType = MaaTaskType.COPILOT,
@@ -160,6 +168,15 @@ class CopilotViewModel(
 
     val maaState: StateFlow<MaaExecutionState> = compositionService.state
 
+    private val profileOperations = mutableSetOf<Job>()
+    private var startInFlight = false
+    private var runningProfileId: String? = null
+    private var runningTaskList: List<CopilotListItem> = emptyList()
+    private var runningListMode = false
+    private var lastHandledSuccessToken = runtimeStateStore.taskSuccessToken.value
+    private var taskListReordering = false
+    private var additionalReordering = false
+
     private var pendingStartContext: TaskStartContext? = null
 
     /** 确认后重入 onStart 时跳过列表被忽略的检查 */
@@ -211,9 +228,69 @@ class CopilotViewModel(
 
     private fun restoreState() {
         viewModelScope.launch {
-            val config = repository.loadConfig() ?: CopilotConfig()
-            val taskList = repository.loadTaskList()
-            _state.update { it.copy(config = config, taskList = taskList) }
+            try {
+                repository.profiles.awaitLoaded()
+            } catch (e: IOException) {
+                Timber.e(e, "自动战斗配置读取失败，保持不可编辑直到重新加载")
+                _state.update { it.copy(statusMessage = fileReadErrorMessage(e)) }
+                return@launch
+            }
+            chainState.profileId.collect { profileId ->
+                val previous = _state.value
+                if (previous.profileId == profileId) return@collect
+                if (previous.profileId.isNotEmpty() && (taskListReordering || additionalReordering)) {
+                    // 切档时保存尚未结束的拖拽。
+                    repository.profiles.update(previous.profileId) {
+                        it.copy(
+                            config = if (additionalReordering) {
+                                it.config.copy(userAdditionalOpers = previous.config.userAdditionalOpers)
+                            } else it.config,
+                            taskList = if (taskListReordering) {
+                                // 合并顺序时保留运行回调更新的勾选状态。
+                                val currentById = it.taskList.associateBy { item -> item.id }
+                                previous.taskList.map { item -> currentById[item.id] ?: item }
+                            } else it.taskList,
+                        )
+                    }
+                }
+                taskListReordering = false
+                additionalReordering = false
+                profileOperations.toList().forEach { it.cancel() }
+                clearPendingStart()
+                _dialog.value = null
+                val data = repository.profiles.forProfile(profileId)
+                _state.value = CopilotUiState(
+                    profileId = profileId,
+                    config = data.config,
+                    taskList = data.taskList,
+                    builtinLoaded = previous.builtinLoaded,
+                    builtinTree = previous.builtinTree,
+                    operBoxAssist = previous.operBoxAssist,
+                )
+            }
+        }
+    }
+
+    private fun editableProfileId(): String? = _state.value.profileId.takeIf {
+        it.isNotEmpty() && it == chainState.profileId.value && repository.profiles.isLoaded.value
+    }
+
+    /** 切档时取消当前 Profile 的导入、下载和选中操作。 */
+    private fun launchProfileOperation(block: suspend (String) -> Unit) {
+        val profileId = editableProfileId() ?: return
+        val job = viewModelScope.launch(start = CoroutineStart.LAZY) {
+            ensureProfile(profileId)
+            block(profileId)
+        }
+        profileOperations += job
+        job.invokeOnCompletion { profileOperations.remove(job) }
+        job.start()
+    }
+
+    private suspend fun ensureProfile(profileId: String) {
+        currentCoroutineContext().ensureActive()
+        if (profileId != chainState.profileId.value || profileId != _state.value.profileId) {
+            throw CancellationException("Copilot Profile changed")
         }
     }
 
@@ -231,19 +308,22 @@ class CopilotViewModel(
         viewModelScope.launch {
             // 下标是整张列表的坐标，与 buildListTask 下发的 id 一致
             runtimeStateStore.currentCopilotIndex.collect { index ->
-                if (index >= 0 && _state.value.listModeActive) {
-                    onSelectListItem(index, followRun = true)
+                if (index >= 0 && runningProfileId == editableProfileId() && runningListMode) {
+                    val id = runningTaskList.getOrNull(index)?.id
+                    val currentIndex = _state.value.taskList.indexOfFirst { it.id == id }
+                    onSelectListItem(currentIndex, followRun = true)
                 }
             }
         }
         viewModelScope.launch {
-            runtimeStateStore.taskSuccessToken.drop(1).collect {
-                onCopilotTaskSuccess()
+            runtimeStateStore.taskSuccessToken.drop(1).collect { token ->
+                onCopilotTaskSuccess(token)
             }
         }
     }
 
     fun onTabChanged(tabIndex: Int) {
+        if (editableProfileId() == null) return
         _state.update { applyTabConstraints(it, tabIndex) }
         persistConfig()
     }
@@ -278,7 +358,7 @@ class CopilotViewModel(
      * @param files 文件名与 JSON 内容的列表
      */
     fun onImportLocalFiles(files: List<Pair<String, String>>) {
-        viewModelScope.launch {
+        launchProfileOperation { profileId ->
             _state.update { it.startingParse() }
             var successCount = 0
             var lastData: CopilotTaskData? = null
@@ -290,8 +370,10 @@ class CopilotViewModel(
                     Timber.w(e, "$TAG: 解析本地文件失败: $fileName")
                     continue
                 }
+                ensureProfile(profileId)
                 val fixed = correctRequirements(data, json, copilotId = 0)
                 val filePath = repository.saveCopilotJsonByName(fileName, fixed.json)
+                ensureProfile(profileId)
                 successCount++
                 lastData = fixed.data
                 lastFilePath = filePath
@@ -315,7 +397,7 @@ class CopilotViewModel(
                         statusMessage = text(R.string.copilot_import_failed)
                     )
                 }
-                return@launch
+                return@launchProfileOperation
             }
 
             if (files.size == 1) {
@@ -369,10 +451,11 @@ class CopilotViewModel(
 
     fun onSelectBuiltinFile(node: CopilotResourceProvider.Node) {
         val path = node.fullPath ?: return
-        viewModelScope.launch {
+        launchProfileOperation { profileId ->
             _state.update { it.startingParse() }
             copilotManager.parseFromFile(path).fold(
                 onSuccess = { (data, json) ->
+                    ensureProfile(profileId)
                     val fixed = correctRequirements(data, json, copilotId = 0)
                     // 内置资源目录只读，改过的作业另存一份到 copilot 目录
                     val filePath = if (fixed.json != json) {
@@ -380,6 +463,7 @@ class CopilotViewModel(
                     } else {
                         path
                     }
+                    ensureProfile(profileId)
                     applyLoadedCopilot(
                         data = fixed.data,
                         json = fixed.json,
@@ -396,6 +480,7 @@ class CopilotViewModel(
                     _state.update { it.copy(builtinPickerExpanded = false) }
                 },
                 onFailure = { e ->
+                    ensureProfile(profileId)
                     _state.update {
                         it.copy(isLoading = false, statusMessage = fileReadErrorMessage(e))
                     }
@@ -430,16 +515,16 @@ class CopilotViewModel(
         val input = _inputText.value.trim()
         if (input.isEmpty()) return
 
-        viewModelScope.launch {
+        launchProfileOperation { profileId ->
             _state.update { it.startingParse() }
             // 神秘代码自带类型信息（prts:// 单作业、prts://s / s 前缀作业集），
             // 旧格式（maa://、纯数字）无法区分，默认当单个作业（与 WPF 6.16 对齐）
             val code = copilotManager.parseCopilotCode(input)
             val asSet = code?.type == CopilotCodeType.COPILOT_SET
             if (asSet) {
-                importCopilotSet(input)
+                importCopilotSet(input, profileId = profileId)
             } else {
-                parseSingleCopilot(input)
+                parseSingleCopilot(input, profileId = profileId)
             }
         }
     }
@@ -450,9 +535,10 @@ class CopilotViewModel(
     }
 
     /** 返回失败提示，成功为 null；[listOnly] 时不载入进不了列表的类型，免得切走页签 */
-    private suspend fun parseSingleCopilot(input: String, listOnly: Boolean = false): UiText? =
+    private suspend fun parseSingleCopilot(input: String, listOnly: Boolean = false, profileId: String): UiText? =
         copilotManager.parseFromId(input).fold(
             onSuccess = { (id, data, json) ->
+                ensureProfile(profileId)
                 val targetTab = resolveLoadedTabIndex(data, _state.value.tabIndex)
                 if (listOnly && !supportsBattleList(targetTab)) {
                     return@fold failLoading(
@@ -461,6 +547,7 @@ class CopilotViewModel(
                 }
                 val fixed = correctRequirements(data, json, id)
                 val filePath = repository.saveCopilotJson(id, fixed.json)
+                ensureProfile(profileId)
                 // 对齐 WPF：单作业校正后仍用原 id
                 applyLoadedCopilot(
                     data = fixed.data,
@@ -478,6 +565,7 @@ class CopilotViewModel(
                 null
             },
             onFailure = { remoteErr ->
+                ensureProfile(profileId)
                 Timber.e(remoteErr, "$TAG: failed to parse Copilot")
                 // 仅当输入连神秘代码都解析不出、且形似路径时才提示本地路径不支持，
                 // 避免 maa:// / prts:// 代码的网络失败被误报
@@ -494,9 +582,10 @@ class CopilotViewModel(
         )
 
     /** 返回失败提示，全部成功为 null；[fromSearch] 时跳过已在列表的作业和进不了列表的类型 */
-    private suspend fun importCopilotSet(input: String, fromSearch: Boolean = false): UiText? =
+    private suspend fun importCopilotSet(input: String, fromSearch: Boolean = false, profileId: String): UiText? =
         copilotManager.getCopilotSetInfo(input).fold(
             onSuccess = { setInfo ->
+                ensureProfile(profileId)
                 val listed: Set<Int> = if (fromSearch) {
                     _state.value.taskList.mapNotNullTo(HashSet()) { it.prtsId }
                 } else {
@@ -528,6 +617,7 @@ class CopilotViewModel(
                 var firstFailureReason: UiText? = null
                 ids.forEach { id ->
                     val copilotResult = copilotManager.parseFromId(id.toString())
+                    ensureProfile(profileId)
                     copilotResult.fold(
                         onSuccess = { (copilotId, data, json) ->
                             val resolvedTabIndex = resolveLoadedTabIndex(data, workingTabIndex)
@@ -540,6 +630,7 @@ class CopilotViewModel(
                             } else {
                                 val fixed = correctRequirements(data, json, copilotId)
                                 val filePath = repository.saveCopilotJson(copilotId, fixed.json)
+                                ensureProfile(profileId)
                                 newItems.addAll(
                                     createListItemsForLoadedCopilot(
                                         data = fixed.data,
@@ -597,6 +688,7 @@ class CopilotViewModel(
                 summary.takeIf { failedCount > 0 }
             },
             onFailure = { e ->
+                ensureProfile(profileId)
                 Timber.e(e, "$TAG: failed to import Copilot set")
                 failLoading(mapCopilotSetRequestError(input, e))
             }
@@ -953,11 +1045,13 @@ class CopilotViewModel(
     }
 
     fun onConfigChanged(config: CopilotConfig) {
+        if (editableProfileId() == null) return
         _state.update { it.copy(config = config) }
         persistConfig()
     }
 
     fun onToggleListMode(enabled: Boolean) {
+        if (editableProfileId() == null) return
         val tab = _state.value.tabIndex
         if (enabled && !supportsBattleList(tab)) {
             _state.update {
@@ -977,6 +1071,7 @@ class CopilotViewModel(
     }
 
     fun onAddToList(isRaid: Boolean = false) {
+        if (editableProfileId() == null) return
         if (!_state.value.useCopilotList) {
             _state.update { it.copy(statusMessage = text(R.string.copilot_enable_battle_list_first)) }
             return
@@ -1044,8 +1139,9 @@ class CopilotViewModel(
     /** [followRun] 为运行中跟随 core 进度自动载入，不覆盖运行状态文案 */
     fun onSelectListItem(index: Int, disableListMode: Boolean = false, followRun: Boolean = false) {
         val item = _state.value.taskList.getOrNull(index) ?: return
-        viewModelScope.launch {
+        launchProfileOperation { profileId ->
             val result = copilotManager.parseFromFile(item.filePath)
+            ensureProfile(profileId)
             result.fold(
                 onSuccess = { (data, json) ->
                     val previousTabIndex = _state.value.tabIndex
@@ -1093,6 +1189,7 @@ class CopilotViewModel(
     }
 
     fun onRemoveFromList(index: Int) {
+        if (editableProfileId() == null) return
         _state.update {
             it.copy(taskList = it.taskList.filterIndexed { i, _ -> i != index })
         }
@@ -1100,11 +1197,13 @@ class CopilotViewModel(
     }
 
     fun onClearList() {
+        if (editableProfileId() == null) return
         _state.update { it.copy(taskList = emptyList()) }
         persistTaskList()
     }
 
     fun onCleanUnchecked() {
+        if (editableProfileId() == null) return
         _state.update {
             it.copy(taskList = it.taskList.filter { item -> item.isChecked })
         }
@@ -1112,6 +1211,7 @@ class CopilotViewModel(
     }
 
     fun onToggleListItem(index: Int) {
+        if (editableProfileId() == null) return
         _state.update {
             it.copy(
                 taskList = it.taskList.mapIndexed { i, item ->
@@ -1125,22 +1225,23 @@ class CopilotViewModel(
     /** 搜索结果只有摘要，按 id 拉完整作业；列表模式下随载入自动入列表 */
     fun onPickFromSearch(copilotId: Int, onFailure: (UiText) -> Unit) {
         if (_state.value.isLoading) return
-        viewModelScope.launch {
+        launchProfileOperation { profileId ->
             _state.update { it.startingParse() }
-            parseSingleCopilot(copilotId.toString(), listOnly = _state.value.listModeActive)?.let(onFailure)
+            parseSingleCopilot(copilotId.toString(), listOnly = _state.value.listModeActive, profileId = profileId)?.let(onFailure)
         }
     }
 
     /** 与粘贴 s 前缀神秘代码同一路径，会自动切到多作业模式 */
     fun onAddSetFromSearch(setId: Int, onFailure: (UiText) -> Unit) {
         if (_state.value.isLoading) return
-        viewModelScope.launch {
+        launchProfileOperation { profileId ->
             _state.update { it.startingParse() }
-            importCopilotSet("s$setId", fromSearch = true)?.let(onFailure)
+            importCopilotSet("s$setId", fromSearch = true, profileId = profileId)?.let(onFailure)
         }
     }
 
     fun onRemovePrtsCopilot(copilotId: Int) {
+        if (editableProfileId() == null) return
         _state.update {
             it.copy(taskList = it.taskList.filter { item -> item.prtsId != copilotId })
         }
@@ -1148,6 +1249,7 @@ class CopilotViewModel(
     }
 
     fun onRemoveListItem(id: String) {
+        if (editableProfileId() == null) return
         _state.update {
             it.copy(taskList = it.taskList.filter { item -> item.id != id })
         }
@@ -1155,6 +1257,7 @@ class CopilotViewModel(
     }
 
     fun onSetListItemRaid(id: String, isRaid: Boolean) {
+        if (editableProfileId() == null) return
         _state.update {
             it.copy(taskList = it.taskList.map { item ->
                 if (item.id == id) item.copy(isRaid = isRaid) else item
@@ -1165,6 +1268,7 @@ class CopilotViewModel(
 
     /** 插到下方并换成另一难度 */
     fun onDuplicateListItem(id: String) {
+        if (editableProfileId() == null) return
         _state.update {
             val index = it.taskList.indexOfFirst { item -> item.id == id }
             if (index < 0) return@update it
@@ -1181,7 +1285,9 @@ class CopilotViewModel(
 
     /** 落盘交给 onReorderSettled，避免拖拽中每次交换都写文件 */
     fun onReorderList(fromId: String, toId: String) {
+        if (editableProfileId() == null) return
         if (fromId == toId) return
+        taskListReordering = true
         _state.update {
             val list = it.taskList.toMutableList()
             val from = list.indexOfFirst { item -> item.id == fromId }
@@ -1198,7 +1304,9 @@ class CopilotViewModel(
 
     /** 拖拽中只改内存，松手再落盘 */
     fun onReorderUserAdditional(fromName: String, toName: String) {
+        if (editableProfileId() == null) return
         if (fromName == toName) return
+        additionalReordering = true
         _state.update {
             val list = it.config.userAdditionalOpers.toMutableList()
             val from = list.indexOfFirst { oper -> oper.name == fromName }
@@ -1241,76 +1349,115 @@ class CopilotViewModel(
     fun onStart() = onStart(TaskStartContext(TaskStartMode.MANUAL))
 
     private fun onStart(context: TaskStartContext) {
+        val profileId = editableProfileId() ?: return
+        if (startInFlight || !maaState.value.isIdle) return
+        startInFlight = true
+        val snapshot = _state.value
+        val clientType = chainState.clientType
+        val operBoxData = if (snapshot.operBoxAssist.active) operBoxAssist.captureCoreData() else emptyList()
         viewModelScope.launch {
-            val snapshot = _state.value
-            if (!validateStart(snapshot)) return@launch
+            try {
+                if (!validateStart(snapshot)) return@launch
+                if (profileId != editableProfileId()) return@launch
 
-            // 列表有勾选项但未启用列表模式，用户多半以为会接着列表打
-            if (!listGuardAcknowledged && shouldWarnListIgnored(snapshot)) {
-                listGuardAcknowledged = true
-                pendingStartContext = context
-                _dialog.value = appContext.createStartWarningDialog(
-                    text(
-                        R.string.copilot_list_ignored_warning,
-                        snapshot.taskList.count { it.isChecked }
+                // 列表有勾选项但未启用列表模式，用户多半以为会接着列表打
+                if (!listGuardAcknowledged && shouldWarnListIgnored(snapshot)) {
+                    listGuardAcknowledged = true
+                    pendingStartContext = context
+                    _dialog.value = appContext.createStartWarningDialog(
+                        text(
+                            R.string.copilot_list_ignored_warning,
+                            snapshot.taskList.count { it.isChecked }
+                        )
                     )
+                    return@launch
+                }
+
+                val readiness = checkGameReadiness(
+                    clientType = clientType,
+                    launchesGame = false,
+                    context = context,
                 )
-                return@launch
-            }
+                if (profileId != editableProfileId()) return@launch
+                when (readiness) {
+                    is GameReadiness.RequiresConfirmation -> {
+                        pendingStartContext = context.acknowledged(readiness.acknowledgement)
+                        _dialog.value = appContext.createStartWarningDialog(readiness.acknowledgement)
+                        return@launch
+                    }
 
-            when (val readiness = checkGameReadiness(
-                clientType = chainState.clientType,
-                launchesGame = false,
-                context = context,
-            )) {
-                is GameReadiness.RequiresConfirmation -> {
-                    pendingStartContext = context.acknowledged(readiness.acknowledgement)
-                    _dialog.value = appContext.createStartWarningDialog(readiness.acknowledgement)
-                    return@launch
+                    is GameReadiness.Blocked -> {
+                        clearPendingStart()
+                        _dialog.value = appContext.createStartBlockedDialog(readiness.reason.message)
+                        return@launch
+                    }
+
+                    is GameReadiness.Ready -> clearPendingStart()
                 }
 
-                is GameReadiness.Blocked -> {
-                    clearPendingStart()
-                    _dialog.value = appContext.createStartBlockedDialog(readiness.reason.message)
-                    return@launch
-                }
-
-                is GameReadiness.Ready -> clearPendingStart()
-            }
-
-            val config = buildEffectiveConfig(snapshot)
-            // 只在自动编队时预检，非常规页签的自动编队已在 buildEffectiveConfig 关掉
-            val operBoxDataPath = if (config.formation && snapshot.operBoxAssist.active) {
-                operBoxAssist.writeCoreData() ?: run {
-                    _state.update { it.copy(statusMessage = text(R.string.copilot_operbox_assist_write_failed)) }
-                    return@launch
-                }
-            } else null
-            val tasks = if (snapshot.listModeActive) {
-                val checked = snapshot.taskList.filter { it.isChecked }
+                val config = buildEffectiveConfig(snapshot)
+                // 只在自动编队时预检，非常规页签的自动编队已在 buildEffectiveConfig 关掉
+                val operBoxDataPath = if (config.formation && snapshot.operBoxAssist.active) {
+                    operBoxAssist.writeCoreData(operBoxData) ?: run {
+                        if (profileId != editableProfileId()) return@launch
+                        _state.update { it.copy(statusMessage = text(R.string.copilot_operbox_assist_write_failed)) }
+                        return@launch
+                    }
+                } else null
+                if (profileId != editableProfileId()) return@launch
+                if (!maaState.value.isIdle) return@launch
                 pendingCopilotIds.clear()
-                pendingCopilotIds.addAll(checked.map { it.copilotId }.filter { it > 0 })
-                // 传完整列表: buildListTask 内部按全列表下标分配 id(与 onCopilotTaskSuccess 同坐标系)
-                copilotManager.buildListTask(snapshot.tabIndex, snapshot.taskList, config, operBoxDataPath)
-            } else {
-                val type = resolveSingleTaskType(snapshot)
-                listOf(copilotManager.buildSingleTask(type, snapshot.currentFilePath, config, operBoxDataPath))
-            }
+                val tasks = if (snapshot.listModeActive) {
+                    val checked = snapshot.taskList.filter { it.isChecked }
+                    pendingCopilotIds.addAll(checked.map { it.copilotId }.filter { it > 0 })
+                    // 传完整列表: buildListTask 内部按全列表下标分配 id(与 onCopilotTaskSuccess 同坐标系)
+                    copilotManager.buildListTask(snapshot.tabIndex, snapshot.taskList, config, operBoxDataPath)
+                } else {
+                    val type = resolveSingleTaskType(snapshot)
+                    listOf(copilotManager.buildSingleTask(type, snapshot.currentFilePath, config, operBoxDataPath))
+                }
 
-            runtimeStateStore.resetRequirementIgnored()
-            runtimeStateStore.resetCurrentCopilotIndex()
-            _state.update { it.copy(statusMessage = text(R.string.toolbox_status_starting)) }
-            val result = compositionService.startCopilot(tasks)
-            _state.update { it.copy(statusMessage = formatStartStatus(result)) }
+                runningProfileId = profileId
+                runningTaskList = snapshot.taskList
+                runningListMode = snapshot.listModeActive
+                runtimeStateStore.resetRequirementIgnored()
+                runtimeStateStore.resetCurrentCopilotIndex()
+                _state.update { it.copy(statusMessage = text(R.string.toolbox_status_starting)) }
+                val result = compositionService.startCopilot(tasks, clientType)
+                if (result !is MaaCompositionService.StartResult.Success) {
+                    runningProfileId = null
+                    runningTaskList = emptyList()
+                    runningListMode = false
+                    pendingCopilotIds.clear()
+                }
+                if (profileId == editableProfileId()) {
+                    _state.update { it.copy(statusMessage = formatStartStatus(result)) }
+                }
+            } finally {
+                startInFlight = false
+            }
         }
     }
 
     fun onStop() {
+        val profileId = editableProfileId()
         viewModelScope.launch {
-            _state.update { it.copy(statusMessage = text(R.string.toolbox_status_stopping)) }
-            compositionService.stop()
-            runtimeStateStore.resetCurrentCopilotIndex()
-            _state.update { it.copy(statusMessage = text(R.string.toolbox_status_stopped)) }
+            if (profileId != null && profileId == editableProfileId()) {
+                _state.update { it.copy(statusMessage = text(R.string.toolbox_status_stopping)) }
+            }
+            val result = compositionService.stop()
+            // 清理前处理已经到达、收集器尚未消费的成功通知。
+            onCopilotTaskSuccess(runtimeStateStore.taskSuccessToken.value)
+            if (result is MaaCompositionService.StopResult.Success) {
+                runningProfileId = null
+                runningTaskList = emptyList()
+                runningListMode = false
+                pendingCopilotIds.clear()
+                runtimeStateStore.resetCurrentCopilotIndex()
+            }
+            if (profileId != null && profileId == editableProfileId()) {
+                _state.update { it.copy(statusMessage = text(R.string.toolbox_status_stopped)) }
+            }
         }
     }
 
@@ -1320,13 +1467,16 @@ class CopilotViewModel(
 
     /** 拉一图流练度，不连提权服务；成功后 [CopilotOperBoxAssist.state] 随快照刷新 */
     fun onSyncOperBox() {
+        val profileId = editableProfileId() ?: return
         if (_state.value.syncingOperBox) return
         _state.update {
             it.copy(syncingOperBox = true, statusMessage = text(R.string.oper_box_yituliu_fetching))
         }
         viewModelScope.launch {
             val message = operBoxYituliuSync.sync().message
-            _state.update { it.copy(syncingOperBox = false, statusMessage = message) }
+            if (profileId == editableProfileId()) {
+                _state.update { it.copy(syncingOperBox = false, statusMessage = message) }
+            }
         }
     }
 
@@ -1346,8 +1496,9 @@ class CopilotViewModel(
     private suspend fun validateStart(snapshot: CopilotUiState): Boolean {
         // 关卡与干员校验依赖元数据，冷启动可能还没装好
         metadataGate.awaitCurrent()
+        ensureProfile(snapshot.profileId)
         if (snapshot.listModeActive) {
-            return validateTaskListStrict(snapshot.taskList)
+            return validateTaskListStrict(snapshot.taskList, snapshot.profileId)
         }
 
         if (snapshot.currentCopilot == null || snapshot.currentFilePath.isBlank()) {
@@ -1373,7 +1524,8 @@ class CopilotViewModel(
     }
 
     private suspend fun validateTaskListStrict(
-        taskList: List<CopilotListItem>
+        taskList: List<CopilotListItem>,
+        profileId: String,
     ): Boolean {
         val selected = taskList.filter { it.isChecked }
         if (selected.isEmpty()) {
@@ -1385,6 +1537,7 @@ class CopilotViewModel(
         val types = mutableSetOf<CopilotType>()
         for (item in selected) {
             val parsed = copilotManager.parseFromFile(item.filePath)
+            ensureProfile(profileId)
             if (parsed.isFailure) {
                 Timber.w("validateTaskListStrict: failed to parse file %s", item.filePath)
                 continue
@@ -1409,13 +1562,13 @@ class CopilotViewModel(
             return verifyParadoxTasks(selected)
         }
         if (detectedType == CopilotType.MAIN_AND_SIDE_STORY || detectedType == null) {
-            return verifyCopilotListTask(selected)
+            return verifyCopilotListTask(selected, profileId)
         }
         // SSS 等类型跳过进一步校验
         return true
     }
 
-    private suspend fun verifyCopilotListTask(items: List<CopilotListItem>): Boolean {
+    private suspend fun verifyCopilotListTask(items: List<CopilotListItem>, profileId: String): Boolean {
         when (items.size) {
             0 -> {
                 _state.update { it.copy(statusMessage = text(R.string.copilot_empty_list)) }
@@ -1435,6 +1588,7 @@ class CopilotViewModel(
         val uniquePaths = items.map { it.filePath }.toSet()
         for (path in uniquePaths) {
             val parsed = copilotManager.parseFromFile(path)
+            ensureProfile(profileId)
             if (parsed.isFailure) {
                 _state.update { it.copy(statusMessage = formatCopilotNotFoundMessage(path)) }
                 return false
@@ -1521,47 +1675,53 @@ class CopilotViewModel(
         return config
     }
 
-    private suspend fun onCopilotTaskSuccess() {
-        achievementRepository.report {
-            event = AchievementEvents.COPILOT_SUCCESS
-        }
-
-        val current = _state.value
-        if (!current.listModeActive) return
-
-        // 上游 #16985: 优先用 core 回传的当前作业下标(跳过失败后下标可能不是第一个勾选项);
-        // 回传缺失(-1)或越界/已取消时回退旧行为(第一个勾选项)。
-        val tracked = runtimeStateStore.currentCopilotIndex.value
-        val index =
-            if (tracked in current.taskList.indices && current.taskList[tracked].isChecked) {
-                tracked
-            } else {
-                current.taskList.indexOfFirst { it.isChecked }
+    private fun onCopilotTaskSuccess(token: Long) {
+        if (token <= lastHandledSuccessToken) return
+        lastHandledSuccessToken = token
+        viewModelScope.launch {
+            achievementRepository.report {
+                event = AchievementEvents.COPILOT_SUCCESS
             }
-        if (index !in current.taskList.indices) return
+        }
 
-        val completed = current.taskList[index]
-        val updated = current.taskList.toMutableList().also {
-            it[index] = completed.copy(isChecked = false)
+        val profileId = runningProfileId ?: return
+        if (!runningListMode) return
+        val tracked = runtimeStateStore.currentCopilotIndex.value
+        val index = if (tracked in runningTaskList.indices && runningTaskList[tracked].isChecked) {
+            tracked
+        } else {
+            runningTaskList.indexOfFirst { it.isChecked }
         }
-        _state.update {
-            it.copy(
-                taskList = updated,
-                statusMessage = text(R.string.copilot_status_completed, completed.name)
-            )
+        val completed = runningTaskList.getOrNull(index) ?: return
+        runningTaskList = runningTaskList.mapIndexed { i, item ->
+            if (i == index) item.copy(isChecked = false) else item
         }
-        repository.saveTaskList(updated)
+        repository.profiles.update(profileId) { data ->
+            data.copy(taskList = data.taskList.map {
+                if (it.id == completed.id) it.copy(isChecked = false) else it
+            })
+        }
+        if (profileId == editableProfileId()) {
+            _state.update { current ->
+                current.copy(
+                    taskList = current.taskList.map {
+                        if (it.id == completed.id) it.copy(isChecked = false) else it
+                    },
+                    statusMessage = text(R.string.copilot_status_completed, completed.name),
+                )
+            }
+        }
 
         val id = completed.copilotId
         if (id <= 0 || id in recentlyRatedCopilotIds) return
         val removed = pendingCopilotIds.remove(id)
         val noMoreSameId = id !in pendingCopilotIds
         if (removed && noMoreSameId && !runtimeStateStore.hasRequirementIgnored.value) {
-            launchRateCopilot(id = id, isLike = true, updateStatusMessage = true)
+            launchRateCopilot(id = id, isLike = true, updateStatusMessage = true, profileId = profileId)
         }
     }
 
-    private fun launchRateCopilot(id: Int, isLike: Boolean, updateStatusMessage: Boolean) {
+    private fun launchRateCopilot(id: Int, isLike: Boolean, updateStatusMessage: Boolean, profileId: String = _state.value.profileId) {
         if (id <= 0 || id in recentlyRatedCopilotIds || id in ratingInFlightCopilotIds) return
         ratingInFlightCopilotIds.add(id)
 
@@ -1573,10 +1733,10 @@ class CopilotViewModel(
                     achievementRepository.report {
                         event = AchievementEvents.COPILOT_LIKED
                     }
-                    if (updateStatusMessage) {
+                    if (updateStatusMessage && profileId == editableProfileId()) {
                         _state.update { it.copy(statusMessage = text(R.string.copilot_rate_success)) }
                     }
-                } else if (updateStatusMessage) {
+                } else if (updateStatusMessage && profileId == editableProfileId()) {
                     _state.update { it.copy(statusMessage = text(R.string.copilot_rate_failed)) }
                 }
             } finally {
@@ -1586,16 +1746,16 @@ class CopilotViewModel(
     }
 
     private fun persistTaskList() {
+        val profileId = editableProfileId() ?: return
+        taskListReordering = false
         val list = _state.value.taskList
-        viewModelScope.launch {
-            repository.saveTaskList(list)
-        }
+        repository.profiles.update(profileId) { it.copy(taskList = list) }
     }
 
     private fun persistConfig() {
+        val profileId = editableProfileId() ?: return
+        additionalReordering = false
         val config = _state.value.config
-        viewModelScope.launch {
-            repository.saveConfig(config)
-        }
+        repository.profiles.update(profileId) { it.copy(config = config) }
     }
 }

@@ -1,42 +1,23 @@
 package com.aliothmoon.maameow.data.repository
 
 import com.aliothmoon.maameow.data.config.MaaPathConfig
-import com.aliothmoon.maameow.data.model.CopilotConfig
-import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
-import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
+import java.security.MessageDigest
 
 class CopilotRepository(
     private val pathConfig: MaaPathConfig,
+    val profiles: CopilotProfileStore,
 ) {
     companion object {
         private const val TAG = "CopilotRepository"
         private const val COPILOT_DIR = "copilot"
-        private const val TASK_LIST_FILE = "task_list.json"
-        private const val CONFIG_FILE = "config.json"
     }
 
     private val copilotDir: File by lazy {
         File(pathConfig.rootDir, COPILOT_DIR).also { it.mkdirs() }
-    }
-
-    private val taskListFile: File by lazy { File(copilotDir, TASK_LIST_FILE) }
-    private val configFile: File by lazy { File(copilotDir, CONFIG_FILE) }
-
-    // 输入框逐字保存会并发写同一文件，串成按调用顺序、整文件替换
-    private val writeLock = Mutex()
-
-    private suspend fun writeReplacing(file: File, text: String) = writeLock.withLock {
-        withContext(Dispatchers.IO) {
-            val tmp = File(file.parentFile, "${file.name}.tmp")
-            tmp.writeText(text, Charsets.UTF_8)
-            check(tmp.renameTo(file)) { "重命名 ${tmp.name} 失败" }
-        }
     }
 
     /**
@@ -53,7 +34,7 @@ class CopilotRepository(
     }
 
     /**
-     * 保存 copilot JSON 到文件 (自定义文件名)
+     * 保存 copilot JSON 到文件 (自定义文件名与内容哈希)
      * @param fileName 文件名 (不含路径)
      * @param json 作业 JSON 内容
      * @return 保存的文件绝对路径
@@ -62,7 +43,9 @@ class CopilotRepository(
         withContext(Dispatchers.IO) {
             val nameWithoutExt = fileName.substringBeforeLast(".")
             val ext = fileName.substringAfterLast(".", "json")
-            val hash = Integer.toHexString(nameWithoutExt.hashCode()).takeLast(6)
+            val hash = MessageDigest.getInstance("SHA-256")
+                .digest(json.toByteArray(Charsets.UTF_8))
+                .joinToString("") { "%02x".format(it) }
             val safeName = "${nameWithoutExt}_${hash}.${ext}".replace(Regex("[^a-zA-Z0-9._-]"), "_")
             val file = File(copilotDir, safeName)
             file.writeText(json, Charsets.UTF_8)
@@ -115,41 +98,4 @@ class CopilotRepository(
     /** 下发给 core 的作业路径：独立目录模式下要映射到提权进程那边 */
     fun toCorePath(filePath: String): String = pathConfig.toCorePath(filePath)
 
-    suspend fun loadTaskList(): List<CopilotListItem> = withContext(Dispatchers.IO) {
-        runCatching {
-            if (!taskListFile.exists()) {
-                return@runCatching emptyList()
-            }
-            JsonUtils.common.decodeFromString<List<CopilotListItem>>(taskListFile.readText(Charsets.UTF_8))
-        }.onFailure {
-            Timber.e(it, "$TAG: 加载战斗列表失败")
-        }.getOrDefault(emptyList())
-    }
-
-    suspend fun saveTaskList(items: List<CopilotListItem>) {
-        runCatching {
-            writeReplacing(taskListFile, JsonUtils.common.encodeToString(items))
-        }.onFailure {
-            Timber.e(it, "$TAG: 保存战斗列表失败")
-        }
-    }
-
-    suspend fun loadConfig(): CopilotConfig? = withContext(Dispatchers.IO) {
-        runCatching {
-            if (!configFile.exists()) {
-                return@runCatching null
-            }
-            JsonUtils.common.decodeFromString<CopilotConfig>(configFile.readText(Charsets.UTF_8))
-        }.onFailure {
-            Timber.e(it, "$TAG: 加载自动战斗配置失败")
-        }.getOrNull()
-    }
-
-    suspend fun saveConfig(config: CopilotConfig) {
-        runCatching {
-            writeReplacing(configFile, JsonUtils.common.encodeToString(config))
-        }.onFailure {
-            Timber.e(it, "$TAG: 保存自动战斗配置失败")
-        }
-    }
 }
