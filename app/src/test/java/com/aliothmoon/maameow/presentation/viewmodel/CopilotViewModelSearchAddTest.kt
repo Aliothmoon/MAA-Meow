@@ -7,6 +7,8 @@ import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotData
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotResponse
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotSetData
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotSetResponse
+import com.aliothmoon.maameow.data.repository.CopilotProfileData
+import com.aliothmoon.maameow.data.repository.CopilotProfileStore
 import com.aliothmoon.maameow.data.repository.CopilotRepository
 import com.aliothmoon.maameow.data.resource.MapInfo
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
@@ -82,8 +84,15 @@ class CopilotViewModelSearchAddTest {
         listMode: Boolean = true,
         taskList: List<CopilotListItem> = emptyList(),
     ): CopilotViewModel {
-        coEvery { repository.loadConfig() } returns CopilotConfig(useCopilotList = listMode)
-        coEvery { repository.loadTaskList() } returns taskList
+        val profileStore = mockk<CopilotProfileStore>(relaxed = true) {
+            every { isLoaded } returns MutableStateFlow(true)
+            coEvery { awaitLoaded() } returns Unit
+            every { forProfile("a") } returns CopilotProfileData(
+                config = CopilotConfig(useCopilotList = listMode),
+                taskList = taskList,
+            )
+        }
+        every { repository.profiles } returns profileStore
         val vm = CopilotViewModel(
             appContext = mockk(relaxed = true),
             copilotManager = CopilotManager(api, repository),
@@ -97,7 +106,9 @@ class CopilotViewModelSearchAddTest {
                 every { taskSuccessToken } returns MutableStateFlow(0)
             },
             checkGameReadiness = mockk(relaxed = true),
-            chainState = mockk(relaxed = true),
+            chainState = mockk(relaxed = true) {
+                every { profileId } returns MutableStateFlow("a")
+            },
             achievementRepository = mockk(relaxed = true),
             operBoxAssist = mockk(relaxed = true) { every { state } returns flowOf() },
             operBoxYituliuSync = mockk(relaxed = true),

@@ -115,8 +115,8 @@ class ProfileShardStore<T : Any>(
         try {
             prepare()
         } catch (e: IOException) {
-            // 迁移失败不影响已有分片的读取。
             Timber.e(e, "准备分片失败: %s", keyPrefix)
+            loadError = e
         }
         val prefs = try {
             store.data.first()
@@ -137,7 +137,7 @@ class ProfileShardStore<T : Any>(
     }
 
     private suspend fun doConsume() {
-        var pendingError: IOException? = null
+        val pendingErrors = mutableMapOf<String, IOException>()
         for (op in ops) {
             try {
                 when (op) {
@@ -149,10 +149,10 @@ class ProfileShardStore<T : Any>(
                                     prefs[keyOf(op.profileId)] =
                                         json.encodeToString(serializer, snap)
                                 }
-                                pendingError = null
+                                pendingErrors.remove(op.profileId)
                             } catch (e: IOException) {
                                 Timber.e(e, "写入分片失败: %s%s", keyPrefix, op.profileId)
-                                pendingError = e
+                                pendingErrors[op.profileId] = e
                             }
                         }
                     }
@@ -160,17 +160,17 @@ class ProfileShardStore<T : Any>(
                     is PersistOp.Delete -> {
                         try {
                             store.edit { it.remove(keyOf(op.profileId)) }
-                            pendingError = null
+                            pendingErrors.remove(op.profileId)
                         } catch (e: IOException) {
                             Timber.w(e, "删除分片失败: %s%s", keyPrefix, op.profileId)
-                            pendingError = e
+                            pendingErrors[op.profileId] = e
                         }
                     }
 
                     is PersistOp.Flush -> {
-                        val err = pendingError
+                        val err = pendingErrors.values.firstOrNull()
+                        pendingErrors.clear()
                         if (err != null) {
-                            pendingError = null
                             op.done.completeExceptionally(err)
                         } else {
                             op.done.complete(Unit)
@@ -182,7 +182,11 @@ class ProfileShardStore<T : Any>(
                 if (op is PersistOp.Flush) {
                     op.done.completeExceptionally(e)
                 } else if (e is IOException) {
-                    pendingError = e
+                    when (op) {
+                        is PersistOp.Write -> pendingErrors[op.profileId] = e
+                        is PersistOp.Delete -> pendingErrors[op.profileId] = e
+                        is PersistOp.Flush -> Unit
+                    }
                 }
             }
         }

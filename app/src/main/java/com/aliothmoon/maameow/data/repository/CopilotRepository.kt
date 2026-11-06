@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
+import java.security.MessageDigest
 
 class CopilotRepository(
     private val pathConfig: MaaPathConfig,
@@ -33,7 +34,7 @@ class CopilotRepository(
     }
 
     /**
-     * 保存 copilot JSON 到文件 (自定义文件名)
+     * 保存 copilot JSON 到文件 (自定义文件名与内容哈希)
      * @param fileName 文件名 (不含路径)
      * @param json 作业 JSON 内容
      * @return 保存的文件绝对路径
@@ -42,7 +43,9 @@ class CopilotRepository(
         withContext(Dispatchers.IO) {
             val nameWithoutExt = fileName.substringBeforeLast(".")
             val ext = fileName.substringAfterLast(".", "json")
-            val hash = Integer.toHexString(nameWithoutExt.hashCode()).takeLast(6)
+            val hash = MessageDigest.getInstance("SHA-256")
+                .digest(json.toByteArray(Charsets.UTF_8))
+                .joinToString("") { "%02x".format(it) }
             val safeName = "${nameWithoutExt}_${hash}.${ext}".replace(Regex("[^a-zA-Z0-9._-]"), "_")
             val file = File(copilotDir, safeName)
             file.writeText(json, Charsets.UTF_8)

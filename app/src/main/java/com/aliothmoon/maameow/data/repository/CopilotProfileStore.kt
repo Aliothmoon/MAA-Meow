@@ -2,11 +2,9 @@ package com.aliothmoon.maameow.data.repository
 
 import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.aliothmoon.maameow.data.config.MaaPathConfig
@@ -41,7 +39,6 @@ class CopilotProfileStore(
         prepare = ::migrateLegacy,
     )
 
-    val snapshot: StateFlow<CopilotProfileData> get() = shards.snapshot
     val isLoaded: StateFlow<Boolean> get() = shards.isLoaded
 
     init {
@@ -69,8 +66,6 @@ class CopilotProfileStore(
         ) return
         shards.mutate(profileId, transform)
     }
-
-    suspend fun awaitPersist() = shards.awaitPersist()
 
     private suspend fun migrateLegacy() {
         taskChainState.isLoaded.first { it }
@@ -114,7 +109,6 @@ class CopilotProfileStore(
 
         private val Context.copilotStore: DataStore<Preferences> by preferencesDataStore(
             name = "copilot",
-            corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
         )
 
         fun create(context: Context, taskChainState: TaskChainState, pathConfig: MaaPathConfig) =

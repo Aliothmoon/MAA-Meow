@@ -173,11 +173,11 @@ class CopilotViewModel(
     private var runningProfileId: String? = null
     private var runningTaskList: List<CopilotListItem> = emptyList()
     private var runningListMode = false
+    private var lastHandledSuccessToken = runtimeStateStore.taskSuccessToken.value
     private var taskListReordering = false
     private var additionalReordering = false
 
     private var pendingStartContext: TaskStartContext? = null
-    private var pendingStartSnapshot: CopilotUiState? = null
 
     /** 确认后重入 onStart 时跳过列表被忽略的检查 */
     private var listGuardAcknowledged = false
@@ -316,8 +316,8 @@ class CopilotViewModel(
             }
         }
         viewModelScope.launch {
-            runtimeStateStore.taskSuccessToken.drop(1).collect {
-                onCopilotTaskSuccess()
+            runtimeStateStore.taskSuccessToken.drop(1).collect { token ->
+                onCopilotTaskSuccess(token)
             }
         }
     }
@@ -1325,11 +1325,9 @@ class CopilotViewModel(
         when (_dialog.value?.confirmAction) {
             PanelDialogConfirmAction.CONFIRM_PENDING_START -> {
                 val pending = pendingStartContext
-                val snapshot = pendingStartSnapshot
                 _dialog.value = null
                 pendingStartContext = null
-                pendingStartSnapshot = null
-                if (pending != null && snapshot != null) onStart(pending, snapshot)
+                if (pending != null) onStart(pending)
             }
 
             else -> {
@@ -1345,16 +1343,16 @@ class CopilotViewModel(
 
     private fun clearPendingStart() {
         pendingStartContext = null
-        pendingStartSnapshot = null
         listGuardAcknowledged = false
     }
 
     fun onStart() = onStart(TaskStartContext(TaskStartMode.MANUAL))
 
-    private fun onStart(context: TaskStartContext, snapshot: CopilotUiState = _state.value) {
+    private fun onStart(context: TaskStartContext) {
         val profileId = editableProfileId() ?: return
         if (startInFlight || !maaState.value.isIdle) return
         startInFlight = true
+        val snapshot = _state.value
         val clientType = chainState.clientType
         val operBoxData = if (snapshot.operBoxAssist.active) operBoxAssist.captureCoreData() else emptyList()
         viewModelScope.launch {
@@ -1366,7 +1364,6 @@ class CopilotViewModel(
                 if (!listGuardAcknowledged && shouldWarnListIgnored(snapshot)) {
                     listGuardAcknowledged = true
                     pendingStartContext = context
-                    pendingStartSnapshot = snapshot
                     _dialog.value = appContext.createStartWarningDialog(
                         text(
                             R.string.copilot_list_ignored_warning,
@@ -1385,7 +1382,6 @@ class CopilotViewModel(
                 when (readiness) {
                     is GameReadiness.RequiresConfirmation -> {
                         pendingStartContext = context.acknowledged(readiness.acknowledgement)
-                        pendingStartSnapshot = snapshot
                         _dialog.value = appContext.createStartWarningDialog(readiness.acknowledgement)
                         return@launch
                     }
@@ -1399,7 +1395,6 @@ class CopilotViewModel(
                     is GameReadiness.Ready -> clearPendingStart()
                 }
 
-                if (profileId != chainState.profileId.value) return@launch
                 val config = buildEffectiveConfig(snapshot)
                 // 只在自动编队时预检，非常规页签的自动编队已在 buildEffectiveConfig 关掉
                 val operBoxDataPath = if (config.formation && snapshot.operBoxAssist.active) {
@@ -1411,10 +1406,6 @@ class CopilotViewModel(
                 } else null
                 if (profileId != editableProfileId()) return@launch
                 if (!maaState.value.isIdle) return@launch
-                val previousProfile = runningProfileId
-                val previousList = runningTaskList
-                val previousListMode = runningListMode
-                val previousPendingIds = pendingCopilotIds.toList()
                 pendingCopilotIds.clear()
                 val tasks = if (snapshot.listModeActive) {
                     val checked = snapshot.taskList.filter { it.isChecked }
@@ -1434,11 +1425,10 @@ class CopilotViewModel(
                 _state.update { it.copy(statusMessage = text(R.string.toolbox_status_starting)) }
                 val result = compositionService.startCopilot(tasks, clientType)
                 if (result !is MaaCompositionService.StartResult.Success) {
-                    runningProfileId = previousProfile
-                    runningTaskList = previousList
-                    runningListMode = previousListMode
+                    runningProfileId = null
+                    runningTaskList = emptyList()
+                    runningListMode = false
                     pendingCopilotIds.clear()
-                    pendingCopilotIds.addAll(previousPendingIds)
                 }
                 if (profileId == editableProfileId()) {
                     _state.update { it.copy(statusMessage = formatStartStatus(result)) }
@@ -1451,14 +1441,20 @@ class CopilotViewModel(
 
     fun onStop() {
         val profileId = editableProfileId()
-        runningProfileId = null
-        runningTaskList = emptyList()
         viewModelScope.launch {
             if (profileId != null && profileId == editableProfileId()) {
                 _state.update { it.copy(statusMessage = text(R.string.toolbox_status_stopping)) }
             }
-            compositionService.stop()
-            runtimeStateStore.resetCurrentCopilotIndex()
+            val result = compositionService.stop()
+            // 清理前处理已经到达、收集器尚未消费的成功通知。
+            onCopilotTaskSuccess(runtimeStateStore.taskSuccessToken.value)
+            if (result is MaaCompositionService.StopResult.Success) {
+                runningProfileId = null
+                runningTaskList = emptyList()
+                runningListMode = false
+                pendingCopilotIds.clear()
+                runtimeStateStore.resetCurrentCopilotIndex()
+            }
             if (profileId != null && profileId == editableProfileId()) {
                 _state.update { it.copy(statusMessage = text(R.string.toolbox_status_stopped)) }
             }
@@ -1679,9 +1675,13 @@ class CopilotViewModel(
         return config
     }
 
-    private suspend fun onCopilotTaskSuccess() {
-        achievementRepository.report {
-            event = AchievementEvents.COPILOT_SUCCESS
+    private fun onCopilotTaskSuccess(token: Long) {
+        if (token <= lastHandledSuccessToken) return
+        lastHandledSuccessToken = token
+        viewModelScope.launch {
+            achievementRepository.report {
+                event = AchievementEvents.COPILOT_SUCCESS
+            }
         }
 
         val profileId = runningProfileId ?: return

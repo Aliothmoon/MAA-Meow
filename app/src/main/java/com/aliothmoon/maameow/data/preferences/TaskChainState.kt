@@ -535,12 +535,13 @@ class TaskChainState(
             return null
         }
         // 复制期间可能有其他 Profile 变更，使用最新列表合并。
-        val updatedProfiles = _profiles.value.map { p ->
+        val latestProfiles = _profiles.value.map { p ->
             if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
-        } + newProfile
-        _profiles.value = updatedProfiles
+        }
+        val publishedProfile = newProfile.copy(name = nextProfileName(latestProfiles))
+        _profiles.value = latestProfiles + publishedProfile
         doSync()
-        Timber.d("Duplicated profile %s as: %s (%s)", profileId, newProfile.name, newProfile.id)
+        Timber.d("Duplicated profile %s as: %s (%s)", profileId, publishedProfile.name, publishedProfile.id)
         return newProfile.id
     }
 
