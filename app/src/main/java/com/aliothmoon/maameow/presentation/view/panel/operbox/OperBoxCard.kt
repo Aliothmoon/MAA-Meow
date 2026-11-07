@@ -47,6 +47,9 @@ import com.aliothmoon.maameow.presentation.components.AppIconAvatar
 import com.aliothmoon.maameow.presentation.components.MasteryBadge
 import com.aliothmoon.maameow.presentation.components.OperAvatar
 import com.aliothmoon.maameow.presentation.components.OperRoleIcon
+import com.aliothmoon.maameow.presentation.components.RARE_SUMMON_GRADIENT_DARK
+import com.aliothmoon.maameow.presentation.components.RARE_SUMMON_GRADIENT_LIGHT
+import com.aliothmoon.maameow.presentation.components.pallasCheerText
 import com.aliothmoon.maameow.presentation.components.operRarityColor
 import com.aliothmoon.maameow.theme.OpaqueTheme
 
@@ -321,24 +324,13 @@ private fun roleNameRes(profession: String?): Int? = when (profession?.uppercase
     else -> null
 }
 
-/** 对齐上游 LocalizationHelper.GetPallasString(6, 6) */
-private val PALLAS_CHARS = listOf("💃", "🕺", "🍷", "🍸", "🍺", "🍻", "🥃", "🍶")
+/** 星级的帕拉斯替身，素材与导出图共用 */
+private fun pallasCheers(): String = pallasCheerText()
 
-private fun pallasCheers(): String = List(6) { PALLAS_CHARS.random() }.joinToString("")
-
-/** 上游 AchievementBrush.Rare.LinearGradientBrush，深浅主题各一套 */
+/** 上游 AchievementBrush.Rare.LinearGradientBrush，深浅主题各一套（色表见 OperPallasStyle） */
 @Composable
 private fun rareAchievementBrush(): Brush {
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    return Brush.linearGradient(if (dark) RARE_DARK else RARE_LIGHT)
+    val colors = if (dark) RARE_SUMMON_GRADIENT_DARK else RARE_SUMMON_GRADIENT_LIGHT
+    return Brush.linearGradient(colors.map { Color(it) })
 }
-
-private val RARE_LIGHT = listOf(
-    Color(0xFF42A5F5), Color(0xFF66BB6A), Color(0xFFFFA726), Color(0xFFAB47BC),
-    Color(0xFFEF5350), Color(0xFF37474F), Color(0xFFFFEB3B), Color(0xFFEC407A),
-)
-
-private val RARE_DARK = listOf(
-    Color(0xFF90CAF9), Color(0xFFA5D6A7), Color(0xFFFFCC80), Color(0xFFCE93D8),
-    Color(0xFFEF9A9A), Color(0xFF90A4AE), Color(0xFFFFF176), Color(0xFFF48FB1),
-)

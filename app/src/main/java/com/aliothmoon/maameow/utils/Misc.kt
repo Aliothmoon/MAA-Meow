@@ -11,6 +11,9 @@ import android.provider.OpenableColumns
 import android.util.DisplayMetrics
 import android.view.WindowManager
 import androidx.core.net.toUri
+import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.utils.i18n.LocalizedException
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import timber.log.Timber
 import kotlin.math.abs
 
@@ -20,6 +23,14 @@ object Misc {
     private const val ASPECT_16X9_TOLERANCE = 0.05f
 
     private const val RESTART_FALLBACK_KILL_MS = 3_000L
+
+    /**
+     * 物理尺寸非法（≤0）时抛出；消息走资源，调用方展示前 resolve。
+     * 用 [LocalizedException] 而非 require：这是开发期兜底，理论上不该触发。
+     */
+    class InvalidPhysicalSizeException : LocalizedException(
+        uiTextOf(R.string.resolution_invalid_physical_size)
+    )
 
     fun getScreenSize(context: Context): Pair<Int, Int> {
         val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -64,9 +75,7 @@ object Misc {
     }
 
     fun calculate16x9Resolution(physicalWidth: Int, physicalHeight: Int): Pair<Int, Int> {
-        require(physicalWidth > 0 && physicalHeight > 0) {
-            "物理尺寸必须为正数"
-        }
+        if (physicalWidth <= 0 || physicalHeight <= 0) throw InvalidPhysicalSizeException()
 
         // 16:9 的最小单位
         val unitW = 16
@@ -77,8 +86,10 @@ object Misc {
         val maxW = if (isLandscape) physicalWidth else physicalHeight
         val maxH = if (isLandscape) physicalHeight else physicalWidth
 
-        require(maxW >= 1280 && maxH >= 720) {
-            "屏幕尺寸 ${maxW}x${maxH} 小于最低要求 1280x720"
+        if (maxW < 1280 || maxH < 720) {
+            throw LocalizedException(
+                uiTextOf(R.string.resolution_below_minimum, maxW, maxH)
+            )
         }
 
         val scaleByWidth = maxW / unitW

@@ -105,8 +105,8 @@ class GameMetadataLoader(
         try {
             coroutineScope {
                 launch { resourceDataManager.load(key.clientType, key.language, key.revision) }
-                // 材料表只跟资源版本有关
-                if (reloadItems) launch { itemHelper.load() }
+                // 材料表只跟资源版本有关，但名称要按客户端档（全球服在 global/{clientType}/resource 下）
+                if (reloadItems) launch { itemHelper.load(key.clientType) }
             }
         } catch (e: CancellationException) {
             throw e

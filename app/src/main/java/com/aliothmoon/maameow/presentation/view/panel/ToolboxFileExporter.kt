@@ -26,10 +26,16 @@ import org.koin.compose.koinInject
  *
  * 为 null 时面板不显示「导出文件」入口，兜底避免在未提供宿主时崩溃。
  */
-fun interface ToolboxFileExporter {
+interface ToolboxFileExporter {
     fun export(
         fileNamePrefix: String,
         content: String,
+        fileType: ToolboxExportFileType,
+    )
+
+    fun exportBytes(
+        fileNamePrefix: String,
+        bytes: ByteArray,
         fileType: ToolboxExportFileType,
     )
 }
@@ -48,16 +54,40 @@ fun rememberShareToolboxFileExporter(
     val chooserTitle = stringResource(R.string.toolbox_export_chooser_title)
     val failedMsg = stringResource(R.string.toolbox_export_file_failed)
     return remember(context, scope, exportService, chooserTitle, failedMsg) {
-        ToolboxFileExporter { prefix, content, fileType ->
-            scope.launch {
-                val intent = exportService.buildShareIntent(prefix, content, fileType)
-                if (intent != null) {
-                    context.startActivity(
-                        Intent.createChooser(intent, chooserTitle)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    )
-                } else {
-                    Toast.makeText(context, failedMsg, Toast.LENGTH_SHORT).show()
+        object : ToolboxFileExporter {
+            override fun export(
+                fileNamePrefix: String,
+                content: String,
+                fileType: ToolboxExportFileType,
+            ) {
+                scope.launch {
+                    val intent = exportService.buildShareIntent(fileNamePrefix, content, fileType)
+                    if (intent != null) {
+                        context.startActivity(
+                            Intent.createChooser(intent, chooserTitle)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    } else {
+                        Toast.makeText(context, failedMsg, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
+            override fun exportBytes(
+                fileNamePrefix: String,
+                bytes: ByteArray,
+                fileType: ToolboxExportFileType,
+            ) {
+                scope.launch {
+                    val intent = exportService.buildShareIntentBytes(fileNamePrefix, bytes, fileType)
+                    if (intent != null) {
+                        context.startActivity(
+                            Intent.createChooser(intent, chooserTitle)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    } else {
+                        Toast.makeText(context, failedMsg, Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
@@ -76,21 +106,45 @@ fun rememberSafToolboxFileExporter(
     val successMsg = stringResource(R.string.toolbox_export_file_success)
     val failedMsg = stringResource(R.string.toolbox_export_file_failed)
     var pendingContent by remember { mutableStateOf<String?>(null) }
+    var pendingBytes by remember { mutableStateOf<ByteArray?>(null) }
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("*/*")
     ) { uri ->
         val content = pendingContent
+        val bytes = pendingBytes
         pendingContent = null
-        if (uri == null || content == null) return@rememberLauncherForActivityResult
+        pendingBytes = null
+        if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
-            val ok = exportService.writeToUri(uri, content)
+            val ok = when {
+                bytes != null -> exportService.writeBytesToUri(uri, bytes)
+                content != null -> exportService.writeToUri(uri, content)
+                else -> false
+            }
             Toast.makeText(context, if (ok) successMsg else failedMsg, Toast.LENGTH_SHORT).show()
         }
     }
     return remember(launcher, exportService) {
-        ToolboxFileExporter { prefix, content, fileType ->
-            pendingContent = content
-            launcher.launch(exportService.makeFileName(prefix, fileType))
+        object : ToolboxFileExporter {
+            override fun export(
+                fileNamePrefix: String,
+                content: String,
+                fileType: ToolboxExportFileType,
+            ) {
+                pendingBytes = null
+                pendingContent = content
+                launcher.launch(exportService.makeFileName(fileNamePrefix, fileType))
+            }
+
+            override fun exportBytes(
+                fileNamePrefix: String,
+                bytes: ByteArray,
+                fileType: ToolboxExportFileType,
+            ) {
+                pendingContent = null
+                pendingBytes = bytes
+                launcher.launch(exportService.makeFileName(fileNamePrefix, fileType))
+            }
         }
     }
 }

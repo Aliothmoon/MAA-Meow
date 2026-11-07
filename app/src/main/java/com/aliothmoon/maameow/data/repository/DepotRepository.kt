@@ -45,6 +45,9 @@ class DepotRepository(
 
     val snapshot: StateFlow<DepotSnapshot> get() = shards.snapshot
 
+    /** 全部配置档的仓库快照（只读），库存页跨配置档查看用。 */
+    val snapshots: StateFlow<Map<String, DepotSnapshot>> get() = shards.allShards
+
     val isLoaded: StateFlow<Boolean> get() = shards.isLoaded
 
     fun start() = shards.start()
@@ -77,6 +80,11 @@ class DepotRepository(
     }
 
     fun countOf(itemId: String): Int = snapshot.value.countOf(itemId)
+
+    /** 清空指定配置档仓库快照（库存页删除；非活跃档也能清）。 */
+    fun clear(profileId: String) {
+        shards.mutateFor(profileId) { DepotSnapshot() }
+    }
 
     private fun shouldExclude(itemId: String): Boolean =
         itemId.isEmpty() || !itemId.all { it in '0'..'9' } || itemId in EXCLUDED_ITEM_IDS

@@ -63,6 +63,7 @@ import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.data.resource.OperAvatarLoader
 import com.aliothmoon.maameow.data.resource.OperRoleIconLoader
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.data.resource.PenguinDropRateProvider
 import com.aliothmoon.maameow.data.resource.StageApCostHelper
 import com.aliothmoon.maameow.domain.launch.BackendBlock
 import com.aliothmoon.maameow.domain.launch.CountdownUI
@@ -317,7 +318,7 @@ val appModule = module {
     singleOf(::UpdateService)
 
     // 与 MaaCompositionService 循环依赖，只能懒取
-    single { ResourceInitService(get(), get(), get(), inject()) }
+    single { ResourceInitService(get(), get(), get(), inject(), get(), get()) }
     singleOf(::MaaResourceLoader)
     // scope 走构造默认值
     single {
@@ -370,7 +371,7 @@ val appModule = module {
     singleOf(::CopilotOperBoxAssist)
     single { PlanSideTaskRunner(androidContext(), get(), get()) }
     singleOf(::TaskChainStatusTracker)
-    singleOf(::FightDropsRefresher)
+    single { FightDropsRefresher(androidContext(), get(), get(), get(), get()) }
     singleOf(::TaskChainHandler)
     singleOf(::SubTaskHandler)
     single<AppAliveChecker> { RemoteAppAliveChecker() }
@@ -415,6 +416,7 @@ val appModule = module {
 
     singleOf(::ItemHelper)
     singleOf(::StageApCostHelper)
+    single { PenguinDropRateProvider(androidContext(), get()) }
     singleOf(::ItemIconLoader)
     singleOf(::OperAvatarLoader)
     singleOf(::OperRoleIconLoader)

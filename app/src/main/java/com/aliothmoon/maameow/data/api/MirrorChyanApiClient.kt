@@ -1,8 +1,11 @@
 package com.aliothmoon.maameow.data.api
 
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.model.MirrorChyanData
 import com.aliothmoon.maameow.data.api.model.MirrorChyanResponse
 import com.aliothmoon.maameow.data.model.update.UpdateError
+import com.aliothmoon.maameow.utils.i18n.LocalizedException
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -44,10 +47,13 @@ class MirrorChyanApiClient(
                 cdk?.let { cdkStatus.onResponse(it, body.code, body.data?.cdkExpiredTime) }
 
                 if (body.code == 500 || (body.code != 0 && !fetchVersion)) {
-                    throw MirrorChyanBizException(body.code, body.msg)
+                    // 消息体留空：UpdateError.fromCode 会把已知错误码固定映射到对应 R.string，
+                    // 服务端返回的中文串在这个路径上永远不会展示
+                    throw MirrorChyanBizException(body.code, null)
                 }
 
-                body.data ?: throw MirrorChyanBizException(-1, "数据为空")
+                // 同上：fromCode(-1) 固定映射到 R.string.update_error_empty_data
+                body.data ?: throw MirrorChyanBizException(-1, null)
             }.onFailure { e ->
                 if (e is CancellationException) throw e
                 if (e !is MirrorChyanBizException) cdk?.let { cdkStatus.onNetworkFailure(it) }
@@ -66,4 +72,5 @@ class MirrorChyanBizException(val bizCode: Int, override val message: String?) :
 }
 
 /** CDK 未配置异常 */
-class CdkRequiredException : Exception("请输入正确的 CDK")
+class CdkRequiredException :
+    LocalizedException(uiTextOf(R.string.update_error_cdk_required))

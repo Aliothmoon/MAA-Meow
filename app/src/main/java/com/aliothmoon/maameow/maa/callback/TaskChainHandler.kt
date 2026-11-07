@@ -87,12 +87,12 @@ class TaskChainHandler(
         val (text, level) = when (outcome) {
             is FightDropsRefresher.RefreshOutcome.InventoryUnavailable -> appContext.getString(
                 R.string.runlog_depot_plan_inventory_unavailable,
-                outcome.logLabel,
+                outcome.logLabel.resolve(appContext),
             ) to LogLevel.WARNING
 
             is FightDropsRefresher.RefreshOutcome.Sufficient -> appContext.getString(
                 R.string.runlog_depot_plan_inventory_enough,
-                outcome.logLabel,
+                outcome.logLabel.resolve(appContext),
                 outcome.dropName,
                 outcome.current,
                 outcome.target,
@@ -100,7 +100,7 @@ class TaskChainHandler(
 
             is FightDropsRefresher.RefreshOutcome.Updated -> appContext.getString(
                 R.string.runlog_depot_plan_inventory_insufficient,
-                outcome.logLabel,
+                outcome.logLabel.resolve(appContext),
                 outcome.dropName,
                 outcome.current,
                 outcome.target,
@@ -109,7 +109,7 @@ class TaskChainHandler(
 
             is FightDropsRefresher.RefreshOutcome.SanityInsufficient -> appContext.getString(
                 R.string.runlog_depot_plan_sanity_insufficient,
-                outcome.logLabel,
+                outcome.logLabel.resolve(appContext),
                 outcome.estimatedSanity,
                 outcome.apCost,
             ) to LogLevel.INFO
@@ -117,7 +117,10 @@ class TaskChainHandler(
         sessionLogger.append(text, level)
         if (!outcome.applied) {
             sessionLogger.append(
-                appContext.getString(R.string.runlog_depot_set_params_failed, outcome.logLabel),
+                appContext.getString(
+                    R.string.runlog_depot_set_params_failed,
+                    outcome.logLabel.resolve(appContext),
+                ),
                 LogLevel.WARNING,
             )
         }

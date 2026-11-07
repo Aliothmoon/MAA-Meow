@@ -24,7 +24,10 @@ class FightDropsRefresherSkippedPlansTest {
             if (firstArg<String>() == ROCK) ItemInfo(id = ROCK, name = "源岩") else null
         }
     }
-    private val refresher = FightDropsRefresher(depotRepository, itemHelper, mockk(), mockk())
+    // 本分支给 FightDropsRefresher 加了 appContext（日志文案本地化）与 stageApCostHelper/subTaskHandler；
+    // relaxed 是因为本用例只断言跳过计划的数据，不关心文案
+    private val refresher =
+        FightDropsRefresher(mockk(relaxed = true), depotRepository, itemHelper, mockk(), mockk())
 
     @Before
     fun setUp() {
