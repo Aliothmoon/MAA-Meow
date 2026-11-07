@@ -500,6 +500,14 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun cancelGestureRecord() = GestureRecorder.cancel()
 
+    /** @return [com.aliothmoon.maameow.constant.WakeUnlockResult] */
+    override fun unlockPinWithSwipe(credential: String?): Int =
+        WakeUnlockController.unlockPinWithSwipe(credential.orEmpty())
+
+    /** @return [com.aliothmoon.maameow.constant.WakeUnlockResult] */
+    override fun testUnlockPinWithSwipe(credential: String?): Int =
+        WakeUnlockController.testUnlockPinWithSwipe(credential.orEmpty())
+
     override fun isPackageInstalled(packageName: String): Boolean {
         return try {
             FakeContext.get().packageManager.getPackageInfo(packageName, 0)

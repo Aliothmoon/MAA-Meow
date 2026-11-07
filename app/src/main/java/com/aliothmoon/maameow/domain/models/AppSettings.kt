@@ -230,6 +230,14 @@ data class AppSettings(
     @PrefKey(default = "")
     val wakeCredential: String = "",
 
+    /**
+     * 兼容指纹解锁（仅 type=pin 时可选）
+     * 指纹机型上 dismissKeyguard 不一定直接给密码面板，勾选后改为先上滑露出面板再输 PIN；
+     * 滑动位置按屏幕比例现场算，不需要用户录制
+     */
+    @PrefKey(default = "false")
+    val wakePinCompat: String = "false",
+
     /** 定时黑名单，包名逗号分隔 */
     @PrefKey(default = "")
     val scheduleAppBlacklist: String = "",

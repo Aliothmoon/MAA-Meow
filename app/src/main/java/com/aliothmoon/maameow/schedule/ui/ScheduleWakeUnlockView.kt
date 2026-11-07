@@ -74,6 +74,7 @@ fun ScheduleWakeUnlockView(
 ) {
     val wakeUnlockType by viewModel.wakeUnlockType.collectAsStateWithLifecycle()
     val wakeCredential by viewModel.wakeCredential.collectAsStateWithLifecycle()
+    val wakePinCompat by viewModel.wakePinCompat.collectAsStateWithLifecycle()
     val wakeTestState by viewModel.wakeTestState.collectAsStateWithLifecycle()
     val unlockGesture by viewModel.unlockGesture.collectAsStateWithLifecycle()
     val gestureRecordState by viewModel.gestureRecordState.collectAsStateWithLifecycle()
@@ -93,7 +94,9 @@ fun ScheduleWakeUnlockView(
         }
     }
 
-    LaunchedEffect(Unit) { viewModel.refreshGestureRecord() }
+    LaunchedEffect(Unit) {
+        viewModel.refreshGestureRecord()
+    }
 
     gestureRecordState?.let { state ->
         val doneTemplate = stringResource(R.string.settings_wake_gesture_done)
@@ -154,6 +157,8 @@ fun ScheduleWakeUnlockView(
                                 AppSettingsManager.WAKE_TYPE_PIN -> SettingWakePinSection(
                                     wakeCredential = wakeCredential,
                                     onCredentialChange = { viewModel.setWakeCredential(it) },
+                                    pinCompat = wakePinCompat,
+                                    onPinCompatChange = { viewModel.setWakePinCompat(it) },
                                 )
 
                                 AppSettingsManager.WAKE_TYPE_GESTURE -> SettingWakeGestureSection(
@@ -503,6 +508,8 @@ private fun gestureStepText(step: UnlockStep): String = when (step) {
 private fun SettingWakePinSection(
     wakeCredential: String,
     onCredentialChange: (String) -> Unit,
+    pinCompat: Boolean,
+    onPinCompatChange: (Boolean) -> Unit,
 ) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         SettingSecretField(
@@ -518,6 +525,14 @@ private fun SettingWakePinSection(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+        )
+        ListItemDivider()
+        SettingSwitchItem(
+            title = stringResource(R.string.settings_wake_pin_compat),
+            description = stringResource(R.string.settings_wake_pin_compat_desc),
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            checked = pinCompat,
+            onCheckedChange = onPinCompatChange,
         )
     }
 }

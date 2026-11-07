@@ -825,6 +825,15 @@ class AppSettingsManager internal constructor(
         }
     }
 
+    val wakePinCompat: StateFlow<Boolean> =
+        setting { it.wakePinCompat.toBooleanStrictOrNull() ?: false }
+
+    suspend fun setWakePinCompat(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[wakePinCompat] = enabled.toString() }
+        }
+    }
+
     val scheduleAppBlacklist: StateFlow<Set<String>> = setting { parsePackageList(it.scheduleAppBlacklist) }
 
     suspend fun setScheduleAppBlacklisted(packageName: String, blacklisted: Boolean) {

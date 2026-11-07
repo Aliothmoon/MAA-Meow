@@ -2798,6 +2798,8 @@
     <string name="settings_wake_gesture_step_swipe">스와이프 (%1$d, %2$d) → (%3$d, %4$d) %5$d ms</string>
     <string name="settings_wake_gesture_step_delay">%1$d ms 대기</string>
     <string name="settings_wake_gesture_test_hint">먼저 화면을 잠그고, 약 1초 후 녹화한 제스처를 재생합니다</string>
+    <string name="settings_wake_pin_compat">지문 잠금 해제 호환</string>
+    <string name="settings_wake_pin_compat_desc">일부 지문 기기에서는 PIN 입력창이 저절로 뜨지 않습니다. 켜면 매번 먼저 위로 밀어 올린 뒤 전환 애니메이션이 끝나면 위에 입력한 PIN을 자동 입력하고, 끄면 바로 PIN을 입력합니다</string>
     <!-- 黑流树海肉鸽运行日志文案 -->
     <string name="blackflow_routing_decision">%1$d층 | 행동력 %2$d→%3$d | %5$s까지 %4$s | 안전 여유 %6$d</string>
     <string name="blackflow_movement_walk">도보 이동</string>

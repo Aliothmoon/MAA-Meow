@@ -234,12 +234,15 @@ class LaunchPipeline(
                 // 1. 快捷选项熄屏挂机已盖上：KEEP_SCREEN_ON，多轮定时不解、不收
                 // 2. 其余交给凭证自己决定注入 PIN、回放手势还是只试 dismissKeyguard，
                 //    别拿 isDeviceLocked 预跳过
+                // 3. 兼容指纹：PIN 方式下先上滑露出密码面板，再让凭证注入
+                val pinCompat = unlockType == UnlockCredential.TYPE_PIN &&
+                        appSettingsManager.wakePinCompat.value
                 val saverKeepScreenOn = screenSaver.isShowing()
                 if (saverKeepScreenOn) {
                     log.append(uiTextOf(R.string.schedule_log_wake_skipped_screensaver))
                 } else {
                     log.append(uiTextOf(R.string.schedule_log_wake_start))
-                    val wake = wakeUnlockEngine.unlock(credential)
+                    val wake = wakeUnlockEngine.unlock(credential, pinCompat)
                     if (wake.isSuccess) {
                         log.append(uiTextOf(R.string.schedule_log_wake_ok))
                     } else {
