@@ -13,7 +13,9 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.OperBoxRepository
-import com.aliothmoon.maameow.data.repository.toSortedItems
+import com.aliothmoon.maameow.data.repository.toArkPlannerJson
+import com.aliothmoon.maameow.data.repository.toExportList
+import com.aliothmoon.maameow.data.repository.toLoliconJson
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.domain.models.RunMode
@@ -405,23 +407,15 @@ class ToolboxViewModel(
 
     // ==================== 导出（与屏幕同源：Repository 快照）====================
 
-    fun exportDepotArkPlanner(): String {
-        val items = depotRepository.snapshot.value.toSortedItems(itemHelper.items.value)
-        val itemsJson = items.joinToString(",") { """{"id":"${it.id}","have":${it.count}}""" }
-        return """{"@type":"@penguin-statistics/depot","items":[$itemsJson]}"""
-    }
+    fun exportDepotArkPlanner(): String =
+        depotRepository.snapshot.value.toArkPlannerJson(itemHelper.items.value)
 
-    fun exportDepotLolicon(): String {
-        val items = depotRepository.snapshot.value.toSortedItems(itemHelper.items.value)
-        return "{${items.joinToString(",") { "\"${it.id}\":${it.count}" }}}"
-    }
+    fun exportDepotLolicon(): String =
+        depotRepository.snapshot.value.toLoliconJson(itemHelper.items.value)
 
     /** 干员识别导出列表：owned + notOwned（全部可用干员）。 */
-    fun exportOperBoxList(): List<OperBoxOperator> {
-        val snap = operBoxRepository.snapshot.value
-        if (!snap.hasSynced) return emptyList()
-        return snap.owned + snap.notOwned
-    }
+    fun exportOperBoxList(): List<OperBoxOperator> =
+        operBoxRepository.snapshot.value.toExportList()
 
     /** 干员识别导出为 JSON（剪贴板与 .json 文件共用）。 */
     fun exportOperBox(): String = OperBoxExportFormatter.toJson(exportOperBoxList())
