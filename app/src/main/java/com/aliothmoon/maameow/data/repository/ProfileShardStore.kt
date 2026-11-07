@@ -44,6 +44,12 @@ class ProfileShardStore<T : Any>(
 
     val snapshot: StateFlow<T> = DerivedActiveSnapshot()
 
+    /**
+     * 全部配置档的分片（只读）。库存页跨配置档查看时用；
+     * 从未写入过的配置档不在 map 中，调用方按 [empty] 兜底。
+     */
+    val allShards: StateFlow<Map<String, T>> = _shards.asStateFlow()
+
     private sealed interface PersistOp {
         data class Write(val profileId: String) : PersistOp
         data class Delete(val profileId: String) : PersistOp
@@ -69,6 +75,15 @@ class ProfileShardStore<T : Any>(
         val profileId = taskChainState.profileId.value
         if (profileId.isEmpty()) {
             Timber.w("活跃配置档为空，跳过写入: %s", keyPrefix)
+            return null
+        }
+        return mutateFor(profileId, transform)
+    }
+
+    /** 同步改内存并排队落盘（指定配置档）。库存页需要操作非活跃档。 */
+    fun mutateFor(profileId: String, transform: (T) -> T): T? {
+        if (profileId.isEmpty()) {
+            Timber.w("配置档为空，跳过写入: %s", keyPrefix)
             return null
         }
         if (!_isLoaded.value) {

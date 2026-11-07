@@ -899,6 +899,16 @@ fun SettingsView(
                         revealToken = revealToken(SettingsSections.DATA),
                     ) {
                         SettingsGroupCard {
+                            SettingSearchTarget(R.string.settings_depot_inventory_title) {
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_depot_inventory_title),
+                                    description = stringResource(R.string.settings_depot_inventory_desc),
+                                    contentColor = contentColor
+                                ) {
+                                    navController.navigate(Routes.DEPOT_INVENTORY)
+                                }
+                            }
+                            ListItemDivider()
                             SettingSearchTarget(R.string.settings_export_config_title) {
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_export_config_title),

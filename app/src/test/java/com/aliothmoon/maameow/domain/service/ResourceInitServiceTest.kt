@@ -3,6 +3,8 @@ package com.aliothmoon.maameow.domain.service
 import android.content.Context
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.datasource.AssetExtractor
+import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import io.mockk.coEvery
 import io.mockk.every
@@ -60,7 +62,17 @@ class ResourceInitServiceTest {
                     extractResult
                 }
             }
-            service = ResourceInitService(context, extractor, pathConfig, lazy { mockk<CoreFilesGate>() })
+            val itemHelper = mockk<ItemHelper> {
+                every { load(any()) } returns true
+            }
+            service = ResourceInitService(
+                context,
+                extractor,
+                pathConfig,
+                lazy { mockk<CoreFilesGate>() },
+                itemHelper,
+                mockk<TaskChainState>(relaxed = true),
+            )
         }
     }
 }
