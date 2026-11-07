@@ -91,6 +91,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.lerp
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -537,32 +548,29 @@ private fun DepotProfileDetailView(
     // 存格子的 key 而不是物品 id：同一物品配了多条计划时会有多格，按 id 找只会拿到第一格
     var planSheetCellKey by remember { mutableStateOf<String?>(null) }
 
-    // 标题栏常驻不隐去；上滑时把下面那块「配置名 / 库存保持 / 更新时间」收走，
-    // 同时标题栏左侧换成配置名、右侧补上识别时间；下滑回到顶部再恢复成原来的三行头部
-    var headerCollapsed by rememberSaveable { mutableStateOf(false) }
-    // 收起要有「拉过去一点才动」的手感：累加这一小段位移再切状态，
-    // 否则手指刚碰到列表、内容还没怎么动，头部就先塌下去，看着像跳了一下
-    var collapseDrag by remember { mutableFloatStateOf(0f) }
+    // 标题栏常驻不隐去。头部按「滚动量」等比收起，不设阈值也不强制切换：手指划多少就收多少；
+    // 配置名则由页面里的位置直接平移到标题栏里，全程可见 —— 不是淡出后再在栏里淡入。
+    var headerHeightPx by remember { mutableIntStateOf(0) }
+    var scrolledPx by remember { mutableFloatStateOf(0f) }
+    var overlayOrigin by remember { mutableStateOf(Offset.Unspecified) }
+    var headerNameBounds by remember { mutableStateOf<Rect?>(null) }
+    var barNameBounds by remember { mutableStateOf<Rect?>(null) }
+    val collapseProgress = if (headerHeightPx > 0) {
+        (scrolledPx / headerHeightPx).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
     val scrollCollapseConnection = remember {
         object : NestedScrollConnection {
-            // 手指向上推（内容下滚）就把头部收走
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (available.y < -1f) {
-                    collapseDrag += -available.y
-                    if (collapseDrag > COLLAPSE_DRAG_THRESHOLD) headerCollapsed = true
-                }
-                return Offset.Zero
-            }
-
-            // 已经在顶部还继续往下拉（内容滚不动了）就把头部放回来
+            // 只累加「内容真的滚掉了」的位移：手势没落到列表上时 consumed 是 0，进度自然不动
             override fun onPostScroll(
                 consumed: Offset,
                 available: Offset,
                 source: NestedScrollSource,
             ): Offset {
-                if (available.y > 1f) {
-                    collapseDrag = 0f
-                    headerCollapsed = false
+                if (consumed.y != 0f && headerHeightPx > 0) {
+                    // 手指上推时 consumed.y 是负的（内容往上走），所以取反累加，才能得到「已经划掉多少」
+                    scrolledPx = (scrolledPx - consumed.y).coerceIn(0f, headerHeightPx.toFloat())
                 }
                 return Offset.Zero
             }
@@ -577,28 +585,32 @@ private fun DepotProfileDetailView(
     val syncTimeLabel =
         if (syncTimeText.isEmpty()) "" else stringResource(R.string.depot_inventory_sync_time, syncTimeText)
 
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollCollapseConnection),
-        topBar = {
-            M3TopAppBar(
-                title = {
-                    // 两种标题之间走淡入淡出 + 轻微上滑，避免直接换字显得突兀
-                    AnimatedContent(
-                        targetState = headerCollapsed,
-                        transitionSpec = {
-                            (
-                                fadeIn(tween(TITLE_ANIM_MILLIS, easing = FastOutSlowInEasing)) +
-                                    slideInVertically(tween(TITLE_ANIM_MILLIS, easing = FastOutSlowInEasing)) {
-                                        it / 3
-                                    }
-                                ).togetherWith(
-                                fadeOut(tween(TITLE_ANIM_MILLIS / 2)) +
-                                    slideOutVertically(tween(TITLE_ANIM_MILLIS / 2)) { -it / 4 },
-                            )
-                        },
-                        label = "depot-detail-title",
-                    ) { collapsed ->
-                        if (collapsed) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            // 飞行文字用「根坐标」定位，所以先记下这层容器的原点
+            .onGloballyPositioned { overlayOrigin = it.positionInRoot() },
+    ) {
+        Scaffold(
+            modifier = Modifier,
+            topBar = {
+                M3TopAppBar(
+                    title = {
+                        Box(Modifier.fillMaxWidth()) {
+                            // 展开态的大标题：上划起步就淡出，把位置让给「正在飞过去的名字」
+                            val introAlpha = (1f - collapseProgress / 0.2f).coerceIn(0f, 1f)
+                            if (introAlpha > 0.01f) {
+                                Text(
+                                    text = stringResource(R.string.depot_inventory_detail_title),
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.alpha(introAlpha),
+                                )
+                            }
+                            // 名字与时间的「落点」：名字由外层那层飞行文字负责画，这里只量位置，
+                            // 所以先按可见状态排版、再把字抹掉（alpha 0），尺寸和基线就都对得上
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = profileName,
@@ -606,7 +618,10 @@ private fun DepotProfileDetailView(
                                     fontWeight = FontWeight.SemiBold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .onGloballyPositioned { barNameBounds = it.boundsInRoot() }
+                                        .alpha(if (collapseProgress >= 0.999f) 1f else 0f),
                                 )
                                 if (syncTimeLabel.isNotEmpty()) {
                                     Spacer(Modifier.width(MaaDesignTokens.Spacing.sm))
@@ -618,128 +633,143 @@ private fun DepotProfileDetailView(
                                         overflow = TextOverflow.Ellipsis,
                                         textAlign = TextAlign.End,
                                         // 按比例分宽度：否则长文案（「更新时间：…」约 173dp）会把名字挤到几个字
-                                        modifier = Modifier.weight(TITLE_TIME_WEIGHT),
+                                        modifier = Modifier
+                                            .weight(TITLE_TIME_WEIGHT)
+                                            // 名字走完大半程再把时间显出来，视线才跟着名字走
+                                            .alpha(((collapseProgress - 0.55f) / 0.45f).coerceIn(0f, 1f)),
                                     )
                                 }
                             }
-                        } else {
-                            Text(
-                                text = stringResource(R.string.depot_inventory_detail_title),
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.accessibility_navigation),
                             )
                         }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.accessibility_navigation),
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onExport) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = stringResource(R.string.depot_inventory_export),
-                        )
-                    }
-                    IconButton(onClick = onClear) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = stringResource(R.string.depot_inventory_delete),
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                },
-                // 与列表页 / 仓库既有顶栏同一条基线：背景色容器 + primary 动作图标，免得进出详情页时顶栏换色。
-                // 这里没有 scrollBehavior，不会进 M3 的「已滚动」配色，所以不用传 scrolledContainerColor
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    actionIconContentColor = MaterialTheme.colorScheme.primary,
-                ),
-            )
-        },
-        // 顶栏自带 windowInsets（收起后仍保留状态栏高度），所以内容区不需要再补 top：
-        // 这里仍传全零，保持与改动前一致的内边距口径
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
-            // 这一块就是「沉浸」的全部：滚起来就收走，回到顶部再放回来，标题栏始终在
-            AnimatedVisibility(
-                visible = !headerCollapsed,
-                enter = expandVertically(
-                    animationSpec = tween(HEADER_ANIM_MILLIS, easing = FastOutSlowInEasing),
-                ) + fadeIn(tween(HEADER_ANIM_MILLIS, easing = FastOutSlowInEasing)),
-                exit = shrinkVertically(
-                    animationSpec = tween(HEADER_ANIM_MILLIS, easing = FastOutSlowInEasing),
-                ) + fadeOut(tween(HEADER_ANIM_MILLIS / 2, easing = FastOutSlowInEasing)),
+                    },
+                    actions = {
+                        IconButton(onClick = onExport) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = stringResource(R.string.depot_inventory_export),
+                            )
+                        }
+                        IconButton(onClick = onClear) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.depot_inventory_delete),
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    },
+                    // 与列表页 / 仓库既有顶栏同一条基线：背景色容器 + primary 动作图标，免得进出详情页时顶栏换色。
+                    // 这里没有 scrollBehavior，不会进 M3 的「已滚动」配色，所以不用传 scrolledContainerColor
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        titleContentColor = MaterialTheme.colorScheme.onBackground,
+                        actionIconContentColor = MaterialTheme.colorScheme.primary,
+                    ),
+                )
+            },
+            // 顶栏自带 windowInsets（收起后仍保留状态栏高度），所以内容区不需要再补 top：
+            // 这里仍传全零，保持与改动前一致的内边距口径
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .nestedScroll(scrollCollapseConnection)
+                    .fillMaxSize()
+                    .padding(padding),
             ) {
+                // 头部随滚动等比收起：高度 = 自然高度 ×（1 - 进度），内容整体上移被裁掉 ——
+                // 划多少收多少，没有「过了阈值就整块塌掉」那一步。
+                // 配置名由外层那层飞行文字负责画，这里保留同名文字只为量出起点，所以抹成透明
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            horizontal = MaaDesignTokens.Spacing.md,
-                            vertical = MaaDesignTokens.Spacing.xs,
-                        ),
-                    verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs),
+                        .collapsingHeader({ collapseProgress }),
                 ) {
-                    Text(
-                        text = profileName,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    row?.let {
-                        if (it.planCount > 0 || !it.hasSynced) {
-                            Text(
-                                text = it.maintainSummary(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (it.hasSynced && it.unmetCount > 0) {
-                                    MaterialTheme.colorScheme.error
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                            )
-                        }
-                        if (it.syncTimeMillis > 0L) {
-                            Text(
-                                text = stringResource(
-                                    R.string.depot_inventory_sync_time,
-                                    formatToolboxSyncTime(it.syncTimeMillis),
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            // 这里量的是「自然高度」：外层 layout 只改绘制偏移，不改这个节点的测量结果
+                            // 头部滑到标题栏底下之前先淡掉：Scaffold 的内容层画在 topBar 之上，
+                            // 只靠裁切会让「库存保持 / 更新时间」压到标题栏文字上
+                            .graphicsLayer { alpha = (1f - collapseProgress * 1.8f).coerceIn(0f, 1f) }
+                            .onSizeChanged { headerHeightPx = it.height }
+                            .padding(
+                                horizontal = MaaDesignTokens.Spacing.md,
+                                vertical = MaaDesignTokens.Spacing.xs,
+                            ),
+                        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs),
+                    ) {
+                        Text(
+                            text = profileName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            // 这份文字只用来量起点（位置 + 宽度），真正画名字的是外面那层飞行文字
+                            modifier = Modifier
+                                // 只在「还没开始收」时记录起点：头部随滚动上移，若一直更新，起点会跟着漂
+                                .onGloballyPositioned {
+                                    if (collapseProgress < 0.002f) headerNameBounds = it.boundsInRoot()
+                                }
+                                .alpha(0f),
+                        )
+                        row?.let {
+                            if (it.planCount > 0 || !it.hasSynced) {
+                                Text(
+                                    text = it.maintainSummary(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (it.hasSynced && it.unmetCount > 0) {
+                                        MaterialTheme.colorScheme.error
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                )
+                            }
+                            if (it.syncTimeMillis > 0L) {
+                                Text(
+                                    text = stringResource(
+                                        R.string.depot_inventory_sync_time,
+                                        formatToolboxSyncTime(it.syncTimeMillis),
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            InventoryDetailBody(
-                cells = cells,
-                plans = plans,
-                operBox = operBox,
-                synced = synced,
-                onCellClick = { planSheetCellKey = it.key },
-                // 刷取顺序页点一行也回到同一格的面板：那里只有计划，得按格子 key 找回它那一格
-                onPlanClick = { plan ->
-                    val key = depotCellKey(plan.itemId, plan.nodeId, plan.planIndex)
-                    if (cells.any { it.key == key }) planSheetCellKey = key
-                },
-                onReorderPlans = viewModel::setPlanOrder,
-            )
+                InventoryDetailBody(
+                    cells = cells,
+                    plans = plans,
+                    operBox = operBox,
+                    synced = synced,
+                    onCellClick = { planSheetCellKey = it.key },
+                    // 刷取顺序页点一行也回到同一格的面板：那里只有计划，得按格子 key 找回它那一格
+                    onPlanClick = { plan ->
+                        val key = depotCellKey(plan.itemId, plan.nodeId, plan.planIndex)
+                        if (cells.any { it.key == key }) planSheetCellKey = key
+                    },
+                    onReorderPlans = viewModel::setPlanOrder,
+                )
         }
+    }
+
+        // 飞行层：展开态头部里那个名字是「起点」，标题栏里那份是「终点」，
+        // 这一层按滚动进度在两者之间插值 —— 名字是移动过去的，中途始终可见
+        HeaderNameFlight(
+            profileName = profileName,
+            headerBounds = headerNameBounds,
+            barBounds = barNameBounds,
+            progress = collapseProgress,
+            overlayOrigin = overlayOrigin,
+        )
     }
 
     planSheetCellKey?.let { cellKey ->
@@ -1592,15 +1622,61 @@ private fun SheetItem(
     )
 }
 
-/** 头部收起/展开的时长；标题栏文案切换用同一个节奏。 */
-private const val HEADER_ANIM_MILLIS = 240
-
-/** 标题栏两种文案交叉淡入淡出的时长。 */
-private const val TITLE_ANIM_MILLIS = 220
-
-/** 手指向上累计滑动多少像素才把头部收走：刚碰到列表就塌会显得跳。 */
-private const val COLLAPSE_DRAG_THRESHOLD = 16f
-
 /** 收起态标题栏里名字与「更新时间」的宽度比例：时间占 2 份，保证「更新时间：…」整句放得下，
  *  名字只在真的很长时才省略。 */
 private const val TITLE_TIME_WEIGHT = 2f
+
+/**
+ * 头部随滚动「整体上移 + 裁切」，不是只缩高度：
+ * 高度按 (1 - progress) 收缩、内容按 progress 往上平移同样的距离，
+ * 于是里面的字是「往上走出去」的 —— 与 [androidx.compose.animation.shrinkVertically] 的压扁感完全不同。
+ */
+private fun Modifier.collapsingHeader(progress: () -> Float): Modifier =
+    this
+        .clipToBounds()
+        .layout { measurable, constraints ->
+            val placeable = measurable.measure(
+                constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity),
+            )
+            val collapsedPx = (placeable.height * progress()).roundToInt().coerceIn(0, placeable.height)
+            layout(placeable.width, placeable.height - collapsedPx) {
+                placeable.place(0, -collapsedPx)
+            }
+        }
+
+/**
+ * 让配置名从页面头部「飞」到标题栏：起止位置、可用宽度、字号都按滚动进度插值。
+ * 中途不淡出、不换字，到终点才把手交给标题栏里那份真名字。
+ */
+@Composable
+private fun HeaderNameFlight(
+    profileName: String,
+    headerBounds: Rect?,
+    barBounds: Rect?,
+    progress: Float,
+    overlayOrigin: Offset,
+) {
+    val header = headerBounds ?: return
+    val bar = barBounds ?: return
+    if (overlayOrigin == Offset.Unspecified) return
+    val p = progress.coerceIn(0f, 1f)
+    // 收尾时交给标题栏里那份同名文字：两份字形宽度可能差一两像素，叠在一起会显得发虚
+    if (p >= 0.995f) return
+    val density = LocalDensity.current
+    val widthDp = with(density) { lerp(header.width, bar.width, p).toDp() }
+    val fontSize = with(density) { lerp(16f, 22f, p).sp }
+    Text(
+        text = profileName,
+        style = MaterialTheme.typography.titleMedium.copy(fontSize = fontSize),
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onBackground,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier
+            .width(widthDp)
+            .graphicsLayer {
+                translationX = lerp(header.left, bar.left, p) - overlayOrigin.x
+                translationY = lerp(header.center.y, bar.center.y, p) - overlayOrigin.y - size.height / 2f
+            },
+    )
+}
