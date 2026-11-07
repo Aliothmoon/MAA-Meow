@@ -479,7 +479,7 @@
     <string name="depot_inventory_empty_profiles">暂无配置档</string>
     <string name="depot_inventory_empty_profile">该配置档暂无库存数据。请在小工具中执行一次仓库/干员识别。</string>
     <string name="depot_inventory_empty_items">该配置档暂无库存明细</string>
-    <string name="depot_inventory_empty_operators">该配置档暂无干员数据，请执行一次干员数据更新</string>
+    <string name="depot_inventory_empty_operators">该配置档暂无干员数据。到「任务 → 小工具 → 干员识别」跑一次识别，结果会保存到当前配置档。</string>
     <string name="depot_inventory_tab_items">库存</string>
     <string name="depot_inventory_tab_operators">干员</string>
     <string name="depot_inventory_tab_order">刷取顺序</string>
@@ -953,7 +953,6 @@
     <string name="panel_operbox_card_detail">查看详情</string>
     <string name="panel_operbox_elite_icon">精英化 %1$d</string>
     <string name="panel_operbox_potential_icon">潜能 %1$d</string>
-    <string name="panel_operbox_owned_meta">E%1$d Lv%2$d 潜%3$d</string>
     <string name="oper_role_caster">术师</string>
     <string name="oper_role_medic">医疗</string>
     <string name="oper_role_pioneer">先锋</string>

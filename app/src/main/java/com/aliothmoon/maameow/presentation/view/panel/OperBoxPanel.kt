@@ -19,14 +19,12 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -45,7 +43,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxExportFormatter
@@ -54,8 +51,6 @@ import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.ToolboxExportFileType
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
-import com.aliothmoon.maameow.presentation.components.MasteryBadge
-import com.aliothmoon.maameow.presentation.components.operRarityColor
 import com.aliothmoon.maameow.presentation.view.panel.operbox.OperBoxCard
 import com.aliothmoon.maameow.presentation.view.panel.operbox.OperBoxDetailDialog
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
@@ -339,100 +334,4 @@ private fun OperBoxHintRow(text: String) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
-}
-
-@Composable
-internal fun OperatorRow(oper: OperBoxOperator) {
-    val rarityColor = operRarityColor(oper.rarity)
-
-    Surface(
-        shape = RoundedCornerShape(6.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.weight(1f, fill = false)
-                ) {
-                    Text(
-                        text = "${oper.rarity}★",
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                        fontWeight = FontWeight.Bold,
-                        color = rarityColor
-                    )
-                    Text(
-                        text = oper.name,
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                if (oper.own) {
-                    Text(
-                        text = stringResource(
-                            R.string.panel_operbox_owned_meta,
-                            oper.elite,
-                            oper.level,
-                            oper.potential
-                        ),
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-            OperTrainingBadges(oper)
-        }
-    }
-}
-
-/** 模组分支到显示名，对齐上游 ToolboxViewModel.ModTypeDisplay */
-private val MOD_TYPE_DISPLAY = mapOf(
-    "A" to "α", "B" to "β", "X" to "χ", "Y" to "γ", "D" to "Δ"
-)
-
-/**
- * 技能练度与模组，只有一图流数据带主技能等级，core 识别路径整块不显示
- * 一个专精都没有（含未满 7 级与 7 级未专精）时只给一个 RANK 徽章
- */
-@Composable
-private fun OperTrainingBadges(oper: OperBoxOperator) {
-    val mainSkillLevel = oper.mainSkillLevel ?: return
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (oper.skills.none { it.level >= 1 }) {
-            BadgeText("RANK $mainSkillLevel")
-        } else {
-            oper.skills.forEach { MasteryBadge(it.level) }
-        }
-        oper.equips.filter { it.level > 0 }.forEach { equip ->
-            BadgeText("${MOD_TYPE_DISPLAY[equip.type] ?: equip.type}${equip.level}")
-        }
-    }
-}
-
-@Composable
-private fun BadgeText(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
 }

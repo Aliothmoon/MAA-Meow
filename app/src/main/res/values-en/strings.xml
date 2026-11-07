@@ -224,7 +224,7 @@
     <string name="depot_inventory_empty_profiles">No profiles yet</string>
     <string name="depot_inventory_empty_profile">No inventory data for this profile yet. Run depot/operator recognition in the Toolbox.</string>
     <string name="depot_inventory_empty_items">No inventory details for this profile</string>
-    <string name="depot_inventory_empty_operators">No operator data for this profile. Run an operator data update first.</string>
+    <string name="depot_inventory_empty_operators">No operator data for this profile. Run a recognition in Tasks → Toolbox → Operator Recognition; the result is saved to the active profile.</string>
     <string name="depot_inventory_tab_items">Inventory</string>
     <string name="depot_inventory_tab_operators">Operators</string>
     <string name="depot_inventory_tab_order">Farming order</string>
@@ -898,7 +898,6 @@
     <string name="panel_operbox_card_detail">View details</string>
     <string name="panel_operbox_elite_icon">Elite %1$d</string>
     <string name="panel_operbox_potential_icon">Potential %1$d</string>
-    <string name="panel_operbox_owned_meta">E%1$d Lv%2$d Pot%3$d</string>
     <string name="oper_role_caster">Caster</string>
     <string name="oper_role_medic">Medic</string>
     <string name="oper_role_pioneer">Vanguard</string>

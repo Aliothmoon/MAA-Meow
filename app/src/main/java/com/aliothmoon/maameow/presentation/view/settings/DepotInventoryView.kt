@@ -106,11 +106,12 @@ import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.profileNameUiText
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxExportLabels
+import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.data.repository.OperBoxSnapshot
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
+import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.ToolboxExportFileType
 import com.aliothmoon.maameow.presentation.components.TopAppBar
-import com.aliothmoon.maameow.presentation.view.panel.OperatorRow
 import com.aliothmoon.maameow.presentation.view.panel.ToolboxFileExporter
 import com.aliothmoon.maameow.presentation.view.panel.depot.DepotCellGap
 import com.aliothmoon.maameow.presentation.view.panel.depot.DepotItemCell
@@ -120,6 +121,8 @@ import com.aliothmoon.maameow.presentation.view.panel.depot.DepotPlanOrderColumn
 import com.aliothmoon.maameow.presentation.view.panel.depot.DepotSectionBreak
 import com.aliothmoon.maameow.presentation.view.panel.depot.depotItemColumns
 import com.aliothmoon.maameow.presentation.view.panel.depot.toOrderEntry
+import com.aliothmoon.maameow.presentation.view.panel.operbox.OperBoxCard
+import com.aliothmoon.maameow.presentation.view.panel.operbox.OperBoxDetailDialog
 import com.aliothmoon.maameow.presentation.view.panel.rememberOperBoxExportLabels
 import com.aliothmoon.maameow.presentation.view.panel.rememberSafToolboxFileExporter
 import com.aliothmoon.maameow.presentation.viewmodel.DepotInventoryCellUi
@@ -138,6 +141,7 @@ import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.theme.MaaMotion
 import com.aliothmoon.maameow.theme.OpaqueTheme
 import com.aliothmoon.maameow.utils.i18n.asString
+import com.aliothmoon.maameow.utils.i18n.formatToolboxSyncTime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -919,52 +923,94 @@ private fun OperBoxPage(
     selectedTab: Int,
     onTabChange: (Int) -> Unit,
 ) {
+    val resourceDataManager: ResourceDataManager = koinInject()
+    var detail by remember { mutableStateOf<OperBoxOperator?>(null) }
+
     if (!snapshot.hasSynced) {
-        DetailEmptyText(R.string.depot_inventory_empty_operators)
+        OperBoxEmptyHint()
         return
     }
-    val operators = if (selectedTab == 0) snapshot.owned else snapshot.notOwned
-    LazyColumn(
+
+    // 与「任务 → 小工具 → 干员识别」用同一套展示：帕拉斯置顶 + 头像卡网格，点开看详情
+    val operators = remember(snapshot.owned, snapshot.notOwned, selectedTab) {
+        if (selectedTab == 0) {
+            snapshot.owned.sortedByDescending { it.isPallas }
+        } else {
+            snapshot.notOwned
+        }
+    }
+
+    detail?.let { oper ->
+        OperBoxDetailDialog(
+            oper = oper,
+            profession = resourceDataManager.getCharacterById(oper.id)?.profession,
+            onDismiss = { detail = null },
+        )
+    }
+
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(72.dp),
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = MaaDesignTokens.Spacing.md),
         contentPadding = PaddingValues(top = 6.dp, bottom = MaaDesignTokens.Spacing.xs),
-        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.lg),
-            ) {
-                val labels = listOf(
-                    stringResource(R.string.panel_operbox_tab_owned, snapshot.owned.size),
-                    stringResource(R.string.panel_operbox_tab_not_owned, snapshot.notOwned.size),
-                )
-                labels.forEachIndexed { index, label ->
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.lg),
+                ) {
+                    val labels = listOf(
+                        stringResource(R.string.panel_operbox_tab_owned, snapshot.owned.size),
+                        stringResource(R.string.panel_operbox_tab_not_owned, snapshot.notOwned.size),
+                    )
+                    labels.forEachIndexed { index, label ->
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (selectedTab == index) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            fontWeight = if (selectedTab == index) {
+                                FontWeight.Bold
+                            } else {
+                                FontWeight.Normal
+                            },
+                            modifier = Modifier
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) { onTabChange(index) }
+                                .padding(vertical = MaaDesignTokens.Spacing.xs),
+                        )
+                    }
+                }
+                if (snapshot.syncTimeMillis > 0L) {
                     Text(
-                        text = label,
+                        text = stringResource(
+                            R.string.panel_toolbox_last_sync,
+                            formatToolboxSyncTime(snapshot.syncTimeMillis),
+                        ),
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (selectedTab == index) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        fontWeight = if (selectedTab == index) {
-                            FontWeight.Bold
-                        } else {
-                            FontWeight.Normal
-                        },
-                        modifier = Modifier
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                            ) { onTabChange(index) }
-                            .padding(vertical = MaaDesignTokens.Spacing.xs),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
         }
-        items(operators, key = { it.id }) { oper -> OperatorRow(oper) }
+        items(operators, key = { it.id }) { oper ->
+            OperBoxCard(
+                oper = oper,
+                profession = resourceDataManager.getCharacterById(oper.id)?.profession,
+                onClick = { detail = oper },
+            )
+        }
     }
 }
 
@@ -1073,6 +1119,36 @@ private fun DetailEmptyText(textRes: Int) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
     )
+}
+
+/**
+ * 干员页的空状态。
+ *
+ * 工具箱那边是整页引导（大标题 + 「点击下方开始任务」），搬到设置页会指错按钮；这里只
+ * 说清两件事：这个配置档还没有数据、去哪儿跑识别能补上，以及识别完之后这里能看到什么。
+ */
+@Composable
+private fun OperBoxEmptyHint() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(MaaDesignTokens.Spacing.xxl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
+    ) {
+        Text(
+            text = stringResource(R.string.depot_inventory_empty_operators),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = stringResource(R.string.panel_operbox_hint_results),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
 }
 
 // ============================== 导出 ==============================

@@ -3091,7 +3091,7 @@
     <string name="depot_inventory_empty_profiles">No profiles yet</string>
     <string name="depot_inventory_empty_profile">No inventory data for this profile yet. Run depot/operator recognition in the Toolbox.</string>
     <string name="depot_inventory_empty_items">No inventory details for this profile</string>
-    <string name="depot_inventory_empty_operators">No operator data for this profile. Run an operator data update first.</string>
+    <string name="depot_inventory_empty_operators">No operator data for this profile. Run a recognition in Tasks → Toolbox → Operator Recognition; the result is saved to the active profile.</string>
     <string name="depot_inventory_tab_items">Inventory</string>
     <string name="depot_inventory_tab_operators">Operators</string>
     <string name="depot_inventory_tab_order">Farming order</string>
@@ -3139,7 +3139,6 @@
     <string name="resolution_invalid_physical_size">Physical dimensions must be positive</string>
     <string name="resolution_below_minimum">Screen size %1$dx%2$d is below the minimum requirement of 1280x720</string>
     <string name="profile_default_name">Profile %1$d</string>
-    <string name="panel_operbox_owned_meta">E%1$d Lv%2$d Pot%3$d</string>
     <string name="panel_depot_use_expected_drop_rate">Farm at max series</string>
     <string name="panel_depot_use_expected_drop_rate_tip">Estimates the number of battles from Penguin Stats drop rates (shortfall ÷ per-run expectation, rounded; a reference only). With this on, farming uses the highest series multiplier currently available: it stops the moment the target is met and keeps going when it is not. Any surplus stays in the depot and is not wasted — the shortfall is recomputed from live inventory before every run, so a later run of the same material simply needs less. Without drop-rate data no estimate is shown.</string>
     <string name="panel_depot_section_planned">Planned (%1$d)</string>
