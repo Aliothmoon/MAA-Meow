@@ -9,7 +9,7 @@ import java.time.DayOfWeek
  */
 data class MergedStageInfo(
     val code: String,                               // 关卡代码 (value)
-    val displayName: String,                        // 显示名称
+    val displayName: String,                        // 显示名称（活动关卡为服务端文案）
     val openDays: List<DayOfWeek> = emptyList(),    // 空 = 每天开放
     val activity: StageActivityInfo? = null,        // 活动信息
     val drop: String? = null,                       // 掉落物品 ID

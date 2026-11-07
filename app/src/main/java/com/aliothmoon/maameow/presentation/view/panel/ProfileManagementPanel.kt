@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskProfile
+import com.aliothmoon.maameow.data.model.displayName
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
@@ -77,6 +78,7 @@ fun ProfileManagementPanel(
     var editingProfileId by remember { mutableStateOf<String?>(null) }
     var editingName by remember { mutableStateOf("") }
     var deleteConfirmProfileId by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
 
     Column(
         modifier = modifier
@@ -136,18 +138,20 @@ fun ProfileManagementPanel(
                         isActive = isActive,
                         isEditing = isEditing,
                         isDragging = isDragging,
-                        editingName = if (isEditing) editingName else profile.name,
+                        editingName = if (isEditing) editingName else profile.displayName(context),
                         canDelete = profiles.size > 1,
                         modifier = Modifier.longPressDraggableHandle(),
                         onSwitch = { onSwitch(profile.id) },
                         onStartRename = {
                             editingProfileId = profile.id
-                            editingName = profile.name
+                            editingName = profile.displayName(context)
                         },
                         onRenameChange = { editingName = it },
                         onRenameConfirm = {
                             val trimmed = editingName.trim()
-                            if (trimmed.isNotEmpty() && trimmed.length <= 20 && trimmed != profile.name) {
+                            if (trimmed.isNotEmpty() && trimmed.length <= 20 &&
+                                trimmed != profile.displayName(context)
+                            ) {
                                 onRename(profile.id, trimmed)
                             }
                             editingProfileId = null
@@ -162,7 +166,7 @@ fun ProfileManagementPanel(
 
     // 删除确认对话框
     val deleteProfileName = deleteConfirmProfileId?.let { id ->
-        profiles.find { it.id == id }?.name
+        profiles.find { it.id == id }?.displayName(context)
     } ?: ""
     AdaptiveTaskPromptDialog(
         visible = deleteConfirmProfileId != null,
@@ -239,7 +243,7 @@ private fun ProfileCard(
                 Spacer(modifier = Modifier.width(4.dp))
 
                 Text(
-                    text = profile.name,
+                    text = profile.displayName(context),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (isActive) FontWeight.Medium else FontWeight.Normal,
                     color = if (isActive) {

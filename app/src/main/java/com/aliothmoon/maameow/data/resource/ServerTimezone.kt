@@ -1,5 +1,7 @@
 package com.aliothmoon.maameow.data.resource
 
+import androidx.annotation.StringRes
+import com.aliothmoon.maameow.R
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
@@ -52,17 +54,18 @@ object ServerTimezone {
     fun getYjDate(clientType: String): LocalDate = yjNow(clientType).toLocalDate()
 
     /**
-     * 获取指定客户端类型的鹰角历星期几（中文名）
+     * 获取指定客户端类型的鹰角历星期几（字符串资源）
      */
-    fun getYjDayOfWeekName(clientType: String): String {
+    @StringRes
+    fun getYjDayOfWeekRes(clientType: String): Int {
         return when (getYjDayOfWeek(clientType)) {
-            DayOfWeek.MONDAY -> "周一"
-            DayOfWeek.TUESDAY -> "周二"
-            DayOfWeek.WEDNESDAY -> "周三"
-            DayOfWeek.THURSDAY -> "周四"
-            DayOfWeek.FRIDAY -> "周五"
-            DayOfWeek.SATURDAY -> "周六"
-            DayOfWeek.SUNDAY -> "周日"
+            DayOfWeek.MONDAY -> R.string.panel_fight_weekday_monday
+            DayOfWeek.TUESDAY -> R.string.panel_fight_weekday_tuesday
+            DayOfWeek.WEDNESDAY -> R.string.panel_fight_weekday_wednesday
+            DayOfWeek.THURSDAY -> R.string.panel_fight_weekday_thursday
+            DayOfWeek.FRIDAY -> R.string.panel_fight_weekday_friday
+            DayOfWeek.SATURDAY -> R.string.panel_fight_weekday_saturday
+            DayOfWeek.SUNDAY -> R.string.panel_fight_weekday_sunday
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.resource
 
 import android.content.Context
+import androidx.annotation.StringRes
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.activity.ActivityStage
 import com.aliothmoon.maameow.data.model.activity.ClientStageActivity
@@ -54,10 +55,11 @@ class ActivityManager(
     }
 
     /**
-     * 获取当前鹰角历星期几的中文名
+     * 获取当前鹰角历星期几的名称资源
      */
-    fun getYjDayOfWeekName(): String {
-        return ServerTimezone.getYjDayOfWeekName(chainState.clientType)
+    @StringRes
+    fun getYjDayOfWeekRes(): Int {
+        return ServerTimezone.getYjDayOfWeekRes(chainState.clientType)
     }
 
     /**

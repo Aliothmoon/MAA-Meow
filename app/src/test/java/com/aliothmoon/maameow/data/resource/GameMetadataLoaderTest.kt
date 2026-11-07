@@ -42,7 +42,7 @@ class GameMetadataLoaderTest {
     private val resourceDataManager = mockk<ResourceDataManager> {
         coEvery { load(any(), any(), any()) } returns Unit
     }
-    private val itemHelper = mockk<ItemHelper> { justRun { load() } }
+    private val itemHelper = mockk<ItemHelper> { every { load(any()) } returns true }
     private val activityManager = mockk<ActivityManager> { justRun { load(any(), any()) } }
     private val hotUpdateRevision = MutableStateFlow(0)
     private val hotUpdateSync = mockk<HotUpdateSync> {

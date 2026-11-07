@@ -8,6 +8,7 @@ import com.aliothmoon.maameow.data.repository.OperBoxSnapshot
 import com.aliothmoon.maameow.domain.models.PlanSideTask
 import com.aliothmoon.maameow.domain.models.UserDataUpdateTriggerInterval
 import com.aliothmoon.maameow.maa.task.MaaTaskType
+import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import io.mockk.every
 import io.mockk.mockk
@@ -53,8 +54,16 @@ class UserDataUpdateConfigTest {
         )
         assertEquals(
             listOf(
-                uiTextOf(R.string.runlog_task_with_detail, "同步数据", uiTextOf(R.string.maa_oper_box)),
-                uiTextOf(R.string.runlog_task_with_detail, "同步数据", uiTextOf(R.string.maa_depot)),
+                uiTextOf(
+                    R.string.runlog_task_with_detail,
+                    UiText.Dynamic("同步数据"),
+                    uiTextOf(R.string.maa_oper_box),
+                ),
+                uiTextOf(
+                    R.string.runlog_task_with_detail,
+                    UiText.Dynamic("同步数据"),
+                    uiTextOf(R.string.maa_depot),
+                ),
             ),
             result.map { it.logName },
         )

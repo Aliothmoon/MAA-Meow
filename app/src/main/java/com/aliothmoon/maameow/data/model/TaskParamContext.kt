@@ -4,6 +4,7 @@ import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
+import com.aliothmoon.maameow.data.resource.PenguinDropRateProvider
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.PlanSideTask
 import com.aliothmoon.maameow.domain.models.ReportOptions
@@ -24,6 +25,8 @@ class TaskParamContext(
     val operBoxRepository: OperBoxRepository,
     val itemHelper: ItemHelper,
     val resourceDataManager: ResourceDataManager,
+    /** 期望掉率查询；数据由 AnalyzeTaskChain 在展开前 prepare，这里只读 */
+    val dropRateProvider: PenguinDropRateProvider,
     val dropsRefresher: FightDropsRefresher,
     val logSink: PreflightLogSink,
     val report: ReportOptions = ReportOptions.DEFAULT,

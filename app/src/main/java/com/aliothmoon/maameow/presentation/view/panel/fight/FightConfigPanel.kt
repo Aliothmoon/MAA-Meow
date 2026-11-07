@@ -104,7 +104,8 @@ fun FightConfigPanel(
             hasSyncedInventory = depotSnapshot.hasSynced
         )
     }
-    val todayName = remember(activityStages) { activityManager.getYjDayOfWeekName() }
+    val todayNameRes = remember(activityStages) { activityManager.getYjDayOfWeekRes() }
+    val todayName = stringResource(todayNameRes)
 
     // 分组列表 -- 依赖 hideUnavailableStage 和活动关卡数据
     val stageGroups = remember(activityStages, config.hideUnavailableStage) {
