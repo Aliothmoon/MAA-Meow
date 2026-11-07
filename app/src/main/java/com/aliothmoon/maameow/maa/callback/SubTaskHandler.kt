@@ -1,4 +1,4 @@
-﻿package com.aliothmoon.maameow.maa.callback
+package com.aliothmoon.maameow.maa.callback
 
 import android.content.Context
 import com.alibaba.fastjson2.JSONArray
@@ -856,10 +856,10 @@ class SubTaskHandler(
                 val name = subDetails?.getString("oper_name") ?: ""
                 val reqType = subDetails?.getString("requirement_type") ?: ""
                 val reason = when (reqType) {
-                    "elite" -> "精英化不足"
-                    "level" -> "等级不足"
-                    "skill_level" -> "技能等级不足"
-                    "module" -> "所需模组未解锁"
+                    "elite" -> str("RequirementElite")
+                    "level" -> str("RequirementLevel")
+                    "skill_level" -> str("RequirementSkillLevel")
+                    "module" -> str("RequirementModule")
                     else -> reqType
                 }
                 append(str("BattleFormationOperUnavailable", name, reason), LogLevel.ERROR)

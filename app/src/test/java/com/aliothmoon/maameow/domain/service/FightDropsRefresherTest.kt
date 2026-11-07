@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.domain.service
 
+import android.content.Context
 import com.aliothmoon.maameow.MaaCoreService
 import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.data.repository.DepotRepository
@@ -11,6 +12,8 @@ import com.aliothmoon.maameow.domain.models.DropTarget
 import com.aliothmoon.maameow.maa.callback.SubTaskHandler
 import com.aliothmoon.maameow.maa.task.TaskSlot
 import com.aliothmoon.maameow.manager.RemoteServiceManager
+import com.aliothmoon.maameow.utils.i18n.UiText
+import com.aliothmoon.maameow.utils.i18n.resolve
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -37,6 +40,7 @@ import org.junit.Test
 class FightDropsRefresherTest {
 
     private val depotRepository: DepotRepository = mockk()
+    private val appContext: Context = mockk()
     private val itemHelper: ItemHelper = mockk()
     private val stageApCostHelper: StageApCostHelper = mockk()
     private val subTaskHandler: SubTaskHandler = mockk()
@@ -67,6 +71,7 @@ class FightDropsRefresherTest {
         every { stageApCostHelper.getApCost(any()) } returns null
 
         refresher = FightDropsRefresher(
+            appContext,
             depotRepository,
             itemHelper,
             stageApCostHelper,
@@ -100,7 +105,7 @@ class FightDropsRefresherTest {
         medicine: Int = 3,
         stone: Int = 1,
         series: Int = 1,
-        logLabel: String = "1",
+        logLabel: UiText = UiText.Dynamic("1"),
     ) = DropTarget(dropId, dropCount, stage, medicine, stone, series, logLabel)
 
     /** 模拟 Analyze stage + Composition bind */
@@ -192,7 +197,7 @@ class FightDropsRefresherTest {
         assertEquals(100, sufficient.current)
         assertEquals(100, sufficient.target)
         assertEquals("源岩", sufficient.dropName)
-        assertEquals("1", sufficient.logLabel)
+        assertEquals("1", sufficient.logLabel.resolve(appContext))
 
         assertEquals(0, json["times"]!!.jsonPrimitive.content.toInt())
         assertEquals(1, json["drops"]!!.jsonObject[ITEM]!!.jsonPrimitive.content.toInt())
@@ -238,7 +243,8 @@ class FightDropsRefresherTest {
         val outcome = refresher.onTaskStarted(1)
         val json = Json.parseToJsonElement(lastParamsJson!!).jsonObject
 
-        assertEquals(FightDropsRefresher.RefreshOutcome.InventoryUnavailable("1", applied = true), outcome)
+        assertTrue(outcome is FightDropsRefresher.RefreshOutcome.InventoryUnavailable)
+        assertTrue((outcome as FightDropsRefresher.RefreshOutcome.InventoryUnavailable).applied)
         assertEquals(0, json["times"]!!.jsonPrimitive.content.toInt())
     }
 
