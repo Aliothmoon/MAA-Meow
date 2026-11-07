@@ -219,7 +219,6 @@
     <string name="settings_import_config_desc">Restore settings and task configurations from a file</string>
 
     <string name="depot_inventory_title">Depot Inventory</string>
-    <string name="depot_inventory_detail_title">Profile data</string>
     <string name="depot_inventory_profile_active">Active</string>
     <string name="depot_inventory_empty_profiles">No profiles yet</string>
     <string name="depot_inventory_empty_profile">No inventory data for this profile yet. Run depot/operator recognition in the Toolbox.</string>
@@ -238,6 +237,7 @@
     <string name="depot_inventory_png_empty">(empty)</string>
     <string name="depot_inventory_png_oper_summary">Owned %1$d · Not owned %2$d</string>
     <string name="depot_inventory_png_oper_meta">E%1$d · Lv%2$d · P%3$d</string>
+    <string name="depot_inventory_detail_title">Profile data</string>
     <string name="depot_inventory_sync_time">Updated: %1$s</string>
     <string name="depot_inventory_export">Export</string>
     <string name="depot_inventory_delete">Clear</string>

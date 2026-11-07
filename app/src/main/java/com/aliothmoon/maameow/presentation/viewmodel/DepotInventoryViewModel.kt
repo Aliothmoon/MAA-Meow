@@ -41,9 +41,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.aliothmoon.maameow.utils.i18n.formatToolboxSyncTime
 import java.io.ByteArrayOutputStream
-import java.text.DateFormat
-import java.util.Date
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -317,7 +316,7 @@ class DepotInventoryViewModel(
         val header = buildList {
             if (!hideProfileLabel && titleLabel.isNotBlank()) add(titleLabel)
             if (snap.syncTimeMillis > 0L) {
-                add(DateFormat.getDateTimeInstance().format(Date(snap.syncTimeMillis)))
+                add(formatToolboxSyncTime(snap.syncTimeMillis))
             }
             add(labels.itemsCountFormat.format(itemList.size))
         }
@@ -449,7 +448,7 @@ class DepotInventoryViewModel(
         val headerLines = buildList {
             if (!hideProfileLabel && titleLabel.isNotBlank()) add(titleLabel)
             if (snap.syncTimeMillis > 0L) {
-                add(DateFormat.getDateTimeInstance().format(Date(snap.syncTimeMillis)))
+                add(formatToolboxSyncTime(snap.syncTimeMillis))
             }
             add(labels.summaryFormat.format(snap.owned.size, snap.notOwned.size))
         }

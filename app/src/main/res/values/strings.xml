@@ -474,7 +474,6 @@
 
     <!-- depot inventory page -->
     <string name="depot_inventory_title">库存数据</string>
-    <string name="depot_inventory_detail_title">配置档数据</string>
     <string name="depot_inventory_profile_active">活跃</string>
     <string name="depot_inventory_empty_profiles">暂无配置档</string>
     <string name="depot_inventory_empty_profile">该配置档暂无库存数据。请在小工具中执行一次仓库/干员识别。</string>
@@ -493,6 +492,7 @@
     <string name="depot_inventory_png_empty">（空）</string>
     <string name="depot_inventory_png_oper_summary">已拥有 %1$d · 未拥有 %2$d</string>
     <string name="depot_inventory_png_oper_meta">精英 %1$d · %2$d 级 · 潜 %3$d</string>
+    <string name="depot_inventory_detail_title">配置档数据</string>
     <string name="depot_inventory_sync_time">更新时间：%1$s</string>
     <string name="depot_inventory_export">导出</string>
     <string name="depot_inventory_delete">清空</string>

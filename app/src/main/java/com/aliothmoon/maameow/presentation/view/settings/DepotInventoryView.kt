@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.presentation.view.settings
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -73,6 +74,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar as M3TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -88,9 +91,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -147,8 +154,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
-import java.text.DateFormat
-import java.util.Date
 import kotlin.math.roundToInt
 
 /** 「库存为 0」那段标题行的 key：展开时要按它把这一段顶回眼前 */
@@ -485,8 +490,7 @@ private fun SwipeRevealProfileCard(
                     Text(
                         text = stringResource(
                             R.string.depot_inventory_sync_time,
-                            DateFormat.getDateTimeInstance()
-                                .format(Date(row.syncTimeMillis)),
+                            formatToolboxSyncTime(row.syncTimeMillis),
                         ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -513,6 +517,7 @@ private fun DepotProfileRow.maintainSummary(): String = when {
 
 // ============================== 三级：配置档详情 ==============================
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DepotProfileDetailView(
     row: DepotProfileRow?,
@@ -531,12 +536,80 @@ private fun DepotProfileDetailView(
     // 存格子的 key 而不是物品 id：同一物品配了多条计划时会有多格，按 id 找只会拿到第一格
     var planSheetCellKey by remember { mutableStateOf<String?>(null) }
 
+    // 标题栏常驻不隐去；上滑时把下面那块「配置名 / 库存保持 / 更新时间」收走，
+    // 同时标题栏左侧换成配置名、右侧补上识别时间；下滑回到顶部再恢复成原来的三行头部
+    var headerCollapsed by rememberSaveable { mutableStateOf(false) }
+    val scrollCollapseConnection = remember {
+        object : NestedScrollConnection {
+            // 手指向上推（内容下滚）就把头部收走
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y < -1f) headerCollapsed = true
+                return Offset.Zero
+            }
+
+            // 已经在顶部还继续往下拉（内容滚不动了）就把头部放回来
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                if (available.y > 1f) headerCollapsed = false
+                return Offset.Zero
+            }
+        }
+    }
+    // 标题右侧显示这一档的识别时间；没识别过就是空串，不占位。
+    // 格式与列表卡片、导出图统一走 formatToolboxSyncTime，避免同一份 syncTimeMillis 出现两种写法
+    val syncTimeText = remember(row?.syncTimeMillis) {
+        formatToolboxSyncTime(row?.syncTimeMillis ?: 0L)
+    }
+    // 收起态标题栏右侧带上「更新时间：」前缀：光一个日期读不出这是什么时候的数据
+    val syncTimeLabel =
+        if (syncTimeText.isEmpty()) "" else stringResource(R.string.depot_inventory_sync_time, syncTimeText)
+
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollCollapseConnection),
         topBar = {
-            TopAppBar(
-                title = stringResource(R.string.depot_inventory_detail_title),
-                navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
-                onNavigationClick = onBack,
+            M3TopAppBar(
+                title = {
+                    if (headerCollapsed) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = profileName,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (syncTimeLabel.isNotEmpty()) {
+                                Spacer(Modifier.width(MaaDesignTokens.Spacing.sm))
+                                Text(
+                                    text = syncTimeLabel,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                )
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = stringResource(R.string.depot_inventory_detail_title),
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.accessibility_navigation),
+                        )
+                    }
+                },
                 actions = {
                     IconButton(onClick = onExport) {
                         Icon(
@@ -552,8 +625,19 @@ private fun DepotProfileDetailView(
                         )
                     }
                 },
+                // 与列表页 / 仓库既有顶栏同一条基线：背景色容器 + primary 动作图标，免得进出详情页时顶栏换色。
+                // scrolledContainerColor 必须显式给：不传会落回 M3 的 surfaceContainer（本工程没覆盖那一族），
+                // 一滚动顶栏就从米色跳成淡紫，纯黑主题下尤其刺眼
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    actionIconContentColor = MaterialTheme.colorScheme.primary,
+                ),
             )
         },
+        // 顶栏自带 windowInsets（收起后仍保留状态栏高度），所以内容区不需要再补 top：
+        // 这里仍传全零，保持与改动前一致的内边距口径
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { padding ->
         Column(
@@ -561,44 +645,50 @@ private fun DepotProfileDetailView(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = MaaDesignTokens.Spacing.md,
-                        vertical = MaaDesignTokens.Spacing.xs,
-                    ),
-                verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs),
+            // 这一块就是「沉浸」的全部：滚起来就收走，回到顶部再放回来，标题栏始终在
+            AnimatedVisibility(
+                visible = !headerCollapsed,
+                enter = expandVertically(animationSpec = tween(180)) + fadeIn(tween(180)),
+                exit = shrinkVertically(animationSpec = tween(180)) + fadeOut(tween(120)),
             ) {
-                Text(
-                    text = profileName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                row?.let {
-                    if (it.planCount > 0 || !it.hasSynced) {
-                        Text(
-                            text = it.maintainSummary(),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (it.hasSynced && it.unmetCount > 0) {
-                                MaterialTheme.colorScheme.error
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                        )
-                    }
-                    if (it.syncTimeMillis > 0L) {
-                        Text(
-                            text = stringResource(
-                                R.string.depot_inventory_sync_time,
-                                DateFormat.getDateTimeInstance()
-                                    .format(Date(it.syncTimeMillis)),
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = MaaDesignTokens.Spacing.md,
+                            vertical = MaaDesignTokens.Spacing.xs,
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs),
+                ) {
+                    Text(
+                        text = profileName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    row?.let {
+                        if (it.planCount > 0 || !it.hasSynced) {
+                            Text(
+                                text = it.maintainSummary(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (it.hasSynced && it.unmetCount > 0) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            )
+                        }
+                        if (it.syncTimeMillis > 0L) {
+                            Text(
+                                text = stringResource(
+                                    R.string.depot_inventory_sync_time,
+                                    formatToolboxSyncTime(it.syncTimeMillis),
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }
