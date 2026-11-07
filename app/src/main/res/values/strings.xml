@@ -491,7 +491,7 @@
     <string name="depot_inventory_png_items">%1$d 项</string>
     <string name="depot_inventory_png_empty">（空）</string>
     <string name="depot_inventory_png_oper_summary">已拥有 %1$d · 未拥有 %2$d</string>
-    <string name="depot_inventory_png_oper_meta">精英 %1$d · %2$d 级 · 潜 %3$d</string>
+    <string name="depot_inventory_png_oper_meta">精%1$d · %2$d 级 · 潜 %3$d</string>
     <string name="depot_inventory_detail_title">配置档数据</string>
     <string name="depot_inventory_sync_time">更新时间：%1$s</string>
     <string name="depot_inventory_export">导出</string>
@@ -507,6 +507,8 @@
     <string name="depot_inventory_export_image">导出为图片（PNG）</string>
     <string name="depot_inventory_export_hide_profile">隐藏配置档名</string>
     <string name="depot_inventory_export_hide_profile_hint">PNG 图头不写配置档名，只保留时间与数据</string>
+    <string name="depot_inventory_export_include_not_owned">包含未拥有干员</string>
+    <string name="depot_inventory_export_include_not_owned_hint">关掉后只导出已拥有的干员，JSON / Markdown / CSV 与导出图同步生效</string>
     <string name="depot_inventory_maintain_title">库存保持计划</string>
     <string name="depot_inventory_maintain_need">缺 %1$d</string>
     <string name="depot_inventory_maintain_enough">已够</string>

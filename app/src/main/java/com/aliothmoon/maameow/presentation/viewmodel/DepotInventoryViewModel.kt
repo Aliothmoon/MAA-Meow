@@ -1,13 +1,23 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
+import android.graphics.Shader
 import android.graphics.Typeface
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.DepotMaintainConfig
 import com.aliothmoon.maameow.data.model.DepotMaintainPlan
 import com.aliothmoon.maameow.data.model.DepotPlanOutcome
@@ -25,11 +35,17 @@ import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.repository.OperBoxSnapshot
 import com.aliothmoon.maameow.data.repository.toArkPlannerJson
 import com.aliothmoon.maameow.data.repository.toExportList
+import com.aliothmoon.maameow.data.repository.toExportSections
 import com.aliothmoon.maameow.data.repository.toLoliconJson
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.data.resource.ItemInfo
+import com.aliothmoon.maameow.data.resource.OperAvatarLoader
+import com.aliothmoon.maameow.data.resource.OperRoleIconLoader
+import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.presentation.components.RARE_SUMMON_GRADIENT_LIGHT
+import com.aliothmoon.maameow.presentation.components.pallasCheerText
 import com.aliothmoon.maameow.utils.i18n.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,7 +79,11 @@ class DepotInventoryViewModel(
     private val taskChainState: TaskChainState,
     private val itemHelper: ItemHelper,
     private val itemIconLoader: ItemIconLoader,
+    private val operAvatarLoader: OperAvatarLoader,
     private val activityManager: ActivityManager,
+    private val operRoleIconLoader: OperRoleIconLoader,
+    private val resourceDataManager: ResourceDataManager,
+    private val appContext: Context,
 ) : ViewModel() {
 
     val profiles: StateFlow<List<TaskProfile>> = taskChainState.profiles
@@ -285,17 +305,24 @@ class DepotInventoryViewModel(
     fun exportDepotLolicon(profileId: String): String =
         snapshotOf(profileId).toLoliconJson(itemHelper.items.value)
 
-    fun exportOperBoxList(profileId: String): List<OperBoxOperator> =
-        (operBoxRepository.snapshots.value[profileId] ?: OperBoxSnapshot()).toExportList()
+    fun exportOperBoxList(profileId: String, includeNotOwned: Boolean = true): List<OperBoxOperator> =
+        (operBoxRepository.snapshots.value[profileId] ?: OperBoxSnapshot())
+            .toExportList(includeNotOwned)
 
-    fun exportOperBoxJson(profileId: String): String =
-        OperBoxExportFormatter.toJson(exportOperBoxList(profileId))
+    fun exportOperBoxJson(profileId: String, includeNotOwned: Boolean = true): String =
+        OperBoxExportFormatter.toJson(exportOperBoxList(profileId, includeNotOwned))
 
-    fun exportOperBoxMarkdown(profileId: String, labels: OperBoxExportLabels): String =
-        OperBoxExportFormatter.toMarkdown(exportOperBoxList(profileId), labels)
+    fun exportOperBoxMarkdown(
+        profileId: String,
+        labels: OperBoxExportLabels,
+        includeNotOwned: Boolean = true,
+    ): String = OperBoxExportFormatter.toMarkdown(exportOperBoxList(profileId, includeNotOwned), labels)
 
-    fun exportOperBoxCsv(profileId: String, labels: OperBoxExportLabels): String =
-        OperBoxExportFormatter.toCsv(exportOperBoxList(profileId), labels)
+    fun exportOperBoxCsv(
+        profileId: String,
+        labels: OperBoxExportLabels,
+        includeNotOwned: Boolean = true,
+    ): String = OperBoxExportFormatter.toCsv(exportOperBoxList(profileId, includeNotOwned), labels)
 
     private fun snapshotOf(profileId: String): DepotSnapshot =
         depotRepository.snapshots.value[profileId] ?: DepotSnapshot()
@@ -339,17 +366,18 @@ class DepotInventoryViewModel(
             Bitmap.Config.ARGB_8888,
         )
         val canvas = Canvas(bitmap)
-        canvas.drawColor(Color.WHITE) // 导出底必须不透明白，黑底图标抠透后透出这里
+        // 底色用界面的背景色；图标模板图的黑底在 ItemIconLoader 里抠成透明，透出这一层
+        canvas.drawColor(EXPORT_BG)
         // 之后一律按设计尺寸绘制，超预算时整体缩小（文字、图标一起缩）
         canvas.scale(scale, scale)
 
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.BLACK
+            color = EXPORT_ON_SURFACE
             textSize = 34f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
         val subPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.DKGRAY
+            color = EXPORT_ON_SURFACE_VARIANT
             textSize = 26f
         }
         var y = pad + 34f
@@ -358,22 +386,17 @@ class DepotInventoryViewModel(
             y += headerLineH
         }
 
-        val cellBg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#F7F5F2") }
+        val cellBg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = EXPORT_CARD }
         val namePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.DKGRAY
+            color = EXPORT_ON_SURFACE_VARIANT
             textSize = 22f
             textAlign = Paint.Align.CENTER
         }
         val countPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.BLACK
+            color = EXPORT_ON_SURFACE
             textSize = 26f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             textAlign = Paint.Align.CENTER
-        }
-        // 图标底板与占位色在循环外建一次，别按格子数 new
-        val plate = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            style = Paint.Style.FILL
         }
         val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             isFilterBitmap = true
@@ -397,7 +420,7 @@ class DepotInventoryViewModel(
                     (left + cellW).toFloat(),
                     (top + cellH).toFloat(),
                 )
-                canvas.drawRoundRect(rect, 12f, 12f, cellBg)
+                canvas.drawRoundRect(rect, 16f, 16f, cellBg)
 
                 val icon = runCatching { itemIconLoader.loadRawAndroidBitmap(item.id) }.getOrNull()
                 val iconSize = 88
@@ -410,9 +433,20 @@ class DepotInventoryViewModel(
                     (iconTop + iconSize).toFloat(),
                 )
                 if (icon != null && !icon.isRecycled) {
-                    // 先铺不透明白底，再画黑转透明后的图标，透出白底不发黑
-                    canvas.drawRoundRect(dst, 8f, 8f, plate)
-                    canvas.drawBitmap(icon, null, dst, iconPaint)
+                    // 先把图标压到卡片色上再贴：图标 PNG 的黑底已抠成透明，
+                    // 直接画到画布上会在位图上留下 alpha=0 的洞，深色相册/深色聊天
+                    // 背景里就透出一圈黑方块；先合成成不透明的小图，到哪都一样
+                    val iconOnCard = Bitmap.createBitmap(iconSize, iconSize, Bitmap.Config.ARGB_8888)
+                    val iconCanvas = Canvas(iconOnCard)
+                    iconCanvas.drawColor(EXPORT_CARD)
+                    iconCanvas.drawBitmap(
+                        icon,
+                        null,
+                        RectF(0f, 0f, iconSize.toFloat(), iconSize.toFloat()),
+                        iconPaint,
+                    )
+                    canvas.drawBitmap(iconOnCard, null, dst, null)
+                    iconOnCard.recycle()
                     icon.recycle()
                 } else {
                     canvas.drawRoundRect(dst, 8f, 8f, placeholder)
@@ -425,36 +459,59 @@ class DepotInventoryViewModel(
             }
         }
 
+        // 底图是不透明 ARGB，直接声明无 alpha 即可让 PNG 编码带上不透明标记，
+        // 不用再整帧拷一层背景（12M 像素上限下那一下要多吃 48MB）
+        bitmap.setHasAlpha(false)
         compressPng(bitmap)
     }
 
     /**
-     * 干员图导出 owned + notOwned 两段，与 JSON / Markdown / CSV 的口径一致；
-     * 只画 owned 会让人以为未拥有的干员不在数据里。
+     * 干员图导出 owned + notOwned 两段，与 JSON / Markdown / CSV 共用
+     * [com.aliothmoon.maameow.data.repository.toExportSections] 的守卫与顺序（帕拉斯置顶）；
+     * [includeNotOwned] 为 false 时只画已拥有的，此时图头也不再写「未拥有 N」。
      */
     suspend fun renderOperBoxPng(
         profileId: String,
         hideProfileLabel: Boolean = false,
         titleLabel: String = "",
         labels: OperBoxPngLabels,
+        includeNotOwned: Boolean = true,
     ): ByteArray? = withContext(Dispatchers.Default) {
         val snap = operBoxRepository.snapshots.value[profileId] ?: OperBoxSnapshot()
-        val opers = snap.toExportList()
+        // 与 JSON / Markdown / CSV 共用同一份导出清单：同样「没识别过就是空表」，同样帕拉斯置顶
+        val (owned, notOwned) = snap.toExportSections(includeNotOwned)
 
         val pad = 24
-        val rowH = 64
-        val gap = 8
+        val gap = 12
+        val columns = 6
+        val cellW = 132
+        val cellH = cellW + 44
+        val sectionHeaderH = 40
         val headerLineH = 40
+
         val headerLines = buildList {
             if (!hideProfileLabel && titleLabel.isNotBlank()) add(titleLabel)
             if (snap.syncTimeMillis > 0L) {
                 add(formatToolboxSyncTime(snap.syncTimeMillis))
             }
-            add(labels.summaryFormat.format(snap.owned.size, snap.notOwned.size))
+            // 只导出已拥有时不写「未拥有 N」，免得和下面的分段标题互相打架
+            if (includeNotOwned) add(labels.summaryFormat.format(snap.owned.size, snap.notOwned.size))
         }
-        val headerH = pad + headerLines.size * headerLineH + 8
+
+        val sections = buildList {
+            if (owned.isNotEmpty()) add(labels.ownedHeaderFormat.format(owned.size) to owned)
+            if (notOwned.isNotEmpty()) add(labels.notOwnedHeaderFormat.format(notOwned.size) to notOwned)
+        }
+
+        // 行与行之间才有 gap，最后一行下面不留：否则底部会多出一条固定的空白
+        fun rowsOf(count: Int): Int = ceil(count / columns.toDouble()).toInt()
+        fun gridHeight(count: Int): Int =
+            if (count == 0) 0 else sectionHeaderH + rowsOf(count) * cellH + (rowsOf(count) - 1) * gap
+
         val width = 900
-        val height = headerH + pad + max(1, opers.size) * (rowH + gap) + pad
+        val headerH = pad + headerLines.size * headerLineH + 8
+        val emptyStateH = if (sections.isEmpty()) headerLineH else 0
+        val height = headerH + emptyStateH + pad + sections.sumOf { (_, list) -> gridHeight(list.size) } + pad
 
         val scale = exportScale(width, height)
         val bitmap = Bitmap.createBitmap(
@@ -463,16 +520,16 @@ class DepotInventoryViewModel(
             Bitmap.Config.ARGB_8888,
         )
         val canvas = Canvas(bitmap)
-        canvas.drawColor(Color.WHITE)
+        canvas.drawColor(EXPORT_BG)
         canvas.scale(scale, scale)
 
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.BLACK
+            color = EXPORT_ON_SURFACE
             textSize = 34f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
         val subPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.DKGRAY
+            color = EXPORT_ON_SURFACE_VARIANT
             textSize = 26f
         }
         var y = pad + 34f
@@ -481,44 +538,239 @@ class DepotInventoryViewModel(
             y += headerLineH
         }
 
-        val rowBg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#F3F1ED") }
-        val namePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.BLACK
-            textSize = 28f
-        }
-        val metaPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.DKGRAY
-            textSize = 24f
-            textAlign = Paint.Align.RIGHT
-        }
-        val rarityPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            textSize = 24f
+        val sectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = EXPORT_ON_SURFACE
+            textSize = 26f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
+        val namePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = EXPORT_ON_SURFACE
+            textSize = 21f
+            textAlign = Paint.Align.CENTER
+        }
+        val metaPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = EXPORT_ON_SURFACE_VARIANT
+            textSize = 18f
+            textAlign = Paint.Align.CENTER
+        }
+        // 卡片底：与界面一致，已拥有按稀有度上色（45% 透明），未拥有统一抹灰
+        val cardPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+        val starPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textAlign = Paint.Align.CENTER
+            setShadowLayer(3f, 0f, 1f, 0xCC000000.toInt())
+        }
+        val levelBadgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xAA1F1F1F.toInt()
+            style = Paint.Style.FILL
+        }
+        val levelTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            // 与其它徽章同字号：界面里的 BadgeText 都是 8sp
+            textSize = 14.6f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        }
+        // 卡片上各种小徽章：深色底 + 白字，和界面里的 BadgeBackground 一致
+        val badgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = BADGE_BG
+            style = Paint.Style.FILL
+        }
+        val badgeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = 14.6f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        }
+        val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { isFilterBitmap = true }
+        val masteryOnPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = MASTERY_ON
+            style = Paint.Style.FILL
+        }
+        val masteryOffPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = MASTERY_OFF
+            style = Paint.Style.FILL
+        }
+        val placeholderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = EXPORT_CARD }
+        val avatarPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { isFilterBitmap = true }
+        val dimFilter = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
+        val clipPath = Path()
+        // 帕拉斯的头像位用应用图标（对齐界面 AppIconAvatar），只解一次
+        val appIconBitmap: Bitmap? = runCatching {
+            appContext.packageManager.getApplicationIcon(appContext.applicationInfo).toBitmap(96, 96)
+        }.getOrNull()
 
-        if (opers.isEmpty()) {
-            canvas.drawText(labels.empty, pad.toFloat(), headerH + 48f, namePaint)
+        if (sections.isEmpty()) {
+            // namePaint 是 CENTER 对齐：x 必须给画布中线，给 pad 会让文字跑出左边框
+            canvas.drawText(labels.empty, width / 2f, headerH + headerLineH * 0.7f, namePaint)
         } else {
-            opers.forEachIndexed { index, op ->
-                val top = headerH + index * (rowH + gap)
-                val rect = RectF(
-                    pad.toFloat(),
-                    top.toFloat(),
-                    (width - pad).toFloat(),
-                    (top + rowH).toFloat(),
-                )
-                canvas.drawRoundRect(rect, 10f, 10f, rowBg)
+            var sectionTop = headerH
+            sections.forEach { (header, list) ->
+                canvas.drawText(header, pad.toFloat(), sectionTop + 26f, sectionPaint)
+                val top = sectionTop + sectionHeaderH
+                list.forEachIndexed { index, op ->
+                    val col = index % columns
+                    val row = index / columns
+                    val left = pad + col * (cellW + gap)
+                    val cellTop = top + row * (cellH + gap)
+                    // 帕拉斯用应用图标当头像；其余走 LRU 复用 + 只解码不入缓存，别把界面缓存的头像挤掉
+                    val avatar = if (op.isPallas && op.own) {
+                        appIconBitmap
+                    } else {
+                        runCatching {
+                            (operAvatarLoader.peek(op.id) ?: operAvatarLoader.loadTransient(op.id))
+                                ?.asAndroidBitmap()
+                        }.getOrNull()
+                    }
 
-                rarityPaint.color = rarityColor(op.rarity)
-                canvas.drawText("${op.rarity}★", (pad + 16).toFloat(), top + 40f, rarityPaint)
-                canvas.drawText(op.name, pad + 80f, top + 40f, namePaint)
-                if (op.own) {
-                    val meta = labels.operMetaFormat.format(op.elite, op.level, op.potential)
-                    canvas.drawText(meta, (width - pad - 16).toFloat(), top + 40f, metaPaint)
+                    // 卡面与界面一致：帕拉斯是稀有成就渐变，已拥有按稀有度上色（45% 透明），未拥有统一抹灰
+                    val cardRect = RectF(
+                        left.toFloat(),
+                        cellTop.toFloat(),
+                        (left + cellW).toFloat(),
+                        (cellTop + cellW).toFloat(),
+                    )
+                    cardPaint.shader = null
+                    if (op.isPallas && op.own) {
+                        cardPaint.shader = LinearGradient(
+                            cardRect.left,
+                            cardRect.top,
+                            cardRect.right,
+                            cardRect.bottom,
+                            RARE_SUMMON_GRADIENT_LIGHT.toIntArray(),
+                            null,
+                            Shader.TileMode.CLAMP,
+                        )
+                    } else {
+                        cardPaint.color = if (op.own) {
+                            withAlpha(rarityColor(op.rarity), 0.45f)
+                        } else {
+                            NOT_OWNED_CARD
+                        }
+                    }
+                    canvas.drawRoundRect(cardRect, 6f, 6f, cardPaint)
+                    cardPaint.shader = null
+
+                    // 头像占卡面 80%，对齐 OperBoxCard 的 fillMaxSize(0.8f)
+                    val side = cellW * 0.8f
+                    val avatarLeft = left + (cellW - side) / 2f
+                    val avatarTop = cellTop + (cellW - side) / 2f
+                    val dst = RectF(avatarLeft, avatarTop, avatarLeft + side, avatarTop + side)
+                    if (avatar != null && !avatar.isRecycled) {
+                        clipPath.reset()
+                        clipPath.addRoundRect(dst, 4f, 4f, Path.Direction.CW)
+                        canvas.save()
+                        canvas.clipPath(clipPath)
+                        avatarPaint.colorFilter = if (op.own) null else dimFilter
+                        canvas.drawBitmap(avatar, null, dst, avatarPaint)
+                        canvas.restore()
+                    } else {
+                        canvas.drawRoundRect(dst, 4f, 4f, placeholderPaint)
+                    }
+
+                    // 顶部居中的稀有度星：白字带阴影，压在浅色卡面上也看得清
+                    // 帕拉斯与界面一致：已拥有时用六个随机表情代替星级
+                    val pallasCheer = op.isPallas && op.own
+                    starPaint.textSize = when {
+                        pallasCheer -> 12f
+                        op.rarity >= 5 -> 10f
+                        else -> 11f
+                    }
+                    val starText = if (pallasCheer) pallasCheerText() else "★".repeat(op.rarity)
+                    if (starText.isNotEmpty()) {
+                        canvas.drawText(starText, left + cellW / 2f, cellTop + 16f, starPaint)
+                    }
+
+                    // 左上角职业图标：深色圆角底 + 1 单位内缩，对齐 OperBoxCard 的 12dp 徽章
+                    val profession = runCatching {
+                        resourceDataManager.getCharacterById(op.id)?.profession
+                    }.getOrNull()
+                    OperRoleIconLoader.templateId(profession)?.let { roleId ->
+                        val role = runCatching {
+                            operRoleIconLoader.load(roleId)?.asAndroidBitmap()
+                        }.getOrNull()
+                        if (role != null && !role.isRecycled) {
+                            canvas.drawRoundRect(
+                                RectF(left + 5f, cellTop + 5f, left + 30f, cellTop + 30f), 4f, 4f, badgePaint,
+                            )
+                            canvas.drawBitmap(
+                                role, null, RectF(left + 7f, cellTop + 7f, left + 28f, cellTop + 28f), iconPaint,
+                            )
+                        }
+                    }
+
+                    if (op.own) {
+                        // 左下角竖排：潜能 / 精英 / 等级，对齐界面里三个小徽章
+                        var badgeBottom = cellTop + cellW - 5.5f
+                        val lv = "Lv.${op.level}"
+                        val lvWidth = levelTextPaint.measureText(lv) + 8f
+                        canvas.drawRoundRect(
+                            RectF(left + 5.5f, badgeBottom - 18f, left + 5.5f + lvWidth, badgeBottom),
+                            3f, 3f, levelBadgePaint,
+                        )
+                        canvas.drawText(lv, left + 9.5f, badgeBottom - 5f, levelTextPaint)
+                        badgeBottom -= 20f
+                        badgeBottom = drawBadgeDrawable(
+                            res = eliteRes(op.elite),
+                            left = left + 5.5f,
+                            bottom = badgeBottom,
+                            size = 22f,
+                            badgePaint = badgePaint,
+                            iconPaint = iconPaint,
+                            canvas = canvas,
+                        )
+                        drawBadgeDrawable(
+                            res = potentialRes(op.potential),
+                            left = left + 5.5f,
+                            bottom = badgeBottom - 2f,
+                            size = 22f,
+                            badgePaint = badgePaint,
+                            iconPaint = iconPaint,
+                            canvas = canvas,
+                        )
+
+                        // 右下角：专精三圆 / RANK 贴卡底，模组依次叠在上面
+                        // 对齐 OperBoxCard.TrainingBadges —— 没有一图流数据（mainSkillLevel 为空）就整块不画
+                        val rank = op.mainSkillLevel
+                        if (rank != null) {
+                            var rightBottom = cellTop + cellW - 5.5f
+                            val mastery = op.skills.map { it.level }
+                            rightBottom = if (mastery.any { it >= 1 }) {
+                                drawMasteryRow(
+                                    canvas, mastery, left + cellW - 5.5f, rightBottom,
+                                    badgePaint, masteryOnPaint, masteryOffPaint,
+                                )
+                            } else {
+                                drawBadgeText(
+                                    canvas, "RANK $rank", left + cellW - 5.5f, rightBottom,
+                                    badgePaint, badgeTextPaint,
+                                )
+                            }
+                            val mods = op.equips.filter { it.level > 0 }
+                                .map { "${MOD_TYPE_LABELS[it.type] ?: it.type}${it.level}" }
+                            for (text in mods.asReversed()) {
+                                rightBottom = drawBadgeText(
+                                    canvas, text, left + cellW - 5.5f, rightBottom - 2f,
+                                    badgePaint, badgeTextPaint,
+                                )
+                            }
+                        }
+                    }
+
+                    val name = op.name.let { if (it.length > 7) it.take(6) + "…" else it }
+                    namePaint.fitText(name, cellW - 4f, base = 20f)
+                    canvas.drawText(name, left + cellW / 2f, cellTop + cellW + 19f, namePaint)
+                    if (op.own) {
+                        val meta = labels.operMetaFormat.format(op.elite, op.level, op.potential)
+                        metaPaint.fitText(meta, cellW - 4f, base = 15f)
+                        canvas.drawText(meta, left + cellW / 2f, cellTop + cellW + 38f, metaPaint)
+                    }
                 }
+                sectionTop = top + gridHeight(list.size)
             }
         }
 
+        // 底图是不透明 ARGB，直接声明无 alpha 即可让 PNG 编码带上不透明标记，
+        // 不用再整帧拷一层背景（12M 像素上限下那一下要多吃 48MB）
+        bitmap.setHasAlpha(false)
         compressPng(bitmap)
     }
 
@@ -528,8 +780,17 @@ class DepotInventoryViewModel(
         4 -> Color.parseColor("#9C7CFF")
         3 -> Color.parseColor("#4FC3F7")
         2 -> Color.parseColor("#A5D6A7")
-        else -> Color.GRAY
+        // 认不出的稀有度按界面兜底：用次要文字色而不是中性灰，深色相册里不会看成脏块
+        else -> EXPORT_ON_SURFACE_VARIANT
     }
+
+    /** 卡片底色：与界面一致，已拥有是稀有度色 45% 透明，未拥有是灰 */
+    private fun withAlpha(color: Int, alpha: Float): Int = Color.argb(
+        (alpha * 255f).roundToInt().coerceIn(0, 255),
+        Color.red(color),
+        Color.green(color),
+        Color.blue(color),
+    )
 
     private fun compressPng(bitmap: Bitmap): ByteArray? {
         return try {
@@ -539,6 +800,35 @@ class DepotInventoryViewModel(
         } finally {
             bitmap.recycle()
         }
+    }
+
+    /**
+     * 卡片上带深色底的图标徽章（潜能 / 精英），返回画完后的上边界。
+     * 直接按 bounds 画 PNG，不额外建位图——这些图标是 30×30 的 nodpi 小图。
+     */
+    private fun drawBadgeDrawable(
+        canvas: Canvas,
+        res: Int?,
+        left: Float,
+        bottom: Float,
+        size: Float,
+        badgePaint: Paint,
+        iconPaint: Paint,
+    ): Float {
+        if (res == null) return bottom
+        val drawable = runCatching { ContextCompat.getDrawable(appContext, res) }.getOrNull()
+            ?: return bottom
+        val top = bottom - size
+        canvas.drawRoundRect(RectF(left, top, left + size, bottom), 3f, 3f, badgePaint)
+        val inset = 2f
+        drawable.setBounds(
+            (left + inset).toInt(),
+            (top + inset).toInt(),
+            (left + size - inset).toInt(),
+            (bottom - inset).toInt(),
+        )
+        drawable.draw(canvas)
+        return top
     }
 }
 
@@ -555,7 +845,107 @@ data class OperBoxPngLabels(
     val empty: String,
     /** 例：「E2 Lv90 P6」 */
     val operMetaFormat: String,
+    /** 例：「已拥有 (%1$d)」 */
+    val ownedHeaderFormat: String,
+    /** 例：「未拥有 (%1$d)」 */
+    val notOwnedHeaderFormat: String,
 )
+
+// 导出图配色取自 theme/Theme.kt 的浅色方案：分享出去的图和 app 里看到的一致
+private const val EXPORT_BG = 0xFFF5F2ED.toInt()
+private const val EXPORT_CARD = 0xFFE8E4DE.toInt()
+private const val EXPORT_ON_SURFACE = 0xFF1C1B18.toInt()
+private const val EXPORT_ON_SURFACE_VARIANT = 0xFF8A8580.toInt()
+
+/** 未拥有干员的卡面：对齐 OperBoxCard 的 0x99808080 */
+private const val NOT_OWNED_CARD = 0x99808080.toInt()
+
+/** 卡片上徽章的深色底，对齐 OperBoxCard 的 BadgeBackground（#AA1F1F1F） */
+private const val BADGE_BG = 0xAA1F1F1F.toInt()
+
+/** 专精三圆：亮的取主题 primary，灭的取 outlineVariant */
+private const val MASTERY_ON = 0xFF2B6BCA.toInt()
+private const val MASTERY_OFF = 0xFFE8E4DE.toInt()
+
+/** 模组分支显示名，对齐 OperBoxCard.MOD_TYPE_DISPLAY */
+private val MOD_TYPE_LABELS = mapOf("A" to "α", "B" to "β", "X" to "χ", "Y" to "γ", "D" to "Δ")
+
+/** 精英图标：0/1/2 各一张，其它情况不画 */
+private fun eliteRes(elite: Int): Int? = when (elite) {
+    0 -> R.drawable.ic_oper_elite_0
+    1 -> R.drawable.ic_oper_elite_1
+    2 -> R.drawable.ic_oper_elite_2
+    else -> null
+}
+
+/** 潜能图标：超出 1~6 的范围按 1 潜显示，同 OperBoxCard.potentialIcon */
+private fun potentialRes(potential: Int): Int = when (potential) {
+    2 -> R.drawable.ic_oper_potential_2
+    3 -> R.drawable.ic_oper_potential_3
+    4 -> R.drawable.ic_oper_potential_4
+    5 -> R.drawable.ic_oper_potential_5
+    6 -> R.drawable.ic_oper_potential_6
+    else -> R.drawable.ic_oper_potential_1
+}
+
+/** 右下角文字徽章（模组 / RANK），返回画完后的上边界，便于继续往上堆 */
+private fun drawBadgeText(
+    canvas: Canvas,
+    text: String,
+    right: Float,
+    bottom: Float,
+    badgePaint: Paint,
+    textPaint: Paint,
+): Float {
+    val width = textPaint.measureText(text) + 8f
+    val top = bottom - 18f
+    canvas.drawRoundRect(RectF(right - width, top, right, bottom), 3f, 3f, badgePaint)
+    canvas.drawText(text, right - width + 4f, bottom - 5f, textPaint)
+    return top
+}
+
+/** 专精三圆：专 1 亮上圆、专 2 加亮右下、专 3 全亮，同 MasteryBadge；返回画完后的上边界 */
+private fun drawMasteryRow(
+    canvas: Canvas,
+    levels: List<Int>,
+    right: Float,
+    bottom: Float,
+    badgePaint: Paint,
+    onPaint: Paint,
+    offPaint: Paint,
+): Float {
+    if (levels.isEmpty()) return bottom
+    val badgeSize = 16f
+    val gap = 1f
+    val width = levels.size * badgeSize + (levels.size - 1) * gap + 2f
+    val top = bottom - badgeSize - 2f
+    canvas.drawRoundRect(RectF(right - width, top, right, bottom), 3f, 3f, badgePaint)
+    var x = right - width + 1f
+    levels.forEach { level ->
+        val radius = badgeSize / 5f
+        val cyTop = top + 1f + radius
+        val cyBottom = top + 1f + badgeSize - 1f - radius
+        // 上圆居中（MasteryBadge 里是 size.width / 2f），不是贴左边
+        canvas.drawCircle(x + badgeSize / 2f, cyTop, radius, if (level >= 1) onPaint else offPaint)
+        canvas.drawCircle(x + badgeSize - radius, cyBottom, radius, if (level >= 2) onPaint else offPaint)
+        canvas.drawCircle(x + radius, cyBottom, radius, if (level >= 3) onPaint else offPaint)
+        x += badgeSize + gap
+    }
+    return top
+}
+
+/**
+ * 单元格只有 [cellW] 宽，名字和「精英/等级/潜能」按可用宽度逐级缩字号：
+ * 宁可小一点，也不要和隔壁格子的文字粘在一起（中文标签比英文长一倍）。
+ */
+private fun Paint.fitText(text: String, maxWidth: Float, base: Float, min: Float = 10f) {
+    textSize = base
+    var size = base
+    while (size > min && measureText(text) > maxWidth) {
+        size -= 0.5f
+        textSize = size
+    }
+}
 
 /**
  * 导出位图的整体缩放系数。

@@ -4,18 +4,19 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -89,7 +90,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -149,6 +149,7 @@ import com.aliothmoon.maameow.theme.MaaMotion
 import com.aliothmoon.maameow.theme.OpaqueTheme
 import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.utils.i18n.formatToolboxSyncTime
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -539,11 +540,17 @@ private fun DepotProfileDetailView(
     // 标题栏常驻不隐去；上滑时把下面那块「配置名 / 库存保持 / 更新时间」收走，
     // 同时标题栏左侧换成配置名、右侧补上识别时间；下滑回到顶部再恢复成原来的三行头部
     var headerCollapsed by rememberSaveable { mutableStateOf(false) }
+    // 收起要有「拉过去一点才动」的手感：累加这一小段位移再切状态，
+    // 否则手指刚碰到列表、内容还没怎么动，头部就先塌下去，看着像跳了一下
+    var collapseDrag by remember { mutableFloatStateOf(0f) }
     val scrollCollapseConnection = remember {
         object : NestedScrollConnection {
             // 手指向上推（内容下滚）就把头部收走
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (available.y < -1f) headerCollapsed = true
+                if (available.y < -1f) {
+                    collapseDrag += -available.y
+                    if (collapseDrag > COLLAPSE_DRAG_THRESHOLD) headerCollapsed = true
+                }
                 return Offset.Zero
             }
 
@@ -553,7 +560,10 @@ private fun DepotProfileDetailView(
                 available: Offset,
                 source: NestedScrollSource,
             ): Offset {
-                if (available.y > 1f) headerCollapsed = false
+                if (available.y > 1f) {
+                    collapseDrag = 0f
+                    headerCollapsed = false
+                }
                 return Offset.Zero
             }
         }
@@ -572,34 +582,55 @@ private fun DepotProfileDetailView(
         topBar = {
             M3TopAppBar(
                 title = {
-                    if (headerCollapsed) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    // 两种标题之间走淡入淡出 + 轻微上滑，避免直接换字显得突兀
+                    AnimatedContent(
+                        targetState = headerCollapsed,
+                        transitionSpec = {
+                            (
+                                fadeIn(tween(TITLE_ANIM_MILLIS, easing = FastOutSlowInEasing)) +
+                                    slideInVertically(tween(TITLE_ANIM_MILLIS, easing = FastOutSlowInEasing)) {
+                                        it / 3
+                                    }
+                                ).togetherWith(
+                                fadeOut(tween(TITLE_ANIM_MILLIS / 2)) +
+                                    slideOutVertically(tween(TITLE_ANIM_MILLIS / 2)) { -it / 4 },
+                            )
+                        },
+                        label = "depot-detail-title",
+                    ) { collapsed ->
+                        if (collapsed) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = profileName,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                if (syncTimeLabel.isNotEmpty()) {
+                                    Spacer(Modifier.width(MaaDesignTokens.Spacing.sm))
+                                    Text(
+                                        text = syncTimeLabel,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        textAlign = TextAlign.End,
+                                        // 按比例分宽度：否则长文案（「更新时间：…」约 173dp）会把名字挤到几个字
+                                        modifier = Modifier.weight(TITLE_TIME_WEIGHT),
+                                    )
+                                }
+                            }
+                        } else {
                             Text(
-                                text = profileName,
-                                style = MaterialTheme.typography.titleLarge,
+                                text = stringResource(R.string.depot_inventory_detail_title),
+                                style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f),
                             )
-                            if (syncTimeLabel.isNotEmpty()) {
-                                Spacer(Modifier.width(MaaDesignTokens.Spacing.sm))
-                                Text(
-                                    text = syncTimeLabel,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                )
-                            }
                         }
-                    } else {
-                        Text(
-                            text = stringResource(R.string.depot_inventory_detail_title),
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
                     }
                 },
                 navigationIcon = {
@@ -626,11 +657,9 @@ private fun DepotProfileDetailView(
                     }
                 },
                 // 与列表页 / 仓库既有顶栏同一条基线：背景色容器 + primary 动作图标，免得进出详情页时顶栏换色。
-                // scrolledContainerColor 必须显式给：不传会落回 M3 的 surfaceContainer（本工程没覆盖那一族），
-                // 一滚动顶栏就从米色跳成淡紫，纯黑主题下尤其刺眼
+                // 这里没有 scrollBehavior，不会进 M3 的「已滚动」配色，所以不用传 scrolledContainerColor
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
-                    scrolledContainerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
                     actionIconContentColor = MaterialTheme.colorScheme.primary,
                 ),
@@ -648,8 +677,12 @@ private fun DepotProfileDetailView(
             // 这一块就是「沉浸」的全部：滚起来就收走，回到顶部再放回来，标题栏始终在
             AnimatedVisibility(
                 visible = !headerCollapsed,
-                enter = expandVertically(animationSpec = tween(180)) + fadeIn(tween(180)),
-                exit = shrinkVertically(animationSpec = tween(180)) + fadeOut(tween(120)),
+                enter = expandVertically(
+                    animationSpec = tween(HEADER_ANIM_MILLIS, easing = FastOutSlowInEasing),
+                ) + fadeIn(tween(HEADER_ANIM_MILLIS, easing = FastOutSlowInEasing)),
+                exit = shrinkVertically(
+                    animationSpec = tween(HEADER_ANIM_MILLIS, easing = FastOutSlowInEasing),
+                ) + fadeOut(tween(HEADER_ANIM_MILLIS / 2, easing = FastOutSlowInEasing)),
             ) {
                 Column(
                     modifier = Modifier
@@ -1266,14 +1299,25 @@ private fun DepotInventoryExportBottomSheet(
         summaryFormat = stringResource(R.string.depot_inventory_png_oper_summary),
         empty = stringResource(R.string.depot_inventory_png_empty),
         operMetaFormat = stringResource(R.string.depot_inventory_png_oper_meta),
+        ownedHeaderFormat = stringResource(R.string.panel_operbox_tab_owned),
+        notOwnedHeaderFormat = stringResource(R.string.panel_operbox_tab_not_owned),
     )
     var section by remember { mutableStateOf<ExportSection?>(null) }
     var hideProfileLabel by remember { mutableStateOf(false) }
+    // 干员数据里「未拥有」占大多数，分享时经常只想给对方看已练的，默认仍全给
+    var includeNotOwned by remember { mutableStateOf(true) }
 
     // 渲染放在页面的 scope 上：面板一收就取消的话，几秒的渲染会白跑一趟还没有任何提示
     val renderAndExport: (String, suspend () -> ByteArray?) -> Unit = { prefix, render ->
         exportScope.launch {
-            val bytes = runCatching { render() }.getOrNull()
+            // 取消（比如转屏）不能被吞成「导出失败」的 Toast，否则协程取消语义就断了
+            val bytes = try {
+                render()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                null
+            }
             if (bytes != null) {
                 exporter.exportBytes(prefix, bytes, ToolboxExportFileType.PNG)
             } else {
@@ -1343,10 +1387,20 @@ private fun DepotInventoryExportBottomSheet(
             ) { current ->
                 Column {
                     if (current != null) {
-                        HideProfileLabelRow(
+                        ExportSwitchRow(
+                            titleRes = R.string.depot_inventory_export_hide_profile,
+                            hintRes = R.string.depot_inventory_export_hide_profile_hint,
                             checked = hideProfileLabel,
                             onCheckedChange = { hideProfileLabel = it },
                         )
+                        if (current == ExportSection.OPERBOX) {
+                            ExportSwitchRow(
+                                titleRes = R.string.depot_inventory_export_include_not_owned,
+                                hintRes = R.string.depot_inventory_export_include_not_owned_hint,
+                                checked = includeNotOwned,
+                                onCheckedChange = { includeNotOwned = it },
+                            )
+                        }
                         HorizontalDivider(
                             modifier = Modifier.padding(
                                 horizontal = MaaDesignTokens.Spacing.lg,
@@ -1422,7 +1476,7 @@ private fun DepotInventoryExportBottomSheet(
                                 onClick = {
                                     exporter.export(
                                         "operbox",
-                                        viewModel.exportOperBoxJson(profileId),
+                                        viewModel.exportOperBoxJson(profileId, includeNotOwned),
                                         ToolboxExportFileType.JSON,
                                     )
                                     onDismiss()
@@ -1434,7 +1488,7 @@ private fun DepotInventoryExportBottomSheet(
                                 onClick = {
                                     exporter.export(
                                         "operbox",
-                                        viewModel.exportOperBoxMarkdown(profileId, exportLabels),
+                                        viewModel.exportOperBoxMarkdown(profileId, exportLabels, includeNotOwned),
                                         ToolboxExportFileType.MARKDOWN,
                                     )
                                     onDismiss()
@@ -1446,7 +1500,7 @@ private fun DepotInventoryExportBottomSheet(
                                 onClick = {
                                     exporter.export(
                                         "operbox",
-                                        viewModel.exportOperBoxCsv(profileId, exportLabels),
+                                        viewModel.exportOperBoxCsv(profileId, exportLabels, includeNotOwned),
                                         ToolboxExportFileType.CSV,
                                     )
                                     onDismiss()
@@ -1462,6 +1516,7 @@ private fun DepotInventoryExportBottomSheet(
                                             hideProfileLabel = hideProfileLabel,
                                             titleLabel = titleLabel,
                                             labels = operBoxPngLabels,
+                                            includeNotOwned = includeNotOwned,
                                         )
                                     }
                                 },
@@ -1477,9 +1532,11 @@ private fun DepotInventoryExportBottomSheet(
 
 private enum class ExportSection { DEPOT, OPERBOX }
 
-/** 二级菜单共用的一行：PNG 图头要不要写配置档名。 */
+/** 二级菜单共用的一行开关：副标题说清打开/关掉会发生什么。 */
 @Composable
-private fun HideProfileLabelRow(
+private fun ExportSwitchRow(
+    titleRes: Int,
+    hintRes: Int,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
@@ -1499,11 +1556,11 @@ private fun HideProfileLabelRow(
                 .padding(end = MaaDesignTokens.Spacing.md),
         ) {
             Text(
-                text = stringResource(R.string.depot_inventory_export_hide_profile),
+                text = stringResource(titleRes),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
-                text = stringResource(R.string.depot_inventory_export_hide_profile_hint),
+                text = stringResource(hintRes),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -1534,3 +1591,16 @@ private fun SheetItem(
         modifier = Modifier.clickable(onClick = onClick),
     )
 }
+
+/** 头部收起/展开的时长；标题栏文案切换用同一个节奏。 */
+private const val HEADER_ANIM_MILLIS = 240
+
+/** 标题栏两种文案交叉淡入淡出的时长。 */
+private const val TITLE_ANIM_MILLIS = 220
+
+/** 手指向上累计滑动多少像素才把头部收走：刚碰到列表就塌会显得跳。 */
+private const val COLLAPSE_DRAG_THRESHOLD = 16f
+
+/** 收起态标题栏里名字与「更新时间」的宽度比例：时间占 2 份，保证「更新时间：…」整句放得下，
+ *  名字只在真的很长时才省略。 */
+private const val TITLE_TIME_WEIGHT = 2f

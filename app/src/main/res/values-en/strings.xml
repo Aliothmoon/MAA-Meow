@@ -252,6 +252,8 @@
     <string name="depot_inventory_export_image">Export as image (PNG)</string>
     <string name="depot_inventory_export_hide_profile">Hide profile name</string>
     <string name="depot_inventory_export_hide_profile_hint">PNG header omits the profile name; keeps time and data only</string>
+    <string name="depot_inventory_export_include_not_owned">Include unowned operators</string>
+    <string name="depot_inventory_export_include_not_owned_hint">Turn off to export owned operators only; applies to JSON, Markdown, CSV and the image</string>
     <string name="depot_inventory_maintain_title">Depot maintain plans</string>
     <string name="depot_inventory_maintain_need">Need %1$d</string>
     <string name="depot_inventory_maintain_enough">Enough</string>
