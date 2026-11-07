@@ -34,6 +34,15 @@ object WakeUnlockController {
     /** 手势回放前等锁屏首屏稳定；不弹 bouncer，比 PIN 那条路要短 */
     private const val GESTURE_SETTLE_MS = 800L
 
+    /** 上滑露出密码面板到可输入之间的过渡动画，注入早了会被动画吃掉 */
+    private const val SWIPE_SETTLE_MS = 500L
+
+    /** 上滑起止位置（屏高比例）与步进：从下部划到中上，与手指上滑一致 */
+    private const val SWIPE_START_RATIO = 0.82f
+    private const val SWIPE_END_RATIO = 0.32f
+    private const val SWIPE_STEPS = 8
+    private const val SWIPE_STEP_MS = 30L
+
     /** 测试：上锁/息屏后等待系统稳定再解锁 */
     private const val LOCK_SETTLE_MS = 500L
     private const val SCREEN_OFF_TIMEOUT_MS = 3_000L
@@ -61,6 +70,12 @@ object WakeUnlockController {
     fun testUnlockGesture(gestureJson: String): Int = traced("test unlock, gesture") {
         lockForTest(it) ?: doUnlockWithGesture(gestureJson, it)
     }
+
+    /** 设置页自测：兼容指纹解锁版（先上滑露出密码面板，再注入 PIN） */
+    fun testUnlockPinWithSwipe(credential: String): Int =
+        traced("test unlock, ${credentialKind(credential)} + swipe") {
+            lockForTest(it) ?: doUnlockPinWithSwipe(credential, it)
+        }
 
     /** @return 非 null 即上锁失败的结果码 */
     private fun lockForTest(trace: WakeTrace): Int? {
@@ -176,7 +191,11 @@ object WakeUnlockController {
         keyguardGoneBeforeInject(wm, "PIN", trace)?.let { return it }
         // 位数不进任何日志：logcat 也会在提权进程死亡时被补报
         trace.i("injecting PIN after ${settleMs}ms settle (wake ${wakeCostMs}ms)")
+        return injectPin(credential, wm, trace)
+    }
 
+    /** 密码面板已就绪后逐位注入并等解锁；兼容指纹那条路也走这里 */
+    private fun injectPin(credential: String, wm: WindowManager, trace: WakeTrace): Int {
         val injectStartMs = SystemClock.elapsedRealtime()
         for (c in credential) {
             val keyCode = KeyEvent.KEYCODE_0 + (c - '0')
@@ -203,6 +222,72 @@ object WakeUnlockController {
             )
             WakeUnlockResult.CREDENTIAL_REJECTED
         }
+    }
+
+    /**
+     * 兼容指纹解锁：亮屏后先上滑，等过渡动画再把 PIN 交给系统
+     * 指纹机型上 dismissKeyguard 不肯直接给密码面板，得先像人一样上滑一下；
+     * 各机型尺寸不同，轨迹按屏幕比例现场生成，不需要用户录制
+     * @param credential 纯数字 PIN
+     */
+    fun unlockPinWithSwipe(credential: String): Int =
+        traced("unlock, ${credentialKind(credential)} + swipe") {
+            doUnlockPinWithSwipe(credential, it)
+        }
+
+    private fun doUnlockPinWithSwipe(credential: String, trace: WakeTrace): Int {
+        if (credential.isEmpty() || credential.any { !it.isDigit() }) {
+            trace.w("compat mode needs a numeric PIN")
+            return WakeUnlockResult.CREDENTIAL_REQUIRED
+        }
+
+        val pm = ServiceManager.getPowerManager()
+        val wm = ServiceManager.getWindowManager()
+
+        wakeAndRequireKeyguard(pm, wm, trace)?.let { return it }
+
+        val secure = wm.isKeyguardSecure(0) ?: false
+        if (!secure) {
+            // 没设密码就没有密码面板可露，按普通无凭证路径走
+            trace.i("keyguard not secure, ignoring swipe and dismissing")
+            return doUnlock(credential, trace)
+        }
+
+        // 与手势录制一致：在 keyguard 首屏采样，不能用桌面的方向
+        val screen = ScreenGeometry.current() ?: run {
+            trace.w("screen geometry unavailable")
+            return WakeUnlockResult.UNSUPPORTED
+        }
+
+        // 这里不能 dismissKeyguard：那会把密码面板直接顶上来，
+        // 而指纹机型要的是「先上滑露出面板」这一下
+        Thread.sleep(GESTURE_SETTLE_MS)
+        keyguardGoneBeforeInject(wm, "swipe", trace)?.let { return it }
+
+        val actions = swipeUpActions(screen.width, screen.height)
+        trace.i("swiping up on ${screen.width}x${screen.height} to reveal the PIN pad")
+        val stats = UnlockGestureReplay.execute(actions)
+        trace.i("swipe replay done, injected $stats")
+
+        // 等面板滑上来的过渡动画，太快注入会被丢掉
+        Thread.sleep(SWIPE_SETTLE_MS)
+        keyguardGoneBeforeInject(wm, "PIN", trace)?.let { return it }
+        trace.i("swipe done, injecting PIN after ${SWIPE_SETTLE_MS}ms transition")
+        return injectPin(credential, wm, trace)
+    }
+
+    /** 屏幕中轴上的上滑；坐标是显示逻辑像素，与 [InputControlUtils] 注入的一致 */
+    private fun swipeUpActions(width: Int, height: Int): List<InjectAction> {
+        val x = width / 2
+        val startY = (height * SWIPE_START_RATIO).toInt().coerceIn(1, height - 1)
+        val endY = (height * SWIPE_END_RATIO).toInt().coerceIn(1, height - 1)
+        val actions = mutableListOf<InjectAction>(InjectAction.Down(x, startY))
+        for (i in 1..SWIPE_STEPS) {
+            actions += InjectAction.Sleep(SWIPE_STEP_MS)
+            val y = startY + (endY - startY) * i / SWIPE_STEPS
+            actions += if (i == SWIPE_STEPS) InjectAction.Up(x, y) else InjectAction.Move(x, y)
+        }
+        return actions
     }
 
     /**

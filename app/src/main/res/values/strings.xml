@@ -2798,6 +2798,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="settings_wake_gesture_step_swipe">滑动 (%1$d, %2$d) → (%3$d, %4$d) %5$d ms</string>
     <string name="settings_wake_gesture_step_delay">等待 %1$d ms</string>
     <string name="settings_wake_gesture_test_hint">先锁屏，约 1 秒后回放录制的手势</string>
+    <string name="settings_wake_pin_compat">兼容指纹解锁</string>
+    <string name="settings_wake_pin_compat_desc">部分指纹机型解锁时不会直接弹出密码面板，要先上滑并点「使用密码解锁」。勾选后每次解锁都会先自动上滑一次，等过渡动画结束再输入上面的 PIN；不勾选则直接输入 PIN</string>
     <!-- 黑流树海肉鸽运行日志文案 -->
     <string name="blackflow_routing_decision">第 %1$d 层｜行动力 %2$d→%3$d｜%4$s至 %5$s｜安全余量 %6$d</string>
     <string name="blackflow_movement_walk">徒步移动</string>

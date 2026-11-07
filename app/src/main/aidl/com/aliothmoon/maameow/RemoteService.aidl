@@ -149,4 +149,10 @@ interface RemoteService {
 
     // 不跑任务单独拉起游戏，后台模式需先建好虚拟屏
     boolean launchGame(String packageName) = 61;
+
+    // ---- 兼容指纹解锁：先上滑露出密码面板，再注入 PIN ----
+    // 滑动轨迹按屏幕比例现场生成，不需要录制
+    int unlockPinWithSwipe(String credential) = 65;
+
+    int testUnlockPinWithSwipe(String credential) = 66;
 }

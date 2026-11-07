@@ -2741,6 +2741,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="settings_wake_gesture_step_swipe">Swipe (%1$d, %2$d) → (%3$d, %4$d) %5$d ms</string>
     <string name="settings_wake_gesture_step_delay">Wait %1$d ms</string>
     <string name="settings_wake_gesture_test_hint">Locks first, then replays the recorded gesture after ~1s</string>
+    <string name="settings_wake_pin_compat">Fingerprint-unlock compatible</string>
+    <string name="settings_wake_pin_compat_desc">On some fingerprint devices the PIN pad does not appear on its own. When enabled, every unlock swipes up first, waits for the transition, then types the PIN above; when disabled the PIN is typed directly</string>
     <!-- BlackFlow roguelike run-log texts -->
     <string name="blackflow_routing_decision">Floor %1$d | AP %2$d→%3$d | %4$s to %5$s | Safety margin %6$d</string>
     <string name="blackflow_movement_walk">Walk</string>

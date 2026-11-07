@@ -67,6 +67,20 @@ class ScheduleWakeUnlockViewModel(
         viewModelScope.launch { appSettingsManager.setWakeCredential(credential) }
     }
 
+    // ───────────────── 兼容指纹解锁 ─────────────────
+
+    val wakePinCompat: StateFlow<Boolean> = appSettingsManager.wakePinCompat
+
+    fun setWakePinCompat(enabled: Boolean) {
+        viewModelScope.launch { appSettingsManager.setWakePinCompat(enabled) }
+    }
+
+    /** 本次解锁要不要先上滑露出密码面板 */
+    private fun currentPinCompat(): Boolean {
+        val type = appSettingsManager.wakeUnlockType.value
+        return type == UnlockCredential.TYPE_PIN && appSettingsManager.wakePinCompat.value
+    }
+
     /** null=未测试 */
     sealed interface WakeTestState {
         data object Testing : WakeTestState
@@ -97,7 +111,7 @@ class ScheduleWakeUnlockViewModel(
             // 测试会先息屏，没人持锁的话 CPU 可能在等待期间睡下去，解锁要拖到下次被唤醒
             val wakeLock = ScheduleWakeLock.acquire(application, TEST_WAKE_TIMEOUT_MS)
             val result = try {
-                wakeUnlockEngine.testUnlock(credential)
+                wakeUnlockEngine.testUnlock(credential, currentPinCompat())
             } finally {
                 ScheduleWakeLock.release(wakeLock)
             }

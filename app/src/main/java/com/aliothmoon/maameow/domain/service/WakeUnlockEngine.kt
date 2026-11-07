@@ -84,24 +84,38 @@ class WakeUnlockEngine {
     @Volatile
     private var unlockStartedAtMs = 0L
 
-    /** 亮屏并解锁 */
-    suspend fun unlock(credential: UnlockCredential): WakeResult {
+    /**
+     * 亮屏并解锁
+     * @param pinCompat 兼容指纹解锁：PIN 方式下先上滑露出密码面板，再注入 PIN
+     */
+    suspend fun unlock(credential: UnlockCredential, pinCompat: Boolean = false): WakeResult {
         unlockStartedAtMs = SystemClock.elapsedRealtime()
         return when (credential) {
             UnlockCredential.Swipe -> call("unlock") { it.unlock("") }
-            is UnlockCredential.Pin -> call("unlock") { it.unlock(credential.digits) }
+            is UnlockCredential.Pin -> if (pinCompat) {
+                call("unlockPinWithSwipe") { it.unlockPinWithSwipe(credential.digits) }
+            } else {
+                call("unlock") { it.unlock(credential.digits) }
+            }
+
             is UnlockCredential.Gesture ->
                 call("unlockWithGesture") { it.unlockWithGesture(credential.json) }
         }
     }
 
     /** 设置页自测：先锁屏息屏再解锁 */
-    suspend fun testUnlock(credential: UnlockCredential): WakeResult = when (credential) {
-        UnlockCredential.Swipe -> call("testUnlock") { it.testUnlock("") }
-        is UnlockCredential.Pin -> call("testUnlock") { it.testUnlock(credential.digits) }
-        is UnlockCredential.Gesture ->
-            call("testUnlockGesture") { it.testUnlockGesture(credential.json) }
-    }
+    suspend fun testUnlock(credential: UnlockCredential, pinCompat: Boolean = false): WakeResult =
+        when (credential) {
+            UnlockCredential.Swipe -> call("testUnlock") { it.testUnlock("") }
+            is UnlockCredential.Pin -> if (pinCompat) {
+                call("testUnlockPinWithSwipe") { it.testUnlockPinWithSwipe(credential.digits) }
+            } else {
+                call("testUnlock") { it.testUnlock(credential.digits) }
+            }
+
+            is UnlockCredential.Gesture ->
+                call("testUnlockGesture") { it.testUnlockGesture(credential.json) }
+        }
 
     /** 锁屏并息屏（任务结束后自动休眠） */
     suspend fun lockAndSleep(): WakeResult = call("lockAndSleep") { it.lockAndSleep() }
