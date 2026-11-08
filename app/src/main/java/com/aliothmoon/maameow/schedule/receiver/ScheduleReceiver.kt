@@ -81,7 +81,6 @@ class ScheduleReceiver : BroadcastReceiver() {
                     }
                     if (strategy != null && strategy.enabled) {
                         // 先续排，结果写盘失败也不丢闹钟
-                        alarmManager.markFired(strategy.id, scheduledTime)
                         alarmManager.scheduleNext(strategy, scheduledTime)
                         failureReporter.report(
                             strategyId = strategyId,

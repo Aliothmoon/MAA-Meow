@@ -177,50 +177,67 @@ class ScheduleAlarmManagerTest {
     @Test
     fun missedOnlyAfterGraceAndWhenNotFired() {
         val armed = 1_000_000_000L
-        val grace = ScheduleAlarmManager.MISSED_GRACE_MS
-        assertFalse(ScheduleAlarmManager.isMissed(null, null, armed + grace + 1))
-        assertFalse(ScheduleAlarmManager.isMissed(0L, null, armed + grace + 1))
-        assertFalse(ScheduleAlarmManager.isMissed(armed, null, armed + grace))
-        assertTrue(ScheduleAlarmManager.isMissed(armed, null, armed + grace + 1))
-        assertTrue(ScheduleAlarmManager.isMissed(armed, armed - 1, armed + grace + 1))
-        assertFalse(ScheduleAlarmManager.isMissed(armed, armed, armed + grace + 1))
+        val late = armed + ScheduleAlarmManager.MISSED_GRACE_MS
+        assertFalse(ScheduleAlarmManager.isMissed(0L, 0L, late + 1))
+        assertFalse(ScheduleAlarmManager.isMissed(armed, 0L, late))
+        assertTrue(ScheduleAlarmManager.isMissed(armed, 0L, late + 1))
+        assertTrue(ScheduleAlarmManager.isMissed(armed, armed - 1, late + 1))
+        assertFalse(ScheduleAlarmManager.isMissed(armed, armed, late + 1))
     }
 
     @Test
-    fun rearmingOverAnUnfiredSlotQueuesItAsMissed_andLateDeliveryIsDropped() {
-        val prefs = mutableMapOf<String, FakePrefs>()
-        every { context.getSharedPreferences(any(), any()) } answers {
-            prefs.getOrPut(firstArg()) { FakePrefs() }
-        }
+    fun rearmingOverAnUnfiredSlotQueuesItAsMissed() {
+        val armed = usePrefs("schedule_armed")
         mockkStatic(SystemClock::class)
         every { SystemClock.elapsedRealtime() } returns 30L * 86_400_000L
         prepareRegistration()
         val hourly = strategy.copy(startTimeMs = System.currentTimeMillis() - 7_200_000L)
         val stale = System.currentTimeMillis() - 3_600_000L
-        prefs.getOrPut("schedule_armed") { FakePrefs() }.data[hourly.id] = stale
+        armed.data[hourly.id] = stale
 
         assertTrue(alarms.scheduleNext(hourly))
-        val missed = alarms.drainMissed()
-        assertEquals(listOf(ScheduleAlarmManager.MissedTrigger(hourly.id, stale, rebooted = false)), missed)
+        assertEquals(
+            listOf(ScheduleAlarmManager.MissedTrigger(hourly.id, stale, rebooted = false)),
+            alarms.drainMissed(),
+        )
         assertTrue(alarms.drainMissed().isEmpty())
 
-        // 投递晚于重排：已标记触发就不再报
-        prefs.getValue("schedule_armed").data[hourly.id] = stale
+        // 之后别的触发点到了：照报
+        armed.data[hourly.id] = stale
+        assertTrue(alarms.scheduleNext(hourly))
+        alarms.markFired(hourly.id, stale + 3_600_000L)
+        assertEquals(1, alarms.drainMissed().size)
+
+        // 同一触发点晚到：不报
+        alarms.markFired(hourly.id, stale - 1)
+        armed.data[hourly.id] = stale
         assertTrue(alarms.scheduleNext(hourly))
         alarms.markFired(hourly.id, stale)
         assertTrue(alarms.drainMissed().isEmpty())
     }
 
     @Test
-    fun disablingClearsArmedSlot() {
+    fun disablingOrFailingToRescheduleClearsArmedSlot() {
+        val armed = usePrefs("schedule_armed")
+        prepareRegistration()
+        armed.data[strategy.id] = 1L
+        alarms.cancel(strategy.id)
+        assertFalse(armed.data.containsKey(strategy.id))
+
+        armed.data[strategy.id] = System.currentTimeMillis() + 3_600_000L
+        every { alarms.canScheduleExact() } returns false
+        assertFalse(alarms.scheduleNext(strategy))
+        assertFalse(armed.data.containsKey(strategy.id))
+        assertTrue(alarms.drainMissed().isEmpty())
+    }
+
+    /** prefs 换成内存实现，返回 [name] 那份 */
+    private fun usePrefs(name: String): FakePrefs {
         val prefs = mutableMapOf<String, FakePrefs>()
         every { context.getSharedPreferences(any(), any()) } answers {
             prefs.getOrPut(firstArg()) { FakePrefs() }
         }
-        prepareRegistration()
-        prefs.getOrPut("schedule_armed") { FakePrefs() }.data[strategy.id] = 1L
-        alarms.cancel(strategy.id)
-        assertFalse(prefs.getValue("schedule_armed").data.containsKey(strategy.id))
+        return prefs.getOrPut(name) { FakePrefs() }
     }
 
     private class FakePrefs : SharedPreferences {
