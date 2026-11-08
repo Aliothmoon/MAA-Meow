@@ -1,14 +1,19 @@
 package com.aliothmoon.maameow.schedule.service
 
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.utils.i18n.UiText
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /** 未进启动流水线的失败上报：触发日志、策略结果与通知各自容错 */
 class ScheduleFailureReporter(
@@ -16,9 +21,32 @@ class ScheduleFailureReporter(
     private val repository: ScheduleStrategyRepository,
     private val appSettings: AppSettingsManager,
     private val notificationCenter: MaaNotificationCenter,
+    private val alarmManager: ScheduleAlarmManager,
 ) {
     companion object {
         private const val RECORD_TIMEOUT_MS = 5_000L
+        private val MISSED_TIME_FORMAT = DateTimeFormatter.ofPattern("MM-dd HH:mm")
+    }
+
+    /** 重排后调用：把漏掉的触发点补记成触发日志并通知 */
+    suspend fun reportMissed() {
+        alarmManager.drainMissed().forEach { missed ->
+            val strategy = repository.strategies.value.find { it.id == missed.strategyId } ?: return@forEach
+            val time = Instant.ofEpochMilli(missed.scheduledTimeMs)
+                .atZone(ZoneId.systemDefault())
+                .format(MISSED_TIME_FORMAT)
+            report(
+                strategyId = strategy.id,
+                strategyName = strategy.name.ifEmpty { strategy.id },
+                scheduledTimeMs = missed.scheduledTimeMs,
+                result = ExecutionResult.MISSED,
+                message = uiTextOf(
+                    if (missed.rebooted) R.string.schedule_log_missed_rebooted
+                    else R.string.schedule_log_missed_not_woken,
+                    time,
+                ),
+            )
+        }
     }
 
     suspend fun report(

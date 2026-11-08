@@ -519,6 +519,7 @@ class TelemetryController(
             ExecutionResult.FAILED_START,
             ExecutionResult.FAILED_UI_LAUNCH,
             ExecutionResult.SKIPPED_LOCKED,
+            ExecutionResult.MISSED,
         )
 
         /**

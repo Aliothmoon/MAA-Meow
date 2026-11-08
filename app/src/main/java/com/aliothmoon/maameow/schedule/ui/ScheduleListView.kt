@@ -450,7 +450,8 @@ private fun formatExecutionResult(result: ExecutionResult, message: String?): St
         ExecutionResult.FAILED_UI_LAUNCH,
         ExecutionResult.SKIPPED_BUSY,
         ExecutionResult.SKIPPED_BLACKLIST,
-        ExecutionResult.CANCELLED -> {
+        ExecutionResult.CANCELLED,
+        ExecutionResult.MISSED -> {
             stringResource(R.string.schedule_last_result, scheduleExecutionResultLabel(result))
         }
 
@@ -473,7 +474,8 @@ private fun executionResultColor(
 
         ExecutionResult.FAILED_VALIDATION,
         ExecutionResult.FAILED_START,
-        ExecutionResult.FAILED_UI_LAUNCH -> errorColor
+        ExecutionResult.FAILED_UI_LAUNCH,
+        ExecutionResult.MISSED -> errorColor
 
         else -> Color.Unspecified
     }

@@ -27,7 +27,7 @@ class ScheduleFailureReporterTest {
         every { runMode } returns MutableStateFlow(RunMode.BACKGROUND)
     }
     private val notificationCenter = mockk<MaaNotificationCenter>(relaxed = true)
-    private val reporter = ScheduleFailureReporter(logger, repository, settings, notificationCenter)
+    private val reporter = ScheduleFailureReporter(logger, repository, settings, notificationCenter, mockk(relaxed = true))
     private val message = uiTextOf(R.string.schedule_log_app_init_failed, "timeout")
 
     @Test

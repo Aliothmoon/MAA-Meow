@@ -1995,6 +1995,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_exact_alarm_blocked">Exact alarms are not allowed</string>
     <string name="schedule_exact_alarm_hint">Schedules cannot trigger until exact alarms are allowed. Scheduling resumes automatically after permission is granted</string>
     <string name="schedule_log_data_unavailable">Schedule configuration is temporarily unavailable</string>
+    <string name="schedule_log_missed_not_woken">Not woken by the system on time (%1$s): the app may have been killed by battery saving or background restrictions; allow auto-start and background activity</string>
+    <string name="schedule_log_missed_rebooted">Not run (%1$s): the device was powered off or restarted since then, possibly off at the scheduled time</string>
     <string name="schedule_log_service_start_failed">Failed to start foreground service: %1$s</string>
     <string name="schedule_log_app_init_failed">App initialization failed: %1$s</string>
     <string name="schedule_exact_alarm_settings">Exact alarm settings</string>
@@ -2132,10 +2134,11 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_result_failed_validation">Validation failed</string>
     <string name="schedule_result_failed_start">Start failed</string>
     <string name="schedule_result_failed_ui_launch">UI launch failed</string>
-    <string name="schedule_result_skipped_busy">System busy</string>
+    <string name="schedule_result_skipped_busy">Task already running</string>
     <string name="schedule_result_skipped_locked">Skipped while locked</string>
     <string name="schedule_result_skipped_blacklist">Skipped by blacklist</string>
     <string name="schedule_result_cancelled">Cancelled</string>
+    <string name="schedule_result_missed">Missed</string>
     <string name="schedule_interval_every_days_hours">Every %1$d day(s) %2$d hour(s)</string>
     <string name="schedule_interval_every_days">Every %1$d day(s)</string>
     <string name="schedule_interval_every_hours">Every %1$d hour(s)</string>

@@ -23,6 +23,7 @@ import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
+import com.aliothmoon.maameow.schedule.service.ScheduleFailureReporter
 import com.aliothmoon.maameow.schedule.service.ShizukuDownMonitor
 import com.aliothmoon.maameow.telemetry.TelemetryController
 import com.aliothmoon.maameow.utils.CrashHandler
@@ -134,6 +135,7 @@ class MaaApplication : Application() {
         applicationScope.launch {
             scheduleRepository.isLoaded.filter { it }.first()
             scheduleAlarmManager.rescheduleAll(scheduleRepository.strategies.value)
+            get<ScheduleFailureReporter>().reportMissed()
         }
     }
 }

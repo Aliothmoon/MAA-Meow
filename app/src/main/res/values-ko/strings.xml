@@ -2051,6 +2051,8 @@
     <string name="schedule_exact_alarm_blocked">정확한 알람이 허용되지 않음</string>
     <string name="schedule_exact_alarm_hint">정확한 알람을 허용할 때까지 예약 작업이 실행되지 않습니다. 권한을 허용하면 예약이 자동으로 재개됩니다</string>
     <string name="schedule_log_data_unavailable">예약 구성을 일시적으로 읽을 수 없습니다</string>
+    <string name="schedule_log_missed_not_woken">시스템이 제시간에 깨우지 않음(%1$s): 절전 또는 백그라운드 제한으로 앱이 종료되었을 수 있습니다. 자동 시작과 백그라운드 활동을 허용하세요</string>
+    <string name="schedule_log_missed_rebooted">실행되지 않음(%1$s): 이후 기기가 꺼졌거나 재시작되었습니다. 예약 시각에 꺼져 있었을 수 있습니다</string>
     <string name="schedule_log_service_start_failed">포그라운드 서비스 시작 실패: %1$s</string>
     <string name="schedule_log_app_init_failed">앱 초기화 실패: %1$s</string>
     <string name="schedule_exact_alarm_settings">정확한 알람 설정</string>
@@ -2188,10 +2190,11 @@
     <string name="schedule_result_failed_validation">검증 실패</string>
     <string name="schedule_result_failed_start">시작 실패</string>
     <string name="schedule_result_failed_ui_launch">앱 화면 열기 실패</string>
-    <string name="schedule_result_skipped_busy">시스템 사용 중</string>
+    <string name="schedule_result_skipped_busy">이미 작업 실행 중</string>
     <string name="schedule_result_skipped_locked">잠금으로 건너뜀</string>
     <string name="schedule_result_skipped_blacklist">블랙리스트로 건너뜀</string>
     <string name="schedule_result_cancelled">취소됨</string>
+    <string name="schedule_result_missed">실행 누락</string>
     <string name="schedule_interval_every_days_hours">%1$d일 %2$d시간마다</string>
     <string name="schedule_interval_every_days">%1$d일마다</string>
     <string name="schedule_interval_every_hours">%1$d시간마다</string>

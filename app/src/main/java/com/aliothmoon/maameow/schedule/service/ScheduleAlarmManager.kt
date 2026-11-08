@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Build
+import android.os.SystemClock
 import androidx.core.content.edit
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import com.aliothmoon.maameow.schedule.model.ScheduleType
@@ -42,6 +43,22 @@ class ScheduleAlarmManager(
         private const val ALARM_PREFS = "schedule_alarm"
         private const val KEY_USE_ALARM_CLOCK = "use_alarm_clock"
 
+        /** 已挂上的下次触发点，策略 id → scheduledTimeMs */
+        private const val ARMED_PREFS = "schedule_armed"
+
+        /** 漏掉的触发点，"id@scheduledTimeMs" → 是否重启过 */
+        private const val MISSED_PREFS = "schedule_missed"
+        private const val MISSED_SEP = '@'
+
+        /** 盖过重试（3 × 60 秒）和冷启动的投递延迟 */
+        const val MISSED_GRACE_MS = 10 * 60_000L
+
+        /** 挂上的触发点过了宽限仍没触发过，就是被漏掉了 */
+        fun isMissed(armedMs: Long?, firedMs: Long?, nowMs: Long): Boolean =
+            armedMs != null && armedMs > 0L &&
+                    armedMs + MISSED_GRACE_MS < nowMs &&
+                    (firedMs == null || firedMs < armedMs)
+
         /**
          * 重排起点：上次触发点仍在「未来」说明时钟往回拨过，从它之后排，免得同一时段再跑一遍
          * 回拨超过一个周期（固定时间按 24 小时）视为时钟纠错，回到按当前时间算
@@ -68,6 +85,17 @@ class ScheduleAlarmManager(
         context.getSharedPreferences(ALARM_PREFS, Context.MODE_PRIVATE)
     }
 
+    private val armedPrefs: SharedPreferences by lazy {
+        context.getSharedPreferences(ARMED_PREFS, Context.MODE_PRIVATE)
+    }
+
+    private val missedPrefs: SharedPreferences by lazy {
+        context.getSharedPreferences(MISSED_PREFS, Context.MODE_PRIVATE)
+    }
+
+    /** [rebooted]：触发点之后设备重启过，可能到点时就是关机的 */
+    data class MissedTrigger(val strategyId: String, val scheduledTimeMs: Long, val rebooted: Boolean)
+
     /** 不放 DataStore：开机重排时它可能还没读完 */
     var useAlarmClock: Boolean
         get() = alarmPrefs.getBoolean(KEY_USE_ALARM_CLOCK, true)
@@ -90,6 +118,7 @@ class ScheduleAlarmManager(
 
         val scheduledTimeMs = nextTrigger.toInstant().toEpochMilli()
         if (!register(strategy.id, scheduledTimeMs, scheduledTimeMs)) return false
+        arm(strategy.id, scheduledTimeMs)
 
         Timber.i(
             "已为策略 [%s] 注册闹钟，触发时间: %s",
@@ -139,6 +168,37 @@ class ScheduleAlarmManager(
         firedPrefs.edit(commit = true) { putLong(strategyId, scheduledTimeMs) }
     }
 
+    /** 换上新触发点前，旧的过期没触发就记进漏触发队列 */
+    @Synchronized
+    private fun arm(strategyId: String, scheduledTimeMs: Long) {
+        val armed = armedPrefs.getLong(strategyId, 0L)
+        val fired = firedPrefs.getLong(strategyId, 0L).takeIf { it > 0L }
+        val now = System.currentTimeMillis()
+        if (isMissed(armed, fired, now)) {
+            val bootAt = now - SystemClock.elapsedRealtime()
+            Timber.w("策略 [%s] 漏触发: %d, 期间重启=%s", strategyId, armed, bootAt > armed)
+            missedPrefs.edit(commit = true) {
+                putBoolean("$strategyId$MISSED_SEP$armed", bootAt > armed)
+            }
+        }
+        armedPrefs.edit(commit = true) { putLong(strategyId, scheduledTimeMs) }
+    }
+
+    /** 取走漏触发队列；投递晚于重排的那次已标记触发，在此剔除 */
+    @Synchronized
+    fun drainMissed(): List<MissedTrigger> {
+        val entries = missedPrefs.all
+        if (entries.isEmpty()) return emptyList()
+        missedPrefs.edit(commit = true) { clear() }
+        return entries.mapNotNull { (key, value) ->
+            val id = key.substringBeforeLast(MISSED_SEP)
+            val time = key.substringAfterLast(MISSED_SEP).toLongOrNull() ?: return@mapNotNull null
+            val fired = firedPrefs.getLong(id, 0L)
+            if (fired >= time) return@mapNotNull null
+            MissedTrigger(id, time, value as? Boolean ?: false)
+        }.sortedBy { it.scheduledTimeMs }
+    }
+
     private fun register(
         strategyId: String,
         scheduledTimeMs: Long,
@@ -175,7 +235,11 @@ class ScheduleAlarmManager(
      */
     fun cancel(strategyId: String, keepRetry: Boolean = false) {
         cancelSlot(buildPendingIntent(strategyId, 0L))
-        if (!keepRetry) cancelSlot(buildPendingIntent(strategyId, 0L, retryCount = 1))
+        if (!keepRetry) {
+            cancelSlot(buildPendingIntent(strategyId, 0L, retryCount = 1))
+            // 禁用或删除后不再算漏触发
+            armedPrefs.edit { remove(strategyId) }
+        }
         Timber.i("已取消策略 [%s] 的闹钟，保留重试=%s", strategyId, keepRetry)
     }
 
@@ -214,6 +278,8 @@ class ScheduleAlarmManager(
         val ids = strategies.mapTo(HashSet()) { it.id }
         val stale = fired.keys.filterNot { it in ids }
         if (stale.isNotEmpty()) firedPrefs.edit { stale.forEach(::remove) }
+        val staleArmed = armedPrefs.all.keys.filterNot { it in ids }
+        if (staleArmed.isNotEmpty()) armedPrefs.edit { staleArmed.forEach(::remove) }
     }
 
     fun computeNextTrigger(strategy: ScheduleStrategy, afterEpochMs: Long = 0L): ZonedDateTime? {

@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.os.SystemClock
 import com.aliothmoon.maameow.MainActivity
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import com.aliothmoon.maameow.schedule.model.ScheduleType
@@ -34,6 +35,7 @@ class ScheduleAlarmManagerTest {
     private val platformAlarms = mockk<AlarmManager>(relaxed = true)
     private val context = mockk<Context> {
         every { getSystemService(Context.ALARM_SERVICE) } returns platformAlarms
+        every { getSharedPreferences(any(), any()) } returns mockk(relaxed = true)
     }
     private val alarms = spyk(ScheduleAlarmManager(context))
     private val strategy = ScheduleStrategy(
@@ -170,6 +172,82 @@ class ScheduleAlarmManagerTest {
         val dayMs = ScheduleAlarmManager.FIXED_RESUME_WINDOW_MS
         assertEquals(now + dayMs, ScheduleAlarmManager.resumeAfter(daily, now + dayMs, now))
         assertEquals(0L, ScheduleAlarmManager.resumeAfter(daily, now + dayMs + 1, now))
+    }
+
+    @Test
+    fun missedOnlyAfterGraceAndWhenNotFired() {
+        val armed = 1_000_000_000L
+        val grace = ScheduleAlarmManager.MISSED_GRACE_MS
+        assertFalse(ScheduleAlarmManager.isMissed(null, null, armed + grace + 1))
+        assertFalse(ScheduleAlarmManager.isMissed(0L, null, armed + grace + 1))
+        assertFalse(ScheduleAlarmManager.isMissed(armed, null, armed + grace))
+        assertTrue(ScheduleAlarmManager.isMissed(armed, null, armed + grace + 1))
+        assertTrue(ScheduleAlarmManager.isMissed(armed, armed - 1, armed + grace + 1))
+        assertFalse(ScheduleAlarmManager.isMissed(armed, armed, armed + grace + 1))
+    }
+
+    @Test
+    fun rearmingOverAnUnfiredSlotQueuesItAsMissed_andLateDeliveryIsDropped() {
+        val prefs = mutableMapOf<String, FakePrefs>()
+        every { context.getSharedPreferences(any(), any()) } answers {
+            prefs.getOrPut(firstArg()) { FakePrefs() }
+        }
+        mockkStatic(SystemClock::class)
+        every { SystemClock.elapsedRealtime() } returns 30L * 86_400_000L
+        prepareRegistration()
+        val hourly = strategy.copy(startTimeMs = System.currentTimeMillis() - 7_200_000L)
+        val stale = System.currentTimeMillis() - 3_600_000L
+        prefs.getOrPut("schedule_armed") { FakePrefs() }.data[hourly.id] = stale
+
+        assertTrue(alarms.scheduleNext(hourly))
+        val missed = alarms.drainMissed()
+        assertEquals(listOf(ScheduleAlarmManager.MissedTrigger(hourly.id, stale, rebooted = false)), missed)
+        assertTrue(alarms.drainMissed().isEmpty())
+
+        // 投递晚于重排：已标记触发就不再报
+        prefs.getValue("schedule_armed").data[hourly.id] = stale
+        assertTrue(alarms.scheduleNext(hourly))
+        alarms.markFired(hourly.id, stale)
+        assertTrue(alarms.drainMissed().isEmpty())
+    }
+
+    @Test
+    fun disablingClearsArmedSlot() {
+        val prefs = mutableMapOf<String, FakePrefs>()
+        every { context.getSharedPreferences(any(), any()) } answers {
+            prefs.getOrPut(firstArg()) { FakePrefs() }
+        }
+        prepareRegistration()
+        prefs.getOrPut("schedule_armed") { FakePrefs() }.data[strategy.id] = 1L
+        alarms.cancel(strategy.id)
+        assertFalse(prefs.getValue("schedule_armed").data.containsKey(strategy.id))
+    }
+
+    private class FakePrefs : SharedPreferences {
+        val data = mutableMapOf<String, Any?>()
+        override fun getAll(): MutableMap<String, *> = data.toMutableMap()
+        override fun getString(key: String, defValue: String?) = data[key] as? String ?: defValue
+        override fun getStringSet(key: String, defValues: MutableSet<String>?) = defValues
+        override fun getInt(key: String, defValue: Int) = data[key] as? Int ?: defValue
+        override fun getLong(key: String, defValue: Long) = data[key] as? Long ?: defValue
+        override fun getFloat(key: String, defValue: Float) = data[key] as? Float ?: defValue
+        override fun getBoolean(key: String, defValue: Boolean) = data[key] as? Boolean ?: defValue
+        override fun contains(key: String) = key in data
+        override fun registerOnSharedPreferenceChangeListener(l: SharedPreferences.OnSharedPreferenceChangeListener?) = Unit
+        override fun unregisterOnSharedPreferenceChangeListener(l: SharedPreferences.OnSharedPreferenceChangeListener?) = Unit
+        override fun edit(): SharedPreferences.Editor = object : SharedPreferences.Editor {
+            private val ops = mutableListOf<(MutableMap<String, Any?>) -> Unit>()
+            override fun putString(key: String, value: String?) = apply { ops += { it[key] = value } }
+            override fun putStringSet(key: String, values: MutableSet<String>?) = apply { ops += { it[key] = values } }
+            override fun putInt(key: String, value: Int) = apply { ops += { it[key] = value } }
+            override fun putLong(key: String, value: Long) = apply { ops += { it[key] = value } }
+            override fun putFloat(key: String, value: Float) = apply { ops += { it[key] = value } }
+            override fun putBoolean(key: String, value: Boolean) = apply { ops += { it[key] = value } }
+            override fun remove(key: String) = apply { ops += { it.remove(key) } }
+            override fun clear() = apply { ops += { it.clear() } }
+            override fun commit(): Boolean { ops.forEach { it(data) }; return true }
+            override fun apply() { commit() }
+        }
     }
 
     private fun prepareRegistration(triggerTime: Long? = null) {

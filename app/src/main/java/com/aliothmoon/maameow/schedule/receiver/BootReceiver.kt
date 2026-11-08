@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
+import com.aliothmoon.maameow.schedule.service.ScheduleFailureReporter
 import com.aliothmoon.maameow.schedule.service.ShizukuDownMonitor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +50,7 @@ class BootReceiver : BroadcastReceiver() {
                 val strategies = repository.strategies.value
                 alarmManager.rescheduleAll(strategies)
                 Timber.i("Schedule restore complete: %d strategies", strategies.size)
+                GlobalContext.get().get<ScheduleFailureReporter>().reportMissed()
             } catch (e: Exception) {
                 Timber.e(e, "Schedule restore failed")
                 runCatching { alarmManager.scheduleResync() }
