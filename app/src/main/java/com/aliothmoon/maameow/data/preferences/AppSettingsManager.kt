@@ -651,6 +651,16 @@ class AppSettingsManager internal constructor(
         }
     }
 
+    // app 落到虚拟屏后把 task bounds 拉满（WSA 等 freeform 宿主需要）
+    val fillDisplayOnVirtualDisplay: StateFlow<Boolean> =
+        setting { it.fillDisplayOnVirtualDisplay.toBooleanStrictOrNull() ?: false }
+
+    suspend fun setFillDisplayOnVirtualDisplay(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[fillDisplayOnVirtualDisplay] = enabled.toString() }
+        }
+    }
+
     // Android 任务配置覆盖开关
     val tasksOverrideEnabled: StateFlow<Boolean> = setting { it.tasksOverrideEnabled.toBooleanStrictOrNull() ?: false }
 

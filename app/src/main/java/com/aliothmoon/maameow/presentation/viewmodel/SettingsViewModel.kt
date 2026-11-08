@@ -390,6 +390,16 @@ class SettingsViewModel(
         }
     }
 
+    val fillDisplayOnVirtualDisplay: StateFlow<Boolean> =
+        appSettingsManager.fillDisplayOnVirtualDisplay
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun setFillDisplayOnVirtualDisplay(enabled: Boolean) {
+        viewModelScope.launch {
+            appSettingsManager.setFillDisplayOnVirtualDisplay(enabled)
+        }
+    }
+
     val pipOnHome: StateFlow<Boolean> = appSettingsManager.pipOnHome
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 

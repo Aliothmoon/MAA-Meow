@@ -162,6 +162,13 @@ data class AppSettings(
     val forceFullscreenOnVirtualDisplay: String = "false",
 
     /**
+     * app 落到虚拟屏后把 task bounds 拉满整屏。WSA 这类 freeform 宿主会把任务钉在
+     * 首次创建时的窗口尺寸，不重算就只占屏的一端、识别坐标整体错位。
+     */
+    @PrefKey(default = "false")
+    val fillDisplayOnVirtualDisplay: String = "false",
+
+    /**
      * 后台模式任务运行中，回桌面时是否自动进入系统画中画
      * 会改变按 Home 的默认行为，故可关
      */

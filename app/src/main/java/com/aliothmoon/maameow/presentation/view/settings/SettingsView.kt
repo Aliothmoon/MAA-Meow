@@ -222,6 +222,7 @@ fun SettingsView(
     val yituliuVerifyMessage by viewModel.yituliuVerifyMessage.collectAsStateWithLifecycle()
     val yituliuVerifying by viewModel.yituliuVerifying.collectAsStateWithLifecycle()
     val forceFullscreenOnVirtualDisplay by viewModel.forceFullscreenOnVirtualDisplay.collectAsStateWithLifecycle()
+    val fillDisplayOnVirtualDisplay by viewModel.fillDisplayOnVirtualDisplay.collectAsStateWithLifecycle()
     val pipOnHome by viewModel.pipOnHome.collectAsStateWithLifecycle()
     val tasksOverrideEnabled by viewModel.tasksOverrideEnabled.collectAsStateWithLifecycle()
     val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
@@ -809,6 +810,29 @@ fun SettingsView(
                                             showForceFullscreenConfirm = true
                                         } else {
                                             viewModel.setForceFullscreenOnVirtualDisplay(false)
+                                        }
+                                    }
+                                )
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_fill_display_on_virtual_display) {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.settings_fill_display_on_virtual_display),
+                                    info = if (isWsa) {
+                                        stringResource(R.string.settings_fill_display_on_virtual_display_desc)
+                                    } else {
+                                        stringResource(R.string.settings_fill_display_on_virtual_display_not_wsa)
+                                    },
+                                    contentColor = contentColor,
+                                    checked = fillDisplayOnVirtualDisplay,
+                                    icon = Icons.Rounded.FitScreen,
+                                    // 非 WSA 设备用不到这个能力，禁掉免得被误开
+                                    enabled = isWsa,
+                                    onCheckedChange = { enabled ->
+                                        if (enabled) {
+                                            showFillDisplayConfirm = true
+                                        } else {
+                                            viewModel.setFillDisplayOnVirtualDisplay(false)
                                         }
                                     }
                                 )

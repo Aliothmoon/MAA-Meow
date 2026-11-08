@@ -152,4 +152,9 @@ interface RemoteService {
 
     // 只在任务期间开，否则共用主屏组时主屏无法息屏
     void setUserActivityKeepAlive(boolean enabled) = 62;
+
+    // freeform 宿主（WSA 等）会把 app 任务钉在首次创建时的窗口尺寸，之后改虚拟屏尺寸
+    // 也不重算，画面只占屏的一端、模板坐标整体错位。开启后每次确认 app 落到虚拟屏
+    // 就把它的 task bounds 拉满整屏。只动 task，不碰 display。
+    oneway void setFillDisplayOnVirtualDisplay(boolean enabled) = 63;
 }

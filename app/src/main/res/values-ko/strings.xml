@@ -399,6 +399,8 @@
     <string name="settings_deploy_with_pause_desc">자동지휘 관련 기능으로, 불안정하여 현재 활성화를 권장하지 않습니다</string>
     <string name="settings_force_fullscreen_on_virtual_display">백그라운드 모드 강제 전체 화면</string>
     <string name="settings_force_fullscreen_on_virtual_display_desc">백그라운드 가상 디스플레이에서만 적용됩니다. 기기에 따라 효과가 다르며, 적용되지 않거나 추가 문제가 생길 수 있습니다</string>
+    <string name="settings_fill_display_on_virtual_display">가상 디스플레이 채우기</string>
+    <string name="settings_fill_display_on_virtual_display_desc">WSA처럼 앱을 개별 창으로 띄우는 호스트는 게임을 처음 열었을 때의 창 크기에 고정시켜, 화면 한쪽만 차지하고 인식 좌표가 어긋납니다. 켜면 게임이 가상 디스플레이에 올라올 때마다 화면 전체로 다시 늘립니다. 일반 휴대폰에서는 꺼 두세요</string>
     <string name="settings_pip_on_home">백그라운드 실행 시 자동 PiP</string>
     <string name="dialog_enable_force_fullscreen_title">백그라운드 강제 전체 화면을 켤까요?</string>
     <string name="dialog_enable_force_fullscreen_message">이 옵션은 일부 기기에서 작동하지 않을 수 있으며, 켜면 호환성 문제가 발생할 수 있습니다. 계속하시겠습니까?</string>
