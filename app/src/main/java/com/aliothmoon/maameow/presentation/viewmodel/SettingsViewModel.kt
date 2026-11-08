@@ -397,6 +397,11 @@ class SettingsViewModel(
     fun setFillDisplayOnVirtualDisplay(enabled: Boolean) {
         viewModelScope.launch {
             appSettingsManager.setFillDisplayOnVirtualDisplay(enabled)
+            // 已就绪的服务只在加载资源时收过这个标志，复用时不会重发；
+            // 这里补一次下发，否则改了开关要等下次重新加载资源才生效
+            runCatching {
+                RemoteServiceManager.getInstanceOrNull()?.setFillDisplayOnVirtualDisplay(enabled)
+            }.onFailure { Timber.w(it, "setFillDisplayOnVirtualDisplay: push to service failed") }
         }
     }
 

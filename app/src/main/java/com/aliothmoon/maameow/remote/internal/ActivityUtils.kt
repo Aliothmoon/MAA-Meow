@@ -9,6 +9,7 @@ import android.os.IBinder
 import android.os.SystemClock
 import android.graphics.Rect
 import android.view.Display
+import java.util.concurrent.TimeUnit
 import com.aliothmoon.maameow.constant.AndroidVersions
 import com.aliothmoon.maameow.remote.internal.ActivityUtils.DISPLAY_NO_TASK
 import com.aliothmoon.maameow.third.FakeContext
@@ -33,6 +34,13 @@ object ActivityUtils {
 
     // resizeTask 后等系统把 task bounds 落地、应用重新布局
     private const val RESIZE_SETTLE_MS = 600L
+
+    // resize 后回读 bounds 确认生效的上限与轮询间隔
+    private const val RESIZE_VERIFY_TIMEOUT_MS = 1_500L
+    private const val RESIZE_VERIFY_POLL_MS = 150L
+
+    // am task resize 进程的等待上限：卡住时不能让启动链跟着挂死
+    private const val AM_RESIZE_TIMEOUT_MS = 3_000L
 
     @Volatile
     var forceFullscreenOnVirtualDisplay: Boolean = false
@@ -236,7 +244,11 @@ object ActivityUtils {
         if (!fillDisplayOnVirtualDisplay) return false
         if (displayId == Display.DEFAULT_DISPLAY) return false
         val taskId = findTaskId(packageName) ?: return false
-        val size = ServiceManager.getDisplayManager().getDisplayInfo(displayId).size()
+        // 查屏失败（屏刚被销毁、服务异常、回退返回 null）时宽容放行：
+        // 这里挂在上层启动路径上，抛出去会连累应用启动
+        val size = runCatching {
+            ServiceManager.getDisplayManager().getDisplayInfo(displayId).size()
+        }.getOrNull() ?: return false
         val w = size.width()
         val h = size.height()
         if (w <= 0 || h <= 0) return false
@@ -245,7 +257,7 @@ object ActivityUtils {
             return false
         }
         Ln.i("fillDisplayIfShrunk: $packageName bounds=${bounds} -> ${w}x$h on display $displayId")
-        val ok = resizeTaskToFullDisplay(taskId, w, h)
+        val ok = resizeTaskToFullDisplay(taskId, w, h, packageName)
         if (ok) SystemClock.sleep(RESIZE_SETTLE_MS)
         return ok
     }
@@ -309,11 +321,16 @@ object ActivityUtils {
      */
     private fun readTaskBounds(packageName: String): Rect? = runCatching {
         val task = findRecentTask(packageName) ?: return null
-        val field = runCatching {
-            ActivityManager.RunningTaskInfo::class.java.getDeclaredField("bounds")
-        }.getOrNull() ?: return null
-        field.isAccessible = true
-        field.get(task) as? Rect
+        // bounds 不一定声明在 RunningTaskInfo 上，沿父类链找，否则继承时永远读到 null
+        var cls: Class<*>? = task.javaClass
+        var field: java.lang.reflect.Field? = null
+        while (cls != null && field == null) {
+            field = runCatching { cls.getDeclaredField("bounds") }.getOrNull()
+            cls = cls.superclass
+        }
+        val f = field ?: return null
+        f.isAccessible = true
+        f.get(task) as? Rect
     }.getOrNull()
 
     private fun findRecentTask(packageName: String): ActivityManager.RunningTaskInfo? {
@@ -450,23 +467,46 @@ object ActivityUtils {
     private fun resizeTaskToFullDisplay(
         taskId: Int,
         width: Int,
-        height: Int
+        height: Int,
+        packageName: String
     ): Boolean {
         val rect = Rect(0, 0, width, height)
         resizeTaskMethod?.let { method ->
-            runCatching {
+            val applied = runCatching {
                 // 两套签名参数个数不同：3 参带 resizeMode，2 参没有
                 val args = if (method.parameterTypes.size >= 3) {
                     arrayOf<Any>(taskId, rect, RESIZE_MODE_USER)
                 } else {
                     arrayOf<Any>(taskId, rect)
                 }
-                method.invoke(activityTaskManager, *args)
+                val ret = method.invoke(activityTaskManager, *args)
+                // 返回 false 表示系统拒绝；返回 void 时按「可能已应用」继续
+                ret !is Boolean || ret
+            }.onFailure {
+                Ln.w("resizeTaskToFullDisplay: ${method.name} failed", it)
+            }.getOrDefault(false)
+            if (applied) {
                 Ln.i("resizeTaskToFullDisplay: ${method.name}($taskId, $rect) invoked")
-                return true
-            }.onFailure { Ln.w("resizeTaskToFullDisplay: ${method.name} failed", it) }
+                // 系统可能静默拒绝且不抛异常，回读一次确认真的变了
+                if (awaitTaskBounds(packageName, width, height)) return true
+                Ln.w("resizeTaskToFullDisplay: bounds did not change after ${method.name}, falling back")
+            }
         }
-        return resizeTaskViaAmCommand(taskId, width, height)
+        return resizeTaskViaAmCommand(taskId, width, height).also { ok ->
+            if (ok) awaitTaskBounds(packageName, width, height)
+        }
+    }
+
+    /** 有界等待 task bounds 变成整屏；读不到 bounds 时按成功处理，避免误判 */
+    private fun awaitTaskBounds(packageName: String, width: Int, height: Int): Boolean {
+        val deadline = SystemClock.uptimeMillis() + RESIZE_VERIFY_TIMEOUT_MS
+        while (true) {
+            val bounds = readTaskBounds(packageName)
+            if (bounds == null) return true
+            if (bounds.width() >= width && bounds.height() >= height) return true
+            if (SystemClock.uptimeMillis() >= deadline) return false
+            SystemClock.sleep(RESIZE_VERIFY_POLL_MS)
+        }
     }
 
     // 与 shell 权限对齐：系统内部用 USER 模式做交互式 resize
@@ -498,7 +538,13 @@ object ActivityUtils {
             )
             Ln.i("resizeTaskViaAmCommand: exec: ${args.joinToString(" ")}")
             val process = Runtime.getRuntime().exec(args)
-            val exitCode = process.waitFor()
+            // 有界等待：am 或它等的系统服务卡住时，不能把同步的启动链一起拖死
+            if (!process.waitFor(AM_RESIZE_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+                Ln.w("resizeTaskViaAmCommand: timed out after ${AM_RESIZE_TIMEOUT_MS}ms, destroying")
+                process.destroyForcibly()
+                return false
+            }
+            val exitCode = process.exitValue()
             val stderr = process.errorStream.bufferedReader().use { it.readText() }.trim()
             if (stderr.isNotEmpty()) Ln.w("resizeTaskViaAmCommand: am stderr: $stderr")
             if (exitCode != 0) {
