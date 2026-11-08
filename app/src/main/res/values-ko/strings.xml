@@ -347,6 +347,7 @@
     <string name="settings_theme_white">라이트</string>
     <string name="settings_theme_dark">다크</string>
     <string name="settings_theme_pure_dark">퓨어 블랙</string>
+    <string name="settings_row_info">설명</string>
     <string name="settings_font_size_title">페이지 배율</string>
     <string name="settings_font_size_summary">인터페이스 전체 크기(간격 포함)를 조정합니다. 자동은 화면 너비에 따라 일반적인 휴대폰 크기에 맞추며, 시스템 글꼴 크기는 별도로 적용됩니다. 메인 화면과 플로팅 창 모두 이 설정을 따릅니다.</string>
     <string name="settings_font_size_preview_text">누구세요? MAA를 응원해 주세요! (\'- \' )</string>
@@ -831,8 +832,6 @@
 
     <!-- settings: about section -->
     <string name="settings_section_about">정보</string>
-    <string name="settings_about_version">버전</string>
-    <string name="settings_about_developer">개발자</string>
     <string name="settings_about_faq_title">자주 묻는 질문</string>
     <string name="settings_about_faq_desc">문제가 생기면 먼저 여기를 확인하세요. 대부분의 문제에 대한 답이 있습니다</string>
     <string name="settings_about_feedback_title">문제 보고</string>

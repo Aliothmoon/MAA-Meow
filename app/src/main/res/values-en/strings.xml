@@ -99,6 +99,7 @@
     <string name="settings_theme_white">Light</string>
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_theme_pure_dark">Pure Black</string>
+    <string name="settings_row_info">Details</string>
     <string name="settings_font_size_title">Page Scale</string>
     <string name="settings_font_size_summary">Scales the whole UI (including spacing). Auto matches typical phone width; system font size applies separately. Main app and floating panel both follow this setting.</string>
     <string name="settings_font_size_preview_text">Who are you? Please support Pallas! (\'- \' )</string>
@@ -576,8 +577,6 @@
     <string name="dialog_shizuku_need_auth_message">Shizuku is running but has not authorized MaaMeow yet. Please grant access. This prompt will keep showing until access is granted.</string>
 
     <string name="settings_section_about">About</string>
-    <string name="settings_about_version">Version</string>
-    <string name="settings_about_developer">Developer</string>
     <string name="settings_about_faq_title">FAQ</string>
     <string name="settings_about_faq_desc">Check here first; most common issues already have answers</string>
     <string name="settings_about_feedback_title">Report an Issue</string>

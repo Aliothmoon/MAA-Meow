@@ -347,6 +347,7 @@
     <string name="settings_theme_white">白色</string>
     <string name="settings_theme_dark">暗色</string>
     <string name="settings_theme_pure_dark">纯黑</string>
+    <string name="settings_row_info">说明</string>
     <string name="settings_font_size_title">页面缩放</string>
     <string name="settings_font_size_summary">调整界面整体大小（含间距）。自动按屏幕宽度对齐常见手机尺寸，系统字体单独生效。主界面与悬浮窗均跟随此设置。</string>
     <string name="settings_font_size_preview_text">你是谁？请支持牛牛！(\'- \' )</string>
@@ -831,8 +832,6 @@
 
     <!-- settings: about section -->
     <string name="settings_section_about">关于</string>
-    <string name="settings_about_version">版本</string>
-    <string name="settings_about_developer">开发者</string>
     <string name="settings_about_faq_title">常见问题</string>
     <string name="settings_about_faq_desc">遇到问题先看这里，多数问题都有现成解答</string>
     <string name="settings_about_feedback_title">问题反馈</string>
