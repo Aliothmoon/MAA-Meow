@@ -385,14 +385,21 @@ class RemoteServiceImpl : RemoteService.Stub() {
         Ln.i("$TAG: startVirtualDisplay() ${virtualDisplayMode.get()}")
         return when (virtualDisplayMode.get()) {
             DisplayMode.PRIMARY -> PrimaryDisplayManager.start()
-            DisplayMode.BACKGROUND -> BackgroundDisplay.start().also { displayId ->
-                if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
-                    PowerController.startUserActivityKeepAlive(displayId)
-                }
-            }
-
+            DisplayMode.BACKGROUND -> BackgroundDisplay.start()
             else -> DefaultDisplayConfig.DISPLAY_NONE
         }
+    }
+
+    @Synchronized
+    override fun setUserActivityKeepAlive(enabled: Boolean) {
+        val displayId = BackgroundDisplay.displayId()
+        if (!enabled || virtualDisplayMode.get() != DisplayMode.BACKGROUND
+            || displayId == DefaultDisplayConfig.DISPLAY_NONE
+        ) {
+            PowerController.stopUserActivityKeepAlive()
+            return
+        }
+        PowerController.startUserActivityKeepAlive(displayId)
     }
 
     @Synchronized

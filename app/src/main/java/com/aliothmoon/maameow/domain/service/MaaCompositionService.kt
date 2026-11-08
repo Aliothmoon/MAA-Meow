@@ -179,6 +179,9 @@ class MaaCompositionService(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    // 串行，保证开关顺序
+    private val keepAliveScope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+
     // 虚拟屏归建它的特权进程，进程一换就没了
     private class BackgroundGame(val binder: IBinder, val packageName: String)
 
@@ -999,15 +1002,24 @@ class MaaCompositionService(
         }
     }
 
-    // 后台模式随会话启停的监视器：游戏存活/漂移看门狗、帧率
+    // 后台模式随会话启停的监视器：游戏存活/漂移看门狗、帧率、虚拟屏保活
     private fun startBackgroundMonitors() {
         appWatchdog.startWatching()
         gameFpsWatcher.start()
+        setUserActivityKeepAlive(true)
     }
 
     private fun stopBackgroundMonitors() {
         appWatchdog.stopWatching()
         gameFpsWatcher.stop()
+        setUserActivityKeepAlive(false)
+    }
+
+    private fun setUserActivityKeepAlive(enabled: Boolean) {
+        keepAliveScope.launch {
+            runCatching { RemoteServiceManager.getInstanceOrNull()?.setUserActivityKeepAlive(enabled) }
+                .onFailure { Timber.w(it, "setUserActivityKeepAlive(%s) failed", enabled) }
+        }
     }
 
     private fun finishStop(result: StopResult): StopResult {
