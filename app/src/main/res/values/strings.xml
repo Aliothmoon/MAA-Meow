@@ -1382,8 +1382,8 @@
     <string name="mini_game_tip_pixel_paint">先在下方选好图片并调参，然后停在游戏的像素画编辑页再开始</string>
     <string name="mini_game_name_pv">PV-烟花筹委会</string>
     <string name="mini_game_tip_pv">从所选关卡开始并自动通关。若选择第一关，则从活动页最左侧开始；若选择其他关卡，请先进入上一关再返回以校准位置。</string>
-    <string name="mini_game_name_spa">卫戍协议：盟约</string>
-    <string name="mini_game_tip_spa">在活动主界面（有 ｢独立模拟｣ 处开始任务）\n在有存档时需要先手动放弃\n最高只测试过 ｢险境模拟｣\n如果已通关更高难度导致看不到 ｢险境模拟｣ 或 ｢标准模拟｣，需手动选择一次 ｢险境模拟｣ 难度\n手动通关 ｢标准模拟｣ 可以更快的刷分\n只能刷等级奖励，拿蚀刻章得打完所有的 ｢关键目标｣</string>
+    <string name="mini_game_name_spa">卫戍协议</string>
+    <string name="mini_game_tip_spa">在活动主界面（有 ｢极速模拟｣ 处）开始任务\n在有存档时需要先手动放弃\n只能刷等级奖励，拿蚀刻章得打完所有的 ｢关键目标｣</string>
     <string name="mini_game_name_os">OS-喀兰贸易技术研发部</string>
     <string name="mini_game_tip_os">在活动主界面（右下角有 ｢开始重建｣ 处）开始任务。</string>
     <string name="mini_game_name_rm_tr_1">次生预案 RM-TR-1</string>
@@ -2983,6 +2983,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="panel_task_type_switch_theme">更换主题</string>
     <string name="maa_switch_theme">更换主题</string>
     <string name="maa_switch_theme_skipped">未配置候选主题，跳过更换游戏主题</string>
+    <string name="maa_annihilation_entry_not_found">未在终端待办中找到剿灭入口，可能本周剿灭已完成，跳过剿灭</string>
     <string name="maa_switch_theme_succeeded">已更换游戏主题：%1$s</string>
     <string name="maa_switch_theme_already_set">当前已是主题：%1$s</string>
     <string name="maa_switch_theme_locked">主题尚未解锁：%1$s</string>

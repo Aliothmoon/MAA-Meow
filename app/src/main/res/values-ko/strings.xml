@@ -1382,8 +1382,8 @@
     <string name="mini_game_tip_pixel_paint">아래에서 이미지를 선택하고 파라미터를 조정한 후, 게임의 픽셀 아트 편집 화면에서 시작하세요</string>
     <string name="mini_game_name_pv">PV-불꽃놀이 집행위원회</string>
     <string name="mini_game_tip_pv">선택한 스테이지부터 자동으로 클리어합니다. 첫 번째 스테이지를 선택한 경우에는 이벤트 페이지의 가장 왼쪽에서 시작하세요. 다른 스테이지를 선택한 경우에는 위치 보정을 위해 이전 스테이지에 먼저 들어갔다가 돌아오세요.</string>
-    <string name="mini_game_name_spa">위수 협의: 맹약</string>
-    <string name="mini_game_tip_spa">이벤트 메인 화면에서 임무 시작 (아래에 ｢독립 시뮬레이션｣)\n저장 데이터가 있는 경우 먼저 수동으로 포기해야 합니다\n｢험지 시뮬레이션｣까지만 테스트되었습니다\n더 높은 난이도를 클리어하여 ｢험지 시뮬레이션｣ 또는 ｢표준 시뮬레이션｣이 보이지 않는 경우, ｢험지 시뮬레이션｣ 난이도를 수동으로 한 번 선택하세요\n｢표준 시뮬레이션｣ 을 수동으로 클리어하면 점수를 더 빠르게 획득할 수 있습니다\n레벨 보상만 획득 가능하며, 조각 메달을 얻으려면 모든 ｢주요 목표｣를 완료해야 합니다</string>
+    <string name="mini_game_name_spa">위수 협의</string>
+    <string name="mini_game_tip_spa">이벤트 메인 화면에서 임무 시작 (아래에 ｢고속 시뮬레이션｣)\n저장 데이터가 있는 경우 먼저 수동으로 포기해야 합니다\n레벨 보상만 획득 가능하며, 조각 메달을 얻으려면 모든 ｢주요 목표｣를 완료해야 합니다</string>
     <string name="mini_game_name_os">OS-카란 무역 연구개발부</string>
     <string name="mini_game_tip_os">이벤트 메인 화면에서 작업을 시작하세요 (오른쪽 아래에 ｢시작하기｣).</string>
     <string name="mini_game_name_rm_tr_1">재건 계획 RM-TR-1</string>
@@ -2983,6 +2983,7 @@
     <string name="panel_task_type_switch_theme">테마 변경</string>
     <string name="maa_switch_theme">테마 변경</string>
     <string name="maa_switch_theme_skipped">후보 테마가 설정되지 않아 게임 테마 전환을 건너뜁니다</string>
+    <string name="maa_annihilation_entry_not_found">터미널 할 일 목록에서 섬멸 작전을 찾을 수 없습니다. 이번 주 섬멸 작전이 이미 완료되었을 수 있습니다. 섬멸 작전을 건너뜁니다</string>
     <string name="maa_switch_theme_succeeded">게임 테마 전환 완료: %1$s</string>
     <string name="maa_switch_theme_already_set">이미 설정된 테마: %1$s</string>
     <string name="maa_switch_theme_locked">테마가 아직 잠금 해제되지 않음: %1$s</string>

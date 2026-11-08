@@ -1328,8 +1328,8 @@
     <string name="mini_game_tip_pixel_paint">Pick an image and tune it below, then stay on the in-game pixel art editor before starting</string>
     <string name="mini_game_name_pv">PV - Fireworks Organizing Committee</string>
     <string name="mini_game_tip_pv">Automatically clear from the selected stage. If you choose the first stage, start from the leftmost side of the event page; for other stages, enter the previous stage and then return to calibrate the position.</string>
-    <string name="mini_game_name_spa">Stronghold Protocol: Alliance</string>
-    <string name="mini_game_tip_spa">Start the task from the main event screen (where ｢Solo Simulation｣ is located)\nIf there is a saved game, you need to manually abandon it first\nOnly tested up to ｢Perilous Simulation｣\nIf higher difficulties have been cleared and ｢Perilous Simulation｣ or ｢Standard Simulation｣ is not visible, manually select ｢Perilous Simulation｣ difficulty once\nCompleting ｢Standard Simulation｣ manually allows faster score farming\nOnly level rewards can be farmed; to get the Engraved Medal, all ｢Key Objectives｣ must be completed</string>
+    <string name="mini_game_name_spa">Stronghold Protocol</string>
+    <string name="mini_game_tip_spa">Start the task from the main event screen (where ｢Express Simulation｣ is located)\nIf there is a saved game, you need to manually abandon it first\nOnly level rewards can be farmed; to get the Engraved Medal, all ｢Key Objectives｣ must be completed</string>
     <string name="mini_game_name_os">OS-Karlan Trade R&amp;D</string>
     <string name="mini_game_tip_os">Start the task at the main minigame interface (where the \";START\"; button is in the left bottom corner).</string>
     <string name="mini_game_name_rm_tr_1">Rebuilding Mandate RM-TR-1</string>
@@ -2926,6 +2926,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="panel_task_type_switch_theme">Switch Theme</string>
     <string name="maa_switch_theme">Switch Theme</string>
     <string name="maa_switch_theme_skipped">No theme candidates configured; skipping game theme switch</string>
+    <string name="maa_annihilation_entry_not_found">Annihilation entry not found in the Terminal to-do list, possibly already completed this week. Skipped Annihilation</string>
     <string name="maa_switch_theme_succeeded">Game theme switched to: %1$s</string>
     <string name="maa_switch_theme_already_set">Theme already set: %1$s</string>
     <string name="maa_switch_theme_locked">Theme is locked: %1$s</string>

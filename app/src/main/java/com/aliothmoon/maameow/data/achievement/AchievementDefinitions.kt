@@ -139,8 +139,8 @@ object AchievementDefinitions {
             group = AchievementIds.ROGUELIKE_GROUP,
             target = 100,
         ) {
-            trigger(AchievementEvents.PROCESS_TASK_STARTED, AchievementTriggerMode.INCREMENT) {
-                where("task" to "ExitThenAbandon")
+            trigger(AchievementEvents.PROCESS_TASK_COMPLETED, AchievementTriggerMode.INCREMENT) {
+                where("taskchain" to "Roguelike", "task" to "AbandonConfirm")
             }
         }
         achievement(
