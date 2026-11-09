@@ -578,15 +578,17 @@ class SettingsViewModel(
     private val _showChangelog = MutableStateFlow(false)
     val showChangelog: StateFlow<Boolean> = _showChangelog.asStateFlow()
 
-    /** 当前版本留档的更新日志；版本号对不上（如旁路装了新版）一律视为没有 */
+    /** 同 WPF：展示最近拿到的更新说明，不校验是否为当前版本 */
     val currentChangelog: StateFlow<ChangelogArchive?> = combine(
+        appSettingsManager.pendingChangelogVersion,
+        appSettingsManager.pendingChangelogContent,
         appSettingsManager.currentChangelogVersion,
         appSettingsManager.currentChangelogContent,
-    ) { version, content ->
-        if (version == BuildConfig.VERSION_NAME && content.isNotBlank()) {
-            ChangelogArchive(version = version, markdown = content)
-        } else {
-            null
+    ) { pendingVersion, pendingContent, version, content ->
+        when {
+            pendingContent.isNotBlank() -> ChangelogArchive(version = pendingVersion, markdown = pendingContent)
+            content.isNotBlank() -> ChangelogArchive(version = version, markdown = content)
+            else -> null
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 

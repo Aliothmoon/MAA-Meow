@@ -228,10 +228,10 @@ fun AnnouncementDialog(
                     // 标题栏：横屏不再塞勾选和确认，避免挤爆
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        DialogIconBadge(icon = Icons.Rounded.Campaign)
+                        DialogTitleIcon(icon = Icons.Rounded.Campaign)
                         Text(
                             text = stringResource(R.string.announcement_title),
                             style = MaterialTheme.typography.titleLarge,

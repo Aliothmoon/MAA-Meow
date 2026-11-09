@@ -20,23 +20,22 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,6 +43,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -89,7 +93,8 @@ fun AdaptiveTaskPromptDialog(
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
     confirmText: String? = null,
-    dismissText: String? = null,
+    /** 传 null 不显示 */
+    dismissText: String? = stringResource(R.string.common_cancel),
     /** 文字按钮单独的回调；不给则同 [onDismissRequest]，点外面和返回键始终走后者 */
     onDismissClick: (() -> Unit)? = null,
     neutralText: String? = null,
@@ -100,59 +105,72 @@ fun AdaptiveTaskPromptDialog(
     buttonLayout: TaskPromptButtonLayout = TaskPromptButtonLayout.HORIZONTAL,
     dismissOnOutsideClick: Boolean = true,
     landscapeAdaptive: Boolean = false,
+    /** 文字按钮的无障碍节点只留内容描述，防 GKD 全局「更新提示」按文字自动点掉；读屏不受影响 */
+    guardDismissFromAutoClick: Boolean = false,
     content: @Composable (() -> Unit)? = null
 ) {
     if (!visible) return
 
     // 弹窗在独立窗口内呈现，不应透出主界面自定义背景图：在玻璃作用域内恢复不透明配色。
-    OpaqueTheme {
-        val resolvedConfirmColor = confirmColor ?: MaterialTheme.colorScheme.primary
-        val resolvedIconTint = iconTint ?: resolvedConfirmColor
-        val resolvedConfirmText = confirmText ?: stringResource(R.string.common_confirm)
-        val resolvedDismissText = dismissText ?: stringResource(R.string.common_cancel)
-        val resolvedDismissClick = onDismissClick ?: onDismissRequest
+    CompositionLocalProvider(LocalGuardDismiss provides guardDismissFromAutoClick) {
+        OpaqueTheme {
+            val resolvedConfirmColor = confirmColor ?: MaterialTheme.colorScheme.primary
+            val resolvedIconTint = iconTint ?: MaterialTheme.colorScheme.onSurfaceVariant
+            val resolvedConfirmText = confirmText ?: stringResource(R.string.common_confirm)
+            val resolvedDismissClick = onDismissClick ?: onDismissRequest
 
-        if (LocalFloatingWindowContext.current) {
-            FloatingTaskPromptDialog(
-                title = title,
-                message = message,
-                onDismissRequest = onDismissRequest,
-                onConfirm = onConfirm,
-                confirmText = resolvedConfirmText,
-                dismissText = resolvedDismissText,
-                onDismissClick = resolvedDismissClick,
-                neutralText = neutralText,
-                onNeutralClick = onNeutralClick,
-                icon = icon,
-                iconTint = resolvedIconTint,
-                confirmColor = resolvedConfirmColor,
-                buttonLayout = buttonLayout,
-                dismissOnOutsideClick = dismissOnOutsideClick,
-                landscapeAdaptive = landscapeAdaptive,
-                content = content
-            )
-        } else {
-            MaterialTaskPromptDialog(
-                title = title,
-                message = message,
-                onDismissRequest = onDismissRequest,
-                onConfirm = onConfirm,
-                confirmText = resolvedConfirmText,
-                dismissText = resolvedDismissText,
-                onDismissClick = resolvedDismissClick,
-                neutralText = neutralText,
-                onNeutralClick = onNeutralClick,
-                icon = icon,
-                iconTint = resolvedIconTint,
-                confirmColor = resolvedConfirmColor,
-                buttonLayout = buttonLayout,
-                dismissOnOutsideClick = dismissOnOutsideClick,
-                landscapeAdaptive = landscapeAdaptive,
-                content = content
-            )
+            if (LocalFloatingWindowContext.current) {
+                FloatingTaskPromptDialog(
+                    title = title,
+                    message = message,
+                    onDismissRequest = onDismissRequest,
+                    onConfirm = onConfirm,
+                    confirmText = resolvedConfirmText,
+                    dismissText = dismissText,
+                    onDismissClick = resolvedDismissClick,
+                    neutralText = neutralText,
+                    onNeutralClick = onNeutralClick,
+                    icon = icon,
+                    iconTint = resolvedIconTint,
+                    confirmColor = resolvedConfirmColor,
+                    buttonLayout = buttonLayout,
+                    dismissOnOutsideClick = dismissOnOutsideClick,
+                    landscapeAdaptive = landscapeAdaptive,
+                    content = content
+                )
+            } else {
+                MaterialTaskPromptDialog(
+                    title = title,
+                    message = message,
+                    onDismissRequest = onDismissRequest,
+                    onConfirm = onConfirm,
+                    confirmText = resolvedConfirmText,
+                    dismissText = dismissText,
+                    onDismissClick = resolvedDismissClick,
+                    neutralText = neutralText,
+                    onNeutralClick = onNeutralClick,
+                    icon = icon,
+                    iconTint = resolvedIconTint,
+                    confirmColor = resolvedConfirmColor,
+                    buttonLayout = buttonLayout,
+                    dismissOnOutsideClick = dismissOnOutsideClick,
+                    landscapeAdaptive = landscapeAdaptive,
+                    content = content
+                )
+            }
         }
     }
 }
+
+/** Dialog 窗口同样继承 */
+private val LocalGuardDismiss = staticCompositionLocalOf { false }
+
+private fun Modifier.guardDismiss(guard: Boolean, text: String, action: () -> Unit): Modifier =
+    if (!guard) this else clearAndSetSemantics {
+        contentDescription = text
+        role = Role.Button
+        onClick { action(); true }
+    }
 
 @Composable
 private fun FloatingTaskPromptDialog(
@@ -349,26 +367,9 @@ private fun TaskPromptCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                icon?.let {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(
-                                color = iconTint.copy(alpha = 0.12f),
-                                shape = CircleShape,
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = it,
-                            contentDescription = null,
-                            tint = iconTint,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
+                icon?.let { DialogTitleIcon(icon = it, tint = iconTint) }
 
                 Text(
                     text = title,
@@ -461,7 +462,9 @@ private fun TaskPromptLandscapeActions(
         dismissText?.takeIf { it.isNotBlank() }?.let {
             TextButton(
                 onClick = onDismissClick,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .guardDismiss(LocalGuardDismiss.current, it, onDismissClick),
                 shape = MaterialTheme.shapes.large,
             ) {
                 Text(
@@ -539,6 +542,7 @@ private fun TaskPromptButtons(
         dismissText?.takeIf { it.isNotBlank() }?.let {
             TextButton(
                 onClick = onDismissClick,
+                modifier = Modifier.guardDismiss(LocalGuardDismiss.current, it, onDismissClick),
                 shape = MaterialTheme.shapes.large
             ) {
                 Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)

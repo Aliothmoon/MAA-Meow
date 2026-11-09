@@ -93,7 +93,7 @@ import com.aliothmoon.maameow.utils.i18n.overlayControlModeDisplayName
 import com.aliothmoon.maameow.utils.i18n.remoteBackendPermissionLabel
 import com.aliothmoon.maameow.utils.i18n.resolve
 import com.aliothmoon.maameow.utils.i18n.runModeDisplayName
-import com.aliothmoon.maameow.presentation.components.MaaMarkdownText
+import com.aliothmoon.maameow.presentation.components.ReleaseNoteText
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -221,6 +221,7 @@ fun HomeView(
             confirmColor = Color(0xFF4CAF50),
             dismissText = stringResource(R.string.dialog_update_dismiss),
             landscapeAdaptive = true,
+            guardDismissFromAutoClick = true,
             onConfirm = {
                 if (result.appUpdate != null) {
                     updateViewModel.confirmAppDownload(result.appUpdate.version)
@@ -231,20 +232,15 @@ fun HomeView(
             },
             onDismissRequest = { updateViewModel.dismissStartupDialog() },
             content = {
-                Column {
+                // 更新说明自带版本号；有 App 更新时确认只下 App
+                if (!releaseNote.isNullOrBlank()) {
+                    ReleaseNoteText(markdown = releaseNote, modifier = Modifier.fillMaxWidth())
+                } else {
                     Text(
                         text = appVersionLine + resourceMessage,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    if (!releaseNote.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        MaaMarkdownText(
-                            markdown = releaseNote,
-                            modifier = Modifier.fillMaxWidth(),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
                 }
             }
         )

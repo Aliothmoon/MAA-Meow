@@ -341,7 +341,8 @@ class UpdateViewModel(
     fun checkPendingChangelog() {
         val version = appSettingsManager.pendingChangelogVersion.value.removePrefix("v")
         val content = appSettingsManager.pendingChangelogContent.value
-        val isNewVersion = version == BuildConfig.VERSION_NAME
+        val isNewVersion = version == BuildConfig.VERSION_NAME &&
+                appSettingsManager.currentChangelogVersion.value != version
         if (version.isNotEmpty() && content.isNotEmpty() && isNewVersion) {
             _changelogDialog.value = content
             // 确认已装上就立刻留档，用户直接划走弹窗也能在「关于」里回看

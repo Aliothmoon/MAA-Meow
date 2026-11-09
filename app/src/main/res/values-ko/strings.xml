@@ -839,7 +839,7 @@
     <string name="settings_about_qq_group_title">QQ 그룹</string>
     <string name="settings_about_qq_group_desc">그룹에 참여해 함께 소통해 보세요</string>
     <string name="settings_about_changelog">변경 내역</string>
-    <string name="settings_about_changelog_empty">아직 변경 내역이 없습니다. 앱 내에서 새 버전으로 업데이트하면 해당 버전의 업데이트 내용이 여기에 보관됩니다</string>
+    <string name="settings_about_changelog_empty">아직 변경 내역이 없습니다. 업데이트 확인에서 새 버전을 찾으면 해당 버전의 업데이트 내용이 여기에 보관됩니다</string>
     <string name="settings_about_announcement">공지사항 확인</string>
     <string name="settings_about_onboarding">시작 가이드</string>
     <string name="settings_about_onboarding_desc">앱의 각 영역별 기능 소개를 다시 확인합니다</string>

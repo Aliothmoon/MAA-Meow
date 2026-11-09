@@ -839,7 +839,7 @@
     <string name="settings_about_qq_group_title">QQ 群</string>
     <string name="settings_about_qq_group_desc">欢迎加群交流</string>
     <string name="settings_about_changelog">更新日志</string>
-    <string name="settings_about_changelog_empty">暂无更新日志。应用内更新到新版本后，这里会留档当前版本的更新说明</string>
+    <string name="settings_about_changelog_empty">暂无更新日志。检查到新版本后，这里会留档它的更新说明</string>
     <string name="settings_about_announcement">查看公告</string>
     <string name="settings_about_onboarding">新手引导</string>
     <string name="settings_about_onboarding_desc">重新查看应用各区域的功能介绍</string>

@@ -627,7 +627,7 @@ class AppSettingsManager internal constructor(
 
     val currentChangelogContent: StateFlow<String> = setting { it.currentChangelogContent }
 
-    /** 单次 edit 内完成，避免中途崩溃导致两份都丢 */
+    /** 首启公告已弹；pending 留着给设置页看 */
     suspend fun promotePendingChangelog() {
         with(AppSettingsSchema) {
             context.dataStore.edit {
@@ -637,8 +637,6 @@ class AppSettingsManager internal constructor(
                     it[currentChangelogVersion] = version.removePrefix("v")
                     it[currentChangelogContent] = content
                 }
-                it[pendingChangelogVersion] = ""
-                it[pendingChangelogContent] = ""
             }
         }
     }

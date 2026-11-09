@@ -584,7 +584,7 @@
     <string name="settings_about_qq_group_title">QQ Group</string>
     <string name="settings_about_qq_group_desc">Join the QQ group to chat with other users</string>
     <string name="settings_about_changelog">Changelog</string>
-    <string name="settings_about_changelog_empty">No changelog yet. After you update to a new version from within the app, the release notes for that version are kept here.</string>
+    <string name="settings_about_changelog_empty">No changelog yet. Once an update check finds a new version, its release notes are kept here.</string>
     <string name="settings_about_announcement">View Announcement</string>
     <string name="settings_about_onboarding">Getting Started</string>
     <string name="settings_about_onboarding_desc">Replay the walkthrough of the app\'s key areas</string>

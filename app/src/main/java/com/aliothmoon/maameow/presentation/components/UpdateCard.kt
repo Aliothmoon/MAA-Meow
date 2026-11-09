@@ -939,8 +939,12 @@ private fun AppUpdateConfirmDialog(
         dismissText = stringResource(R.string.dialog_update_later),
         icon = Icons.Rounded.Info,
         landscapeAdaptive = true,
+        guardDismissFromAutoClick = true,
         content = {
-            Column {
+            // 更新说明自带版本号
+            if (!updateInfo.releaseNote.isNullOrBlank()) {
+                ReleaseNoteText(markdown = updateInfo.releaseNote, modifier = Modifier.fillMaxWidth())
+            } else {
                 Text(
                     text = "$currentVersion → ${updateInfo.version}",
                     style = MaterialTheme.typography.bodyMedium,
@@ -948,14 +952,6 @@ private fun AppUpdateConfirmDialog(
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center
                 )
-                if (!updateInfo.releaseNote.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    MaaMarkdownText(
-                        markdown = updateInfo.releaseNote,
-                        modifier = Modifier.fillMaxWidth(),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
             }
         }
     )

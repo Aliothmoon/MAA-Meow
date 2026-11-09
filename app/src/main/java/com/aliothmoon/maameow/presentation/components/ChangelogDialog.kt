@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -31,11 +30,7 @@ fun ChangelogDialog(
         content = {
             Column {
                 Spacer(modifier = Modifier.height(12.dp))
-                MaaMarkdownText(
-                    markdown = content,
-                    modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                ReleaseNoteText(markdown = content, modifier = Modifier.fillMaxWidth())
             }
         }
     )

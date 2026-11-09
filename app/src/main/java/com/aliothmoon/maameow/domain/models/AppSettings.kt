@@ -129,13 +129,14 @@ data class AppSettings(
     @PrefKey(default = "SYSTEM")
     val language: String = "SYSTEM",
 
+    /** 最近检查到的新版本更新说明，同 WPF VersionUpdate.body，不清空 */
     @PrefKey(default = "")
     val pendingChangelogVersion: String = "",
 
     @PrefKey(default = "")
     val pendingChangelogContent: String = "",
 
-    // 与 pending 分开存：pending 会被下一次检查覆盖成尚未安装版本的日志
+    /** 已弹过首启公告的版本；旧版本弹完会清空 pending，日志只剩这份 */
     @PrefKey(default = "")
     val currentChangelogVersion: String = "",
 
