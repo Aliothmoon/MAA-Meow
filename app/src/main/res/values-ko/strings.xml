@@ -1391,7 +1391,7 @@
     <string name="mini_game_name_pv">PV-불꽃놀이 집행위원회</string>
     <string name="mini_game_tip_pv">선택한 스테이지부터 자동으로 클리어합니다. 첫 번째 스테이지를 선택한 경우에는 이벤트 페이지의 가장 왼쪽에서 시작하세요. 다른 스테이지를 선택한 경우에는 위치 보정을 위해 이전 스테이지에 먼저 들어갔다가 돌아오세요.</string>
     <string name="mini_game_name_spa">위수 협의</string>
-    <string name="mini_game_tip_spa">이벤트 메인 화면에서 임무 시작 (아래에 ｢고속 시뮬레이션｣)\n저장 데이터가 있는 경우 먼저 수동으로 포기해야 합니다\n레벨 보상만 획득 가능하며, 조각 메달을 얻으려면 모든 ｢주요 목표｣를 완료해야 합니다</string>
+    <string name="mini_game_tip_spa">이벤트 메인 화면에서 임무 시작 (아래에 ｢고속 시뮬레이션｣)\n기본 스킨을 사용해야 합니다\n저장 데이터가 있는 경우 먼저 수동으로 포기해야 합니다\n레벨 보상만 획득 가능하며, 조각 메달을 얻으려면 모든 ｢주요 목표｣를 완료해야 합니다</string>
     <string name="mini_game_name_os">OS-카란 무역 연구개발부</string>
     <string name="mini_game_tip_os">이벤트 메인 화면에서 작업을 시작하세요 (오른쪽 아래에 ｢시작하기｣).</string>
     <string name="mini_game_name_rm_tr_1">재건 계획 RM-TR-1</string>

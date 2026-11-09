@@ -1337,7 +1337,7 @@
     <string name="mini_game_name_pv">PV - Fireworks Organizing Committee</string>
     <string name="mini_game_tip_pv">Automatically clear from the selected stage. If you choose the first stage, start from the leftmost side of the event page; for other stages, enter the previous stage and then return to calibrate the position.</string>
     <string name="mini_game_name_spa">Stronghold Protocol</string>
-    <string name="mini_game_tip_spa">Start the task from the main event screen (where ｢Express Simulation｣ is located)\nIf there is a saved game, you need to manually abandon it first\nOnly level rewards can be farmed; to get the Engraved Medal, all ｢Key Objectives｣ must be completed</string>
+    <string name="mini_game_tip_spa">Start the task from the main event screen (where ｢Express Simulation｣ is located)\nDefault outfits must be used\nIf there is a saved game, you need to manually abandon it first\nOnly level rewards can be farmed; to get the Engraved Medal, all ｢Key Objectives｣ must be completed</string>
     <string name="mini_game_name_os">OS-Karlan Trade R&amp;D</string>
     <string name="mini_game_tip_os">Start the task at the main minigame interface (where the \";START\"; button is in the left bottom corner).</string>
     <string name="mini_game_name_rm_tr_1">Rebuilding Mandate RM-TR-1</string>

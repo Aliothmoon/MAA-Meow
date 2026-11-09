@@ -1391,7 +1391,7 @@
     <string name="mini_game_name_pv">PV-烟花筹委会</string>
     <string name="mini_game_tip_pv">从所选关卡开始并自动通关。若选择第一关，则从活动页最左侧开始；若选择其他关卡，请先进入上一关再返回以校准位置。</string>
     <string name="mini_game_name_spa">卫戍协议</string>
-    <string name="mini_game_tip_spa">在活动主界面（有 ｢极速模拟｣ 处）开始任务\n在有存档时需要先手动放弃\n只能刷等级奖励，拿蚀刻章得打完所有的 ｢关键目标｣</string>
+    <string name="mini_game_tip_spa">在活动主界面（有 ｢极速模拟｣ 处）开始任务\n需要使用默认皮肤\n在有存档时需要先手动放弃\n只能刷等级奖励，拿蚀刻章得打完所有的 ｢关键目标｣</string>
     <string name="mini_game_name_os">OS-喀兰贸易技术研发部</string>
     <string name="mini_game_tip_os">在活动主界面（右下角有 ｢开始重建｣ 处）开始任务。</string>
     <string name="mini_game_name_rm_tr_1">次生预案 RM-TR-1</string>
