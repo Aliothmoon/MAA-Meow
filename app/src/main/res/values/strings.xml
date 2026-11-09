@@ -400,7 +400,10 @@
     <string name="settings_force_fullscreen_on_virtual_display">后台模式强制全屏模式</string>
     <string name="settings_force_fullscreen_on_virtual_display_desc">仅后台虚拟屏生效。效果因机型而异，不一定生效，也可能带来额外问题</string>
     <string name="settings_fill_display_on_virtual_display">铺满虚拟屏</string>
-    <string name="settings_fill_display_on_virtual_display_desc">WSA 等把应用当作独立窗口托管的宿主会把游戏钉在首次打开时的窗口大小，画面只占屏幕一角、识别坐标整体错位。开启后每次游戏落到虚拟屏都重新拉满整屏。普通手机保持关闭</string>
+    <string name="settings_fill_display_on_virtual_display_desc">仅 Windows 子系统（WSA）需要。它把应用当作独立窗口托管，会把游戏钉在首次打开时的窗口大小，画面只占屏幕一角、识别坐标整体错位。开启后每次游戏落到虚拟屏都重新拉满整屏</string>
+    <string name="settings_fill_display_on_virtual_display_not_wsa">当前设备不是 Windows 子系统（WSA），普通手机不需要此项，故不可用</string>
+    <string name="dialog_enable_fill_display_title">开启铺满虚拟屏？</string>
+    <string name="dialog_enable_fill_display_message">此项目前只在 Windows 子系统（WSA）上经过验证。当前设备并非 WSA，强行开启会在每次游戏落到虚拟屏时重建任务窗口，可能导致画面闪烁、任务被中断或触控位置偏移。确认继续？</string>
     <string name="settings_pip_on_home">后台运行时自动画中画</string>
     <string name="dialog_enable_force_fullscreen_title">启用后台强制全屏？</string>
     <string name="dialog_enable_force_fullscreen_message">此选项不一定在所有设备上生效，开启后可能出现兼容性问题。确认继续？</string>
