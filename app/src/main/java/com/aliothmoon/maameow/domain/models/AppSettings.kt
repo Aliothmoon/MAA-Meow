@@ -256,6 +256,14 @@ data class AppSettings(
     @PrefKey(default = "false")
     val operBoxAssistEnabled: String = "false",
 
+    /** 作业搜索干员匹配，有干员数据才生效 */
+    @PrefKey(default = "true")
+    val copilotOperMatchEnabled: String = "true",
+
+    /** OperatorMatchMode 名，逗号分隔 */
+    @PrefKey(default = "READY,BORROW,TRAIN")
+    val copilotOperMatchModes: String = "READY,BORROW,TRAIN",
+
     /** 牛杂活动商店黑名单：勾选的常用商品物品 id，逗号分隔 */
     @PrefKey(default = "")
     val eventShopBlacklistPresets: String = "",

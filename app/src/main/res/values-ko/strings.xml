@@ -995,6 +995,15 @@
     <string name="copilot_search_pick">사용</string>
     <string name="copilot_search_load_more">더 보기</string>
     <string name="copilot_search_empty">작업을 찾을 수 없습니다</string>
+    <string name="copilot_match_toggle">오퍼레이터 매칭</string>
+    <string name="copilot_match_ready">바로 가능</string>
+    <string name="copilot_match_borrow">지원 필요</string>
+    <string name="copilot_match_train">육성 부족</string>
+    <string name="copilot_match_blocked">미보유</string>
+    <string name="copilot_match_partial">오퍼레이터 인식 데이터에 스킬과 모듈이 없어 정예화와 레벨로만 매칭합니다</string>
+    <string name="copilot_match_hidden">오퍼레이터 매칭으로 숨긴 작업: %1$d개</string>
+    <string name="copilot_match_missing">미보유: %1$s</string>
+    <string name="copilot_match_training">육성 부족: %1$s</string>
     <string name="copilot_search_added_list">추가된 작업</string>
     <string name="copilot_search_tab_copilot">작업</string>
     <string name="copilot_search_tab_set">작업 세트</string>

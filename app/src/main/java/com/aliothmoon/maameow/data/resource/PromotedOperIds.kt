@@ -11,4 +11,10 @@ object PromotedOperIds {
     val ids: Set<String> = BASE.keys
 
     fun baseOf(id: String): String? = BASE[id]
+
+    /** 含基础形态；非升变干员只有自己 */
+    fun formsOf(id: String): List<String> {
+        val base = BASE[id] ?: id
+        return listOf(base) + BASE.filterValues { it == base }.keys
+    }
 }

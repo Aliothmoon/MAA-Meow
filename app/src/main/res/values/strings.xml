@@ -995,6 +995,15 @@
     <string name="copilot_search_pick">使用</string>
     <string name="copilot_search_load_more">加载更多</string>
     <string name="copilot_search_empty">没有找到作业</string>
+    <string name="copilot_match_toggle">匹配干员</string>
+    <string name="copilot_match_ready">可直接打</string>
+    <string name="copilot_match_borrow">需借干员</string>
+    <string name="copilot_match_train">练度不足</string>
+    <string name="copilot_match_blocked">缺干员</string>
+    <string name="copilot_match_partial">干员识别数据不含技能与模组，只按精英化与等级匹配</string>
+    <string name="copilot_match_hidden">已按干员匹配隐藏 %1$d 个作业</string>
+    <string name="copilot_match_missing">未拥有：%1$s</string>
+    <string name="copilot_match_training">练度不足：%1$s</string>
     <string name="copilot_search_added_list">已添加作业</string>
     <string name="copilot_search_tab_copilot">作业</string>
     <string name="copilot_search_tab_set">作业集</string>

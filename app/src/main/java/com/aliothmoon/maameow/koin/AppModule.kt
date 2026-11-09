@@ -79,6 +79,7 @@ import com.aliothmoon.maameow.domain.service.AppTerminator
 import com.aliothmoon.maameow.domain.service.AppWatchdog
 import com.aliothmoon.maameow.domain.service.CopilotManager
 import com.aliothmoon.maameow.domain.service.CopilotOperBoxAssist
+import com.aliothmoon.maameow.domain.service.CopilotOperatorMatching
 import com.aliothmoon.maameow.domain.service.CoreDataPusher
 import com.aliothmoon.maameow.domain.service.CoreFilesGate
 import com.aliothmoon.maameow.domain.service.ExternalNotificationService
@@ -368,6 +369,7 @@ val appModule = module {
     singleOf(::ToolboxResultCollector)
     singleOf(::OperBoxYituliuSync)
     singleOf(::CopilotOperBoxAssist)
+    singleOf(::CopilotOperatorMatching)
     single { PlanSideTaskRunner(androidContext(), get(), get()) }
     singleOf(::TaskChainStatusTracker)
     singleOf(::FightDropsRefresher)

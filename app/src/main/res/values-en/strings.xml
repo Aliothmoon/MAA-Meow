@@ -941,6 +941,15 @@
     <string name="copilot_search_pick">Use</string>
     <string name="copilot_search_load_more">Load more</string>
     <string name="copilot_search_empty">No copilots found</string>
+    <string name="copilot_match_toggle">Match operators</string>
+    <string name="copilot_match_ready">Ready</string>
+    <string name="copilot_match_borrow">Borrow</string>
+    <string name="copilot_match_train">Train</string>
+    <string name="copilot_match_blocked">Missing</string>
+    <string name="copilot_match_partial">Recognized operator data has no skills or modules; matching by promotion and level only</string>
+    <string name="copilot_match_hidden">Hidden by operator match: %1$d</string>
+    <string name="copilot_match_missing">Not owned: %1$s</string>
+    <string name="copilot_match_training">Under-trained: %1$s</string>
     <string name="copilot_search_added_list">Added copilots</string>
     <string name="copilot_search_tab_copilot">Copilots</string>
     <string name="copilot_search_tab_set">Copilot sets</string>

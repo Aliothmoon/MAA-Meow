@@ -889,6 +889,23 @@ class AppSettingsManager internal constructor(
         }
     }
 
+    val copilotOperMatchEnabled: StateFlow<Boolean> =
+        setting { it.copilotOperMatchEnabled.toBooleanStrictOrNull() ?: true }
+
+    suspend fun setCopilotOperMatchEnabled(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[copilotOperMatchEnabled] = enabled.toString() }
+        }
+    }
+
+    val copilotOperMatchModes: StateFlow<String> = setting { it.copilotOperMatchModes }
+
+    suspend fun setCopilotOperMatchModes(modes: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[copilotOperMatchModes] = modes }
+        }
+    }
+
     val telemetryEnabled: StateFlow<Boolean> = setting { it.telemetryEnabled.toBooleanStrictOrNull() ?: true }
 
     suspend fun setTelemetryEnabled(enabled: Boolean) {
