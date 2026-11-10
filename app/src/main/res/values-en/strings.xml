@@ -213,7 +213,6 @@
 
     <string name="settings_section_data">Data Management</string>
     <string name="settings_depot_inventory_title">Depot Inventory</string>
-    <string name="settings_depot_inventory_desc">View depot and operator data for each profile</string>
     <string name="settings_export_config_title">Export Configuration</string>
     <string name="settings_export_config_desc">Export all settings and task configurations to a file</string>
     <string name="settings_import_config_title">Import Configuration</string>

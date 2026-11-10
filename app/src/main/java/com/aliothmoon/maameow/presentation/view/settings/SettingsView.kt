@@ -1011,7 +1011,6 @@ fun SettingsView(
                             SettingSearchTarget(R.string.settings_depot_inventory_title) {
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_depot_inventory_title),
-                                    description = stringResource(R.string.settings_depot_inventory_desc),
                                     icon = Icons.Rounded.Inventory2,
                                     contentColor = contentColor
                                 ) {

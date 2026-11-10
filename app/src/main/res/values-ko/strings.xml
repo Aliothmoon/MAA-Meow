@@ -3097,7 +3097,6 @@
     <string name="maa_requirement_skill_level">Skill level too low</string>
     <string name="maa_requirement_module">Required module not unlocked</string>
     <string name="settings_depot_inventory_title">Depot Inventory</string>
-    <string name="settings_depot_inventory_desc">View depot and operator data for each profile</string>
     <string name="depot_inventory_title">Depot Inventory</string>
     <string name="depot_inventory_profile_active">Active</string>
     <string name="depot_inventory_empty_profiles">No profiles yet</string>

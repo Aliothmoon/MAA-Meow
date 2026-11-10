@@ -467,7 +467,6 @@
     <!-- settings: data section -->
     <string name="settings_section_data">数据管理</string>
     <string name="settings_depot_inventory_title">库存数据</string>
-    <string name="settings_depot_inventory_desc">查看各配置档的仓库与干员数据</string>
     <string name="settings_export_config_title">导出配置</string>
     <string name="settings_export_config_desc">将所有设置和任务配置导出为文件</string>
     <string name="settings_import_config_title">导入配置</string>
