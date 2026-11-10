@@ -8,6 +8,7 @@ import com.aliothmoon.maameow.data.datasource.AppDownloader
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.OperBoxRepository
+import com.aliothmoon.maameow.data.repository.YituliuTokenRepository
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.data.resource.GameMetadataLoader
 import com.aliothmoon.maameow.data.resource.HotUpdateSync
@@ -115,6 +116,7 @@ class MaaApplication : Application() {
         gameMuteCoordinator.startAutoRestore()
         depotRepository.start()
         operBoxRepository.start()
+        get<YituliuTokenRepository>().start()
         cleanCachedUpdateApks()
         get<ShizukuDownMonitor>().start(applicationScope)
         applicationScope.launch {

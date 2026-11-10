@@ -39,6 +39,8 @@ class ProfileShardStore<T : Any>(
 
     private val _shards = MutableStateFlow<Map<String, T>>(emptyMap())
 
+    val all: StateFlow<Map<String, T>> = _shards.asStateFlow()
+
     private val _isLoaded = MutableStateFlow(false)
     val isLoaded: StateFlow<Boolean> = _isLoaded.asStateFlow()
 
@@ -64,9 +66,19 @@ class ProfileShardStore<T : Any>(
         }
     }
 
-    /** 同步改内存并排队落盘；返回写入值，没写返回 null */
-    fun mutate(transform: (T) -> T): T? {
-        val profileId = taskChainState.profileId.value
+    /** 写活跃档：同步改内存并排队落盘；返回写入值，没写返回 null */
+    fun mutate(transform: (T) -> T): T? = write(taskChainState.profileId.value, transform)
+
+    /** 写指定档；已删的档丢弃，免得留下孤儿分片 */
+    fun mutate(profileId: String, transform: (T) -> T): T? {
+        if (taskChainState.profiles.value.none { it.id == profileId }) {
+            Timber.w("配置档不存在，跳过写入: %s%s", keyPrefix, profileId)
+            return null
+        }
+        return write(profileId, transform)
+    }
+
+    private fun write(profileId: String, transform: (T) -> T): T? {
         if (profileId.isEmpty()) {
             Timber.w("活跃配置档为空，跳过写入: %s", keyPrefix)
             return null

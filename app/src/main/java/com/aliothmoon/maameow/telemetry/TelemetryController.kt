@@ -10,6 +10,7 @@ import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.repository.YituliuTokenRepository
 import com.aliothmoon.maameow.data.resource.MaaCoreVersion
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunMode
@@ -64,6 +65,7 @@ class TelemetryController(
     private val pathConfig: MaaPathConfig,
     private val taskChainState: TaskChainState,
     private val screenPower: ScreenPowerController,
+    private val yituliuTokens: YituliuTokenRepository,
 ) : RunTelemetry {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -467,6 +469,7 @@ class TelemetryController(
         notification = notificationSettings.settings.first(),
         // 当前配置档的链以内存里的为准，存盘的那份可能还没跟上
         chains = taskChainState.profiles.value.map { it.chain } + listOf(taskChainState.chain.value),
+        yituliuProfileTokens = yituliuTokens.profileTokens.value.values,
     )
 
     /** Core 存的是 PNG，一张一兆上下，缩小并压成 JPEG 再带走 */

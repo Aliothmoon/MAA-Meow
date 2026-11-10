@@ -86,6 +86,11 @@ object SettingSearchIndex {
         path = listOf(R.string.bottom_nav_schedule, R.string.schedule_wake_unlock_title),
     )
 
+    private val yituliuPage = SettingLocation.Page(
+        route = Routes.YITULIU,
+        path = listOf(R.string.settings_section_third_party, R.string.settings_yituliu_title),
+    )
+
     private val appBlacklistPage = SettingLocation.Page(
         route = Routes.SCHEDULE_APP_BLACKLIST,
         path = listOf(R.string.bottom_nav_schedule, R.string.schedule_app_blacklist_title),
@@ -136,9 +141,16 @@ object SettingSearchIndex {
 
         SettingSearchEntry(R.string.settings_telemetry, thirdParty, keywordsRes = R.string.search_keywords_telemetry),
         SettingSearchEntry(R.string.settings_report_penguin, thirdParty, R.string.settings_report_penguin_desc),
-        SettingSearchEntry(R.string.settings_report_yituliu, thirdParty, R.string.settings_report_yituliu_desc),
-        SettingSearchEntry(R.string.settings_oper_box_yituliu_title, thirdParty, R.string.settings_oper_box_yituliu_desc),
-        SettingSearchEntry(R.string.panel_autobattle_operbox_assist, thirdParty, R.string.settings_oper_box_assist_desc),
+        SettingSearchEntry(R.string.settings_yituliu_title, thirdParty, R.string.settings_yituliu_desc),
+
+        SettingSearchEntry(R.string.settings_oper_box_yituliu_title, yituliuPage, R.string.settings_oper_box_yituliu_desc),
+        SettingSearchEntry(R.string.panel_autobattle_operbox_assist, yituliuPage, R.string.settings_oper_box_assist_desc),
+        SettingSearchEntry(
+            R.string.settings_yituliu_open_api_token, yituliuPage,
+            R.string.settings_yituliu_open_api_token_hint,
+        ),
+        SettingSearchEntry(R.string.settings_yituliu_token_per_profile, yituliuPage),
+        SettingSearchEntry(R.string.settings_report_yituliu, yituliuPage, R.string.settings_report_yituliu_desc),
 
         SettingSearchEntry(R.string.settings_deploy_with_pause, task, R.string.settings_deploy_with_pause_desc),
         SettingSearchEntry(R.string.settings_tasks_override_title, task, R.string.settings_tasks_override_desc),

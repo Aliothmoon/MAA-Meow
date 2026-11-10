@@ -426,6 +426,14 @@
     <string name="settings_oper_box_yituliu_title">오퍼레이터 인식을 Yituliu에서 가져오기</string>
     <string name="settings_oper_box_yituliu_desc">켜면 게임 스크린샷으로 인식하지 않고 Yituliu 데이터를 가져옵니다. 데이터는 Skland에서 가져온 것으로 중국 서버에만 있습니다</string>
     <string name="settings_oper_box_assist_desc">자동지휘 편성 전에 Yituliu 육성 데이터로 작업 편성을 사전 매칭합니다. 자동지휘 페이지의 같은 이름 옵션과 같은 스위치입니다. 위 옵션을 켜고 Yituliu 데이터를 동기화해야 합니다</string>
+    <string name="settings_yituliu_title">Yituliu</string>
+    <string name="settings_yituliu_desc">오퍼레이터 데이터, OpenAPI 토큰 및 드롭 보고</string>
+    <string name="settings_yituliu_section_oper_box">오퍼레이터 데이터</string>
+    <string name="settings_yituliu_section_report">데이터 보고</string>
+    <string name="settings_yituliu_token_profile_active">%1$s (현재)</string>
+    <string name="settings_yituliu_token_per_profile">프로필별 토큰 설정</string>
+    <string name="settings_yituliu_token_placeholder">토큰을 입력하세요</string>
+    <string name="oper_box_yituliu_token_empty_profile">프로필 「%1$s」에 Yituliu 토큰이 없습니다. 「설정 → 서드파티 → Yituliu」에서 입력해 주세요</string>
     <string name="oper_box_yituliu_fetching">Yituliu에서 오퍼레이터 데이터를 가져오는 중…</string>
     <string name="oper_box_yituliu_done">Yituliu에서 오퍼레이터 %1$d명을 가져왔습니다</string>
     <string name="oper_box_yituliu_done_skipped">Yituliu에서 오퍼레이터 %1$d명을 가져왔습니다. 로컬 리소스에 없는 %2$d명은 건너뛰었습니다</string>
@@ -433,7 +441,7 @@
     <string name="oper_box_yituliu_internal_error">가져오지 못했습니다. 자세한 원인은 로그를 확인하세요</string>
     <string name="settings_secret_show">표시</string>
     <string name="settings_secret_hide">숨기기</string>
-    <string name="oper_box_yituliu_token_empty">먼저 설정에서 Yituliu 토큰을 입력해 주세요</string>
+    <string name="oper_box_yituliu_token_empty">먼저 「설정 → 서드파티 → Yituliu」에서 Yituliu 토큰을 입력해 주세요</string>
     <string name="oper_box_yituliu_no_data">토큰에 해당하는 계정에 오퍼레이터 데이터가 없어 로컬 결과를 유지합니다</string>
     <string name="oper_box_yituliu_write_only">토큰에 읽기 권한이 없습니다. 읽기 전용 또는 읽기/쓰기 토큰을 사용해 주세요</string>
     <string name="oper_box_yituliu_invalid">토큰이 유효하지 않거나 만료되었습니다. 다시 생성해 주세요</string>
@@ -779,9 +787,6 @@
     <string name="update_cdk_saved">입력됨</string>
     <string name="update_cdk_unset">미입력</string>
     <string name="update_cdk_placeholder">CDK를 입력하세요</string>
-    <string name="update_cdk_clear_cd">지우기</string>
-    <string name="update_cdk_show_cd">표시</string>
-    <string name="update_cdk_hide_cd">숨기기</string>
     <string name="update_cdk_subscribe">CDK가 없나요? 지금 구독하기</string>
     <string name="update_cdk_status_checking">CDK 확인 중…</string>
     <string name="update_cdk_status_failed">CDK 검증에 실패했습니다. 네트워크 연결을 확인하세요</string>
@@ -965,7 +970,7 @@
     <string name="panel_autobattle_user_additional_skill">스킬</string>
     <string name="panel_autobattle_user_additional_skill_default">기본</string>
     <string name="panel_autobattle_operbox_assist">Yituliu 데이터로 편성 지원</string>
-    <string name="panel_autobattle_operbox_assist_tip">자동 편성 전 Yituliu 오퍼레이터 육성 데이터(스킬 및 모듈 포함)로 작업 편성을 사전 매칭하며, 편성을 채울 수 없으면 전투를 시작하지 않습니다\n먼저 「설정 → 서드파티」에서 Yituliu 토큰을 입력하고 「오퍼레이터 인식을 Yituliu에서 가져오기」를 켠 뒤 데이터를 한 번 동기화하세요</string>
+    <string name="panel_autobattle_operbox_assist_tip">자동 편성 전 Yituliu 오퍼레이터 육성 데이터(스킬 및 모듈 포함)로 작업 편성을 사전 매칭하며, 편성을 채울 수 없으면 전투를 시작하지 않습니다\n먼저 「설정 → 서드파티 → Yituliu」에서 Yituliu 토큰을 입력하고 「오퍼레이터 인식을 Yituliu에서 가져오기」를 켠 뒤 데이터를 한 번 동기화하세요</string>
     <string name="panel_autobattle_operbox_sync">동기화</string>
     <string name="panel_autobattle_battle_list">다중 작업 모드</string>
     <string name="panel_autobattle_battle_list_tip">다음 모드에서만 지원됩니다:\n  1. 메인: 동일 챕터 내에서 이동\n  2. 사이드: 현재 페이지 내에서 이동 (일반/EX/S 간 이동 불가)\n  3. 에피소드: 현재 페이지 내에서 이동\n  4. 패러독스: 오퍼레이터 목록에서 시작\n해당 화면에서 시작하세요. 챕터 간 이동은 지원되지 않습니다\n\n｢다중 작업 모드｣가 활성화되면 단일 작업을 선택할 때 자동으로 ｢작업 목록｣에 추가됩니다</string>

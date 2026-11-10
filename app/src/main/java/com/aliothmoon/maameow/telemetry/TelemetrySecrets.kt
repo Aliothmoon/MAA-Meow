@@ -12,9 +12,11 @@ internal object TelemetrySecrets {
         app: AppSettings,
         notification: NotificationSettings,
         chains: List<List<TaskChainNode>>,
+        yituliuProfileTokens: Collection<String>,
     ): List<String> = buildList {
         add(app.penguinId)
         add(app.yituliuOpenApiToken)
+        addAll(yituliuProfileTokens)
         add(app.mirrorChyanCdk)
 
         add(notification.serverChanSendKey)

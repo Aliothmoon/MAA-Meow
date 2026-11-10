@@ -102,6 +102,7 @@ class ConfigBackupManager(
             mirrorChyanCdkExpiresAt = "0",
             wakeCredential = "",
             yituliuOpenApiToken = "",
+            yituliuTokenPerProfile = "false",
             operBoxUseYituliuApi = "false",
             operBoxAssistEnabled = "false",
             customBackgroundEnabled = "false",
@@ -146,7 +147,7 @@ class ConfigBackupManager(
 
 /**
  * 导出时剥离的凭证连同配套开关沿用本机值，备份里是空的，直接覆盖会清掉本机已填的
- * 解锁方式与 PIN 对应本机锁屏；一图流两个开关依赖 Token
+ * 解锁方式与 PIN 对应本机锁屏；一图流开关依赖 Token，按配置的 Token 不进备份
  */
 internal fun AppSettings.withLocalCredentials(local: AppSettings) = copy(
     mirrorChyanCdk = local.mirrorChyanCdk,
@@ -154,6 +155,7 @@ internal fun AppSettings.withLocalCredentials(local: AppSettings) = copy(
     wakeUnlockType = local.wakeUnlockType,
     wakeCredential = local.wakeCredential,
     yituliuOpenApiToken = local.yituliuOpenApiToken,
+    yituliuTokenPerProfile = local.yituliuTokenPerProfile,
     operBoxUseYituliuApi = local.operBoxUseYituliuApi,
     operBoxAssistEnabled = local.operBoxAssistEnabled,
 )

@@ -426,6 +426,14 @@
     <string name="settings_oper_box_yituliu_title">干员识别从一图流获取</string>
     <string name="settings_oper_box_yituliu_desc">开启后不再进游戏截图识别，改为拉取一图流数据；数据来自森空岛导入，仅国服有</string>
     <string name="settings_oper_box_assist_desc">自动战斗编队前按一图流练度预匹配作业编队，与自动战斗页同名选项是同一个开关；需开启上一项并同步过一图流数据</string>
+    <string name="settings_yituliu_title">一图流</string>
+    <string name="settings_yituliu_desc">干员数据、OpenAPI Token 与掉落上报</string>
+    <string name="settings_yituliu_section_oper_box">干员数据</string>
+    <string name="settings_yituliu_section_report">数据上报</string>
+    <string name="settings_yituliu_token_profile_active">%1$s（当前）</string>
+    <string name="settings_yituliu_token_per_profile">按配置分别设置 Token</string>
+    <string name="settings_yituliu_token_placeholder">请输入 Token</string>
+    <string name="oper_box_yituliu_token_empty_profile">配置「%1$s」未填写一图流 Token，请到「设置 → 三方服务 → 一图流」填写</string>
     <string name="oper_box_yituliu_fetching">正在从一图流获取干员数据…</string>
     <string name="oper_box_yituliu_done">已从一图流获取 %1$d 名干员</string>
     <string name="oper_box_yituliu_done_skipped">已从一图流获取 %1$d 名干员，%2$d 名在本地资源中不存在，已跳过</string>
@@ -433,7 +441,7 @@
     <string name="oper_box_yituliu_internal_error">获取失败，详细原因见日志</string>
     <string name="settings_secret_show">显示</string>
     <string name="settings_secret_hide">隐藏</string>
-    <string name="oper_box_yituliu_token_empty">请先在设置里填写一图流 Token</string>
+    <string name="oper_box_yituliu_token_empty">请先在「设置 → 三方服务 → 一图流」填写一图流 Token</string>
     <string name="oper_box_yituliu_no_data">Token 对应账号暂无干员练度数据，已保留本地结果</string>
     <string name="oper_box_yituliu_write_only">Token 没有读取权限，请换只读或读写 Token</string>
     <string name="oper_box_yituliu_invalid">Token 无效或已失效，请重新生成</string>
@@ -779,9 +787,6 @@
     <string name="update_cdk_saved">已填写</string>
     <string name="update_cdk_unset">未填写</string>
     <string name="update_cdk_placeholder">请输入 CDK</string>
-    <string name="update_cdk_clear_cd">清空</string>
-    <string name="update_cdk_show_cd">显示</string>
-    <string name="update_cdk_hide_cd">隐藏</string>
     <string name="update_cdk_subscribe">没有CDK? 立即订阅</string>
     <string name="update_cdk_status_checking">正在验证 CDK……</string>
     <string name="update_cdk_status_failed">CDK 验证失败，请检查网络</string>
@@ -965,7 +970,7 @@
     <string name="panel_autobattle_user_additional_skill">技能</string>
     <string name="panel_autobattle_user_additional_skill_default">默认</string>
     <string name="panel_autobattle_operbox_assist">使用一图流数据辅助编队</string>
-    <string name="panel_autobattle_operbox_assist_tip">自动编队前，按一图流干员练度（含技能与模组）预匹配作业编队，配不齐时不开打\n需先在「设置 → 三方服务」填写一图流 Token、开启「干员识别从一图流获取」，并同步一次数据</string>
+    <string name="panel_autobattle_operbox_assist_tip">自动编队前，按一图流干员练度（含技能与模组）预匹配作业编队，配不齐时不开打\n需先在「设置 → 三方服务 → 一图流」填写 Token、开启「干员识别从一图流获取」，并同步一次数据</string>
     <string name="panel_autobattle_operbox_sync">同步</string>
     <string name="panel_autobattle_battle_list">多作业模式</string>
     <string name="panel_autobattle_battle_list_tip">仅支持以下模式:\n  1. 主线: 同一章节内导航\n  2. SideStory: 当前页面内导航（普通/EX/S 不能互跳）\n  3. 故事集: 当前页面内导航\n  4. 悖论模拟: 从干员列表启动\n请在对应界面启动，不支持跨章节导航\n\n当 ｢多作业模式｣ 启用后, 选择单个作业时会自动添加到 ｢作业列表｣</string>

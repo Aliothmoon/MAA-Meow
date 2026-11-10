@@ -137,7 +137,7 @@ class ToolboxResultCollector(
     }
 
     /** 落库 + 成就，Core 识别与一图流拉取共用 */
-    fun applyOperBoxResult(rawOwnOpers: List<OperBoxOperator>) {
+    fun applyOperBoxResult(rawOwnOpers: List<OperBoxOperator>, profileId: String? = null) {
         val roster = resourceDataManager.operators.value
         // 升变形态保留原 ID：core 编队预检按形态 ID 对位，一图流也会给全部形态
         val ownOpers = rawOwnOpers.distinctBy { it.id }
@@ -168,7 +168,7 @@ class ToolboxResultCollector(
         )
         val notOwnedSorted = notOwned.sortedByDescending { it.rarity }
 
-        operBoxRepository.set(ownedSorted, notOwnedSorted)
+        operBoxRepository.set(ownedSorted, notOwnedSorted, profileId)
         achievement.onOperSuccess()
         ioScope.launch {
             achievementRepository.report {

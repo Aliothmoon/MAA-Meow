@@ -178,6 +178,14 @@
     <string name="settings_oper_box_yituliu_title">Fetch operator data from Yituliu</string>
     <string name="settings_oper_box_yituliu_desc">Fetches from Yituliu instead of recognising in-game screenshots. Data comes from Skland imports and only exists for the CN server.</string>
     <string name="settings_oper_box_assist_desc">Pre-matches the auto-battle squad against your Yituliu operator data before formation; same switch as the option on the Copilot page. Requires the option above and synced Yituliu data</string>
+    <string name="settings_yituliu_title">Yituliu</string>
+    <string name="settings_yituliu_desc">Operator data, OpenAPI token and drop reports</string>
+    <string name="settings_yituliu_section_oper_box">Operator data</string>
+    <string name="settings_yituliu_section_report">Data reporting</string>
+    <string name="settings_yituliu_token_profile_active">%1$s (current)</string>
+    <string name="settings_yituliu_token_per_profile">Set token per configuration</string>
+    <string name="settings_yituliu_token_placeholder">Enter token</string>
+    <string name="oper_box_yituliu_token_empty_profile">Configuration \"%1$s\" has no Yituliu token. Enter it in Settings → Third-party services → Yituliu</string>
     <string name="oper_box_yituliu_fetching">Fetching operator data from Yituliu…</string>
     <string name="oper_box_yituliu_done">Fetched %1$d operators from Yituliu</string>
     <string name="oper_box_yituliu_done_skipped">Fetched %1$d operators from Yituliu; %2$d not present in local resources were skipped</string>
@@ -185,7 +193,7 @@
     <string name="oper_box_yituliu_internal_error">Fetch failed, see the log for details</string>
     <string name="settings_secret_show">Show</string>
     <string name="settings_secret_hide">Hide</string>
-    <string name="oper_box_yituliu_token_empty">Enter the Yituliu token in Settings first</string>
+    <string name="oper_box_yituliu_token_empty">Enter the Yituliu token in Settings → Third-party services → Yituliu first</string>
     <string name="oper_box_yituliu_no_data">No operator data on this account; local results kept</string>
     <string name="oper_box_yituliu_write_only">Token lacks read access; use a read-only or read-write token</string>
     <string name="oper_box_yituliu_invalid">Token is invalid or expired; generate a new one</string>
@@ -525,9 +533,6 @@
     <string name="update_cdk_saved">Saved</string>
     <string name="update_cdk_unset">Not set</string>
     <string name="update_cdk_placeholder">Enter CDK</string>
-    <string name="update_cdk_clear_cd">Clear</string>
-    <string name="update_cdk_show_cd">Show</string>
-    <string name="update_cdk_hide_cd">Hide</string>
     <string name="update_cdk_subscribe">No CDK? Subscribe now</string>
     <string name="update_cdk_status_checking">Validating CDK…</string>
     <string name="update_cdk_status_failed">CDK validation failed. Check your network connection</string>
@@ -911,7 +916,7 @@
     <string name="panel_autobattle_user_additional_skill">Skill</string>
     <string name="panel_autobattle_user_additional_skill_default">Default</string>
     <string name="panel_autobattle_operbox_assist">Use Yituliu data to assist formation</string>
-    <string name="panel_autobattle_operbox_assist_tip">Before auto formation, pre-match the squad against your Yituliu operator data (including skills and modules); the run won\'t start if it can\'t be filled\nFirst enter a Yituliu token in Settings → Third-party services, turn on \"Fetch operator data from Yituliu\" and sync once</string>
+    <string name="panel_autobattle_operbox_assist_tip">Before auto formation, pre-match the squad against your Yituliu operator data (including skills and modules); the run won\'t start if it can\'t be filled\nFirst enter a Yituliu token in Settings → Third-party services → Yituliu, turn on \"Fetch operator data from Yituliu\" and sync once</string>
     <string name="panel_autobattle_operbox_sync">Sync</string>
     <string name="panel_autobattle_battle_list">Multi-Job mode</string>
     <string name="panel_autobattle_battle_list_tip">Only supported in the following modes:\n  1. Main Theme: Navigate within the same chapter\n  2. Side Story: Navigate within the current page (Normal / EX / S cannot jump across pages)\n  3. Story Collection: Navigate within the current page\n  4. Paradox Simulation: Start from the operator list\nPlease start from the corresponding screen. Cross-chapter navigation is not supported.\n\nWhen ｢Multi-Job mode｣ is enabled, individual jobs will be automatically added to the ｢Job List｣.</string>

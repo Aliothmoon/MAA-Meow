@@ -7,11 +7,14 @@ import com.aliothmoon.maameow.data.model.toolbox.OperBoxEquip
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxSkill
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.repository.YituliuTokenRepository
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.maa.callback.ToolboxResultCollector
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -28,6 +31,8 @@ class OperBoxYituliuSync(
     private val collector: ToolboxResultCollector,
     private val appSettings: AppSettingsManager,
     private val metadataGate: GameMetadataGate,
+    private val taskChainState: TaskChainState,
+    private val tokens: YituliuTokenRepository,
 ) {
     sealed interface Result {
         val message: UiText
@@ -47,18 +52,25 @@ class OperBoxYituliuSync(
 
     private val mutex = Mutex()
 
+    /** 发起时定下配置档，拉取中途切换不影响归属 */
     suspend fun sync(): Result {
-        val token = appSettings.yituliuOpenApiToken.value
-        if (token.isEmpty()) return failed(R.string.oper_box_yituliu_token_empty)
+        taskChainState.isLoaded.first { it }
+        val profileId = taskChainState.profileId.value
+        val (token, perProfile) = tokens.resolve(profileId)
+        if (token.isEmpty()) {
+            if (!perProfile) return failed(R.string.oper_box_yituliu_token_empty)
+            val name = taskChainState.profiles.value.find { it.id == profileId }?.name ?: profileId
+            return Result.Failed(uiTextOf(R.string.oper_box_yituliu_token_empty_profile, name))
+        }
         if (!mutex.tryLock()) return failed(R.string.oper_box_yituliu_busy)
         return try {
-            withContext(Dispatchers.IO) { doSync(token) }
+            withContext(Dispatchers.IO) { doSync(profileId, token) }
         } finally {
             mutex.unlock()
         }
     }
 
-    private suspend fun doSync(token: String): Result {
+    private suspend fun doSync(profileId: String, token: String): Result {
         if (!ensureLocalOperators()) return failed(R.string.oper_box_yituliu_local_data_missing)
 
         val operators = when (val result = api.fetchOperators(token)) {
@@ -70,7 +82,7 @@ class OperBoxYituliuSync(
         val owned = operators.mapNotNull(::toOperBoxOperator)
         if (owned.isEmpty()) return failed(R.string.oper_box_yituliu_local_table_outdated)
 
-        collector.applyOperBoxResult(owned)
+        collector.applyOperBoxResult(owned, profileId)
         val skipped = operators.size - owned.size
         Timber.i("%s: synced %d operators, skipped %d", TAG, owned.size, skipped)
         return Result.Success(synced = owned.size, skipped = skipped)

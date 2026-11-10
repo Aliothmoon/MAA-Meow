@@ -249,6 +249,10 @@ data class AppSettings(
     @PrefKey(default = "")
     val yituliuOpenApiToken: String = "",
 
+    /** 按配置分别设置一图流 Token，见 YituliuTokenRepository */
+    @PrefKey(default = "false")
+    val yituliuTokenPerProfile: String = "false",
+
     /** 干员识别从一图流拉取，不再进游戏截图识别 */
     @PrefKey(default = "false")
     val operBoxUseYituliuApi: String = "false",

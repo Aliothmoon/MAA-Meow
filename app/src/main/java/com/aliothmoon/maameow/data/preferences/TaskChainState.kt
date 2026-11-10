@@ -610,12 +610,15 @@ class TaskChainState(
         val resolvedActiveId =
             profiles.find { it.id == activeId }?.id ?: profiles.firstOrNull()?.id ?: return
         val activeChain = profiles.find { it.id == resolvedActiveId }?.chain ?: buildDefaultChain()
+        val replaced = _profiles.value.map { it.id } - profiles.mapTo(HashSet()) { it.id }
         _profiles.value = profiles
         _profileId.value = resolvedActiveId
         _chain.value = activeChain
         doSync()
         // 导入是用户可见的终态操作（随后会提示「导入成功」），必须确认落盘再返回
         flush()
+        // 被替换的配置档按删除处理，清掉其分片
+        replaced.forEach { _profileDeleted.emit(it) }
         Timber.d("Imported %d profiles, active: %s", profiles.size, resolvedActiveId)
     }
 

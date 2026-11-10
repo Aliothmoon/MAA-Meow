@@ -67,10 +67,14 @@ class SecretRedactionTest {
                 listOf(TaskChainNode(name = "开始唤醒", config = WakeUpConfig(accountName = "13800000000"))),
                 listOf(TaskChainNode(name = "开始唤醒", config = WakeUpConfig())),
             ),
+            yituliuProfileTokens = listOf("yituliu-token-a", "yituliu-token-b", ""),
         )
 
         assertEquals(
-            setOf("12345678", "yituliu-token", "CDK-0001", "123:telegram", "bark-key", "13800000000"),
+            setOf(
+                "12345678", "yituliu-token", "yituliu-token-a", "yituliu-token-b", "CDK-0001",
+                "123:telegram", "bark-key", "13800000000",
+            ),
             secrets.toSet(),
         )
         assertFalse("2026" in secrets)

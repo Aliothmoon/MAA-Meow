@@ -56,6 +56,7 @@ import com.aliothmoon.maameow.presentation.view.settings.AchievementDebugView
 import com.aliothmoon.maameow.presentation.view.settings.AchievementView
 import com.aliothmoon.maameow.presentation.view.settings.ErrorLogView
 import com.aliothmoon.maameow.presentation.view.settings.GamePackageSettingsView
+import com.aliothmoon.maameow.presentation.view.settings.YituliuSettingsView
 import com.aliothmoon.maameow.presentation.view.settings.LogHistoryView
 import com.aliothmoon.maameow.presentation.view.settings.LiveUpdateSettingsView
 import com.aliothmoon.maameow.presentation.view.settings.TaskOverrideEditorView
@@ -278,6 +279,9 @@ fun AppNavigation(
                     }
                     composable(Routes.GAME_PACKAGE) {
                         GamePackageSettingsView(navController = navController)
+                    }
+                    composable(Routes.YITULIU) {
+                        YituliuSettingsView(navController = navController)
                     }
                 }
             }
