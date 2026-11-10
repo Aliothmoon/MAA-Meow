@@ -14,7 +14,16 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** 弹窗标题左侧的圆底图标 */
+/** 同设置页行首图标 */
+@Composable
+fun DialogTitleIcon(
+    icon: ImageVector,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+) {
+    Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
+}
+
+/** 新手引导标题左侧的圆底图标 */
 @Composable
 fun DialogIconBadge(
     icon: ImageVector,

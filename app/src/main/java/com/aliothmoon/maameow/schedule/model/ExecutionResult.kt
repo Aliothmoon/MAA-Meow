@@ -11,7 +11,10 @@ enum class ExecutionResult {
     SKIPPED_BUSY,
     SKIPPED_LOCKED,
     SKIPPED_BLACKLIST,
-    CANCELLED;
+    CANCELLED,
+
+    /** 到点没被系统唤起，事后重排时补记 */
+    MISSED;
 
     val isSkipped: Boolean
         get() = this == SKIPPED_BUSY || this == SKIPPED_LOCKED || this == SKIPPED_BLACKLIST

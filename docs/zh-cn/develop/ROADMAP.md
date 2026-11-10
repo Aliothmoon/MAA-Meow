@@ -21,3 +21,6 @@
   逐步迁移至 MaaFramework AndroidNativeController，优化底层实现，为后续功能扩展与维护打下基础
 
 - [ ] 为 MaaCore 支持 NCNN 提高移动端运行效率
+
+- [ ] 作战日报
+  移植上游 WPF 作战日报：按天汇总每场作战的掉落、理智与碎石，提供图表、日历和按材料视图

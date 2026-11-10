@@ -247,6 +247,11 @@ class SubTaskHandler(
                 // 匹配列表引用了未定义任务，说明资源与 core 不匹配，按资源损坏处理
                 if (details.getString("what") == "UnknownTask") {
                     stopForBrokenResource(str("UnknownTaskInChain", detailNames(details, "tasks")))
+                } else if (details.getString("taskchain") == "Mall"
+                    && details.getJSONArray("first")?.contains("VisitBegin") == true
+                ) {
+                    // 访问好友失败被 Core 忽略、任务链仍报完成，单独提示（只认最外层 VisitBegin）
+                    append(str("TaskError") + str("Visiting"), LogLevel.WARNING)
                 }
                 reportSubTaskError(subtask)
             }
@@ -360,16 +365,6 @@ class SubTaskHandler(
             "InfrastDormDoubleConfirmButton" -> {
                 // 待进驻干员已进驻其他设施，Core 会自动点确认，仅提示
                 append(str("InfrastDormDoubleConfirmed"), LogLevel.INFO)
-            }
-
-            "ExitThenAbandon" -> {
-                append(str("ExplorationAbandoned"), LogLevel.ROGUELIKE_ABANDON)
-                ioScope.launch {
-                    achievementRepository.report {
-                        event = AchievementEvents.PROCESS_TASK_STARTED
-                        "task" to task
-                    }
-                }
             }
 
             "MissionCompletedFlag" -> {
@@ -555,6 +550,18 @@ class SubTaskHandler(
                     }
                 }
 
+                // 确认放弃后才算撤退，ExitThenAbandon 可能没真放弃
+                "Roguelike" if task == "AbandonConfirm" -> {
+                    append(str("ExplorationAbandoned"), LogLevel.ROGUELIKE_ABANDON)
+                    ioScope.launch {
+                        achievementRepository.report {
+                            event = AchievementEvents.PROCESS_TASK_COMPLETED
+                            "taskchain" to taskchain
+                            "task" to task
+                        }
+                    }
+                }
+
                 // 上游 dev-v2 22f3175b4: Core 移除 EndOfActionThenStop 任务,
                 // OF-1 信用战完成现在会触发 Copilot@StageDrops-Stars-3
                 "Mall" if task == "StageDrops-Stars-3" -> {
@@ -720,6 +727,7 @@ class SubTaskHandler(
             }
 
             "StageInfoError" -> append(str("StageInfoError"), LogLevel.ERROR)
+            "AnnihilationEntryNotFound" -> append(str("AnnihilationEntryNotFound"), LogLevel.INFO)
             "StageQueueUnableToAgent" -> {
                 val code = subDetails?.getString("stage_code") ?: ""
                 append("${str("StageQueue")} $code ${str("UnableToAgent")}", LogLevel.INFO)

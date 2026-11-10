@@ -347,6 +347,7 @@
     <string name="settings_theme_white">라이트</string>
     <string name="settings_theme_dark">다크</string>
     <string name="settings_theme_pure_dark">퓨어 블랙</string>
+    <string name="settings_row_info">설명</string>
     <string name="settings_font_size_title">페이지 배율</string>
     <string name="settings_font_size_summary">인터페이스 전체 크기(간격 포함)를 조정합니다. 자동은 화면 너비에 따라 일반적인 휴대폰 크기에 맞추며, 시스템 글꼴 크기는 별도로 적용됩니다. 메인 화면과 플로팅 창 모두 이 설정을 따릅니다.</string>
     <string name="settings_font_size_preview_text">누구세요? MAA를 응원해 주세요! (\'- \' )</string>
@@ -831,8 +832,6 @@
 
     <!-- settings: about section -->
     <string name="settings_section_about">정보</string>
-    <string name="settings_about_version">버전</string>
-    <string name="settings_about_developer">개발자</string>
     <string name="settings_about_faq_title">자주 묻는 질문</string>
     <string name="settings_about_faq_desc">문제가 생기면 먼저 여기를 확인하세요. 대부분의 문제에 대한 답이 있습니다</string>
     <string name="settings_about_feedback_title">문제 보고</string>
@@ -840,7 +839,7 @@
     <string name="settings_about_qq_group_title">QQ 그룹</string>
     <string name="settings_about_qq_group_desc">그룹에 참여해 함께 소통해 보세요</string>
     <string name="settings_about_changelog">변경 내역</string>
-    <string name="settings_about_changelog_empty">아직 변경 내역이 없습니다. 앱 내에서 새 버전으로 업데이트하면 해당 버전의 업데이트 내용이 여기에 보관됩니다</string>
+    <string name="settings_about_changelog_empty">아직 변경 내역이 없습니다. 업데이트 확인에서 새 버전을 찾으면 해당 버전의 업데이트 내용이 여기에 보관됩니다</string>
     <string name="settings_about_announcement">공지사항 확인</string>
     <string name="settings_about_onboarding">시작 가이드</string>
     <string name="settings_about_onboarding_desc">앱의 각 영역별 기능 소개를 다시 확인합니다</string>
@@ -996,6 +995,15 @@
     <string name="copilot_search_pick">사용</string>
     <string name="copilot_search_load_more">더 보기</string>
     <string name="copilot_search_empty">작업을 찾을 수 없습니다</string>
+    <string name="copilot_match_toggle">오퍼레이터 매칭</string>
+    <string name="copilot_match_ready">바로 가능</string>
+    <string name="copilot_match_borrow">지원 필요</string>
+    <string name="copilot_match_train">육성 부족</string>
+    <string name="copilot_match_blocked">미보유</string>
+    <string name="copilot_match_partial">오퍼레이터 인식 데이터에 스킬과 모듈이 없어 정예화와 레벨로만 매칭합니다</string>
+    <string name="copilot_match_hidden">오퍼레이터 매칭으로 숨긴 작업: %1$d개</string>
+    <string name="copilot_match_missing">미보유: %1$s</string>
+    <string name="copilot_match_training">육성 부족: %1$s</string>
     <string name="copilot_search_added_list">추가된 작업</string>
     <string name="copilot_search_tab_copilot">작업</string>
     <string name="copilot_search_tab_set">작업 세트</string>
@@ -1382,8 +1390,8 @@
     <string name="mini_game_tip_pixel_paint">아래에서 이미지를 선택하고 파라미터를 조정한 후, 게임의 픽셀 아트 편집 화면에서 시작하세요</string>
     <string name="mini_game_name_pv">PV-불꽃놀이 집행위원회</string>
     <string name="mini_game_tip_pv">선택한 스테이지부터 자동으로 클리어합니다. 첫 번째 스테이지를 선택한 경우에는 이벤트 페이지의 가장 왼쪽에서 시작하세요. 다른 스테이지를 선택한 경우에는 위치 보정을 위해 이전 스테이지에 먼저 들어갔다가 돌아오세요.</string>
-    <string name="mini_game_name_spa">위수 협의: 맹약</string>
-    <string name="mini_game_tip_spa">이벤트 메인 화면에서 임무 시작 (아래에 ｢독립 시뮬레이션｣)\n저장 데이터가 있는 경우 먼저 수동으로 포기해야 합니다\n｢험지 시뮬레이션｣까지만 테스트되었습니다\n더 높은 난이도를 클리어하여 ｢험지 시뮬레이션｣ 또는 ｢표준 시뮬레이션｣이 보이지 않는 경우, ｢험지 시뮬레이션｣ 난이도를 수동으로 한 번 선택하세요\n｢표준 시뮬레이션｣ 을 수동으로 클리어하면 점수를 더 빠르게 획득할 수 있습니다\n레벨 보상만 획득 가능하며, 조각 메달을 얻으려면 모든 ｢주요 목표｣를 완료해야 합니다</string>
+    <string name="mini_game_name_spa">위수 협의</string>
+    <string name="mini_game_tip_spa">이벤트 메인 화면에서 임무 시작 (아래에 ｢고속 시뮬레이션｣)\n기본 스킨을 사용해야 합니다\n저장 데이터가 있는 경우 먼저 수동으로 포기해야 합니다\n레벨 보상만 획득 가능하며, 조각 메달을 얻으려면 모든 ｢주요 목표｣를 완료해야 합니다</string>
     <string name="mini_game_name_os">OS-카란 무역 연구개발부</string>
     <string name="mini_game_tip_os">이벤트 메인 화면에서 작업을 시작하세요 (오른쪽 아래에 ｢시작하기｣).</string>
     <string name="mini_game_name_rm_tr_1">재건 계획 RM-TR-1</string>
@@ -2051,6 +2059,8 @@
     <string name="schedule_exact_alarm_blocked">정확한 알람이 허용되지 않음</string>
     <string name="schedule_exact_alarm_hint">정확한 알람을 허용할 때까지 예약 작업이 실행되지 않습니다. 권한을 허용하면 예약이 자동으로 재개됩니다</string>
     <string name="schedule_log_data_unavailable">예약 구성을 일시적으로 읽을 수 없습니다</string>
+    <string name="schedule_log_missed_not_woken">시스템이 제시간에 깨우지 않음(%1$s): 절전 또는 백그라운드 제한으로 앱이 종료되었을 수 있습니다. 자동 시작과 백그라운드 활동을 허용하세요</string>
+    <string name="schedule_log_missed_rebooted">실행되지 않음(%1$s): 이후 기기가 꺼졌거나 재시작되었습니다. 예약 시각에 꺼져 있었을 수 있습니다</string>
     <string name="schedule_log_service_start_failed">포그라운드 서비스 시작 실패: %1$s</string>
     <string name="schedule_log_app_init_failed">앱 초기화 실패: %1$s</string>
     <string name="schedule_exact_alarm_settings">정확한 알람 설정</string>
@@ -2188,10 +2198,11 @@
     <string name="schedule_result_failed_validation">검증 실패</string>
     <string name="schedule_result_failed_start">시작 실패</string>
     <string name="schedule_result_failed_ui_launch">앱 화면 열기 실패</string>
-    <string name="schedule_result_skipped_busy">시스템 사용 중</string>
+    <string name="schedule_result_skipped_busy">이미 작업 실행 중</string>
     <string name="schedule_result_skipped_locked">잠금으로 건너뜀</string>
     <string name="schedule_result_skipped_blacklist">블랙리스트로 건너뜀</string>
     <string name="schedule_result_cancelled">취소됨</string>
+    <string name="schedule_result_missed">실행 누락</string>
     <string name="schedule_interval_every_days_hours">%1$d일 %2$d시간마다</string>
     <string name="schedule_interval_every_days">%1$d일마다</string>
     <string name="schedule_interval_every_hours">%1$d시간마다</string>
@@ -2981,6 +2992,7 @@
     <string name="panel_task_type_switch_theme">테마 변경</string>
     <string name="maa_switch_theme">테마 변경</string>
     <string name="maa_switch_theme_skipped">후보 테마가 설정되지 않아 게임 테마 전환을 건너뜁니다</string>
+    <string name="maa_annihilation_entry_not_found">터미널 할 일 목록에서 섬멸 작전을 찾을 수 없습니다. 이번 주 섬멸 작전이 이미 완료되었을 수 있습니다. 섬멸 작전을 건너뜁니다</string>
     <string name="maa_switch_theme_succeeded">게임 테마 전환 완료: %1$s</string>
     <string name="maa_switch_theme_already_set">이미 설정된 테마: %1$s</string>
     <string name="maa_switch_theme_locked">테마가 아직 잠금 해제되지 않음: %1$s</string>

@@ -23,6 +23,7 @@ import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
+import com.aliothmoon.maameow.schedule.service.ScheduleFailureReporter
 import com.aliothmoon.maameow.schedule.service.ShizukuDownMonitor
 import com.aliothmoon.maameow.telemetry.TelemetryController
 import com.aliothmoon.maameow.utils.CrashHandler
@@ -36,7 +37,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.android.ext.android.get
 import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
@@ -134,6 +137,12 @@ class MaaApplication : Application() {
         applicationScope.launch {
             scheduleRepository.isLoaded.filter { it }.first()
             scheduleAlarmManager.rescheduleAll(scheduleRepository.strategies.value)
+            // 遥测没就绪时的上报会被丢
+            withTimeoutOrNull(10_000L) { telemetry.awaitConfigured() }
+            val reporter = get<ScheduleFailureReporter>()
+            scheduleAlarmManager.missedQueued
+                .onStart { emit(Unit) }
+                .collect { reporter.reportMissed() }
         }
     }
 }

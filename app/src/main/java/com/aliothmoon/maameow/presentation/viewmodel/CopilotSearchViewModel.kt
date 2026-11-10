@@ -5,12 +5,17 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.model.copilot.CopilotGroup
+import com.aliothmoon.maameow.data.model.copilot.CopilotOperator
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotPage
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotSummary
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.CopilotCode
 import com.aliothmoon.maameow.domain.service.CopilotCodeType
 import com.aliothmoon.maameow.domain.service.CopilotManager
+import com.aliothmoon.maameow.domain.service.CopilotOperatorMatching
+import com.aliothmoon.maameow.domain.service.OperatorMatch
+import com.aliothmoon.maameow.domain.service.OperatorMatchMode
 import com.aliothmoon.maameow.domain.service.CopilotRequestException
 import com.aliothmoon.maameow.domain.service.CopilotSetInfo
 import com.aliothmoon.maameow.domain.service.OperatorSummaryData
@@ -41,7 +46,24 @@ data class CopilotSearchItem(
     val views: Int,
     val likes: Int,
     val summary: OperatorSummaryData,
+    val opers: List<CopilotOperator>,
+    val groups: List<CopilotGroup>,
+    /** 没有干员数据时为空 */
+    val match: OperatorMatch? = null,
 )
+
+data class OperatorMatchFilter(
+    /** 有干员数据才显示筛选 */
+    val available: Boolean = false,
+    /** 干员数据不含技能与模组 */
+    val partial: Boolean = false,
+    val enabled: Boolean = true,
+    val modes: Set<OperatorMatchMode> = CopilotOperatorMatching.DEFAULT_MODES,
+) {
+    val active: Boolean get() = available && enabled
+
+    fun accepts(match: OperatorMatch?): Boolean = match == null || match.mode in modes
+}
 
 data class StageSuggestion(val code: String, val name: String, val stageId: String)
 
@@ -56,10 +78,12 @@ data class SearchResults<T>(
     val refreshing: Boolean = false,
     val searched: Boolean = false,
     val error: UiText = UiText.Empty,
+    /** 连续几页被筛光，停自动翻页 */
+    val paused: Boolean = false,
 ) {
-    val canLoadMore: Boolean get() = hasNext && !loading && error == UiText.Empty
+    val canLoadMore: Boolean get() = hasNext && !loading && !paused && error == UiText.Empty
 
-    fun started(page: Int) = copy(loading = true, refreshing = page == 1, error = UiText.Empty)
+    fun started(page: Int) = copy(loading = true, refreshing = page == 1, paused = false, error = UiText.Empty)
 
     fun loaded(new: List<T>, page: Int, hasNext: Boolean, key: (T) -> Int) = copy(
         items = if (page == 1) new else (items + new).distinctBy(key),
@@ -98,11 +122,20 @@ data class CopilotSearchUiState(
     val order: CopilotSearchOrder = CopilotSearchOrder.HOT,
     val suggestions: List<StageSuggestion> = emptyList(),
     val results: SearchResults<CopilotSearchItem> = SearchResults(),
-)
+    val matchFilter: OperatorMatchFilter = OperatorMatchFilter(),
+    /** 神秘代码查的是指定作业，不按干员筛 */
+    val byCode: Boolean = false,
+) {
+    val filtering: Boolean get() = matchFilter.active && !byCode
+
+    val shownItems: List<CopilotSearchItem>
+        get() = if (filtering) results.items.filter { matchFilter.accepts(it.match) } else results.items
+}
 
 class CopilotSearchViewModel(
     private val copilotManager: CopilotManager,
     private val resourceDataManager: ResourceDataManager,
+    private val matching: CopilotOperatorMatching,
 ) : ViewModel() {
 
     private companion object {
@@ -112,6 +145,9 @@ class CopilotSearchViewModel(
         const val CACHE_TTL_MS = 60_000L
         const val CACHE_MAX = 30
         const val ID_QUERY_KEY = "copilot_ids"
+
+        /** 免得把作业站翻穿 */
+        const val MAX_EMPTY_PAGES = 5
 
         /** overview 里突袭变体的 stageId 带这个后缀，作业站只认原 id */
         const val RAID_VARIANT_SUFFIX = "#f#"
@@ -132,6 +168,33 @@ class CopilotSearchViewModel(
     // 翻页沿用提交时的条件，不读还没提交的输入框
     private var committedQuery: Map<String, String> = emptyMap()
     private var committedSetKeyword = ""
+
+    private var matcher: CopilotOperatorMatching.Matcher? = null
+    private var emptyPageStreak = 0
+
+    init {
+        viewModelScope.launch {
+            matching.settings.collect { settings ->
+                _state.update {
+                    it.copy(matchFilter = it.matchFilter.copy(enabled = settings.enabled, modes = settings.modes))
+                }
+                resumeAutoLoad()
+            }
+        }
+        viewModelScope.launch {
+            matching.matcher.collect { m ->
+                matcher = m
+                _state.update {
+                    it.copy(
+                        matchFilter = it.matchFilter.copy(available = m != null, partial = m?.partial == true),
+                        results = it.results.copy(items = it.results.items.map(::withMatch)),
+                    )
+                }
+                _setState.update { s -> s.copy(contents = s.contents.mapValues { (_, items) -> items.map(::withMatch) }) }
+                resumeAutoLoad()
+            }
+        }
+    }
 
     fun onOpened() = searchTabIfFresh(_state.value.tab)
 
@@ -181,13 +244,42 @@ class CopilotSearchViewModel(
         // 神秘代码只按 id 查，其余条件都不带，与作业站一致
         committedQuery = code?.let { mapOf("limit" to PAGE_SIZE.toString(), ID_QUERY_KEY to it.id.toString()) }
             ?: buildQuery(s)
+        _state.update { it.copy(byCode = code != null) }
+        emptyPageStreak = 0
         fetchPage(page = 1)
     }
 
     fun onLoadMore() {
         val results = _state.value.results
-        if (results.hasNext && !results.loading) fetchPage(results.page + 1)
+        if (!results.hasNext || results.loading) return
+        // 暂停后只有手动点「加载更多」会走到这里
+        if (results.paused) emptyPageStreak = 0
+        fetchPage(results.page + 1)
     }
+
+    fun onToggleMatch(enabled: Boolean) {
+        _state.update { it.copy(matchFilter = it.matchFilter.copy(enabled = enabled)) }
+        resumeAutoLoad()
+        viewModelScope.launch { matching.setEnabled(enabled) }
+    }
+
+    /** 至少留一档，全不选等于清空列表 */
+    fun onToggleMatchMode(mode: OperatorMatchMode) {
+        val modes = _state.value.matchFilter.modes
+        val next = if (mode in modes) modes - mode else modes + mode
+        if (next.isEmpty()) return
+        _state.update { it.copy(matchFilter = it.matchFilter.copy(modes = next)) }
+        resumeAutoLoad()
+        viewModelScope.launch { matching.setModes(next) }
+    }
+
+    private fun resumeAutoLoad() {
+        emptyPageStreak = 0
+        _state.update { it.copy(results = it.results.copy(paused = false)) }
+    }
+
+    private fun withMatch(item: CopilotSearchItem): CopilotSearchItem =
+        item.copy(match = matcher?.match(item.opers, item.groups))
 
     private fun fetchPage(page: Int) {
         val query = committedQuery + ("page" to page.toString())
@@ -198,10 +290,16 @@ class CopilotSearchViewModel(
                 ?: copilotManager.searchCopilots(query).onSuccess { remember(query, it) }
             result.fold(
                 onSuccess = { data ->
-                    val items = withContext(Dispatchers.Default) { data.data.mapNotNull(::toItem) }
+                    val items = withContext(Dispatchers.Default) { data.data.mapNotNull(::toItem) }.map(::withMatch)
                     // 按 id 查时后端按条数估 has_next，会一直翻页
                     val hasNext = data.hasNext && ID_QUERY_KEY !in query
-                    _state.update { it.copy(results = it.results.loaded(items, page, hasNext, CopilotSearchItem::id)) }
+                    val s = _state.value
+                    val gained = if (s.filtering) items.count { s.matchFilter.accepts(it.match) } else items.size
+                    emptyPageStreak = if (gained > 0) 0 else emptyPageStreak + 1
+                    val paused = hasNext && emptyPageStreak >= MAX_EMPTY_PAGES
+                    _state.update {
+                        it.copy(results = it.results.loaded(items, page, hasNext, CopilotSearchItem::id).copy(paused = paused))
+                    }
                 },
                 onFailure = { e ->
                     _state.update { it.copy(results = it.results.failed(page, failedText(e))) }
@@ -305,7 +403,7 @@ class CopilotSearchViewModel(
         }
         viewModelScope.launch {
             val result = copilotManager.getCopilotSummaries(set.copilotIds)
-                .map { list -> withContext(Dispatchers.Default) { list.mapNotNull(::toItem) } }
+                .map { list -> withContext(Dispatchers.Default) { list.mapNotNull(::toItem) }.map(::withMatch) }
             _setState.update {
                 result.fold(
                     onSuccess = { items ->
@@ -380,6 +478,8 @@ class CopilotSearchViewModel(
             views = summary.views,
             likes = summary.like,
             summary = copilotManager.getOperatorSummary(data),
+            opers = data.opers,
+            groups = data.groups,
         )
     }
 

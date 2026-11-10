@@ -22,3 +22,6 @@ Planned features and improvements:
 
 - [ ] NCNN support for MaaCore
   Improve on-device runtime efficiency.
+
+- [ ] Combat daily report
+  Port the upstream WPF combat daily report: per-day summaries of drops, sanity and Originite Prime spent in each battle, with charts, a calendar and a per-material view.

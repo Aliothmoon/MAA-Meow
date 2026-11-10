@@ -129,13 +129,14 @@ data class AppSettings(
     @PrefKey(default = "SYSTEM")
     val language: String = "SYSTEM",
 
+    /** 最近检查到的新版本更新说明，同 WPF VersionUpdate.body，不清空 */
     @PrefKey(default = "")
     val pendingChangelogVersion: String = "",
 
     @PrefKey(default = "")
     val pendingChangelogContent: String = "",
 
-    // 与 pending 分开存：pending 会被下一次检查覆盖成尚未安装版本的日志
+    /** 已弹过首启公告的版本；旧版本弹完会清空 pending，日志只剩这份 */
     @PrefKey(default = "")
     val currentChangelogVersion: String = "",
 
@@ -255,6 +256,14 @@ data class AppSettings(
     /** 自动战斗用一图流练度辅助编队，自动战斗页与设置页共用 */
     @PrefKey(default = "false")
     val operBoxAssistEnabled: String = "false",
+
+    /** 作业搜索干员匹配，有干员数据才生效 */
+    @PrefKey(default = "true")
+    val copilotOperMatchEnabled: String = "true",
+
+    /** OperatorMatchMode 名，逗号分隔 */
+    @PrefKey(default = "READY,BORROW,TRAIN")
+    val copilotOperMatchModes: String = "READY,BORROW,TRAIN",
 
     /** 牛杂活动商店黑名单：勾选的常用商品物品 id，逗号分隔 */
     @PrefKey(default = "")

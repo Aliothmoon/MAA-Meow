@@ -552,6 +552,11 @@ fun BackgroundTaskView(
                         )
                         val toolboxTab by toolboxViewModel.currentTab.collectAsStateWithLifecycle()
                         var autoBattleSearchOpen by remember { mutableStateOf(false) }
+                        // 搜作业时预览让位给结果列表
+                        val searchingCopilot = state.current == PanelTab.AUTO_BATTLE && autoBattleSearchOpen
+                        LaunchedEffect(searchingCopilot) {
+                            previewCollapse.holdCollapsed(searchingCopilot, reduceMotion)
+                        }
                         val gachaDisclaimerOk by
                         toolboxViewModel.gachaDisclaimerAccepted.collectAsStateWithLifecycle()
                         val toolsHidesStartBar = toolboxTab == ToolboxTab.GACHA && !gachaDisclaimerOk
@@ -759,7 +764,9 @@ fun BackgroundTaskView(
                             )
                             HorizontalPager(
                                 state = pagerState,
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .holdHeightWhilePreviewMoves(previewCollapse),
                                 userScrollEnabled = true,
                                 flingBehavior = rememberMaaPagerFling(pagerState),
                                 pageSpacing = PagerPageSpacing,

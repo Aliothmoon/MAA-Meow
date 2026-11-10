@@ -23,21 +23,67 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
+import androidx.compose.material.icons.rounded.AdminPanelSettings
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.BugReport
+import androidx.compose.material.icons.rounded.Campaign
+import androidx.compose.material.icons.rounded.Celebration
+import androidx.compose.material.icons.rounded.CloudUpload
+import androidx.compose.material.icons.rounded.ColorLens
+import androidx.compose.material.icons.rounded.DataObject
+import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.DesktopWindows
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.FactCheck
+import androidx.compose.material.icons.rounded.Feedback
+import androidx.compose.material.icons.rounded.FileDownload
+import androidx.compose.material.icons.rounded.FileUpload
+import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.FormatSize
+import androidx.compose.material.icons.rounded.Forum
+import androidx.compose.material.icons.rounded.Fullscreen
+import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.HighQuality
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Insights
+import androidx.compose.material.icons.rounded.Inventory2
+import androidx.compose.material.icons.rounded.IosShare
+import androidx.compose.material.icons.rounded.Leaderboard
+import androidx.compose.material.icons.rounded.NewReleases
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.PauseCircle
+import androidx.compose.material.icons.rounded.PictureInPicture
+import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material.icons.rounded.RocketLaunch
+import androidx.compose.material.icons.rounded.School
+import androidx.compose.material.icons.rounded.Science
+import androidx.compose.material.icons.rounded.SettingsBackupRestore
+import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.Translate
+import androidx.compose.material.icons.rounded.Update
+import androidx.compose.material.icons.rounded.Wallpaper
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -72,6 +118,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -93,15 +140,14 @@ import com.aliothmoon.maameow.manager.ShizukuInstallHelper
 import com.aliothmoon.maameow.presentation.StaySober
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ChangelogDialog
-import com.aliothmoon.maameow.presentation.components.CollapsibleSection
 import com.aliothmoon.maameow.presentation.components.InstalledAppPickerDialog
-import com.aliothmoon.maameow.presentation.components.ListItemDivider
 import com.aliothmoon.maameow.presentation.components.LocalSettingRowBleed
 import com.aliothmoon.maameow.presentation.components.LogExportController
+import com.aliothmoon.maameow.presentation.components.SettingInfoText
+import com.aliothmoon.maameow.presentation.components.SettingInfoToggle
 import com.aliothmoon.maameow.presentation.components.ReInitializeConfirmDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.SettingRow
-import com.aliothmoon.maameow.presentation.components.SettingsGroupCard
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.components.horizontalBleed
 import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
@@ -405,7 +451,7 @@ fun SettingsView(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = stringResource(R.string.settings_title)
+                title = stringResource(R.string.settings_title),
             )
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -436,49 +482,56 @@ fun SettingsView(
 
                 // 更新管理
                 item {
-                    CollapsibleSection(
+                    SettingsSection(
                         title = stringResource(R.string.settings_section_update),
                         sectionKey = SettingsSections.UPDATE,
                         revealToken = revealToken(SettingsSections.UPDATE),
                     ) {
-                        SettingsGroupCard {
-                            SettingSearchTarget(R.string.settings_reinit_resource_title) {
-                                SettingClickItem(
-                                    title = stringResource(R.string.settings_reinit_resource_title),
-                                    description = stringResource(R.string.settings_reinit_resource_desc),
-                                    contentColor = contentColor
-                                ) {
-                                    showReInitConfirm = true
-                                }
-                            }
-                            ListItemDivider()
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_auto_check_update_title) {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.settings_auto_check_update_title),
-                                    description = stringResource(R.string.settings_auto_check_update_desc),
                                     contentColor = contentColor,
                                     checked = autoCheckUpdate,
+                                    icon = Icons.Rounded.Update,
                                     onCheckedChange = { viewModel.setAutoCheckUpdate(it) }
                                 )
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_auto_download_update_title) {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.settings_auto_download_update_title),
-                                    description = stringResource(R.string.settings_auto_download_update_desc),
                                     contentColor = contentColor,
                                     checked = autoDownloadUpdate,
                                     enabled = autoCheckUpdate,
+                                    icon = Icons.Rounded.Download,
                                     onCheckedChange = { viewModel.setAutoDownloadUpdate(it) }
                                 )
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_update_channel_title) {
-                                SettingChannelItem(
-                                    contentColor = contentColor,
-                                    selectedChannel = updateChannel,
-                                    onChannelSelected = { viewModel.setUpdateChannel(it) }
+                                SettingChoiceItem(
+                                    title = stringResource(R.string.settings_update_channel_title),
+                                    icon = Icons.Rounded.Science,
+                                    entries = UpdateChannel.entries,
+                                    selected = updateChannel,
+                                    label = { stringResource(it.resId) },
+                                    onSelected = { viewModel.setUpdateChannel(it) },
                                 )
+                            }
+                        }
+                        SettingsSegment {
+                            SettingSearchTarget(R.string.settings_reinit_resource_title) {
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_reinit_resource_title),
+                                    info = stringResource(R.string.settings_reinit_resource_desc),
+                                    icon = Icons.Rounded.RestartAlt,
+                                    trailing = RowTrailing.NONE,
+                                ) {
+                                    showReInitConfirm = true
+                                }
                             }
                         }
                     }
@@ -486,48 +539,50 @@ fun SettingsView(
 
                 // 日志
                 item {
-                    CollapsibleSection(
+                    SettingsSection(
                         title = stringResource(R.string.settings_section_log),
                         sectionKey = SettingsSections.LOG,
                         revealToken = revealToken(SettingsSections.LOG),
                     ) {
-                        SettingsGroupCard {
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_log_history_title) {
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_log_history_title),
-                                    description = stringResource(R.string.settings_log_history_desc),
-                                    contentColor = contentColor
+                                    icon = Icons.Rounded.History,
                                 ) {
                                     navController.navigate("log_history")
                                 }
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_log_error_title) {
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_log_error_title),
-                                    description = stringResource(R.string.settings_log_error_desc),
-                                    contentColor = contentColor
+                                    icon = Icons.Rounded.ErrorOutline,
                                 ) {
                                     navController.navigate("error_log")
                                 }
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_log_export_title) {
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_log_export_title),
-                                    description = stringResource(R.string.settings_log_export_desc),
-                                    contentColor = contentColor
+                                    icon = Icons.Rounded.IosShare,
+                                    trailing = RowTrailing.NONE,
                                 ) {
                                     showExportSheet = true
                                 }
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_debug_mode_title) {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.settings_debug_mode_title),
-                                    description = stringResource(R.string.settings_debug_mode_desc),
+                                    info = stringResource(R.string.settings_debug_mode_desc),
                                     contentColor = contentColor,
                                     checked = debugMode,
+                                    icon = Icons.Rounded.BugReport,
                                     onCheckedChange = { enabled ->
                                         if (enabled) {
                                             showDebugModeConfirm = true
@@ -543,37 +598,60 @@ fun SettingsView(
 
                 // 显示设置
                 item {
-                    CollapsibleSection(
+                    SettingsSection(
                         title = stringResource(R.string.settings_section_display),
                         sectionKey = SettingsSections.DISPLAY,
                         revealToken = revealToken(SettingsSections.DISPLAY),
                     ) {
-                        SettingsGroupCard {
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_language_title) {
-                                SettingLanguageItem(
-                                    contentColor = contentColor,
-                                    selectedLanguage = language,
-                                    onLanguageSelected = { viewModel.setLanguage(it) }
+                                val options = listOf(
+                                    AppSettingsManager.AppLanguage.ZH,
+                                    AppSettingsManager.AppLanguage.EN,
+                                    AppSettingsManager.AppLanguage.KO,
+                                )
+                                SettingChoiceItem(
+                                    title = stringResource(R.string.settings_language_title),
+                                    icon = Icons.Rounded.Translate,
+                                    entries = options,
+                                    selected = resolveSelectedLanguage(language),
+                                    label = { it.label() },
+                                    onSelected = { viewModel.setLanguage(it) },
                                 )
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_theme_title) {
-                                SettingThemeSection(
-                                    contentColor = contentColor,
-                                    selectedMode = themeMode,
-                                    onModeSelected = { viewModel.setThemeMode(it) },
-                                    useSystemMonetColor = useSystemMonetColor,
-                                    onMonetColorChanged = { viewModel.setUseSystemMonetColor(it) },
-                                    fontSizeScale = fontSizeScale,
-                                    onFontSizeScaleChanged = { viewModel.setFontSizeScale(it) }
+                                ThemeModePicker(
+                                    selected = themeMode,
+                                    onSelected = { viewModel.setThemeMode(it) },
+                                    icon = Icons.Rounded.Palette,
                                 )
                             }
-                            ListItemDivider()
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            SettingsSegment {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.settings_monet_color_title),
+                                    contentColor = contentColor,
+                                    checked = useSystemMonetColor,
+                                    icon = Icons.Rounded.ColorLens,
+                                    onCheckedChange = { viewModel.setUseSystemMonetColor(it) }
+                                )
+                            }
+                        }
+                        SettingsSegment {
+                            FontSizeSetting(
+                                contentColor = contentColor,
+                                value = fontSizeScale,
+                                onValueChange = { viewModel.setFontSizeScale(it) },
+                            )
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_background_title) {
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_background_title),
-                                    description = stringResource(R.string.settings_background_desc),
-                                    contentColor = contentColor
+                                    icon = Icons.Rounded.Wallpaper,
                                 ) {
                                     navController.navigate(Routes.WALLPAPER)
                                 }
@@ -584,104 +662,111 @@ fun SettingsView(
 
                 // 运行环境
                 item {
-                    CollapsibleSection(
+                    SettingsSection(
                         title = stringResource(R.string.settings_section_runtime),
                         sectionKey = SettingsSections.RUNTIME,
                         forceExpanded = onboardingSection == SettingsSections.RUNTIME,
                         revealToken = revealToken(SettingsSections.RUNTIME),
                     ) {
-                        SettingsGroupCard {
-                            Column(
-                                modifier = Modifier.onboardingTarget(OnboardingTarget.RUNTIME_BACKEND),
-                            ) {
-                                SettingSearchTarget(R.string.settings_startup_backend_title) {
-                                    SettingRadioItem(
-                                        title = stringResource(R.string.settings_startup_backend_title),
-                                        contentColor = contentColor,
-                                        entries = RemoteBackend.entries,
-                                        selected = startupBackend,
-                                        label = { it.display },
-                                        onSelected = { viewModel.setStartupBackend(it) }
-                                    )
-                                }
-                            }
-                            ListItemDivider()
-                            SettingSearchTarget(R.string.settings_core_data_location_title) {
-                                SettingRadioItem(
-                                    title = stringResource(R.string.settings_core_data_location_title),
-                                    contentColor = contentColor,
-                                    entries = CoreDataLocation.entries,
-                                    selected = coreDataLocation,
-                                    label = { stringResource(it.labelRes()) },
-                                    onSelected = { viewModel.requestCoreDataLocationChange(it) }
+                        SettingsSegment(
+                            modifier = Modifier.onboardingTarget(OnboardingTarget.RUNTIME_BACKEND),
+                        ) {
+                            SettingSearchTarget(R.string.settings_startup_backend_title) {
+                                SettingChoiceItem(
+                                    title = stringResource(R.string.settings_startup_backend_title),
+                                    icon = Icons.Rounded.AdminPanelSettings,
+                                    entries = RemoteBackend.entries,
+                                    selected = startupBackend,
+                                    label = { it.display },
+                                    onSelected = { viewModel.setStartupBackend(it) },
                                 )
                             }
-                            ListItemDivider()
-                            SettingSearchTarget(R.string.settings_core_data_clear_title) {
-                                SettingClickItem(
-                                    title = stringResource(R.string.settings_core_data_clear_title),
-                                    contentColor = contentColor
-                                ) {
-                                    viewModel.requestClearCoreData()
-                                }
-                            }
-                            ListItemDivider()
-                            if (startupBackend == RemoteBackend.SHIZUKU) {
+                        }
+                        if (startupBackend == RemoteBackend.SHIZUKU) {
+                            SettingsSegment {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.settings_shizuku_launch_mode_title),
-                                    description = stringResource(R.string.settings_shizuku_launch_mode_desc),
+                                    info = stringResource(R.string.settings_shizuku_launch_mode_desc),
                                     contentColor = contentColor,
                                     checked = shizukuShortcutEnabled,
+                                    icon = Icons.Rounded.RocketLaunch,
                                     onCheckedChange = { viewModel.setShizukuShortcutEnabled(it) }
                                 )
-                                ListItemDivider()
-                                MaaAnimatedVisibility(
-                                    visible = shizukuShortcutEnabled,
-                                    enter = expandVertically(),
-                                    exit = shrinkVertically()
-                                ) {
-                                    Column {
-                                        val shizukuLaunchAppName =
-                                            ShizukuInstallHelper.getLaunchAppLabel(
-                                                context,
-                                                shizukuLaunchPackage
+                            }
+                            MaaAnimatedVisibility(
+                                visible = shizukuShortcutEnabled,
+                                enter = expandVertically(),
+                                exit = shrinkVertically()
+                            ) {
+                                SettingsDividedColumn {
+                                    val shizukuLaunchAppName =
+                                        ShizukuInstallHelper.getLaunchAppLabel(
+                                            context,
+                                            shizukuLaunchPackage
+                                        )
+                                    val shizukuLaunchAppDescription =
+                                        if (shizukuLaunchPackage == OFFICIAL_SHIZUKU_PACKAGE) {
+                                            stringResource(R.string.settings_shizuku_launch_app_default_desc)
+                                        } else {
+                                            stringResource(
+                                                R.string.settings_shizuku_launch_app_selected_desc,
+                                                shizukuLaunchAppName ?: shizukuLaunchPackage
                                             )
-                                        val shizukuLaunchAppDescription =
-                                            if (shizukuLaunchPackage == OFFICIAL_SHIZUKU_PACKAGE) {
-                                                stringResource(R.string.settings_shizuku_launch_app_default_desc)
-                                            } else {
-                                                stringResource(
-                                                    R.string.settings_shizuku_launch_app_selected_desc,
-                                                    shizukuLaunchAppName ?: shizukuLaunchPackage
-                                                )
-                                            }
+                                        }
+                                    SettingsSegment {
                                         SettingClickItem(
                                             title = stringResource(R.string.settings_shizuku_launch_app_title),
                                             description = shizukuLaunchAppDescription,
-                                            contentColor = contentColor
+                                            icon = Icons.Rounded.Apps,
                                         ) {
                                             showShizukuAppPicker = true
                                         }
-                                        ListItemDivider()
+                                    }
+                                    SettingsSegment {
                                         SettingClickItem(
                                             title = stringResource(R.string.settings_shizuku_launch_app_reset_title),
-                                            description = stringResource(R.string.settings_shizuku_launch_app_reset_desc),
-                                            contentColor = contentColor
+                                            icon = Icons.Rounded.SettingsBackupRestore,
+                                            trailing = RowTrailing.NONE,
                                         ) {
                                             viewModel.setShizukuLaunchPackage(OFFICIAL_SHIZUKU_PACKAGE)
                                         }
-                                        ListItemDivider()
                                     }
                                 }
                             }
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_skip_shizuku_check) {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.settings_skip_shizuku_check),
                                     contentColor = contentColor,
                                     checked = skipShizukuCheck,
                                     enabled = startupBackend == RemoteBackend.SHIZUKU,
+                                    icon = Icons.Rounded.FactCheck,
                                     onCheckedChange = { viewModel.setSkipShizukuCheck(it) }
                                 )
+                            }
+                        }
+                        SettingsSegment {
+                            SettingSearchTarget(R.string.settings_core_data_location_title) {
+                                SettingChoiceItem(
+                                    title = stringResource(R.string.settings_core_data_location_title),
+                                    icon = Icons.Rounded.FolderOpen,
+                                    entries = CoreDataLocation.entries,
+                                    selected = coreDataLocation,
+                                    label = { stringResource(it.labelRes()) },
+                                    onSelected = { viewModel.requestCoreDataLocationChange(it) },
+                                )
+                            }
+                        }
+                        SettingsSegment {
+                            SettingSearchTarget(R.string.settings_core_data_clear_title) {
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_core_data_clear_title),
+                                    icon = Icons.Rounded.DeleteSweep,
+                                    trailing = RowTrailing.NONE,
+                                ) {
+                                    viewModel.requestClearCoreData()
+                                }
                             }
                         }
                     }
@@ -689,26 +774,36 @@ fun SettingsView(
 
                 // 后台运行
                 item {
-                    CollapsibleSection(
+                    SettingsSection(
                         title = stringResource(R.string.settings_section_background_run),
                         sectionKey = SettingsSections.BACKGROUND_RUN,
                         revealToken = revealToken(SettingsSections.BACKGROUND_RUN),
                     ) {
-                        SettingsGroupCard {
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_background_resolution_title) {
-                                SettingBackgroundResolutionItem(
-                                    contentColor = contentColor,
-                                    selectedPreference = backgroundResolution,
-                                    onPreferenceSelected = { viewModel.setBackgroundResolution(it) }
+                                SettingChoiceItem(
+                                    title = stringResource(R.string.settings_background_resolution_title),
+                                    icon = Icons.Rounded.HighQuality,
+                                    entries = listOf(
+                                        DefaultDisplayConfig.ResolutionPreference.P720,
+                                        DefaultDisplayConfig.ResolutionPreference.P1080,
+                                    ),
+                                    selected = backgroundResolution,
+                                    label = {
+                                        if (it == DefaultDisplayConfig.ResolutionPreference.P720) "720p" else "1080p"
+                                    },
+                                    onSelected = { viewModel.setBackgroundResolution(it) },
                                 )
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_force_fullscreen_on_virtual_display) {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.settings_force_fullscreen_on_virtual_display),
-                                    description = stringResource(R.string.settings_force_fullscreen_on_virtual_display_desc),
+                                    info = stringResource(R.string.settings_force_fullscreen_on_virtual_display_desc),
                                     contentColor = contentColor,
                                     checked = forceFullscreenOnVirtualDisplay,
+                                    icon = Icons.Rounded.Fullscreen,
                                     onCheckedChange = { enabled ->
                                         if (enabled) {
                                             showForceFullscreenConfirm = true
@@ -718,21 +813,25 @@ fun SettingsView(
                                     }
                                 )
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_pip_on_home) {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.settings_pip_on_home),
                                     contentColor = contentColor,
                                     checked = pipOnHome,
+                                    icon = Icons.Rounded.PictureInPicture,
                                     onCheckedChange = { viewModel.setPipOnHome(it) }
                                 )
                             }
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                                ListItemDivider()
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            SettingsSegment {
                                 SettingSearchTarget(R.string.settings_virtual_display_backend_title) {
-                                    SettingRadioItem(
+                                    SettingChoiceItem(
                                         title = stringResource(R.string.settings_virtual_display_backend_title),
-                                        contentColor = contentColor,
+                                        info = stringResource(R.string.settings_virtual_display_backend_desc),
+                                        icon = Icons.Rounded.DesktopWindows,
                                         entries = VirtualDisplayBackend.entries,
                                         selected = virtualDisplayBackend,
                                         label = { backend ->
@@ -755,27 +854,30 @@ fun SettingsView(
 
                 // 三方服务：数据上报与一图流 OpenAPI
                 item {
-                    CollapsibleSection(
+                    SettingsSection(
                         title = stringResource(R.string.settings_section_third_party),
                         sectionKey = SettingsSections.THIRD_PARTY,
                         revealToken = revealToken(SettingsSections.THIRD_PARTY),
                     ) {
-                        SettingsGroupCard {
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_telemetry) {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.settings_telemetry),
                                     contentColor = contentColor,
                                     checked = telemetryEnabled,
+                                    icon = Icons.Rounded.Insights,
                                     onCheckedChange = { viewModel.setTelemetryEnabled(it) }
                                 )
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_report_penguin) {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.settings_report_penguin),
-                                    description = stringResource(R.string.settings_report_penguin_desc),
+                                    info = stringResource(R.string.settings_report_penguin_desc),
                                     contentColor = contentColor,
                                     checked = reportToPenguin,
+                                    icon = Icons.Rounded.CloudUpload,
                                     onCheckedChange = { viewModel.setReportToPenguin(it) }
                                 )
                             }
@@ -785,25 +887,25 @@ fun SettingsView(
                                 enter = expandVertically(),
                                 exit = shrinkVertically(),
                             ) {
-                                Column {
-                                    ListItemDivider()
-                                    SettingPenguinIdField(
-                                        penguinId = penguinId,
-                                        onIdChange = { viewModel.setPenguinId(it) },
-                                    )
-                                }
+                                SettingPenguinIdField(
+                                    penguinId = penguinId,
+                                    onIdChange = { viewModel.setPenguinId(it) },
+                                )
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_report_yituliu) {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.settings_report_yituliu),
-                                    description = stringResource(R.string.settings_report_yituliu_desc),
+                                    info = stringResource(R.string.settings_report_yituliu_desc),
                                     contentColor = contentColor,
                                     checked = reportToYituliu,
+                                    icon = Icons.Rounded.Leaderboard,
                                     onCheckedChange = { viewModel.setReportToYituliu(it) }
                                 )
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingYituliuTokenSection(
                                 token = yituliuOpenApiToken,
                                 verifying = yituliuVerifying,
@@ -811,24 +913,28 @@ fun SettingsView(
                                 onTokenChange = { viewModel.setYituliuOpenApiToken(it) },
                                 onVerify = { viewModel.verifyYituliuToken() },
                             )
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_oper_box_yituliu_title) {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.settings_oper_box_yituliu_title),
-                                    description = stringResource(R.string.settings_oper_box_yituliu_desc),
+                                    info = stringResource(R.string.settings_oper_box_yituliu_desc),
                                     contentColor = contentColor,
                                     checked = operBoxUseYituliuApi,
+                                    icon = Icons.Rounded.Inventory2,
                                     onCheckedChange = { viewModel.setOperBoxUseYituliuApi(it) }
                                 )
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.panel_autobattle_operbox_assist) {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.panel_autobattle_operbox_assist),
-                                    description = stringResource(R.string.settings_oper_box_assist_desc),
+                                    info = stringResource(R.string.settings_oper_box_assist_desc),
                                     contentColor = contentColor,
                                     checked = operBoxAssist.active,
                                     enabled = operBoxAssist.available,
+                                    icon = Icons.Rounded.Groups,
                                     onCheckedChange = { viewModel.setOperBoxAssistEnabled(it) }
                                 )
                             }
@@ -838,51 +944,54 @@ fun SettingsView(
 
                 // 任务设置：划火柴模式、MAA 任务覆盖、自定义游戏包名
                 item {
-                    CollapsibleSection(
+                    SettingsSection(
                         title = stringResource(R.string.settings_section_task),
                         sectionKey = SettingsSections.TASK,
                         revealToken = revealToken(SettingsSections.TASK),
                     ) {
-                        SettingsGroupCard {
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_deploy_with_pause) {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.settings_deploy_with_pause),
-                                    description = stringResource(R.string.settings_deploy_with_pause_desc),
+                                    info = stringResource(R.string.settings_deploy_with_pause_desc),
                                     contentColor = contentColor,
                                     checked = deployWithPause,
+                                    icon = Icons.Rounded.PauseCircle,
                                     onCheckedChange = { viewModel.setDeployWithPause(it) }
                                 )
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_tasks_override_title) {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.settings_tasks_override_title),
-                                    description = stringResource(R.string.settings_tasks_override_desc),
+                                    info = stringResource(R.string.settings_tasks_override_desc),
                                     contentColor = contentColor,
                                     checked = tasksOverrideEnabled,
+                                    icon = Icons.Rounded.DataObject,
                                     onCheckedChange = { viewModel.setTasksOverrideEnabled(it) }
                                 )
                             }
-                            MaaAnimatedVisibility(
-                                visible = tasksOverrideEnabled,
-                                enter = expandVertically(),
-                                exit = shrinkVertically()
-                            ) {
-                                Column {
-                                    ListItemDivider()
-                                    SettingClickItem(
-                                        title = stringResource(R.string.settings_tasks_override_edit_title),
-                                        contentColor = contentColor
-                                    ) {
-                                        navController.navigate(Routes.TASK_OVERRIDE_EDITOR)
-                                    }
+                        }
+                        MaaAnimatedVisibility(
+                            visible = tasksOverrideEnabled,
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
+                            SettingsSegment {
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_tasks_override_edit_title),
+                                    icon = Icons.Rounded.Edit,
+                                ) {
+                                    navController.navigate(Routes.TASK_OVERRIDE_EDITOR)
                                 }
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_game_package_title) {
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_game_package_title),
-                                    contentColor = contentColor
+                                    icon = Icons.Rounded.SportsEsports,
                                 ) {
                                     navController.navigate(Routes.GAME_PACKAGE)
                                 }
@@ -893,37 +1002,40 @@ fun SettingsView(
 
                 // 数据管理
                 item {
-                    CollapsibleSection(
+                    SettingsSection(
                         title = stringResource(R.string.settings_section_data),
                         sectionKey = SettingsSections.DATA,
                         revealToken = revealToken(SettingsSections.DATA),
                     ) {
-                        SettingsGroupCard {
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_depot_inventory_title) {
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_depot_inventory_title),
                                     description = stringResource(R.string.settings_depot_inventory_desc),
+                                    icon = Icons.Rounded.Inventory2,
                                     contentColor = contentColor
                                 ) {
                                     navController.navigate(Routes.DEPOT_INVENTORY)
                                 }
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_export_config_title) {
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_export_config_title),
-                                    description = stringResource(R.string.settings_export_config_desc),
-                                    contentColor = contentColor
+                                    icon = Icons.Rounded.FileUpload,
+                                    trailing = RowTrailing.NONE,
                                 ) {
                                     exportLauncher.launch("maameow_config.json")
                                 }
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_import_config_title) {
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_import_config_title),
-                                    description = stringResource(R.string.settings_import_config_desc),
-                                    contentColor = contentColor
+                                    icon = Icons.Rounded.FileDownload,
+                                    trailing = RowTrailing.NONE,
                                 ) {
                                     importLauncher.launch(arrayOf("application/json"))
                                 }
@@ -934,27 +1046,26 @@ fun SettingsView(
 
                 // 通知
                 item {
-                    CollapsibleSection(
+                    SettingsSection(
                         title = stringResource(R.string.settings_section_notification),
                         sectionKey = SettingsSections.NOTIFICATION,
                         revealToken = revealToken(SettingsSections.NOTIFICATION),
                     ) {
-                        SettingsGroupCard {
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_notification_title) {
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_notification_title),
-                                    description = stringResource(R.string.settings_notification_desc),
-                                    contentColor = contentColor
+                                    icon = Icons.Rounded.Notifications,
                                 ) {
                                     navController.navigate(Routes.NOTIFICATION)
                                 }
                             }
-                            if (liveUpdateEntryVisible) {
-                                ListItemDivider()
+                        }
+                        if (liveUpdateEntryVisible) {
+                            SettingsSegment {
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_live_update_title),
-                                    description = stringResource(R.string.settings_live_update_desc),
-                                    contentColor = contentColor
+                                    icon = Icons.Rounded.Bolt,
                                 ) {
                                     navController.navigate(Routes.LIVE_UPDATE)
                                 }
@@ -965,12 +1076,12 @@ fun SettingsView(
 
                 // 成就（帕拉斯头像在分栏卡片内第一项）
                 item {
-                    CollapsibleSection(
+                    SettingsSection(
                         title = stringResource(R.string.settings_section_achievement),
                         sectionKey = SettingsSections.ACHIEVEMENT,
                         revealToken = revealToken(SettingsSections.ACHIEVEMENT),
                     ) {
-                        SettingsGroupCard {
+                        SettingsSegment {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1017,32 +1128,33 @@ fun SettingsView(
                                     }
                                 }
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_achievement_title) {
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_achievement_title),
-                                    description = stringResource(R.string.settings_achievement_desc),
-                                    contentColor = contentColor
+                                    icon = Icons.Rounded.EmojiEvents,
                                 ) {
                                     navController.navigate(Routes.ACHIEVEMENT)
                                 }
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_achievement_snackbar_title) {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.settings_achievement_snackbar_title),
-                                    description = stringResource(R.string.settings_achievement_snackbar_desc),
                                     contentColor = contentColor,
                                     checked = showAchievementSnackbar,
+                                    icon = Icons.Rounded.Celebration,
                                     onCheckedChange = { viewModel.setShowAchievementSnackbar(it) }
                                 )
                             }
-                            if (BuildConfig.DEBUG) {
-                                ListItemDivider()
+                        }
+                        if (BuildConfig.DEBUG) {
+                            SettingsSegment {
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_achievement_debug_title),
-                                    description = stringResource(R.string.settings_achievement_debug_desc),
-                                    contentColor = contentColor
+                                    icon = Icons.Rounded.BugReport,
                                 ) {
                                     navController.navigate(Routes.ACHIEVEMENT_DEBUG)
                                 }
@@ -1053,81 +1165,77 @@ fun SettingsView(
 
                 // 关于
                 item {
-                    CollapsibleSection(
+                    SettingsSection(
                         title = stringResource(R.string.settings_section_about),
                         sectionKey = SettingsSections.ABOUT,
                         forceExpanded = onboardingSection == SettingsSections.ABOUT,
                         revealToken = revealToken(SettingsSections.ABOUT),
                     ) {
-                        SettingsGroupCard {
-                            SettingInfoRow(
-                                label = stringResource(R.string.settings_about_version),
-                                value = BuildConfig.VERSION_NAME,
-                                contentColor = contentColor,
-                            )
-                            ListItemDivider()
-                            SettingInfoRow(
-                                label = stringResource(R.string.settings_about_developer),
-                                value = "Aliothmoon",
-                                contentColor = contentColor
-                            )
-                            ListItemDivider()
-                            // 两行合为一个引导靶点
-                            Column(
-                                modifier = Modifier.onboardingTarget(OnboardingTarget.ABOUT_HELP),
-                            ) {
+                        SettingsSegment {
+                            SettingAboutHeader()
+                        }
+                        // 两行合为一个引导靶点
+                        SettingsDividedColumn(
+                            modifier = Modifier.onboardingTarget(OnboardingTarget.ABOUT_HELP),
+                        ) {
+                            SettingsSegment {
                                 SettingSearchTarget(R.string.settings_about_faq_title) {
                                     SettingClickItem(
                                         title = stringResource(R.string.settings_about_faq_title),
-                                        description = stringResource(R.string.settings_about_faq_desc),
-                                        contentColor = contentColor,
+                                        icon = Icons.AutoMirrored.Rounded.HelpOutline,
+                                        trailing = RowTrailing.EXTERNAL,
                                     ) {
                                         Misc.openUriSafely(context, MaaApi.FAQ_URL)
                                     }
                                 }
-                                ListItemDivider()
+                            }
+                            SettingsSegment {
                                 SettingSearchTarget(R.string.settings_about_feedback_title) {
                                     SettingClickItem(
                                         title = stringResource(R.string.settings_about_feedback_title),
-                                        description = stringResource(R.string.settings_about_feedback_desc),
-                                        contentColor = contentColor,
+                                        icon = Icons.Rounded.Feedback,
+                                        trailing = RowTrailing.EXTERNAL,
                                     ) {
                                         Misc.openUriSafely(context, MaaApi.FEEDBACK_URL)
                                     }
                                 }
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingClickItem(
                                 title = stringResource(R.string.settings_about_qq_group_title),
-                                description = stringResource(R.string.settings_about_qq_group_desc),
-                                contentColor = contentColor
+                                icon = Icons.Rounded.Forum,
+                                trailing = RowTrailing.EXTERNAL,
                             ) {
                                 achievementReporter.reportFeedbackGroupOpened()
                                 Misc.openUriSafely(context, "https://join.maameow.com/")
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingClickItem(
                                 title = stringResource(R.string.settings_about_changelog),
-                                contentColor = contentColor
+                                icon = Icons.Rounded.NewReleases,
                             ) {
                                 viewModel.onShowChangelog()
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingClickItem(
                                 title = stringResource(R.string.settings_about_announcement),
-                                contentColor = contentColor
+                                icon = Icons.Rounded.Campaign,
                             ) {
                                 onViewAnnouncement()
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             SettingClickItem(
                                 title = stringResource(R.string.settings_about_onboarding),
-                                description = stringResource(R.string.settings_about_onboarding_desc),
-                                contentColor = contentColor
+                                icon = Icons.Rounded.School,
                             ) {
                                 onViewOnboarding()
                             }
-                            ListItemDivider()
+                        }
+                        SettingsSegment {
                             Text(
                                 text = stringResource(R.string.settings_about_star),
                                 style = MaterialTheme.typography.bodyMedium,
@@ -1158,98 +1266,23 @@ fun SettingsView(
 }
 
 @Composable
-private fun SettingThemeSection(
-    contentColor: Color,
-    selectedMode: AppSettingsManager.ThemeMode,
-    onModeSelected: (AppSettingsManager.ThemeMode) -> Unit,
-    useSystemMonetColor: Boolean,
-    onMonetColorChanged: (Boolean) -> Unit,
-    fontSizeScale: Int,
-    onFontSizeScaleChanged: (Int) -> Unit
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.md),
-        ) {
-            Text(
-                text = stringResource(R.string.settings_theme_title),
-                style = MaterialTheme.typography.bodyLarge,
-                color = contentColor,
-            )
-            Row(modifier = Modifier.fillMaxWidth()) {
-                val modes = listOf(
-                    AppSettingsManager.ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
-                    AppSettingsManager.ThemeMode.WHITE to stringResource(R.string.settings_theme_white),
-                    AppSettingsManager.ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
-                    AppSettingsManager.ThemeMode.PURE_DARK to stringResource(R.string.settings_theme_pure_dark),
-                )
-                modes.forEach { (mode, label) ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(8.dp))
-                            .selectable(
-                                selected = mode == selectedMode,
-                                onClick = { onModeSelected(mode) },
-                                role = Role.RadioButton,
-                            ),
-                    ) {
-                        RadioButton(
-                            selected = mode == selectedMode,
-                            onClick = null,
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = contentColor,
-                            maxLines = 1,
-                        )
-                    }
-                }
-            }
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            ListItemDivider()
-            SettingRow(
-                title = stringResource(R.string.settings_monet_color_title),
-                description = stringResource(R.string.settings_monet_color_desc),
-                titleColor = contentColor,
-                descriptionColor = contentColor.copy(alpha = 0.7f),
-                trailing = {
-                    Switch(
-                        checked = useSystemMonetColor,
-                        onCheckedChange = onMonetColorChanged,
-                    )
-                },
-            )
-        }
-        ListItemDivider()
-        FontSizeSetting(
-            contentColor = contentColor,
-            value = fontSizeScale,
-            onValueChange = onFontSizeScaleChanged,
-        )
-    }
-}
-
-@Composable
 private fun SettingClickItem(
     title: String,
     description: String = "",
-    contentColor: Color,
+    info: String? = null,
+    icon: ImageVector? = null,
+    trailing: RowTrailing = RowTrailing.CHEVRON,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
     onClick: () -> Unit
 ) {
     SettingRow(
         title = title,
         description = description.ifEmpty { null },
+        info = info,
         titleColor = contentColor,
-        descriptionColor = contentColor.copy(alpha = 0.7f),
+        descriptionColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        leading = icon?.let { { SettingIcon(it) } },
+        trailing = if (trailing == RowTrailing.NONE) null else ({ RowTrailingIcon(trailing) }),
         onClick = onClick,
     )
 }
@@ -1415,6 +1448,7 @@ private fun FontSizeSetting(
     LaunchedEffect(value, recommended, isAuto) {
         sliderValue = (if (isAuto) recommended else value).toFloat()
     }
+    var infoExpanded by rememberSaveable { mutableStateOf(false) }
     val current = sliderValue.roundToInt()
         .coerceIn(AppSettingsManager.FONT_SIZE_SCALE_MIN, AppSettingsManager.FONT_SIZE_SCALE_MAX)
 
@@ -1434,12 +1468,19 @@ private fun FontSizeSetting(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(
-                    text = stringResource(R.string.settings_font_size_title),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = contentColor,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
+                SettingIcon(Icons.Rounded.FormatSize)
+                Spacer(modifier = Modifier.width(MaaDesignTokens.Spacing.lg))
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_font_size_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = contentColor,
+                    )
+                    SettingInfoToggle(infoExpanded) { infoExpanded = !infoExpanded }
+                }
                 Text(
                     text = if (isAuto) {
                         stringResource(R.string.settings_font_size_auto_value, effective)
@@ -1451,12 +1492,6 @@ private fun FontSizeSetting(
                     modifier = Modifier.padding(start = MaaDesignTokens.Spacing.md),
                 )
             }
-            Text(
-                text = stringResource(R.string.settings_font_size_summary),
-                style = MaterialTheme.typography.bodySmall,
-                color = contentColor.copy(alpha = 0.7f),
-                modifier = Modifier.fillMaxWidth(),
-            )
         }
         if (!isAuto) {
             OutlinedButton(
@@ -1531,6 +1566,10 @@ private fun FontSizeSetting(
                 )
             }
         }
+        SettingInfoText(
+            text = stringResource(R.string.settings_font_size_summary),
+            expanded = infoExpanded,
+        )
     }
 }
 
@@ -1538,276 +1577,40 @@ private fun FontSizeSetting(
 internal fun SettingSwitchItem(
     title: String,
     description: String? = null,
-    contentColor: Color,
+    info: String? = null,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
     checked: Boolean,
     enabled: Boolean = true,
+    icon: ImageVector? = null,
     onCheckedChange: (Boolean) -> Unit
 ) {
     SettingRow(
         title = title,
         description = description,
+        info = info,
         titleColor = contentColor,
-        descriptionColor = contentColor.copy(alpha = 0.7f),
+        descriptionColor = MaterialTheme.colorScheme.onSurfaceVariant,
         enabled = enabled,
+        leading = icon?.let { { SettingIcon(it, enabled) } },
+        // 开关不占 48dp 触控区，改由整行点击
         trailing = {
-            Switch(
-                checked = checked,
-                enabled = enabled,
-                onCheckedChange = onCheckedChange
-            )
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                Switch(checked = checked, enabled = enabled, onCheckedChange = null)
+            }
         },
+        toggled = checked,
+        onClick = { onCheckedChange(!checked) },
     )
 }
 
 @Composable
-private fun SettingInfoRow(
-    label: String,
-    value: String,
-    contentColor: Color,
-    onClick: (() -> Unit)? = null,
-) {
-    SettingRow(
-        title = label,
-        titleColor = contentColor,
-        trailing = {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyLarge,
-                color = contentColor.copy(alpha = 0.7f)
-            )
-        },
-        onClick = onClick,
-    )
-}
-
-@Composable
-private fun SettingChannelItem(
-    contentColor: Color,
-    selectedChannel: UpdateChannel,
-    onChannelSelected: (UpdateChannel) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap)
-        ) {
-            Text(
-                text = stringResource(R.string.settings_update_channel_title),
-                style = MaterialTheme.typography.bodyLarge,
-                color = contentColor
-            )
-            Text(
-                text = stringResource(R.string.settings_update_channel_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = contentColor.copy(alpha = 0.7f)
-            )
-        }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            UpdateChannel.entries.forEach { channel ->
-                val channelName = stringResource(channel.resId)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .selectable(
-                            selected = channel == selectedChannel,
-                            onClick = { onChannelSelected(channel) },
-                            role = Role.RadioButton
-                        )
-                ) {
-                    RadioButton(
-                        selected = channel == selectedChannel,
-                        onClick = null
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = channelName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = contentColor
-                    )
-                }
-            }
-        }
+private fun AppSettingsManager.AppLanguage.label(): String = stringResource(
+    when (this) {
+        AppSettingsManager.AppLanguage.EN -> R.string.settings_language_en
+        AppSettingsManager.AppLanguage.KO -> R.string.settings_language_ko
+        else -> R.string.settings_language_zh
     }
-}
-
-@Composable
-private fun SettingBackgroundResolutionItem(
-    contentColor: Color,
-    selectedPreference: DefaultDisplayConfig.ResolutionPreference,
-    onPreferenceSelected: (DefaultDisplayConfig.ResolutionPreference) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap)
-        ) {
-            Text(
-                text = stringResource(R.string.settings_background_resolution_title),
-                style = MaterialTheme.typography.bodyLarge,
-                color = contentColor
-            )
-        }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val options = listOf(
-                DefaultDisplayConfig.ResolutionPreference.P720 to "720p",
-                DefaultDisplayConfig.ResolutionPreference.P1080 to "1080p"
-            )
-            options.forEach { (pref, label) ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .selectable(
-                            selected = pref == selectedPreference,
-                            onClick = { onPreferenceSelected(pref) },
-                            role = Role.RadioButton
-                        )
-                ) {
-                    RadioButton(
-                        selected = pref == selectedPreference,
-                        onClick = null
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = contentColor
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettingLanguageItem(
-    contentColor: Color,
-    selectedLanguage: AppSettingsManager.AppLanguage,
-    onLanguageSelected: (AppSettingsManager.AppLanguage) -> Unit
-) {
-    val effectiveSelectedLanguage = resolveSelectedLanguage(selectedLanguage)
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.md),
-    ) {
-        Text(
-            text = stringResource(R.string.settings_language_title),
-            style = MaterialTheme.typography.bodyLarge,
-            color = contentColor
-        )
-        Row(modifier = Modifier.fillMaxWidth()) {
-            val options = listOf(
-                AppSettingsManager.AppLanguage.ZH to stringResource(R.string.settings_language_zh),
-                AppSettingsManager.AppLanguage.EN to stringResource(R.string.settings_language_en),
-                AppSettingsManager.AppLanguage.KO to stringResource(R.string.settings_language_ko),
-            )
-            options.forEach { (lang, label) ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .selectable(
-                            selected = lang == effectiveSelectedLanguage,
-                            onClick = { onLanguageSelected(lang) },
-                            role = Role.RadioButton
-                        )
-                ) {
-                    RadioButton(
-                        selected = lang == effectiveSelectedLanguage,
-                        onClick = null
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = contentColor,
-                        maxLines = 1,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun <T> SettingRadioItem(
-    title: String,
-    contentColor: Color,
-    entries: List<T>,
-    selected: T,
-    label: @Composable (T) -> String,
-    onSelected: (T) -> Unit,
-    enabled: Boolean = true,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            color = contentColor,
-            modifier = Modifier.weight(1f)
-        )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            entries.forEach { entry ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .selectable(
-                            selected = entry == selected,
-                            onClick = { onSelected(entry) },
-                            enabled = enabled,
-                            role = Role.RadioButton
-                        )
-                ) {
-                    RadioButton(
-                        selected = entry == selected,
-                        onClick = null,
-                        enabled = enabled
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = label(entry),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = contentColor
-                    )
-                }
-            }
-        }
-    }
-}
+)
 
 @StringRes
 private fun CoreDataLocation.labelRes(): Int = when (this) {

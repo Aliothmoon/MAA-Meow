@@ -11,8 +11,11 @@ import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotSetQueryResponse
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotSetResponse
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotSetSummary
 import com.aliothmoon.maameow.data.model.copilot.PrtsCopilotSummary
+import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.CopilotManager
+import com.aliothmoon.maameow.domain.service.CopilotOperatorMatching
+import com.aliothmoon.maameow.domain.service.OperatorMatchMode
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import io.mockk.coEvery
@@ -23,6 +26,7 @@ import io.mockk.unmockkStatic
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -43,6 +47,7 @@ class CopilotSearchViewModelTest {
     private val queries = mutableListOf<Map<String, String>>()
     private val responses = ArrayDeque<suspend () -> Result<PrtsCopilotQueryResponse>>()
     private val setKeywords = mutableListOf<String>()
+    private val matcherFlow = MutableStateFlow<CopilotOperatorMatching.Matcher?>(null)
     private lateinit var vm: CopilotSearchViewModel
 
     @Before
@@ -54,7 +59,11 @@ class CopilotSearchViewModelTest {
             queries += firstArg<Map<String, String>>()
             responses.removeFirst()()
         }
-        vm = CopilotSearchViewModel(CopilotManager(api, mockk(relaxed = true)), resources)
+        val matching = mockk<CopilotOperatorMatching>(relaxed = true) {
+            every { settings } returns MutableStateFlow(CopilotOperatorMatching.Settings())
+            every { matcher } returns matcherFlow
+        }
+        vm = CopilotSearchViewModel(CopilotManager(api, mockk(relaxed = true)), resources, matching)
     }
 
     @After
@@ -63,17 +72,32 @@ class CopilotSearchViewModelTest {
         unmockkStatic(SystemClock::class)
     }
 
-    private fun page(vararg ids: Int, hasNext: Boolean = false, stage: String = "main_01-07") = Result.success(
+    private fun page(
+        vararg ids: Int,
+        hasNext: Boolean = false,
+        stage: String = "main_01-07",
+        opers: List<String> = emptyList(),
+    ) = Result.success(
         PrtsCopilotQueryResponse(
             statusCode = 200,
             data = PrtsCopilotPage(
                 hasNext = hasNext,
                 data = ids.map {
-                    PrtsCopilotSummary(id = it, content = """{"stage_name":"$stage","doc":{"title":"t$it"}}""")
+                    val operJson = opers.joinToString(",") { name -> """{"name":"$name"}""" }
+                    PrtsCopilotSummary(
+                        id = it,
+                        content = """{"stage_name":"$stage","doc":{"title":"t$it"},"opers":[$operJson]}""",
+                    )
                 },
             ),
         )
     )
+
+    private fun ownOnlyA() {
+        val a = OperBoxOperator(id = "a", name = "a", rarity = 6, elite = 2, level = 90, potential = 1, own = true)
+        matcherFlow.value = CopilotOperatorMatching.Matcher(mapOf("a" to a)) { it.name }
+        dispatcher.scheduler.advanceUntilIdle()
+    }
 
     private fun respond(results: List<Result<PrtsCopilotQueryResponse>>) {
         results.forEach { result -> responses += { result } }
@@ -264,6 +288,69 @@ class CopilotSearchViewModelTest {
 
         assertEquals(listOf("A", "A"), setKeywords)
         assertEquals(listOf(1, 2), vm.setState.value.results.items.map { it.id })
+    }
+
+    @Test
+    fun matchFilterHidesBlockedButNotShortCodeHits() {
+        ownOnlyA()
+        respond(listOf(page(1, opers = listOf("a")), page(2, opers = listOf("x", "y"))))
+
+        search("A")
+        assertEquals(listOf(1), vm.state.value.shownItems.map { it.id })
+        search("B")
+        assertEquals(listOf(2), ids())
+        assertEquals(OperatorMatchMode.BLOCKED, vm.state.value.results.items.single().match?.mode)
+        assertTrue(vm.state.value.shownItems.isEmpty())
+
+        respond(listOf(page(2, opers = listOf("x", "y"))))
+        search("prts://2")
+        assertEquals(listOf(2), vm.state.value.shownItems.map { it.id })
+    }
+
+    @Test
+    fun matchArrivingLaterTagsLoadedItems() {
+        respond(listOf(page(1, opers = listOf("a"))))
+        search("A")
+        assertEquals(null, vm.state.value.results.items.single().match)
+
+        ownOnlyA()
+
+        assertEquals(OperatorMatchMode.READY, vm.state.value.results.items.single().match?.mode)
+        assertTrue(vm.state.value.matchFilter.available)
+    }
+
+    @Test
+    fun emptyFilteredPagesPauseAutoLoadUntilManualRequest() {
+        ownOnlyA()
+        respond((1..6).map { page(it, hasNext = true, opers = listOf("x", "y")) })
+
+        search("A")
+        repeat(4) {
+            assertTrue(vm.state.value.results.canLoadMore)
+            vm.onLoadMore()
+            settle()
+        }
+        assertTrue(vm.state.value.results.paused)
+        assertFalse(vm.state.value.results.canLoadMore)
+
+        vm.onLoadMore()
+        settle()
+        assertEquals("6", queries.last()["page"])
+        assertFalse(vm.state.value.results.paused)
+    }
+
+    @Test
+    fun changingModesResumesAutoLoad() {
+        ownOnlyA()
+        respond((1..5).map { page(it, hasNext = true, opers = listOf("x", "y")) })
+        search("A")
+        repeat(4) { vm.onLoadMore(); settle() }
+        assertTrue(vm.state.value.results.paused)
+
+        vm.onToggleMatchMode(OperatorMatchMode.BLOCKED)
+
+        assertFalse(vm.state.value.results.paused)
+        assertEquals(5, vm.state.value.shownItems.size)
     }
 
     @Test

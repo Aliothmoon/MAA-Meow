@@ -627,7 +627,7 @@ class AppSettingsManager internal constructor(
 
     val currentChangelogContent: StateFlow<String> = setting { it.currentChangelogContent }
 
-    /** 单次 edit 内完成，避免中途崩溃导致两份都丢 */
+    /** 首启公告已弹；pending 留着给设置页看 */
     suspend fun promotePendingChangelog() {
         with(AppSettingsSchema) {
             context.dataStore.edit {
@@ -637,8 +637,6 @@ class AppSettingsManager internal constructor(
                     it[currentChangelogVersion] = version.removePrefix("v")
                     it[currentChangelogContent] = content
                 }
-                it[pendingChangelogVersion] = ""
-                it[pendingChangelogContent] = ""
             }
         }
     }
@@ -886,6 +884,23 @@ class AppSettingsManager internal constructor(
     suspend fun setOperBoxAssistEnabled(enabled: Boolean) {
         with(AppSettingsSchema) {
             context.dataStore.edit { it[operBoxAssistEnabled] = enabled.toString() }
+        }
+    }
+
+    val copilotOperMatchEnabled: StateFlow<Boolean> =
+        setting { it.copilotOperMatchEnabled.toBooleanStrictOrNull() ?: true }
+
+    suspend fun setCopilotOperMatchEnabled(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[copilotOperMatchEnabled] = enabled.toString() }
+        }
+    }
+
+    val copilotOperMatchModes: StateFlow<String> = setting { it.copilotOperMatchModes }
+
+    suspend fun setCopilotOperMatchModes(modes: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[copilotOperMatchModes] = modes }
         }
     }
 

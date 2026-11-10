@@ -22,6 +22,7 @@ import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.MaaCoreVersion
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.ShizukuManager
+import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
 import com.aliothmoon.maameow.telemetry.TelemetryUserId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -48,6 +49,7 @@ class LogExportService(
     private val appSettingsManager: AppSettingsManager,
     private val taskChainState: TaskChainState,
     private val achievementRepository: AchievementRepository,
+    private val scheduleAlarmManager: ScheduleAlarmManager,
 ) {
     companion object {
         private val DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
@@ -302,6 +304,10 @@ class LogExportService(
         append("RAM         : ${memoryInfo}\n")
         append("Storage     : $storageInfo\n")
         append("Battery Opt : $batteryOptimized\n")
+        append(
+            "Schedule    : alarmClock=${scheduleAlarmManager.useAlarmClock}, " +
+                    "exactAlarm=${runCatching { scheduleAlarmManager.canScheduleExact() }.getOrDefault(false)}\n"
+        )
         append("SELinux     : $selinuxMode\n")
         append(line).append("\n")
     }

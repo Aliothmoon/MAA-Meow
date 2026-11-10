@@ -18,6 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.manager.MiuiAdbInputEnabler
+import com.aliothmoon.maameow.presentation.view.panel.PanelDialogConfirmAction
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogFixAction
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogUiState
@@ -27,7 +28,7 @@ import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * 面板弹窗统一渲染；带修复动作时按「修复 > 取消 > 仍然启动」排，仍然启动只是文字按钮
+ * 面板弹窗统一渲染；带修复动作时按「修复 > 取消 > 仍然启动」排，无修复动作时按「取消 > 仍然启动」排，仍然启动只是文字按钮
  * 点外面始终按取消处理；返回键只有独立窗口的 Dialog 会响应，悬浮窗里不处理
  */
 @Composable
@@ -46,6 +47,9 @@ fun PanelPromptDialog(
     }
     val confirmText = dialog.confirmText.asString().ifBlank { stringResource(R.string.common_confirm) }
     val fix = dialog.fixAction
+    val cancelText = stringResource(R.string.common_cancel)
+    // 没有修复动作的启动警告：取消做主按钮，仍然启动降为文字按钮，免得顺手点掉
+    val cancelFirst = fix == null && dialog.confirmAction == PanelDialogConfirmAction.CONFIRM_PENDING_START
     AdaptiveTaskPromptDialog(
         visible = true,
         title = dialog.title.asString(),
@@ -53,17 +57,25 @@ fun PanelPromptDialog(
         onDismissRequest = onDismiss,
         icon = if (dialog.type == PanelDialogType.SUCCESS) Icons.Filled.CheckCircle else Icons.Filled.Warning,
         iconTint = tint,
-        confirmColor = if (fix != null) MaterialTheme.colorScheme.primary else tint,
-        confirmText = if (fix != null) stringResource(fix.labelRes) else confirmText,
-        onConfirm = if (fix != null) onFix else onConfirm,
-        neutralText = if (fix != null) stringResource(R.string.common_cancel) else null,
+        confirmColor = if (fix != null || cancelFirst) MaterialTheme.colorScheme.primary else tint,
+        confirmText = when {
+            fix != null -> stringResource(fix.labelRes)
+            cancelFirst -> cancelText
+            else -> confirmText
+        },
+        onConfirm = when {
+            fix != null -> onFix
+            cancelFirst -> onDismiss
+            else -> onConfirm
+        },
+        neutralText = if (fix != null) cancelText else null,
         onNeutralClick = onDismiss,
-        dismissText = if (fix != null) {
+        dismissText = if (fix != null || cancelFirst) {
             confirmText
         } else {
             dialog.dismissText.asString().ifBlank { stringResource(R.string.common_close) }
         },
-        onDismissClick = if (fix != null) onConfirm else null,
+        onDismissClick = if (fix != null || cancelFirst) onConfirm else null,
     )
 }
 

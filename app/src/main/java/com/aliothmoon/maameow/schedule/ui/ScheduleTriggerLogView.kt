@@ -495,7 +495,8 @@ private fun resultColor(result: ExecutionResult) = when (result) {
 
     ExecutionResult.FAILED_VALIDATION,
     ExecutionResult.FAILED_START,
-    ExecutionResult.FAILED_UI_LAUNCH -> MaterialTheme.colorScheme.error
+    ExecutionResult.FAILED_UI_LAUNCH,
+    ExecutionResult.MISSED -> MaterialTheme.colorScheme.error
 }
 
 private val dateTimeFormatter = DateTimeFormatter.ofPattern("MM-dd HH:mm:ss")

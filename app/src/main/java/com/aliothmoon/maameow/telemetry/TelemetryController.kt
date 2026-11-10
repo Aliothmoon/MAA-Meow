@@ -37,6 +37,7 @@ import io.sentry.SpanStatus
 import io.sentry.android.core.SentryAndroid
 import io.sentry.logger.SentryLogParameters
 import io.sentry.protocol.User
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -109,16 +110,25 @@ class TelemetryController(
     /** 取值不随开关变，重新初始化不必再查一遍 ActivityManager */
     private val hardware by lazy { TelemetryHardware.collect(context) }
 
+    private val configured = CompletableDeferred<Unit>()
+
+    /** 首次按开关初始化完成；之前的上报会被丢弃 */
+    suspend fun awaitConfigured() = configured.await()
+
     /** 须在设置读完盘之后调：读盘前开关还是默认值，照着初始化会绕过用户的关闭 */
     fun setup() {
         if (BuildConfig.SENTRY_DSN.isBlank()) {
             Timber.i("[telemetry] 构建未带 DSN，遥测不启用")
+            configured.complete(Unit)
             return
         }
         scope.launch {
             // 开关关着也记：用户反馈问题时可凭这行在后台按 user.id 定位
             Timber.i("[telemetry] 匿名设备 ID (Sentry user.id) = %s", TelemetryUserId.get(context))
-            settings.telemetryEnabled.collect(::reconfigure)
+            settings.telemetryEnabled.collect {
+                reconfigure(it)
+                configured.complete(Unit)
+            }
         }
         scope.launch {
             RemoteServiceManager.state
@@ -519,6 +529,7 @@ class TelemetryController(
             ExecutionResult.FAILED_START,
             ExecutionResult.FAILED_UI_LAUNCH,
             ExecutionResult.SKIPPED_LOCKED,
+            ExecutionResult.MISSED,
         )
 
         /**

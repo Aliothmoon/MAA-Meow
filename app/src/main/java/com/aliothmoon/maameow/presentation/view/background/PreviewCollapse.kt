@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
@@ -67,6 +68,19 @@ class PreviewCollapseState(private val scope: CoroutineScope) {
 
     fun toggle(reduceMotion: Boolean) = animateTo(!expanded, reduceMotion)
 
+    private var restoreOnRelease = false
+
+    /** 临时收起，释放时恢复原先的展开状态 */
+    fun holdCollapsed(hold: Boolean, reduceMotion: Boolean) {
+        if (hold) {
+            restoreOnRelease = expanded
+            if (expanded) animateTo(false, reduceMotion)
+        } else if (restoreOnRelease) {
+            restoreOnRelease = false
+            if (!expanded) animateTo(true, reduceMotion)
+        }
+    }
+
     private fun animateTo(target: Boolean, reduceMotion: Boolean) {
         expanded = target
         scope.launch { fraction.animateTo(if (target) 1f else 0f, MaaMotion.spec(reduceMotion)) }
@@ -82,6 +96,22 @@ fun Modifier.previewHeight(state: PreviewCollapseState): Modifier = layout { mea
     val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
     layout(placeable.width, height) { placeable.place(0, 0) }
 }
+
+/**
+ * 预览没停在展开位时，按收起后的最大高度测量、超出部分裁掉
+ * 缩放过程中只读位置不重测，免得保留的几个分页每帧整体重排
+ */
+fun Modifier.holdHeightWhilePreviewMoves(state: PreviewCollapseState): Modifier =
+    clipToBounds().layout { measurable, constraints ->
+        val fraction = state.fraction.value
+        val height = if (fraction >= 1f || !constraints.hasBoundedHeight) {
+            constraints.maxHeight
+        } else {
+            constraints.maxHeight + (state.rangePx * fraction).roundToInt()
+        }
+        val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
+        layout(placeable.width, constraints.maxHeight) { placeable.place(0, 0) }
+    }
 
 /** 上下拖动收起 / 展开；点击不受影响，移动超过阈值才算拖 */
 @Composable

@@ -38,6 +38,7 @@ internal fun scheduleExecutionResultLabel(result: ExecutionResult): String = whe
     ExecutionResult.SKIPPED_LOCKED -> stringResource(R.string.schedule_result_skipped_locked)
     ExecutionResult.SKIPPED_BLACKLIST -> stringResource(R.string.schedule_result_skipped_blacklist)
     ExecutionResult.CANCELLED -> stringResource(R.string.schedule_result_cancelled)
+    ExecutionResult.MISSED -> stringResource(R.string.schedule_result_missed)
 }
 
 /**

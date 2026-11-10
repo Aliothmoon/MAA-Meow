@@ -99,6 +99,7 @@
     <string name="settings_theme_white">Light</string>
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_theme_pure_dark">Pure Black</string>
+    <string name="settings_row_info">Details</string>
     <string name="settings_font_size_title">Page Scale</string>
     <string name="settings_font_size_summary">Scales the whole UI (including spacing). Auto matches typical phone width; system font size applies separately. Main app and floating panel both follow this setting.</string>
     <string name="settings_font_size_preview_text">Who are you? Please support Pallas! (\'- \' )</string>
@@ -634,8 +635,6 @@
     <string name="dialog_shizuku_need_auth_message">Shizuku is running but has not authorized MaaMeow yet. Please grant access. This prompt will keep showing until access is granted.</string>
 
     <string name="settings_section_about">About</string>
-    <string name="settings_about_version">Version</string>
-    <string name="settings_about_developer">Developer</string>
     <string name="settings_about_faq_title">FAQ</string>
     <string name="settings_about_faq_desc">Check here first; most common issues already have answers</string>
     <string name="settings_about_feedback_title">Report an Issue</string>
@@ -643,7 +642,7 @@
     <string name="settings_about_qq_group_title">QQ Group</string>
     <string name="settings_about_qq_group_desc">Join the QQ group to chat with other users</string>
     <string name="settings_about_changelog">Changelog</string>
-    <string name="settings_about_changelog_empty">No changelog yet. After you update to a new version from within the app, the release notes for that version are kept here.</string>
+    <string name="settings_about_changelog_empty">No changelog yet. Once an update check finds a new version, its release notes are kept here.</string>
     <string name="settings_about_announcement">View Announcement</string>
     <string name="settings_about_onboarding">Getting Started</string>
     <string name="settings_about_onboarding_desc">Replay the walkthrough of the app\'s key areas</string>
@@ -1005,6 +1004,15 @@
     <string name="copilot_search_pick">Use</string>
     <string name="copilot_search_load_more">Load more</string>
     <string name="copilot_search_empty">No copilots found</string>
+    <string name="copilot_match_toggle">Match operators</string>
+    <string name="copilot_match_ready">Ready</string>
+    <string name="copilot_match_borrow">Borrow</string>
+    <string name="copilot_match_train">Train</string>
+    <string name="copilot_match_blocked">Missing</string>
+    <string name="copilot_match_partial">Recognized operator data has no skills or modules; matching by promotion and level only</string>
+    <string name="copilot_match_hidden">Hidden by operator match: %1$d</string>
+    <string name="copilot_match_missing">Not owned: %1$s</string>
+    <string name="copilot_match_training">Under-trained: %1$s</string>
     <string name="copilot_search_added_list">Added copilots</string>
     <string name="copilot_search_tab_copilot">Copilots</string>
     <string name="copilot_search_tab_set">Copilot sets</string>
@@ -1391,8 +1399,8 @@
     <string name="mini_game_tip_pixel_paint">Pick an image and tune it below, then stay on the in-game pixel art editor before starting</string>
     <string name="mini_game_name_pv">PV - Fireworks Organizing Committee</string>
     <string name="mini_game_tip_pv">Automatically clear from the selected stage. If you choose the first stage, start from the leftmost side of the event page; for other stages, enter the previous stage and then return to calibrate the position.</string>
-    <string name="mini_game_name_spa">Stronghold Protocol: Alliance</string>
-    <string name="mini_game_tip_spa">Start the task from the main event screen (where ｢Solo Simulation｣ is located)\nIf there is a saved game, you need to manually abandon it first\nOnly tested up to ｢Perilous Simulation｣\nIf higher difficulties have been cleared and ｢Perilous Simulation｣ or ｢Standard Simulation｣ is not visible, manually select ｢Perilous Simulation｣ difficulty once\nCompleting ｢Standard Simulation｣ manually allows faster score farming\nOnly level rewards can be farmed; to get the Engraved Medal, all ｢Key Objectives｣ must be completed</string>
+    <string name="mini_game_name_spa">Stronghold Protocol</string>
+    <string name="mini_game_tip_spa">Start the task from the main event screen (where ｢Express Simulation｣ is located)\nDefault outfits must be used\nIf there is a saved game, you need to manually abandon it first\nOnly level rewards can be farmed; to get the Engraved Medal, all ｢Key Objectives｣ must be completed</string>
     <string name="mini_game_name_os">OS-Karlan Trade R&amp;D</string>
     <string name="mini_game_tip_os">Start the task at the main minigame interface (where the \";START\"; button is in the left bottom corner).</string>
     <string name="mini_game_name_rm_tr_1">Rebuilding Mandate RM-TR-1</string>
@@ -2065,6 +2073,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_exact_alarm_blocked">Exact alarms are not allowed</string>
     <string name="schedule_exact_alarm_hint">Schedules cannot trigger until exact alarms are allowed. Scheduling resumes automatically after permission is granted</string>
     <string name="schedule_log_data_unavailable">Schedule configuration is temporarily unavailable</string>
+    <string name="schedule_log_missed_not_woken">Not woken by the system on time (%1$s): the app may have been killed by battery saving or background restrictions; allow auto-start and background activity</string>
+    <string name="schedule_log_missed_rebooted">Not run (%1$s): the device was powered off or restarted since then, possibly off at the scheduled time</string>
     <string name="schedule_log_service_start_failed">Failed to start foreground service: %1$s</string>
     <string name="schedule_log_app_init_failed">App initialization failed: %1$s</string>
     <string name="schedule_exact_alarm_settings">Exact alarm settings</string>
@@ -2202,10 +2212,11 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_result_failed_validation">Validation failed</string>
     <string name="schedule_result_failed_start">Start failed</string>
     <string name="schedule_result_failed_ui_launch">UI launch failed</string>
-    <string name="schedule_result_skipped_busy">System busy</string>
+    <string name="schedule_result_skipped_busy">Task already running</string>
     <string name="schedule_result_skipped_locked">Skipped while locked</string>
     <string name="schedule_result_skipped_blacklist">Skipped by blacklist</string>
     <string name="schedule_result_cancelled">Cancelled</string>
+    <string name="schedule_result_missed">Missed</string>
     <string name="schedule_interval_every_days_hours">Every %1$d day(s) %2$d hour(s)</string>
     <string name="schedule_interval_every_days">Every %1$d day(s)</string>
     <string name="schedule_interval_every_hours">Every %1$d hour(s)</string>
@@ -2996,6 +3007,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="panel_task_type_switch_theme">Switch Theme</string>
     <string name="maa_switch_theme">Switch Theme</string>
     <string name="maa_switch_theme_skipped">No theme candidates configured; skipping game theme switch</string>
+    <string name="maa_annihilation_entry_not_found">Annihilation entry not found in the Terminal to-do list, possibly already completed this week. Skipped Annihilation</string>
     <string name="maa_switch_theme_succeeded">Game theme switched to: %1$s</string>
     <string name="maa_switch_theme_already_set">Theme already set: %1$s</string>
     <string name="maa_switch_theme_locked">Theme is locked: %1$s</string>

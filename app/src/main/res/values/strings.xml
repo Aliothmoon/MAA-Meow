@@ -351,6 +351,7 @@
     <string name="settings_theme_white">白色</string>
     <string name="settings_theme_dark">暗色</string>
     <string name="settings_theme_pure_dark">纯黑</string>
+    <string name="settings_row_info">说明</string>
     <string name="settings_font_size_title">页面缩放</string>
     <string name="settings_font_size_summary">调整界面整体大小（含间距）。自动按屏幕宽度对齐常见手机尺寸，系统字体单独生效。主界面与悬浮窗均跟随此设置。</string>
     <string name="settings_font_size_preview_text">你是谁？请支持牛牛！(\'- \' )</string>
@@ -894,8 +895,6 @@
 
     <!-- settings: about section -->
     <string name="settings_section_about">关于</string>
-    <string name="settings_about_version">版本</string>
-    <string name="settings_about_developer">开发者</string>
     <string name="settings_about_faq_title">常见问题</string>
     <string name="settings_about_faq_desc">遇到问题先看这里，多数问题都有现成解答</string>
     <string name="settings_about_feedback_title">问题反馈</string>
@@ -903,7 +902,7 @@
     <string name="settings_about_qq_group_title">QQ 群</string>
     <string name="settings_about_qq_group_desc">欢迎加群交流</string>
     <string name="settings_about_changelog">更新日志</string>
-    <string name="settings_about_changelog_empty">暂无更新日志。应用内更新到新版本后，这里会留档当前版本的更新说明</string>
+    <string name="settings_about_changelog_empty">暂无更新日志。检查到新版本后，这里会留档它的更新说明</string>
     <string name="settings_about_announcement">查看公告</string>
     <string name="settings_about_onboarding">新手引导</string>
     <string name="settings_about_onboarding_desc">重新查看应用各区域的功能介绍</string>
@@ -1060,6 +1059,15 @@
     <string name="copilot_search_pick">使用</string>
     <string name="copilot_search_load_more">加载更多</string>
     <string name="copilot_search_empty">没有找到作业</string>
+    <string name="copilot_match_toggle">匹配干员</string>
+    <string name="copilot_match_ready">可直接打</string>
+    <string name="copilot_match_borrow">需借干员</string>
+    <string name="copilot_match_train">练度不足</string>
+    <string name="copilot_match_blocked">缺干员</string>
+    <string name="copilot_match_partial">干员识别数据不含技能与模组，只按精英化与等级匹配</string>
+    <string name="copilot_match_hidden">已按干员匹配隐藏 %1$d 个作业</string>
+    <string name="copilot_match_missing">未拥有：%1$s</string>
+    <string name="copilot_match_training">练度不足：%1$s</string>
     <string name="copilot_search_added_list">已添加作业</string>
     <string name="copilot_search_tab_copilot">作业</string>
     <string name="copilot_search_tab_set">作业集</string>
@@ -1446,8 +1454,8 @@
     <string name="mini_game_tip_pixel_paint">先在下方选好图片并调参，然后停在游戏的像素画编辑页再开始</string>
     <string name="mini_game_name_pv">PV-烟花筹委会</string>
     <string name="mini_game_tip_pv">从所选关卡开始并自动通关。若选择第一关，则从活动页最左侧开始；若选择其他关卡，请先进入上一关再返回以校准位置。</string>
-    <string name="mini_game_name_spa">卫戍协议：盟约</string>
-    <string name="mini_game_tip_spa">在活动主界面（有 ｢独立模拟｣ 处开始任务）\n在有存档时需要先手动放弃\n最高只测试过 ｢险境模拟｣\n如果已通关更高难度导致看不到 ｢险境模拟｣ 或 ｢标准模拟｣，需手动选择一次 ｢险境模拟｣ 难度\n手动通关 ｢标准模拟｣ 可以更快的刷分\n只能刷等级奖励，拿蚀刻章得打完所有的 ｢关键目标｣</string>
+    <string name="mini_game_name_spa">卫戍协议</string>
+    <string name="mini_game_tip_spa">在活动主界面（有 ｢极速模拟｣ 处）开始任务\n需要使用默认皮肤\n在有存档时需要先手动放弃\n只能刷等级奖励，拿蚀刻章得打完所有的 ｢关键目标｣</string>
     <string name="mini_game_name_os">OS-喀兰贸易技术研发部</string>
     <string name="mini_game_tip_os">在活动主界面（右下角有 ｢开始重建｣ 处）开始任务。</string>
     <string name="mini_game_name_rm_tr_1">次生预案 RM-TR-1</string>
@@ -2122,6 +2130,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_exact_alarm_blocked">系统未允许精确闹钟</string>
     <string name="schedule_exact_alarm_hint">定时任务暂无法触发，请允许精确闹钟，授权后自动恢复调度</string>
     <string name="schedule_log_data_unavailable">定时配置暂时无法读取</string>
+    <string name="schedule_log_missed_not_woken">未被系统按时唤起（%1$s）：应用可能被省电或后台管控清理，请允许自启动与后台高耗电</string>
+    <string name="schedule_log_missed_rebooted">未执行（%1$s）：此后设备关机或重启过，可能到点时处于关机状态</string>
     <string name="schedule_log_service_start_failed">前台服务启动失败：%1$s</string>
     <string name="schedule_log_app_init_failed">应用初始化失败：%1$s</string>
     <string name="schedule_exact_alarm_settings">精确闹钟设置</string>
@@ -2259,10 +2269,11 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_result_failed_validation">校验失败</string>
     <string name="schedule_result_failed_start">启动失败</string>
     <string name="schedule_result_failed_ui_launch">拉起界面失败</string>
-    <string name="schedule_result_skipped_busy">系统繁忙</string>
+    <string name="schedule_result_skipped_busy">已有任务在运行</string>
     <string name="schedule_result_skipped_locked">锁屏跳过</string>
     <string name="schedule_result_skipped_blacklist">黑名单跳过</string>
     <string name="schedule_result_cancelled">已取消</string>
+    <string name="schedule_result_missed">未触发</string>
     <string name="schedule_interval_every_days_hours">每 %1$d 天 %2$d 小时</string>
     <string name="schedule_interval_every_days">每 %1$d 天</string>
     <string name="schedule_interval_every_hours">每 %1$d 小时</string>
@@ -3054,6 +3065,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="panel_task_type_switch_theme">更换主题</string>
     <string name="maa_switch_theme">更换主题</string>
     <string name="maa_switch_theme_skipped">未配置候选主题，跳过更换游戏主题</string>
+    <string name="maa_annihilation_entry_not_found">未在终端待办中找到剿灭入口，可能本周剿灭已完成，跳过剿灭</string>
     <string name="maa_switch_theme_succeeded">已更换游戏主题：%1$s</string>
     <string name="maa_switch_theme_already_set">当前已是主题：%1$s</string>
     <string name="maa_switch_theme_locked">主题尚未解锁：%1$s</string>

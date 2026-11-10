@@ -42,6 +42,9 @@ class ScheduleReceiver : BroadcastReceiver() {
             delayMs,
             retryCount,
         )
+        // 抢在启动时的重排之前落盘，否则晚到的投递会被当成漏触发
+        runCatching { GlobalContext.get().get<ScheduleAlarmManager>().markFired(strategyId, scheduledTime) }
+            .onFailure { Timber.w(it, "markFired failed: %s", strategyId) }
         val serviceIntent = Intent().apply {
             setClassName(context, EXECUTION_SERVICE_CLASS)
             action = ScheduleAlarmManager.ACTION_SCHEDULE_TRIGGER
@@ -78,7 +81,6 @@ class ScheduleReceiver : BroadcastReceiver() {
                     }
                     if (strategy != null && strategy.enabled) {
                         // 先续排，结果写盘失败也不丢闹钟
-                        alarmManager.markFired(strategy.id, scheduledTime)
                         alarmManager.scheduleNext(strategy, scheduledTime)
                         failureReporter.report(
                             strategyId = strategyId,

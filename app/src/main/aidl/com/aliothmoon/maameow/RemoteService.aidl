@@ -149,4 +149,7 @@ interface RemoteService {
 
     // 不跑任务单独拉起游戏，后台模式需先建好虚拟屏
     boolean launchGame(String packageName) = 61;
+
+    // 只在任务期间开，否则共用主屏组时主屏无法息屏
+    void setUserActivityKeepAlive(boolean enabled) = 62;
 }

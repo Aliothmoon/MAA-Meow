@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.presentation.view.panel
 import android.icu.text.CompactDecimalFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -41,6 +43,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LeadingIconTab
@@ -86,10 +89,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.model.LogColorRole
 import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
 import com.aliothmoon.maameow.data.resource.CharacterInfo
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.CopilotSetInfo
+import com.aliothmoon.maameow.domain.service.OperatorMatch
+import com.aliothmoon.maameow.domain.service.OperatorMatchMode
 import com.aliothmoon.maameow.domain.service.OperatorSummaryData
 import com.aliothmoon.maameow.presentation.components.ISearchField
 import com.aliothmoon.maameow.presentation.components.InlineConfirmPanel
@@ -103,9 +109,11 @@ import com.aliothmoon.maameow.presentation.viewmodel.CopilotSearchViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotSetSearchUiState
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotTabs
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotUiState
+import com.aliothmoon.maameow.presentation.viewmodel.OperatorMatchFilter
 import com.aliothmoon.maameow.presentation.viewmodel.SearchResults
 import com.aliothmoon.maameow.presentation.viewmodel.StageSuggestion
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
+import com.aliothmoon.maameow.theme.themedColor
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.asString
@@ -168,6 +176,7 @@ internal fun CopilotSearchSheet(
         val characters = remember(item.summary, nameIndex) { resourceDataManager.charactersOf(item.summary) }
         CopilotSearchRow(
             item = item,
+            match = item.match.takeIf { state.matchFilter.active },
             characters = characters,
             countFormat = countFormat,
             listMode = listMode,
@@ -320,13 +329,31 @@ private fun LazyListScope.copilotResults(
             if (state.suggestions.isNotEmpty()) {
                 StageSuggestions(state.suggestions, onPick = viewModel::onPickStage)
             }
+            if (state.matchFilter.available) {
+                MatchFilterBar(
+                    filter = state.matchFilter,
+                    onToggle = viewModel::onToggleMatch,
+                    onToggleMode = viewModel::onToggleMatchMode,
+                )
+            }
         }
     }
     val results = state.results
+    val shown = state.shownItems
     errorItem(results.error)
-    items(results.items, key = { it.id }) { item -> copilotRow(item, staleAlpha(results.refreshing)) }
+    items(shown, key = { it.id }) { item -> copilotRow(item, staleAlpha(results.refreshing)) }
     item(key = "footer") {
-        ListFooter(results, stringResource(R.string.copilot_search_empty), viewModel::onLoadMore)
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+            val hidden = results.items.size - shown.size
+            if (hidden > 0) {
+                Text(
+                    text = stringResource(R.string.copilot_match_hidden, hidden),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            ListFooter(results, stringResource(R.string.copilot_search_empty), viewModel::onLoadMore)
+        }
     }
 }
 
@@ -447,7 +474,7 @@ private fun ListFooter(results: SearchResults<*>, emptyText: String, onLoadMore:
         verticalAlignment = Alignment.CenterVertically
     ) {
         when {
-            results.hasNext && failed -> TextButton(onClick = onLoadMore) {
+            results.hasNext && (failed || results.paused) -> TextButton(onClick = onLoadMore) {
                 Text(stringResource(R.string.copilot_search_load_more))
             }
 
@@ -464,6 +491,75 @@ private fun ListFooter(results: SearchResults<*>, emptyText: String, onLoadMore:
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+@Composable
+private fun MatchFilterBar(
+    filter: OperatorMatchFilter,
+    onToggle: (Boolean) -> Unit,
+    onToggleMode: (OperatorMatchMode) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+        ) {
+            FilterChip(
+                selected = filter.enabled,
+                onClick = { onToggle(!filter.enabled) },
+                label = { Text(stringResource(R.string.copilot_match_toggle), style = MaterialTheme.typography.bodySmall) },
+                leadingIcon = checkIconIf(filter.enabled),
+            )
+            OperatorMatchMode.entries.forEach { mode ->
+                val selected = mode in filter.modes
+                FilterChip(
+                    selected = selected,
+                    enabled = filter.enabled,
+                    onClick = { onToggleMode(mode) },
+                    label = { Text(stringResource(mode.labelRes), style = MaterialTheme.typography.bodySmall) },
+                    leadingIcon = checkIconIf(selected),
+                )
+            }
+        }
+        if (filter.enabled && filter.partial) {
+            Text(
+                text = stringResource(R.string.copilot_match_partial),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+private fun checkIconIf(checked: Boolean): (@Composable () -> Unit)? = if (checked) {
+    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+} else null
+
+private val OperatorMatchMode.labelRes: Int
+    get() = when (this) {
+        OperatorMatchMode.READY -> R.string.copilot_match_ready
+        OperatorMatchMode.BORROW -> R.string.copilot_match_borrow
+        OperatorMatchMode.TRAIN -> R.string.copilot_match_train
+        OperatorMatchMode.BLOCKED -> R.string.copilot_match_blocked
+    }
+
+@Composable
+private fun MatchBadge(mode: OperatorMatchMode) {
+    val color = when (mode) {
+        OperatorMatchMode.READY -> LogColorRole.SUCCESS
+        OperatorMatchMode.BORROW -> LogColorRole.INFO
+        OperatorMatchMode.TRAIN -> LogColorRole.WARNING
+        OperatorMatchMode.BLOCKED -> LogColorRole.ERROR
+    }.themedColor()
+    Surface(shape = RoundedCornerShape(4.dp), color = color.copy(alpha = 0.14f), contentColor = color) {
+        Text(
+            text = stringResource(mode.labelRes),
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+        )
     }
 }
 
@@ -809,6 +905,7 @@ private fun SetRow(
 @Composable
 private fun CopilotSearchRow(
     item: CopilotSearchItem,
+    match: OperatorMatch?,
     characters: Map<String, CharacterInfo?>,
     countFormat: CompactDecimalFormat,
     listMode: Boolean,
@@ -824,6 +921,7 @@ private fun CopilotSearchRow(
     val removeLabel = stringResource(R.string.common_delete)
     val addedLabel = stringResource(R.string.copilot_search_added)
     val stageLabel = item.stageLabel.asString()
+    val matchLabel = match?.let { stringResource(it.mode.labelRes) }.orEmpty()
     val currentOnPick by rememberUpdatedState(onPick)
     val currentOnRemove by rememberUpdatedState(onRemove)
     Column(
@@ -839,7 +937,7 @@ private fun CopilotSearchRow(
                 .fillMaxWidth()
                 .clickable(onClickLabel = toggleLabel) { expanded = !expanded }
                 .clearAndSetSemantics {
-                    contentDescription = "$stageLabel ${item.title}"
+                    contentDescription = "$stageLabel ${item.title} $matchLabel".trim()
                     if (added) stateDescription = addedLabel
                     onClick(label = toggleLabel) { expanded = !expanded; true }
                     customActions = listOf(
@@ -852,7 +950,8 @@ private fun CopilotSearchRow(
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Surface(
                         shape = RoundedCornerShape(4.dp),
@@ -872,8 +971,14 @@ private fun CopilotSearchRow(
                             text = item.title,
                             style = MaterialTheme.typography.bodyMedium,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            // 有标签时占满，把标签推到行尾
+                            modifier = Modifier.weight(1f, fill = match != null)
                         )
+                    }
+                    if (match != null) {
+                        if (item.title.isBlank()) Spacer(modifier = Modifier.weight(1f))
+                        MatchBadge(match.mode)
                     }
                 }
                 Row(
@@ -922,17 +1027,29 @@ private fun CopilotSearchRow(
             }
         }
         MaaAnimatedVisibility(visible = expanded) {
-            CopilotRowDetails(item, characters)
+            CopilotRowDetails(item, match, characters)
         }
     }
 }
 
 @Composable
-private fun CopilotRowDetails(item: CopilotSearchItem, characters: Map<String, CharacterInfo?>) {
+private fun CopilotRowDetails(
+    item: CopilotSearchItem,
+    match: OperatorMatch?,
+    characters: Map<String, CharacterInfo?>,
+) {
     Column(
         modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
+        if (match != null) {
+            if (match.missing.isNotEmpty()) {
+                MatchGap(stringResource(R.string.copilot_match_missing, match.missing.joinToString(" / ")))
+            }
+            if (match.training.isNotEmpty()) {
+                MatchGap(stringResource(R.string.copilot_match_training, match.training.joinToString(" / ")))
+            }
+        }
         if (item.details.isNotBlank()) CopilotDetails(item.details)
         if (item.summary.operators.isNotEmpty()) {
             OperatorGrid { OperatorCells(item.summary.operators, characters) }
@@ -941,6 +1058,15 @@ private fun CopilotRowDetails(item: CopilotSearchItem, characters: Map<String, C
             OperatorGroup(name, opers, characters)
         }
     }
+}
+
+@Composable
+private fun MatchGap(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.error
+    )
 }
 
 /** 一行放不下就截断，末尾补 +N */
