@@ -19,7 +19,6 @@ import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.INumericField
 import com.aliothmoon.maameow.presentation.view.panel.common.GroupedStageButtonGroup
-import com.aliothmoon.maameow.presentation.view.panel.common.ItemButtonGroup
 import com.aliothmoon.maameow.presentation.view.panel.common.StageInputField
 import com.aliothmoon.maameow.presentation.view.panel.common.StageRow
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
@@ -65,8 +64,11 @@ internal fun rememberDepotItemIds(itemHelper: ItemHelper): List<String> {
 }
 
 /**
- * 一条库存保持计划的可编辑字段：关卡（列表 / 自定义代码）、物品、目标数量、
- * 按期望掉率刷取，以及由调用方决定要不要露出来的理智药与源石。
+ * 一条库存保持计划的可编辑字段：关卡（列表 / 自定义代码）、目标数量，
+ * 以及由调用方决定要不要露出来的理智药与源石。
+ *
+ * 物品**不在这里选**：计划总是从某个物品点开的（物品网格的一格、列表的一行），
+ * 物品种类由入口决定。老计划里残留的其它 dropId 照样显示、照样能保存，只是不能换成另一种物品。
  *
  * 任务配置页的展开卡和库存数据页的底部面板共用这一份，免得两边的字段、上下限、
  * 关卡过滤各写一套。
@@ -77,7 +79,6 @@ internal fun rememberDepotItemIds(itemHelper: ItemHelper): List<String> {
  * 所有输入都走 [INumericField] / [StageInputField] 的 `commitOnChange`：面板里有「保存」
  * 按钮，只靠失焦提交的话，用户敲完直接点保存，写下去的还是上一次的值。
  *
- * @param itemIds null = 不显示物品选择（库存页的物品由点开的格子定死）
  * @param showStageListWithCustom true = 选了自定义关卡也保留关卡列表，方便再点回列表里的关卡
  * @param onStageSelected 从关卡列表里点了某一关；默认写回 [onPlanChange]，
  *   库存页用它顺手退出自定义态
@@ -94,8 +95,6 @@ internal fun DepotPlanFields(
     modifier: Modifier = Modifier,
     showMedicine: Boolean = false,
     showStone: Boolean = false,
-    itemIds: List<String>? = null,
-    itemNameMap: Map<String, String> = emptyMap(),
     showStageListWithCustom: Boolean = false,
     onStageSelected: ((String) -> Unit)? = null,
     onTargetBlankChange: ((Boolean) -> Unit)? = null,
@@ -132,16 +131,6 @@ internal fun DepotPlanFields(
                     modifier = Modifier.weight(1f),
                 )
             }
-        }
-
-        itemIds?.let { ids ->
-            ItemButtonGroup(
-                label = stringResource(R.string.panel_fight_material),
-                selectedValue = plan.dropId,
-                items = ids,
-                onItemSelected = { onPlanChange(plan.copy(dropId = it)) },
-                displayMapper = { id -> itemNameMap[id] ?: id },
-            )
         }
 
         INumericField(

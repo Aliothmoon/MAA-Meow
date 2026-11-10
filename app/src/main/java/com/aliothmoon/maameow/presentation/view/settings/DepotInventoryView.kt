@@ -870,10 +870,7 @@ private fun DepotProfileDetailView(
                 // 已有计划就跟着它所属节点的开关走，新计划才用「第一个库存保持节点」的状态
                 context = cell.plan?.node ?: planContext,
                 synced = synced,
-                // 这一页的物品由点开的格子定死，不给换
-                allowItemPick = false,
-                // 换物品后缺口按「该物品」的库存算：库存页里的格子已含双芯片折算，
-                // 与任务面板保持同一口径
+                // 缺口按「该物品」的库存算：库存页里的格子已含双芯片折算，与任务面板同一口径
                 countOf = { id -> cells.firstOrNull { it.id == id }?.count ?: cell.count },
                 onDismiss = { planSheetCellKey = null },
                 // 用点开时那一格上的计划当写回落点，不回查派生流

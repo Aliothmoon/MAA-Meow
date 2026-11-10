@@ -81,14 +81,12 @@ import org.koin.compose.koinInject
 private enum class DepotPlanSheetMode { UNSUPPORTED, SUMMARY, EDITOR }
 
 /**
- * @param itemId 要配的物品；空串 = 还没选物品（老配置里「添加计划」留下的空行），
- *   这时必须放开物品选择，否则那条计划在这里就永远配不上物品
+ * @param itemId 要配的物品；空串 = 老配置里「添加计划」留下的空行。面板里不提供物品选择，
+ *   这种行只能删掉（它本来也跑不起来，dropId 空会被执行侧拒掉）
  * @param itemName 物品名，调用方解析好（认不出来的按「未选择」兜底）
  * @param count 该物品当前的库存数量
  * @param existing 这个物品已有的计划；null = 还没有，先出一张摘要卡再进表单
  * @param existingOutcome 已有计划在本次运行里的去向，用来提示「配了也跑不起来」；null = 没有计划
- * @param allowItemPick 面板里能不能换物品。任务配置页可以（一条计划换物品是常事），
- *   库存数据页不行 —— 那里的物品由点开的格子定死
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,15 +95,14 @@ internal fun DepotPlanEditorSheet(
     itemName: String,
     count: Int,
     /**
-     * 按物品 id 取当前库存：换物品之后要按新物品的数重算，
-     * 不能继续用「点开那一格」的数量（默认仍返回 [count]，兼容只传数量的调用方）。
+     * 按物品 id 取当前库存：老计划里的 dropId 与点开的那一行不一定相同（历史数据、导入的配置），
+     * 「现在有多少」要按计划自己的 dropId 取；默认仍返回 [count]，兼容只传数量的调用方。
      */
     countOf: (String) -> Int = { count },
     existing: DepotMaintainPlan?,
     existingOutcome: DepotPlanOutcome?,
     context: DepotPlanContext,
     synced: Boolean,
-    allowItemPick: Boolean,
     showMedicine: Boolean = false,
     showStone: Boolean = false,
     onDismiss: () -> Unit,
@@ -339,9 +336,7 @@ internal fun DepotPlanEditorSheet(
                                 draft = draft.copy(stage = it)
                                 customStage = false
                             },
-                            // 物品定死的那几处不传，选择器就不出现
-                            itemIds = itemIds.takeIf { allowItemPick },
-                            itemNameMap = itemNameMap,
+                            // 物品种类由入口定死（点开的格子 / 那一行），表单里不再出选择器
                             // 药/石是任务级选项：任务配置页逐条给开关，库存数据页不给
                             showMedicine = showMedicine,
                             showStone = showStone,

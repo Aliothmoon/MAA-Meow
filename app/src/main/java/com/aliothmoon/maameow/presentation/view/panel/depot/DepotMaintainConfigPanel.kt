@@ -279,14 +279,12 @@ fun DepotMaintainConfigPanel(
             itemName = target.itemName,
             // 与概览同一口径：勾了双芯片折算的档，这里显示的「现在有多少」也跟着折算
             count = effectiveInventory[target.itemId] ?: 0,
-            // 这一页能换物品，换完要按新物品的库存重算进度与缺口
+            // 计划里的 dropId 与点开的那一行不一定相同（历史数据/导入），按它自己取库存
             countOf = { id -> effectiveInventory[id] ?: 0 },
             existing = index?.let { config.plans.getOrNull(it) },
             existingOutcome = index?.let { planOutcomes.getOrNull(it) },
             context = DepotPlanContext(nodeEnabled = nodeEnabled),
             synced = snapshot.hasSynced,
-            // 任务配置页可以换物品：老配置里「添加计划」留下的空行，就是靠这里补上物品的
-            allowItemPick = true,
             showMedicine = config.useMedicine,
             showStone = config.useStone,
             onDismiss = { sheetTarget = null },
