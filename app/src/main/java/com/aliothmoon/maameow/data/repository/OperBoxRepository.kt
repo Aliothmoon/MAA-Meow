@@ -51,8 +51,9 @@ class OperBoxRepository(
 
     fun start() = shards.start()
 
-    fun set(owned: List<OperBoxOperator>, notOwned: List<OperBoxOperator>) {
-        shards.mutate {
+    /** [profileId] 为空写活跃档 */
+    fun set(owned: List<OperBoxOperator>, notOwned: List<OperBoxOperator>, profileId: String? = null) {
+        val transform = { _: OperBoxSnapshot ->
             OperBoxSnapshot(
                 owned = owned,
                 notOwned = notOwned,
@@ -60,6 +61,7 @@ class OperBoxRepository(
                 version = OperBoxSnapshot.CURRENT_VERSION,
             )
         }
+        if (profileId == null) shards.mutate(transform) else shards.mutate(profileId, transform)
     }
 
     /** 清空指定配置档干员快照（库存页删除；非活跃档也能清）。 */

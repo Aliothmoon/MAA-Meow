@@ -11,6 +11,7 @@ class MaaCallbackDispatcherSetParamsErrorTest {
     private val errors = SetParamsErrorSignal()
     private val subTaskHandler = mockk<SubTaskHandler>(relaxed = true)
     private val dispatcher = MaaCallbackDispatcher(
+        applicationContext = mockk(relaxed = true),
         sessionLogger = mockk(relaxed = true),
         stateHolder = mockk(relaxed = true),
         connectionInfoHandler = mockk(relaxed = true),

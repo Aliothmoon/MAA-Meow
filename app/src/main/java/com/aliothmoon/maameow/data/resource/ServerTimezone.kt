@@ -52,20 +52,4 @@ object ServerTimezone {
      * see WPF DateTimeExtension.ToYjDate
      */
     fun getYjDate(clientType: String): LocalDate = yjNow(clientType).toLocalDate()
-
-    /**
-     * 获取指定客户端类型的鹰角历星期几（字符串资源）
-     */
-    @StringRes
-    fun getYjDayOfWeekRes(clientType: String): Int {
-        return when (getYjDayOfWeek(clientType)) {
-            DayOfWeek.MONDAY -> R.string.panel_fight_weekday_monday
-            DayOfWeek.TUESDAY -> R.string.panel_fight_weekday_tuesday
-            DayOfWeek.WEDNESDAY -> R.string.panel_fight_weekday_wednesday
-            DayOfWeek.THURSDAY -> R.string.panel_fight_weekday_thursday
-            DayOfWeek.FRIDAY -> R.string.panel_fight_weekday_friday
-            DayOfWeek.SATURDAY -> R.string.panel_fight_weekday_saturday
-            DayOfWeek.SUNDAY -> R.string.panel_fight_weekday_sunday
-        }
-    }
 }

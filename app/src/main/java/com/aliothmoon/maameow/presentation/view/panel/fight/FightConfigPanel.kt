@@ -104,8 +104,10 @@ fun FightConfigPanel(
             hasSyncedInventory = depotSnapshot.hasSynced
         )
     }
-    val todayNameRes = remember(activityStages) { activityManager.getYjDayOfWeekRes() }
-    val todayName = stringResource(todayNameRes)
+    val resourceCollectionTipShown = remember(activityStages, resourceCollectionInfo) {
+        activityManager.isResourceCollectionTipShown()
+    }
+    val todayName = remember(activityStages) { activityManager.getYjDayOfWeekName() }
 
     // 分组列表 -- 依赖 hideUnavailableStage 和活动关卡数据
     val stageGroups = remember(activityStages, config.hideUnavailableStage) {
@@ -209,6 +211,7 @@ fun FightConfigPanel(
                             TodayStagesHint(
                                 stageGroups = stageGroups,
                                 isResourceCollectionOpen = isResourceCollectionOpen,
+                                resourceCollectionTipShown = resourceCollectionTipShown,
                                 stageTips = stageTips,
                                 todayName = todayName
                             )
@@ -472,11 +475,11 @@ private fun SeriesSection(
             verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            UiUsageConstants.seriesOptions.forEach { (value, label) ->
-                val displayLabel = if (value == -1) {
-                    stringResource(R.string.panel_fight_series_no_switch)
-                } else {
-                    label
+            UiUsageConstants.seriesOptions.forEach { value ->
+                val displayLabel = when (value) {
+                    -1 -> stringResource(R.string.panel_fight_series_no_switch)
+                    0 -> "AUTO"
+                    else -> value.toString()
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

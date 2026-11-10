@@ -105,4 +105,13 @@ object StageAliasMapper {
     fun isKnownAlias(input: String): Boolean {
         return stageAliases.containsKey(input) || stageAliases.containsKey(input.uppercase())
     }
+
+    /**
+     * 获取所有已知别名列表（用于UI提示）
+     */
+    fun getKnownAliases(): List<Pair<String, String>> {
+        return stageAliases.entries
+            .distinctBy { it.value }  // 去重相同目标
+            .map { it.key to it.value }
+    }
 }

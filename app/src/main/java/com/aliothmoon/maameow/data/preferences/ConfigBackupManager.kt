@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.data.preferences
 
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
 import com.aliothmoon.maameow.data.model.InfrastConfig
 import com.aliothmoon.maameow.data.model.TaskProfile
@@ -12,6 +13,8 @@ import com.aliothmoon.maameow.domain.models.AppSettings
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
 import com.aliothmoon.maameow.utils.JsonUtils
+import com.aliothmoon.maameow.utils.i18n.LocalizedException
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import com.aliothmoon.maameow.utils.readTextAtMost
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -61,8 +64,10 @@ class ConfigBackupManager(
     suspend fun importFrom(inputStream: InputStream) = withContext(Dispatchers.IO) {
         val content = inputStream.use { it.readTextAtMost(MAX_IMPORT_BYTES) }
         val backup = json.decodeFromString(ConfigBackup.serializer(), content)
-        require(backup.version <= CURRENT_VERSION) {
-            "不支持的备份版本: ${backup.version}，当前最高支持: $CURRENT_VERSION"
+        if (backup.version > CURRENT_VERSION) {
+            throw LocalizedException(
+                uiTextOf(R.string.settings_import_unsupported_version, backup.version, CURRENT_VERSION)
+            )
         }
         // 自定义背景的开关与令牌指向本机文件，导入其他设备的配置时保留本机值。
         // 遥测开关是本机用户自己的选择，别人的备份（或没这个字段的旧备份）不能替他打开
@@ -102,6 +107,7 @@ class ConfigBackupManager(
             mirrorChyanCdkExpiresAt = "0",
             wakeCredential = "",
             yituliuOpenApiToken = "",
+            yituliuTokenPerProfile = "false",
             operBoxUseYituliuApi = "false",
             operBoxAssistEnabled = "false",
             customBackgroundEnabled = "false",
@@ -146,7 +152,7 @@ class ConfigBackupManager(
 
 /**
  * 导出时剥离的凭证连同配套开关沿用本机值，备份里是空的，直接覆盖会清掉本机已填的
- * 解锁方式与 PIN 对应本机锁屏；一图流两个开关依赖 Token
+ * 解锁方式与 PIN 对应本机锁屏；一图流开关依赖 Token，按配置的 Token 不进备份
  */
 internal fun AppSettings.withLocalCredentials(local: AppSettings) = copy(
     mirrorChyanCdk = local.mirrorChyanCdk,
@@ -154,6 +160,7 @@ internal fun AppSettings.withLocalCredentials(local: AppSettings) = copy(
     wakeUnlockType = local.wakeUnlockType,
     wakeCredential = local.wakeCredential,
     yituliuOpenApiToken = local.yituliuOpenApiToken,
+    yituliuTokenPerProfile = local.yituliuTokenPerProfile,
     operBoxUseYituliuApi = local.operBoxUseYituliuApi,
     operBoxAssistEnabled = local.operBoxAssistEnabled,
 )

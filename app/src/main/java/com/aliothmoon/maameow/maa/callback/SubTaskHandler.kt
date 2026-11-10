@@ -338,7 +338,7 @@ class SubTaskHandler(
             "CheckEncounter-Uncollected" -> {
                 val title = resources.getString(R.string.runlog_exhibition_uncollected_title)
                 val content = resources.getString(R.string.runlog_exhibition_uncollected_content)
-                append("$title：$content", LogLevel.WARNING)
+                append(resources.getString(R.string.runlog_title_content, title, content), LogLevel.WARNING)
                 notificationCenter.notifyHandoverRequired(title, content)
             }
 
@@ -907,10 +907,10 @@ class SubTaskHandler(
                 val name = subDetails?.getString("oper_name") ?: ""
                 val reqType = subDetails?.getString("requirement_type") ?: ""
                 val reason = when (reqType) {
-                    "elite" -> str("RequirementElite")
-                    "level" -> str("RequirementLevel")
-                    "skill_level" -> str("RequirementSkillLevel")
-                    "module" -> str("RequirementModule")
+                    "elite" -> resources.getString(R.string.maa_oper_unavailable_elite)
+                    "level" -> resources.getString(R.string.maa_oper_unavailable_level)
+                    "skill_level" -> resources.getString(R.string.maa_oper_unavailable_skill_level)
+                    "module" -> resources.getString(R.string.maa_oper_unavailable_module)
                     else -> reqType
                 }
                 append(str("BattleFormationOperUnavailable", name, reason), LogLevel.ERROR)

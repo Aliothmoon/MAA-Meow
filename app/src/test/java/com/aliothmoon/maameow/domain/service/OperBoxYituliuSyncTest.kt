@@ -3,12 +3,16 @@ package com.aliothmoon.maameow.domain.service
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.YituliuApiService
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
+import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.repository.YituliuTokenRepository
 import com.aliothmoon.maameow.data.resource.CharacterInfo
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.maa.callback.ToolboxResultCollector
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -49,6 +53,7 @@ class OperBoxYituliuSyncTest {
     /** [operators] 是本地资源里的全量干员表，不过滤虚拟干员 */
     private fun sync(
         apiToken: String = "t",
+        perProfile: Boolean = false,
         language: String = "zh-cn",
         operators: Map<String, CharacterInfo> = mapOf(amiya.id to amiya),
     ): OperBoxYituliuSync {
@@ -63,14 +68,33 @@ class OperBoxYituliuSyncTest {
             }
         }
         val settings = mockk<AppSettingsManager> {
-            every { yituliuOpenApiToken } returns MutableStateFlow(apiToken)
             every { displayLanguage } returns language
         }
         val metadataGate = mockk<GameMetadataGate> {
             coEvery { awaitCurrent(any()) } returns true
         }
-        return OperBoxYituliuSync(api, resource, collector, settings, metadataGate)
+        val chainState = mockk<TaskChainState> {
+            every { isLoaded } returns MutableStateFlow(true)
+            every { profileId } returns activeProfile
+            every { profiles } returns MutableStateFlow(
+                listOf(
+                    TaskProfile(id = "p1", name = "配置-1", chain = emptyList()),
+                    TaskProfile(id = "p2", name = "配置-2", chain = emptyList()),
+                ),
+            )
+        }
+        val tokens = mockk<YituliuTokenRepository> {
+            if (perProfile) {
+                coEvery { resolve("p1") } returns YituliuTokenRepository.Resolved(apiToken, perProfile = true)
+                coEvery { resolve("p2") } returns YituliuTokenRepository.Resolved("", perProfile = true)
+            } else {
+                coEvery { resolve(any()) } returns YituliuTokenRepository.Resolved(apiToken, perProfile = false)
+            }
+        }
+        return OperBoxYituliuSync(api, resource, collector, settings, metadataGate, chainState, tokens)
     }
+
+    private val activeProfile = MutableStateFlow("p1")
 
     private fun operator(id: String) = YituliuApiService.Operator(
         id = id,
@@ -84,9 +108,33 @@ class OperBoxYituliuSyncTest {
     private fun failedWith(resId: Int) = OperBoxYituliuSync.Result.Failed(uiTextOf(resId))
 
     @Test
-    fun blankTokenIsRejectedWithoutRequest() = runTest {
+    fun blankSharedTokenIsRejectedWithoutRequest() = runTest {
         assertEquals(failedWith(R.string.oper_box_yituliu_token_empty), sync(apiToken = "").sync())
-        verify(exactly = 0) { collector.applyOperBoxResult(any()) }
+        coVerify(exactly = 0) { api.fetchOperators(any()) }
+        verify(exactly = 0) { collector.applyOperBoxResult(any(), any()) }
+    }
+
+    @Test
+    fun blankProfileTokenNamesTheActiveProfile() = runTest {
+        activeProfile.value = "p2"
+
+        assertEquals(
+            OperBoxYituliuSync.Result.Failed(uiTextOf(R.string.oper_box_yituliu_token_empty_profile, "配置-2")),
+            sync(perProfile = true).sync(),
+        )
+        coVerify(exactly = 0) { api.fetchOperators(any()) }
+    }
+
+    @Test
+    fun resultStaysWithProfileThatStartedSync() = runTest {
+        coEvery { api.fetchOperators("t") } coAnswers {
+            activeProfile.value = "p2"
+            YituliuApiService.Result.Success(listOf(operator(amiya.id)))
+        }
+
+        sync(perProfile = true).sync()
+
+        verify { collector.applyOperBoxResult(any(), "p1") }
     }
 
     @Test
@@ -97,7 +145,7 @@ class OperBoxYituliuSyncTest {
 
         assertEquals(OperBoxYituliuSync.Result.Success(synced = 1, skipped = 0), sync().sync())
 
-        verify { collector.applyOperBoxResult(capture(owned)) }
+        verify { collector.applyOperBoxResult(capture(owned), "p1") }
         val oper = owned.captured.single()
         assertEquals("阿米娅", oper.name)
         assertEquals(5, oper.rarity)
@@ -116,7 +164,7 @@ class OperBoxYituliuSyncTest {
 
         sync(language = "en-us").sync()
 
-        verify { collector.applyOperBoxResult(capture(owned)) }
+        verify { collector.applyOperBoxResult(capture(owned), "p1") }
         assertEquals("Amiya", owned.captured.single().name)
     }
 
@@ -133,7 +181,7 @@ class OperBoxYituliuSyncTest {
             sync(operators = mapOf(amiya.id to amiya, amiyaGuard.id to amiyaGuard)).sync(),
         )
 
-        verify { collector.applyOperBoxResult(capture(owned)) }
+        verify { collector.applyOperBoxResult(capture(owned), "p1") }
         assertEquals(listOf(amiya.id, amiyaGuard.id), owned.captured.map { it.id })
     }
 
@@ -149,7 +197,7 @@ class OperBoxYituliuSyncTest {
             sync(operators = mapOf(amiya.id to amiya, token.id to token)).sync(),
         )
 
-        verify { collector.applyOperBoxResult(capture(owned)) }
+        verify { collector.applyOperBoxResult(capture(owned), "p1") }
         assertEquals(listOf(amiya.id), owned.captured.map { it.id })
     }
 
@@ -162,7 +210,7 @@ class OperBoxYituliuSyncTest {
 
         assertEquals(OperBoxYituliuSync.Result.Success(synced = 1, skipped = 1), sync().sync())
 
-        verify { collector.applyOperBoxResult(capture(owned)) }
+        verify { collector.applyOperBoxResult(capture(owned), "p1") }
         assertEquals(listOf(amiya.id), owned.captured.map { it.id })
     }
 
@@ -175,7 +223,7 @@ class OperBoxYituliuSyncTest {
                 YituliuApiService.Result.Success(listOf(operator("char_999_unknown")))
         assertEquals(failedWith(R.string.oper_box_yituliu_local_table_outdated), sync().sync())
 
-        verify(exactly = 0) { collector.applyOperBoxResult(any()) }
+        verify(exactly = 0) { collector.applyOperBoxResult(any(), any()) }
     }
 
     @Test
@@ -184,7 +232,7 @@ class OperBoxYituliuSyncTest {
             failedWith(R.string.oper_box_yituliu_local_data_missing),
             sync(operators = emptyMap()).sync(),
         )
-        verify(exactly = 0) { collector.applyOperBoxResult(any()) }
+        verify(exactly = 0) { collector.applyOperBoxResult(any(), any()) }
     }
 
     @Test
@@ -198,6 +246,6 @@ class OperBoxYituliuSyncTest {
             coEvery { api.fetchOperators(any()) } returns apiResult
             assertEquals(failedWith(resId), sync().sync())
         }
-        verify(exactly = 0) { collector.applyOperBoxResult(any()) }
+        verify(exactly = 0) { collector.applyOperBoxResult(any(), any()) }
     }
 }

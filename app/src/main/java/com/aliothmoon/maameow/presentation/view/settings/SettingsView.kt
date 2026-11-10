@@ -51,11 +51,9 @@ import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material.icons.rounded.Fullscreen
-import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.HighQuality
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Insights
-import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material.icons.rounded.Leaderboard
 import androidx.compose.material.icons.rounded.NewReleases
@@ -89,7 +87,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -173,7 +170,6 @@ import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.UiScale
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
-import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.utils.i18n.resolve
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
@@ -214,13 +210,7 @@ fun SettingsView(
     val deployWithPause by viewModel.deployWithPause.collectAsStateWithLifecycle()
     val telemetryEnabled by viewModel.telemetryEnabled.collectAsStateWithLifecycle()
     val reportToPenguin by viewModel.reportToPenguin.collectAsStateWithLifecycle()
-    val reportToYituliu by viewModel.reportToYituliu.collectAsStateWithLifecycle()
     val penguinId by viewModel.penguinId.collectAsStateWithLifecycle()
-    val yituliuOpenApiToken by viewModel.yituliuOpenApiToken.collectAsStateWithLifecycle()
-    val operBoxUseYituliuApi by viewModel.operBoxUseYituliuApi.collectAsStateWithLifecycle()
-    val operBoxAssist by viewModel.operBoxAssistState.collectAsStateWithLifecycle()
-    val yituliuVerifyMessage by viewModel.yituliuVerifyMessage.collectAsStateWithLifecycle()
-    val yituliuVerifying by viewModel.yituliuVerifying.collectAsStateWithLifecycle()
     val forceFullscreenOnVirtualDisplay by viewModel.forceFullscreenOnVirtualDisplay.collectAsStateWithLifecycle()
     val pipOnHome by viewModel.pipOnHome.collectAsStateWithLifecycle()
     val tasksOverrideEnabled by viewModel.tasksOverrideEnabled.collectAsStateWithLifecycle()
@@ -894,49 +884,14 @@ fun SettingsView(
                             }
                         }
                         SettingsSegment {
-                            SettingSearchTarget(R.string.settings_report_yituliu) {
-                                SettingSwitchItem(
-                                    title = stringResource(R.string.settings_report_yituliu),
-                                    info = stringResource(R.string.settings_report_yituliu_desc),
-                                    contentColor = contentColor,
-                                    checked = reportToYituliu,
+                            SettingSearchTarget(R.string.settings_yituliu_title) {
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_yituliu_title),
+                                    description = stringResource(R.string.settings_yituliu_desc),
                                     icon = Icons.Rounded.Leaderboard,
-                                    onCheckedChange = { viewModel.setReportToYituliu(it) }
-                                )
-                            }
-                        }
-                        SettingsSegment {
-                            SettingYituliuTokenSection(
-                                token = yituliuOpenApiToken,
-                                verifying = yituliuVerifying,
-                                verifyMessage = yituliuVerifyMessage,
-                                onTokenChange = { viewModel.setYituliuOpenApiToken(it) },
-                                onVerify = { viewModel.verifyYituliuToken() },
-                            )
-                        }
-                        SettingsSegment {
-                            SettingSearchTarget(R.string.settings_oper_box_yituliu_title) {
-                                SettingSwitchItem(
-                                    title = stringResource(R.string.settings_oper_box_yituliu_title),
-                                    info = stringResource(R.string.settings_oper_box_yituliu_desc),
-                                    contentColor = contentColor,
-                                    checked = operBoxUseYituliuApi,
-                                    icon = Icons.Rounded.Inventory2,
-                                    onCheckedChange = { viewModel.setOperBoxUseYituliuApi(it) }
-                                )
-                            }
-                        }
-                        SettingsSegment {
-                            SettingSearchTarget(R.string.panel_autobattle_operbox_assist) {
-                                SettingSwitchItem(
-                                    title = stringResource(R.string.panel_autobattle_operbox_assist),
-                                    info = stringResource(R.string.settings_oper_box_assist_desc),
-                                    contentColor = contentColor,
-                                    checked = operBoxAssist.active,
-                                    enabled = operBoxAssist.available,
-                                    icon = Icons.Rounded.Groups,
-                                    onCheckedChange = { viewModel.setOperBoxAssistEnabled(it) }
-                                )
+                                ) {
+                                    navController.navigate(Routes.YITULIU)
+                                }
                             }
                         }
                     }
@@ -1011,7 +966,7 @@ fun SettingsView(
                             SettingSearchTarget(R.string.settings_depot_inventory_title) {
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_depot_inventory_title),
-                                    icon = Icons.Rounded.Inventory2,
+                                    icon = Icons.Rounded.DataObject,
                                     contentColor = contentColor
                                 ) {
                                     navController.navigate(Routes.DEPOT_INVENTORY)
@@ -1360,58 +1315,6 @@ internal fun SettingSecretField(
             .fillMaxWidth()
             .onFocusChanged { focused = it.isFocused },
     )
-}
-
-@Composable
-private fun SettingYituliuTokenSection(
-    token: String,
-    verifying: Boolean,
-    verifyMessage: SettingsViewModel.TokenVerifyMessage?,
-    onTokenChange: (String) -> Unit,
-    onVerify: () -> Unit,
-) {
-    Column(
-        modifier = Modifier.padding(
-            horizontal = MaaDesignTokens.Spacing.lg,
-            vertical = 8.dp,
-        ),
-    ) {
-        SettingSecretField(
-            value = token,
-            label = stringResource(R.string.settings_yituliu_open_api_token),
-            placeholder = stringResource(R.string.settings_yituliu_open_api_token_hint),
-            keyboardType = KeyboardType.Password,
-            onValueChange = onTokenChange,
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (verifyMessage != null) {
-                Text(
-                    text = verifyMessage.text.asString(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (verifyMessage.ok) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.error
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp),
-                )
-            } else {
-                Spacer(modifier = Modifier.weight(1f))
-            }
-            val context = LocalContext.current
-            TextButton(onClick = { Misc.openUriSafely(context, MaaApi.YITULIU_ACCOUNT_HOME) }) {
-                Text(stringResource(R.string.settings_yituliu_get_token))
-            }
-            TextButton(onClick = onVerify, enabled = !verifying) {
-                Text(stringResource(R.string.settings_yituliu_token_verify))
-            }
-        }
-    }
 }
 
 /**

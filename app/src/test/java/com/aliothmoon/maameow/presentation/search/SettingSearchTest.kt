@@ -97,6 +97,9 @@ class SettingSearchTest {
             Routes.SCHEDULE_APP_BLACKLIST ->
                 source("src/main/java/com/aliothmoon/maameow/schedule/ui/ScheduleAppBlacklistView.kt")
 
+            Routes.YITULIU ->
+                source("src/main/java/com/aliothmoon/maameow/presentation/view/settings/YituliuSettingsView.kt")
+
             else -> error("no source mapping for route ${location.route}")
         }
     }

@@ -476,12 +476,20 @@ class HomeViewModel(
                         return@launch
                     }
                 }
-                _uiState.update { it.copy(isLoading = true) }
                 val (width, height) = Misc.getPhysicalSize(ctx)
-
-                val (targetWidth, targetHeight) = Misc.calculate16x9Resolution(
-                    width, height
-                )
+                val target = Misc.calculate16x9Resolution(width, height)
+                if (target == null) {
+                    _effects.send(
+                        UiEffect.toast(
+                            R.string.home_toast_resolution_too_small,
+                            maxOf(width, height),
+                            minOf(width, height),
+                        )
+                    )
+                    return@launch
+                }
+                _uiState.update { it.copy(isLoading = true) }
+                val (targetWidth, targetHeight) = target
                 val ret = useRemoteService { service ->
                     service.setForcedDisplaySize(targetWidth, targetHeight)
                 }

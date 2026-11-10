@@ -19,4 +19,5 @@ object Routes {
     const val WALLPAPER = "wallpaper"
     const val TASK_OVERRIDE_EDITOR = "task_override_editor"
     const val GAME_PACKAGE = "game_package"
+    const val YITULIU = "yituliu"
 }

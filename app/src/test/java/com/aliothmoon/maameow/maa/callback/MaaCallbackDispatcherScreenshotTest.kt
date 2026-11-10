@@ -18,6 +18,7 @@ class MaaCallbackDispatcherScreenshotTest {
     private val screenshot = NotificationImage(byteArrayOf(1, 2, 3))
 
     private val dispatcher = MaaCallbackDispatcher(
+        applicationContext = mockk(relaxed = true),
         sessionLogger = mockk(relaxed = true),
         stateHolder = stateHolder,
         connectionInfoHandler = mockk(relaxed = true),

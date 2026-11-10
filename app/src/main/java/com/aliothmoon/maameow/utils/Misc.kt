@@ -24,14 +24,6 @@ object Misc {
 
     private const val RESTART_FALLBACK_KILL_MS = 3_000L
 
-    /**
-     * 物理尺寸非法（≤0）时抛出；消息走资源，调用方展示前 resolve。
-     * 用 [LocalizedException] 而非 require：这是开发期兜底，理论上不该触发。
-     */
-    class InvalidPhysicalSizeException : LocalizedException(
-        uiTextOf(R.string.resolution_invalid_physical_size)
-    )
-
     fun getScreenSize(context: Context): Pair<Int, Int> {
         val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -74,9 +66,8 @@ object Misc {
         return physicalWidth to physicalHeight
     }
 
-    fun calculate16x9Resolution(physicalWidth: Int, physicalHeight: Int): Pair<Int, Int> {
-        if (physicalWidth <= 0 || physicalHeight <= 0) throw InvalidPhysicalSizeException()
-
+    /** null = 尺寸无效或小于 1280x720 */
+    fun calculate16x9Resolution(physicalWidth: Int, physicalHeight: Int): Pair<Int, Int>? {
         // 16:9 的最小单位
         val unitW = 16
         val unitH = 9
@@ -86,11 +77,7 @@ object Misc {
         val maxW = if (isLandscape) physicalWidth else physicalHeight
         val maxH = if (isLandscape) physicalHeight else physicalWidth
 
-        if (maxW < 1280 || maxH < 720) {
-            throw LocalizedException(
-                uiTextOf(R.string.resolution_below_minimum, maxW, maxH)
-            )
-        }
+        if (maxW < 1280 || maxH < 720) return null
 
         val scaleByWidth = maxW / unitW
         val scaleByHeight = maxH / unitH

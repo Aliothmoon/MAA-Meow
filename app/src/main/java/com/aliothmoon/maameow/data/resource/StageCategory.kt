@@ -8,11 +8,11 @@ package com.aliothmoon.maameow.data.resource
  */
 enum class StageCategory {
     MAIN,           // 主线关卡
-    RESOURCE_CE,    // CE 系列（龙门币）
-    RESOURCE_LS,    // LS 系列（作战记录）
-    RESOURCE_CA,    // CA 系列（技巧概要）
-    RESOURCE_AP,    // AP 系列（采购凭证）
-    RESOURCE_SK,    // SK 系列（碳素）
+    RESOURCE_CE,    // CE 系列
+    RESOURCE_LS,    // LS 系列
+    RESOURCE_CA,    // CA 系列
+    RESOURCE_AP,    // AP 系列（芯片材料）
+    RESOURCE_SK,    // SK 系列
     CHIP_PR,        // PR 系列（芯片本）
     ANNIHILATION,   // 剿灭模式
     EVENT,          // 活动关卡

@@ -11,6 +11,7 @@ import android.system.Os
 import android.view.WindowManager
 import androidx.core.content.FileProvider
 import com.aliothmoon.maameow.BuildConfig
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.MaaFiles
 import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
@@ -387,13 +388,13 @@ class LogExportService(
         return Intent(Intent.ACTION_SEND).apply {
             type = "application/octet-stream"
             putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_SUBJECT, "MaaMeow 日志导出")
+            putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.log_export_share_subject))
             putExtra(
                 Intent.EXTRA_TEXT,
-                "MaaMeow 日志文件导出于 ${
-                    ZonedDateTime.now()
-                        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss (Z)"))
-                }"
+                context.getString(
+                    R.string.log_export_share_text,
+                    ZonedDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss (Z)"))
+                )
             )
             flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
         }

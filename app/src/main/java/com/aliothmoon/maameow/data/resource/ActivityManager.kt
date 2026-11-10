@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import timber.log.Timber
 import java.time.DayOfWeek
+import java.time.format.TextStyle
 
 /**
  * MAA 资源管理器
@@ -54,13 +55,9 @@ class ActivityManager(
         return ServerTimezone.getYjDayOfWeek(chainState.clientType)
     }
 
-    /**
-     * 获取当前鹰角历星期几的名称资源
-     */
-    @StringRes
-    fun getYjDayOfWeekRes(): Int {
-        return ServerTimezone.getYjDayOfWeekRes(chainState.clientType)
-    }
+    /** 当前鹰角历星期几的短名，随界面语言 */
+    fun getYjDayOfWeekName(): String =
+        getYjDayOfWeek().getDisplayName(TextStyle.SHORT, context.resources.configuration.locales[0])
 
     /**
      * 迁移自 WPF MergePermanentAndActivityStages
@@ -247,6 +244,13 @@ class ActivityManager(
     fun isResourceCollectionOpen(): Boolean {
         return _resourceCollection.value?.isOpen == true
     }
+
+    /** 与 [getStageTips] 第 1 步同口径：今日关卡提示里是否已带资源收集活动行 */
+    fun isResourceCollectionTipShown(dayOfWeek: DayOfWeek = getYjDayOfWeek()): Boolean =
+        _stages.value.values.any { stage ->
+            stage.isStageOpen(dayOfWeek) &&
+                    stage.activity?.let { it.isResourceCollection && it.isOpen } == true
+        }
 
     /**
      * 判断当前是否有 SideStory 活动进行中。

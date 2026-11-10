@@ -18,7 +18,7 @@ class FightSeriesParamsTest {
     fun seriesOptions_matchUpstreamSeriesList() {
         assertEquals(
             listOf(0, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, -1),
-            UiUsageConstants.seriesOptions.map { it.first },
+            UiUsageConstants.seriesOptions,
         )
     }
 

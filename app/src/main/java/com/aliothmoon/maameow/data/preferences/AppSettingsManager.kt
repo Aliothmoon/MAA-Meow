@@ -869,6 +869,15 @@ class AppSettingsManager internal constructor(
         }
     }
 
+    val yituliuTokenPerProfile: StateFlow<Boolean> =
+        setting { it.yituliuTokenPerProfile.toBooleanStrictOrNull() ?: false }
+
+    suspend fun setYituliuTokenPerProfile(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[yituliuTokenPerProfile] = enabled.toString() }
+        }
+    }
+
     val operBoxUseYituliuApi: StateFlow<Boolean> =
         setting { it.operBoxUseYituliuApi.toBooleanStrictOrNull() ?: false }
 

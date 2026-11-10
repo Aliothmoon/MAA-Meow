@@ -13,6 +13,8 @@
     <string name="maa_touch_mode_not_available">触控模式不可用。请进入 ｢设置 - 连接设置｣ 切换其他触控模式。</string>
     <string name="maa_try_to_reconnect">应用断开，正在尝试重连</string>
     <string name="maa_fastest_way_to_screencap">最快截图耗时: %1$sms (%2$s)</string>
+    <string name="maa_fastest_way_to_screencap_error_tip">截图用时过长(平均: %1$sms)，自动战斗类功能（如自动肉鸽）很可能无法正常运行</string>
+    <string name="maa_fastest_way_to_screencap_warning_tip">截图用时较长(平均: %1$sms)，自动战斗类功能（如自动肉鸽）可能表现异常</string>
 
     <!-- taskchain -->
     <string name="maa_task_error">任务出错: </string>
@@ -108,6 +110,7 @@
 
     <!-- subtask_extra_drop -->
     <string name="maa_total_drop">掉落统计: </string>
+    <string name="maa_total">累计</string>
     <string name="maa_cur_times">当前次数</string>
     <string name="maa_furniture_drop">家具</string>
     <string name="maa_no_drop">无</string>
@@ -146,6 +149,7 @@
 
     <!-- subtask_extra_recruit -->
     <string name="maa_recruiting_results">公招识别结果: </string>
+    <string name="maa_recruiting_tips">公招提示</string>
     <string name="maa_choose">选择</string>
     <string name="maa_recruit_tags_selected_log">选择 Tags：\n%1$s</string>
     <string name="maa_refreshed">当前槽位已刷新</string>
@@ -182,6 +186,10 @@
     <string name="maa_battle_formation_parse_failed">编队解析失败</string>
     <string name="maa_battle_formation_selected">选择干员: </string>
     <string name="maa_battle_formation_oper_unavailable">干员不可用: %1$s, 原因: %2$s</string>
+    <string name="maa_oper_unavailable_elite">精英化不足</string>
+    <string name="maa_oper_unavailable_level">等级不足</string>
+    <string name="maa_oper_unavailable_skill_level">技能等级不足</string>
+    <string name="maa_oper_unavailable_module">所需模组未解锁</string>
     <string name="maa_battle_formation_operbox_matched">预匹配的干员（组）：</string>
     <string name="maa_battle_formation_operbox1_unmatched">干员（组）%1$s 没有匹配的干员，需要借助战（预匹配建议 %2$s，实际按助战列表选择）</string>
     <string name="maa_requirement_elite">精英化不足</string>
@@ -267,6 +275,7 @@
     <string name="settings_export_success">配置导出成功</string>
     <string name="settings_export_failed">导出失败: %1$s</string>
     <string name="settings_import_failed">导入失败: %1$s</string>
+    <string name="settings_import_unsupported_version">不支持的备份版本: %1$d，当前最高支持: %2$d</string>
     <string name="settings_import_too_large">导入失败: 文件超过 %1$d MB，请确认选择的是配置备份</string>
 
     <!-- settings: top-level -->
@@ -313,6 +322,8 @@
     <string name="log_export_save_success">已保存：%1$s</string>
     <string name="log_export_failed">导出失败，请确认有可导出的日志</string>
     <string name="log_export_in_progress">正在导出…</string>
+    <string name="log_export_share_subject">MaaMeow 日志导出</string>
+    <string name="log_export_share_text">MaaMeow 日志文件导出于 %1$s</string>
     <string name="settings_debug_mode_title">调试模式</string>
     <string name="settings_debug_mode_desc">启用后记录详细日志信息</string>
 
@@ -430,6 +441,14 @@
     <string name="settings_oper_box_yituliu_title">干员识别从一图流获取</string>
     <string name="settings_oper_box_yituliu_desc">开启后不再进游戏截图识别，改为拉取一图流数据；数据来自森空岛导入，仅国服有</string>
     <string name="settings_oper_box_assist_desc">自动战斗编队前按一图流练度预匹配作业编队，与自动战斗页同名选项是同一个开关；需开启上一项并同步过一图流数据</string>
+    <string name="settings_yituliu_title">一图流</string>
+    <string name="settings_yituliu_desc">干员数据、OpenAPI Token 与掉落上报</string>
+    <string name="settings_yituliu_section_oper_box">干员数据</string>
+    <string name="settings_yituliu_section_report">数据上报</string>
+    <string name="settings_yituliu_token_profile_active">%1$s（当前）</string>
+    <string name="settings_yituliu_token_per_profile">按配置分别设置 Token</string>
+    <string name="settings_yituliu_token_placeholder">请输入 Token</string>
+    <string name="oper_box_yituliu_token_empty_profile">配置「%1$s」未填写一图流 Token，请到「设置 → 三方服务 → 一图流」填写</string>
     <string name="oper_box_yituliu_fetching">正在从一图流获取干员数据…</string>
     <string name="oper_box_yituliu_done">已从一图流获取 %1$d 名干员</string>
     <string name="oper_box_yituliu_done_skipped">已从一图流获取 %1$d 名干员，%2$d 名在本地资源中不存在，已跳过</string>
@@ -437,7 +456,7 @@
     <string name="oper_box_yituliu_internal_error">获取失败，详细原因见日志</string>
     <string name="settings_secret_show">显示</string>
     <string name="settings_secret_hide">隐藏</string>
-    <string name="oper_box_yituliu_token_empty">请先在设置里填写一图流 Token</string>
+    <string name="oper_box_yituliu_token_empty">请先在「设置 → 三方服务 → 一图流」填写一图流 Token</string>
     <string name="oper_box_yituliu_no_data">Token 对应账号暂无干员练度数据，已保留本地结果</string>
     <string name="oper_box_yituliu_write_only">Token 没有读取权限，请换只读或读写 Token</string>
     <string name="oper_box_yituliu_invalid">Token 无效或已失效，请重新生成</string>
@@ -657,8 +676,7 @@
     <string name="home_toast_open_service_failed">打开服务失败: %1$s</string>
     <string name="home_toast_close_service_failed">关闭服务失败: %1$s</string>
     <string name="home_toast_change_resolution_failed">修改分辨率失败: %1$s</string>
-    <string name="resolution_invalid_physical_size">物理尺寸必须为正数</string>
-    <string name="resolution_below_minimum">屏幕尺寸 %1$dx%2$d 小于最低要求 1280x720</string>
+    <string name="home_toast_resolution_too_small">屏幕尺寸 %1$dx%2$d 小于最低要求 1280x720</string>
     <string name="home_toast_reset_resolution_failed">重置分辨率失败: %1$s</string>
     <string name="home_toast_not_16_9_resolution">当前分辨率不是 16:9，请使用后台任务或调整分辨率</string>
 
@@ -766,6 +784,7 @@
 
     <!-- panel: mall -->
     <string name="panel_mall_use_formation">使用编队</string>
+    <string name="panel_mall_formation_current">当前</string>
 
     <!-- background task: toast -->
     <string name="bg_toast_service_died">MaaService 异常关闭，请尝试重新启动</string>
@@ -841,9 +860,6 @@
     <string name="update_cdk_saved">已填写</string>
     <string name="update_cdk_unset">未填写</string>
     <string name="update_cdk_placeholder">请输入 CDK</string>
-    <string name="update_cdk_clear_cd">清空</string>
-    <string name="update_cdk_show_cd">显示</string>
-    <string name="update_cdk_hide_cd">隐藏</string>
     <string name="update_cdk_subscribe">没有CDK? 立即订阅</string>
     <string name="update_cdk_status_checking">正在验证 CDK……</string>
     <string name="update_cdk_status_failed">CDK 验证失败，请检查网络</string>
@@ -1028,7 +1044,7 @@
     <string name="panel_autobattle_user_additional_skill">技能</string>
     <string name="panel_autobattle_user_additional_skill_default">默认</string>
     <string name="panel_autobattle_operbox_assist">使用一图流数据辅助编队</string>
-    <string name="panel_autobattle_operbox_assist_tip">自动编队前，按一图流干员练度（含技能与模组）预匹配作业编队，配不齐时不开打\n需先在「设置 → 三方服务」填写一图流 Token、开启「干员识别从一图流获取」，并同步一次数据</string>
+    <string name="panel_autobattle_operbox_assist_tip">自动编队前，按一图流干员练度（含技能与模组）预匹配作业编队，配不齐时不开打\n需先在「设置 → 三方服务 → 一图流」填写 Token、开启「干员识别从一图流获取」，并同步一次数据</string>
     <string name="panel_autobattle_operbox_sync">同步</string>
     <string name="panel_autobattle_battle_list">多作业模式</string>
     <string name="panel_autobattle_battle_list_tip">仅支持以下模式:\n  1. 主线: 同一章节内导航\n  2. SideStory: 当前页面内导航（普通/EX/S 不能互跳）\n  3. 故事集: 当前页面内导航\n  4. 悖论模拟: 从干员列表启动\n请在对应界面启动，不支持跨章节导航\n\n当 ｢多作业模式｣ 启用后, 选择单个作业时会自动添加到 ｢作业列表｣</string>
@@ -1475,6 +1491,9 @@
     <string name="mini_game_tip_tl_wartime_press_committee">请从活动报纸选择界面（可见报纸名称与 ｢开始组版｣ 按钮）的状态开始。</string>
     <string name="runlog_exhibition_uncollected_title">奇象巡展：发现暂未收录奇象</string>
     <string name="runlog_exhibition_uncollected_content">已停止自动探索，请返回游戏完成战斗。</string>
+    <string name="runlog_core_init_failed">初始化失败: %1$s</string>
+    <string name="runlog_core_destroyed">MaaCore 实例已销毁</string>
+    <string name="runlog_title_content">%1$s：%2$s</string>
 
     <!-- panel: task list -->
     <string name="panel_task_list_edit_config">编辑配置</string>
@@ -1969,6 +1988,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="notification_event_channel_popup_desc">任务完成、出错、公招高星等事件通知（弹出横幅）</string>
     <string name="notification_event_all_tasks_completed">全部任务完成</string>
     <string name="notification_event_task_error">任务出错</string>
+    <string name="notification_external_task_error_text">任务链 %1$s 执行失败</string>
     <string name="notification_event_task_stopped">任务已停止</string>
     <string name="notification_event_task_stopped_text">任务已手动停止</string>
     <string name="notification_event_task_aborted_text">任务因异常中止，原因见上一条通知或运行日志</string>

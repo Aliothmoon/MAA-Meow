@@ -1,8 +1,10 @@
 package com.aliothmoon.maameow.maa.callback
 
+import android.content.Context
 import com.alibaba.fastjson2.JSON
 import com.alibaba.fastjson2.JSONObject
 import com.aliothmoon.maameow.BuildConfig
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.domain.models.NotificationImage
 import com.aliothmoon.maameow.domain.service.CoreReportRequest
@@ -17,6 +19,7 @@ import com.aliothmoon.maameow.maa.CallbackLogPolicy
 import timber.log.Timber
 
 class MaaCallbackDispatcher(
+    applicationContext: Context,
     private val sessionLogger: MaaSessionLogger,
     private val stateHolder: MaaExecutionStateHolder,
     private val connectionInfoHandler: ConnectionInfoHandler,
@@ -27,6 +30,7 @@ class MaaCallbackDispatcher(
     private val telemetry: RunTelemetry,
     private val setParamsErrors: SetParamsErrorSignal,
 ) {
+    private val resources = applicationContext.resources
 
     fun onEvent(msg: Int, json: String?) {
         val message = AsstMsg.fromValue(msg)
@@ -83,7 +87,8 @@ class MaaCallbackDispatcher(
         val why = details?.getString("why") ?: ""
         Timber.e("MaaCore 初始化失败: what=$what, why=$why")
         stateHolder.reportRunState(MaaExecutionState.ERROR)
-        val message = "初始化失败: $what${if (why.isNotEmpty()) " ($why)" else ""}"
+        val detail = if (why.isNotEmpty()) "$what ($why)" else what
+        val message = resources.getString(R.string.runlog_core_init_failed, detail)
         sessionLogger.append(message, LogLevel.ERROR)
         sessionLogger.endSession("INIT_FAILED")
         notificationCenter.notifyStartFailed(message)
@@ -139,7 +144,11 @@ class MaaCallbackDispatcher(
     private fun handleDestroyed(details: JSONObject?) {
         stateHolder.reportRunState(MaaExecutionState.IDLE)
         Timber.i("MaaCore 实例已销毁")
-        sessionLogger.completeSession("DESTROYED", "MaaCore 实例已销毁", LogLevel.WARNING)
+        sessionLogger.completeSession(
+            "DESTROYED",
+            resources.getString(R.string.runlog_core_destroyed),
+            LogLevel.WARNING
+        )
     }
 
     private fun handleSubTaskError(details: JSONObject?) {

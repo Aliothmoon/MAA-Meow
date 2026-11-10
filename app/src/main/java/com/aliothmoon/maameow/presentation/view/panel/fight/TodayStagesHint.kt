@@ -41,10 +41,10 @@ import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 fun TodayStagesHint(
     stageGroups: List<StageGroup>,
     isResourceCollectionOpen: Boolean,
+    resourceCollectionTipShown: Boolean,
     stageTips: List<String>,
     todayName: String = ""
 ) {
-    // TODO: i18n — 用 group.isPermanent 替代硬编码字符串比较
     // 收集活动关卡分组（包含剩余天数）
     val activities = stageGroups.filter { !it.isPermanent }
 
@@ -92,7 +92,7 @@ fun TodayStagesHint(
                         )
                     }
                     // 资源收集活动提示
-                    if (isResourceCollectionOpen && activityTips.none { it.contains("资源收集") }) {
+                    if (isResourceCollectionOpen && !resourceCollectionTipShown) {
                         Text(
                             text = stringResource(R.string.panel_fight_resource_collection_open_tip),
                             style = MaterialTheme.typography.labelSmall,
