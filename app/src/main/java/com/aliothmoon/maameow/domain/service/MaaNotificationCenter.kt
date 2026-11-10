@@ -39,7 +39,7 @@ class MaaNotificationCenter(
         val title = appContext.getString(R.string.notification_event_all_tasks_completed)
         publishResult(title, summary, timeoutSec = 120)
         if (settings.sendOnComplete.value) {
-            externalService.sendWithLogs("所有任务已完成", summary, screenshot)
+            externalService.sendWithLogs(title, summary, screenshot)
         }
     }
 
@@ -60,7 +60,11 @@ class MaaNotificationCenter(
 
     fun notifyTaskError(taskName: String) {
         eventNotifier.notifyTaskError(taskName)
-        pushExternal(settings.sendOnError, "任务出错", "任务链 $taskName 执行失败")
+        pushExternal(
+            settings.sendOnError,
+            appContext.getString(R.string.notification_event_task_error),
+            appContext.getString(R.string.notification_external_task_error_text, taskName),
+        )
     }
 
     fun notifyStartFailed(message: String) {
@@ -98,7 +102,7 @@ class MaaNotificationCenter(
         val text = appContext.getString(R.string.notification_event_service_died_text)
         // 服务可能在空闲期挂掉，不能占用本轮运行的一次性结果闸门
         liveCoordinator.publishEvent(resultSession(title, text, timeoutSec = 180, isError = true))
-        pushExternal(settings.sendOnServiceDied, "服务异常", "MAA 服务意外终止")
+        pushExternal(settings.sendOnServiceDied, title, text)
     }
 
     /** 不设超时，Shizuku 回来时撤 */

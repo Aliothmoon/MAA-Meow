@@ -63,11 +63,8 @@ object Misc {
         return physicalWidth to physicalHeight
     }
 
-    fun calculate16x9Resolution(physicalWidth: Int, physicalHeight: Int): Pair<Int, Int> {
-        require(physicalWidth > 0 && physicalHeight > 0) {
-            "物理尺寸必须为正数"
-        }
-
+    /** null = 尺寸无效或小于 1280x720 */
+    fun calculate16x9Resolution(physicalWidth: Int, physicalHeight: Int): Pair<Int, Int>? {
         // 16:9 的最小单位
         val unitW = 16
         val unitH = 9
@@ -77,9 +74,7 @@ object Misc {
         val maxW = if (isLandscape) physicalWidth else physicalHeight
         val maxH = if (isLandscape) physicalHeight else physicalWidth
 
-        require(maxW >= 1280 && maxH >= 720) {
-            "屏幕尺寸 ${maxW}x${maxH} 小于最低要求 1280x720"
-        }
+        if (maxW < 1280 || maxH < 720) return null
 
         val scaleByWidth = maxW / unitW
         val scaleByHeight = maxH / unitH

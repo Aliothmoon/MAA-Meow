@@ -128,16 +128,10 @@ data class MallConfig(
 ) : TaskParamProvider {
     companion object {
         /**
-         * 编队选项列表
+         * 编队选项，0 为当前编队
          * 对应 WPF: FormationSelectList
          */
-        val FORMATION_OPTIONS = listOf(
-            0 to "当前",
-            1 to "1",
-            2 to "2",
-            3 to "3",
-            4 to "4"
-        )
+        val FORMATION_OPTIONS = listOf(0, 1, 2, 3, 4)
 
         private val FIXED_BLACKLIST_BY_CLIENT = mapOf(
             "Official" to listOf("讯使", "嘉维尔", "坚雷"),

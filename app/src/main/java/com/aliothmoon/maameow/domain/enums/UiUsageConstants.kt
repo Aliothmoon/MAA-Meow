@@ -24,21 +24,8 @@ object UiUsageConstants {
     )
 
 
-    // 代理倍率选项 (SeriesList)
-    val seriesOptions = listOf(
-        0 to "AUTO",
-        10 to "10",
-        9 to "9",
-        8 to "8",
-        7 to "7",
-        6 to "6",
-        5 to "5",
-        4 to "4",
-        3 to "3",
-        2 to "2",
-        1 to "1",
-        -1 to "不切换"
-    )
+    // 代理倍率选项 (SeriesList)，0 为 AUTO，-1 为不切换
+    val seriesOptions = listOf(0, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, -1)
 
     val dropItems = listOf(
         "30011", "30012", "30013", "30014",  // 技能类材料
@@ -157,9 +144,6 @@ object UiUsageConstants {
         ): Boolean {
             return mode == RoguelikeMode.Collectible && theme == "Sami" && squad == "生活至上分队"
         }
-
-        // 多任务共享提示 - WPF: MultiTasksShareTip
-        const val MULTI_TASKS_SHARE_TIP = "以下选项为多任务共用"
 
         // 策略模式列表（按主题动态变化）
         private val BASE_MODES = listOf("Exp", "Investment", "Collectible", "Squad", "Exploration")

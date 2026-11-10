@@ -31,6 +31,7 @@ import com.aliothmoon.maameow.utils.InputTooLargeException
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
+import com.aliothmoon.maameow.utils.i18n.LocalizedException
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.Dispatchers
@@ -113,6 +114,9 @@ class SettingsViewModel(
                 Timber.w(e, "import config rejected")
                 _settingsMessage.value =
                     uiTextOf(R.string.settings_import_too_large, e.limitBytes / (1024 * 1024))
+            } catch (e: LocalizedException) {
+                Timber.w(e, "import config rejected")
+                _settingsMessage.value = uiTextOf(R.string.settings_import_failed, e.uiText)
             } catch (e: Exception) {
                 Timber.e(e, "import config failed")
                 _settingsMessage.value =

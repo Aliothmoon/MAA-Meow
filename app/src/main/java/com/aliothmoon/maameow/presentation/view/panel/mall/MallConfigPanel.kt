@@ -280,7 +280,7 @@ private fun FormationSelector(selectedFormation: Int, onFormationChange: (Int) -
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            MallConfig.FORMATION_OPTIONS.forEach { (value, label) ->
+            MallConfig.FORMATION_OPTIONS.forEach { value ->
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
@@ -298,7 +298,10 @@ private fun FormationSelector(selectedFormation: Int, onFormationChange: (Int) -
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(label, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        if (value == 0) stringResource(R.string.panel_mall_formation_current) else value.toString(),
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }

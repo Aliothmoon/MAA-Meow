@@ -13,6 +13,8 @@
     <string name="maa_touch_mode_not_available">터치 수행 방식을 사용할 수 없습니다. ｢설정 - 연결 설정｣에서 다른 터치 수행 방식으로 변경해 주세요.</string>
     <string name="maa_try_to_reconnect">앱 연결이 끊어졌습니다. 재연결을 시도합니다</string>
     <string name="maa_fastest_way_to_screencap">스크린샷 캡처 속도: %1$sms (%2$s)</string>
+    <string name="maa_fastest_way_to_screencap_error_tip">스크린샷 캡처 속도가 너무 느려서(평균: %1$sms) 자동 전투 기능(예: 자동 통합 전략)이 제대로 실행되지 않을 수 있습니다</string>
+    <string name="maa_fastest_way_to_screencap_warning_tip">스크린샷 캡처 속도가 느려서(평균: %1$sms) 자동 전투 기능(예: 자동 통합 전략)에서 비정상적인 동작이 발생할 수 있습니다</string>
 
     <!-- taskchain -->
     <string name="maa_task_error">작업 오류: </string>
@@ -108,6 +110,7 @@
 
     <!-- subtask_extra_drop -->
     <string name="maa_total_drop">드롭 통계: </string>
+    <string name="maa_total">누적</string>
     <string name="maa_cur_times">현재 횟수</string>
     <string name="maa_furniture_drop">가구</string>
     <string name="maa_no_drop">없음</string>
@@ -146,6 +149,7 @@
 
     <!-- subtask_extra_recruit -->
     <string name="maa_recruiting_results">공개모집 인식 결과: </string>
+    <string name="maa_recruiting_tips">공개모집 팁</string>
     <string name="maa_choose">선택</string>
     <string name="maa_recruit_tags_selected_log">선택한 Tags:\n%1$s</string>
     <string name="maa_refreshed">새로고침됨</string>
@@ -182,6 +186,10 @@
     <string name="maa_battle_formation_parse_failed">편성 분석 실패</string>
     <string name="maa_battle_formation_selected">오퍼레이터 선택: </string>
     <string name="maa_battle_formation_oper_unavailable">사용 불가 오퍼레이터: %1$s, 사유: %2$s</string>
+    <string name="maa_oper_unavailable_elite">정예화 수준이 너무 낮음</string>
+    <string name="maa_oper_unavailable_level">레벨이 너무 낮음</string>
+    <string name="maa_oper_unavailable_skill_level">스킬 레벨이 너무 낮음</string>
+    <string name="maa_oper_unavailable_module">필요한 모듈이 잠금 해제되지 않음</string>
     <string name="maa_battle_formation_operbox_matched">사전 매칭된 오퍼레이터 (그룹):</string>
     <string name="maa_battle_formation_operbox1_unmatched">오퍼레이터 (그룹) %1$s: 일치하는 오퍼레이터가 없어 지원 유닛이 필요합니다 (사전 매칭 추천 %2$s, 실제 선택은 지원 목록 기준)</string>
     <string name="maa_current_steps">현재 단계: %1$s %2$s</string>
@@ -263,6 +271,7 @@
     <string name="settings_export_success">구성을 내보냈습니다</string>
     <string name="settings_export_failed">내보내기 실패: %1$s</string>
     <string name="settings_import_failed">가져오기 실패: %1$s</string>
+    <string name="settings_import_unsupported_version">지원하지 않는 백업 버전: %1$d (최대 %2$d까지 지원)</string>
     <string name="settings_import_too_large">가져오기 실패: 파일이 %1$d MB를 초과합니다. 설정 백업 파일을 선택했는지 확인하세요</string>
 
     <!-- settings: top-level -->
@@ -309,6 +318,8 @@
     <string name="log_export_save_success">저장됨: %1$s</string>
     <string name="log_export_failed">내보내기 실패. 내보낼 로그가 있는지 확인하세요</string>
     <string name="log_export_in_progress">내보내는 중…</string>
+    <string name="log_export_share_subject">MaaMeow 로그 내보내기</string>
+    <string name="log_export_share_text">MaaMeow 로그 파일 내보내기 시각: %1$s</string>
     <string name="settings_debug_mode_title">디버그 모드</string>
     <string name="settings_debug_mode_desc">활성화하면 상세 로그 정보를 기록합니다</string>
 
@@ -605,6 +616,7 @@
     <string name="home_toast_open_service_failed">서비스 시작 실패: %1$s</string>
     <string name="home_toast_close_service_failed">서비스 종료 실패: %1$s</string>
     <string name="home_toast_change_resolution_failed">해상도 변경 실패: %1$s</string>
+    <string name="home_toast_resolution_too_small">화면 크기 %1$dx%2$d이(가) 최소 요구 사항 1280x720보다 작습니다</string>
     <string name="home_toast_reset_resolution_failed">해상도 초기화 실패: %1$s</string>
     <string name="home_toast_not_16_9_resolution">현재 해상도가 16:9가 아닙니다. 백그라운드 작업을 사용하거나 해상도를 조정하세요</string>
 
@@ -712,6 +724,7 @@
 
     <!-- panel: mall -->
     <string name="panel_mall_use_formation">편성 사용</string>
+    <string name="panel_mall_formation_current">현재</string>
 
     <!-- background task: toast -->
     <string name="bg_toast_service_died">MaaService가 비정상 종료되었습니다. 다시 시작해 보세요</string>
@@ -1417,6 +1430,9 @@
     <string name="mini_game_tip_tl_wartime_press_committee">이벤트 신문 선택 화면이 표시된 상태에서 시작하세요</string>
     <string name="runlog_exhibition_uncollected_title">기상 순회전: 미수록 기상 발견</string>
     <string name="runlog_exhibition_uncollected_content">자동 탐색을 중지했습니다. 게임으로 돌아가 전투를 완료하세요.</string>
+    <string name="runlog_core_init_failed">초기화 실패: %1$s</string>
+    <string name="runlog_core_destroyed">MaaCore 인스턴스가 해제되었습니다</string>
+    <string name="runlog_title_content">%1$s: %2$s</string>
 
     <!-- panel: task list -->
     <string name="panel_task_list_edit_config">설정 편집</string>
@@ -1904,6 +1920,7 @@
     <string name="notification_event_channel_popup_desc">작업 완료, 오류, 공개모집 고등급 태그 등의 이벤트 알림 (배너 팝업)</string>
     <string name="notification_event_all_tasks_completed">모든 작업 완료</string>
     <string name="notification_event_task_error">작업 오류</string>
+    <string name="notification_external_task_error_text">작업 체인 %1$s 실행 실패</string>
     <string name="notification_event_task_stopped">작업 중지됨</string>
     <string name="notification_event_task_stopped_text">작업을 수동으로 중지했습니다</string>
     <string name="notification_event_task_aborted_text">오류로 작업이 중단되었습니다. 원인은 이전 알림이나 실행 로그를 확인하세요</string>

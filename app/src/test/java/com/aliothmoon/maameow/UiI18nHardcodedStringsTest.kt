@@ -1,147 +1,168 @@
 package com.aliothmoon.maameow
 
 import java.io.File
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * 全量扫描 main 源码里的中文字面量，跳过注释与 Timber / Ln / Log 调用参数
+ * 界面文案一律走字符串资源；传给 MAA 的游戏数据、映射 key、仅诊断用的文案逐条登记到 [ALLOWLIST]
+ */
 class UiI18nHardcodedStringsTest {
 
     @Test
-    fun navigationAndPanelBatch_doesNotContainUnexpectedHardcodedChineseStringLiterals() {
-        val failures = TARGETS.mapNotNull { target ->
-            val file = resolveSourceFile(target.relativePath)
-            val literals = HARD_CODED_CHINESE_LITERAL.findAll(file.readText())
-                .map { it.value.trim('"') }
-                .filterNot { it in target.allowedLiterals }
-                .toList()
-            if (literals.isEmpty()) null else "${target.relativePath}: ${literals.joinToString()}"
-        }
+    fun mainSources_haveNoUnregisteredChineseLiterals() {
+        val root = resolve(SOURCE_ROOT)
+        val found = root.walkTopDown()
+            .filter { it.isFile && it.extension in SOURCE_EXTENSIONS }
+            .flatMap { file ->
+                val path = file.relativeTo(root).invariantSeparatorsPath
+                hanLiterals(file.readText()).map { Entry(path, it) }
+            }
+            .toSet()
+        val allowed = loadAllowlist()
 
+        val unexpected = (found - allowed).sortedWith(ENTRY_ORDER)
         assertTrue(
-            "Unexpected hardcoded Chinese string literals remain:\n${failures.joinToString("\n")}",
-            failures.isEmpty()
+            "未登记的中文字面量；界面文案请改用字符串资源，确属游戏数据 / 映射 key / 诊断文案的追加到 $ALLOWLIST：\n" +
+                    unexpected.joinToString("\n") { "${it.path}\t${it.literal}" },
+            unexpected.isEmpty()
+        )
+        val stale = (allowed - found).sortedWith(ENTRY_ORDER)
+        assertTrue(
+            "$ALLOWLIST 中这些条目已不在源码里，请删除：\n" +
+                    stale.joinToString("\n") { "${it.path}\t${it.literal}" },
+            stale.isEmpty()
         )
     }
 
-    private fun resolveSourceFile(relativePath: String): File {
-        val candidates = listOf(
-            File(relativePath),
-            File("app/$relativePath"),
-            File("../app/$relativePath"),
+    @Test
+    fun scanner_skipsCommentsAndLogCalls() {
+        val src = """
+            // 注释
+            /* 块注释 */
+            val a = "界面"
+            Timber.i("日志 %s", x)
+            Timber.w(
+                "多行日志",
+                y,
+            )
+            Ln.e("服务进程日志")
+            val b = "外层 ${'$'}{"模板里"} 尾巴"
+            val c = '中'
+        """.trimIndent()
+        assertEquals(
+            listOf("界面", "外层 ${'$'}{\"模板里\"} 尾巴"),
+            hanLiterals(src),
         )
-        val file = candidates.firstOrNull { it.isFile }
-        checkNotNull(file) { "Source file not found for test: $relativePath" }
+    }
+
+    private data class Entry(val path: String, val literal: String)
+
+    private fun loadAllowlist(): Set<Entry> =
+        resolve(ALLOWLIST).readLines()
+            .filter { it.isNotBlank() && !it.startsWith("#") }
+            .map { line ->
+                val tab = line.indexOf('\t')
+                check(tab > 0) { "$ALLOWLIST 格式应为 <路径>\\t<字面量>: $line" }
+                Entry(line.substring(0, tab), line.substring(tab + 1))
+            }
+            .toSet()
+
+    private fun resolve(relativePath: String): File {
+        val file = listOf(File(relativePath), File("app/$relativePath"), File("../app/$relativePath"))
+            .firstOrNull { it.exists() }
+        checkNotNull(file) { "找不到 $relativePath" }
         return file
     }
 
-    private data class TargetFile(
-        val relativePath: String,
-        val allowedLiterals: Set<String> = emptySet(),
-    )
-
     companion object {
-        private val HARD_CODED_CHINESE_LITERAL = Regex("\"[^\"\\n]*\\p{IsHan}[^\"\\n]*\"")
+        private const val SOURCE_ROOT = "src/main/java/com/aliothmoon/maameow"
+        private const val ALLOWLIST = "src/test/resources/i18n/chinese_literal_allowlist.tsv"
+        private val SOURCE_EXTENSIONS = setOf("kt", "java")
+        private val ENTRY_ORDER = compareBy<Entry>({ it.path }, { it.literal })
 
-        private val TARGETS = listOf(
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/navigation/BottomNavigation.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/navigation/AppNavigation.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/FloatingPanelState.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/PanelHeader.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/ToolboxPanel.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/viewmodel/ToolboxViewModel.kt"),
-            TargetFile(
-                "src/main/java/com/aliothmoon/maameow/presentation/viewmodel/MiniGameDelegate.kt",
-                allowedLiterals = setOf("支援作战平台", "游侠", "诡影迷踪"),
-            ),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/AwardConfigPanel.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/DepotRecognitionPanel.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/OperBoxPanel.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/userdata/UserDataUpdateConfigPanel.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/MiniGamePanel.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/TaskListPanel.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/LogPanel.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/RecruitCalcPanel.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/WakeUpConfigPanel.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/depot/DepotMaintainConfigPanel.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/fight/MedicineAndStoneSection.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/fight/SpecifiedDropsSection.kt"),
-            TargetFile(
-                "src/main/java/com/aliothmoon/maameow/presentation/view/panel/fight/TodayStagesHint.kt",
-                allowedLiterals = setOf("常驻关卡", "资源收集"),
-            ),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/mall/AdvancedOptionsSection.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/mall/MallConfigPanel.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/mall/PriorityItemRow.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/mall/BlacklistItemRow.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/roguelike/RoguelikeConfigPanel.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/roguelike/AdvancedRoguelikeSettings.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/roguelike/ModeSpecificSettings.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/panel/roguelike/ThemeSpecificSettings.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/schedule/ui/ScheduleListView.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/schedule/ui/ScheduleTriggerLogView.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/schedule/ui/ScheduleEditView.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/schedule/ui/ScheduleEditViewModel.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/notification/NotificationSettingsView.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/components/ResourceInitDialog.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/components/UpdateConfirmDialog.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/components/TopAppBar.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/components/ShizukuReadinessDialog.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/components/tip/ExpandableTipIcon.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/components/AdaptiveTaskPromptDialog.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/components/OverlayDialog.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/components/PanelComponents.kt"),
-            TargetFile(
-                "src/main/java/com/aliothmoon/maameow/presentation/components/CoreCharSelector.kt",
-                allowedLiterals = setOf(
-                    "[CoreCharSelector] 空字符串，设置 isValid=true",
-                    "[CoreCharSelector] 更新配置为空字符串",
-                    "[CoreCharSelector] 开始校验: '${'$'}newValue'",
-                    "[CoreCharSelector] 开始校验: isValidOperatorName",
-                    "[CoreCharSelector] 校验结果: validationResult=${'$'}validationResult, newValue='${'$'}newValue'",
-                    "[CoreCharSelector] 建议列表计算完成: ${'$'}{newSuggestions.size} 个结果",
-                    "[CoreCharSelector] 输入已变化，跳过此次校验结果: 当前='${'$'}inputText', 校验='${'$'}newValue'",
-                    "[CoreCharSelector] UI更新完成: isValid=${'$'}isValid, isValidating=${'$'}isValidating",
-                    "[CoreCharSelector] 校验通过，更新配置: '${'$'}newValue'",
-                    "[CoreCharSelector] 校验失败，不更新配置。当前配置值保持: '${'$'}value'",
-                    "[CoreCharSelector] 渲染状态: inputText='${'$'}inputText', isValid=${'$'}isValid, isValidating=${'$'}isValidating, showError=${'$'}{!isValid && !isValidating && inputText.isNotBlank()}",
-                ),
-            ),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/view/background/VirtualDisplayPreview.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/schedule/ui/CountdownDialog.kt"),
-            TargetFile(
-                "src/main/java/com/aliothmoon/maameow/presentation/viewmodel/UpdateViewModel.kt",
-                allowedLiterals = setOf(
-                    "读取资源版本失败",
-                    "当前资源版本: ${'$'}currentVersion, 下载源: ${'$'}{updateSource.value}",
-                    "检查 App 更新 (MirrorChyan)",
-                    "确认下载 App 更新: version=${'$'}version",
-                ),
-            ),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/viewmodel/TaskStartUiHelpers.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/viewmodel/ExpandedControlPanelViewModel.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/viewmodel/BackgroundTaskViewModel.kt"),
-            TargetFile(
-                "src/main/java/com/aliothmoon/maameow/presentation/viewmodel/CopilotViewModel.kt",
-                allowedLiterals = setOf(
-                    "${'$'}TAG: 解析本地文件失败: ${'$'}fileName",
-                    "${'$'}TAG: 校正后重解析失败，沿用校正前的解析结果",
-                ),
-            ),
-            TargetFile("src/main/java/com/aliothmoon/maameow/presentation/state/HomeUiState.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/domain/models/RunMode.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/domain/models/OverlayControlMode.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/domain/models/RemoteBackend.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/data/model/update/UpdateSource.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/data/model/update/UpdateChannel.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/data/model/WakeUpConfig.kt"),
-            TargetFile(
-                "src/main/java/com/aliothmoon/maameow/domain/service/MaaResourceLoader.kt",
-                // 仅经 Exception/日志流转的诊断文案，UI 层（HomeViewModel/TaskStartUiHelpers）均映射为资源串
-                allowedLiterals = setOf("资源未就绪，请重新初始化"),
-            ),
-            TargetFile("src/main/java/com/aliothmoon/maameow/domain/service/MaaEventNotifier.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/domain/usecase/PrepareTaskStartUseCase.kt"),
-            TargetFile("src/main/java/com/aliothmoon/maameow/domain/usecase/AnalyzeTaskChainUseCase.kt"),
-        )
+        private val HAN = Regex("\\p{IsHan}")
+        private val LOG_CALL =
+            Regex("(?:^|[^\\w.])(?:Timber|Ln|Log)(?:\\.tag\\([^()]*\\))?\\.[a-z]\\w*\\s*$")
+
+        /** 返回不在注释、不在日志调用参数里的中文字面量（引号内的源码原文） */
+        internal fun hanLiterals(src: String): List<String> {
+            val out = mutableListOf<String>()
+            val logParens = ArrayDeque<Boolean>()
+            fun record(literal: String) {
+                if (HAN.containsMatchIn(literal) && logParens.none { it }) out += literal
+            }
+
+            var i = 0
+            val n = src.length
+            while (i < n) {
+                when {
+                    src.startsWith("//", i) -> i = src.indexOf('\n', i).let { if (it < 0) n else it }
+                    src.startsWith("/*", i) -> i = src.indexOf("*/", i + 2).let { if (it < 0) n else it + 2 }
+                    src.startsWith("\"\"\"", i) -> {
+                        val close = src.indexOf("\"\"\"", i + 3).let { if (it < 0) n else it }
+                        var end = (close + 3).coerceAtMost(n)
+                        while (end < n && src[end] == '"') end++
+                        record(src.substring(i + 3, maxOf(i + 3, end - 3)))
+                        i = end
+                    }
+
+                    src[i] == '"' -> {
+                        val close = stringEnd(src, i + 1)
+                        record(src.substring(i + 1, close))
+                        i = close + 1
+                    }
+
+                    src[i] == '\'' -> i = charEnd(src, i)
+                    src[i] == '(' -> {
+                        logParens.addLast(LOG_CALL.containsMatchIn(src.substring(maxOf(0, i - 64), i)))
+                        i++
+                    }
+
+                    src[i] == ')' -> {
+                        logParens.removeLastOrNull()
+                        i++
+                    }
+
+                    else -> i++
+                }
+            }
+            return out
+        }
+
+        private fun stringEnd(src: String, start: Int): Int {
+            var j = start
+            while (j < src.length) {
+                when {
+                    src[j] == '\\' -> j += 2
+                    src.startsWith("\${", j) -> j = templateEnd(src, j + 2)
+                    src[j] == '"' || src[j] == '\n' -> return j
+                    else -> j++
+                }
+            }
+            return src.length
+        }
+
+        private fun templateEnd(src: String, start: Int): Int {
+            var depth = 1
+            var j = start
+            while (j < src.length && depth > 0) {
+                when (src[j]) {
+                    '{' -> depth++
+                    '}' -> depth--
+                    '"' -> j = stringEnd(src, j + 1)
+                }
+                j++
+            }
+            return j
+        }
+
+        private fun charEnd(src: String, i: Int): Int {
+            val from = if (src.getOrNull(i + 1) == '\\') i + 3 else i + 2
+            val close = src.indexOf('\'', from)
+            return if (close in from..i + 8) close + 1 else i + 1
+        }
     }
 }

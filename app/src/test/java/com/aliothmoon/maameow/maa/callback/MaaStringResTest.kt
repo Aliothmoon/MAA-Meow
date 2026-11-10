@@ -10,6 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
+import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -66,6 +67,23 @@ class MaaStringResTest {
             runCatching { R.string::class.java.getField(name) }
                 .onFailure { fail("动作 $action 缺少字符串资源 $name") }
         }
+    }
+
+    @Test
+    fun literalStrKeys_allHaveStringResource() {
+        // str("Key") 缺资源会原样回落成英文 key，verifyI18nStrings 只比对 XML，查不到
+        val dir = listOf("src/main/java/$MAA_PACKAGE_DIR", "app/src/main/java/$MAA_PACKAGE_DIR")
+            .map(::File).first { it.isDirectory }
+        val missing = dir.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .flatMap { file -> LITERAL_STR_CALL.findAll(file.readText()).map { file.name to it.groupValues[1] } }
+            .filter { (_, key) ->
+                runCatching { R.string::class.java.getField("maa_${MaaStringRes.camelToSnake(key)}") }.isFailure
+            }
+            .map { (file, key) -> "$file: $key" }
+            .distinct()
+            .toList()
+        assertTrue("以下 str() key 缺少 maa_* 字符串资源：\n${missing.joinToString("\n")}", missing.isEmpty())
     }
 
     // ==================== 正向缓存 ====================
@@ -191,5 +209,10 @@ class MaaStringResTest {
         }
         // 每个 key 只解析一次：负缓存在并发下同样生效
         assertEquals(keys.size, calls.get())
+    }
+
+    private companion object {
+        const val MAA_PACKAGE_DIR = "com/aliothmoon/maameow/maa"
+        val LITERAL_STR_CALL = Regex("\\bstr\\(\\s*\"([A-Za-z0-9_.]+)\"")
     }
 }

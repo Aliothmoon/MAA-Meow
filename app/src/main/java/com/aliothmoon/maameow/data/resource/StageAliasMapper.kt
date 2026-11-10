@@ -93,19 +93,4 @@ object StageAliasMapper {
             .distinctBy { it.value }  // 去重相同目标
             .map { it.key to it.value }
     }
-
-    /**
-     * 获取别名提示文本
-     */
-    fun getAliasHintText(): String {
-        return buildString {
-            appendLine("支持以下简写：")
-            appendLine("• 龙门币/CE → CE-6")
-            appendLine("• 经验/狗粮/LS → LS-6")
-            appendLine("• 技能/CA → CA-5")
-            appendLine("• 红票/AP → AP-5")
-            appendLine("• 碳/SK → SK-5")
-            appendLine("• 剿灭/AN → Annihilation")
-        }
-    }
 }
