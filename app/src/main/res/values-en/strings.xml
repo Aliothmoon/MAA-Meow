@@ -268,6 +268,7 @@
     <string name="depot_inventory_plan_new">New depot maintain plan</string>
     <string name="depot_inventory_plan_current">In stock: %1$s</string>
     <string name="depot_inventory_plan_unsupported">This item cannot be farmed, so depot maintain is unavailable</string>
+    <string name="depot_plan_currency_inventory_tip">The stock of currencies like LMD and purchase certificates only builds up from battle drops; depot recognition never refreshes them</string>
     <string name="depot_inventory_plan_stage_custom">Custom stage</string>
     <string name="depot_inventory_plan_node_disabled">This task is disabled, so the plan will not run</string>
     <string name="depot_inventory_plan_save">Save</string>

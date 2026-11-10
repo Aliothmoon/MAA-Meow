@@ -294,6 +294,14 @@ internal fun DepotPlanEditorSheet(
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
+                    if (headerItemId in itemHelper.currencyItemIds) {
+                        Text(
+                            text = stringResource(R.string.depot_plan_currency_inventory_tip),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
                     if (current == DepotPlanSheetMode.UNSUPPORTED) {
                         Text(
                             text = stringResource(R.string.depot_inventory_plan_unsupported),

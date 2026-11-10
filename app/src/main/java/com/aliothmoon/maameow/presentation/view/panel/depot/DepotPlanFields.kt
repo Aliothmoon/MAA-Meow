@@ -51,16 +51,16 @@ internal fun List<StageGroup>.allStageCodes(): List<String> =
     flatMap { group -> group.stages.map { it.code } }
 
 /**
- * 库存保持可选的物品列表 = 仓库识别认得出的那份（[ItemHelper.depotItems]），
- * 不是关卡掉落列表：掉落列表里的声望、龙门币做库存保持没有意义，识别也认不出来。
+ * 库存保持可选的物品列表 = 仓库识别认得出的那批材料 + 三样货币（[ItemHelper.depotTargetItems]），
+ * 不是关卡掉落列表：掉落列表里的声望做库存保持没有意义，也识别不出来。
  *
  * 索引还没加载出来时退回内置的那份，别让面板空着。
  */
 @Composable
 internal fun rememberDepotItemIds(itemHelper: ItemHelper): List<String> {
-    val depotItems by itemHelper.depotItems.collectAsStateWithLifecycle()
-    return remember(depotItems) {
-        if (depotItems.isNotEmpty()) depotItems.map { it.id } else UiUsageConstants.dropItems
+    val depotTargets by itemHelper.depotTargetItems.collectAsStateWithLifecycle()
+    return remember(depotTargets) {
+        if (depotTargets.isNotEmpty()) depotTargets.map { it.id } else UiUsageConstants.dropItems
     }
 }
 

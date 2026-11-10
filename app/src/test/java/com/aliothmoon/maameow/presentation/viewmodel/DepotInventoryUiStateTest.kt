@@ -58,6 +58,55 @@ class DepotInventoryUiStateTest {
         assertEquals(72_000, cells.first { it.id == "4003" }.count)
     }
 
+    /**
+     * 声望这类杂项不进库存页：Core 每场战斗都会报 5001，
+     * 但它既不能配计划也不是库存，出格子只会得到一个永远点不开的数字。
+     */
+    @Test
+    fun buildInventoryCells_dropsJunkItemsWithoutPlan() {
+        val cells = buildInventoryCells(
+            snapshot = DepotSnapshot(items = mapOf("5001" to 98_765, "30011" to 7)),
+            itemMap = mapOf("5001" to info("5001", "声望"), "30011" to info("30011", "源岩")),
+            depotItemIds = listOf("30011"),
+            plans = emptyList(),
+            excludedItemIds = setOf("5001"),
+        )
+
+        assertEquals(listOf("30011"), cells.map { it.id })
+    }
+
+    /** 老计划里真存着杂项 id 时仍要能看见：否则那条计划在界面上删不掉 */
+    @Test
+    fun buildInventoryCells_keepsJunkItemWhenPlanned() {
+        val snap = DepotSnapshot(items = mapOf("5001" to 98_765))
+        val plans = listOf(plan(dropId = "5001").toUi(node(), 0, snap, emptyMap()) { true })
+
+        val cells = buildInventoryCells(
+            snapshot = snap,
+            itemMap = mapOf("5001" to info("5001", "声望")),
+            depotItemIds = emptyList(),
+            plans = plans,
+            excludedItemIds = setOf("5001"),
+        )
+
+        assertEquals(listOf("5001"), cells.map { it.id })
+    }
+
+    /** 龙门币这类货币能被选成刷取目标，数量按战斗累计的掉落算 */
+    @Test
+    fun buildInventoryCells_includesCurrencyTargets() {
+        val cells = buildInventoryCells(
+            snapshot = DepotSnapshot(items = mapOf("4001" to 1_200_000)),
+            itemMap = mapOf("4001" to info("4001", "龙门币"), "4006" to info("4006", "采购凭证")),
+            depotItemIds = listOf("4001", "4006"),
+            plans = emptyList(),
+        )
+
+        assertEquals(listOf("4001", "4006"), cells.map { it.id })
+        assertEquals(1_200_000, cells.first { it.id == "4001" }.count)
+        assertEquals(0, cells.first { it.id == "4006" }.count)
+    }
+
     /** 同一物品配了多条计划就出多格：执行侧会挨个跑，格子少一条就和二级页的计数对不上 */
     @Test
     fun buildInventoryCells_oneCellPerPlanForDuplicates() {

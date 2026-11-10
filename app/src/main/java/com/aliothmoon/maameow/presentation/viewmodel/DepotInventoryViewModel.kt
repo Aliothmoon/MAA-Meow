@@ -187,11 +187,18 @@ class DepotInventoryViewModel(
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
-     * 库存格子 = 仓库识别认得出的全部物品 ∪ 仓库现有物品 ∪ 保持计划里的物品。
+     * 库存格子 = 可刷取目标（识别得出的材料 + 龙门币/采购凭证/家具零件）∪ 快照里的其它物品
+     * ∪ 保持计划里的物品，但**排除**明确的杂项（声望这类每场必掉的博士经验）。
      *
-     * 识别集合取 [ItemHelper.depotItems]（索引里 `classifyType == "MATERIAL"`），
-     * 与 Core 建模板缓存用的那份同源；**不能取 [ItemHelper.dropItems]**——那是关卡掉落列表，
-     * 会把声望（博士经验）、龙门币这类根本进不了仓库的东西画成一格。
+     * 目标集合取 [ItemHelper.depotTargetItems]：仓库识别本身只覆盖 MATERIAL，
+     * 三样货币靠战斗结算的累计掉落进快照，所以也要出格子；
+     * **不能取 [ItemHelper.dropItems]**——那是关卡掉落列表，会把声望（博士经验）
+     * 这类根本不该出现在库存页的条目画成一格。
+     *
+     * 快照里 Core 额外上报的条目（合成玉、寻访凭证）仍然保留：它们确实是库存，
+     * 只是不能当刷取目标，点开面板会给出「不能作为刷取目标」的说明。
+     * 历史遗留的杂项（早期版本累计下来的声望）不再出格子，数据本身不删，
+     * 清空库存时一起清掉。
      *
      * 库里一条记录都没有的材料也要出格子（图标压淡），否则「这个材料我到底有没有」
      * 只能靠数格子猜；计划里的物品即便识别不到（= 0）也要出现，否则「缺多少」
@@ -200,10 +207,16 @@ class DepotInventoryViewModel(
     val cells: StateFlow<List<DepotInventoryCellUi>> = combine(
         depotSnapshot,
         itemHelper.items,
-        itemHelper.depotItems,
+        itemHelper.depotTargetItems,
         maintainPlans,
-    ) { snap, itemMap, depotItems, plans ->
-        buildInventoryCells(snap, itemMap, depotItems.map { it.id }, plans)
+    ) { snap, itemMap, depotTargets, plans ->
+        buildInventoryCells(
+            snapshot = snap,
+            itemMap = itemMap,
+            depotItemIds = depotTargets.map { it.id },
+            plans = plans,
+            excludedItemIds = itemHelper.nonTargetItemIds,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** 新建计划时要知道的所属节点状态（只用来提示任务没启用、以及显不显示药/石）。 */
@@ -1085,11 +1098,17 @@ internal fun buildInventoryCells(
     itemMap: Map<String, ItemInfo>,
     depotItemIds: List<String>,
     plans: List<DepotMaintainPlanUi>,
+    /**
+     * 明确不该出格子的条目（声望这类每场必掉的杂项）。
+     *
+     * 只过滤「没有计划」的格子：老计划里真存着这类 id 时仍要能看见、能删掉。
+     */
+    excludedItemIds: Set<String> = emptySet(),
 ): List<DepotInventoryCellUi> {
     val plansByItem = plans.groupBy { it.itemId }
     val ids = LinkedHashSet<String>(depotItemIds.size + snapshot.items.size).apply {
         addAll(depotItemIds)
-        addAll(snapshot.items.keys)
+        addAll(snapshot.items.keys.filterNot { it in excludedItemIds })
         addAll(plansByItem.keys)
     }
     return ids.asSequence()

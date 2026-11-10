@@ -523,6 +523,7 @@
     <string name="depot_inventory_plan_new">新建库存保持计划</string>
     <string name="depot_inventory_plan_current">当前库存 %1$s</string>
     <string name="depot_inventory_plan_unsupported">该物品不能作为刷取目标，无法设置库存保持</string>
+    <string name="depot_plan_currency_inventory_tip">龙门币、采购凭证这类货币的库存只能靠战斗结算累积，仓库识别不会刷新它们</string>
     <string name="depot_inventory_plan_stage_custom">自定义关卡</string>
     <string name="depot_inventory_plan_node_disabled">该任务未启用，计划不会执行</string>
     <string name="depot_inventory_plan_save">保存</string>

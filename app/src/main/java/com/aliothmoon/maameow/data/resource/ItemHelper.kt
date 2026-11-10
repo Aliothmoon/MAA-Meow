@@ -19,6 +19,7 @@ class ItemHelper(
     private val _items = MutableStateFlow<Map<String, ItemInfo>>(emptyMap())
     private val _dropItems = MutableStateFlow<List<ItemInfo>>(emptyList())
     private val _depotItems = MutableStateFlow<List<ItemInfo>>(emptyList())
+    private val _depotTargetItems = MutableStateFlow<List<ItemInfo>>(emptyList())
 
     /**  (itemId -> ItemInfo) */
     val items: StateFlow<Map<String, ItemInfo>> = _items.asStateFlow()
@@ -43,11 +44,57 @@ class ItemHelper(
     val depotItems: StateFlow<List<ItemInfo>> = _depotItems.asStateFlow()
 
     /**
+     * 可以作为「库存保持」刷取目标的物品 = [depotItems] + [DEPOT_EXTRA_ITEM_IDS]。
+     *
+     * 仓库识别只覆盖 MATERIAL，龙门币 / 采购凭证这类货币永远识别不到，
+     * 但它们的掉落会随战斗结算进仓库快照（见 `SubTaskHandler.handleStageDrops`），
+     * 所以照样能当目标刷：当前数量只按累计掉落算，没有识别基线。
+     *
+     * 家具零件（`3401`）**不在**这里：它不是关卡掉落，没有可刷的关卡，
+     * 放进来只会得到一格永远刷不满的数字。
+     *
+     * 声望（`5001`，classifyType=NONE）这类「每场必掉、但不是可刷资源」的条目
+     * 不在这里，库存页与物品选择器都不该出现。
+     */
+    val depotTargetItems: StateFlow<List<ItemInfo>> = _depotTargetItems.asStateFlow()
+
+    /** 该物品能否作为库存保持的刷取目标 */
+    fun isDepotTargetItem(itemId: String): Boolean =
+        _depotTargetItems.value.any { it.id == itemId } ||
+            // 索引未载入时退化成「只要不是明确的杂项就放行」，避免掉落事件被整批吞掉
+            (_depotTargetItems.value.isEmpty() && itemId !in NON_TARGET_ITEM_IDS)
+
+    /** 明确不该出现在库存页 / 不写进仓库的条目（声望这类每场必掉的杂项） */
+    val nonTargetItemIds: Set<String> get() = NON_TARGET_ITEM_IDS
+
+    /**
+     * 仓库识别覆盖不到、只能靠战斗结算累积库存的物品（龙门币 / 采购凭证）。
+     *
+     * 界面上要据此提示「识别不会刷新它们的数字」，否则用户会以为识别漏了。
+     */
+    val currencyItemIds: Set<String> get() = DEPOT_EXTRA_ITEM_IDS.toSet()
+
+    /**
      * 关卡不可掉落的材料排除列表
      * see FightSettingsUserControlModel._excludedValues
      */
     companion object {
         private const val INDEX_JSON = "item_index.json"
+
+        /**
+         * 仓库识别之外的刷取目标：龙门币、采购凭证。
+         *
+         * 这两样在仓库界面里不在可识别的材料网格内（classifyType=NORMAL），
+         * 但关卡掉落会带它们，所以能按「累计掉落」当目标刷。
+         * 家具零件（3401）不在其中：它只能靠基建/活动产出，没有可刷关卡。
+         */
+        private val DEPOT_EXTRA_ITEM_IDS = listOf("4001", "4006")
+
+        /**
+         * 明确不作为刷取目标的条目：声望（博士经验）每场必掉且无法消耗，
+         * 进库存页只会变成一堆无人关心的数字。
+         */
+        private val NON_TARGET_ITEM_IDS = setOf("5001")
 
         /** 没有独立资源档的客户端，只有根目录那一份索引 */
         const val DEFAULT_CLIENT = "Official"
@@ -112,8 +159,13 @@ class ItemHelper(
                 .filter { it.id !in excludedValues }
                 .sortedBy { it.id }  // WPF: string.Compare Ordinal
             // Core 那边 sortId 相同就是 `std::ranges::sort` 的不稳定序，这里补个 id 兜底
-            _depotItems.value = parsed.values
+            val materials = parsed.values
                 .filter { it.classifyType == MATERIAL_CLASSIFY }
+                .sortedWith(compareBy({ it.sortId }, { it.id }))
+            _depotItems.value = materials
+            // 排序跟仓库材料同一条：先 sortId 再 id，货币会落在它们自己的位置（家具零件在最后）
+            _depotTargetItems.value = (materials + DEPOT_EXTRA_ITEM_IDS.mapNotNull { parsed[it] })
+                .filterNot { it.id in NON_TARGET_ITEM_IDS }
                 .sortedWith(compareBy({ it.sortId }, { it.id }))
         }
         return true

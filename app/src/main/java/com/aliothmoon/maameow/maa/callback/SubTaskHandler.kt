@@ -18,6 +18,7 @@ import com.aliothmoon.maameow.data.repository.DepotDelta
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.delta
 import com.aliothmoon.maameow.data.resource.ActivityManager
+import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.data.resource.ServerTimezone
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
@@ -55,6 +56,9 @@ class SubTaskHandler(
     private val operProgressHandler: OperProgressHandler
             by inject(OperProgressHandler::class.java)
     private val appSettings: AppSettingsManager by inject(AppSettingsManager::class.java)
+
+    /** 刷取目标集合（材料 + 三样货币），用来过滤战斗结算里的杂项掉落 */
+    private val itemHelper: ItemHelper by inject(ItemHelper::class.java)
 
     // 懒取：实现方 MaaCompositionService 反过来依赖本类，构造注入会成环
     private val executionStateHolder: MaaExecutionStateHolder
@@ -1006,12 +1010,15 @@ class SubTaskHandler(
         sessionLogger.append(sb.toString(), LogLevel.TRACE)
 
         if (drops.isNotEmpty()) {
+            // 只把「能当库存目标」的掉落写进仓库：声望（每场必给的博士经验）这类
+            // 既不能配计划、也识别不出来，写进去只会在库存页堆一批无人关心的数字
+            val targetDrops = drops.filter { (itemId, _) -> itemHelper.isDepotTargetItem(itemId) }
             // 同步写穿内存，下一关 TaskChainStart 立刻能 countOf 到本场掉落。
             // 目标档用开跑时捕获的那一档，避免中途切档把掉落写错档
-            val written = depotRepository.merge(drops, runProfileId)
+            val written = targetDrops.isNotEmpty() && depotRepository.merge(targetDrops, runProfileId)
             // 写不进去（运行中删掉了开跑档 / 该档一直没有识别基线）时用户只会看到「库存没涨」，
             // 这条警告每场会话只打一次，免得刷屏
-            if (!written && !dropWriteWarned) {
+            if (targetDrops.isNotEmpty() && !written && !dropWriteWarned) {
                 dropWriteWarned = true
                 append(
                     resources.getString(R.string.runlog_depot_drop_write_skipped),

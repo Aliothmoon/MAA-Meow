@@ -169,6 +169,43 @@ class ItemHelperTest {
         assertTrue(itemHelper.dropItems.value.map { it.id }.contains("5001"))
     }
 
+    /**
+     * 刷取目标 = 材料 + 两样货币（龙门币 / 采购凭证）。
+     *
+     * 仓库识别认不出货币，但关卡掉落会带，所以它们得能当目标；
+     * 家具零件是基建产出、没有可刷关卡，声望是每场必掉的杂项，两者都不能进集合。
+     */
+    @Test
+    fun depotTargetItemsAddCurrenciesButNoReputation() {
+        val itemHelper = helper()
+        writeIndexJson(
+            baseDir,
+            """
+            {
+              "5001":{"name":"声望","sortId":-10000,"classifyType":"NONE"},
+              "4001":{"name":"龙门币","sortId":10201,"classifyType":"NORMAL"},
+              "4006":{"name":"采购凭证","sortId":10205,"classifyType":"NORMAL"},
+              "3401":{"name":"家具零件","sortId":200002,"classifyType":"NORMAL"},
+              "30011":{"name":"源岩","sortId":100040,"classifyType":"MATERIAL"}
+            }
+            """.trimIndent(),
+        )
+
+        assertTrue(itemHelper.load("Official"))
+
+        assertEquals(
+            listOf("4001", "4006", "30011"),
+            itemHelper.depotTargetItems.value.map { it.id },
+        )
+        assertTrue(itemHelper.isDepotTargetItem("4001"))
+        assertTrue(itemHelper.isDepotTargetItem("4006"))
+        // 家具零件不是关卡掉落，不能当刷取目标
+        assertFalse(itemHelper.isDepotTargetItem("3401"))
+        assertFalse(itemHelper.isDepotTargetItem("5001"))
+        assertEquals(setOf("5001"), itemHelper.nonTargetItemIds)
+        assertEquals(setOf("4001", "4006"), itemHelper.currencyItemIds)
+    }
+
     private companion object {
         const val INDEX_JSON = "item_index.json"
     }
