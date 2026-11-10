@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.settings
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -129,6 +130,7 @@ import com.aliothmoon.maameow.data.repository.OperBoxSnapshot
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.ToolboxExportFileType
+import com.aliothmoon.maameow.domain.service.ToolboxExportService
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.view.panel.ToolboxFileExporter
 import com.aliothmoon.maameow.presentation.view.panel.depot.DepotCellGap
@@ -1316,10 +1318,12 @@ private fun DepotInventoryExportBottomSheet(
     viewModel: DepotInventoryViewModel,
     exporter: ToolboxFileExporter,
     exportLabels: OperBoxExportLabels,
+    exportService: ToolboxExportService = koinInject(),
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
     val failedMsg = stringResource(R.string.toolbox_export_file_failed)
+    val chooserTitle = stringResource(R.string.toolbox_export_chooser_title)
     // 图里的文案在这里解析好再传进去：ViewModel 不碰 Context
     val depotPngLabels = DepotPngLabels(
         itemsCountFormat = stringResource(R.string.depot_inventory_png_items),
@@ -1338,7 +1342,8 @@ private fun DepotInventoryExportBottomSheet(
     var includeNotOwned by remember { mutableStateOf(true) }
 
     // 渲染放在页面的 scope 上：面板一收就取消的话，几秒的渲染会白跑一趟还没有任何提示
-    val renderAndExport: (String, suspend () -> ByteArray?) -> Unit = { prefix, render ->
+    // 出图后直接进系统分享面板（想存文件在面板里选「文件」即可），不再先落一次 SAF
+    val renderAndShare: (String, suspend () -> ByteArray?) -> Unit = { prefix, render ->
         exportScope.launch {
             // 取消（比如转屏）不能被吞成「导出失败」的 Toast，否则协程取消语义就断了
             val bytes = try {
@@ -1348,8 +1353,11 @@ private fun DepotInventoryExportBottomSheet(
             } catch (e: Throwable) {
                 null
             }
-            if (bytes != null) {
-                exporter.exportBytes(prefix, bytes, ToolboxExportFileType.PNG)
+            val intent = bytes?.let {
+                exportService.buildShareIntentBytes(prefix, it, ToolboxExportFileType.PNG)
+            }
+            if (intent != null) {
+                context.startActivity(Intent.createChooser(intent, chooserTitle))
             } else {
                 Toast.makeText(context, failedMsg, Toast.LENGTH_SHORT).show()
             }
@@ -1487,7 +1495,7 @@ private fun DepotInventoryExportBottomSheet(
                                 text = stringResource(R.string.depot_inventory_export_image),
                                 icon = Icons.Default.Image,
                                 onClick = {
-                                    renderAndExport("depot") {
+                                    renderAndShare("depot") {
                                         viewModel.renderDepotPng(
                                             profileId = profileId,
                                             hideProfileLabel = hideProfileLabel,
@@ -1540,7 +1548,7 @@ private fun DepotInventoryExportBottomSheet(
                                 text = stringResource(R.string.depot_inventory_export_image),
                                 icon = Icons.Default.Image,
                                 onClick = {
-                                    renderAndExport("operbox") {
+                                    renderAndShare("operbox") {
                                         viewModel.renderOperBoxPng(
                                             profileId = profileId,
                                             hideProfileLabel = hideProfileLabel,
