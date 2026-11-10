@@ -17,7 +17,8 @@ class FightDropsRefresherSkippedPlansTest {
 
     private val inventory = mutableMapOf<String, Int>()
     private val depotRepository: DepotRepository = mockk {
-        every { countOf(any()) } answers { inventory[firstArg()] ?: 0 }
+        // 判定改走「开跑档」重载：本用例没有切档场景，按同一份库存读
+        every { countOf(any(), any()) } answers { inventory[firstArg()] ?: 0 }
     }
     private val itemHelper: ItemHelper = mockk {
         every { getItemInfo(any()) } answers {
@@ -26,8 +27,13 @@ class FightDropsRefresherSkippedPlansTest {
     }
     // 本分支给 FightDropsRefresher 加了 appContext（日志文案本地化）与 stageApCostHelper/subTaskHandler；
     // relaxed 是因为本用例只断言跳过计划的数据，不关心文案
-    private val refresher =
-        FightDropsRefresher(mockk(relaxed = true), depotRepository, itemHelper, mockk(), mockk())
+    private val refresher = FightDropsRefresher(
+        mockk(relaxed = true),
+        depotRepository,
+        itemHelper,
+        mockk(),
+        mockk { every { runProfileId } returns null },
+    )
 
     @Before
     fun setUp() {

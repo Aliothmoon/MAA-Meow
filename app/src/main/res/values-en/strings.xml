@@ -250,6 +250,7 @@
     <string name="depot_inventory_export_arkplanner">Penguin / ArkPlanner (JSON)</string>
     <string name="depot_inventory_export_lolicon">Lolicon (JSON)</string>
     <string name="depot_inventory_export_image">Export as image (PNG)</string>
+    <string name="depot_inventory_export_rendering">Generating image…</string>
     <string name="depot_inventory_export_hide_profile">Hide profile name</string>
     <string name="depot_inventory_export_hide_profile_hint">PNG header omits the profile name; keeps time and data only</string>
     <string name="depot_inventory_export_include_not_owned">Include unowned operators</string>
@@ -2743,6 +2744,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="runlog_depot_plan_stale_skipped">%1$s #%2$d: %3$s is actually %4$d/%5$d, insufficient. Plans skipped at the pre-check can\'t be added mid-run; run again to farm it</string>
     <string name="runlog_depot_delta_summary">Depot: %2$d items changed since %1$s. See Tools → Depot</string>
     <string name="runlog_depot_delta_none">No depot changes (vs %1$s)</string>
+    <string name="runlog_depot_drop_write_skipped">Drops from this run were not saved: the profile chosen at start was deleted or never had an inventory baseline</string>
     <string name="runlog_depot_skipped_activity">An event is in progress; Depot Maintain skipped</string>
     <string name="runlog_depot_skipped_resource">The resource collection event is active; Depot Maintain skipped</string>
     <string name="runlog_depot_sorted_by_progress">Plans queued in ascending order of inventory progress</string>

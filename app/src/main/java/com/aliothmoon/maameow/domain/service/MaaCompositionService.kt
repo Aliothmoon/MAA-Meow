@@ -819,6 +819,9 @@ class MaaCompositionService(
         // 凭这行能从会话日志找到遥测里的那一轮
         telemetry.onRunStarted(kind, tasks)?.let { sessionLogger.appendToFileOnly("[Telemetry] run_id=$it") }
         subTaskHandler.resetSessionState()
+        // 预检（连设备、载资源）可能几十秒，这之前的活跃档就是本场分析用的档；
+        // 在这里钉住，中途切档才不会把掉落记到别的档上
+        subTaskHandler.beginSession(taskChainState.profileId.value)
         toolboxResultCollector.onSessionStart()
         onSessionStarted?.invoke()
         sessionLogger.appendAndWait(startMessage, LogLevel.INFO)

@@ -96,6 +96,11 @@ internal fun DepotPlanEditorSheet(
     itemId: String,
     itemName: String,
     count: Int,
+    /**
+     * 按物品 id 取当前库存：换物品之后要按新物品的数重算，
+     * 不能继续用「点开那一格」的数量（默认仍返回 [count]，兼容只传数量的调用方）。
+     */
+    countOf: (String) -> Int = { count },
     existing: DepotMaintainPlan?,
     existingOutcome: DepotPlanOutcome?,
     context: DepotPlanContext,
@@ -144,6 +149,8 @@ internal fun DepotPlanEditorSheet(
             ),
         )
     }
+    // 当前草稿所指物品的库存（面板里换过物品之后，不能再拿点开那一格的数）
+    val currentCount = countOf(draft.dropId)
 
     // 关卡列表里选「自定义」才放出输入框；已有计划用的是列表外的代码时默认就是它。
     // 不再有任务级的「手动输入关卡名」开关：手动输入是「这一条计划」的编辑动作，
@@ -174,7 +181,7 @@ internal fun DepotPlanEditorSheet(
 
     // 目标库存跟着草稿实时算，改数字时右上的「已够/缺多少」立刻跟着变
     val draftTarget = draft.dropCount.coerceIn(1, MAX_DEPOT_TARGET_INVENTORY)
-    val short = draftTarget > count
+    val short = draftTarget > currentCount
     // 放开物品选择时草稿里的物品会被换掉，抬头得跟着它走；定死的那几处就是点开时那一个
     val headerItemId = draft.dropId.ifBlank { itemId }
     val headerName = itemNameMap[headerItemId] ?: itemName
@@ -246,11 +253,11 @@ internal fun DepotPlanEditorSheet(
                             Text(
                                 text = if (editing) {
                                     // 与格子、与后台任务的计划概览同一个顺序、同一份实现
-                                    depotProgressText(count, draftTarget, synced)
+                                    depotProgressText(currentCount, draftTarget, synced)
                                 } else {
                                     stringResource(
                                         R.string.depot_inventory_plan_current,
-                                        if (synced) "$count" else "--",
+                                        if (synced) "$currentCount" else "--",
                                     )
                                 },
                                 style = MaterialTheme.typography.bodySmall,
@@ -264,7 +271,7 @@ internal fun DepotPlanEditorSheet(
                                 text = if (short) {
                                     stringResource(
                                         R.string.depot_inventory_maintain_need,
-                                        draftTarget - count,
+                                        draftTarget - currentCount,
                                     )
                                 } else {
                                     stringResource(R.string.depot_inventory_maintain_enough)
@@ -334,11 +341,15 @@ internal fun DepotPlanEditorSheet(
                         )
 
                         if (existing != null && existingOutcome != null) {
-                            PlanOutcomeHint(existingOutcome, existing.needAgainst(count))
+                            PlanOutcomeHint(existingOutcome, existing.needAgainst(currentCount), existing.stage)
                         }
 
-                        // 手输的关卡码可能写错或今天没开，提前说一声，别等跑起来才发现被跳过
-                        if (draft.stage.isNotBlank() && !activityManager.isStageOpen(draft.stage)) {
+                        // 手输的关卡码可能写错或今天没开，提前说一声，别等跑起来才发现被跳过。
+                        // 已有计划的 StageClosed 已经由上面的 PlanOutcomeHint 说过一次，这里不重复
+                        if (draft.stage.isNotBlank() &&
+                            existingOutcome != DepotPlanOutcome.StageClosed &&
+                            !activityManager.isStageOpen(draft.stage)
+                        ) {
                             Text(
                                 text = stringResource(
                                     R.string.depot_inventory_maintain_stage_closed,
@@ -402,11 +413,11 @@ internal fun DepotPlanEditorSheet(
 
 /** 已保存计划里那些「配了也跑不起来」的原因，与运行日志同一套口径。 */
 @Composable
-private fun PlanOutcomeHint(outcome: DepotPlanOutcome, need: Int) {
+private fun PlanOutcomeHint(outcome: DepotPlanOutcome, need: Int, stage: String) {
     // 能跑的计划，缺口由 DepotPlanFields 按草稿实时算
     if (outcome == DepotPlanOutcome.Enough || outcome == DepotPlanOutcome.Runnable) return
     Text(
-        text = depotPlanOutcomeLabel(outcome = outcome, need = need, stage = ""),
+        text = depotPlanOutcomeLabel(outcome = outcome, need = need, stage = stage),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.error,
     )

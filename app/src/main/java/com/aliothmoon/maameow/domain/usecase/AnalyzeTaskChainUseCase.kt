@@ -31,6 +31,7 @@ import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
+import timber.log.Timber
 
 /** 期望掉率准备的等待上限：断网时不能让启动卡在 OkHttp 的读超时上，取不到就回退逐场刷 */
 private const val DROP_RATE_PREPARE_TIMEOUT_MS = 20_000L
@@ -96,12 +97,23 @@ class AnalyzeTaskChainUseCase(
         )
 
         // 按最大倍率刷取要估算次数，得在展开前备好掉率：toTaskParams 是同步的，不能在里面联网。
-        // 没人开启时完全不联网（有磁盘缓存时也只是读文件）。
+        // 只有「真会去刷」的节点才值得联网：节点启用 + 开了倍率 + 至少有一条计划，
+        // 否则空节点或只有空计划的配置会让每次启动都白等一次超时。
         // 首次拉取约 2MB，断网时必须给个上限，否则启动会被 OkHttp 超时拖住一两分钟；
         // 超时/取不到就让它保持 null，各计划自动回退逐场刷。
-        if (runNodes.any { (it.config as? DepotMaintainConfig)?.useAutoSeries == true }) {
-            withTimeoutOrNull(DROP_RATE_PREPARE_TIMEOUT_MS) {
+        val needsDropRate = runNodes.any { node ->
+            if (!node.enabled) return@any false
+            val cfg = node.config as? DepotMaintainConfig ?: return@any false
+            cfg.useAutoSeries && cfg.plans.any { it.dropCount > 0 }
+        }
+        if (needsDropRate) {
+            val prepared = withTimeoutOrNull(DROP_RATE_PREPARE_TIMEOUT_MS) {
                 dropRateProvider.prepare(report.server)
+                true
+            }
+            if (prepared == null) {
+                // 日志用英文：UiI18nHardcodedStringsTest 会拦 main 源码里的中文字面量
+                Timber.w("Drop-rate prefetch timed out after %d ms, skipping run estimate", DROP_RATE_PREPARE_TIMEOUT_MS)
             }
         }
         val log = CollectingPreflightLogSink()

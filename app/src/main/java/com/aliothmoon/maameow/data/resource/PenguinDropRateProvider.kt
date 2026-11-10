@@ -51,10 +51,17 @@ class PenguinDropRateProvider(
         }
     }
 
-    /** 单次进图该材料的期望掉落个数；无数据返回 null（调用方回退逐场刷）。 */
-    fun getRate(stageCode: String, itemId: String): Double? {
+    /**
+     * 单次进图该材料的期望掉落个数；无数据返回 null（调用方回退逐场刷）。
+     *
+     * [server] 必填：切服之后旧服的掉率不能拿来算次数，否则会按错误服的期望刷
+     * （prepare 还没来得及刷新的那段时间最容易中招）。
+     */
+    fun getRate(stageCode: String, itemId: String, server: String): Double? {
         if (stageCode.isBlank() || itemId.isBlank()) return null
-        val map = synchronized(stateLock) { rates } ?: return null
+        val (map, loaded) = synchronized(stateLock) { rates to loadedServer }
+        if (map == null) return null
+        if (loaded != server) return null
         return map[dropRateKey(stageCode, itemId)]?.takeIf { it > 0.0 }
     }
 

@@ -36,6 +36,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -52,6 +53,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.IOException
 import java.util.Locale
@@ -99,6 +101,24 @@ class TaskChainState(
 
     private val _profileDeleted = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val profileDeleted: SharedFlow<String> = _profileDeleted.asSharedFlow()
+
+    /**
+     * 删除事件没有第二次机会：列表已经改完，调用方恰好被取消就会丢掉「清分片」，
+     * 重启 load 又把死档读回来。
+     *
+     * 无订阅者时 `tryEmit` 直接成功但**不入队**（replay=0 → 事件丢弃），所以这里
+     * 只记一条 warn，真正的兜底是 [ProfileShardStore.load] 按 profiles 对账。
+     * 有订阅者时 `tryEmit` 成功即入队；仅在缓冲满（一次导入顶掉 ≥8 个档）时才退化成
+     * 挂起 `emit`，用 `NonCancellable` 挡住「用户离开设置页 → viewModelScope 取消」。
+     */
+    private suspend fun emitProfileDeleted(profileId: String) {
+        if (_profileDeleted.subscriptionCount.value == 0) {
+            Timber.w("No profileDeleted subscriber, shard cleanup relies on next load(): %s", profileId)
+        }
+        if (!_profileDeleted.tryEmit(profileId)) {
+            withContext(NonCancellable) { _profileDeleted.emit(profileId) }
+        }
+    }
 
     private val _lastUsedClientType = MutableStateFlow<String?>(null)
 
@@ -648,7 +668,7 @@ class TaskChainState(
             true
         }
         if (!removed) return
-        _profileDeleted.tryEmit(profileId)
+        emitProfileDeleted(profileId)
         Timber.d("Deleted profile: %s", profileId)
     }
 
@@ -790,12 +810,21 @@ class TaskChainState(
         val resolvedActiveId =
             profiles.find { it.id == activeId }?.id ?: profiles.firstOrNull()?.id ?: return
         val activeChain = profiles.find { it.id == resolvedActiveId }?.chain ?: buildDefaultChain()
+        var previousIds: List<String> = emptyList()
         locked {
+            // 在锁内取旧列表：与 createProfile 并发时，锁外的快照可能已经过时
+            previousIds = _profiles.value.map { it.id }
             _profiles.value = profiles
             _profileId.value = resolvedActiveId
             _chain.value = activeChain
             doSync()
         }
+        // 导入会整体替换列表：被顶掉的档不走 removeProfile，必须补发删除事件，
+        // 否则它们的分片留在磁盘上（UI 看不到、重启 load 又会读回，导入同 id 备份时还会复活）。
+        // 交接语义见 emitProfileDeleted：有订阅者才真正入队，无订阅者靠 load() 对账兜底。
+        previousIds
+            .filter { id -> profiles.none { it.id == id } }
+            .forEach { emitProfileDeleted(it) }
         // 导入是用户可见的终态操作（随后会提示「导入成功」），必须确认落盘再返回
         flush()
         Timber.d("Imported %d profiles, active: %s", profiles.size, resolvedActiveId)

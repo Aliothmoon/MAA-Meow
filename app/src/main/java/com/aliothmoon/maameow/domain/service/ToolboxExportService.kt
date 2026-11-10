@@ -39,7 +39,7 @@ class ToolboxExportService(
         withContext(Dispatchers.IO) {
             try {
                 val exportDir = File(context.cacheDir, EXPORT_DIR).apply { mkdirs() }
-                cleanupOldExports(exportDir, prefix)
+                cleanupOldExports(exportDir, prefix, fileType)
                 val file = File(exportDir, makeFileName(prefix, fileType))
                 file.writeText(content)
                 createShareIntent(file, fileType)
@@ -74,7 +74,7 @@ class ToolboxExportService(
         withContext(Dispatchers.IO) {
             try {
                 val exportDir = File(context.cacheDir, EXPORT_DIR).apply { mkdirs() }
-                cleanupOldExports(exportDir, prefix)
+                cleanupOldExports(exportDir, prefix, fileType)
                 val file = File(exportDir, makeFileName(prefix, fileType))
                 file.writeBytes(bytes)
                 createShareIntent(file, fileType)
@@ -112,10 +112,20 @@ class ToolboxExportService(
         }
     }
 
-    private fun cleanupOldExports(dir: File, prefix: String) {
+    /**
+     * 只清同一前缀、同一扩展名的旧文件。
+     * 以前只看前缀：`operbox_` 前缀下 JSON / MD / CSV / PNG 混放，
+     * 刚分享出去的 MD 会被下一次导出 PNG 顺手删掉（分享面板可能还没读完）。
+     */
+    private fun cleanupOldExports(
+        dir: File,
+        prefix: String,
+        fileType: ToolboxExportFileType,
+    ) {
         try {
+            val suffix = ".${fileType.extension}"
             dir.listFiles { f ->
-                f.isFile && f.name.startsWith("${prefix}_")
+                f.isFile && f.name.startsWith("${prefix}_") && f.name.endsWith(suffix)
             }?.forEach { it.delete() }
         } catch (e: Exception) {
             Timber.w(e, "Failed to cleanup old exports")

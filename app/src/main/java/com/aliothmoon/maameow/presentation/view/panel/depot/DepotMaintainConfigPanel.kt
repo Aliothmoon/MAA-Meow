@@ -113,27 +113,31 @@ fun DepotMaintainConfigPanel(
     iconLoader: ItemIconLoader = koinInject(),
 ) {
     val snapshot by depotRepository.snapshot.collectAsStateWithLifecycle()
-    val dropItems by itemHelper.dropItems.collectAsStateWithLifecycle()
+    // 物品源与名字都取仓库口径：dropItems 是战斗掉落口径（含声望 / 龙门币这类永不进仓库的东西，
+    // 又把芯片助剂等合法材料排除在外），拿它当库存保持的物品源会既多出死格、又漏掉材料
+    val itemIds = rememberDepotItemIds(itemHelper)
+    val itemIndex by itemHelper.items.collectAsStateWithLifecycle()
     val activityStages by activityManager.activityStages.collectAsStateWithLifecycle()
 
-    val itemNameMap = remember(dropItems) { dropItems.associate { it.id to it.name } }
+    // 名字映射用全表：老计划里可能存着已经不在识别列表里的 id
+    val itemNameMap = remember(itemIndex) { itemIndex.mapValues { it.value.name } }
     val planOutcomes = remember(config.plans, config.countDualChipAsChipPack, snapshot, activityStages) {
         config.plans.map { plan ->
             val current = DualChipConversion.count(plan.dropId, config.countDualChipAsChipPack, snapshot::countOf)
             depotPlanOutcome(plan, current) { activityManager.isStageOpen(it) }
         }
     }
-    val itemIds =
-        if (dropItems.isNotEmpty()) dropItems.map { it.id } else UiUsageConstants.dropItems
 
     // 概览与详情面板都按「折算后」的库存算缺口：勾了双芯片折算的档，
-    // 两处显示的「现在有多少」才和执行层一致
+    // 两处显示的「现在有多少」才和执行层一致。
+    // 键集合取并集：快照只收录 count > 0 的物品，芯片组自身为 0 时不会出现，
+    // 但折算后它可能「有货」（只掉了双芯片没掉芯片组），漏键会比执行层少算
     val effectiveInventory = remember(snapshot, config.countDualChipAsChipPack) {
         if (!config.countDualChipAsChipPack) {
             snapshot.items
         } else {
-            snapshot.items.mapValues { (id, value) ->
-                value + DualChipConversion.extra(id) { snapshot.items[it] ?: 0 }
+            (snapshot.items.keys + DualChipConversion.DUAL_CHIP_BY_PACK.keys).associateWith { id ->
+                snapshot.countOf(id) + DualChipConversion.extra(id, snapshot::countOf)
             }
         }
     }
@@ -142,7 +146,8 @@ fun DepotMaintainConfigPanel(
     var presetPanelExpanded by remember { mutableStateOf(false) }
     // 只在展开期间有效，应用或取消后清掉
     var selectedPreset by remember { mutableStateOf<DepotPresetSelection?>(null) }
-    val knownItemIds = itemHelper.items.collectAsStateWithLifecycle().value.keys
+    // 物品索引只订阅一次：itemIds / 名字表 / 活动预设键集都从这份快照派生
+    val knownItemIds = itemIndex.keys
     // 展开或导入落空时以当下时刻重算，对齐上游 PresetDropDownVisibilityChanged
     var presetClock by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val activityPresets = remember(activityStages, knownItemIds, presetClock) {
@@ -274,6 +279,8 @@ fun DepotMaintainConfigPanel(
             itemName = target.itemName,
             // 与概览同一口径：勾了双芯片折算的档，这里显示的「现在有多少」也跟着折算
             count = effectiveInventory[target.itemId] ?: 0,
+            // 这一页能换物品，换完要按新物品的库存重算进度与缺口
+            countOf = { id -> effectiveInventory[id] ?: 0 },
             existing = index?.let { config.plans.getOrNull(it) },
             existingOutcome = index?.let { planOutcomes.getOrNull(it) },
             context = DepotPlanContext(nodeEnabled = nodeEnabled),

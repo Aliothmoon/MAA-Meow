@@ -65,7 +65,7 @@ class SubTaskHandlerInfrastRecycleProductTest {
         )
 
         verify { logger.append("回收站产出\n固源岩 : 3\n赤金 : 12", LogLevel.TRACE) }
-        verify(exactly = 0) { depotRepository.merge(any()) }
+        verify(exactly = 0) { depotRepository.merge(any(), any()) }
     }
 
     @Test

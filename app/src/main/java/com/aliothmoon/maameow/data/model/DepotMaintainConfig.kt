@@ -289,7 +289,7 @@ data class DepotMaintainConfig(
             medicineExpireDays = if (useExpiringMedicine) EXPIRING_MEDICINE_DAYS else null,
             report = ctx.report,
             dropRate = if (useAutoSeries) {
-                ctx.dropRateProvider.getRate(plan.stage, plan.dropId)
+                ctx.dropRateProvider.getRate(plan.stage, plan.dropId, ctx.report.server)
             } else {
                 null
             },

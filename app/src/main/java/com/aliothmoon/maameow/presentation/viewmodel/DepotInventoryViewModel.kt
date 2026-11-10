@@ -47,7 +47,10 @@ import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.presentation.components.RARE_SUMMON_GRADIENT_LIGHT
 import com.aliothmoon.maameow.presentation.components.pallasCheerText
 import com.aliothmoon.maameow.utils.i18n.UiText
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -339,9 +342,13 @@ class DepotInventoryViewModel(
         labels: DepotPngLabels,
     ): ByteArray? = withContext(Dispatchers.Default) {
         val snap = snapshotOf(profileId)
+        // 没识别过仓库时导出的只会是「（空）」图，别让用户把它当成数据分享出去
+        if (snap.syncTimeMillis <= 0L) return@withContext null
         val itemList = snap.toItemUiList(itemHelper.items.value)
+        // 收掉档名之后第一行就变成时间了，但它不该被当成大标题画
+        val hasTitle = !hideProfileLabel && titleLabel.isNotBlank()
         val header = buildList {
-            if (!hideProfileLabel && titleLabel.isNotBlank()) add(titleLabel)
+            if (hasTitle) add(titleLabel)
             if (snap.syncTimeMillis > 0L) {
                 add(formatToolboxSyncTime(snap.syncTimeMillis))
             }
@@ -382,7 +389,7 @@ class DepotInventoryViewModel(
         }
         var y = pad + 34f
         header.forEachIndexed { i, line ->
-            canvas.drawText(line, pad.toFloat(), y, if (i == 0) titlePaint else subPaint)
+            canvas.drawText(line, pad.toFloat(), y, if (hasTitle && i == 0) titlePaint else subPaint)
             y += headerLineH
         }
 
@@ -410,6 +417,8 @@ class DepotInventoryViewModel(
             canvas.drawText(labels.empty, width / 2f, headerH + 80f, namePaint)
         } else {
             itemList.forEachIndexed { index, item ->
+                // 纯 CPU 绘制不天然响应取消：每个格子查一次，关面板/bat 取消后尽快停
+                currentCoroutineContext().ensureActive()
                 val col = index % columns
                 val row = index / columns
                 val left = pad + col * (cellW + gap)
@@ -422,7 +431,7 @@ class DepotInventoryViewModel(
                 )
                 canvas.drawRoundRect(rect, 16f, 16f, cellBg)
 
-                val icon = runCatching { itemIconLoader.loadRawAndroidBitmap(item.id) }.getOrNull()
+                val icon = ignoreFailure { itemIconLoader.loadRawAndroidBitmap(item.id) }
                 val iconSize = 88
                 val iconLeft = left + (cellW - iconSize) / 2
                 val iconTop = top + 14
@@ -478,8 +487,12 @@ class DepotInventoryViewModel(
         includeNotOwned: Boolean = true,
     ): ByteArray? = withContext(Dispatchers.Default) {
         val snap = operBoxRepository.snapshots.value[profileId] ?: OperBoxSnapshot()
+        // 没识别过就不该导出一张空图让人去分享
+        if (!snap.hasSynced) return@withContext null
         // 与 JSON / Markdown / CSV 共用同一份导出清单：同样「没识别过就是空表」，同样帕拉斯置顶
         val (owned, notOwned) = snap.toExportSections(includeNotOwned)
+        // 收掉档名之后第一行就变成时间了，但它不该被当成大标题画
+        val hasTitle = !hideProfileLabel && titleLabel.isNotBlank()
 
         val pad = 24
         val gap = 12
@@ -490,7 +503,7 @@ class DepotInventoryViewModel(
         val headerLineH = 40
 
         val headerLines = buildList {
-            if (!hideProfileLabel && titleLabel.isNotBlank()) add(titleLabel)
+            if (hasTitle) add(titleLabel)
             if (snap.syncTimeMillis > 0L) {
                 add(formatToolboxSyncTime(snap.syncTimeMillis))
             }
@@ -534,7 +547,7 @@ class DepotInventoryViewModel(
         }
         var y = pad + 34f
         headerLines.forEachIndexed { i, line ->
-            canvas.drawText(line, pad.toFloat(), y, if (i == 0) titlePaint else subPaint)
+            canvas.drawText(line, pad.toFloat(), y, if (hasTitle && i == 0) titlePaint else subPaint)
             y += headerLineH
         }
 
@@ -594,9 +607,9 @@ class DepotInventoryViewModel(
         val dimFilter = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
         val clipPath = Path()
         // 帕拉斯的头像位用应用图标（对齐界面 AppIconAvatar），只解一次
-        val appIconBitmap: Bitmap? = runCatching {
+        val appIconBitmap: Bitmap? = ignoreFailure {
             appContext.packageManager.getApplicationIcon(appContext.applicationInfo).toBitmap(96, 96)
-        }.getOrNull()
+        }
 
         if (sections.isEmpty()) {
             // namePaint 是 CENTER 对齐：x 必须给画布中线，给 pad 会让文字跑出左边框
@@ -607,18 +620,20 @@ class DepotInventoryViewModel(
                 canvas.drawText(header, pad.toFloat(), sectionTop + 26f, sectionPaint)
                 val top = sectionTop + sectionHeaderH
                 list.forEachIndexed { index, op ->
+                    currentCoroutineContext().ensureActive()
                     val col = index % columns
                     val row = index / columns
                     val left = pad + col * (cellW + gap)
                     val cellTop = top + row * (cellH + gap)
-                    // 帕拉斯用应用图标当头像；其余走 LRU 复用 + 只解码不入缓存，别把界面缓存的头像挤掉
-                    val avatar = if (op.isPallas && op.own) {
+                    // 帕拉斯用应用图标当头像（未拥有也照用，和界面 OperCardAvatar 一致，只是会去色）；
+                    // 其余走 LRU 复用 + 只解码不入缓存，别把界面缓存的头像挤掉
+                    val avatar = if (op.isPallas) {
                         appIconBitmap
                     } else {
-                        runCatching {
+                        ignoreFailure {
                             (operAvatarLoader.peek(op.id) ?: operAvatarLoader.loadTransient(op.id))
                                 ?.asAndroidBitmap()
-                        }.getOrNull()
+                        }
                     }
 
                     // 卡面与界面一致：帕拉斯是稀有成就渐变，已拥有按稀有度上色（45% 透明），未拥有统一抹灰
@@ -629,7 +644,7 @@ class DepotInventoryViewModel(
                         (cellTop + cellW).toFloat(),
                     )
                     cardPaint.shader = null
-                    if (op.isPallas && op.own) {
+                    if (op.isPallas) {
                         cardPaint.shader = LinearGradient(
                             cardRect.left,
                             cardRect.top,
@@ -680,13 +695,13 @@ class DepotInventoryViewModel(
                     }
 
                     // 左上角职业图标：深色圆角底 + 1 单位内缩，对齐 OperBoxCard 的 12dp 徽章
-                    val profession = runCatching {
+                    val profession = ignoreFailure {
                         resourceDataManager.getCharacterById(op.id)?.profession
-                    }.getOrNull()
+                    }
                     OperRoleIconLoader.templateId(profession)?.let { roleId ->
-                        val role = runCatching {
+                        val role = ignoreFailure {
                             operRoleIconLoader.load(roleId)?.asAndroidBitmap()
-                        }.getOrNull()
+                        }
                         if (role != null && !role.isRecycled) {
                             canvas.drawRoundRect(
                                 RectF(left + 5f, cellTop + 5f, left + 30f, cellTop + 30f), 4f, 4f, badgePaint,
@@ -816,7 +831,7 @@ class DepotInventoryViewModel(
         iconPaint: Paint,
     ): Float {
         if (res == null) return bottom
-        val drawable = runCatching { ContextCompat.getDrawable(appContext, res) }.getOrNull()
+        val drawable = ignoreFailure { ContextCompat.getDrawable(appContext, res) }
             ?: return bottom
         val top = bottom - size
         canvas.drawRoundRect(RectF(left, top, left + size, bottom), 3f, 3f, badgePaint)
@@ -859,6 +874,19 @@ private const val EXPORT_ON_SURFACE_VARIANT = 0xFF8A8580.toInt()
 
 /** 未拥有干员的卡面：对齐 OperBoxCard 的 0x99808080 */
 private const val NOT_OWNED_CARD = 0x99808080.toInt()
+
+/**
+ * 渲染期的容错：单张图标/单次查询失败不该让整张图挂掉（缺一个图就画占位块），
+ * 但协程取消必须继续往上抛 —— `runCatching` 会把 CancellationException 一起吞掉。
+ */
+private inline fun <T> ignoreFailure(block: () -> T): T? =
+    try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        null
+    }
 
 /** 卡片上徽章的深色底，对齐 OperBoxCard 的 BadgeBackground（#AA1F1F1F） */
 private const val BADGE_BG = 0xAA1F1F1F.toInt()

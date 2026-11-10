@@ -70,7 +70,7 @@ class DepotMaintainExpansionTest {
         every { itemHelper.getItemInfo(any()) } answers {
             if (firstArg<String>() == ITEM) ItemInfo(id = ITEM, name = "源岩") else null
         }
-        every { dropRateProvider.getRate(any(), any()) } answers {
+        every { dropRateProvider.getRate(any(), any(), any()) } answers {
             dropRates["${firstArg<String>()}|${secondArg<String>()}"]
         }
         val sink = CollectingPreflightLogSink()
