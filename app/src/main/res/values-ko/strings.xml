@@ -3094,12 +3094,10 @@
     <string name="depot_inventory_empty_operators">No operator data for this profile. Run a recognition in Tasks → Toolbox → Operator Recognition; the result is saved to the active profile.</string>
     <string name="depot_inventory_tab_items">Inventory</string>
     <string name="depot_inventory_tab_operators">Operators</string>
-    <string name="depot_inventory_tab_order">Farming order</string>
     <string name="depot_inventory_section_unmet">Not stocked yet (%1$d)</string>
     <string name="depot_inventory_section_empty">Not in stock (%1$d)</string>
     <string name="depot_inventory_order_hint">Collected items are skipped. Drag the handle on the right to reorder.</string>
     <string name="depot_inventory_order_drag">Reorder</string>
-    <string name="depot_inventory_order_empty">No depot maintain plans yet. Tap an item on the Inventory tab to add one.</string>
     <string name="depot_inventory_order_stage_closed">Stage closed</string>
     <string name="depot_inventory_png_items">%1$d items</string>
     <string name="depot_inventory_png_empty">(empty)</string>

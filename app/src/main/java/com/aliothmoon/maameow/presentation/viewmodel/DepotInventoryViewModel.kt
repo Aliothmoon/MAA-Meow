@@ -268,23 +268,6 @@ class DepotInventoryViewModel(
         }
     }
 
-    /**
-     * 刷取顺序页拖动之后写回一段计划的新顺序。
-     *
-     * [order] 是这一段可见计划在该节点 `plans` 里的下标，按新的显示顺序给出；
-     * 未选物品的占位计划不出现在那一页，重排后留在原位（见 [applyPlanOrder]）。
-     *
-     * 写回的就是执行顺序：执行侧按链上节点顺序、节点内 `plans` 的下标依次跑。
-     */
-    fun setPlanOrder(nodeId: String, order: List<Int>) {
-        val profileId = selectedProfileId.value
-        if (profileId.isEmpty() || nodeId.isEmpty() || order.isEmpty()) return
-        viewModelScope.launch {
-            taskChainState.updateDepotMaintainPlans(profileId, nodeId) { plans ->
-                applyPlanOrder(plans, order)
-            }
-        }
-    }
 
     /**
      * 写回整份库存保持配置（计划面板里的「常规设置 / 高级设置」）。
@@ -1234,68 +1217,3 @@ internal fun DepotSnapshot.toItemUiList(itemMap: Map<String, ItemInfo>): List<De
         .sortedWith(compareBy<DepotInventoryItemUi> { it.sortId }.thenBy { it.id })
         .toList()
 
-// ========== 刷取顺序 ==========
-
-/**
- * 刷取顺序页的一行：一条计划 + 它在这一页的第几位。
- *
- * 序号只数这一页可见的计划；未选物品的计划不在这页，所以节点里有那种计划时，
- * 序号会比运行日志里的 `#N` 小 —— 那种计划执行侧会按「未选物品」跳过，本来也不刷。
- */
-data class DepotFarmingOrderRow(
-    val plan: DepotMaintainPlanUi,
-    /** 段内序号，1 起 */
-    val no: Int,
-)
-
-/** 刷取顺序页的一段：一个库存保持节点。节点在链上的顺序就是它执行的前后顺序。 */
-data class DepotFarmingOrderSection(
-    val nodeId: String,
-    val nodeName: UiText,
-    val nodeEnabled: Boolean,
-    val rows: List<DepotFarmingOrderRow>,
-)
-
-/**
- * 按节点分段，段内保持计划原本的顺序。
- *
- * 执行顺序就是「链上节点顺序 × 节点内计划顺序」，所以这里不能重排，照搬即可。
- * 未启用的节点照样列出（否则那些计划在这一页既看不到也排不了），由界面标注「不会执行」。
- */
-internal fun List<DepotMaintainPlanUi>.farmingOrderSections(): List<DepotFarmingOrderSection> =
-    groupBy { it.nodeId }.map { (nodeId, nodePlans) ->
-        DepotFarmingOrderSection(
-            nodeId = nodeId,
-            nodeName = nodePlans.first().nodeName,
-            nodeEnabled = nodePlans.first().node.nodeEnabled,
-            rows = nodePlans.mapIndexed { index, plan -> DepotFarmingOrderRow(plan, index + 1) },
-        )
-    }
-
-/**
- * 把 [plans] 里 [order] 这些位置上的计划按新顺序重排，其余位置原地不动。
- *
- * [order] 是这一段可见计划在 `plans` 里的下标，**按新的显示顺序**给出，
- * 所以它必须是这些下标的排列（界面给的就是那一页每行的 `planIndex`）。
- *
- * 落点取 `order.sorted()`：可见计划原本就是按下标升序排的（见 [farmingOrderSections]），
- * 排完序就是它们各自占着的那些位置 —— 用 `order` 自己当落点等于拿排列去置换排列，
- * 结果是原地打转（把 c 拖到最前，写回去还是 a b c）。
- *
- * 未选物品的占位计划不出现在刷取顺序页，所以也不能按可见下标裁剪重排 ——
- * 那会把占位挤走、让它后面的下标全部错位，用户没碰过的计划也跟着变。
- *
- * 下标重复、越界，或与当前长度对不上（期间被别处改过）时整笔放弃，
- * 宁可不生效也不能把计划写到别的下标上。
- */
-internal fun applyPlanOrder(
-    plans: List<DepotMaintainPlan>,
-    order: List<Int>,
-): List<DepotMaintainPlan> {
-    if (order.size != order.distinct().size) return plans
-    if (order.any { it !in plans.indices }) return plans
-    val moved = order.map { plans[it] }
-    return plans.toMutableList().also { out ->
-        order.sorted().forEachIndexed { index, slot -> out[slot] = moved[index] }
-    }
-}

@@ -50,9 +50,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -141,23 +139,18 @@ import com.aliothmoon.maameow.presentation.view.panel.depot.DepotCellGap
 import com.aliothmoon.maameow.presentation.view.panel.depot.DepotItemCell
 import com.aliothmoon.maameow.presentation.view.panel.depot.DepotItemCellUi
 import com.aliothmoon.maameow.presentation.view.panel.depot.DepotPlanEditorSheet
-import com.aliothmoon.maameow.presentation.view.panel.depot.DepotPlanOrderColumn
 import com.aliothmoon.maameow.presentation.view.panel.depot.DepotSectionBreak
 import com.aliothmoon.maameow.presentation.view.panel.depot.depotItemColumns
-import com.aliothmoon.maameow.presentation.view.panel.depot.toOrderEntry
 import com.aliothmoon.maameow.presentation.view.panel.operbox.OperBoxCard
 import com.aliothmoon.maameow.presentation.view.panel.operbox.OperBoxDetailDialog
 import com.aliothmoon.maameow.presentation.view.panel.rememberOperBoxExportLabels
 import com.aliothmoon.maameow.presentation.view.panel.rememberSafToolboxFileExporter
 import com.aliothmoon.maameow.presentation.viewmodel.DepotInventoryCellUi
 import com.aliothmoon.maameow.presentation.viewmodel.DepotInventoryViewModel
-import com.aliothmoon.maameow.presentation.viewmodel.DepotFarmingOrderSection
-import com.aliothmoon.maameow.presentation.viewmodel.DepotMaintainPlanUi
 import com.aliothmoon.maameow.presentation.viewmodel.DepotPngLabels
 import com.aliothmoon.maameow.presentation.viewmodel.DepotProfileRow
 import com.aliothmoon.maameow.presentation.viewmodel.OperBoxPngLabels
 import com.aliothmoon.maameow.presentation.viewmodel.depotCellKey
-import com.aliothmoon.maameow.presentation.viewmodel.farmingOrderSections
 import com.aliothmoon.maameow.presentation.viewmodel.groupForDisplay
 import com.aliothmoon.maameow.theme.LocalReduceMotion
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
@@ -583,7 +576,6 @@ private fun DepotProfileDetailView(
     viewModel: DepotInventoryViewModel,
 ) {
     val cells by viewModel.cells.collectAsStateWithLifecycle()
-    val plans by viewModel.maintainPlans.collectAsStateWithLifecycle()
     val operBox by viewModel.operBoxSnapshot.collectAsStateWithLifecycle()
     val planContext by viewModel.planContext.collectAsStateWithLifecycle()
     // 没识别过仓库时当前库存是未知：格子、面板、刷取顺序都按「--」显示，别写 0
@@ -844,16 +836,9 @@ private fun DepotProfileDetailView(
 
                 InventoryDetailBody(
                     cells = cells,
-                    plans = plans,
                     operBox = operBox,
                     synced = synced,
                     onCellClick = { planSheetCellKey = it.key },
-                    // 刷取顺序页点一行也回到同一格的面板：那里只有计划，得按格子 key 找回它那一格
-                    onPlanClick = { plan ->
-                        val key = depotCellKey(plan.itemId, plan.nodeId, plan.planIndex)
-                        if (cells.any { it.key == key }) planSheetCellKey = key
-                    },
-                    onReorderPlans = viewModel::setPlanOrder,
                     // 头部收起只认「当前页签的列表停在顶部」这一段手势：真值由当页上报，
                     // 父层只接受 settled 那一页的上报，避免横滑取消后误信其他页的值
                     reportAtTop = reportAtTop,
@@ -903,18 +888,15 @@ private fun DepotProfileDetailView(
 @Composable
 private fun InventoryDetailBody(
     cells: List<DepotInventoryCellUi>,
-    plans: List<DepotMaintainPlanUi>,
     operBox: OperBoxSnapshot,
     synced: Boolean,
     onCellClick: (DepotInventoryCellUi) -> Unit,
-    onPlanClick: (DepotMaintainPlanUi) -> Unit,
-    onReorderPlans: (String, List<Int>) -> Unit,
     reportAtTop: (Int, Boolean) -> Unit,
     currentPage: MutableState<Int>,
     pageSwitching: MutableState<Boolean>,
     iconLoader: ItemIconLoader = koinInject(),
 ) {
-    val pagerState = rememberPagerState(pageCount = { 3 })
+    val pagerState = rememberPagerState(pageCount = { 2 })
     // 把当前页签号回传给外层：头部收起逻辑要据此判断「哪一页的列表在顶部」，换页时也要归零进度
     // 用 settledPage：currentPage 在半途（50%）就翻转，来回滑会把进度反复清零，
     // settledPage 只在落位后变化，正好对应「换到另一页的列表」
@@ -935,7 +917,6 @@ private fun InventoryDetailBody(
     val pageLabels = listOf(
         stringResource(R.string.depot_inventory_tab_items),
         stringResource(R.string.depot_inventory_tab_operators),
-        stringResource(R.string.depot_inventory_tab_order),
     )
     Column(modifier = Modifier.fillMaxSize()) {
         DetailPageTabs(
@@ -966,15 +947,6 @@ private fun InventoryDetailBody(
                     selectedTab = operBoxTab,
                     onTabChange = { operBoxTab = it },
                     onAtTop = { reportAtTop(1, it) },
-                )
-
-                else -> DepotFarmingOrderPage(
-                    plans = plans,
-                    iconLoader = iconLoader,
-                    synced = synced,
-                    onPlanClick = onPlanClick,
-                    onReorder = onReorderPlans,
-                    onAtTop = { reportAtTop(2, it) },
                 )
             }
         }
@@ -1304,108 +1276,6 @@ private fun OperBoxPage(
                 oper = oper,
                 profession = resourceDataManager.getCharacterById(oper.id)?.profession,
                 onClick = { detail = oper },
-            )
-        }
-    }
-}
-
-// ============================== 三级：刷取顺序 ==============================
-
-/**
- * 刷取顺序：把库存保持计划按要刷的先后排开，拖右侧手柄换位。
- *
- * 顺序就是执行顺序 —— 链上节点顺序 × 节点内计划顺序，和运行日志逐条跑下去的顺序一致。
- * 行号是**这一页可见计划**的第几条（未选物品的计划不在这页，所以节点里有那种计划时，
- * 行号会比运行日志里的 `#N` 小；那种计划本来也跑不了）。
- * 已集齐的照样列在这里、也参与排序（以后抬高目标就按这个位置来），但执行时会被跳过，
- * 所以标绿；未集齐的才是真要去刷的，用正常前景色。
- *
- * @param onReorder 松手后写回：节点 ID + 该段计划在节点 `plans` 里的新下标顺序
- */
-@Composable
-private fun DepotFarmingOrderPage(
-    plans: List<DepotMaintainPlanUi>,
-    iconLoader: ItemIconLoader,
-    synced: Boolean,
-    onPlanClick: (DepotMaintainPlanUi) -> Unit,
-    onReorder: (String, List<Int>) -> Unit,
-    onAtTop: (Boolean) -> Unit,
-) {
-    if (plans.isEmpty()) {
-        // 同「物品」页：空页必须申报「停在顶部」，否则头部会被上一页的 false 卡住
-        LaunchedEffect(Unit) { onAtTop(true) }
-        DetailEmptyText(R.string.depot_inventory_order_empty)
-        return
-    }
-    // 只有落手（onSettle）那一次才改这份；拖动期间由库自己拿 offset 摆位
-    var sections by remember(plans) { mutableStateOf(plans.farmingOrderSections()) }
-    val scrollState = rememberScrollState()
-    LaunchedEffect(scrollState) {
-        snapshotFlow { scrollState.value == 0 }.collect { onAtTop(it) }
-    }
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(
-                horizontal = MaaDesignTokens.Spacing.md,
-                vertical = MaaDesignTokens.Spacing.xs,
-            ),
-        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs),
-    ) {
-        Text(
-            text = stringResource(R.string.depot_inventory_order_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        sections.forEach { section ->
-            // 节点 ID 单独取出来：落手回调要按它回查当时的 sections，不能闭包住组合时那一份
-            val nodeId = section.nodeId
-            FarmingOrderSectionHeader(section)
-            // 一段一个列表：跨段拖动会把计划挪进另一个库存保持节点、连带换掉那个节点的
-            // 药/石/连战设置，不是这一页该做的事；分开之后跨段在结构上就拖不过去。
-            //
-            // 行的样子、进度口径、去向文案、拖动行为都在 DepotPlanOrderList 里，
-            // 后台任务的库存保持计划概览用的是同一份，两边不会各长各的。
-            val entries = remember(section.rows) { section.rows.map { it.toOrderEntry() } }
-            DepotPlanOrderColumn(
-                entries = entries,
-                synced = synced,
-                iconLoader = iconLoader,
-                onClick = { index -> section.rows.getOrNull(index)?.let { onPlanClick(it.plan) } },
-                onMove = { from, to ->
-                    val current = sections.firstOrNull { it.nodeId == nodeId }
-                        ?: return@DepotPlanOrderColumn
-                    val rows = current.rows.toMutableList().also { it.add(to, it.removeAt(from)) }
-                    // 先换本地这份：库已经把它摆到位了，数据不跟着换就会停在拖过去的样子。
-                    // 同时写回磁盘，等 plans 重新发一遍再对齐
-                    sections = sections.map { if (it.nodeId == nodeId) it.copy(rows = rows) else it }
-                    onReorder(nodeId, rows.map { it.plan.planIndex })
-                },
-            )
-        }
-    }
-}
-
-/** 一段的标题：节点名，没启用的再补一句「不会执行」。 */
-@Composable
-private fun FarmingOrderSectionHeader(section: DepotFarmingOrderSection) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = MaaDesignTokens.Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Text(
-            text = section.nodeName.asString(),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-        if (!section.nodeEnabled) {
-            Text(
-                text = stringResource(R.string.depot_inventory_plan_node_disabled),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
             )
         }
     }

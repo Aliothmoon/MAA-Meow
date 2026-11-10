@@ -55,7 +55,6 @@ import com.aliothmoon.maameow.data.model.DepotPlanOutcome
 import com.aliothmoon.maameow.data.model.LogColorRole
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.presentation.components.ItemIcon
-import com.aliothmoon.maameow.presentation.viewmodel.DepotFarmingOrderRow
 import com.aliothmoon.maameow.presentation.viewmodel.depotProgressText
 import com.aliothmoon.maameow.theme.LocalReduceMotion
 import com.aliothmoon.maameow.theme.MaaDesignTokens
@@ -92,25 +91,6 @@ internal data class DepotPlanOrderEntry(
     val target: Int,
     val need: Int,
     val outcome: DepotPlanOutcome,
-)
-
-/**
- * 刷取顺序页的一段 → 排序列表的行。序号沿用分段时算好的那个。
- *
- * key 带上节点与下标：同一物品可能配了多条计划，光按物品认不出是哪一条。
- * 前缀写 `order-row-` 而不是 `order-`：段的标题、行、提示行将来若都进同一个列表，
- * 光靠「节点 ID + 下标」拼，某个节点的 ID 正好是「另一个节点 ID + '-' + 下标」时就会撞 key
- * （LazyColumn 撞 key 是直接抛异常）。节点 ID 一般是 UUID，但导入的配置里可能是任意字符串。
- */
-internal fun DepotFarmingOrderRow.toOrderEntry(): DepotPlanOrderEntry = DepotPlanOrderEntry(
-    key = "order-row-${plan.nodeId}-${plan.planIndex}",
-    no = no,
-    itemId = plan.itemId,
-    itemName = plan.itemName,
-    current = plan.current,
-    target = plan.target,
-    need = plan.need,
-    outcome = plan.outcome,
 )
 
 /**
