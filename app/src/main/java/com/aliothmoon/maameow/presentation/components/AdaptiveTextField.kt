@@ -76,8 +76,15 @@ internal const val MULTI_LINE_MAX_LINES = 8
 
 private fun maxLinesOf(singleLine: Boolean): Int = if (singleLine) 1 else MULTI_LINE_MAX_LINES
 
+private fun TextFieldValue.withoutNewlines(): TextFieldValue {
+    if ('\n' !in text) return this
+    fun map(index: Int) = index - text.subSequence(0, index).count { it == '\n' }
+    return TextFieldValue(text.replace("\n", ""), TextRange(map(selection.start), map(selection.end)))
+}
+
 private fun KeyboardOptions.withDoneIfSingleLine(singleLine: Boolean): KeyboardOptions =
-    if (singleLine && imeAction == ImeAction.Default) {
+    // KeyboardOptions.Default 的 imeAction 是 Unspecified
+    if (singleLine && (imeAction == ImeAction.Default || imeAction == ImeAction.Unspecified)) {
         copy(imeAction = ImeAction.Done)
     } else {
         this
@@ -97,7 +104,9 @@ fun ITextField(
     trailingIcon: @Composable (() -> Unit)? = null,
     outlineColor: Color? = null,
     cursorToEndRequest: Int = 0,
-    onImeAction: (() -> Unit)? = null
+    onImeAction: (() -> Unit)? = null,
+    // 单行内容折行显示，浮窗不生效
+    wrapMaxLines: Int = 1,
 ) {
     val isInFloatingWindow = LocalFloatingWindowContext.current
     val (bufferedValue, bufferedOnChange) = rememberBufferedTextState(value, onValueChange)
@@ -137,18 +146,20 @@ fun ITextField(
         if (editingValue.text != bufferedValue) {
             editingValue = editingValue.copy(text = bufferedValue)
         }
+        val wrap = singleLine && wrapMaxLines > 1
         OutlinedTextField(
             value = editingValue,
-            onValueChange = {
-                val textChanged = it.text != editingValue.text
-                editingValue = it
-                if (textChanged) bufferedOnChange(it.text)
+            onValueChange = { raw ->
+                val next = if (wrap) raw.withoutNewlines() else raw
+                val textChanged = next.text != editingValue.text
+                editingValue = next
+                if (textChanged) bufferedOnChange(next.text)
             },
             modifier = modifier.fillMaxWidth(),
             label = label?.let { { Text(it) } },
             placeholder = { Text(placeholder) },
-            singleLine = singleLine,
-            maxLines = maxLinesOf(singleLine),
+            singleLine = singleLine && !wrap,
+            maxLines = if (wrap) wrapMaxLines else maxLinesOf(singleLine),
             enabled = enabled,
             shape = shape,
             supportingText = supportingText,

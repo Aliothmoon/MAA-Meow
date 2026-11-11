@@ -64,6 +64,8 @@ fun TaskListDetailLayout(
     val floatMaxWidth = (configuration.screenWidthDp * 0.85f).dp
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val availableWidth = if (constraints.hasBoundedWidth) maxWidth else floatMaxWidth
+        val listMaxWidth = (availableWidth * 0.4f).coerceIn(140.dp, 200.dp)
         val contentModifier = if (constraints.hasBoundedWidth) {
             Modifier.fillMaxSize()
         } else {
@@ -88,6 +90,7 @@ fun TaskListDetailLayout(
                 onToggleProfileMode = onToggleProfileMode,
                 modifier = Modifier
                     .fillMaxHeight()
+                    .widthIn(max = listMaxWidth)
                     .width(IntrinsicSize.Max),
             )
             Spacer(modifier = Modifier.width(8.dp))

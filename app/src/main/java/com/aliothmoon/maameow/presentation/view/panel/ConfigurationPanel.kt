@@ -393,7 +393,8 @@ private fun TaskManagementView(
                     Text(stringResource(R.string.panel_config_name_too_long))
                 }
             },
-            outlineColor = if (isError || isTooLong) MaterialTheme.colorScheme.error else null
+            outlineColor = if (isError || isTooLong) MaterialTheme.colorScheme.error else null,
+            wrapMaxLines = 3,
         )
 
         // 字数统计在 ITextField 下方展示，因为 ITextField 内部目前可能不支持 trailingIcon（取决于具体实现）
