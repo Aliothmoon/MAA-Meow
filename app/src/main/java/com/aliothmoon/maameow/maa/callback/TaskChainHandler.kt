@@ -5,6 +5,8 @@ import com.alibaba.fastjson2.JSONObject
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
+import com.aliothmoon.maameow.data.model.LogItem
+import com.aliothmoon.maameow.data.model.LogKind
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.models.NotificationImage
@@ -60,7 +62,11 @@ class TaskChainHandler(
         refreshDropsIfNeeded(taskId)
 
         val taskName = resolveTaskName(details)
-        sessionLogger.append("${str("StartTask")}$taskName", LogLevel.TRACE)
+        appendMarked("${str("StartTask")}$taskName", LogLevel.TRACE, LogKind.TASK_START, taskName)
+    }
+
+    private fun appendMarked(content: String, level: LogLevel, kind: LogKind, task: String? = null) {
+        sessionLogger.append(LogItem(content = content, level = level, kind = kind, task = task))
     }
 
     private fun clearSessionScopedState() {
@@ -140,7 +146,7 @@ class TaskChainHandler(
         } else {
             "${str("TaskError")}$taskName"
         }
-        sessionLogger.append(message, LogLevel.ERROR)
+        appendMarked(message, LogLevel.ERROR, LogKind.TASK_FAILED, taskName)
         notificationCenter.notifyTaskError(taskName)
         callbackScope.launch {
             achievementRepository.report {
@@ -165,7 +171,7 @@ class TaskChainHandler(
         val taskTime = chainStartNanos.remove(taskId)
             ?.let { str("TaskTime", formatTaskDuration(System.nanoTime() - it)) }
             .orEmpty()
-        sessionLogger.append("${str("CompleteTask")}$taskName$taskTime", LogLevel.SUCCESS)
+        appendMarked("${str("CompleteTask")}$taskName$taskTime", LogLevel.SUCCESS, LogKind.TASK_DONE, taskName)
 
         // 任一仓库识别（库存保持自带的或独立的数据更新）都会纠正缓存，复查预检时跳过的计划
         if (taskchain == "Depot") {
@@ -280,16 +286,17 @@ class TaskChainHandler(
         val message = listOfNotNull(headline, sanityReport).joinToString("\n")
         if (titledWithErrors) {
             // 标题连同出错任务名标红，理智报告留在下一段默认色
-            sessionLogger.append(headline, LogLevel.ERROR)
-            sanityReport?.let { sessionLogger.append(it, LogLevel.MESSAGE) }
+            appendMarked(headline, LogLevel.ERROR, LogKind.SUMMARY)
+            sanityReport?.let { appendMarked(it, LogLevel.MESSAGE, LogKind.SUMMARY) }
         } else {
-            sessionLogger.append(message, if (asStopped) LogLevel.INFO else LogLevel.SUCCESS)
+            appendMarked(message, if (asStopped) LogLevel.INFO else LogLevel.SUCCESS, LogKind.SUMMARY)
         }
 
         if (asStopped && hasTaskErrors) {
-            sessionLogger.append(
+            appendMarked(
                 failedTaskNames.joinToString("\n", prefix = str("TaskErrorSummaryTitle") + "\n"),
                 LogLevel.ERROR,
+                LogKind.SUMMARY,
             )
         }
         if (!asStopped) {

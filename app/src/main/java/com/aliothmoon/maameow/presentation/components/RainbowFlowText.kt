@@ -45,6 +45,8 @@ fun RainbowFlowText(
     fontWeight: FontWeight? = FontWeight.ExtraBold,
     textAlign: TextAlign? = null,
     maxLines: Int = Int.MAX_VALUE,
+    /** 渐变一个周期的宽度（px），短文本调小才能看到完整彩虹 */
+    span: Float = SPAN,
 ) {
     val pageVisible = LocalPageVisible.current
     val inViewport = remember { mutableStateOf(false) }
@@ -65,13 +67,13 @@ fun RainbowFlowText(
                 val brush = Brush.linearGradient(
                     colorStops = RainbowStops,
                     start = Offset.Zero,
-                    end = Offset(SPAN, 0f),
+                    end = Offset(span, 0f),
                     tileMode = TileMode.Repeated,
                 )
                 onDrawWithContent {
                     drawContent()
                     // phase 只在绘制阶段读，每帧只重绘
-                    val shift = phase.value * SPAN * 2f
+                    val shift = phase.value * span * 2f
                     translate(left = shift) {
                         drawRect(
                             brush = brush,

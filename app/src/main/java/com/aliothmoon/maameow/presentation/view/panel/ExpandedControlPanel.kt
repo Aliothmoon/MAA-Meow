@@ -203,6 +203,8 @@ fun ExpandedControlPanel(
                             val runtimeLogs by viewModel.runtimeLogs.collectWhilePageVisible()
                             LogPanel(
                                 logs = runtimeLogs,
+                                running = maaState != MaaExecutionState.IDLE &&
+                                        maaState != MaaExecutionState.ERROR,
                                 onClearLogs = { viewModel.onClearLogs() },
                             )
                         }

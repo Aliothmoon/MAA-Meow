@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.res.Resources
 import com.alibaba.fastjson2.JSONObject
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
+import com.aliothmoon.maameow.data.model.LogItem
+import com.aliothmoon.maameow.data.model.LogKind
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.service.AchievementReporter
@@ -63,10 +65,14 @@ class TaskChainHandlerErrorTest {
         every { resources.getString(3, *anyVararg()) } answers { "(${secondArg<Array<Any>>()[0]})" }
     }
 
+    private fun verifyLogged(content: String, level: LogLevel, kind: LogKind) = verify {
+        sessionLogger.append(match<LogItem> { it.content == content && it.level == level && it.kind == kind })
+    }
+
     @Test
     fun registeredPlanName_isUsedForStartCompletionAndError() {
-        val messages = mutableListOf<String>()
-        every { sessionLogger.append(capture(messages), any()) } returns Unit
+        val items = mutableListOf<LogItem>()
+        every { sessionLogger.append(capture(items)) } returns Unit
         statusTracker.register(7, "Fight", logName = UiText.Dynamic("材料补货 #3"))
         val details = JSONObject.of("taskchain", "Fight", "taskid", 7)
 
@@ -76,8 +82,10 @@ class TaskChainHandlerErrorTest {
 
         assertEquals(
             listOf("StartTask材料补货 #3", "CompleteTask材料补货 #3(0h 0m 0s)", "任务出错: 材料补货 #3"),
-            messages,
+            items.map { it.content },
         )
+        assertEquals(listOf(LogKind.TASK_START, LogKind.TASK_DONE, LogKind.TASK_FAILED), items.map { it.kind })
+        assertEquals(List(3) { "材料补货 #3" }, items.map { it.task })
     }
 
     @Test
@@ -90,7 +98,7 @@ class TaskChainHandlerErrorTest {
             )
         )
 
-        verify { sessionLogger.append("Infrast任务因内存不足停止", LogLevel.ERROR) }
+        verifyLogged("Infrast任务因内存不足停止", LogLevel.ERROR, LogKind.TASK_FAILED)
         verify { notificationCenter.notifyTaskError("Infrast") }
     }
 
@@ -104,13 +112,13 @@ class TaskChainHandlerErrorTest {
             )
         )
 
-        verify { sessionLogger.append("任务出错: Fight", LogLevel.ERROR) }
+        verifyLogged("任务出错: Fight", LogLevel.ERROR, LogKind.TASK_FAILED)
     }
 
     @Test
     fun plainRecognitionError_hasNoErrorField() {
         handler.onTaskChainError(JSONObject.of("taskchain", "Recruit", "taskid", 9))
 
-        verify { sessionLogger.append("任务出错: Recruit", LogLevel.ERROR) }
+        verifyLogged("任务出错: Recruit", LogLevel.ERROR, LogKind.TASK_FAILED)
     }
 }

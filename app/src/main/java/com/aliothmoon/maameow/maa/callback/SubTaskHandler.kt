@@ -11,6 +11,8 @@ import com.aliothmoon.maameow.data.model.LogItem
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.model.RecruitCombination
 import com.aliothmoon.maameow.data.model.RecruitOper
+import com.aliothmoon.maameow.data.model.RecruitTagsLog
+import com.aliothmoon.maameow.data.model.RecruitTagsKind
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
@@ -31,6 +33,9 @@ import org.koin.java.KoinJavaComponent.inject
 import timber.log.Timber
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+
+// 英文标签自带空格，不能只用空格分隔
+private const val RECRUIT_TAG_SEPARATOR = " · "
 
 /**
  * SubTask 级别回调处理器
@@ -748,20 +753,27 @@ class SubTaskHandler(
             "InfrastTrainingCompleted" -> handleInfrastTrainingCompleted(subDetails)
             "InfrastTrainingTimeLeft" -> handleInfrastTrainingTimeLeft(subDetails)
             "RecruitTagsDetected" -> {
-                val tags = subDetails?.getJSONArray("tags")?.joinToString("\n") ?: ""
-                append("${str("RecruitingResults")}\n$tags", LogLevel.TRACE)
+                val tags = subDetails?.getJSONArray("tags")?.map { it.toString() }.orEmpty()
+                val label = str("RecruitingResults")
+                sessionLogger.append(
+                    LogItem(
+                        content = "$label ${tags.joinToString(RECRUIT_TAG_SEPARATOR)}",
+                        level = LogLevel.TRACE,
+                        recruitTags = RecruitTagsLog(label.trimEnd(':', '：', ' '), tags, RecruitTagsKind.DETECTED),
+                    )
+                )
                 toolboxResultCollector.onRecruitTagsDetected(subDetails)
             }
 
             "RecruitSpecialTag" -> {
                 val tag = subDetails?.getString("tag") ?: ""
-                append("${str("RecruitingTips")}\n$tag", LogLevel.RARE)
+                appendRecruitTip(tag, LogLevel.RARE, RecruitTagsKind.SPECIAL)
                 notificationCenter.notifyRecruitSpecialTag(tag)
             }
 
             "RecruitRobotTag" -> {
                 val tag = subDetails?.getString("tag") ?: ""
-                append("${str("RecruitingTips")}\n$tag", LogLevel.RECRUIT_ROBOT)
+                appendRecruitTip(tag, LogLevel.RECRUIT_ROBOT, RecruitTagsKind.ROBOT)
                 notificationCenter.notifyRecruitRobotTag(tag)
             }
 
@@ -793,8 +805,17 @@ class SubTaskHandler(
             }
 
             "RecruitTagsSelected" -> {
-                val tags = subDetails?.getJSONArray("tags")?.joinToString("\n") ?: str("NoDrop")
-                append(str("RecruitTagsSelectedLog", tags), LogLevel.TRACE)
+                val tags = subDetails?.getJSONArray("tags")?.map { it.toString() }
+                val text = tags?.joinToString(RECRUIT_TAG_SEPARATOR) ?: str("NoDrop")
+                sessionLogger.append(
+                    LogItem(
+                        content = str("RecruitTagsSelectedLog", text),
+                        level = LogLevel.TRACE,
+                        recruitTags = tags?.takeIf { it.isNotEmpty() }?.let {
+                            RecruitTagsLog(str("RecruitTagsSelectedLog", "").trimEnd(':', '：', ' '), it, RecruitTagsKind.SELECTED)
+                        },
+                    )
+                )
             }
 
             "RecruitTagsRefreshed" -> {
@@ -1486,5 +1507,16 @@ class SubTaskHandler(
 
     private fun append(content: String, level: LogLevel) {
         sessionLogger.append(content, level)
+    }
+
+    private fun appendRecruitTip(tag: String, level: LogLevel, kind: RecruitTagsKind) {
+        val label = str("RecruitingTips")
+        sessionLogger.append(
+            LogItem(
+                content = "$label\n$tag",
+                level = level,
+                recruitTags = RecruitTagsLog(label, listOf(tag), kind),
+            )
+        )
     }
 }

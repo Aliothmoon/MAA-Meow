@@ -736,7 +736,7 @@
     <string name="maa_recruiting_results">Recruitment Results: </string>
     <string name="maa_recruiting_tips">Recruiting Tips</string>
     <string name="maa_choose">Choose</string>
-    <string name="maa_recruit_tags_selected_log">Selected tags:\n%1$s</string>
+    <string name="maa_recruit_tags_selected_log">Selected tags: %1$s</string>
     <string name="maa_refreshed">Refreshed</string>
     <string name="maa_continue_refresh">No recruitment permit, trying to refresh Tags</string>
     <string name="maa_no_recruitment_permit">No recruitment permit, returned</string>
@@ -1388,6 +1388,18 @@
     <!-- panel: log -->
     <string name="panel_log_title">Task Logs</string>
     <string name="panel_log_resume_auto_scroll">Resume auto-scroll</string>
+    <string name="panel_log_empty">No logs yet</string>
+    <string name="panel_log_copied">Log copied</string>
+    <string name="log_a11y_task_done">Completed</string>
+    <string name="log_a11y_task_failed">Failed</string>
+    <string name="log_a11y_task_running">In progress</string>
+    <string name="log_a11y_task_interrupted">Interrupted</string>
+    <string name="log_a11y_warnings">Warnings: %1$d</string>
+    <string name="log_a11y_expanded">Expanded</string>
+    <string name="log_a11y_collapsed">Collapsed</string>
+    <string name="log_a11y_error">Error</string>
+    <string name="log_a11y_star">%1$d-star</string>
+    <string name="log_a11y_recruit_result">%1$s recruitment result. Best combination %2$s: %3$s</string>
     <string name="panel_log_view_details">View details</string>
     <string name="panel_log_details_section">Details</string>
     <string name="panel_log_screenshot_section">Screenshot</string>

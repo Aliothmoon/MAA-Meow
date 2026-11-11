@@ -24,8 +24,10 @@ data class LogItem(
     val tooltip: String? = null,
     /** 结构化富文本详情，UI 层按主题着色 */
     val recruitTooltip: List<RecruitCombination>? = null,
-    val screenshotPath: String? = null
-    // TODO: 实现截图缩略图支持
+    val recruitTags: RecruitTagsLog? = null,
+    val kind: LogKind = LogKind.NORMAL,
+    /** 任务起止条目的任务名 */
+    val task: String? = null,
 ) {
     companion object {
         private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
@@ -35,5 +37,8 @@ data class LogItem(
     val formattedTime: String get() = time.format(timeFormatter)
 
     val hasDetails: Boolean
-        get() = tooltip != null || recruitTooltip != null || screenshotPath != null
+        get() = tooltip != null || recruitTooltip != null
 }
+
+/** 运行日志按任务分组用的结构标记 */
+enum class LogKind { NORMAL, TASK_START, TASK_DONE, TASK_FAILED, SUMMARY }

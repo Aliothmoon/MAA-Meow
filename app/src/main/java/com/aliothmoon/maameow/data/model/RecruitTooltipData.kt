@@ -15,3 +15,12 @@ data class RecruitOper(
     val starLevel: Int,
     val name: String
 )
+
+@Immutable
+data class RecruitTagsLog(
+    val label: String,
+    val tags: List<String>,
+    val kind: RecruitTagsKind,
+)
+
+enum class RecruitTagsKind { DETECTED, SELECTED, SPECIAL, ROBOT }

@@ -832,6 +832,7 @@ fun BackgroundTaskView(
                                                 val runtimeLogs by viewModel.logs.collectWhilePageVisible()
                                                 LogPanel(
                                                     logs = runtimeLogs,
+                                                    running = isTaskActive,
                                                     onClearLogs = { viewModel.onClearLogs() },
                                                     onExportLogs = { showLogExportSheet = true },
                                                 )

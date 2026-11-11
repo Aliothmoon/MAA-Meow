@@ -151,7 +151,7 @@
     <string name="maa_recruiting_results">공개모집 인식 결과: </string>
     <string name="maa_recruiting_tips">공개모집 팁</string>
     <string name="maa_choose">선택</string>
-    <string name="maa_recruit_tags_selected_log">선택한 Tags:\n%1$s</string>
+    <string name="maa_recruit_tags_selected_log">선택한 Tags: %1$s</string>
     <string name="maa_refreshed">새로고침됨</string>
     <string name="maa_continue_refresh">모집 허가증 없음, 태그 새로고침</string>
     <string name="maa_no_recruitment_permit">모집 허가증 없음, 중지</string>
@@ -1442,6 +1442,18 @@
     <!-- panel: log -->
     <string name="panel_log_title">작업 로그</string>
     <string name="panel_log_resume_auto_scroll">자동 스크롤 재개</string>
+    <string name="panel_log_empty">로그가 없습니다</string>
+    <string name="panel_log_copied">로그를 복사했습니다</string>
+    <string name="log_a11y_task_done">완료</string>
+    <string name="log_a11y_task_failed">실패</string>
+    <string name="log_a11y_task_running">진행 중</string>
+    <string name="log_a11y_task_interrupted">중단됨</string>
+    <string name="log_a11y_warnings">경고 %1$d개</string>
+    <string name="log_a11y_expanded">펼쳐짐</string>
+    <string name="log_a11y_collapsed">접힘</string>
+    <string name="log_a11y_error">오류</string>
+    <string name="log_a11y_star">%1$d성</string>
+    <string name="log_a11y_recruit_result">%1$s 공개모집 결과, 최적 조합 %2$s: %3$s</string>
     <string name="panel_log_view_details">자세히 보기</string>
     <string name="panel_log_details_section">세부 정보</string>
     <string name="panel_log_screenshot_section">스크린샷</string>

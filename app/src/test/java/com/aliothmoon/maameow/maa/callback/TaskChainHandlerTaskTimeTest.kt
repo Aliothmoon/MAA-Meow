@@ -3,6 +3,8 @@ package com.aliothmoon.maameow.maa.callback
 import android.content.Context
 import android.content.res.Resources
 import com.alibaba.fastjson2.JSONObject
+import com.aliothmoon.maameow.data.model.LogItem
+import com.aliothmoon.maameow.data.model.LogKind
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.domain.service.FightDropsRefresher
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
@@ -52,6 +54,10 @@ class TaskChainHandlerTaskTimeTest {
     @After
     fun tearDown() = MaaStringRes.clearCacheForTest()
 
+    private fun verifyLogged(content: String, level: LogLevel, kind: LogKind) = verify {
+        sessionLogger.append(match<LogItem> { it.content == content && it.level == level && it.kind == kind })
+    }
+
     private fun chain(taskId: Int) = JSONObject.of("taskid", taskId, "taskchain", "Award")
 
     @Test
@@ -59,14 +65,14 @@ class TaskChainHandlerTaskTimeTest {
         handler.onTaskChainStart(chain(3))
         handler.onTaskChainCompleted(chain(3))
 
-        verify { sessionLogger.append("完成任务: Award\n(用时 0h 0m 0s)", LogLevel.SUCCESS) }
+        verifyLogged("完成任务: Award\n(用时 0h 0m 0s)", LogLevel.SUCCESS, LogKind.TASK_DONE)
     }
 
     @Test
     fun completedWithoutStart_hasNoTime() {
         handler.onTaskChainCompleted(chain(4))
 
-        verify { sessionLogger.append("完成任务: Award", LogLevel.SUCCESS) }
+        verifyLogged("完成任务: Award", LogLevel.SUCCESS, LogKind.TASK_DONE)
     }
 
     @Test

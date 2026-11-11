@@ -3,6 +3,8 @@ package com.aliothmoon.maameow.maa.callback
 import android.content.Context
 import android.content.res.Resources
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
+import com.aliothmoon.maameow.data.model.LogItem
+import com.aliothmoon.maameow.data.model.LogKind
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.service.AchievementReporter
@@ -59,6 +61,10 @@ class TaskChainHandlerCompletionTest {
         every { resources.getString(3) } returns "本轮任务出现以下错误："
     }
 
+    private fun verifyLogged(content: String, level: LogLevel, kind: LogKind) = verify {
+        sessionLogger.append(match<LogItem> { it.content == content && it.level == level && it.kind == kind })
+    }
+
     private fun failTasks() {
         statusTracker.register(7, "Fight", TaskSlot("n1"), UiText.Dynamic("理智作战"))
         statusTracker.register(8, "Infrast", TaskSlot("n2"), UiText.Dynamic("基建换班"))
@@ -75,8 +81,8 @@ class TaskChainHandlerCompletionTest {
         handler.onAllTasksCompleted()
 
         val title = "任务已结束，以下任务出现错误:\n理智作战, 基建换班"
-        verify(exactly = 1) { sessionLogger.append(any<String>(), any()) }
-        verify { sessionLogger.append(title, LogLevel.ERROR) }
+        verify(exactly = 1) { sessionLogger.append(any<LogItem>()) }
+        verifyLogged(title, LogLevel.ERROR, LogKind.SUMMARY)
         verify { notificationCenter.notifyAllTasksCompleted(title, null) }
     }
 
@@ -90,9 +96,9 @@ class TaskChainHandlerCompletionTest {
         handler.onAllTasksCompleted()
 
         val title = "任务已结束，以下任务出现错误:\n理智作战, 基建换班"
-        verify(exactly = 2) { sessionLogger.append(any<String>(), any()) }
-        verify { sessionLogger.append(title, LogLevel.ERROR) }
-        verify { sessionLogger.append("当前理智: 135/135", LogLevel.MESSAGE) }
+        verify(exactly = 2) { sessionLogger.append(any<LogItem>()) }
+        verifyLogged(title, LogLevel.ERROR, LogKind.SUMMARY)
+        verifyLogged("当前理智: 135/135", LogLevel.MESSAGE, LogKind.SUMMARY)
         verify { notificationCenter.notifyAllTasksCompleted("$title\n当前理智: 135/135", null) }
     }
 
@@ -102,8 +108,8 @@ class TaskChainHandlerCompletionTest {
 
         handler.onAllTasksCompleted(asStopped = true)
 
-        verify { sessionLogger.append("任务已全部完成！", LogLevel.INFO) }
-        verify { sessionLogger.append("本轮任务出现以下错误：\n理智作战\n基建换班", LogLevel.ERROR) }
+        verifyLogged("任务已全部完成！", LogLevel.INFO, LogKind.SUMMARY)
+        verifyLogged("本轮任务出现以下错误：\n理智作战\n基建换班", LogLevel.ERROR, LogKind.SUMMARY)
         verify(exactly = 0) { notificationCenter.notifyAllTasksCompleted(any(), any()) }
     }
 
@@ -114,8 +120,8 @@ class TaskChainHandlerCompletionTest {
 
         handler.onAllTasksCompleted()
 
-        verify(exactly = 1) { sessionLogger.append(any<String>(), any()) }
-        verify { sessionLogger.append("任务已全部完成！", LogLevel.SUCCESS) }
+        verify(exactly = 1) { sessionLogger.append(any<LogItem>()) }
+        verifyLogged("任务已全部完成！", LogLevel.SUCCESS, LogKind.SUMMARY)
         verify { notificationCenter.notifyAllTasksCompleted("任务已全部完成！", null) }
     }
 }

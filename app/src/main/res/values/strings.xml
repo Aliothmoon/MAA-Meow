@@ -151,7 +151,7 @@
     <string name="maa_recruiting_results">公招识别结果: </string>
     <string name="maa_recruiting_tips">公招提示</string>
     <string name="maa_choose">选择</string>
-    <string name="maa_recruit_tags_selected_log">选择 Tags：\n%1$s</string>
+    <string name="maa_recruit_tags_selected_log">选择 Tags：%1$s</string>
     <string name="maa_refreshed">当前槽位已刷新</string>
     <string name="maa_continue_refresh">无招聘许可，继续尝试刷新 Tags</string>
     <string name="maa_no_recruitment_permit">无招聘许可，已返回</string>
@@ -1442,6 +1442,18 @@
     <!-- panel: log -->
     <string name="panel_log_title">任务日志</string>
     <string name="panel_log_resume_auto_scroll">恢复自动滚动</string>
+    <string name="panel_log_empty">暂无日志</string>
+    <string name="panel_log_copied">已复制日志</string>
+    <string name="log_a11y_task_done">已完成</string>
+    <string name="log_a11y_task_failed">出错</string>
+    <string name="log_a11y_task_running">进行中</string>
+    <string name="log_a11y_task_interrupted">已中断</string>
+    <string name="log_a11y_warnings">%1$d 条警告</string>
+    <string name="log_a11y_expanded">已展开</string>
+    <string name="log_a11y_collapsed">已收起</string>
+    <string name="log_a11y_error">错误</string>
+    <string name="log_a11y_star">%1$d 星</string>
+    <string name="log_a11y_recruit_result">%1$s公招结果，最优组合 %2$s：%3$s</string>
     <string name="panel_log_view_details">查看详情</string>
     <string name="panel_log_details_section">详细信息</string>
     <string name="panel_log_screenshot_section">截图</string>
