@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.data.model
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
-import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
@@ -27,7 +26,7 @@ data class SwitchThemeConfig(
             MaaTaskParams(
                 MaaTaskType.SWITCH_THEME,
                 params.toString(),
-                logName = UiText.Dynamic(ctx.node.name),
+                logName = ctx.node.nameUiText(),
             )
         )
     }

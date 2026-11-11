@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.data.model
 
 import com.aliothmoon.maameow.domain.models.DropTarget
 import com.aliothmoon.maameow.domain.models.ReportOptions
+import com.aliothmoon.maameow.utils.i18n.UiText
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonObject
@@ -79,7 +80,7 @@ class FightRecruitReportParamsTest {
                 medicine = 0,
                 stone = 0,
                 series = 0,
-                logLabel = "1",
+                logLabel = UiText.Dynamic("1"),
                 report = ReportOptions(true, true, "77", "CN"),
             ).toFightParamsJson(need = 3),
         ).jsonObject

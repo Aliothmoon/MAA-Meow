@@ -192,6 +192,10 @@
     <string name="maa_oper_unavailable_module">所需模组未解锁</string>
     <string name="maa_battle_formation_operbox_matched">预匹配的干员（组）：</string>
     <string name="maa_battle_formation_operbox1_unmatched">干员（组）%1$s 没有匹配的干员，需要借助战（预匹配建议 %2$s，实际按助战列表选择）</string>
+    <string name="maa_requirement_elite">精英化不足</string>
+    <string name="maa_requirement_level">等级不足</string>
+    <string name="maa_requirement_skill_level">技能等级不足</string>
+    <string name="maa_requirement_module">所需模组未解锁</string>
     <string name="maa_current_steps">当前步骤: %1$s %2$s</string>
     <string name="maa_elapsed_time">当前计时器: %1$sms</string>
     <string name="maa_current_stage">当前关卡: %1$s</string>
@@ -481,10 +485,66 @@
 
     <!-- settings: data section -->
     <string name="settings_section_data">数据管理</string>
+    <string name="settings_depot_inventory_title">库存数据</string>
     <string name="settings_export_config_title">导出配置</string>
     <string name="settings_export_config_desc">将所有设置和任务配置导出为文件</string>
     <string name="settings_import_config_title">导入配置</string>
     <string name="settings_import_config_desc">从文件恢复设置和任务配置</string>
+
+    <!-- depot inventory page -->
+    <string name="depot_inventory_title">库存数据</string>
+    <string name="depot_inventory_profile_active">活跃</string>
+    <string name="depot_inventory_empty_profiles">暂无配置档</string>
+    <string name="depot_inventory_empty_profile">该配置档暂无库存数据。请在小工具中执行一次仓库/干员识别。</string>
+    <string name="depot_inventory_empty_items">该配置档暂无库存明细</string>
+    <string name="depot_inventory_empty_operators">该配置档暂无干员数据。到「任务 → 小工具 → 干员识别」跑一次识别，结果会保存到当前配置档。</string>
+    <string name="depot_inventory_tab_items">库存</string>
+    <string name="depot_inventory_tab_operators">干员</string>
+    <string name="depot_inventory_section_unmet">未集齐（%1$d）</string>
+    <string name="depot_inventory_section_empty">库存为 0（%1$d）</string>
+    <string name="depot_inventory_order_hint">已集齐的会跳过；拖动右侧手柄调整刷取顺序</string>
+    <string name="depot_inventory_order_drag">拖动排序</string>
+    <string name="depot_inventory_order_stage_closed">关卡未开放</string>
+    <string name="depot_inventory_png_items">%1$d 项</string>
+    <string name="depot_inventory_png_empty">（空）</string>
+    <string name="depot_inventory_png_oper_summary">已拥有 %1$d · 未拥有 %2$d</string>
+    <string name="depot_inventory_png_oper_meta">精%1$d · %2$d 级 · 潜 %3$d</string>
+    <string name="depot_inventory_detail_title">配置档数据</string>
+    <string name="depot_inventory_sync_time">更新时间：%1$s</string>
+    <string name="depot_inventory_export">导出</string>
+    <string name="depot_inventory_delete">清空</string>
+    <string name="depot_inventory_delete_title">清空库存数据</string>
+    <string name="depot_inventory_delete_message">确定清空配置档「%1$s」的仓库与干员数据吗？此操作不可撤销。</string>
+    <string name="depot_inventory_delete_confirm">清空</string>
+    <string name="depot_inventory_export_title">导出 %1$s</string>
+    <string name="depot_inventory_export_depot">导出仓库数据</string>
+    <string name="depot_inventory_export_operbox">导出干员数据</string>
+    <string name="depot_inventory_export_arkplanner">企鹅物流 / ArkPlanner（JSON）</string>
+    <string name="depot_inventory_export_lolicon">Lolicon（JSON）</string>
+    <string name="depot_inventory_export_image">导出为图片（PNG）</string>
+    <string name="depot_inventory_export_rendering">正在生成图片…</string>
+    <string name="depot_inventory_export_hide_profile">隐藏配置档名</string>
+    <string name="depot_inventory_export_hide_profile_hint">PNG 图头不写配置档名，只保留时间与数据</string>
+    <string name="depot_inventory_export_include_not_owned">包含未拥有干员</string>
+    <string name="depot_inventory_export_include_not_owned_hint">关掉后只导出已拥有的干员，JSON / Markdown / CSV 与导出图同步生效</string>
+    <string name="depot_inventory_maintain_title">库存保持计划</string>
+    <string name="depot_inventory_maintain_need">缺 %1$d</string>
+    <string name="depot_inventory_maintain_enough">已够</string>
+    <string name="depot_inventory_maintain_no_item">未选物品</string>
+    <string name="depot_inventory_maintain_zero_target">目标为 0</string>
+    <string name="depot_inventory_maintain_stage_required">未设关卡</string>
+    <string name="depot_inventory_maintain_stage_closed">关卡未开放（%1$s）</string>
+    <string name="depot_inventory_maintain_none">未设置库存保持</string>
+    <string name="depot_inventory_maintain_all_done">库存保持：已全部集齐</string>
+    <string name="depot_inventory_maintain_unmet_count">库存保持：%1$d 项未集齐</string>
+    <string name="depot_inventory_plan_new">新建库存保持计划</string>
+    <string name="depot_inventory_plan_current">当前库存 %1$s</string>
+    <string name="depot_inventory_plan_unsupported">该物品不能作为刷取目标，无法设置库存保持</string>
+    <string name="depot_plan_currency_inventory_tip">龙门币、采购凭证这类货币的库存只能靠战斗结算累积，仓库识别不会刷新它们</string>
+    <string name="depot_inventory_plan_stage_custom">自定义关卡</string>
+    <string name="depot_inventory_plan_node_disabled">该任务未启用，计划不会执行</string>
+    <string name="depot_inventory_plan_save">保存</string>
+    <string name="depot_inventory_plan_remove">移除计划</string>
 
     <!-- settings: achievement section -->
     <string name="settings_section_achievement">成就</string>
@@ -900,6 +960,7 @@
     <string name="panel_profile_delete_message">确定要删除配置「%1$s」吗？此操作不可撤销。</string>
     <string name="panel_profile_copy_id">复制 Profile ID</string>
     <string name="panel_profile_id_copied">已复制 Profile ID</string>
+    <string name="profile_default_name">配置-%1$d</string>
 
     <!-- panel: oper box -->
     <string name="panel_operbox_tab_owned">已拥有 (%1$d)</string>
@@ -1511,12 +1572,21 @@
     <!-- panel: depot maintain -->
     <string name="panel_depot_update_before_start">任务开始前更新库存数据</string>
     <string name="panel_depot_update_before_start_tip">任务开始时先执行一次仓库识别刷新库存数据，已加入队列的计划开始时按最新库存重算缺口。开跑前就判定已充足的计划不会加入队列，识别后若实际不足只在日志提示，重新运行即可刷取</string>
-    <string name="panel_depot_use_auto_series">AUTO 代理倍率</string>
-    <string name="panel_depot_use_auto_series_tip">未勾选时以 1 倍代理；勾选后按当前理智允许的最大倍率代理，单次掉落可能超过目标库存上限。</string>
-    <string name="panel_depot_skip_during_activity">活动期间跳过</string>
-    <string name="panel_depot_skip_during_resource">资源收集限时全天开放期间跳过</string>
+    <!-- 上游库存保持面板的计划概览/增删计划文案（我方面板已改用计划编辑面板，这些键仍被上游面板使用） -->
     <string name="panel_depot_add_plan">添加</string>
     <string name="panel_depot_collapse_all">折叠</string>
+    <string name="panel_depot_remove_plan">删除此计划</string>
+    <string name="panel_depot_summary_no_item">未选材料</string>
+    <string name="panel_depot_summary_zero_target">目标为 0</string>
+    <string name="panel_depot_summary_stage_required">需指定关卡</string>
+    <string name="panel_depot_summary_stage_closed">今日未开放</string>
+    <string name="panel_depot_summary_enough">库存已足</string>
+    <string name="panel_depot_use_auto_series">AUTO 代理倍率</string>
+    <string name="panel_depot_use_auto_series_tip">未勾选时以 1 倍代理；勾选后按当前理智允许的最大倍率代理，单次掉落可能超过目标库存上限。</string>
+    <string name="panel_depot_use_expected_drop_rate">按最大倍率刷取</string>
+    <string name="panel_depot_use_expected_drop_rate_tip">按企鹅物流掉率估算需要刷的战斗次数（缺口 ÷ 单次期望，四舍五入，仅作参考）：勾选后以当前可用的最大代理倍率刷取，刷够立即结束，不够继续刷。单次战斗多出来的部分会留在仓库里，不会浪费——库存保持每次执行前都按最新库存重算缺口，同一材料后续再刷时直接扣掉。无掉率数据时不做次数估算。</string>
+    <string name="panel_depot_skip_during_activity">活动期间跳过</string>
+    <string name="panel_depot_skip_during_resource">资源收集限时全天开放期间跳过</string>
     <string name="panel_depot_preset">预设</string>
     <string name="panel_depot_preset_chip_1">低级芯片（全职业）</string>
     <string name="panel_depot_preset_chip_2">高级芯片组（全职业）</string>
@@ -1538,15 +1608,13 @@
     <string name="panel_depot_use_expiring_medicine_tip">对全部计划生效，阈值固定 48 小时；与「理智作战」里可调天数的同名开关互不影响</string>
     <string name="panel_depot_summary_title">计划概览</string>
     <string name="panel_depot_summary_runnable">本次可执行 %1$d / %2$d</string>
-    <string name="panel_depot_summary_no_item">未选材料</string>
-    <string name="panel_depot_summary_zero_target">目标为 0</string>
-    <string name="panel_depot_summary_stage_required">需指定关卡</string>
-    <string name="panel_depot_summary_stage_closed">今日未开放</string>
-    <string name="panel_depot_summary_enough">库存已足</string>
+    <string name="panel_depot_section_planned">已有计划（%1$d）</string>
+    <string name="panel_depot_section_unplanned">暂无计划（%1$d）</string>
+    <string name="panel_depot_plan_removed">已移除「%1$s」</string>
+    <string name="panel_depot_undo_remove">撤销</string>
     <string name="panel_depot_target_inventory">目标库存</string>
     <string name="panel_depot_stone_count">最多使用 N 个源石</string>
     <string name="panel_depot_not_selected">未选择</string>
-    <string name="panel_depot_remove_plan">删除此计划</string>
 
     <!-- panel: mall -->
     <string name="panel_mall_advanced_options">高级选项</string>
@@ -2765,6 +2833,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <!-- 首参可能是计划序号也可能是任务名，编号前缀由调用方给 -->
     <string name="runlog_depot_plan_inventory_enough">%1$s：%2$s 已充足 %3$d/%4$d</string>
     <string name="runlog_depot_plan_inventory_insufficient">%1$s：%2$s 不足 %3$d/%4$d，需刷取 %5$d</string>
+    <string name="runlog_depot_plan_expected_runs">#%1$d：%2$s 按期望掉率 %3$s 预计刷取 %4$d 次，以最大代理倍率刷到够为止</string>
+    <string name="runlog_depot_plan_no_drop_rate">#%1$d：无掉率数据，不估算次数（仍以最大代理倍率刷到够为止）</string>
     <string name="runlog_fight_inventory_unavailable">任务「%1$s」启用了目标库存，但当前没有可用的库存数据，已跳过。可通过「更新数据」任务或「工具箱 - 仓库识别」更新库存</string>
     <string name="runlog_fight_stage_unavailable">%1$s：无今日开放的关卡（首选 %2$s），已跳过理智作战</string>
     <string name="runlog_depot_set_params_failed">%1$s：更新任务参数失败，将按原参数执行</string>
@@ -2773,6 +2843,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="runlog_depot_plan_stale_skipped">%1$s #%2$d：%3$s 实际 %4$d/%5$d 不足，预检时已跳过的计划无法在运行中补上，重新运行即可刷取</string>
     <string name="runlog_depot_delta_summary">仓库较 %1$s 有 %2$d 种物品变化，可在「小工具 → 仓库识别」查看</string>
     <string name="runlog_depot_delta_none">仓库无变化（较 %1$s）</string>
+    <string name="runlog_depot_drop_write_skipped">本场掉落未写入仓库：开跑时选中的配置档已被删除或一直没有识别基线</string>
     <string name="runlog_depot_skipped_activity">当前有活动进行中，已跳过库存保持</string>
     <string name="runlog_depot_skipped_resource">当前处于资源收集限时全天开放期间，已跳过库存保持</string>
     <string name="runlog_depot_sorted_by_progress">已按库存达成率从低到高排序执行</string>
@@ -3124,4 +3195,13 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="oper_progress_result_recognition">识别或操作失败</string>
     <string name="oper_progress_log_detail">%1$s：%2$s%3$s</string>
     <string name="oper_progress_log_summary">干员培养本轮处理结果：成功 %1$d，失败 %2$d，跳过 %3$d（专精启动也计入成功）</string>
+
+    <!-- 鹰角历星期名（库存保持/理智作战的今日关卡提示用，见 ServerTimezone.getYjDayOfWeekRes） -->
+    <string name="panel_fight_weekday_monday">周一</string>
+    <string name="panel_fight_weekday_tuesday">周二</string>
+    <string name="panel_fight_weekday_wednesday">周三</string>
+    <string name="panel_fight_weekday_thursday">周四</string>
+    <string name="panel_fight_weekday_friday">周五</string>
+    <string name="panel_fight_weekday_saturday">周六</string>
+    <string name="panel_fight_weekday_sunday">周日</string>
 </resources>

@@ -88,8 +88,11 @@ class ToolboxResultCollector(
         _recruitResults.value = emptyList()
     }
 
-    /** @return 落库后的快照，未落库为 null */
-    fun onDepotResult(details: JSONObject?): DepotSnapshot? {
+    /**
+     * @param profileId 开跑时捕获的配置档；识别期间切了档也不会把结果写进新档
+     * @return 落库后的快照，未落库为 null
+     */
+    fun onDepotResult(details: JSONObject?, profileId: String? = null): DepotSnapshot? {
         details ?: return null
         if (!details.getBooleanValue("done")) return null
 
@@ -104,7 +107,7 @@ class ToolboxResultCollector(
             Timber.w("仓库识别结果为空，跳过落库")
             return null
         }
-        val stored = depotRepository.set(items) ?: return null
+        val stored = depotRepository.set(items, profileId) ?: return null
         achievement.onDepotSuccess()
         ioScope.launch {
             achievementRepository.report {

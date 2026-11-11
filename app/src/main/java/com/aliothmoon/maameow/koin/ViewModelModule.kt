@@ -5,6 +5,7 @@ import com.aliothmoon.maameow.presentation.viewmodel.AppEventsViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotSearchViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
+import com.aliothmoon.maameow.presentation.viewmodel.DepotInventoryViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.ErrorLogViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.ExpandedControlPanelViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.HomeViewModel
@@ -20,7 +21,9 @@ import com.aliothmoon.maameow.schedule.ui.ScheduleListViewModel
 import com.aliothmoon.maameow.schedule.ui.ScheduleTriggerLogViewModel
 import com.aliothmoon.maameow.schedule.ui.ScheduleAppBlacklistViewModel
 import com.aliothmoon.maameow.schedule.ui.ScheduleWakeUnlockViewModel
+import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.singleOf
+import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
@@ -41,6 +44,12 @@ val viewModelModule = module {
     viewModelOf(::ScheduleAppBlacklistViewModel)
     viewModelOf(::NotificationSettingsViewModel)
     viewModelOf(::TaskOverrideEditorViewModel)
+    // 导出图要画潜能/精英图标，得拿到应用 Context 去解 drawable，所以显式装配
+    viewModel {
+        DepotInventoryViewModel(
+            get(), get(), get(), get(), get(), get(), get(), get(), get(), androidContext(),
+        )
+    }
     viewModelOf(::YituliuSettingsViewModel)
 }
 

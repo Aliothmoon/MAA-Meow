@@ -223,10 +223,65 @@
     <string name="settings_live_update_desc">Adjust content, color and icon for the current presentation</string>
 
     <string name="settings_section_data">Data Management</string>
+    <string name="settings_depot_inventory_title">Depot Inventory</string>
     <string name="settings_export_config_title">Export Configuration</string>
     <string name="settings_export_config_desc">Export all settings and task configurations to a file</string>
     <string name="settings_import_config_title">Import Configuration</string>
     <string name="settings_import_config_desc">Restore settings and task configurations from a file</string>
+
+    <string name="depot_inventory_title">Depot Inventory</string>
+    <string name="depot_inventory_profile_active">Active</string>
+    <string name="depot_inventory_empty_profiles">No profiles yet</string>
+    <string name="depot_inventory_empty_profile">No inventory data for this profile yet. Run depot/operator recognition in the Toolbox.</string>
+    <string name="depot_inventory_empty_items">No inventory details for this profile</string>
+    <string name="depot_inventory_empty_operators">No operator data for this profile. Run a recognition in Tasks → Toolbox → Operator Recognition; the result is saved to the active profile.</string>
+    <string name="depot_inventory_tab_items">Inventory</string>
+    <string name="depot_inventory_tab_operators">Operators</string>
+    <string name="depot_inventory_section_unmet">Not stocked yet (%1$d)</string>
+    <string name="depot_inventory_section_empty">Not in stock (%1$d)</string>
+    <string name="depot_inventory_order_hint">Collected items are skipped. Drag the handle on the right to reorder.</string>
+    <string name="depot_inventory_order_drag">Reorder</string>
+    <string name="depot_inventory_order_stage_closed">Stage closed</string>
+    <string name="depot_inventory_png_items">%1$d items</string>
+    <string name="depot_inventory_png_empty">(empty)</string>
+    <string name="depot_inventory_png_oper_summary">Owned %1$d · Not owned %2$d</string>
+    <string name="depot_inventory_png_oper_meta">E%1$d · Lv%2$d · P%3$d</string>
+    <string name="depot_inventory_detail_title">Profile data</string>
+    <string name="depot_inventory_sync_time">Updated: %1$s</string>
+    <string name="depot_inventory_export">Export</string>
+    <string name="depot_inventory_delete">Clear</string>
+    <string name="depot_inventory_delete_title">Clear inventory data</string>
+    <string name="depot_inventory_delete_message">Clear depot and operator data for profile "%1$s"? This cannot be undone.</string>
+    <string name="depot_inventory_delete_confirm">Clear</string>
+    <string name="depot_inventory_export_title">Export %1$s</string>
+    <string name="depot_inventory_export_depot">Export depot data</string>
+    <string name="depot_inventory_export_operbox">Export operator data</string>
+    <string name="depot_inventory_export_arkplanner">Penguin / ArkPlanner (JSON)</string>
+    <string name="depot_inventory_export_lolicon">Lolicon (JSON)</string>
+    <string name="depot_inventory_export_image">Export as image (PNG)</string>
+    <string name="depot_inventory_export_rendering">Generating image…</string>
+    <string name="depot_inventory_export_hide_profile">Hide profile name</string>
+    <string name="depot_inventory_export_hide_profile_hint">PNG header omits the profile name; keeps time and data only</string>
+    <string name="depot_inventory_export_include_not_owned">Include unowned operators</string>
+    <string name="depot_inventory_export_include_not_owned_hint">Turn off to export owned operators only; applies to JSON, Markdown, CSV and the image</string>
+    <string name="depot_inventory_maintain_title">Depot maintain plans</string>
+    <string name="depot_inventory_maintain_need">Need %1$d</string>
+    <string name="depot_inventory_maintain_enough">Enough</string>
+    <string name="depot_inventory_maintain_no_item">No item selected</string>
+    <string name="depot_inventory_maintain_zero_target">Target is 0</string>
+    <string name="depot_inventory_maintain_stage_required">No stage set</string>
+    <string name="depot_inventory_maintain_stage_closed">Stage closed (%1$s)</string>
+    <string name="depot_inventory_maintain_none">No depot maintain plans</string>
+    <string name="depot_inventory_maintain_all_done">Depot maintain: all stocked</string>
+    <string name="depot_inventory_maintain_unmet_count">Depot maintain: %1$d item(s) short</string>
+    <string name="depot_inventory_plan_new">New depot maintain plan</string>
+    <string name="depot_inventory_plan_current">In stock: %1$s</string>
+    <string name="depot_inventory_plan_unsupported">This item cannot be farmed, so depot maintain is unavailable</string>
+    <string name="depot_plan_currency_inventory_tip">The stock of currencies like LMD and purchase certificates only builds up from battle drops; depot recognition never refreshes them</string>
+    <string name="depot_inventory_plan_stage_custom">Custom stage</string>
+    <string name="depot_inventory_plan_node_disabled">This task is disabled, so the plan will not run</string>
+    <string name="depot_inventory_plan_save">Save</string>
+    <string name="depot_inventory_plan_remove">Remove plan</string>
     <string name="settings_section_achievement">Achievements</string>
     <string name="settings_achievement_snackbar_title">Achievement Notifications</string>
     <string name="settings_achievement_snackbar_desc">Show Snackbar when achievements are unlocked</string>
@@ -769,6 +824,10 @@
     <string name="maa_oper_unavailable_module">Required module not unlocked</string>
     <string name="maa_battle_formation_operbox_matched">Pre-matched operators (groups):</string>
     <string name="maa_battle_formation_operbox1_unmatched">No owned operator matches group %1$s; a support unit is needed (suggested %2$s, the actual pick follows the support list)</string>
+    <string name="maa_requirement_elite">Promotion level too low</string>
+    <string name="maa_requirement_level">Level too low</string>
+    <string name="maa_requirement_skill_level">Skill level too low</string>
+    <string name="maa_requirement_module">Required module not unlocked</string>
     <string name="maa_current_steps">Step: %1$s %2$s</string>
     <string name="maa_elapsed_time">Elapsed time: %1$sms</string>
     <string name="maa_current_stage">Current Stage: %1$s</string>
@@ -846,6 +905,7 @@
     <string name="panel_profile_delete_message">Delete profile \"%1$s\"? This action cannot be undone.</string>
     <string name="panel_profile_copy_id">Copy Profile ID</string>
     <string name="panel_profile_id_copied">Profile ID copied</string>
+    <string name="profile_default_name">Profile %1$d</string>
 
     <!-- panel: oper box -->
     <string name="panel_operbox_tab_owned">Owned (%1$d)</string>
@@ -1456,12 +1516,21 @@
 
     <string name="panel_depot_update_before_start">Update inventory before starting</string>
     <string name="panel_depot_update_before_start_tip">Runs depot recognition first to refresh inventory data; queued plans recompute their deficit from the latest inventory when they start. Plans judged sufficient before the run aren\'t queued; if recognition shows they\'re actually short, it\'s only logged, and running again farms them</string>
-    <string name="panel_depot_use_auto_series">Auto Series</string>
-    <string name="panel_depot_use_auto_series_tip">When unchecked, runs at 1×; when checked, runs at the highest series multiplier allowed by current sanity, so drops from a single run may exceed the target inventory limit.</string>
-    <string name="panel_depot_skip_during_activity">Skip during event</string>
-    <string name="panel_depot_skip_during_resource">Skip while the resource collection event is active</string>
+    <!-- Plan overview / add-remove plan strings of the upstream depot panel (still used by it) -->
     <string name="panel_depot_add_plan">Add</string>
     <string name="panel_depot_collapse_all">Collapse</string>
+    <string name="panel_depot_remove_plan">Remove this plan</string>
+    <string name="panel_depot_summary_no_item">No item</string>
+    <string name="panel_depot_summary_zero_target">Target is 0</string>
+    <string name="panel_depot_summary_stage_required">Stage required</string>
+    <string name="panel_depot_summary_stage_closed">Closed today</string>
+    <string name="panel_depot_summary_enough">Target met</string>
+    <string name="panel_depot_use_auto_series">Auto Series</string>
+    <string name="panel_depot_use_auto_series_tip">When unchecked, runs at 1×; when checked, runs at the highest series multiplier allowed by current sanity, so drops from a single run may exceed the target inventory limit.</string>
+    <string name="panel_depot_use_expected_drop_rate">Farm at max series</string>
+    <string name="panel_depot_use_expected_drop_rate_tip">Estimates the number of battles from Penguin Stats drop rates (shortfall ÷ per-run expectation, rounded; a reference only). With this on, farming uses the highest series multiplier currently available: it stops the moment the target is met and keeps going when it is not. Any surplus stays in the depot and is not wasted — the shortfall is recomputed from live inventory before every run, so a later run of the same material simply needs less. Without drop-rate data no estimate is shown.</string>
+    <string name="panel_depot_skip_during_activity">Skip during event</string>
+    <string name="panel_depot_skip_during_resource">Skip while the resource collection event is active</string>
     <string name="panel_depot_preset">Preset</string>
     <string name="panel_depot_preset_chip_1">Chips (All Classes)</string>
     <string name="panel_depot_preset_chip_2">Chip Packs (All Classes)</string>
@@ -1483,15 +1552,13 @@
     <string name="panel_depot_use_expiring_medicine_tip">Applies to all plans with a fixed 48-hour threshold; independent of the similarly named option in the Fight task, whose threshold is adjustable</string>
     <string name="panel_depot_summary_title">Plan overview</string>
     <string name="panel_depot_summary_runnable">%1$d / %2$d will run</string>
-    <string name="panel_depot_summary_no_item">No item</string>
-    <string name="panel_depot_summary_zero_target">Target is 0</string>
-    <string name="panel_depot_summary_stage_required">Stage required</string>
-    <string name="panel_depot_summary_stage_closed">Closed today</string>
-    <string name="panel_depot_summary_enough">Target met</string>
+    <string name="panel_depot_section_planned">Planned (%1$d)</string>
+    <string name="panel_depot_section_unplanned">No plan (%1$d)</string>
+    <string name="panel_depot_plan_removed">Removed "%1$s"</string>
+    <string name="panel_depot_undo_remove">Undo</string>
     <string name="panel_depot_target_inventory">Target inventory</string>
     <string name="panel_depot_stone_count">Use up to N Originite Prime</string>
     <string name="panel_depot_not_selected">Not selected</string>
-    <string name="panel_depot_remove_plan">Remove this plan</string>
 
     <!-- panel: mall -->
     <string name="panel_mall_advanced_options">Advanced Options</string>
@@ -2708,6 +2775,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="runlog_depot_plan_stage_not_open">#%1$d: stage \'%2$s\' is not open</string>
     <string name="runlog_depot_plan_inventory_enough">%1$s: %2$s sufficient %3$d/%4$d</string>
     <string name="runlog_depot_plan_inventory_insufficient">%1$s: %2$s insufficient %3$d/%4$d, need %5$d more</string>
+    <string name="runlog_depot_plan_expected_runs">#%1$d: %2$s at expected drop rate %3$s, about %4$d runs; farming at the highest series multiplier until enough</string>
+    <string name="runlog_depot_plan_no_drop_rate">#%1$d: no drop-rate data, no run estimate (still farming at the highest series multiplier until enough)</string>
     <string name="runlog_fight_inventory_unavailable">Task \"%1$s\" uses target inventory, but no inventory data is currently available, so it was skipped. Update it via the \"Update doctor data\" task or \"Toolbox - Depot Recognition\"</string>
     <string name="runlog_fight_stage_unavailable">%1$s: no stage open today (primary %2$s), fight task skipped</string>
     <string name="runlog_depot_set_params_failed">%1$s: failed to update task params; original params will be used</string>
@@ -2716,6 +2785,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="runlog_depot_plan_stale_skipped">%1$s #%2$d: %3$s is actually %4$d/%5$d, insufficient. Plans skipped at the pre-check can\'t be added mid-run; run again to farm it</string>
     <string name="runlog_depot_delta_summary">Depot: %2$d items changed since %1$s. See Tools → Depot</string>
     <string name="runlog_depot_delta_none">No depot changes (vs %1$s)</string>
+    <string name="runlog_depot_drop_write_skipped">Drops from this run were not saved: the profile chosen at start was deleted or never had an inventory baseline</string>
     <string name="runlog_depot_skipped_activity">An event is in progress; Depot Maintain skipped</string>
     <string name="runlog_depot_skipped_resource">The resource collection event is active; Depot Maintain skipped</string>
     <string name="runlog_depot_sorted_by_progress">Plans queued in ascending order of inventory progress</string>
@@ -3067,4 +3137,13 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="oper_progress_result_recognition">Recognition or operation failed</string>
     <string name="oper_progress_log_detail">%1$s: %2$s%3$s</string>
     <string name="oper_progress_log_summary">Operator training results: %1$d successful, %2$d failed, %3$d skipped (starting mastery also counts as success).</string>
+
+    <!-- Weekday names of the YJ calendar (used by the today's-stage hints, see ServerTimezone.getYjDayOfWeekRes) -->
+    <string name="panel_fight_weekday_monday">Monday</string>
+    <string name="panel_fight_weekday_tuesday">Tuesday</string>
+    <string name="panel_fight_weekday_wednesday">Wednesday</string>
+    <string name="panel_fight_weekday_thursday">Thursday</string>
+    <string name="panel_fight_weekday_friday">Friday</string>
+    <string name="panel_fight_weekday_saturday">Saturday</string>
+    <string name="panel_fight_weekday_sunday">Sunday</string>
 </resources>

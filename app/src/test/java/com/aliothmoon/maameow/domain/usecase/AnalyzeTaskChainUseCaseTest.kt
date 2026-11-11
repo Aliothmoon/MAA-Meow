@@ -67,6 +67,7 @@ class AnalyzeTaskChainUseCaseTest {
         depotRepository = depotRepository,
         operBoxRepository = operBoxRepository,
         itemHelper = mockk(relaxed = true),
+        dropRateProvider = mockk(relaxed = true),
         dropsRefresher = mockk(relaxed = true),
         appSettingsManager = appSettingsManager,
         metadataGate = mockk { coEvery { awaitCurrent(any()) } returns true },

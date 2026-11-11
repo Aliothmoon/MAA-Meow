@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.theme.OpaqueTheme
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,41 +38,44 @@ fun LogExportBottomSheet(
     onShare: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .windowInsetsPadding(MaaWindowInsets.bottomBar)
-                .padding(bottom = 8.dp),
+    // 玻璃背景下面板会透出底下的日志列表，弹层换回不透明配色
+    OpaqueTheme {
+        ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            sheetState = sheetState,
         ) {
-            Text(
-                text = stringResource(R.string.settings_log_export_chooser_title),
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-            )
+                    .windowInsetsPadding(MaaWindowInsets.bottomBar)
+                    .padding(bottom = 8.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_log_export_chooser_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                )
 
-            SheetItem(
-                text = stringResource(R.string.log_export_share),
-                icon = Icons.Default.Share,
-                onClick = onShare,
-            )
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                color = MaterialTheme.colorScheme.outlineVariant,
-            )
-            SheetItem(
-                text = stringResource(R.string.log_export_save_to_device),
-                icon = Icons.Default.Save,
-                onClick = onSave,
-            )
+                SheetItem(
+                    text = stringResource(R.string.log_export_share),
+                    icon = Icons.Default.Share,
+                    onClick = onShare,
+                )
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                )
+                SheetItem(
+                    text = stringResource(R.string.log_export_save_to_device),
+                    icon = Icons.Default.Save,
+                    onClick = onSave,
+                )
 
-            Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(8.dp))
+            }
         }
     }
 }

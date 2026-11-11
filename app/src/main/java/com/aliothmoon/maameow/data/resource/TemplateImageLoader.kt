@@ -52,12 +52,7 @@ abstract class TemplateImageLoader(
             cache.get(id)?.let { return@withContext it }
             if (id in missing) return@withContext null
 
-            val file = listOfNotNull(id, fallbackOf(id)).asSequence()
-                .flatMap { name ->
-                    sequenceOf(pathConfig.cacheResourceDir, pathConfig.resourceDir)
-                        .map { File(it, "$subDir/$name.png") }
-                }
-                .firstOrNull { it.isFile }
+            val file = findFile(id)
             val bitmap = try {
                 file?.let(::decode)
             } catch (e: Exception) {
@@ -72,6 +67,34 @@ abstract class TemplateImageLoader(
             bitmap
         }
     }
+
+    /**
+     * 只解码、不写 LRU：批量导出要一口气读几百张图，
+     * 走 [load] 会把界面刚缓存的头像全部挤出去，回到列表又要重新解码。
+     * 已经在缓存里的仍然复用（先 [peek]），没缓存的每次现读盘。
+     */
+    suspend fun loadTransient(id: String): ImageBitmap? {
+        if (id.isEmpty()) return null
+        if (id in missing) return null
+        return withContext(Dispatchers.IO) {
+            val file = findFile(id)
+            val bitmap = try {
+                file?.let(::decode)
+            } catch (e: Exception) {
+                Timber.w(e, "加载图片失败: $subDir/$id")
+                null
+            }
+            if (bitmap == null) missing.add(id)
+            bitmap
+        }
+    }
+
+    private fun findFile(id: String): File? = listOfNotNull(id, fallbackOf(id)).asSequence()
+        .flatMap { name ->
+            sequenceOf(pathConfig.cacheResourceDir, pathConfig.resourceDir)
+                .map { File(it, "$subDir/$name.png") }
+        }
+        .firstOrNull { it.isFile }
 
     protected open fun fallbackOf(id: String): String? = null
 

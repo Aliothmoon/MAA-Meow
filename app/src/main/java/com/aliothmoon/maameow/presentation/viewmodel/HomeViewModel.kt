@@ -27,6 +27,7 @@ import com.aliothmoon.maameow.presentation.state.UiEffect
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
 import com.aliothmoon.maameow.utils.Misc
+import com.aliothmoon.maameow.utils.i18n.LocalizedException
 import com.aliothmoon.maameow.utils.i18n.remoteBackendPermissionLabel
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.channels.Channel
@@ -498,11 +499,15 @@ class HomeViewModel(
             } catch (e: Exception) {
                 Timber.e(e, "onChangeTo16x9Resolution: Error changing resolution")
                 _uiState.update { it.copy(isLoading = false) }
-                _effects.send(
-                    UiEffect.toast(
-                        R.string.home_toast_change_resolution_failed, e.message.orEmpty()
+                if (e is LocalizedException) {
+                    _effects.send(UiEffect.toast(e.uiText))
+                } else {
+                    _effects.send(
+                        UiEffect.toast(
+                            R.string.home_toast_change_resolution_failed, e.message.orEmpty()
+                        )
                     )
-                )
+                }
             }
         }
     }

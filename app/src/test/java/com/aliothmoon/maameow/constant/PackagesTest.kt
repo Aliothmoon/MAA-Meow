@@ -12,6 +12,8 @@ class PackagesTest {
 
     @After
     fun tearDown() {
+        // appliedMapping 是进程级状态：别的测试类（MaaResourceLoaderTest）也会写它
+        Packages.appliedMapping = emptyMap()
         Packages.bindOverrides(MutableStateFlow(emptyMap()))
     }
 

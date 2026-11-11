@@ -15,6 +15,7 @@ enum class ToolboxExportFileType(val extension: String, val mimeType: String) {
     JSON("json", "application/json"),
     MARKDOWN("md", "text/markdown"),
     CSV("csv", "text/csv"),
+    PNG("png", "image/png"),
 }
 
 
@@ -38,7 +39,7 @@ class ToolboxExportService(
         withContext(Dispatchers.IO) {
             try {
                 val exportDir = File(context.cacheDir, EXPORT_DIR).apply { mkdirs() }
-                cleanupOldExports(exportDir, prefix)
+                cleanupOldExports(exportDir, prefix, fileType)
                 val file = File(exportDir, makeFileName(prefix, fileType))
                 file.writeText(content)
                 createShareIntent(file, fileType)
@@ -64,6 +65,42 @@ class ToolboxExportService(
             }
         }
 
+    /** 写入缓存并返回分享 Intent（字节版，供 PNG 等二进制导出）；失败返回 null。 */
+    suspend fun buildShareIntentBytes(
+        prefix: String,
+        bytes: ByteArray,
+        fileType: ToolboxExportFileType
+    ): Intent? =
+        withContext(Dispatchers.IO) {
+            try {
+                val exportDir = File(context.cacheDir, EXPORT_DIR).apply { mkdirs() }
+                cleanupOldExports(exportDir, prefix, fileType)
+                val file = File(exportDir, makeFileName(prefix, fileType))
+                file.writeBytes(bytes)
+                createShareIntent(file, fileType)
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to build share intent bytes for %s", prefix)
+                null
+            }
+        }
+
+    /** 字节版写入 SAF Uri。 */
+    suspend fun writeBytesToUri(uri: Uri, bytes: ByteArray): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                val out = context.contentResolver.openOutputStream(uri)
+                if (out == null) {
+                    Timber.e("openOutputStream returned null for %s", uri)
+                    return@withContext false
+                }
+                out.use { it.write(bytes) }
+                true
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to write export bytes to uri")
+                false
+            }
+        }
+
     private fun createShareIntent(file: File, fileType: ToolboxExportFileType): Intent {
         val authority = "${context.packageName}.fileprovider"
         val uri = FileProvider.getUriForFile(context, authority, file)
@@ -75,10 +112,20 @@ class ToolboxExportService(
         }
     }
 
-    private fun cleanupOldExports(dir: File, prefix: String) {
+    /**
+     * 只清同一前缀、同一扩展名的旧文件。
+     * 以前只看前缀：`operbox_` 前缀下 JSON / MD / CSV / PNG 混放，
+     * 刚分享出去的 MD 会被下一次导出 PNG 顺手删掉（分享面板可能还没读完）。
+     */
+    private fun cleanupOldExports(
+        dir: File,
+        prefix: String,
+        fileType: ToolboxExportFileType,
+    ) {
         try {
+            val suffix = ".${fileType.extension}"
             dir.listFiles { f ->
-                f.isFile && f.name.startsWith("${prefix}_")
+                f.isFile && f.name.startsWith("${prefix}_") && f.name.endsWith(suffix)
             }?.forEach { it.delete() }
         } catch (e: Exception) {
             Timber.w(e, "Failed to cleanup old exports")

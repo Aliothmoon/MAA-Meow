@@ -54,6 +54,7 @@ import com.aliothmoon.maameow.presentation.state.UiEffect
 import com.aliothmoon.maameow.presentation.view.notification.NotificationSettingsView
 import com.aliothmoon.maameow.presentation.view.settings.AchievementDebugView
 import com.aliothmoon.maameow.presentation.view.settings.AchievementView
+import com.aliothmoon.maameow.presentation.view.settings.DepotInventoryView
 import com.aliothmoon.maameow.presentation.view.settings.ErrorLogView
 import com.aliothmoon.maameow.presentation.view.settings.GamePackageSettingsView
 import com.aliothmoon.maameow.presentation.view.settings.YituliuSettingsView
@@ -256,6 +257,9 @@ fun AppNavigation(
                     }
                     composable(Routes.LOG_HISTORY) {
                         LogHistoryView(navController = navController)
+                    }
+                    composable(Routes.DEPOT_INVENTORY) {
+                        DepotInventoryView(navController = navController)
                     }
                     composable(Routes.ERROR_LOG) {
                         ErrorLogView(navController = navController)

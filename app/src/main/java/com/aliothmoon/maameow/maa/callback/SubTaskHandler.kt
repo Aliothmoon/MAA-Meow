@@ -1,4 +1,4 @@
-﻿package com.aliothmoon.maameow.maa.callback
+package com.aliothmoon.maameow.maa.callback
 
 import android.content.Context
 import com.alibaba.fastjson2.JSONArray
@@ -20,6 +20,7 @@ import com.aliothmoon.maameow.data.repository.DepotDelta
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.delta
 import com.aliothmoon.maameow.data.resource.ActivityManager
+import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.data.resource.ServerTimezone
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
@@ -61,6 +62,9 @@ class SubTaskHandler(
             by inject(OperProgressHandler::class.java)
     private val appSettings: AppSettingsManager by inject(AppSettingsManager::class.java)
 
+    /** 刷取目标集合（材料 + 三样货币），用来过滤战斗结算里的杂项掉落 */
+    private val itemHelper: ItemHelper by inject(ItemHelper::class.java)
+
     // 懒取：实现方 MaaCompositionService 反过来依赖本类，构造注入会成环
     private val executionStateHolder: MaaExecutionStateHolder
             by inject(MaaExecutionStateHolder::class.java)
@@ -80,9 +84,25 @@ class SubTaskHandler(
     // 最近一条设施行的 facility#序号，同房间的原因提示据此省掉重复的设施行
     private var lastFacilityKey: String? = null
 
+    /**
+     * 本场任务链开跑时的配置档 id。
+     *
+     * 仓库掉落、识别结果都要记在「开跑那一档」上：跑到一半把配置档切到 B 档，
+     * 这一场剩下的掉落不该写进 B（[com.aliothmoon.maameow.data.repository.ProfileShardStore.mutate]
+     * 默认写活跃档，切了就跟着跑）。任务链开始与 session 重置时重新捕获。
+     */
+    @Volatile
+    var runProfileId: String? = null
+        private set
+
     // 本次会话累计用药数（跨战斗累计，session 开始时重置）
     private var medicineUsedTotal = 0
     private var expiringMedicineUsedTotal = 0
+
+    // 「掉落没写进仓库」的警告每场会话只提醒一次，避免每场战斗都刷一条。
+    // callback 线程与 resetSessionState 可能不在同一线程，标记要可见
+    @Volatile
+    private var dropWriteWarned = false
 
     // 会话级理智快照（最近一次 SanityBeforeStage），供 AllTasksCompleted 消费
     data class SanitySnapshot(
@@ -103,12 +123,35 @@ class SubTaskHandler(
         expiringMedicineUsedTotal = 0
         lastSanitySnapshot = null
         lastFacilityKey = null
+        runProfileId = null
+        dropWriteWarned = false
+    }
+
+    /**
+     * session 开始时钉住配置档，必须在 [resetSessionState] 之后、预检之前调用。
+     *
+     * [resetSessionState] 与首个 TaskChainStart 之间隔着整段预检（连设备、载资源，
+     * 首跑或热更后可能几十秒），这段窗口里切档会让「记账档」和「分析用的档」错位：
+     * 参数按 A 档算、掉落却写进 B 档。预检之前定下来窗口就只剩点击到调用这一段；
+     * [onTaskChainStart] 里的懒采集保留作兜底（AUX 等不走预检的入口）。
+     */
+    fun beginSession(profileId: String) {
+        if (runProfileId == null && profileId.isNotEmpty()) runProfileId = profileId
     }
 
     /** 新任务链开始，上一链的主题目标与设施行标识不再有效 */
     fun onTaskChainStart(taskId: Int) {
         clearThemeTarget(taskId)
         lastFacilityKey = null
+        // 记下开跑时的配置档：中途切档不影响本链的掉落/识别归属。
+        // 只认第一次：core 对每个 AppendTask 都会发一次 TaskChainStart，
+        // 中途切档后若覆盖，后续节点就会把这一场剩下的掉落写到新档去。
+        // 包一层 runCatching：单测里 chainState 是 relaxed mock，profileId.value 不是字符串
+        if (runProfileId == null) {
+            runProfileId = runCatching {
+                chainState.profileId.value.ifEmpty { null }
+            }.getOrNull()
+        }
     }
 
     fun clearThemeTarget(taskId: Int) {
@@ -568,7 +611,7 @@ class SubTaskHandler(
         val subDetails = details.getJSONObject("details")
         when (taskchain) {
             "Depot" -> {
-                toolboxResultCollector.onDepotResult(subDetails)?.delta()?.let(::appendDepotDelta)
+                toolboxResultCollector.onDepotResult(subDetails, runProfileId)?.delta()?.let(::appendDepotDelta)
                 return
             }
 
@@ -996,8 +1039,21 @@ class SubTaskHandler(
         sessionLogger.append(sb.toString(), LogLevel.TRACE)
 
         if (drops.isNotEmpty()) {
-            // 同步写穿内存，下一关 TaskChainStart 立刻能 countOf 到本场掉落
-            depotRepository.merge(drops)
+            // 只把「能当库存目标」的掉落写进仓库：声望（每场必给的博士经验）这类
+            // 既不能配计划、也识别不出来，写进去只会在库存页堆一批无人关心的数字
+            val targetDrops = drops.filter { (itemId, _) -> itemHelper.isDepotTargetItem(itemId) }
+            // 同步写穿内存，下一关 TaskChainStart 立刻能 countOf 到本场掉落。
+            // 目标档用开跑时捕获的那一档，避免中途切档把掉落写错档
+            val written = targetDrops.isNotEmpty() && depotRepository.merge(targetDrops, runProfileId)
+            // 写不进去（运行中删掉了开跑档 / 该档一直没有识别基线）时用户只会看到「库存没涨」，
+            // 这条警告每场会话只打一次，免得刷屏
+            if (targetDrops.isNotEmpty() && !written && !dropWriteWarned) {
+                dropWriteWarned = true
+                append(
+                    resources.getString(R.string.runlog_depot_drop_write_skipped),
+                    LogLevel.WARNING,
+                )
+            }
         }
     }
 

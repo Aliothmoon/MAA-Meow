@@ -1,5 +1,7 @@
 package com.aliothmoon.maameow.data.resource
 
+import androidx.annotation.StringRes
+import com.aliothmoon.maameow.R
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId

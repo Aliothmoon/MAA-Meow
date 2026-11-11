@@ -13,6 +13,7 @@ import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.maa.task.TaskSlot
 import com.aliothmoon.maameow.utils.i18n.UiText
+import com.aliothmoon.maameow.utils.i18n.uiTextDynamic
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.serialization.Serializable
 
@@ -72,7 +73,11 @@ data class DepotMaintainConfig(
     /** 芯片组计入双芯片折算，只改计数口径，对齐 WPF CountDualChipAsChipPack */
     val countDualChipAsChipPack: Boolean = false,
     val customStageCode: Boolean = false,
-    /** false→series=1；true→series=0（AUTO）。对齐 WPF UseAutoSeries。 */
+    /**
+     * 按最大倍率刷取：false→series=1；true→series=0，交给 core 取当前可用的最大代理倍率
+     * （对齐 WPF UseAutoSeries）。开启时顺带把缺口按企鹅物流掉率折算成战斗次数写进日志
+     * ——次数只估不截止，一次 Fight 的停止条件仍是 drops 达标 / times 打满 / 药石理智耗尽。
+     */
     val useAutoSeries: Boolean = false,
     val skipDuringActivity: Boolean = false,
     val skipDuringResourceCollection: Boolean = false,
@@ -102,13 +107,13 @@ data class DepotMaintainConfig(
             params += MaaTaskParams(
                 MaaTaskType.DEPOT,
                 "{}",
-                logName = uiTextOf(R.string.runlog_task_with_detail, ctx.node.name, uiTextOf(R.string.maa_depot)),
+                logName = uiTextOf(R.string.runlog_task_with_detail, ctx.node.nameUiText(), uiTextOf(R.string.maa_depot)),
             )
         }
 
         // 每份库存保持的计划日志前插一条分段，跟上游 AddLogSection 对齐
         if (plans.isNotEmpty()) {
-            ctx.appendLog(uiTextOf(R.string.runlog_log_section, ctx.node.name), LogLevel.TRACE)
+            ctx.appendLog(uiTextOf(R.string.runlog_log_section, ctx.node.nameUiText()), LogLevel.TRACE)
         }
 
         // 预先评估后备计划，暂不输出日志
@@ -137,6 +142,8 @@ data class DepotMaintainConfig(
         val logged = if (primary != null) decisions.take(primaryAt + 1) else decisions
         for (d in logged) {
             ctx.appendLog(d.logText(ctx), d.logLevel())
+            // 期望模式的折算明细紧跟在该计划后面，便于核对次数怎么来的
+            d.expectedLogText(ctx)?.let { ctx.appendLog(it, LogLevel.TRACE) }
         }
 
         // 登记不随日志截断
@@ -232,7 +239,8 @@ data class DepotMaintainConfig(
 
         fun skippedPlan() = SkippedDepotPlans.Plan(no = no, dropId = plan.dropId, dropCount = plan.dropCount)
 
-        fun logName(ctx: TaskParamContext): UiText = UiText.Dynamic("${ctx.node.name} #$no")
+        fun logName(ctx: TaskParamContext): UiText =
+            ctx.node.nameUiText("#$no")
 
         fun logLevel(): LogLevel = when (outcome) {
             DepotPlanOutcome.NoItem,
@@ -275,16 +283,43 @@ data class DepotMaintainConfig(
             stage = plan.stage,
             medicine = if (useMedicine && plan.useMedicine) plan.medicineCount else 0,
             stone = if (useStone && plan.useStone) plan.stoneCount else 0,
+            // 倍率：任务级开关打开就交给 core 取最大倍率（一次进图连打几场）；次数只估不截止
             series = if (useAutoSeries) 0 else 1,
-            logLabel = no.toString(),
+            logLabel = uiTextDynamic(no.toString()),
             medicineExpireDays = if (useExpiringMedicine) EXPIRING_MEDICINE_DAYS else null,
             report = ctx.report,
+            dropRate = if (useAutoSeries) {
+                ctx.dropRateProvider.getRate(plan.stage, plan.dropId, ctx.report.server)
+            } else {
+                null
+            },
             countDualChips = countDualChipAsChipPack,
         )
+
+        /** 按最大倍率刷取时的日志：掉率与折算次数；无数据时说明不做估算 */
+        fun expectedLogText(ctx: TaskParamContext): UiText? {
+            // 只给真会去刷的计划算：已集齐、未选材料、关卡没开的计划算出「要刷几次」没有意义，
+            // 缺口为 0 时还会被兜成「1 次」，反而误导
+            if (!useAutoSeries || outcome != DepotPlanOutcome.Runnable) return null
+            val t = target(ctx)
+            val rate = t.dropRate
+                ?: return uiTextOf(R.string.runlog_depot_plan_no_drop_rate, no)
+            // 估算次数与实际下发的 times 无关（那边恒为 MAX），只是让用户核对要刷多少
+            val runs = t.expectedTimes(need) ?: 1
+            return uiTextOf(
+                R.string.runlog_depot_plan_expected_runs,
+                no, ctx.itemHelper.getItemInfo(plan.dropId)?.name ?: plan.dropId,
+                formatRate(rate), runs,
+            )
+        }
     }
 
     companion object {
         /** 临期药阈值，对齐上游 DepotMaintainTask.ExpiringMedicineDays，不开放给用户调 */
         const val EXPIRING_MEDICINE_DAYS = 2
+
+        /** 掉率的展示形态：百分比保留一位小数，固定 Locale 免得小数点随系统语言变 */
+        fun formatRate(rate: Double): String =
+            String.format(java.util.Locale.US, "%.1f%%", rate * 100)
     }
 }

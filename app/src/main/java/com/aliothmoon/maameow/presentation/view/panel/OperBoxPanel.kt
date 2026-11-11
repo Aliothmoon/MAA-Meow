@@ -262,7 +262,7 @@ fun OperBoxPanel(
 }
 
 @Composable
-private fun rememberOperBoxExportLabels(): OperBoxExportLabels {
+internal fun rememberOperBoxExportLabels(): OperBoxExportLabels {
     val name = stringResource(R.string.operbox_export_header_name)
     val id = stringResource(R.string.operbox_export_header_id)
     val rarity = stringResource(R.string.operbox_export_header_rarity)

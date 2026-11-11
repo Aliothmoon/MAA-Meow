@@ -44,6 +44,9 @@ class OperBoxRepository(
 
     val snapshot: StateFlow<OperBoxSnapshot> get() = shards.snapshot
 
+    /** 全部配置档的干员快照（只读），库存页跨配置档查看用。 */
+    val snapshots: StateFlow<Map<String, OperBoxSnapshot>> get() = shards.allShards
+
     val isLoaded: StateFlow<Boolean> get() = shards.isLoaded
 
     fun start() = shards.start()
@@ -59,6 +62,11 @@ class OperBoxRepository(
             )
         }
         if (profileId == null) shards.mutate(transform) else shards.mutate(profileId, transform)
+    }
+
+    /** 清空指定配置档干员快照（库存页删除；非活跃档也能清）。 */
+    fun clear(profileId: String) {
+        shards.mutateFor(profileId) { OperBoxSnapshot() }
     }
 
     companion object {

@@ -6,10 +6,13 @@ import com.aliothmoon.maameow.constant.MaaFiles.ASSET_DIR_NAME
 import com.aliothmoon.maameow.constant.MaaFiles.OVERRIDES_ASSET_TASKS
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.datasource.AssetExtractor
+import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.utils.i18n.LocalizedException
 import com.aliothmoon.maameow.utils.i18n.uiTextDynamicOr
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +26,8 @@ class ResourceInitService(
     private val assetExtractor: AssetExtractor,
     private val pathConfig: MaaPathConfig,
     private val coreFiles: Lazy<CoreFilesGate>,
+    private val itemHelper: ItemHelper,
+    private val chainState: TaskChainState,
 ) {
     private val _state = MutableStateFlow<ResourceInitState>(ResourceInitState.NotChecked)
     val state: StateFlow<ResourceInitState> = _state.asStateFlow()
@@ -47,6 +52,7 @@ class ResourceInitService(
 
         try {
             if (withContext(Dispatchers.IO) { pathConfig.isResourceReady }) {
+                loadItemIndex()
                 _state.value = ResourceInitState.Ready
                 return
             }
@@ -97,6 +103,7 @@ class ResourceInitService(
                 onSuccess = {
                     pathConfig.markAppVersion()
                     doForceSyncOverridesTemplate()
+                    loadItemIndex()
                     Timber.i("资源初始化完成")
                     _state.value = ResourceInitState.Ready
                 },
@@ -116,6 +123,30 @@ class ResourceInitService(
         }
     }
 
+    /**
+     * 物品索引只依赖 `resource/item_index.json`，与 MaaCore 服务无关。
+     * 放在资源就绪时加载：MaaResourceLoader 要等服务连上才跑，那之前界面会把物品回退成纯 ID。
+     *
+     * 必须按当前客户端读——[ItemHelper.DEFAULT_CLIENT] 那份是国服索引，
+     * 用它顶一阵会让国际服用户先看到中文名、服务连上后又翻成外文。
+     *
+     * 刚解完资源偶发读不到（文件系统还没落稳），空结果退避重试几次；
+     * [ItemHelper.load] 拿不到内容时会保留旧表，所以重试不会把已有数据打掉。
+     */
+    private suspend fun loadItemIndex() {
+        val clientType = chainState.clientType
+        withContext(Dispatchers.IO) {
+            repeat(ITEM_INDEX_LOAD_ATTEMPTS) { attempt ->
+                val ok = runCatching { itemHelper.load(clientType) }
+                    .onFailure { Timber.w(it, "物品索引加载失败") }
+                    .getOrDefault(false)
+                if (ok) return@withContext
+                if (attempt < ITEM_INDEX_LOAD_ATTEMPTS - 1) delay(ITEM_INDEX_RETRY_DELAY_MS)
+            }
+            Timber.w("物品索引始终为空，界面将把物品显示为 ID")
+        }
+    }
+
     private fun doForceSyncOverridesTemplate() {
         val dest = pathConfig.overrideTasksFile
         runCatching {
@@ -127,5 +158,11 @@ class ResourceInitService(
         }.onFailure {
             Timber.w(it, "overrides 模板同步失败，跳过")
         }
+    }
+
+    private companion object {
+        /** 首次加载物品索引的重试次数（含首次） */
+        const val ITEM_INDEX_LOAD_ATTEMPTS = 3
+        const val ITEM_INDEX_RETRY_DELAY_MS = 300L
     }
 }

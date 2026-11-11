@@ -1,10 +1,13 @@
 package com.aliothmoon.maameow
 
 import android.os.IBinder
+import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.HotUpdateSync
+import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.ClientResourceProfile
 import com.aliothmoon.maameow.domain.service.CoreDataPusher
@@ -21,6 +24,7 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.jsonArray
@@ -39,6 +43,9 @@ class MaaResourceLoaderTest {
 
     @After
     fun tearDown() {
+        // `Packages.appliedMapping` 是进程级可变状态：用例里写进去的值会漏到下一个类
+        // （PackagesTest 依赖「没被污染」的顺序断言）
+        Packages.appliedMapping = emptyMap()
         unmockkObject(RemoteServiceManager)
     }
 
@@ -54,6 +61,21 @@ class MaaResourceLoaderTest {
             assertTrue(env.loader.ensureLoaded("Official").isSuccess)
             assertTrue(env.loadedDirs.isNotEmpty())
             verify(exactly = 0) { RemoteServiceManager.unbind() }
+        }
+    }
+
+    @Test
+    fun depsInfoTimeout_doesNotLeaveLoaderInLoading() = runBlocking {
+        withEnv { env ->
+            // `withTimeout` 抛的是 CancellationException 子类：若被当成「上层取消」原样抛出，
+            // `_state` 会永久停在 Loading，`ensureLoaded` 的等待者与启动互斥锁一起挂死
+            env.loader.depsInfoTimeoutMs = 50
+            coEvery { env.resourceDataManager.load(any(), any(), any()) } coAnswers {
+                delay(5_000)
+            }
+
+            assertTrue(env.loader.load("Official").isSuccess)
+            assertTrue(env.loader.state.value is MaaResourceLoader.State.Ready)
         }
     }
 
@@ -148,8 +170,19 @@ class MaaResourceLoaderTest {
     }
 
     @Test
-    fun load_addsGamePackageLayerRightAfterMain_whenCustomized() = runBlocking {
-        withEnv(gamePackages = mapOf("YoStarJP" to "com.example.jp")) { env ->
+    fun load_usesSelectedDisplayLanguage_forClientResources() = runBlocking {
+        withEnv(appLanguage = AppSettingsManager.AppLanguage.EN) { env ->
+            // revision 必须与 GameMetadataLoader 用同一套记账：传默认 0 会让
+            // ResourceDataManager 的 cachedBase 校验永远失配，每次加载都重解析一遍
+            env.resourceRevision.value = 7
+            assertTrue(env.loader.load("YoStarEN").isSuccess)
+            coVerify(exactly = 1) { env.resourceDataManager.load("YoStarEN", any(), 7) }
+            verify(exactly = 1) { env.itemHelper.load("YoStarEN") }
+        }
+    }
+
+    @Test
+    fun load_addsGamePackageLayerRightAfterMain_whenCustomized() = runBlocking {        withEnv(gamePackages = mapOf("YoStarJP" to "com.example.jp")) { env ->
             assertTrue(env.loader.load("YoStarJP").isSuccess)
             // 必须紧跟主资源，后面的层才能照常覆盖 options
             assertEquals("game_package", File(env.loadedDirs[1]).name)
@@ -158,15 +191,129 @@ class MaaResourceLoaderTest {
     }
 
     @Test
-    fun load_skipsAndClearsGamePackageLayer_whenNotCustomized() = runBlocking {
+    fun load_writesGamePackageLayerWithDefaults_whenNotCustomized() = runBlocking {
         withEnv { env ->
+            // 之前自定义过、后来清空：这一层必须写回默认映射。
+            // 只删目录、跳过这层的话，core 进程里旧的 packageName 还在，任务会连不上
             val stale = File(env.rootDir, "game_package/resource/config.json")
             stale.parentFile!!.mkdirs()
-            stale.writeText("{}")
+            stale.writeText("""{"packageName":{"Official":"com.example.old"}}""")
 
             assertTrue(env.loader.load("Official").isSuccess)
-            assertTrue(env.loadedDirs.none { it.contains("game_package") })
-            assertFalse(stale.exists())
+            assertEquals("game_package", File(env.loadedDirs[1]).name)
+            val written = File(env.loadedDirs[1], "resource/config.json").readText()
+            val packages = runCatching {
+                JsonUtils.common.parseToJsonElement(written).jsonObject.getValue("packageName")
+                    .jsonObject.mapValues { it.value.jsonPrimitive.content }
+            }.getOrThrow()
+            // 基底里没有 txwy，它能出现说明默认映射被补齐（而不是照抄基底）
+            assertEquals("tw.txwy.and.arknights", packages["txwy"])
+            assertFalse(packages.containsValue("com.example.old"))
+            // connection 保持基底原样，别把连接模板清空
+            assertTrue(
+                "game package layer should keep base connection templates",
+                written.contains("General"),
+            )
+        }
+    }
+
+    @Test
+    fun load_doesNotLeaveAppliedMarker_whenPrepareFails() = runBlocking {
+        withEnv(coreSeparated = true, gamePackages = mapOf("Official" to "com.example.cn")) { env ->
+            // 写层成功 ≠ core 应用成功：prepare 在 LoadResource 之前，失败时 core 从未见过这一层。
+            // 提前写标记会给下一次「清空覆盖 + 基底缺失」留下假证据（永久硬失败）
+            coEvery { env.coreDataPusher.prepare(any()) } returns false
+            assertTrue(env.loader.load("Official").isFailure)
+            assertFalse(File(env.rootDir, "game_package/.applied").exists())
+        }
+    }
+
+    @Test
+    fun resetIfStale_forgetsAppliedMapping_whenReplacedWhileFailed() = runBlocking {
+        withEnv(gamePackages = mapOf("Official" to "com.example.cn")) { env ->
+            assertTrue(env.loader.load("Official").isSuccess)
+            assertEquals("com.example.cn", Packages.appliedMapping["Official"])
+
+            // 用户恢复默认包名 → 该重载，但新进程加载失败（服务仍 Connected）。
+            // 旧映射必须归零，否则 App 会拿旧自定义包名判「已安装」/拉错包
+            env.gamePackages.value = emptyMap()
+            coEvery { env.coreDataPusher.prepare(any()) } returns false
+            assertTrue(env.loader.load("Official").isFailure)
+
+            val fresh = env.replaceService()
+            assertTrue(env.loader.resetIfStale(fresh))
+            assertTrue(Packages.appliedMapping.isEmpty())
+            assertEquals(Packages.defaults["Official"], Packages["Official"])
+        }
+    }
+
+    @Test
+    fun load_gamePackageLayer_keepsBasePackageNameFromResource() = runBlocking {
+        // 基包名可能被热更更新过：写层时必须沿用基底自己的值，不能被编译期常量盖回默认
+        val baseConfig = """
+            {
+              "version": "1.0",
+              "options": { "taskDelay": 500, "controlDelayRange": [0, 0] },
+              "packageName": { "Official": "com.hypergryph.custom" },
+              "connection": [ { "configName": "General" } ]
+            }
+        """.trimIndent()
+        withEnv(baseConfig = baseConfig, gamePackages = mapOf("YoStarEN" to "com.example.en")) { env ->
+            assertTrue(env.loader.load("Official").isSuccess)
+            val written = File(env.loadedDirs[1], "resource/config.json").readText()
+            val packages = JsonUtils.common.parseToJsonElement(written).jsonObject
+                .getValue("packageName").jsonObject.mapValues { it.value.jsonPrimitive.content }
+            assertEquals("com.hypergryph.custom", packages["Official"])
+            assertEquals("com.example.en", packages["YoStarEN"])
+        }
+    }
+
+    @Test
+    fun load_failsWhenClearingOverrides_cannotRestoreBaseMapping() = runBlocking {
+        // 先带自定义包名成功加载（这层真的推进 core 了），再让基底读不到并清空覆盖：
+        // 这时必须失败，不能静默 Ready（core 会一直等旧包名）。
+        // 用「本进程是否应用过这层」判断，而不是磁盘上有没有旧目录——后者在写失败/被外部清掉时会误判。
+        withEnv(gamePackages = mapOf("Official" to "com.example.cn")) { env ->
+            assertTrue(env.loader.load("Official").isSuccess)
+            File(env.rootDir, "resource/config.json").delete()
+            env.gamePackages.value = emptyMap()
+            env.loader.invalidate()
+
+            assertTrue(env.loader.load("Official").isFailure)
+            // 失败后重试仍必须失败：不能第二次退化成「不需要这一层」而直接 Ready
+            env.loader.invalidate()
+            assertTrue(env.loader.load("Official").isFailure)
+        }
+    }
+
+    @Test
+    fun load_failsWhenClearingOverridesAfterProcessRestart() = runBlocking {
+        // 跨进程证据：App 重启后新实例的 `appliedGamePackageLayer` 是干净的，
+        // 只剩磁盘上的 `.applied` 标记。core 进程能活过 App 重启，这条路径是唯一拦得住
+        // 「清空覆盖 + 本次写失败 → 静默 Ready、core 仍等旧包名」的证据，之前零覆盖。
+        withEnv(gamePackages = mapOf("Official" to "com.example.cn")) { env ->
+            assertTrue(env.loader.load("Official").isSuccess)
+            Packages.appliedMapping = emptyMap()
+            val restarted = env.rebuildLoader()
+            // 基底读不到 → 无法把默认映射写回 core，必须硬失败而不是「不需要这一层」
+            File(env.rootDir, "resource/config.json").delete()
+            env.gamePackages.value = emptyMap()
+            restarted.invalidate()
+            assertTrue(restarted.load("Official").isFailure)
+            // 重试仍失败：标记还在，不能第二次退化成 Ready
+            restarted.invalidate()
+            assertTrue(restarted.load("Official").isFailure)
+        }
+    }
+
+    @Test
+    fun load_skipsGamePackageLayer_whenNoOverridesAndBaseMissingOnFirstLoad() = runBlocking {
+        // 首次加载、没有任何自定义包名、基底又读不到：这层本来就没有内容要写进 core，
+        // 不该把它当失败（否则首页红字 + 每次启动无退避重试）
+        withEnv { env ->
+            File(env.rootDir, "resource/config.json").delete()
+
+            assertTrue(env.loader.load("Official").isSuccess)
         }
     }
 
@@ -190,9 +337,15 @@ class MaaResourceLoaderTest {
             assertEquals("game_package", File(env.loadedDirs[1]).name)
             verify(exactly = 0) { RemoteServiceManager.unbind() }
 
+            // 清空覆盖后必须重载：这一层改写成默认映射，把 core 里旧的包名映射顶回去
             env.loadedDirs.clear()
+            env.gamePackages.value = emptyMap()
             assertTrue(env.loader.ensureLoaded("Official").isSuccess)
-            assertTrue(env.loadedDirs.isEmpty())
+            assertEquals("game_package", File(env.loadedDirs[1]).name)
+            assertTrue(
+                File(env.loadedDirs[1], "resource/config.json").readText()
+                    .contains("com.hypergryph.arknights")
+            )
         }
     }
 
@@ -204,11 +357,16 @@ class MaaResourceLoaderTest {
 
         assertEquals(setOf("version", "options", "packageName", "connection"), config.keys)
         assertEquals(JsonUtils.common.parseToJsonElement(BASE_CONFIG).jsonObject["options"], config["options"])
+        // 这一层的唯一职责就是替换 packageName（合并逻辑在 writeGamePackageLayer）
         assertEquals(
             mapOf("YoStarKR" to "com.example.kr"),
             config.getValue("packageName").jsonObject.mapValues { it.value.jsonPrimitive.content },
         )
-        assertTrue(config.getValue("connection").jsonArray.isEmpty())
+        // connection 保持基底原样：清空会让后加载覆盖掉用户的 ADB/模拟器模板
+        assertEquals(
+            JsonUtils.common.parseToJsonElement(BASE_CONFIG).jsonObject["connection"],
+            config["connection"],
+        )
     }
 
     @Test
@@ -407,8 +565,13 @@ class MaaResourceLoaderTest {
         /** 置 true 模拟换进程后服务没能回来 */
         val rebindFails: AtomicBoolean,
         val coreDataPusher: CoreDataPusher,
+        /** 资源依赖数据：与 core 资源同步加载的那两个 load 调用 */
+        val itemHelper: ItemHelper,
+        val resourceDataManager: ResourceDataManager,
         /** 换一个新提权进程并直接置 Connected，不经过 Disconnected */
         val replaceService: () -> RemoteService,
+        /** 用同一个 rootDir 重建 loader：模拟 App 重启后内存 flag 不可见、只剩磁盘证据 */
+        val rebuildLoader: () -> MaaResourceLoader,
     )
 
     private suspend fun withEnv(
@@ -416,12 +579,13 @@ class MaaResourceLoaderTest {
         setupCode: Int = SetupResult.OK,
         coreSeparated: Boolean = false,
         gamePackages: Map<String, String> = emptyMap(),
+        baseConfig: String = BASE_CONFIG,
         block: suspend (Env) -> Unit,
     ) {
         val rootDir = Files.createTempDirectory("maa-resource-loader-test").toFile()
         try {
             File(rootDir, "resource").mkdirs()
-            File(rootDir, "resource/config.json").writeText(BASE_CONFIG)
+            File(rootDir, "resource/config.json").writeText(baseConfig)
             File(rootDir, "cache/resource").mkdirs()
             listOf("YoStarJP", "YoStarEN").forEach {
                 File(rootDir, "resource/global/$it/resource").mkdirs()
@@ -471,6 +635,10 @@ class MaaResourceLoaderTest {
             val coreDataPusher = mockk<CoreDataPusher> {
                 coEvery { prepare(any()) } returns true
             }
+            // 资源依赖数据（活动关卡/物品索引/干员表）与 core 资源无关，这里只需不抛异常
+            val itemHelper = mockk<ItemHelper>(relaxed = true)
+            val resourceDataManager = mockk<ResourceDataManager>(relaxed = true)
+            val activityManager = mockk<ActivityManager>(relaxed = true)
             val loadedDirs = mutableListOf<String>()
 
             fun newService(): RemoteService {
@@ -518,6 +686,9 @@ class MaaResourceLoaderTest {
                         chainState = chainState,
                         hotUpdateSync = hotUpdateSync,
                         resourceInitService = resourceInitService,
+                        itemHelper = itemHelper,
+                        resourceDataManager = resourceDataManager,
+                        activityManager = activityManager,
                         coreDataPusher = coreDataPusher,
                     ),
                     loadedDirs = loadedDirs,
@@ -526,10 +697,25 @@ class MaaResourceLoaderTest {
                     resourceReady = resourceReady,
                     rebindFails = rebindFails,
                     coreDataPusher = coreDataPusher,
+                    itemHelper = itemHelper,
+                    resourceDataManager = resourceDataManager,
                     replaceService = {
                         service = newService()
                         serviceState.value = RemoteServiceManager.ServiceState.Connected(service)
                         service
+                    },
+                    rebuildLoader = {
+                        MaaResourceLoader(
+                            pathConfig = pathConfig,
+                            appSettings = appSettings,
+                            chainState = chainState,
+                            hotUpdateSync = hotUpdateSync,
+                            resourceInitService = resourceInitService,
+                            itemHelper = itemHelper,
+                            resourceDataManager = resourceDataManager,
+                            activityManager = activityManager,
+                            coreDataPusher = coreDataPusher,
+                        )
                     },
                 )
             )

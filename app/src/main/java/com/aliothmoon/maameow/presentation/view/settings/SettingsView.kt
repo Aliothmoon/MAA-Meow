@@ -963,6 +963,17 @@ fun SettingsView(
                         revealToken = revealToken(SettingsSections.DATA),
                     ) {
                         SettingsSegment {
+                            SettingSearchTarget(R.string.settings_depot_inventory_title) {
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_depot_inventory_title),
+                                    icon = Icons.Rounded.DataObject,
+                                    contentColor = contentColor
+                                ) {
+                                    navController.navigate(Routes.DEPOT_INVENTORY)
+                                }
+                            }
+                        }
+                        SettingsSegment {
                             SettingSearchTarget(R.string.settings_export_config_title) {
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_export_config_title),
