@@ -547,6 +547,11 @@ class RemoteServiceImpl : RemoteService.Stub() {
         ActivityUtils.forceFullscreenOnVirtualDisplay = enabled
     }
 
+    override fun setFillDisplayOnVirtualDisplay(enabled: Boolean) {
+        Ln.i("$TAG: setFillDisplayOnVirtualDisplay($enabled)")
+        ActivityUtils.fillDisplayOnVirtualDisplay = enabled
+    }
+
     override fun setPackageNetworkingEnabled(packageName: String?, enabled: Boolean): Boolean {
         return !packageName.isNullOrBlank() && XmsfFirewall.setNetworkingEnabled(
             packageName,

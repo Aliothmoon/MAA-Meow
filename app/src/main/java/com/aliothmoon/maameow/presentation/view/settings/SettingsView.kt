@@ -169,6 +169,7 @@ import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.UiScale
+import com.aliothmoon.maameow.utils.device.WsaDetector
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
 import com.aliothmoon.maameow.utils.i18n.resolve
 import kotlinx.coroutines.flow.collectLatest
@@ -212,6 +213,9 @@ fun SettingsView(
     val reportToPenguin by viewModel.reportToPenguin.collectAsStateWithLifecycle()
     val penguinId by viewModel.penguinId.collectAsStateWithLifecycle()
     val forceFullscreenOnVirtualDisplay by viewModel.forceFullscreenOnVirtualDisplay.collectAsStateWithLifecycle()
+    val fillDisplayOnVirtualDisplay by viewModel.fillDisplayOnVirtualDisplay.collectAsStateWithLifecycle()
+    // 这个能力只针对 WSA，普通设备连入口都禁用
+    val isWsa = remember { WsaDetector.isWsa() }
     val pipOnHome by viewModel.pipOnHome.collectAsStateWithLifecycle()
     val tasksOverrideEnabled by viewModel.tasksOverrideEnabled.collectAsStateWithLifecycle()
     val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
@@ -322,6 +326,7 @@ fun SettingsView(
     var showReInitConfirm by remember { mutableStateOf(false) }
     var showDebugModeConfirm by remember { mutableStateOf(false) }
     var showForceFullscreenConfirm by remember { mutableStateOf(false) }
+    var showFillDisplayConfirm by remember { mutableStateOf(false) }
     var showExportSheet by remember { mutableStateOf(false) }
 
     LogExportController(
@@ -399,6 +404,22 @@ fun SettingsView(
             },
             onDismissRequest = { showDebugModeConfirm = false },
             confirmText = stringResource(R.string.common_confirm_restart),
+            dismissText = stringResource(R.string.common_cancel),
+            icon = Icons.Rounded.Build
+        )
+    }
+
+    if (showFillDisplayConfirm) {
+        AdaptiveTaskPromptDialog(
+            visible = true,
+            title = stringResource(R.string.dialog_enable_fill_display_title),
+            message = stringResource(R.string.dialog_enable_fill_display_message),
+            onConfirm = {
+                showFillDisplayConfirm = false
+                viewModel.setFillDisplayOnVirtualDisplay(true)
+            },
+            onDismissRequest = { showFillDisplayConfirm = false },
+            confirmText = stringResource(R.string.common_confirm),
             dismissText = stringResource(R.string.common_cancel),
             icon = Icons.Rounded.Build
         )
@@ -799,6 +820,30 @@ fun SettingsView(
                                             showForceFullscreenConfirm = true
                                         } else {
                                             viewModel.setForceFullscreenOnVirtualDisplay(false)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                        SettingsSegment {
+                            SettingSearchTarget(R.string.settings_fill_display_on_virtual_display) {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.settings_fill_display_on_virtual_display),
+                                    info = if (isWsa) {
+                                        stringResource(R.string.settings_fill_display_on_virtual_display_desc)
+                                    } else {
+                                        stringResource(R.string.settings_fill_display_on_virtual_display_not_wsa)
+                                    },
+                                    contentColor = contentColor,
+                                    checked = fillDisplayOnVirtualDisplay,
+                                    icon = Icons.Rounded.Fullscreen,
+                                    // 非 WSA 设备用不到这个能力，禁掉免得被误开
+                                    enabled = isWsa,
+                                    onCheckedChange = { enabled ->
+                                        if (enabled) {
+                                            showFillDisplayConfirm = true
+                                        } else {
+                                            viewModel.setFillDisplayOnVirtualDisplay(false)
                                         }
                                     }
                                 )

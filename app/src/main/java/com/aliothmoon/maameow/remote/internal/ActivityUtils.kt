@@ -7,7 +7,9 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
+import android.graphics.Rect
 import android.view.Display
+import java.util.concurrent.TimeUnit
 import com.aliothmoon.maameow.constant.AndroidVersions
 import com.aliothmoon.maameow.remote.internal.ActivityUtils.DISPLAY_NO_TASK
 import com.aliothmoon.maameow.third.FakeContext
@@ -30,8 +32,25 @@ object ActivityUtils {
     // 拉回操作后等系统完成 reparent 的时间
     private const val REPIN_SETTLE_MS = 1_000L
 
+    // resizeTask 后等系统把 task bounds 落地、应用重新布局
+    private const val RESIZE_SETTLE_MS = 600L
+
+    // resize 后回读 bounds 确认生效的上限与轮询间隔
+    private const val RESIZE_VERIFY_TIMEOUT_MS = 1_500L
+    private const val RESIZE_VERIFY_POLL_MS = 150L
+
+    // am task resize 进程的等待上限：卡住时不能让启动链跟着挂死
+    private const val AM_RESIZE_TIMEOUT_MS = 3_000L
+
     @Volatile
     var forceFullscreenOnVirtualDisplay: Boolean = false
+
+    /**
+     * app 落到虚拟屏后是否把它的 task bounds 拉满整屏。
+     * 只对 freeform 宿主（WSA）有意义，见 [fillDisplayIfShrunk]。
+     */
+    @Volatile
+    var fillDisplayOnVirtualDisplay: Boolean = false
 
     private val setLaunchWindowingMode by lazy {
         runCatching {
@@ -194,7 +213,12 @@ object ActivityUtils {
         while (true) {
             when (val current = getAppDisplayId(packageName)) {
                 null -> return true // 无法判断，宽松放行
-                displayId -> return true
+                displayId -> {
+                    // app 已在目标屏上，顺手把 task 拉满整屏：freeform 宿主（WSA）
+                    // 会把 maxBounds 钉在首次创建时的尺寸，不重算就永远留黑边
+                    fillDisplayIfShrunk(packageName, displayId)
+                    return true
+                }
                 DISPLAY_NO_TASK -> Unit // 任务尚未出现，继续等待
                 else -> {
                     Ln.w("ensureAppOnDisplay: $packageName drifted to display $current (expected $displayId), trying to move it back")
@@ -210,6 +234,35 @@ object ActivityUtils {
     }
 
     /**
+     * app 已在 [displayId] 上时，把它的 task bounds 拉满整屏。
+     *
+     * 只对虚拟屏生效（displayId == 0 的物理屏不动，那是用户自己的桌面），
+     * 并且只在 task 实际尺寸小于整屏时动手，避免每轮都无谓地重建 task。
+     */
+    @JvmStatic
+    fun fillDisplayIfShrunk(packageName: String, displayId: Int): Boolean {
+        if (!fillDisplayOnVirtualDisplay) return false
+        if (displayId == Display.DEFAULT_DISPLAY) return false
+        val taskId = findTaskId(packageName) ?: return false
+        // 查屏失败（屏刚被销毁、服务异常、回退返回 null）时宽容放行：
+        // 这里挂在上层启动路径上，抛出去会连累应用启动
+        val size = runCatching {
+            ServiceManager.getDisplayManager().getDisplayInfo(displayId).size()
+        }.getOrNull() ?: return false
+        val w = size.width()
+        val h = size.height()
+        if (w <= 0 || h <= 0) return false
+        val bounds = readTaskBounds(packageName)
+        if (bounds != null && bounds.width() >= w && bounds.height() >= h) {
+            return false
+        }
+        Ln.i("fillDisplayIfShrunk: $packageName bounds=${bounds} -> ${w}x$h on display $displayId")
+        val ok = resizeTaskToFullDisplay(taskId, w, h, packageName)
+        if (ok) SystemClock.sleep(RESIZE_SETTLE_MS)
+        return ok
+    }
+
+    /**
      * 把 [packageName] 的任务拉回 [displayId]：
      * 1. moveRootTaskToDisplay / moveStackToDisplay（hidden API，shell 有 MANAGE_ACTIVITY_TASKS）
      * 2. am display move-stack 命令兜底
@@ -221,6 +274,7 @@ object ActivityUtils {
             SystemClock.sleep(REPIN_SETTLE_MS)
             if (isAppOnDisplay(packageName, displayId)) {
                 Ln.i("repinAppToDisplay: $packageName moved back to display $displayId")
+                fillDisplayIfShrunk(packageName, displayId)
                 return true
             }
         }
@@ -232,6 +286,7 @@ object ActivityUtils {
                 SystemClock.sleep(REPIN_SETTLE_MS)
                 if (isAppOnDisplay(packageName, displayId)) {
                     Ln.i("repinAppToDisplay: $packageName relaunched onto display $displayId")
+                    fillDisplayIfShrunk(packageName, displayId)
                     return true
                 }
             }
@@ -259,6 +314,24 @@ object ActivityUtils {
         @Suppress("DEPRECATION")
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) task.taskId else task.id
     }
+
+    /**
+     * 读 task 当前 bounds（API 29+ 的 RunningTaskInfo.bounds）。读不到返回 null，
+     * 调用方按「不确定就照做」处理，宁可多一次 resize 也不要漏。
+     */
+    private fun readTaskBounds(packageName: String): Rect? = runCatching {
+        val task = findRecentTask(packageName) ?: return null
+        // bounds 不一定声明在 RunningTaskInfo 上，沿父类链找，否则继承时永远读到 null
+        var cls: Class<*>? = task.javaClass
+        var field: java.lang.reflect.Field? = null
+        while (cls != null && field == null) {
+            field = runCatching { cls.getDeclaredField("bounds") }.getOrNull()
+            cls = cls.superclass
+        }
+        val f = field ?: return null
+        f.isAccessible = true
+        f.get(task) as? Rect
+    }.getOrNull()
 
     private fun findRecentTask(packageName: String): ActivityManager.RunningTaskInfo? {
         val am = FakeContext.get().getSystemService(ActivityManager::class.java) ?: return null
@@ -381,14 +454,117 @@ object ActivityUtils {
         }
     }
 
+    /**
+     * 把 [packageName] 的任务拉满 [displayId] 整屏。
+     *
+     * WSA 一类宿主把 app 当 freeform 窗口托管，首次创建时就把 task 的 maxBounds 钉死成
+     * 窗口当时的内容区（实测 819x461），之后改虚拟屏尺寸、拖 Windows 窗口都不会重算，
+     * app 只占屏的一端、另一侧全是黑边，MAA 的模板坐标随之整体错位。
+     * resizeTask 会让系统重建 task bounds，把那个常量重算成整屏。
+     *
+     * 只动 task，不碰 display：wm size 那种覆盖是全局的，会把同一屏上所有应用一起改坏。
+     */
+    private fun resizeTaskToFullDisplay(
+        taskId: Int,
+        width: Int,
+        height: Int,
+        packageName: String
+    ): Boolean {
+        val rect = Rect(0, 0, width, height)
+        resizeTaskMethod?.let { method ->
+            val applied = runCatching {
+                // 两套签名参数个数不同：3 参带 resizeMode，2 参没有
+                val args = if (method.parameterTypes.size >= 3) {
+                    arrayOf<Any>(taskId, rect, RESIZE_MODE_USER)
+                } else {
+                    arrayOf<Any>(taskId, rect)
+                }
+                val ret = method.invoke(activityTaskManager, *args)
+                // 返回 false 表示系统拒绝；返回 void 时按「可能已应用」继续
+                ret !is Boolean || ret
+            }.onFailure {
+                Ln.w("resizeTaskToFullDisplay: ${method.name} failed", it)
+            }.getOrDefault(false)
+            if (applied) {
+                Ln.i("resizeTaskToFullDisplay: ${method.name}($taskId, $rect) invoked")
+                // 系统可能静默拒绝且不抛异常，回读一次确认真的变了
+                if (awaitTaskBounds(packageName, width, height)) return true
+                Ln.w("resizeTaskToFullDisplay: bounds did not change after ${method.name}, falling back")
+            }
+        }
+        return resizeTaskViaAmCommand(taskId, width, height).also { ok ->
+            if (ok) awaitTaskBounds(packageName, width, height)
+        }
+    }
+
+    /** 有界等待 task bounds 变成整屏；读不到 bounds 时按成功处理，避免误判 */
+    private fun awaitTaskBounds(packageName: String, width: Int, height: Int): Boolean {
+        val deadline = SystemClock.uptimeMillis() + RESIZE_VERIFY_TIMEOUT_MS
+        while (true) {
+            val bounds = readTaskBounds(packageName)
+            if (bounds == null) return true
+            if (bounds.width() >= width && bounds.height() >= height) return true
+            if (SystemClock.uptimeMillis() >= deadline) return false
+            SystemClock.sleep(RESIZE_VERIFY_POLL_MS)
+        }
+    }
+
+    // 与 shell 权限对齐：系统内部用 USER 模式做交互式 resize
+    private val RESIZE_MODE_USER = 0
+
+    // API 31+ resizeTask(taskId, Rect, int)；更早的签名是 resizeTask(int, Rect)
+    private val resizeTaskMethod by lazy {
+        val atm = activityTaskManager ?: return@lazy null
+        sequenceOf(
+            arrayOf<Class<*>>(
+                Int::class.javaPrimitiveType!!,
+                Rect::class.java,
+                Int::class.javaPrimitiveType!!
+            ),
+            arrayOf<Class<*>>(Int::class.javaPrimitiveType!!, Rect::class.java)
+        ).firstNotNullOfOrNull { sig ->
+            runCatching { atm.javaClass.getMethod("resizeTask", *sig) }.getOrNull()
+        } ?: run {
+            Ln.w("resizeTaskMethod: no candidate method found")
+            null
+        }
+    }
+
+    private fun resizeTaskViaAmCommand(taskId: Int, width: Int, height: Int): Boolean {
+        return try {
+            val args = arrayOf(
+                "am", "task", "resize",
+                taskId.toString(), "0", "0", width.toString(), height.toString()
+            )
+            Ln.i("resizeTaskViaAmCommand: exec: ${args.joinToString(" ")}")
+            val process = Runtime.getRuntime().exec(args)
+            // 有界等待：am 或它等的系统服务卡住时，不能把同步的启动链一起拖死
+            if (!process.waitFor(AM_RESIZE_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+                Ln.w("resizeTaskViaAmCommand: timed out after ${AM_RESIZE_TIMEOUT_MS}ms, destroying")
+                process.destroyForcibly()
+                return false
+            }
+            val exitCode = process.exitValue()
+            val stderr = process.errorStream.bufferedReader().use { it.readText() }.trim()
+            if (stderr.isNotEmpty()) Ln.w("resizeTaskViaAmCommand: am stderr: $stderr")
+            if (exitCode != 0) {
+                Ln.w("resizeTaskViaAmCommand: am exited with code $exitCode")
+                return false
+            }
+            true
+        } catch (e: Exception) {
+            Ln.e("resizeTaskViaAmCommand: am command failed", e)
+            false
+        }
+    }
+
     private val taskDisplayIdField by lazy {
         runCatching {
             var cls: Class<*>? = ActivityManager.RunningTaskInfo::class.java
             var field: java.lang.reflect.Field? = null
             while (cls != null && field == null) {
                 field = runCatching { cls.getDeclaredField("displayId") }.getOrNull()
-                cls = cls.superclass
-            }
+                cls = cls.superclass            }
             field?.also { it.isAccessible = true }
         }.onFailure { Ln.w("taskDisplayIdField: reflection failed", it) }.getOrNull()
     }

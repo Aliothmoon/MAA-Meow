@@ -154,6 +154,11 @@
     <string name="settings_deploy_with_pause_desc">Copilot only. Experimental, not recommended for now</string>
     <string name="settings_force_fullscreen_on_virtual_display">Force fullscreen in background mode</string>
     <string name="settings_force_fullscreen_on_virtual_display_desc">Applies to the background virtual display only. May not take effect on all devices and can cause extra issues</string>
+    <string name="settings_fill_display_on_virtual_display">Fill the virtual display</string>
+    <string name="settings_fill_display_on_virtual_display_desc">Only needed on Windows Subsystem for Android (WSA). It hosts each app in its own window and pins the game to the size it had when first opened, so the picture only covers a corner of the screen and every recognition coordinate is off. When enabled, the task is stretched back to the full display each time the game lands on the virtual display</string>
+    <string name="settings_fill_display_on_virtual_display_not_wsa">This device is not Windows Subsystem for Android (WSA); regular phones do not need this, so it is unavailable</string>
+    <string name="dialog_enable_fill_display_title">Enable filling the virtual display?</string>
+    <string name="dialog_enable_fill_display_message">This option has only been verified on Windows Subsystem for Android (WSA). This device is not WSA, so forcing it on will rebuild the task window every time the game lands on the virtual display, which may cause flicker, interrupted tasks, or offset touch positions. Continue?</string>
     <string name="settings_pip_on_home">Auto picture-in-picture on Home</string>
     <string name="dialog_enable_force_fullscreen_title">Enable background force fullscreen?</string>
     <string name="dialog_enable_force_fullscreen_message">This may not work on every device and can cause compatibility issues. Continue?</string>
