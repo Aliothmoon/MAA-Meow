@@ -16,13 +16,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
@@ -38,13 +38,16 @@ import androidx.compose.material.icons.rounded.FolderZip
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StopCircle
+import androidx.compose.material.icons.rounded.VerticalAlignBottom
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,7 +57,9 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -87,6 +92,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aliothmoon.maameow.R
@@ -101,6 +107,9 @@ import com.aliothmoon.maameow.presentation.components.LocalPageVisible
 import com.aliothmoon.maameow.presentation.components.RainbowFlowText
 import com.aliothmoon.maameow.presentation.components.RainbowStops
 import com.aliothmoon.maameow.presentation.components.runRainbowFlow
+import com.aliothmoon.maameow.theme.LocalReduceMotion
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaMotion
 import com.aliothmoon.maameow.theme.themedColor
 import kotlinx.coroutines.launch
 
@@ -142,17 +151,29 @@ fun LogPanel(
         derivedStateOf { !isAutoScroll && listState.canScrollForward }
     }
 
+    // 手动滑回底部即恢复跟随
     LaunchedEffect(listState.isScrollInProgress) {
         if (listState.isScrollInProgress) {
             isAutoScroll = false
+        } else if (!listState.canScrollForward) {
+            isAutoScroll = true
         }
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    // 可视高度变化（如展开画面预览）时列表保住首行，底部被挤出屏幕，跟随时重新贴底
+    val follow by rememberUpdatedState(isAutoScroll)
+    val lastIndex by rememberUpdatedState(rows.lastIndex)
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo.viewportSize.height }
+            .collect { if (follow && lastIndex >= 0) listState.scrollToItem(lastIndex) }
+    }
+
+    // 标题行 36dp，与小工具页签行同高
+    Column(modifier = modifier.fillMaxSize().padding(TabPanelPadding)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .height(36.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -170,22 +191,24 @@ fun LogPanel(
                 )
             }
 
-            Row {
-                if (onExportLogs != null) {
-                    IconButton(onClick = onExportLogs) {
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                Row {
+                    if (onExportLogs != null) {
+                        IconButton(onClick = onExportLogs, modifier = Modifier.size(36.dp)) {
+                            Icon(
+                                imageVector = Icons.Rounded.FolderZip,
+                                contentDescription = stringResource(R.string.settings_log_export_title),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    IconButton(onClick = onClearLogs, modifier = Modifier.size(36.dp)) {
                         Icon(
-                            imageVector = Icons.Rounded.FolderZip,
-                            contentDescription = stringResource(R.string.settings_log_export_title),
+                            imageVector = Icons.Rounded.Delete,
+                            contentDescription = stringResource(R.string.common_clear),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                }
-                IconButton(onClick = onClearLogs) {
-                    Icon(
-                        imageVector = Icons.Rounded.Delete,
-                        contentDescription = stringResource(R.string.common_clear),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
         }
@@ -205,7 +228,7 @@ fun LogPanel(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 12.dp),
+                contentPadding = PaddingValues(bottom = 8.dp),
             ) {
                 items(
                     items = rows,
@@ -235,23 +258,21 @@ fun LogPanel(
                 }
             }
 
-            if (showResumeButton && logs.isNotEmpty()) {
-                IconButton(
-                    onClick = { isAutoScroll = true },
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(16.dp)
-                        .size(40.dp)
-                        .background(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            CircleShape
-                        )
-                ) {
+            val reduceMotion = LocalReduceMotion.current
+            MaaAnimatedVisibility(
+                visible = showResumeButton && logs.isNotEmpty(),
+                enter = MaaMotion.fadeIn(reduceMotion),
+                exit = MaaMotion.fadeOut(reduceMotion),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 12.dp, bottom = 12.dp),
+            ) {
+                IconButton(onClick = { isAutoScroll = true }) {
                     Icon(
-                        imageVector = Icons.Filled.KeyboardArrowDown,
+                        imageVector = Icons.Rounded.VerticalAlignBottom,
                         contentDescription = stringResource(R.string.panel_log_resume_auto_scroll),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(20.dp)
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp)
                     )
                 }
             }
