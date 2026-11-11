@@ -62,7 +62,11 @@ fun FloatBall(
         animationSpec = tween(MaaMotion.Medium),
     )
 
-    val textColor = Color.White
+    // 空闲态底色是主色，深色主题下白字看不清
+    val idle = !isCountdown && runningState !in setOf(
+        MaaExecutionState.RUNNING, MaaExecutionState.STOPPING, MaaExecutionState.ERROR,
+    )
+    val textColor = if (idle) MaterialTheme.colorScheme.onPrimary else Color.White
 
     val infiniteTransition = rememberInfiniteTransition()
     val breathingAlpha by infiniteTransition.animateFloat(

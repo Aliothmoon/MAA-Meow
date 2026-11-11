@@ -312,6 +312,7 @@ private enum class Scenario(val label: String) {
 @Composable
 fun LogPanelDemo() {
     var dark by remember { mutableStateOf(false) }
+    var monet by remember { mutableStateOf(false) }
     var scenario by remember { mutableStateOf(Scenario.RECRUIT) }
     var replayTick by remember { mutableIntStateOf(0) }
     val daily = remember { dailyRun().enrich() }
@@ -356,7 +357,7 @@ fun LogPanelDemo() {
     }
 
     val mode = if (dark) AppSettingsManager.ThemeMode.DARK else AppSettingsManager.ThemeMode.WHITE
-    MaaMeowTheme(themeMode = mode) {
+    MaaMeowTheme(themeMode = mode, useSystemMonetColor = monet) {
         Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().safeDrawingPadding()) {
                 Row(
@@ -377,6 +378,7 @@ fun LogPanelDemo() {
                         )
                     }
                     FilterChip(selected = dark, onClick = { dark = !dark }, label = { Text("深色") })
+                    FilterChip(selected = monet, onClick = { monet = !monet }, label = { Text("动态取色") })
                 }
                 key(scenario, replayTick) {
                     LogPanel(

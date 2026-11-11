@@ -57,7 +57,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.rotate
@@ -66,6 +68,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboard
@@ -197,7 +200,7 @@ fun LogPanel(
                 )
             }
 
-            val container = MaterialTheme.colorScheme.surfaceContainer
+            val container = GroupColors(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.outlineVariant)
             val a11y = rememberLogA11y()
             LazyColumn(
                 state = listState,
@@ -344,7 +347,11 @@ private fun specialStar(lines: List<LogItem>, index: Int): Int {
     return 0
 }
 
-private fun Modifier.groupBlock(first: Boolean, last: Boolean, container: Color): Modifier {
+// surface 底加描边：动态取色下 surface 与背景同色，靠描边分组
+@Immutable
+private data class GroupColors(val fill: Color, val outline: Color)
+
+private fun Modifier.groupBlock(first: Boolean, last: Boolean, colors: GroupColors): Modifier {
     val shape: Shape = when {
         first && last -> ShapeSingle
         first -> ShapeTop
@@ -354,13 +361,29 @@ private fun Modifier.groupBlock(first: Boolean, last: Boolean, container: Color)
     return fillMaxWidth()
         .padding(top = if (first) GroupGap else 0.dp)
         .clip(shape)
-        .background(container)
+        .background(colors.fill)
+        .drawWithCache {
+            val stroke = 1.dp.toPx()
+            val radius = CardRadius.toPx()
+            // 非首尾行的上下边外延到行外被裁掉，同组行之间不出横线
+            val top = if (first) stroke / 2 else -radius * 2
+            val bottom = if (last) size.height - stroke / 2 else size.height + radius * 2
+            onDrawBehind {
+                drawRoundRect(
+                    color = colors.outline,
+                    topLeft = Offset(stroke / 2, top),
+                    size = Size(size.width - stroke, bottom - top),
+                    cornerRadius = CornerRadius(radius - stroke / 2),
+                    style = Stroke(stroke),
+                )
+            }
+        }
 }
 
 @Composable
 private fun GroupHeader(
     row: HeaderRow,
-    container: Color,
+    container: GroupColors,
     a11y: LogA11y,
     onToggle: () -> Unit,
 ) {
@@ -377,7 +400,7 @@ private fun GroupHeader(
 
     Row(
         modifier = Modifier
-            .groupBlock(first = true, last = row.last, container = container)
+            .groupBlock(first = true, last = row.last, colors = container)
             .then(if (expandable) Modifier.clickable(onClick = onToggle) else Modifier)
             .clearAndSetSemantics {
                 contentDescription = listOfNotNull(
@@ -546,7 +569,7 @@ private val PlainLevels = setOf(
 @Composable
 private fun LogLine(
     row: LineRow,
-    container: Color,
+    container: GroupColors,
     a11y: LogA11y,
     onOpen: (LogItem) -> Unit,
 ) {
@@ -584,7 +607,7 @@ private fun LogLine(
 
     Box(
         modifier = Modifier
-            .groupBlock(first = row.first, last = row.last, container = container)
+            .groupBlock(first = row.first, last = row.last, colors = container)
             .padding(
                 start = 6.dp,
                 end = 6.dp,
@@ -754,7 +777,7 @@ private fun StarBadge(level: Int) {
 }
 
 @Composable
-private fun SummaryCard(group: LogGroup, container: Color) {
+private fun SummaryCard(group: LogGroup, container: GroupColors) {
     val head = group.lines.first()
     val (icon, accent) = when (head.level) {
         LogLevel.SUCCESS -> Icons.Rounded.CheckCircle to LogColorRole.SUCCESS.themedColor()
@@ -770,7 +793,7 @@ private fun SummaryCard(group: LogGroup, container: Color) {
             .fillMaxWidth()
             .padding(top = GroupGap)
             .clip(ShapeSingle)
-            .background(container)
+            .background(container.fill)
             .background(accent.copy(alpha = 0.12f))
             .clearAndSetSemantics { this.text = AnnotatedString(text) }
             .padding(12.dp),
@@ -887,7 +910,7 @@ private fun LogDetailDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(scheme.surfaceContainerHighest)
+                                .background(scheme.surfaceVariant)
                                 .padding(10.dp)
                         )
                     }

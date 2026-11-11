@@ -33,21 +33,64 @@ private val LightOnSurface = Color(0xFF1C1B18)
 private val LightOnSurfaceVariant = Color(0xFF8A8580)
 private val LightOutline = Color(0xFFC9C4BE)
 
-private val DarkBackground = Color(0xFF121212)
-private val DarkSurface = Color(0xFF1C1C1E)
-private val DarkSurfaceVariant = Color(0xFF2C2C2E)
-private val DarkOnSurface = Color(0xFFFFFFFF)
-private val DarkOnSurfaceVariant = Color(0xFF98989D)
-private val DarkOutline = Color(0xFF3A3A3C)
+// 与浅色同一暖色相（约 36°）的炭灰，切换明暗不换性格
+private val DarkBackground = Color(0xFF151312)
+private val DarkSurface = Color(0xFF1E1C1A)
+private val DarkSurfaceVariant = Color(0xFF2D2B28)
+private val DarkOnSurface = Color(0xFFF3F1ED)
+private val DarkOnSurfaceVariant = Color(0xFFA19C97)
+private val DarkOutline = Color(0xFF3C3A37)
 
 private val PureDarkBackground = Color(0xFF000000)
 private val PureDarkSurface = Color(0xFF000000)
-private val PureDarkSurfaceVariant = Color(0xFF121212)
+private val PureDarkSurfaceVariant = Color(0xFF141311)
+
+// 不补全会回退成 M3 默认紫色；Lowest → Highest 由亮到暗（深色反之）
+private class SurfaceTones(
+    val lowest: Color,
+    val low: Color,
+    val container: Color,
+    val high: Color,
+    val highest: Color,
+    val dim: Color,
+    val bright: Color,
+)
+
+private val LightTones = SurfaceTones(
+    lowest = Color(0xFFFFFFFF),
+    low = LightSurface,
+    container = Color(0xFFF2EFEA),
+    high = Color(0xFFEDE9E4),
+    highest = LightSurfaceVariant,
+    dim = Color(0xFFE3DFD9),
+    bright = LightSurface,
+)
+
+private val DarkTones = SurfaceTones(
+    lowest = Color(0xFF0F0E0D),
+    low = DarkSurface,
+    container = Color(0xFF23211F),
+    high = Color(0xFF282624),
+    highest = DarkSurfaceVariant,
+    dim = DarkBackground,
+    bright = DarkOutline,
+)
+
+private val PureDarkTones = SurfaceTones(
+    lowest = Color(0xFF000000),
+    low = Color(0xFF0B0A09),
+    container = PureDarkSurfaceVariant,
+    high = Color(0xFF1B1A18),
+    highest = Color(0xFF23211F),
+    dim = Color(0xFF000000),
+    bright = DarkSurfaceVariant,
+)
 
 
 private fun createLightColorScheme(
-    primary: Color, primaryContainer: Color, onPrimaryContainer: Color
+    primary: Color, primaryContainer: Color, onPrimaryContainer: Color, inversePrimary: Color
 ): ColorScheme {
+    val tones = LightTones
     return lightColorScheme(
         primary = primary,
         onPrimary = Color(0xFFFFFFFF),
@@ -72,28 +115,46 @@ private fun createLightColorScheme(
         error = Color(0xfff53f3f),
         onError = Color.White,
         errorContainer = Color(0xFFFFD8D6),
-        onErrorContainer = Color(0xFF690005)
+        onErrorContainer = Color(0xFF690005),
+        // 默认 primary 会把 tonalElevation 表面染蓝；不用 Transparent，M3 按 tint.copy(alpha) 叠加会压暗
+        surfaceTint = LightSurface,
+        inversePrimary = inversePrimary,
+        inverseSurface = Color(0xFF31302C),
+        inverseOnSurface = Color(0xFFF4F1EC),
+        surfaceBright = tones.bright,
+        surfaceDim = tones.dim,
+        surfaceContainerLowest = tones.lowest,
+        surfaceContainerLow = tones.low,
+        surfaceContainer = tones.container,
+        surfaceContainerHigh = tones.high,
+        surfaceContainerHighest = tones.highest,
     )
 }
 
 private fun createDarkColorScheme(
-    primary: Color, primaryContainer: Color, onPrimaryContainer: Color, isPureDark: Boolean = false
+    primary: Color,
+    onPrimary: Color,
+    primaryContainer: Color,
+    onPrimaryContainer: Color,
+    inversePrimary: Color,
+    isPureDark: Boolean = false,
 ): ColorScheme {
     val bg = if (isPureDark) PureDarkBackground else DarkBackground
     val surface = if (isPureDark) PureDarkSurface else DarkSurface
     val surfaceVariant = if (isPureDark) PureDarkSurfaceVariant else DarkSurfaceVariant
+    val tones = if (isPureDark) PureDarkTones else DarkTones
 
     return darkColorScheme(
         primary = primary,
-        onPrimary = Color(0xFFFFFFFF),
+        onPrimary = onPrimary,
         primaryContainer = primaryContainer,
         onPrimaryContainer = onPrimaryContainer,
-        secondary = Color(0xFF98989D),
+        secondary = DarkOnSurfaceVariant,
         onSecondary = Color(0xFFFFFFFF),
-        secondaryContainer = Color(0xFF2C2C2E),
-        onSecondaryContainer = Color(0xFFE5E5EA),
+        secondaryContainer = DarkSurfaceVariant,
+        onSecondaryContainer = Color(0xFFEAE6E0),
         tertiary = primary.copy(alpha = 0.8f),
-        onTertiary = Color(0xFFFFFFFF),
+        onTertiary = onPrimary,
         tertiaryContainer = primaryContainer.copy(alpha = 0.5f),
         onTertiaryContainer = onPrimaryContainer,
         background = bg,
@@ -107,27 +168,48 @@ private fun createDarkColorScheme(
         error = Color(0xFFFF453A),
         onError = Color(0xFF690005),
         errorContainer = Color(0xFF93000A),
-        onErrorContainer = Color(0xFFFFDAD6)
+        onErrorContainer = Color(0xFFFFDAD6),
+        surfaceTint = surface,
+        inversePrimary = inversePrimary,
+        inverseSurface = LightSurfaceVariant,
+        inverseOnSurface = DarkSurface,
+        surfaceBright = tones.bright,
+        surfaceDim = tones.dim,
+        surfaceContainerLowest = tones.lowest,
+        surfaceContainerLow = tones.low,
+        surfaceContainer = tones.container,
+        surfaceContainerHigh = tones.high,
+        surfaceContainerHighest = tones.highest,
     )
 }
 
+private val BluePrimary = Color(0xFF2B6BCA)
+
+// 深色把主色提亮，按钮文字随之换深色
+private val BluePrimaryDark = Color(0xFF6D9DE3)
+
 private val BlueLight = createLightColorScheme(
-    primary = Color(0xFF2B6BCA),
-    primaryContainer = Color(0xFFE5F1FF),
-    onPrimaryContainer = Color(0xFF002453)
+    primary = BluePrimary,
+    primaryContainer = Color(0xFFE5ECF5),
+    onPrimaryContainer = Color(0xFF002453),
+    inversePrimary = BluePrimaryDark,
 )
 
 private val BlueDark = createDarkColorScheme(
-    primary = Color(0xFF2B6BCA),
-    primaryContainer = Color(0xFF004088),
-    onPrimaryContainer = Color(0xFFD6E8FF)
+    primary = BluePrimaryDark,
+    onPrimary = Color(0xFF071E40),
+    primaryContainer = Color(0xFF224577),
+    onPrimaryContainer = Color(0xFFD6E8FF),
+    inversePrimary = BluePrimary,
 )
 
 private val BluePureDark = createDarkColorScheme(
-    primary = Color(0xFF2B6BCA),
-    primaryContainer = Color(0xFF004088),
+    primary = BluePrimaryDark,
+    onPrimary = Color(0xFF071E40),
+    primaryContainer = Color(0xFF224577),
     onPrimaryContainer = Color(0xFFD6E8FF),
-    isPureDark = true
+    inversePrimary = BluePrimary,
+    isPureDark = true,
 )
 
 val MaaShapes = Shapes(
