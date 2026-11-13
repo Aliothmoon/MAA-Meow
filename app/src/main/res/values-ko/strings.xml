@@ -3087,7 +3087,6 @@
     <string name="oper_progress_order">%1$d번째 계획</string>
     <string name="oper_progress_mastery_summary">마스터리 %1$s</string>
     <string name="oper_progress_empty_title">첫 오퍼레이터를 추가하세요</string>
-    <string name="oper_progress_remove_plan">계획 제거</string>
     <string name="oper_progress_add">오퍼레이터 추가</string>
     <string name="oper_progress_search">오퍼레이터 이름 검색</string>
     <string name="oper_progress_no_operators">육성 가능한 오퍼레이터를 찾을 수 없습니다. 이름을 확인하거나 리소스를 업데이트하세요</string>

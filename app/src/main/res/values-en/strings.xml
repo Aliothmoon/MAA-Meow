@@ -3030,7 +3030,6 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="oper_progress_order">Plan %1$d</string>
     <string name="oper_progress_mastery_summary">Mastery %1$s</string>
     <string name="oper_progress_empty_title">Add your first operator</string>
-    <string name="oper_progress_remove_plan">Remove Plan</string>
     <string name="oper_progress_add">Add Operator</string>
     <string name="oper_progress_search">Search operator names</string>
     <string name="oper_progress_no_operators">No supported operators found. Check the name or update resources.</string>

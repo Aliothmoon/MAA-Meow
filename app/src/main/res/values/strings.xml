@@ -3087,7 +3087,6 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="oper_progress_order">第 %1$d 项计划</string>
     <string name="oper_progress_mastery_summary">专精 %1$s</string>
     <string name="oper_progress_empty_title">添加第一位干员</string>
-    <string name="oper_progress_remove_plan">移除计划</string>
     <string name="oper_progress_add">添加干员</string>
     <string name="oper_progress_search">搜索干员名称</string>
     <string name="oper_progress_no_operators">未找到可培养的干员，请检查名称或更新资源</string>
