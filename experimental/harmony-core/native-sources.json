@@ -1,0 +1,17 @@
+{
+  "zlib": {
+    "version": "1.3.1",
+    "url": "https://zlib.net/fossils/zlib-1.3.1.tar.gz",
+    "sha256": "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23"
+  },
+  "opencv": {
+    "version": "4.11.0",
+    "url": "https://codeload.github.com/opencv/opencv/tar.gz/refs/tags/4.11.0",
+    "sha256": "9a7c11f924eff5f8d8070e297b322ee68b9227e003fd600d4b8122198091665f"
+  },
+  "ncnn": {
+    "version": "20260113",
+    "url": "https://codeload.github.com/Tencent/ncnn/tar.gz/refs/tags/20260113",
+    "sha256": "2fdc5c6e37f8552921a9daad498a1be54a6fa6edd32c1a9e3030b27fab253b47"
+  }
+}

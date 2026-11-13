@@ -1,0 +1,161 @@
+diff --git a/MaaUtils.cmake b/MaaUtils.cmake
+index a409492..ab194d9 100644
+--- a/MaaUtils.cmake
++++ b/MaaUtils.cmake
+@@ -15,8 +15,17 @@ set(Boost_NO_WARN_NEW_VERSIONS ON)
+ set(MAAUTILS_DIR ${CMAKE_CURRENT_LIST_DIR})
+ 
+ list(APPEND CMAKE_MODULE_PATH "${MAAUTILS_DIR}/cmake/modules")
+-set(MAADEPS_DIR ${MAAUTILS_DIR}/MaaDeps)
+-include(${MAADEPS_DIR}/maadeps.cmake)
++if(CMAKE_SYSTEM_NAME STREQUAL "OHOS")
++    list(PREPEND CMAKE_FIND_ROOT_PATH ${MAA_OHOS_DEPS} ${MAA_OHOS_VCPKG})
++    include_directories(${MAA_OHOS_PORT_DIR})
++    find_package(fmt CONFIG REQUIRED)
++    link_libraries(fmt::fmt)
++    function(maadeps_install dest)
++    endfunction()
++else()
++    set(MAADEPS_DIR ${MAAUTILS_DIR}/MaaDeps)
++    include(${MAADEPS_DIR}/maadeps.cmake)
++endif()
+ 
+ # Basic compile and link configuration
+ include(${MAAUTILS_DIR}/cmake/config.cmake)
+@@ -24,9 +33,14 @@ include(${MAAUTILS_DIR}/cmake/utils.cmake)
+ include(${MAAUTILS_DIR}/cmake/version.cmake)
+ 
+ find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs)
++if(CMAKE_SYSTEM_NAME STREQUAL "OHOS")
++    find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs features2d calib3d videoio)
++endif()
+ find_package(Boost REQUIRED CONFIG COMPONENTS system regex)
+ find_package(ZLIB REQUIRED)
+-find_package(fastdeploy_ppocr REQUIRED)
++if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "OHOS")
++    find_package(fastdeploy_ppocr REQUIRED)
++endif()
+ find_package(ONNXRuntime REQUIRED)
+ 
+ find_program(CCACHE_PROG ccache)
+diff --git a/include/MaaUtils/JsonExt.hpp b/include/MaaUtils/JsonExt.hpp
+index 09b0cd6..be81643 100644
+--- a/include/MaaUtils/JsonExt.hpp
++++ b/include/MaaUtils/JsonExt.hpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #pragma once
+ 
+ #include <chrono>
+@@ -49,7 +50,7 @@ template <>
+ class jsonization<std::chrono::milliseconds>
+ {
+ public:
+-    json::value to_json(const std::chrono::milliseconds& ms) const { return std::format("{}ms", ms.count()); }
++    json::value to_json(const std::chrono::milliseconds& ms) const { return maa_format::format("{}ms", ms.count()); }
+ 
+     bool check_json(const json::value&) const { return false; }
+ 
+diff --git a/include/MaaUtils/LoggerUtils.h b/include/MaaUtils/LoggerUtils.h
+index bfe6452..9fcab15 100644
+--- a/include/MaaUtils/LoggerUtils.h
++++ b/include/MaaUtils/LoggerUtils.h
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #pragma once
+ 
+ #if defined(__APPLE__) || defined(__linux__)
+@@ -123,7 +124,7 @@ private:
+             buffer_ << std::forward<T>(value) << sep.str;
+         }
+         else {
+-            static_assert(false, "Unsupported type for LogStream::stream");
++            static_assert(sizeof(T) == 0, "Unsupported type for LogStream::stream");
+         }
+     }
+ 
+@@ -137,9 +138,9 @@ private:
+ #endif
+         auto tid = static_cast<uint16_t>(std::hash<std::thread::id> { }(std::this_thread::get_id()));
+ 
+-        std::string props = std::format("[{}][{}][Px{}][Tx{}]", format_now(), level_str(), pid, tid);
++        std::string props = maa_format::format("[{}][{}][Px{}][Tx{}]", format_now(), level_str(), pid, tid);
+         for (auto&& arg : { args... }) {
+-            props += std::format("[{}]", arg);
++            props += maa_format::format("[{}]", arg);
+         }
+         stream(props, sep_);
+     }
+diff --git a/include/MaaUtils/Time.hpp b/include/MaaUtils/Time.hpp
+index 2eebed6..2f48425 100644
+--- a/include/MaaUtils/Time.hpp
++++ b/include/MaaUtils/Time.hpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #pragma once
+ 
+ #ifdef _WIN32
+@@ -25,13 +26,13 @@ inline std::string format_now()
+ #ifdef _WIN32
+     SYSTEMTIME sys {};
+     GetLocalTime(&sys);
+-    return std::format(kFormat, sys.wYear, sys.wMonth, sys.wDay, sys.wHour, sys.wMinute, sys.wSecond, sys.wMilliseconds);
++    return maa_format::format(kFormat, sys.wYear, sys.wMonth, sys.wDay, sys.wHour, sys.wMinute, sys.wSecond, sys.wMilliseconds);
+ #else
+     timeval tv = {};
+     gettimeofday(&tv, nullptr);
+     time_t nowtime = tv.tv_sec;
+     tm* tm_info = localtime(&nowtime);
+-    return std::format(
++    return maa_format::format(
+         kFormat,
+         tm_info->tm_year + 1900,
+         tm_info->tm_mon + 1,
+@@ -50,13 +51,13 @@ inline std::string format_now_for_filename()
+ #ifdef _WIN32
+     SYSTEMTIME sys {};
+     GetLocalTime(&sys);
+-    return std::format(kFormat, sys.wYear, sys.wMonth, sys.wDay, sys.wHour, sys.wMinute, sys.wSecond, sys.wMilliseconds);
++    return maa_format::format(kFormat, sys.wYear, sys.wMonth, sys.wDay, sys.wHour, sys.wMinute, sys.wSecond, sys.wMilliseconds);
+ #else
+     timeval tv = {};
+     gettimeofday(&tv, nullptr);
+     time_t nowtime = tv.tv_sec;
+     tm* tm_info = localtime(&nowtime);
+-    return std::format(
++    return maa_format::format(
+         kFormat,
+         tm_info->tm_year + 1900,
+         tm_info->tm_mon + 1,
+diff --git a/source/Logger/Logger.cpp b/source/Logger/Logger.cpp
+index 93cba6e..5478673 100644
+--- a/source/Logger/Logger.cpp
++++ b/source/Logger/Logger.cpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #define _CRT_SECURE_NO_WARNINGS
+ 
+ #include "MaaUtils/Logger.h"
+@@ -178,7 +179,7 @@ bool Logger::rotate()
+ 
+     std::error_code ec;
+ 
+-    const std::filesystem::path bak_path = log_dir_ / std::format(kLogbakFilename, format_now_for_filename());
++    const std::filesystem::path bak_path = log_dir_ / maa_format::format(kLogbakFilename, format_now_for_filename());
+     std::filesystem::copy(log_path_, bak_path, std::filesystem::copy_options::overwrite_existing, ec);
+ 
+     return true;
+@@ -244,11 +245,11 @@ static std::string sys_info()
+         arch = "arch" + std::to_string(sys.wProcessorArchitecture);
+         break;
+     }
+-    return std::format("{} {}", "Windows", arch);
++    return maa_format::format("{} {}", "Windows", arch);
+ #else
+     utsname uts {};
+     uname(&uts);
+-    return std::format("{} {}", (const char*)uts.sysname, (const char*)uts.machine);
++    return maa_format::format("{} {}", (const char*)uts.sysname, (const char*)uts.machine);
+ #endif
+ }
+ 

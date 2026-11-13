@@ -1,0 +1,18 @@
+{
+  "core": {
+    "commit": "201cbb73e7505884f61027b06294ecf049c670c7",
+    "remote": "https://github.com/MaaAssistantArknights/MaaAssistantArknights.git"
+  },
+  "maadeps": {
+    "commit": "cec43f04c295054e0aa3dce6e5f685b7b64f5be8",
+    "remote": "https://github.com/MaaXYZ/MaaDeps.git"
+  },
+  "vcpkg": {
+    "commit": "c5a15727ee70fddf0296f0d8aafc3f58916fefac",
+    "remote": "https://github.com/microsoft/vcpkg.git"
+  },
+  "maautils": {
+    "commit": "f093a19d07db89f2a03bf0ec50c2061a49758783",
+    "remote": "https://github.com/MaaXYZ/MaaUtils.git"
+  }
+}

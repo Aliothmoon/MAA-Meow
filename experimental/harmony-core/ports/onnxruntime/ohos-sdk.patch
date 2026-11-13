@@ -1,0 +1,72 @@
+--- a/onnxruntime/core/mlas/lib/mlasi.h
++++ b/onnxruntime/core/mlas/lib/mlasi.h
+@@ -396,7 +396,7 @@
+ 
+ #else
+ 
+-#if defined(__aarch64__) && defined(__linux__)
++#if defined(__aarch64__) && defined(__linux__) && !defined(__OHOS__)
+ typedef size_t(MLASCALL MLAS_SBGEMM_FLOAT_KERNEL)(
+     const float* A,
+     const bfloat16_t* B,
+@@ -946,7 +946,7 @@
+ #else
+     MLAS_GEMM_FLOAT_KERNEL MlasSgemmKernelZero;
+     MLAS_GEMM_FLOAT_KERNEL MlasSgemmKernelAdd;
+-#if defined(__aarch64__) && defined(__linux__)
++#if defined(__aarch64__) && defined(__linux__) && !defined(__OHOS__)
+     MLAS_SBGEMM_FLOAT_KERNEL MlasSbgemmKernelZero;
+     MLAS_SBGEMM_FLOAT_KERNEL MlasSbgemmKernelAdd;
+ #endif
+@@ -1099,7 +1099,7 @@
+ #define MLAS_QGEMM_THREAD_COMPLEXITY                65536
+ #define MLAS_HGEMM_THREAD_COMPLEXITY                65536
+ 
+-#if defined(__aarch64__) && defined(__linux__)
++#if defined(__aarch64__) && defined(__linux__) && !defined(__OHOS__)
+ #define MLAS_SBGEMM_THREAD_COMPLEXITY (size_t(64) * size_t(1024))
+ #endif
+ 
+--- a/onnxruntime/core/mlas/lib/sbgemm_kernel_neon.cpp
++++ b/onnxruntime/core/mlas/lib/sbgemm_kernel_neon.cpp
+@@ -15,7 +15,7 @@
+ 
+ --*/
+ 
+-#if defined(__aarch64__) && defined(__linux__)
++#if defined(__aarch64__) && defined(__linux__) && !defined(__OHOS__)
+ 
+ #include "arm_neon.h"
+ #include "mlasi.h"
+--- a/onnxruntime/core/platform/posix/env.cc
++++ b/onnxruntime/core/platform/posix/env.cc
+@@ -40,7 +40,7 @@
+ // We can not use CPUINFO if it is not supported and we do not want to used
+ // it on certain platforms because of the binary size increase.
+ // We could use it to find out the number of physical cores for certain supported platforms
+-#if defined(CPUINFO_SUPPORTED) && !defined(__APPLE__) && !defined(__ANDROID__) && !defined(__wasm__) && !defined(_AIX)
++#if defined(CPUINFO_SUPPORTED) && !defined(__APPLE__) && !defined(__ANDROID__) && !defined(__wasm__) && !defined(_AIX) && !defined(__OHOS__)
+ #include <cpuinfo.h>
+ #define ORT_USE_CPUINFO
+ #endif
+@@ -202,7 +202,7 @@
+   static void* ThreadMain(void* param) {
+     std::unique_ptr<Param> p(static_cast<Param*>(param));
+     ORT_TRY {
+-#if !defined(__APPLE__) && !defined(__ANDROID__) && !defined(__wasm__) && !defined(_AIX)
++#if !defined(__APPLE__) && !defined(__ANDROID__) && !defined(__wasm__) && !defined(_AIX) && !defined(__OHOS__)
+       if (p->affinity.has_value() && !p->affinity->empty()) {
+         cpu_set_t cpuset;
+         CPU_ZERO(&cpuset);
+--- a/cmake/onnxruntime_mlas.cmake
++++ b/cmake/onnxruntime_mlas.cmake
+@@ -455,6 +455,9 @@
+           set_source_files_properties(${MLAS_SRC_DIR}/aarch64/HalfGemmKernelNeon.S PROPERTIES COMPILE_FLAGS " -march=armv8.2-a+fp16 ")
+           set_source_files_properties(${MLAS_SRC_DIR}/aarch64/QgemmS8S8KernelSmmla.S PROPERTIES COMPILE_FLAGS " -march=armv8.2-a+i8mm ")
+           set_source_files_properties(${MLAS_SRC_DIR}/aarch64/QgemmU8X8KernelUmmla.S PROPERTIES COMPILE_FLAGS " -march=armv8.2-a+i8mm ")
++          if(CMAKE_SYSTEM_NAME STREQUAL "OHOS")
++            list(REMOVE_ITEM mlas_platform_srcs ${MLAS_SRC_DIR}/aarch64/SbgemmKernelNeon.S ${MLAS_SRC_DIR}/sbgemm_kernel_neon.cpp)
++          endif()
+           set_source_files_properties(${MLAS_SRC_DIR}/aarch64/SbgemmKernelNeon.S PROPERTIES COMPILE_FLAGS " -march=armv8.2-a+bf16 ")
+           set_source_files_properties(${MLAS_SRC_DIR}/activate_fp16.cpp PROPERTIES COMPILE_FLAGS " -march=armv8.2-a+fp16 ")
+           set_source_files_properties(${MLAS_SRC_DIR}/dwconv.cpp PROPERTIES COMPILE_FLAGS " -march=armv8.2-a+fp16 ")

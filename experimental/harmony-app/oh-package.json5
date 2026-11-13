@@ -1,0 +1,8 @@
+{
+  "modelVersion": "26.0.0",
+  "name": "maa-harmony-probe",
+  "version": "0.0.1",
+  "description": "MAA HarmonyOS device capability probe",
+  "dependencies": {},
+  "devDependencies": {}
+}

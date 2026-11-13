@@ -1,0 +1,1530 @@
+diff --git a/src/MaaCore/Assistant.cpp b/src/MaaCore/Assistant.cpp
+index 5382d9f..a5bb8c4 100644
+--- a/src/MaaCore/Assistant.cpp
++++ b/src/MaaCore/Assistant.cpp
+@@ -203,6 +203,12 @@ bool asst::Assistant::set_instance_option(InstanceOptionKey key, const std::stri
+             return true;
+         }
+ #endif
++#ifdef __OHOS__
++        else if (value == "Harmony") {
++            m_ctrler->set_touch_mode(TouchMode::Harmony);
++            return true;
++        }
++#endif
+ #ifdef __ANDROID__
+         else if (constexpr std::string_view Android = "Android"; value == Android) {
+             m_ctrler->set_touch_mode(TouchMode::Android);
+@@ -514,7 +520,7 @@ std::vector<Assistant::TaskId> asst::Assistant::get_tasks_list() const
+ {
+     std::unique_lock<std::mutex> lock(m_mutex);
+     std::vector<TaskId> result(m_tasks_list.size());
+-    std::ranges::copy(m_tasks_list | std::views::keys, result.begin());
++    std::ranges::copy(m_tasks_list | std::views::transform([](const auto& pair) { return pair.first; }), result.begin());
+     return result;
+ }
+ 
+@@ -648,11 +654,11 @@ void Assistant::working_proc()
+                 best_effort([&] { Log.error("Unknown exception in task thread"); });
+             }
+ 
+-            const auto save_fail_img = [&]() {
+-                if (task_ptr == nullptr) {
++            const auto save_fail_img = [&, task = task_ptr]() {
++                if (task == nullptr) {
+                     return;
+                 }
+-                best_effort([&] { task_ptr->save_fail_img(); });
++                best_effort([&] { task->save_fail_img(); });
+             };
+ 
+             lock.lock();
+diff --git a/src/MaaCore/CMakeLists.txt b/src/MaaCore/CMakeLists.txt
+index 31b96fe..6f2e627 100644
+--- a/src/MaaCore/CMakeLists.txt
++++ b/src/MaaCore/CMakeLists.txt
+@@ -1,7 +1,7 @@
+ file(GLOB_RECURSE maa_src *.h *.hpp *.cpp)
+ 
+ # Exclude the platform-specific OCR implementation that is not needed on this target
+-if(ANDROID)
++if(ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "OHOS")
+     list(FILTER maa_src EXCLUDE REGEX "OcrPack\\.cpp$")
+ else()
+     list(FILTER maa_src EXCLUDE REGEX "OcrPackNcnn\\.cpp$")
+@@ -33,7 +33,7 @@ target_compile_definitions(MaaCore PRIVATE ASST_WITH_MAC_SCK=$<BOOL:${WITH_MAC_S
+ 
+ target_include_directories(MaaCore PUBLIC ${PROJECT_SOURCE_DIR}/include PRIVATE .)
+ add_dependencies(MaaCore MaaUtils)
+-if(ANDROID)
++if(ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "OHOS")
+     find_package(ncnn REQUIRED)
+     find_package(polyclipping CONFIG REQUIRED)
+     target_link_libraries(MaaCore
+diff --git a/src/MaaCore/Common/AsstBattleDef.h b/src/MaaCore/Common/AsstBattleDef.h
+index d73394f..d1b239e 100644
+--- a/src/MaaCore/Common/AsstBattleDef.h
++++ b/src/MaaCore/Common/AsstBattleDef.h
+@@ -724,7 +724,8 @@ struct OperNameTag
+     Role role = Role::Unknown; // 干员职业
+     std::string name;          // 干员名
+ 
+-    auto operator<=>(const OperNameTag&) const = default;
++    bool operator==(const OperNameTag& other) const { return role == other.role && name == other.name; }
++    bool operator<(const OperNameTag& other) const { return role == other.role ? name < other.name : role < other.role; }
+ 
+     std::string to_string() const { return "(" + enum_to_string(role) + ", " + name + ")"; }
+ 
+diff --git a/src/MaaCore/Common/AsstTypes.h b/src/MaaCore/Common/AsstTypes.h
+index 55d6755..7ce8349 100644
+--- a/src/MaaCore/Common/AsstTypes.h
++++ b/src/MaaCore/Common/AsstTypes.h
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #pragma once
+ 
+ #include <array>
+@@ -60,6 +61,7 @@ enum class TouchMode
+     MaaFwAdb = 4,
+     Android = 5,
+     MumuExtras = 6, // MuMu external renderer IPC，不可用时自动降级为 Minitouch
++    Harmony = 7,
+ };
+ 
+ // Swipe 任务 specialParams[1] 的额外滑动方向。json 协议层仍为 int：0 不启用，1/2/3/4 为上/下/左/右
+@@ -103,7 +105,7 @@ inline std::string enum_to_string(SwipeExtraDirection direction)
+     case SwipeExtraDirection::Right:
+         return "Right";
+     default:
+-        return std::format("Unknown({})", static_cast<int>(direction));
++        return maa_format::format("Unknown({})", static_cast<int>(direction));
+     }
+ }
+ 
+@@ -377,7 +379,7 @@ struct TextRect : public AnalyzerResult
+ 
+     std::string to_string() const override
+     {
+-        return std::format("{{ text: {}, rect: {}, score: {:.6f} }}", text, rect.to_string(), score);
++        return maa_format::format("{{ text: {}, rect: {}, score: {:.6f} }}", text, rect.to_string(), score);
+     }
+ 
+     json::object to_json() const override
+@@ -405,7 +407,7 @@ struct MatchRect : public AnalyzerResult
+ 
+     std::string to_string() const override
+     {
+-        return std::format("{{ template: {}, rect: {}, score: {:.6f} }}", templ_name, rect.to_string(), score);
++        return maa_format::format("{{ template: {}, rect: {}, score: {:.6f} }}", templ_name, rect.to_string(), score);
+     }
+ 
+     json::object to_json() const override
+@@ -430,7 +432,7 @@ struct FeatureMatchRect : public AnalyzerResult
+     {
+     }
+ 
+-    std::string to_string() const override { return std::format("{{ rect: {}, count: {} }}", rect.to_string(), count); }
++    std::string to_string() const override { return maa_format::format("{{ rect: {}, count: {} }}", rect.to_string(), count); }
+ 
+     json::object to_json() const override
+     {
+diff --git a/src/MaaCore/Config/GpuDeviceSelector.cpp b/src/MaaCore/Config/GpuDeviceSelector.cpp
+index 1109d69..4c8b2f3 100644
+--- a/src/MaaCore/Config/GpuDeviceSelector.cpp
++++ b/src/MaaCore/Config/GpuDeviceSelector.cpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #include "GpuDeviceSelector.h"
+ 
+ #include <format>
+@@ -21,7 +22,7 @@ std::optional<int> asst::GpuDeviceSelector::resolve_device_id() const
+     Microsoft::WRL::ComPtr<IDXGIFactory1> factory;
+     const auto factory_hr = CreateDXGIFactory1(IID_PPV_ARGS(factory.GetAddressOf()));
+     if (FAILED(factory_hr)) {
+-        Log.error(__FUNCTION__, "CreateDXGIFactory1 failed", std::format("0x{:08X}", factory_hr));
++        Log.error(__FUNCTION__, "CreateDXGIFactory1 failed", maa_format::format("0x{:08X}", factory_hr));
+         return std::nullopt;
+     }
+ 
+@@ -32,7 +33,7 @@ std::optional<int> asst::GpuDeviceSelector::resolve_device_id() const
+             break;
+         }
+         if (FAILED(enum_hr)) {
+-            Log.error(__FUNCTION__, "EnumAdapters failed", index, std::format("0x{:08X}", enum_hr));
++            Log.error(__FUNCTION__, "EnumAdapters failed", index, maa_format::format("0x{:08X}", enum_hr));
+             return std::nullopt;
+         }
+ 
+@@ -50,14 +51,14 @@ std::optional<int> asst::GpuDeviceSelector::resolve_device_id() const
+         Log.info(
+             __FUNCTION__,
+             "resolved adapter LUID",
+-            std::format("{:016X}", adapter_luid),
++            maa_format::format("{:016X}", adapter_luid),
+             "to device id",
+             index,
+             MAA_NS::from_u16(std::wstring_view(desc.Description)));
+         return static_cast<int>(index);
+     }
+ 
+-    Log.error(__FUNCTION__, "adapter LUID not found", std::format("{:016X}", *m_adapter_luid));
++    Log.error(__FUNCTION__, "adapter LUID not found", maa_format::format("{:016X}", *m_adapter_luid));
+ #else
+     Log.error(__FUNCTION__, "adapter LUID selectors are only supported on Windows");
+ #endif
+diff --git a/src/MaaCore/Config/Miscellaneous/ItemConfig.cpp b/src/MaaCore/Config/Miscellaneous/ItemConfig.cpp
+index 8c272ae..956275c 100644
+--- a/src/MaaCore/Config/Miscellaneous/ItemConfig.cpp
++++ b/src/MaaCore/Config/Miscellaneous/ItemConfig.cpp
+@@ -37,7 +37,7 @@ bool asst::ItemConfig::parse(const json::value& json)
+ 
+     m_ordered_material_item_id.clear();
+     m_ordered_material_item_id.reserve(material_sortid.size());
+-    std::ranges::copy(material_sortid | std::views::keys, std::back_inserter(m_ordered_material_item_id));
++    std::ranges::copy(material_sortid | std::views::transform([](const auto& pair) { return pair.first; }), std::back_inserter(m_ordered_material_item_id));
+     std::ranges::sort(m_ordered_material_item_id, std::less {}, [&](const std::string& name) -> int {
+         return material_sortid[name];
+     });
+diff --git a/src/MaaCore/Config/Miscellaneous/OcrPack.cpp b/src/MaaCore/Config/Miscellaneous/OcrPack.cpp
+index 01ad5f8..c95769e 100644
+--- a/src/MaaCore/Config/Miscellaneous/OcrPack.cpp
++++ b/src/MaaCore/Config/Miscellaneous/OcrPack.cpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #ifndef __ANDROID__
+ 
+ #include "OcrPack.h"
+@@ -177,7 +178,7 @@ OcrPack::ResultsVec OcrPack::recognize(const cv::Mat& image, bool without_det, c
+             if (i != 0) {
+                 output += ", ";
+             }
+-            output += std::format(
++            output += maa_format::format(
+                 "{{ text: {}, rect: [ {} ({}), {} ({}), {}, {} ], score: {:.6f} }}",
+                 raw_results[i].text,
+                 raw_results[i].rect.x,
+diff --git a/src/MaaCore/Config/Miscellaneous/OcrPackNcnn.cpp b/src/MaaCore/Config/Miscellaneous/OcrPackNcnn.cpp
+index 85f5bde..f615d5c 100644
+--- a/src/MaaCore/Config/Miscellaneous/OcrPackNcnn.cpp
++++ b/src/MaaCore/Config/Miscellaneous/OcrPackNcnn.cpp
+@@ -1,4 +1,5 @@
+-#ifdef __ANDROID__
++#include "HarmonyFormat.h"
++#if defined(__ANDROID__) || defined(__OHOS__)
+ 
+ #include "OcrPack.h"
+ 
+@@ -96,7 +97,7 @@ OcrPack::ResultsVec OcrPack::recognize(const cv::Mat& image, bool without_det, c
+             if (i != 0) {
+                 output += ", ";
+             }
+-            output += std::format(
++            output += maa_format::format(
+                 "{{ text: {}, rect: [ {} ({}), {} ({}), {}, {} ], score: {:.6f} }}",
+                 raw_results[i].text,
+                 raw_results[i].rect.x,
+@@ -343,7 +344,7 @@ int asst::OcrPackNcnn::bind_performance_cores()
+     long lowest = 0;
+     bool readable = true;
+     for (int i = 0; i < count; ++i) {
+-        std::ifstream ifs(utils::path(std::format("/sys/devices/system/cpu/cpu{}/cpufreq/cpuinfo_max_freq", i)));
++        std::ifstream ifs(utils::path(maa_format::format("/sys/devices/system/cpu/cpu{}/cpufreq/cpuinfo_max_freq", i)));
+         if (!(ifs >> max_freq[i]) || max_freq[i] <= 0) {
+             readable = false;
+             break;
+diff --git a/src/MaaCore/Config/Miscellaneous/OcrPackNcnn.h b/src/MaaCore/Config/Miscellaneous/OcrPackNcnn.h
+index 1ccc4c3..f24a81f 100644
+--- a/src/MaaCore/Config/Miscellaneous/OcrPackNcnn.h
++++ b/src/MaaCore/Config/Miscellaneous/OcrPackNcnn.h
+@@ -1,6 +1,6 @@
+ #pragma once
+ 
+-#ifdef __ANDROID__
++#if defined(__ANDROID__) || defined(__OHOS__)
+ 
+ #include <filesystem>
+ #include <memory>
+diff --git a/src/MaaCore/Config/Miscellaneous/OperBoxDataConfig.cpp b/src/MaaCore/Config/Miscellaneous/OperBoxDataConfig.cpp
+index 98c3da6..e87ae40 100644
+--- a/src/MaaCore/Config/Miscellaneous/OperBoxDataConfig.cpp
++++ b/src/MaaCore/Config/Miscellaneous/OperBoxDataConfig.cpp
+@@ -205,8 +205,8 @@ std::optional<asst::battle::copilot::OperUsageGroups>
+         for (const auto& [left, right] : result.matched) {
+             assigned[groups[left].name] = operbox_data[right].id;
+             std::string oper_name = BattleData.find_oper_by_id(operbox_data[right].id)->name;
+-            auto req_it = std::ranges::find_if(groups[left].opers, [&](const battle::OperUsage& op) {
+-                return BattleData.get_first_id(op.role, op.name, true) == operbox_data[right].id;
++            auto req_it = std::ranges::find_if(groups[left].opers, [&, right_index = right](const battle::OperUsage& op) {
++                return BattleData.get_first_id(op.role, op.name, true) == operbox_data[right_index].id;
+             });
+             LogInfo << __FUNCTION__ << "| Matched group:" << groups[left].name << "with oper:" << oper_name
+                     << ". Usage elite:" << req_it->requirements.elite << ", level:" << req_it->requirements.level
+@@ -226,8 +226,8 @@ std::optional<asst::battle::copilot::OperUsageGroups>
+     // 没有未匹配的干员组
+     if (result.unmatched_left.empty()) {
+         for (const auto& [left, right] : result.matched) {
+-            auto req_it = std::ranges::find_if(groups[left].opers, [&](const battle::OperUsage& op) {
+-                return BattleData.get_first_id(op.role, op.name, true) == operbox_data[right].id;
++            auto req_it = std::ranges::find_if(groups[left].opers, [&, right_index = right](const battle::OperUsage& op) {
++                return BattleData.get_first_id(op.role, op.name, true) == operbox_data[right_index].id;
+             });
+             groups[left].opers = { *req_it }; // 只保留匹配的干员
+         }
+diff --git a/src/MaaCore/Config/Roguelike/RoguelikeStageEncounterConfig.cpp b/src/MaaCore/Config/Roguelike/RoguelikeStageEncounterConfig.cpp
+index 650e4c4..5740748 100644
+--- a/src/MaaCore/Config/Roguelike/RoguelikeStageEncounterConfig.cpp
++++ b/src/MaaCore/Config/Roguelike/RoguelikeStageEncounterConfig.cpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #include "RoguelikeStageEncounterConfig.h"
+ 
+ #include <meojson/json.hpp>
+@@ -36,7 +37,7 @@ bool asst::RoguelikeStageEncounterConfig::parse(const json::value& json)
+         }
+         else {
+             Log.error(
+-                std::format(
++                maa_format::format(
+                     "RoguelikeEncounterConfig | default number of options {} for event {} is less than zero",
+                     num_options,
+                     event.name));
+@@ -47,7 +48,7 @@ bool asst::RoguelikeStageEncounterConfig::parse(const json::value& json)
+         }
+         else {
+             Log.error(
+-                std::format(
++                maa_format::format(
+                     "RoguelikeEncounterConfig | default choice {} for event {} is less than zero",
+                     choice,
+                     event.name));
+@@ -87,7 +88,7 @@ bool asst::RoguelikeStageEncounterConfig::parse(const json::value& json)
+                 int option_num = pair_arr[0].as_integer();
+                 if (option_num < 0) {
+                     Log.error(
+-                        std::format(
++                        maa_format::format(
+                             "RoguelikeEncounterConfig | callback option_num for event {} is less than zero",
+                             event.name));
+                     return false;
+@@ -95,7 +96,7 @@ bool asst::RoguelikeStageEncounterConfig::parse(const json::value& json)
+                 int choice = pair_arr[1].as_integer();
+                 if (choice < 0) {
+                     Log.error(
+-                        std::format(
++                        maa_format::format(
+                             "RoguelikeEncounterConfig | callback choice for event {} with {} option(s) is less than "
+                             "zero",
+                             event.name,
+diff --git a/src/MaaCore/Config/TaskData.cpp b/src/MaaCore/Config/TaskData.cpp
+index b4b0bac..1deb660 100644
+--- a/src/MaaCore/Config/TaskData.cpp
++++ b/src/MaaCore/Config/TaskData.cpp
+@@ -110,7 +110,7 @@ bool asst::TaskData::lazy_parse(const json::value& json)
+         std::queue<std::string> task_queue;
+         std::unordered_set<std::string> checking_task_set;
+ 
+-        for (const std::string& name : m_json_all_tasks_info | std::views::keys) {
++        for (const std::string& name : m_json_all_tasks_info | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.first); })) {
+             m_task_status[name] = ToBeGenerate;
+             task_queue.push(name);
+             checking_task_set.insert(name);
+@@ -304,7 +304,7 @@ bool asst::TaskData::parse(const json::value& json)
+ #ifndef ASST_DEBUG
+     // 本来重构之后完全支持惰性加载，但是发现模板图片不支持（
+     // generate_task_info 中会把模板图片名加入 m_templ_required, 而 ASST_DEBUG 中语法检查已经生成过
+-    for (const std::string& name : m_json_all_tasks_info | std::views::keys) {
++    for (const std::string& name : m_json_all_tasks_info | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.first); })) {
+         generate_task_info(name);
+     }
+ #endif
+@@ -318,7 +318,7 @@ void asst::TaskData::clear_tasks()
+     // 即运行期修改对已经获取的任务指针无效，但是不会导致崩溃；要想更新，需要重新获取任务指针
+     m_all_tasks_info.clear();
+     m_raw_all_tasks_info.clear();
+-    for (const std::string& name : m_json_all_tasks_info | std::views::keys) {
++    for (const std::string& name : m_json_all_tasks_info | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.first); })) {
+         m_task_status[task_name_view(name)] = ToBeGenerate;
+     }
+ }
+diff --git a/src/MaaCore/Config/WebGpuDevice.cpp b/src/MaaCore/Config/WebGpuDevice.cpp
+index 506093c..6e9f851 100644
+--- a/src/MaaCore/Config/WebGpuDevice.cpp
++++ b/src/MaaCore/Config/WebGpuDevice.cpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #include "WebGpuDevice.h"
+ 
+ #include <cstdint>
+@@ -65,9 +66,9 @@ std::unordered_map<std::string, std::shared_ptr<DawnContext>> s_contexts;
+ std::string context_key(const GpuDeviceSelector& selector, int device_id)
+ {
+     if (selector.uses_adapter_luid()) {
+-        return std::format("luid:{:016X}", *selector.adapter_luid());
++        return maa_format::format("luid:{:016X}", *selector.adapter_luid());
+     }
+-    return std::format("index:{}", device_id);
++    return maa_format::format("index:{}", device_id);
+ }
+ 
+ std::shared_ptr<DawnContext> create_context(const GpuDeviceSelector& selector, int device_id)
+diff --git a/src/MaaCore/Controller/Controller.cpp b/src/MaaCore/Controller/Controller.cpp
+index 91b78e1..7440292 100644
+--- a/src/MaaCore/Controller/Controller.cpp
++++ b/src/MaaCore/Controller/Controller.cpp
+@@ -21,6 +21,9 @@
+ 
+ #include "AdbController.h"
+ #include "ControllerAPI.h"
++#ifdef __OHOS__
++#include "HarmonyController.h"
++#endif
+ #include "MaaFwAdbController.h"
+ #include "MaatouchController.h"
+ #include "MinitouchController.h"
+@@ -66,6 +69,10 @@ std::shared_ptr<asst::ControllerAPI>
+             return std::make_shared<PlayToolsController>(m_callback, m_inst, platform_type);
+         case ControllerType::MaaFwAdb:
+             return std::make_shared<MaaFwAdbController>(m_callback, m_inst, platform_type);
++#ifdef __OHOS__
++        case ControllerType::Harmony:
++            return std::make_shared<HarmonyController>();
++#endif
+ #if ASST_WITH_EMULATOR_EXTRAS
+         case ControllerType::Mumu:
+             return std::make_shared<MumuController>(m_callback, m_inst, platform_type);
+@@ -427,6 +434,11 @@ void asst::Controller::set_touch_mode(const TouchMode& mode) noexcept
+     case TouchMode::MaaFwAdb:
+         m_controller_type = ControllerType::MaaFwAdb;
+         break;
++#ifdef __OHOS__
++    case TouchMode::Harmony:
++        m_controller_type = ControllerType::Harmony;
++        break;
++#endif
+ #if ASST_WITH_EMULATOR_EXTRAS
+     case TouchMode::MumuExtras:
+         m_controller_type = ControllerType::Mumu;
+diff --git a/src/MaaCore/Controller/ControllerAPI.h b/src/MaaCore/Controller/ControllerAPI.h
+index 284fa11..a4b9584 100644
+--- a/src/MaaCore/Controller/ControllerAPI.h
++++ b/src/MaaCore/Controller/ControllerAPI.h
+@@ -19,6 +19,9 @@ enum class ControllerType
+     Win32,
+ #endif
+     MaaFwAdb,
++#ifdef __OHOS__
++    Harmony,
++#endif
+ #if ASST_WITH_EMULATOR_EXTRAS
+     Mumu,
+ #endif
+diff --git a/src/MaaCore/Controller/MinitouchController.h b/src/MaaCore/Controller/MinitouchController.h
+index 39430bc..7fa19fe 100644
+--- a/src/MaaCore/Controller/MinitouchController.h
++++ b/src/MaaCore/Controller/MinitouchController.h
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #pragma once
+ 
+ #include "AdbController.h"
+@@ -146,7 +147,7 @@ protected:
+             down_cmd(int x, int y, int wait_ms = TouchHoldMs, bool with_commit = true, int contact = 0)
+         {
+             auto [c_x, c_y] = scale(x, y);
+-            std::string str = std::format("d {} {} {} {}\n", contact, c_x, c_y, m_props.max_pressure);
++            std::string str = maa_format::format("d {} {} {} {}\n", contact, c_x, c_y, m_props.max_pressure);
+ 
+             if (with_commit) {
+                 str += commit_cmd();
+@@ -161,7 +162,7 @@ protected:
+             move_cmd(int x, int y, int wait_ms = SwipeIntervalMs, bool with_commit = true, int contact = 0)
+         {
+             auto [c_x, c_y] = scale(x, y);
+-            std::string str = std::format("m {} {} {} {}\n", contact, c_x, c_y, m_props.max_pressure);
++            std::string str = maa_format::format("m {} {} {} {}\n", contact, c_x, c_y, m_props.max_pressure);
+ 
+             if (with_commit) {
+                 str += commit_cmd();
+@@ -174,7 +175,7 @@ protected:
+ 
+         [[nodiscard]] std::string up_cmd(int wait_ms = TouchHoldMs, bool with_commit = true, int contact = 0)
+         {
+-            std::string str = std::format("u {}\n", contact);
++            std::string str = maa_format::format("u {}\n", contact);
+ 
+             if (with_commit) {
+                 str += commit_cmd();
+@@ -187,7 +188,7 @@ protected:
+ 
+         [[nodiscard]] std::string key_down_cmd(int key_code, int wait_ms = TouchHoldMs, bool with_commit = true)
+         {
+-            std::string str = std::format("k {} d\n", key_code);
++            std::string str = maa_format::format("k {} d\n", key_code);
+ 
+             if (with_commit) {
+                 str += commit_cmd();
+@@ -200,7 +201,7 @@ protected:
+ 
+         [[nodiscard]] std::string key_up_cmd(int key_code, int wait_ms = TouchHoldMs, bool with_commit = true)
+         {
+-            std::string str = std::format("k {} u\n", key_code);
++            std::string str = maa_format::format("k {} u\n", key_code);
+ 
+             if (with_commit) {
+                 str += commit_cmd();
+@@ -214,7 +215,7 @@ protected:
+         [[nodiscard]] std::string wait_cmd(int ms)
+         {
+             m_wait_ms_count += ms;
+-            return std::format("w {}\n", ms);
++            return maa_format::format("w {}\n", ms);
+         }
+ #ifdef _MSC_VER
+ #pragma warning(pop)
+diff --git a/src/MaaCore/Controller/Platform/PosixIO.cpp b/src/MaaCore/Controller/Platform/PosixIO.cpp
+index fcf91f6..5cf0684 100644
+--- a/src/MaaCore/Controller/Platform/PosixIO.cpp
++++ b/src/MaaCore/Controller/Platform/PosixIO.cpp
+@@ -3,8 +3,8 @@
+ 
+ #include <fcntl.h>
+ #include <signal.h>
+-#include <sys/errno.h>
+-#include <sys/poll.h>
++#include <errno.h>
++#include <poll.h>
+ #include <sys/socket.h>
+ #ifndef __APPLE__
+ #include <sys/prctl.h>
+diff --git a/src/MaaCore/Task/BattleHelper.cpp b/src/MaaCore/Task/BattleHelper.cpp
+index c4a384c..c464228 100644
+--- a/src/MaaCore/Task/BattleHelper.cpp
++++ b/src/MaaCore/Task/BattleHelper.cpp
+@@ -799,9 +799,9 @@ bool asst::BattleHelper::use_all_ready_skill(const cv::Mat& reusable)
+     const auto now = std::chrono::steady_clock::now();
+     const cv::Mat image = reusable.empty() ? m_inst_helper.ctrler()->get_image() : reusable;
+     for (const auto& [oper_tag, loc] : m_battlefield_opers) {
+-        const auto& skill_it = std::ranges::find_if(m_skill_usage, [&](const auto& pair) {
+-            return (pair.first.role == battle::Role::Unknown || pair.first.role == oper_tag.role) &&
+-                   pair.first.name == oper_tag.name;
++        const auto& skill_it = std::ranges::find_if(m_skill_usage, [&, tag = oper_tag](const auto& pair) {
++            return (pair.first.role == battle::Role::Unknown || pair.first.role == tag.role) &&
++                   pair.first.name == tag.name;
+         });
+         battle::OperNameTag skill_tag;
+         if (skill_it == m_skill_usage.cend()) {
+diff --git a/src/MaaCore/Task/Experiment/CombatRecordRecognitionTask.cpp b/src/MaaCore/Task/Experiment/CombatRecordRecognitionTask.cpp
+index a1bb3f9..024433d 100644
+--- a/src/MaaCore/Task/Experiment/CombatRecordRecognitionTask.cpp
++++ b/src/MaaCore/Task/Experiment/CombatRecordRecognitionTask.cpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #include "CombatRecordRecognitionTask.h"
+ 
+ #include <ranges>
+@@ -86,7 +87,7 @@ bool asst::CombatRecordRecognitionTask::_run()
+ 
+     Log.info("full copilot json", m_copilot_json.to_string());
+ 
+-    std::string filename = std::format(
++    std::string filename = maa_format::format(
+         "MaaAI_{}_{}_{}.json",
+         m_stage_name,
+         utils::path_to_utf8_string(m_video_path.stem()),
+@@ -144,7 +145,7 @@ bool asst::CombatRecordRecognitionTask::analyze_formation()
+         }
+     }
+ 
+-    Log.info("Formation:", m_formation | std::views::keys);
++    Log.info("Formation:", m_formation | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.first); }));
+     auto cb_info = basic_info_with_what("OcrFormation");
+     auto& cb_formation = cb_info["details"]["formation"];
+     for (const auto& [name, avatar] : m_formation) {
+@@ -590,7 +591,7 @@ bool asst::CombatRecordRecognitionTask::detect_operators(ClipInfo& clip, [[maybe
+         auto result_opt = analyzer.analyze();
+ 
+         DetectionResult cur_locations;
+-        auto tiles = m_normal_tile_info | std::views::values;
++        auto tiles = m_normal_tile_info | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.second); });
+         for (const auto& box : result_opt->operators) {
+             Rect rect = box.rect.move(det_box_move);
+             auto iter = std::ranges::find_if(tiles, [&](const TilePack::TileInfo& t) { return rect.include(t.pos); });
+@@ -634,7 +635,7 @@ bool asst::CombatRecordRecognitionTask::classify_direction(ClipInfo& clip, ClipI
+     }
+ 
+     std::vector<Point> newcomer;
+-    for (const Point& loc : clip.battlefield | std::views::keys) {
++    for (const Point& loc : clip.battlefield | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.first); })) {
+         if (pre_clip_ptr->battlefield.contains(loc)) {
+             continue;
+         }
+diff --git a/src/MaaCore/Task/Infrast/InfrastReceptionTask.cpp b/src/MaaCore/Task/Infrast/InfrastReceptionTask.cpp
+index 26c75b2..86af353 100644
+--- a/src/MaaCore/Task/Infrast/InfrastReceptionTask.cpp
++++ b/src/MaaCore/Task/Infrast/InfrastReceptionTask.cpp
+@@ -148,7 +148,7 @@ bool asst::InfrastReceptionTask::use_clue()
+     vacancy_analyzer.analyze();
+ 
+     const auto& vacancy = vacancy_analyzer.get_vacancy();
+-    for (const auto& id : vacancy | std::views::keys) {
++    for (const auto& id : vacancy | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.first); })) {
+         Log.trace("InfrastReceptionTask | Vacancy", id);
+     }
+ 
+@@ -185,7 +185,7 @@ bool asst::InfrastReceptionTask::remove_clue()
+     }
+ 
+     bool ret = true;
+-    for (const auto& id : vacancy | std::views::keys) {
++    for (const auto& id : vacancy | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.first); })) {
+         if (need_exit()) {
+             return false;
+         }
+diff --git a/src/MaaCore/Task/Miscellaneous/BattleFormationTask.cpp b/src/MaaCore/Task/Miscellaneous/BattleFormationTask.cpp
+index d61d724..c60f722 100644
+--- a/src/MaaCore/Task/Miscellaneous/BattleFormationTask.cpp
++++ b/src/MaaCore/Task/Miscellaneous/BattleFormationTask.cpp
+@@ -63,9 +63,9 @@ bool asst::BattleFormationTask::_run()
+     }
+     if (compare_formation()) { // 与上一个作业的编队进行对比，相同则跳过
+         Log.info(__FUNCTION__, "| Formation is the same as last time, skip");
+-        for (auto& [name, _, __, opers] : m_formation | std::views::values | std::views::join) {
++        for (auto& [name, _, __, opers] : m_formation | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.second); }) | std::views::join) {
+             const auto& pair_it =
+-                std::ranges::find_if(*m_opers_in_formation, [&](const auto& pair) { return pair.second == name; });
++                std::ranges::find_if(*m_opers_in_formation, [&, oper_name = name](const auto& pair) { return pair.second == oper_name; });
+             if (pair_it == m_opers_in_formation->end()) {
+                 continue;
+             }
+@@ -109,7 +109,7 @@ bool asst::BattleFormationTask::_run()
+ 
+     // 记录缺失干员组的数量
+     auto missing_groups = std::ranges::views::filter(
+-        m_formation | std::views::values /* 剔除职业 */ | std::views::join,
++        m_formation | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.second); }) /* 剔除职业 */ | std::views::join,
+         [&](const OperGroup& group) { return !has_oper_selected(group.opers); }); // 拿到缺干员的组
+ 
+     int missing_numbers = (int)std::ranges::distance(missing_groups);
+@@ -167,7 +167,7 @@ bool asst::BattleFormationTask::_run()
+         for (const auto& [name, skill] : m_user_additional) {
+             auto has_oper = std::ranges::any_of(
+                 *m_opers_in_formation,
+-                [&](const std::pair<battle::OperNameTag, std::string>& pair) { return pair.first.name == name; });
++                [&, oper_name = name](const std::pair<battle::OperNameTag, std::string>& pair) { return pair.first.name == oper_name; });
+             if (has_oper) {
+                 continue;
+             }
+@@ -178,7 +178,7 @@ bool asst::BattleFormationTask::_run()
+             oper.name = name;
+             oper.skill = skill;
+             std::vector<asst::battle::OperUsage> usage { std::move(oper) };
+-            user_formation[BattleData.get_first_role(name)].emplace_back(name, 0, 0, std::move(usage));
++            user_formation[BattleData.get_first_role(name)].push_back(OperGroup { name, 0, 0, std::move(usage) });
+         }
+         click_role_table(battle::Role::Unknown);
+         for (auto& [role, oper_groups] : user_formation) {
+@@ -224,7 +224,7 @@ void asst::BattleFormationTask::formation_with_last_opers()
+ 
+     // 展平的干员组
+     std::unordered_map<std::string, std::vector<asst::battle::OperUsage>*> formation_view;
+-    for (auto& group : m_formation | std::views::values | std::views::join) {
++    for (auto& group : m_formation | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.second); }) | std::views::join) {
+         formation_view.emplace(group.name, &group.opers);
+     }
+     const int delay = Task.get("BattleQuickFormationOCR")->post_delay;
+@@ -886,7 +886,7 @@ bool asst::BattleFormationTask::parse_formation()
+         }
+ 
+         // for unknown, will use { "BattleQuickFormationRole-All", "BattleQuickFormationRole-All-OCR" }
+-        m_formation[same_role ? role : battle::Role::Unknown].emplace_back(name, elite_min, level_min, opers_vec);
++        m_formation[same_role ? role : battle::Role::Unknown].push_back(OperGroup { name, elite_min, level_min, opers_vec });
+     }
+     callback(AsstMsg::SubTaskExtraInfo, info);
+     return true;
+@@ -927,10 +927,10 @@ bool asst::BattleFormationTask::compare_formation()
+     }
+ 
+     auto formation_size =
+-        static_cast<size_t>(std::ranges::distance(m_formation | std::views::values | std::views::join));
++        static_cast<size_t>(std::ranges::distance(m_formation | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.second); }) | std::views::join));
+ 
+     return formation_size == m_opers_in_formation->size() &&
+-           std::ranges::distance(m_formation_last | std::views::values | std::views::join) == 0;
++           std::ranges::distance(m_formation_last | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.second); }) | std::views::join) == 0;
+ }
+ 
+ bool asst::BattleFormationTask::select_formation(int select_index, const cv::Mat& img)
+diff --git a/src/MaaCore/Task/Miscellaneous/BattleProcessTask.cpp b/src/MaaCore/Task/Miscellaneous/BattleProcessTask.cpp
+index 50acf08..d510d2c 100644
+--- a/src/MaaCore/Task/Miscellaneous/BattleProcessTask.cpp
++++ b/src/MaaCore/Task/Miscellaneous/BattleProcessTask.cpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #include "BattleProcessTask.h"
+ 
+ #include <chrono>
+@@ -149,7 +150,7 @@ bool asst::BattleProcessTask::to_group()
+     }
+ 
+     std::unordered_map<battle::OperNameTag, battle::OperNameTag> ungrouped;
+-    const auto& grouped_view = m_oper_in_group | std::views::values;
++    const auto& grouped_view = m_oper_in_group | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.second); });
+     for (const auto& tag : char_set) {
+         if (std::ranges::find_if(grouped_view, [&](const battle::OperNameTag& oper) {
+                 return (oper.role == battle::Role::Unknown || oper.role == tag.role) && oper.name == tag.name;
+@@ -189,8 +190,8 @@ bool asst::BattleProcessTask::to_group()
+ 
+     // 对于实际编入战斗的干员, 从作业中读取技能用法并存入m_skill_usage和m_skill_times
+     for (const auto& [group_tag, oper_tag] : m_oper_in_group) {
+-        const auto& group_it = std::ranges::find_if(get_combat_data().groups, [&](const OperUsageGroup& pair) {
+-            return pair.name == group_tag.name;
++        const auto& group_it = std::ranges::find_if(get_combat_data().groups, [&, tag = group_tag](const OperUsageGroup& pair) {
++            return pair.name == tag.name;
+         });
+         if (group_it == get_combat_data().groups.end()) {
+             LogError << __FUNCTION__ << "Group not found in combat data: " << group_tag.name;
+@@ -200,8 +201,8 @@ bool asst::BattleProcessTask::to_group()
+         // there is a build error on macOS
+         // https://github.com/MaaAssistantArknights/MaaAssistantArknights/actions/runs/3779762713/jobs/6425284487
+         // const std::string& oper_name_for_lambda = oper_tag;
+-        auto iter = std::ranges::find_if(this_group, [&](const auto& oper) {
+-            return (oper.role == battle::Role::Unknown || oper.role == oper_tag.role) && oper.name == oper_tag.name;
++        auto iter = std::ranges::find_if(this_group, [&, tag = oper_tag](const auto& oper) {
++            return (oper.role == battle::Role::Unknown || oper.role == tag.role) && oper.name == tag.name;
+         });
+         if (iter == this_group.end()) {
+             continue;
+@@ -343,7 +344,7 @@ bool asst::BattleProcessTask::do_action(const battle::copilot::Action& action, s
+             std::string drone_name;
+             if (auto it = m_used_tiles.find(*location); it == m_used_tiles.end()) {
+                 LogInfo << "Tile hasn't used, register for drone" << *location;
+-                drone_name = std::format("drone_{}_{}", location->x, location->y);
++                drone_name = maa_format::format("drone_{}_{}", location->x, location->y);
+                 _role = Role::Drone;
+                 register_deployed_oper(_role, drone_name, *location);
+             }
+@@ -354,8 +355,8 @@ bool asst::BattleProcessTask::do_action(const battle::copilot::Action& action, s
+             set_usage({ _role, drone_name }, action.modify_usage, action.modify_times);
+         }
+         else { // 坐标未填, 指定 oper name
+-            auto tag_it = std::ranges::find_if(m_skill_usage, [&](const auto& pair) {
+-                return (role == battle::Role::Unknown || pair.first.role == role) && pair.first.name == name;
++            auto tag_it = std::ranges::find_if(m_skill_usage, [&, role_value = role, name_value = name](const auto& pair) {
++                return (role_value == battle::Role::Unknown || pair.first.role == role_value) && pair.first.name == name_value;
+             });
+             if (tag_it != m_skill_usage.end()) {
+                 set_usage(tag_it->first, action.modify_usage, action.modify_times);
+diff --git a/src/MaaCore/Task/Roguelike/BlackFlow/BlackFlowInventoryCleanup.cpp b/src/MaaCore/Task/Roguelike/BlackFlow/BlackFlowInventoryCleanup.cpp
+index 1a0e4f3..6f18b46 100644
+--- a/src/MaaCore/Task/Roguelike/BlackFlow/BlackFlowInventoryCleanup.cpp
++++ b/src/MaaCore/Task/Roguelike/BlackFlow/BlackFlowInventoryCleanup.cpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #include "BlackFlowInventoryCleanup.h"
+ 
+ #include <algorithm>
+@@ -175,7 +176,7 @@ bool BlackFlowInventoryCleanup::rewind_to_left(BlackFlowInventoryContext& contex
+ {
+     // 回左次数只覆盖背包的物理宽度，扫描上限还包含右端未移动时的识别次数。
+     const int swipes = RewindSwipes;
+-    LogInfo << std::format("BlackFlow inventory | event=rewind_started | swipes={}", swipes);
++    LogInfo << maa_format::format("BlackFlow inventory | event=rewind_started | swipes={}", swipes);
+     for (int step = 0; step < swipes; ++step) {
+         if (context.interrupted()) {
+             set_error(error, "inventory cleanup interrupted");
+@@ -184,9 +185,9 @@ bool BlackFlowInventoryCleanup::rewind_to_left(BlackFlowInventoryContext& contex
+         if (!swipe(context, false, error)) {
+             return false;
+         }
+-        LogInfo << std::format("BlackFlow inventory | event=rewind_step | step={} | total={}", step + 1, swipes);
++        LogInfo << maa_format::format("BlackFlow inventory | event=rewind_step | step={} | total={}", step + 1, swipes);
+     }
+-    LogInfo << std::format("BlackFlow inventory | event=rewind_completed | swipes={}", swipes);
++    LogInfo << maa_format::format("BlackFlow inventory | event=rewind_completed | swipes={}", swipes);
+     return true;
+ }
+ 
+@@ -217,7 +218,7 @@ bool BlackFlowInventoryCleanup::advance(
+     }
+ 
+     const std::string task(forward ? SwipeForwardTask : SwipeBackTask);
+-    LogInfo << std::format(
++    LogInfo << maa_format::format(
+         "BlackFlow inventory | event=swipe_command | direction={} | distance={} | landing={}",
+         forward ? "forward" : "backward",
+         distance,
+@@ -270,7 +271,7 @@ bool BlackFlowInventoryCleanup::survey(
+         if (!base_known) {
+             m_base_x = std::ranges::min(visible, {}, &VisibleScrap::center_x).center_x;
+             base_known = true;
+-            LogInfo << std::format("BlackFlow inventory | event=survey_started | base_x={}", m_base_x);
++            LogInfo << maa_format::format("BlackFlow inventory | event=survey_started | base_x={}", m_base_x);
+         }
+ 
+         bool stalled = false;
+@@ -284,7 +285,7 @@ bool BlackFlowInventoryCleanup::survey(
+                     m_rank_fallback = true;
+                     fallback_activated = true;
+                     consecutive_same = view_same ? 1 : 0;
+-                    LogWarn << std::format(
++                    LogWarn << maa_format::format(
+                         "BlackFlow inventory | event=rank_fallback_started | step={} | same_view={} | "
+                         "consecutive_same={} | reason=swipe_unmeasured",
+                         step,
+@@ -293,7 +294,7 @@ bool BlackFlowInventoryCleanup::survey(
+                 }
+                 else {
+                     m_offset += shift->distance;
+-                    LogInfo << std::format(
++                    LogInfo << maa_format::format(
+                         "BlackFlow inventory | event=swipe_measured | step={} | distance={} | anchor={} | row={} | "
+                         "samples={}",
+                         step,
+@@ -306,13 +307,13 @@ bool BlackFlowInventoryCleanup::survey(
+             }
+             if (m_rank_fallback && !fallback_activated) {
+                 consecutive_same = view_same ? consecutive_same + 1 : 0;
+-                LogInfo << std::format(
++                LogInfo << maa_format::format(
+                     "BlackFlow inventory | event=rank_fallback_view | step={} | same_view={} | consecutive_same={}",
+                     step,
+                     view_same ? 1 : 0,
+                     consecutive_same);
+                 if (consecutive_same == 2) {
+-                    LogWarn << std::format(
++                    LogWarn << maa_format::format(
+                         "BlackFlow inventory | event=rank_fallback_confirmed | step={} | remaining_steps={}",
+                         step,
+                         MaxSurveySteps - step - 1);
+@@ -322,12 +323,12 @@ bool BlackFlowInventoryCleanup::survey(
+ 
+         if (m_rank_fallback) {
+             if (best_updated && m_fallback_best.has_value()) {
+-                LogInfo << std::format(
++                LogInfo << maa_format::format(
+                     "BlackFlow inventory | event=best_candidate | name={} | rank={}",
+                     m_fallback_best->name,
+                     m_fallback_best->rank);
+             }
+-            LogInfo << std::format(
++            LogInfo << maa_format::format(
+                 "BlackFlow inventory | event=survey_step | mode=rank_fallback | step={} | visible={}",
+                 step,
+                 visible.size());
+@@ -337,7 +338,7 @@ bool BlackFlowInventoryCleanup::survey(
+                     set_error(error, "rank fallback found no discardable scrap");
+                     return false;
+                 }
+-                LogInfo << std::format(
++                LogInfo << maa_format::format(
+                     "BlackFlow inventory | event=rank_fallback_completed | steps={} | best_name={} | best_rank={}",
+                     MaxSurveySteps,
+                     m_fallback_best->name,
+@@ -359,7 +360,7 @@ bool BlackFlowInventoryCleanup::survey(
+             }
+             m_model.put(slot, InventoryCell { scrap.name, scrap.rank });
+             ++fresh;
+-            LogInfo << std::format(
++            LogInfo << maa_format::format(
+                 "BlackFlow inventory | event=survey_cell | column={} | row={} | name={} | rank={} | rect={} | "
+                 "score={}",
+                 scrap.column,
+@@ -371,7 +372,7 @@ bool BlackFlowInventoryCleanup::survey(
+         }
+         // 记下当前屏最左边是第几列，走位时用它在名字重复的几列之间按距离取舍。
+         m_view_left_column = std::ranges::min(visible, {}, &VisibleScrap::column).column;
+-        LogInfo << std::format(
++        LogInfo << maa_format::format(
+             "BlackFlow inventory | event=survey_step | mode=exact | step={} | visible={} | fresh={} | total={}",
+             step,
+             visible.size(),
+@@ -379,7 +380,7 @@ bool BlackFlowInventoryCleanup::survey(
+             m_model.size());
+ 
+         if (step > 0 && (fresh == 0 || stalled)) {
+-            LogInfo << std::format(
++            LogInfo << maa_format::format(
+                 "BlackFlow inventory | event=survey_completed | mode=exact | columns={} | cells={} | fresh={} | "
+                 "stalled={}",
+                 m_model.max_column() + 1,
+@@ -398,7 +399,7 @@ bool BlackFlowInventoryCleanup::survey(
+     }
+ 
+     set_error(error, "inventory survey did not reach the right end");
+-    LogWarn << std::format(
++    LogWarn << maa_format::format(
+         "BlackFlow inventory | event=survey_failed | steps={} | cells={} | reason=max_steps_exhausted",
+         MaxSurveySteps,
+         m_model.size());
+@@ -423,7 +424,7 @@ BlackFlowInventoryCleanup::WalkToResult BlackFlowInventoryCleanup::walk_to(
+         std::vector<VisibleScrap> visible = recognize(context, policy);
+         const auto columns = m_model.resolve_columns(visible, hint);
+         if (!columns.has_value()) {
+-            LogWarn << std::format(
++            LogWarn << maa_format::format(
+                 "BlackFlow inventory | event=viewport_unresolved | step={} | visible={}",
+                 step,
+                 visible.size());
+@@ -431,7 +432,7 @@ BlackFlowInventoryCleanup::WalkToResult BlackFlowInventoryCleanup::walk_to(
+         }
+         hint = columns->front();
+         m_view_left_column = *hint;
+-        LogInfo << std::format(
++        LogInfo << maa_format::format(
+             "BlackFlow inventory | event=viewport_resolved | step={} | left_column={} | right_column={} | "
+             "target_column={}",
+             step,
+@@ -444,14 +445,14 @@ BlackFlowInventoryCleanup::WalkToResult BlackFlowInventoryCleanup::walk_to(
+                 return scrap.column == slot.first && scrap.row == slot.second;
+             });
+             if (found == visible.end()) {
+-                LogWarn << std::format(
++                LogWarn << maa_format::format(
+                     "BlackFlow inventory | event=target_slot_missing | column={} | row={}",
+                     slot.first,
+                     slot.second);
+                 return { WalkToStatus::TargetUnavailable, std::nullopt, "target slot is missing from the viewport" };
+             }
+             if (found->name != wanted->name) {
+-                LogWarn << std::format(
++                LogWarn << maa_format::format(
+                     "BlackFlow inventory | event=target_slot_mismatch | column={} | row={} | expected={} | actual={}",
+                     slot.first,
+                     slot.second,
+@@ -471,7 +472,7 @@ BlackFlowInventoryCleanup::WalkToResult BlackFlowInventoryCleanup::walk_to(
+         hint = columns->front() + (forward ? 1 : -1);
+         m_view_left_column = *hint;
+     }
+-    LogWarn << std::format("BlackFlow inventory | event=walk_exhausted | column={} | row={}", slot.first, slot.second);
++    LogWarn << maa_format::format("BlackFlow inventory | event=walk_exhausted | column={} | row={}", slot.first, slot.second);
+     return { WalkToStatus::Failed, std::nullopt, "inventory walk exhausted before reaching the target" };
+ }
+ 
+@@ -489,7 +490,7 @@ std::optional<VisibleScrap> BlackFlowInventoryCleanup::walk_to_name(
+         std::vector<VisibleScrap> visible = recognize(context, policy);
+         const auto found =
+             std::ranges::find_if(visible, [name](const VisibleScrap& scrap) { return scrap.name == name; });
+-        LogInfo << std::format(
++        LogInfo << maa_format::format(
+             "BlackFlow inventory | event=fallback_search | step={} | name={} | visible={} | found={}",
+             step,
+             name,
+@@ -528,13 +529,13 @@ bool BlackFlowInventoryCleanup::discard(
+         context.wait(SettleDelay);
+         if (context.execute({ std::string(DiscardReadyTask) }, nullptr)) {
+             opened = true;
+-            LogInfo << std::format(
++            LogInfo << maa_format::format(
+                 "BlackFlow inventory | event=card_opened | name={} | attempt={}",
+                 scrap.name,
+                 attempt + 1);
+             break;
+         }
+-        LogWarn << std::format(
++        LogWarn << maa_format::format(
+             "BlackFlow inventory | event=card_open_failed | name={} | attempt={}",
+             scrap.name,
+             attempt + 1);
+@@ -567,7 +568,7 @@ bool BlackFlowInventoryCleanup::finish(BlackFlowInventoryContext& context, bool
+     if (report) {
+         context.report_cleanup_status("completed");
+     }
+-    LogInfo << std::format("BlackFlow inventory | event=cleanup_completed | discarded={}", m_discarded);
++    LogInfo << maa_format::format("BlackFlow inventory | event=cleanup_completed | discarded={}", m_discarded);
+     return true;
+ }
+ 
+@@ -575,12 +576,12 @@ bool BlackFlowInventoryCleanup::abandon(BlackFlowInventoryContext& context, std:
+ {
+     // 主动停止时按成功返回，以免日志上留下一条移动事务失败。
+     if (context.interrupted()) {
+-        LogInfo << std::format("BlackFlow inventory | event=cleanup_interrupted | discarded={}", m_discarded);
++        LogInfo << maa_format::format("BlackFlow inventory | event=cleanup_interrupted | discarded={}", m_discarded);
+         return true;
+     }
+     const std::string reason = error != nullptr && !error->empty() ? *error : std::string("unknown error");
+     LogError
+-        << std::format("BlackFlow inventory | event=cleanup_failed | discarded={} | reason={}", m_discarded, reason);
++        << maa_format::format("BlackFlow inventory | event=cleanup_failed | discarded={} | reason={}", m_discarded, reason);
+     context.report_cleanup_status("failed");
+     return false;
+ }
+@@ -624,7 +625,7 @@ bool BlackFlowInventoryCleanup::run(BlackFlowInventoryContext& context, std::str
+         }
+         if (!remaining_after_clear.has_value() && !full_flag_visible(context)) {
+             remaining_after_clear = policy->extra_discards_after_clear;
+-            LogInfo << std::format(
++            LogInfo << maa_format::format(
+                 "BlackFlow inventory | event=overload_cleared | discarded={} | extra_remaining={}",
+                 m_discarded,
+                 *remaining_after_clear);
+@@ -643,7 +644,7 @@ bool BlackFlowInventoryCleanup::run(BlackFlowInventoryContext& context, std::str
+                 return abandon(context, error);
+             }
+             cell = *m_fallback_best;
+-            LogInfo << std::format(
++            LogInfo << maa_format::format(
+                 "BlackFlow inventory | event=discard_target | mode=rank_fallback | name={} | rank={}",
+                 cell.name,
+                 cell.rank);
+@@ -663,7 +664,7 @@ bool BlackFlowInventoryCleanup::run(BlackFlowInventoryContext& context, std::str
+             // 同一 rank 试满次数后不再尝试其余实例，避免在同名零件之间反复走位。
+             const auto candidates = m_model.ranked_candidates(discardable, m_failed);
+             const InventoryCell* picked = nullptr;
+-            for (const InventorySlot candidate : candidates) {
++            for (const InventorySlot& candidate : candidates) {
+                 const InventoryCell* probe = m_model.find(candidate);
+                 if (probe == nullptr) {
+                     continue;
+@@ -682,7 +683,7 @@ bool BlackFlowInventoryCleanup::run(BlackFlowInventoryContext& context, std::str
+                     return abandon(context, error);
+                 }
+                 ++m_rescans;
+-                LogWarn << std::format(
++                LogWarn << maa_format::format(
+                     "BlackFlow inventory | event=rescan_started | failed_slots={} | reason=no_candidate",
+                     m_failed.size());
+                 m_failed.clear();
+@@ -700,7 +701,7 @@ bool BlackFlowInventoryCleanup::run(BlackFlowInventoryContext& context, std::str
+                     return abandon(context, error);
+                 }
+                 ++m_rescans;
+-                LogWarn << std::format(
++                LogWarn << maa_format::format(
+                     "BlackFlow inventory | event=rescan_started | rank={} | rank_limit={} | failed_slots={} | "
+                     "reason=candidates_degraded",
+                     cell.rank,
+@@ -714,7 +715,7 @@ bool BlackFlowInventoryCleanup::run(BlackFlowInventoryContext& context, std::str
+                 continue;
+             }
+ 
+-            LogInfo << std::format(
++            LogInfo << maa_format::format(
+                 "BlackFlow inventory | event=discard_target | mode=exact | name={} | rank={} | column={} | row={} | "
+                 "failed_slots={}",
+                 cell.name,
+@@ -737,7 +738,7 @@ bool BlackFlowInventoryCleanup::run(BlackFlowInventoryContext& context, std::str
+                     return abandon(context, error);
+                 }
+                 ++m_rescans;
+-                LogWarn << std::format(
++                LogWarn << maa_format::format(
+                     "BlackFlow inventory | event=rescan_started | failed_slots={} | reason=viewport_unresolved",
+                     m_failed.size());
+                 m_failed.clear();
+@@ -764,7 +765,7 @@ bool BlackFlowInventoryCleanup::run(BlackFlowInventoryContext& context, std::str
+                 set_error(error, "inventory cleanup interrupted");
+                 return abandon(context, error);
+             }
+-            LogWarn << std::format(
++            LogWarn << maa_format::format(
+                 "BlackFlow inventory | event=discard_failed | mode={} | name={} | rank={} | column={} | row={} | "
+                 "reason={}",
+                 fallback_target ? "rank_fallback" : "exact",
+@@ -784,7 +785,7 @@ bool BlackFlowInventoryCleanup::run(BlackFlowInventoryContext& context, std::str
+ 
+         ++m_discarded;
+         context.report_cleanup_status("discarded", cell.name);
+-        LogInfo << std::format(
++        LogInfo << maa_format::format(
+             "BlackFlow inventory | event=discard_succeeded | mode={} | name={} | rank={} | column={} | row={} | "
+             "discarded={}",
+             fallback_target ? "rank_fallback" : "exact",
+@@ -798,7 +799,7 @@ bool BlackFlowInventoryCleanup::run(BlackFlowInventoryContext& context, std::str
+             context.wait(SettleDelay);
+             if (remaining_after_clear.has_value()) {
+                 --*remaining_after_clear;
+-                LogInfo << std::format(
++                LogInfo << maa_format::format(
+                     "BlackFlow inventory | event=extra_discard_completed | remaining={}",
+                     *remaining_after_clear);
+             }
+@@ -818,7 +819,7 @@ bool BlackFlowInventoryCleanup::run(BlackFlowInventoryContext& context, std::str
+         }
+ 
+         std::set<InventorySlot> shifted;
+-        for (const InventorySlot failed : m_failed) {
++        for (const InventorySlot& failed : m_failed) {
+             const auto moved = m_model.shifted_by_removal(failed, slot);
+             if (moved.has_value()) {
+                 shifted.insert(*moved);
+@@ -837,11 +838,11 @@ bool BlackFlowInventoryCleanup::run(BlackFlowInventoryContext& context, std::str
+ 
+         if (remaining_after_clear.has_value()) {
+             --*remaining_after_clear;
+-            LogInfo << std::format(
++            LogInfo << maa_format::format(
+                 "BlackFlow inventory | event=extra_discard_completed | remaining={}",
+                 *remaining_after_clear);
+         }
+-        LogInfo << std::format("BlackFlow inventory | event=model_size | cells={}", m_model.size());
++        LogInfo << maa_format::format("BlackFlow inventory | event=model_size | cells={}", m_model.size());
+     }
+ 
+     set_error(error, "inventory is still overloaded after discarding every candidate");
+diff --git a/src/MaaCore/Task/Roguelike/JieGarden/RoguelikeCoppersTaskPlugin.cpp b/src/MaaCore/Task/Roguelike/JieGarden/RoguelikeCoppersTaskPlugin.cpp
+index c4bec39..08f8416 100644
+--- a/src/MaaCore/Task/Roguelike/JieGarden/RoguelikeCoppersTaskPlugin.cpp
++++ b/src/MaaCore/Task/Roguelike/JieGarden/RoguelikeCoppersTaskPlugin.cpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #include "RoguelikeCoppersTaskPlugin.h"
+ 
+ #include "Common/AsstTypes.h"
+@@ -385,7 +386,7 @@ asst::CopperTaskResult asst::RoguelikeCoppersTaskPlugin::handle_exchange_mode()
+ 
+     // 发送通宝替换信息到 WPF
+     auto copper_info = basic_info_with_what("RoguelikeCoppersExchangeInfo");
+-    copper_info["details"]["to_discard"] = std::format("{} ({},{})", worst_it->name, worst_it->col, worst_it->row);
++    copper_info["details"]["to_discard"] = maa_format::format("{} ({},{})", worst_it->name, worst_it->col, worst_it->row);
+     copper_info["details"]["to_pickup"] = m_new_copper.name;
+     callback(AsstMsg::SubTaskExtraInfo, copper_info);
+ 
+@@ -431,7 +432,7 @@ bool asst::RoguelikeCoppersTaskPlugin::swipe_copper_list(int times, bool to_left
+                     (swipe_task->special_params.size() < 4) ? 1 : swipe_task->special_params.at(3) / 10.0);
+                 Log.debug(
+                     __FUNCTION__,
+-                    std::format(
++                    maa_format::format(
+                         "| correcting swipe error: origin_x = {}, cur_x = {}, diff = {}",
+                         m_origin_x,
+                         cur_x,
+@@ -485,7 +486,7 @@ void asst::RoguelikeCoppersTaskPlugin::click_copper_at_position(int col, int row
+ 
+     Log.debug(
+         __FUNCTION__,
+-        std::format(
++        maa_format::format(
+             "| clicking copper at ({},{}) -> point ({},{},{},{})",
+             col,
+             row,
+@@ -544,7 +545,7 @@ std::optional<asst::RoguelikeCopper> asst::RoguelikeCoppersTaskPlugin::create_co
+         copper.is_cast = is_cast;
+         Log.info(
+             __FUNCTION__,
+-            std::format(
++            maa_format::format(
+                 "| created copper: {} priority: {}/{}/{}",
+                 name,
+                 copper.pickup_priority,
+@@ -553,7 +554,7 @@ std::optional<asst::RoguelikeCopper> asst::RoguelikeCoppersTaskPlugin::create_co
+         return copper;
+     }
+ 
+-    Log.error(__FUNCTION__, std::format("| copper not found in config: {}", name));
++    Log.error(__FUNCTION__, maa_format::format("| copper not found in config: {}", name));
+ 
+     // 将识别到的错误的名称发送到 WPF 进行反馈
+     auto copper_info = basic_info_with_what("RoguelikeCoppersRecognitionError");
+@@ -571,7 +572,7 @@ std::optional<asst::RoguelikeCopper> asst::RoguelikeCoppersTaskPlugin::create_co
+         }
+     }
+     catch (const std::exception& e) {
+-        Log.error(__FUNCTION__, std::format("| failed to save unknown copper debug image: {}", e.what()));
++        Log.error(__FUNCTION__, maa_format::format("| failed to save unknown copper debug image: {}", e.what()));
+     }
+ 
+     return std::nullopt;
+@@ -592,7 +593,7 @@ void asst::RoguelikeCoppersTaskPlugin::draw_detection_debug(
+     // 在矩形框上方显示名称识别置信度
+     cv::putText(
+         image,
+-        std::format("score: {:.6f}", detection.name_score),
++        maa_format::format("score: {:.6f}", detection.name_score),
+         cv::Point(detection.name_roi.x, std::max(0, detection.name_roi.y - 6)),
+         cv::FONT_HERSHEY_SIMPLEX,
+         0.45,
+@@ -608,7 +609,7 @@ void asst::RoguelikeCoppersTaskPlugin::draw_detection_debug(
+             2);
+         cv::putText(
+             image,
+-            std::format("cast_score: {:.6f}", detection.cast_score),
++            maa_format::format("cast_score: {:.6f}", detection.cast_score),
+             cv::Point(detection.cast_roi.x, std::max(0, detection.cast_roi.y + detection.cast_roi.height + 16)),
+             cv::FONT_HERSHEY_SIMPLEX,
+             0.45,
+diff --git a/src/MaaCore/Task/Roguelike/RoguelikeBattleTaskPlugin.cpp b/src/MaaCore/Task/Roguelike/RoguelikeBattleTaskPlugin.cpp
+index 1f89fa0..ad15a14 100644
+--- a/src/MaaCore/Task/Roguelike/RoguelikeBattleTaskPlugin.cpp
++++ b/src/MaaCore/Task/Roguelike/RoguelikeBattleTaskPlugin.cpp
+@@ -797,7 +797,7 @@ std::optional<asst::battle::DeploymentOper> asst::RoguelikeBattleTaskPlugin::cal
+ void asst::RoguelikeBattleTaskPlugin::all_melee_retreat()
+ {
+     std::vector<Point> retreat_locs {};
+-    for (const auto& loc : m_used_tiles | std::views::keys) {
++    for (const auto& loc : m_used_tiles | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.first); })) {
+         auto& tile_info = m_normal_tile_info[loc];
+         auto& type = tile_info.buildable;
+         if (type == battle::LocationType::Melee || type == battle::LocationType::All) {
+diff --git a/src/MaaCore/Task/Roguelike/RoguelikeStageEncounterTaskPlugin.cpp b/src/MaaCore/Task/Roguelike/RoguelikeStageEncounterTaskPlugin.cpp
+index b04d044..0c092bf 100644
+--- a/src/MaaCore/Task/Roguelike/RoguelikeStageEncounterTaskPlugin.cpp
++++ b/src/MaaCore/Task/Roguelike/RoguelikeStageEncounterTaskPlugin.cpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #include "RoguelikeStageEncounterTaskPlugin.h"
+ 
+ #include <algorithm>
+@@ -770,7 +771,7 @@ void asst::RoguelikeStageEncounterTaskPlugin::report_analyzed_options()
+ 
+     Log.info("Analyzed Options");
+     Log.info(std::string(40, '-'));
+-    Log.info(std::format("{:^9} | {}", "Enabled", "Text"));
++    Log.info(maa_format::format("{:^9} | {}", "Enabled", "Text"));
+     Log.info(std::string(40, '-'));
+     for (const auto& [enabled, templ, text, merged_y] : m_option_list) {
+         json::value option = json::object {
+@@ -778,7 +779,7 @@ void asst::RoguelikeStageEncounterTaskPlugin::report_analyzed_options()
+             { "text", text },
+         };
+         options.emplace_back(std::move(option));
+-        Log.info(std::format("{:^9} | {}", enabled ? "Y" : "N", text));
++        Log.info(maa_format::format("{:^9} | {}", enabled ? "Y" : "N", text));
+     }
+     Log.info(std::string(40, '-'));
+ 
+@@ -814,7 +815,7 @@ bool asst::RoguelikeStageEncounterTaskPlugin::update_view(const cv::Mat& image)
+         }
+     }
+ 
+-    LogInfo << __FUNCTION__ << std::format("| Current view is [{}, {}]", m_view_begin + 1, m_view_end);
++    LogInfo << __FUNCTION__ << maa_format::format("| Current view is [{}, {}]", m_view_begin + 1, m_view_end);
+     return !need_exit();
+ }
+ 
+diff --git a/src/MaaCore/Task/SSS/SSSBattleProcessTask.cpp b/src/MaaCore/Task/SSS/SSSBattleProcessTask.cpp
+index 45d2c07..2111941 100644
+--- a/src/MaaCore/Task/SSS/SSSBattleProcessTask.cpp
++++ b/src/MaaCore/Task/SSS/SSSBattleProcessTask.cpp
+@@ -201,7 +201,7 @@ bool asst::SSSBattleProcessTask::check_and_do_strategy(const cv::Mat& reusable)
+     }
+ 
+     auto tool_men_done = [&](const RoleCounts& tool_men) -> bool {
+-        return std::ranges::all_of(tool_men | std::views::values, [](int counts) { return counts <= 0; });
++        return std::ranges::all_of(tool_men | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.second); }), [](int counts) { return counts <= 0; });
+     };
+ 
+     /* 不再检查干员是否暴毙
+@@ -209,7 +209,7 @@ bool asst::SSSBattleProcessTask::check_and_do_strategy(const cv::Mat& reusable)
+         return role != Role::Drone && role != Role::Unknown;
+     };
+     for (Strategy& strategy :
+-         m_sss_combat_data.loc_stragegies | std::views::values | std::views::transform([&](const auto& locs) ->
++         m_sss_combat_data.loc_stragegies | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.second); }) | std::views::transform([&](const auto& locs) ->
+     Strategy& { return m_sss_combat_data.strategies[locs.back()]; // 仅检查同格子最靠后的 strategy 的部署情况
+          })) {
+         if (strategy.core_deployed &&                          // 当前 strategy 已经完毕
+@@ -272,7 +272,7 @@ bool asst::SSSBattleProcessTask::check_and_do_strategy(const cv::Mat& reusable)
+ 
+         auto required_roles_view = strategy.tool_men |
+                                    std::views::filter([](const auto& tool_man) { return tool_man.second > 0; }) |
+-                                   std::views::keys;
++                                   std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.first); });
+         auto required_roles = std::unordered_set(required_roles_view.begin(), required_roles_view.end());
+ 
+         // 如果有费用转好的干员，直接使用
+diff --git a/src/MaaCore/Ui/SupportList.cpp b/src/MaaCore/Ui/SupportList.cpp
+index 0891740..bbb0843 100644
+--- a/src/MaaCore/Ui/SupportList.cpp
++++ b/src/MaaCore/Ui/SupportList.cpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #include "SupportList.h"
+ 
+ #include "Config/GeneralConfig.h"
+@@ -118,7 +119,7 @@ bool asst::SupportList::select_support_unit(const size_t index)
+     move_to_support_unit(index);
+ 
+     // click support unit
+-    Log.info(__FUNCTION__, std::format("| Clicking support unit {}: {}", index + 1, m_list[index].name));
++    Log.info(__FUNCTION__, maa_format::format("| Clicking support unit {}: {}", index + 1, m_list[index].name));
+     Rect click_rect = Task.get("SupportList-ClickSupportUnit")->specific_rect;
+     click_rect.x = m_support_unit_x_in_view[index];
+     ctrler()->click(click_rect);
+@@ -377,11 +378,11 @@ void asst::SupportList::print_support_list() const
+ 
+     Log.info("Support List");
+     Log.info(std::string(40, '-'));
+-    Log.info(std::format(FMT_STR, "Elite", "Lv", "Pot", "Mod", "Frd", "Name"));
++    Log.info(maa_format::format(FMT_STR, "Elite", "Lv", "Pot", "Mod", "Frd", "Name"));
+     Log.info(std::string(40, '-'));
+     for (const SupportUnit& support_unit : m_list) {
+         Log.info(
+-            std::format(
++            maa_format::format(
+                 FMT_STR,
+                 support_unit.elite,
+                 support_unit.level,
+diff --git a/src/MaaCore/Utils/Algorithm.hpp b/src/MaaCore/Utils/Algorithm.hpp
+index 8bfde49..30f29f4 100644
+--- a/src/MaaCore/Utils/Algorithm.hpp
++++ b/src/MaaCore/Utils/Algorithm.hpp
+@@ -347,7 +347,7 @@ struct CharAllocationResult
+             if (inserted) {
+                 char_id_mapping.emplace_back(*it);
+             }
+-            node_id_mapping.emplace_back(group_id, char_it->second);
++            node_id_mapping.push_back(CandidateNode { group_id, char_it->second });
+         }
+ 
+         if (!has_candidate) {
+diff --git a/src/MaaCore/Utils/Logger.hpp b/src/MaaCore/Utils/Logger.hpp
+index 31af264..c10e741 100644
+--- a/src/MaaCore/Utils/Logger.hpp
++++ b/src/MaaCore/Utils/Logger.hpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #pragma once
+ 
+ #ifdef _WIN32
+@@ -492,7 +493,7 @@ public:
+ #endif
+                 auto tid = static_cast<uint16_t>(std::hash<std::thread::id> {}(std::this_thread::get_id()));
+ 
+-                s << std::format("[{}][{}][Px{}][Tx{}]", MAA_NS::format_now(), v.str, pid, tid);
++                s << maa_format::format("[{}][{}][Px{}][Tx{}]", MAA_NS::format_now(), v.str, pid, tid);
+             }
+             else if constexpr (std::is_enum_v<remove_cvref_t<T>> && enum_could_to_string<remove_cvref_t<T>>) {
+                 s << asst::enum_to_string(std::forward<T>(v));
+@@ -918,7 +919,7 @@ private:
+             logger.error("Version", MAA_VERSION);
+             logger.error("Built at", __DATE__, __TIME__);
+             logger.error("User Dir", UserDir.get());
+-            logger.error("ExceptionCode", std::format("{:#010x}", static_cast<unsigned>(er.ExceptionCode)));
++            logger.error("ExceptionCode", maa_format::format("{:#010x}", static_cast<unsigned>(er.ExceptionCode)));
+             logger.error("ExceptionAddress", er.ExceptionAddress);
+             logger.error("ExceptionParameters", er.NumberParameters);
+             if (er.ExceptionCode == EXCEPTION_ACCESS_VIOLATION && er.NumberParameters >= 2) {
+@@ -1022,7 +1023,7 @@ private:
+                 const auto base = reinterpret_cast<std::uintptr_t>(info.dli_saddr);
+                 const auto pc = reinterpret_cast<std::uintptr_t>(frames[i]);
+                 const auto offset = pc >= base ? pc - base : 0;
+-                frame_message = std::format(
++                frame_message = maa_format::format(
+                     "#{:02} pc {:p} {} ({}+0x{:x})",
+                     i - frame_start,
+                     frames[i],
+@@ -1031,7 +1032,7 @@ private:
+                     offset);
+             }
+             else {
+-                frame_message = std::format("#{:02} pc {:p}", i - frame_start, frames[i]);
++                frame_message = maa_format::format("#{:02} pc {:p}", i - frame_start, frames[i]);
+             }
+ 
+             __android_log_write(ANDROID_LOG_FATAL, AndroidCrashLogTag, frame_message.c_str());
+diff --git a/src/MaaCore/Utils/Platform/PlatformWin32.cpp b/src/MaaCore/Utils/Platform/PlatformWin32.cpp
+index 6bb7a1d..9afcac2 100644
+--- a/src/MaaCore/Utils/Platform/PlatformWin32.cpp
++++ b/src/MaaCore/Utils/Platform/PlatformWin32.cpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #ifdef _WIN32
+ #include "PlatformWin32.h"
+ #include "Platform.h"
+@@ -40,7 +41,7 @@ bool asst::win32::CreateOverlappablePipe(
+     bool overlapped_write)
+ {
+     static std::atomic<size_t> pipeid {};
+-    auto pipename = std::format(L"\\\\.\\pipe\\maa-pipe-{}-{}", GetCurrentProcessId(), pipeid++);
++    auto pipename = maa_format::format(L"\\\\.\\pipe\\maa-pipe-{}-{}", GetCurrentProcessId(), pipeid++);
+     DWORD read_flag = PIPE_ACCESS_INBOUND;
+     if (overlapped_read) {
+         read_flag |= FILE_FLAG_OVERLAPPED;
+diff --git a/src/MaaCore/Vision/Battle/BattlefieldClassifier.cpp b/src/MaaCore/Vision/Battle/BattlefieldClassifier.cpp
+index 1d25e2b..7f545d2 100644
+--- a/src/MaaCore/Vision/Battle/BattlefieldClassifier.cpp
++++ b/src/MaaCore/Vision/Battle/BattlefieldClassifier.cpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #include "BattlefieldClassifier.h"
+ 
+ #include "MaaUtils/NoWarningCV.hpp"
+@@ -204,7 +205,7 @@ BattlefieldClassifier::SkillReadyResult BattlefieldClassifier::skill_ready_analy
+             break;
+         }
+ 
+-        std::string filename = std::format(
++        std::string filename = maa_format::format(
+             "{}_{}_{}(c{:3f})(n{:3f})(y{:3f}).png",
+             MAA_NS::format_now_for_filename(),
+             m_base_point.x,
+diff --git a/src/MaaCore/Vision/Battle/BattlefieldMatcher.cpp b/src/MaaCore/Vision/Battle/BattlefieldMatcher.cpp
+index b95f04f..53d1943 100644
+--- a/src/MaaCore/Vision/Battle/BattlefieldMatcher.cpp
++++ b/src/MaaCore/Vision/Battle/BattlefieldMatcher.cpp
+@@ -176,7 +176,7 @@ battle::Role BattlefieldMatcher::oper_role_analyze(const Rect& roi) const
+     role_analyzer.set_task_info(TaskName);
+     role_analyzer.set_roi(roi);
+ 
+-    for (const auto& role_name : RoleMap | std::views::keys) {
++    for (const auto& role_name : RoleMap | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.first); })) {
+         role_analyzer.append_templ(TaskName + role_name + Ext);
+     }
+     auto role_opt = role_analyzer.analyze();
+diff --git a/src/MaaCore/Vision/Battle/SupportListAnalyzer.cpp b/src/MaaCore/Vision/Battle/SupportListAnalyzer.cpp
+index 2e88981..c750cf9 100644
+--- a/src/MaaCore/Vision/Battle/SupportListAnalyzer.cpp
++++ b/src/MaaCore/Vision/Battle/SupportListAnalyzer.cpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #include "SupportListAnalyzer.h"
+ 
+ #include "Config/TaskData.h"
+@@ -193,7 +194,7 @@ bool asst::SupportListAnalyzer::analyze(const battle::Role role)
+                                    .module_enabled = module_enabled,
+                                    .friendship = friendship };
+         Log.info(
+-            std::format(
++            maa_format::format(
+                 "SupportListAnalyzer"
+                 " | Found support unit {} from {} with elite {}, level {}, potential {} and module {}",
+                 support_unit.name,
+@@ -244,7 +245,7 @@ std::optional<int> asst::SupportListAnalyzer::merge_image(const cv::Mat& new_img
+     if (new_img.rows != m_image.rows) [[unlikely]] {
+         Log.error(
+             __FUNCTION__,
+-            std::format(
++            maa_format::format(
+                 "| new_img height ({}) does not match m_image height ({}); failed to merge images",
+                 new_img.rows,
+                 m_image.rows));
+diff --git a/src/MaaCore/Vision/FeatureMatcher.cpp b/src/MaaCore/Vision/FeatureMatcher.cpp
+index e9930f2..2bb93aa 100644
+--- a/src/MaaCore/Vision/FeatureMatcher.cpp
++++ b/src/MaaCore/Vision/FeatureMatcher.cpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #include "FeatureMatcher.h"
+ 
+ #include "Config/TemplResource.h"
+@@ -89,7 +90,7 @@ asst::FeatureMatcher::ResultsVecOpt asst::FeatureMatcher::analyze() const
+         return std::nullopt;
+     }
+ 
+-    LogTrace << std::format("count:{}, cost: {}ms", results.size(), cost.count());
++    LogTrace << maa_format::format("count:{}, cost: {}ms", results.size(), cost.count());
+     m_result = std::move(results);
+     return m_result;
+ }
+diff --git a/src/MaaCore/Vision/Infrast/InfrastOperImageAnalyzer.cpp b/src/MaaCore/Vision/Infrast/InfrastOperImageAnalyzer.cpp
+index 7359da3..cd196ab 100644
+--- a/src/MaaCore/Vision/Infrast/InfrastOperImageAnalyzer.cpp
++++ b/src/MaaCore/Vision/Infrast/InfrastOperImageAnalyzer.cpp
+@@ -274,7 +274,7 @@ void asst::InfrastOperImageAnalyzer::skill_analyze()
+ 
+             std::vector<std::pair<infrast::Skill, MatchRect>> possible_skills;
+             // 逐个该设施内所有可能的技能，取得分最高的
+-            for (const auto& skill : InfrastData.get_skills(m_facility) | std::views::values) {
++            for (const auto& skill : InfrastData.get_skills(m_facility) | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.second); })) {
+                 skill_analyzer.set_templ(skill.templ_name);
+ 
+                 if (!skill_analyzer.analyze()) {
+diff --git a/src/MaaCore/Vision/Miscellaneous/StageDropsImageAnalyzer.cpp b/src/MaaCore/Vision/Miscellaneous/StageDropsImageAnalyzer.cpp
+index 16d55f4..0cd005f 100644
+--- a/src/MaaCore/Vision/Miscellaneous/StageDropsImageAnalyzer.cpp
++++ b/src/MaaCore/Vision/Miscellaneous/StageDropsImageAnalyzer.cpp
+@@ -610,7 +610,7 @@ bool asst::StageDropsImageAnalyzer::analyze_baseline()
+     }
+ 
+     Log.trace(__FUNCTION__, "baseline size", m_baseline.size());
+-    for (const auto& key : m_baseline | std::views::keys) {
++    for (const auto& key : m_baseline | std::views::transform([](auto&& pair) -> decltype(auto) { return (pair.first); })) {
+         Log.trace(__FUNCTION__, "baseline", key.to_string());
+     }
+ 
+diff --git a/src/MaaCore/Vision/Roguelike/BlackFlow/RecognitionBridge.cpp b/src/MaaCore/Vision/Roguelike/BlackFlow/RecognitionBridge.cpp
+index 97a27c6..4cad177 100644
+--- a/src/MaaCore/Vision/Roguelike/BlackFlow/RecognitionBridge.cpp
++++ b/src/MaaCore/Vision/Roguelike/BlackFlow/RecognitionBridge.cpp
+@@ -260,8 +260,8 @@ bool RecognitionBridge::load(const std::filesystem::path& manifest_path, std::st
+             if (codepoints.empty()) {
+                 return;
+             }
+-            const auto existing = std::find_if(m_ocr_labels.begin(), m_ocr_labels.end(), [&](const OcrLabel& label) {
+-                return label.normalized_name == normalized_name;
++            const auto existing = std::find_if(m_ocr_labels.begin(), m_ocr_labels.end(), [&, captured_name = normalized_name](const OcrLabel& label) {
++                return label.normalized_name == captured_name;
+             });
+             OcrLabel label { display_name, std::move(normalized_name), node_type, std::move(codepoints) };
+             if (existing == m_ocr_labels.end()) {
+diff --git a/src/MaaCore/Vision/Roguelike/RoguelikeEncounterOptionAnalyzer.cpp b/src/MaaCore/Vision/Roguelike/RoguelikeEncounterOptionAnalyzer.cpp
+index 5c0a959..638cca6 100644
+--- a/src/MaaCore/Vision/Roguelike/RoguelikeEncounterOptionAnalyzer.cpp
++++ b/src/MaaCore/Vision/Roguelike/RoguelikeEncounterOptionAnalyzer.cpp
+@@ -1,3 +1,4 @@
++#include "HarmonyFormat.h"
+ #include "RoguelikeEncounterOptionAnalyzer.h"
+ 
+ #include "Config/TaskData.h"
+@@ -15,12 +16,12 @@ bool asst::RoguelikeEncounterOptionAnalyzer::analyze()
+     // validate m_theme
+     // ————————————————————————————————————————————————————————————————
+     if (!RoguelikeConfig::is_valid_theme(m_theme)) [[unlikely]] {
+-        Log.error(__FUNCTION__, std::format("| Invalid roguelike theme: {}; failed to analyze", m_theme));
++        Log.error(__FUNCTION__, maa_format::format("| Invalid roguelike theme: {}; failed to analyze", m_theme));
+         return false;
+     }
+ 
+     if (m_theme != RoguelikeTheme::JieGarden && m_theme != RoguelikeTheme::BlackFlow) [[unlikely]] {
+-        Log.error(__FUNCTION__, std::format("| Unsupported roguelike theme: {}; failed to analyze", m_theme));
++        Log.error(__FUNCTION__, maa_format::format("| Unsupported roguelike theme: {}; failed to analyze", m_theme));
+         return false;
+     }
+     // ————————————————————————————————————————————————————————————————
+@@ -109,12 +110,12 @@ std::optional<int> asst::RoguelikeEncounterOptionAnalyzer::merge_image(const cv:
+     // validate m_theme
+     // ————————————————————————————————————————————————————————————————
+     if (!RoguelikeConfig::is_valid_theme(m_theme)) {
+-        Log.error(__FUNCTION__, std::format("| Invalid roguelike theme: {}; failed to merge images", m_theme));
++        Log.error(__FUNCTION__, maa_format::format("| Invalid roguelike theme: {}; failed to merge images", m_theme));
+         return std::nullopt;
+     }
+ 
+     if (m_theme != RoguelikeTheme::JieGarden && m_theme != RoguelikeTheme::BlackFlow) {
+-        Log.error(__FUNCTION__, std::format("| Unsupported roguelike theme: {}; failed to merge images", m_theme));
++        Log.error(__FUNCTION__, maa_format::format("| Unsupported roguelike theme: {}; failed to merge images", m_theme));
+         return std::nullopt;
+     }
+ 
+@@ -138,7 +139,7 @@ std::optional<int> asst::RoguelikeEncounterOptionAnalyzer::merge_image(const cv:
+     if (new_img.cols != m_image.cols) [[unlikely]] {
+         Log.error(
+             __FUNCTION__,
+-            std::format(
++            maa_format::format(
+                 "| new_img width ({}) does not match m_image width ({}); failed to merge images",
+                 new_img.cols,
+                 m_image.cols));
+@@ -216,14 +217,14 @@ void asst::RoguelikeEncounterOptionAnalyzer::set_theme(const std::string& theme)
+     if (!RoguelikeConfig::is_valid_theme(theme)) {
+         Log.error(
+             __FUNCTION__,
+-            std::format("| Invalid roguelike theme: {}; failed to set theme; reverting to {}", theme, m_theme));
++            maa_format::format("| Invalid roguelike theme: {}; failed to set theme; reverting to {}", theme, m_theme));
+         return;
+     }
+ 
+     if (theme != RoguelikeTheme::JieGarden && theme != RoguelikeTheme::BlackFlow) {
+         Log.error(
+             __FUNCTION__,
+-            std::format("| Unsupported roguelike theme: {}; failed to set theme; reverting to {}", theme, m_theme));
++            maa_format::format("| Unsupported roguelike theme: {}; failed to set theme; reverting to {}", theme, m_theme));
+         return;
+     }
+     // ————————————————————————————————————————————————————————————————
+@@ -243,12 +244,12 @@ asst::Matcher::ResultOpt asst::RoguelikeEncounterOptionAnalyzer::match_option(
+     // validate theme
+     // ————————————————————————————————————————————————————————————————
+     if (!RoguelikeConfig::is_valid_theme(theme)) [[unlikely]] {
+-        Log.error(__FUNCTION__, std::format("| Invalid roguelike theme: {}; failed to match option", theme));
++        Log.error(__FUNCTION__, maa_format::format("| Invalid roguelike theme: {}; failed to match option", theme));
+         return std::nullopt;
+     }
+ 
+     if (theme != RoguelikeTheme::JieGarden && theme != RoguelikeTheme::BlackFlow) [[unlikely]] {
+-        Log.error(__FUNCTION__, std::format("| Unsupported roguelike theme: {}; failed to match option", theme));
++        Log.error(__FUNCTION__, maa_format::format("| Unsupported roguelike theme: {}; failed to match option", theme));
+         return std::nullopt;
+     }
+     // ————————————————————————————————————————————————————————————————

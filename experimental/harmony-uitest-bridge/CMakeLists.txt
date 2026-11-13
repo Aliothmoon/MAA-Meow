@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.16)
+project(maa_uitest_bridge CXX)
+add_library(maa-uitest-bridge SHARED probe.cpp)
+target_compile_features(maa-uitest-bridge PRIVATE cxx_std_17)
+target_compile_options(maa-uitest-bridge PRIVATE -Wall -Wextra -Werror -Wno-unused-command-line-argument)
