@@ -6,33 +6,27 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -92,6 +86,12 @@ internal fun OperProgressPlanCard(
                         Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null,
                             Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                    // 折叠时也能直接移除单个干员的计划，不必先展开卡片
+                    IconButton(onClick = onRemove, enabled = enabled, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Default.Delete, removeLabel, Modifier.size(20.dp),
+                            tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
+                            else MaterialTheme.colorScheme.outlineVariant)
+                    }
                 }
                 if (!expanded) {
                     val targets = buildList {
@@ -121,7 +121,7 @@ internal fun OperProgressPlanCard(
                 }
             }
             MaaAnimatedVisibility(visible = expanded) {
-                Column(Modifier.padding(horizontal = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     TargetChoices(stringResource(R.string.oper_progress_elite), plan.elite,
                         listOf(0) + (1..(oper?.maxProgressElite ?: 2)), enabled) {
@@ -136,17 +136,6 @@ internal fun OperProgressPlanCard(
                                 onChange(plan.withMastery(skill, it))
                             }
                         }
-                    }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
-                    TextButton(
-                        onClick = onRemove, enabled = enabled, modifier = Modifier.align(Alignment.End)
-                            .semantics { contentDescription = removeLabel },
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
-                    ) {
-                        Icon(Icons.Default.Delete, null, Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.oper_progress_remove_plan), style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
