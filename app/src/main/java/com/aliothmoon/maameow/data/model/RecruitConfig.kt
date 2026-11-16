@@ -246,11 +246,13 @@ data class RecruitConfig(
     override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
         // 构建 select 和 confirm 列表
         val selectList = buildList {
-            if (chooseLevel3) add(3)
+            // if (chooseLevel3) add(3)
             if (chooseLevel4) add(4)
             if (chooseLevel5) add(5)
         }
-        val confirmList = selectList // 选择即确认
+        val confirmList = selectList.toMutableList().apply {
+            if (chooseLevel3) add(3)
+        }.toList() // 三星Tag仅确认，不选择
 
         val paramsJson = buildJsonObject {
             put("refresh", refreshLevel3)
