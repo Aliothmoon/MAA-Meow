@@ -968,6 +968,11 @@
     <string name="copilot_match_hidden">Hidden by operator match: %1$d</string>
     <string name="copilot_match_missing">Not owned: %1$s</string>
     <string name="copilot_match_training">Under-trained: %1$s</string>
+    <string name="copilot_match_badge_missing">× Missing</string>
+    <string name="copilot_match_badge_elite">× Elite</string>
+    <string name="copilot_match_badge_level">× Level</string>
+    <string name="copilot_match_badge_skill">× Skill</string>
+    <string name="copilot_match_badge_module">× Module</string>
     <string name="copilot_search_added_list">Added copilots</string>
     <string name="copilot_search_tab_copilot">Copilots</string>
     <string name="copilot_search_tab_set">Copilot sets</string>

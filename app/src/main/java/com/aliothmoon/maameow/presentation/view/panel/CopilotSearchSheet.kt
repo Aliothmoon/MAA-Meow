@@ -1038,6 +1038,9 @@ private fun CopilotRowDetails(
     match: OperatorMatch?,
     characters: Map<String, CharacterInfo?>,
 ) {
+    val summary = remember(item.summary, match) {
+        match?.let { item.summary.withMatch(it) } ?: item.summary
+    }
     Column(
         modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -1051,10 +1054,10 @@ private fun CopilotRowDetails(
             }
         }
         if (item.details.isNotBlank()) CopilotDetails(item.details)
-        if (item.summary.operators.isNotEmpty()) {
-            OperatorGrid { OperatorCells(item.summary.operators, characters) }
+        if (summary.operators.isNotEmpty()) {
+            OperatorGrid { OperatorCells(summary.operators, characters) }
         }
-        item.summary.groups.forEach { (name, opers) ->
+        summary.groups.forEach { (name, opers) ->
             OperatorGroup(name, opers, characters)
         }
     }

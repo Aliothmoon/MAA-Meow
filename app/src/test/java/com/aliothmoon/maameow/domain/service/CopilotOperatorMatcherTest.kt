@@ -8,6 +8,7 @@ import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxSkill
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -133,7 +134,32 @@ class CopilotOperatorMatcherTest {
     fun recognizedDataSkipsSkillAndModule() {
         val recognized = owned("x", elite = 2, level = 60)
         assertTrue(CopilotOperatorMatcher.meets(oper("x", skill = 3, skillLevel = 10, module = 1), recognized))
+        assertNull(CopilotOperatorMatcher.firstMismatch(oper("x", skill = 3, skillLevel = 10, module = 1), recognized))
         assertFalse(CopilotOperatorMatcher.meets(oper("x", elite = 2, level = 70), recognized))
+    }
+
+    @Test
+    fun firstMismatchFollowsPriority() {
+        val need = oper("x", elite = 2, level = 60, skill = 2, skillLevel = 10, module = 1)
+        val ready = owned("x", level = 60, mainSkillLevel = 7, mastery = listOf(0, 3), equips = listOf("X"))
+        val weak = ready.copy(elite = 1, level = 30, skills = listOf(OperBoxSkill("s1", 0), OperBoxSkill("s2", 1)), equips = emptyList())
+
+        assertEquals(OperatorMismatchReason.MISSING, CopilotOperatorMatcher.firstMismatch(need, null))
+        assertEquals(OperatorMismatchReason.ELITE, CopilotOperatorMatcher.firstMismatch(need, weak))
+        assertEquals(OperatorMismatchReason.LEVEL, CopilotOperatorMatcher.firstMismatch(need, weak.copy(elite = 2)))
+        assertEquals(OperatorMismatchReason.SKILL, CopilotOperatorMatcher.firstMismatch(need, weak.copy(elite = 2, level = 60)))
+        assertEquals(OperatorMismatchReason.MODULE, CopilotOperatorMatcher.firstMismatch(need, ready.copy(equips = emptyList())))
+        assertNull(CopilotOperatorMatcher.firstMismatch(need, ready))
+    }
+
+    @Test
+    fun promotionReasonsKeepCumulativeLevelAndInference() {
+        val inferred = oper("x", level = 60)
+        assertEquals(OperatorMismatchReason.ELITE, CopilotOperatorMatcher.firstMismatch(inferred, owned("x", elite = 0, level = 50)))
+        assertEquals(OperatorMismatchReason.LEVEL, CopilotOperatorMatcher.firstMismatch(inferred, owned("x", elite = 1, level = 59)))
+        // 精二 1 级的累计等级已超过精一 60 级，不能按裸等级判为不足。
+        assertNull(CopilotOperatorMatcher.firstMismatch(inferred, owned("x", elite = 2, level = 1)))
+        assertNull(CopilotOperatorMatcher.firstMismatch(oper("x", elite = 1, level = 60), owned("x", elite = 2, level = 1)))
     }
 
     @Test
@@ -141,9 +167,25 @@ class CopilotOperatorMatcherTest {
         val box = listOf(owned("a", elite = 1, level = 1), owned("b"))
         fun group(vararg names: String) = CopilotGroup("g", names.map { oper(it, elite = 2, level = 1) })
 
-        assertEquals(OperatorMatchMode.READY, match(emptyList(), box, listOf(group("a", "b"))).mode)
+        val result = match(emptyList(), box, listOf(group("a", "b", "ghost")))
+        assertEquals(OperatorMatchMode.READY, result.mode)
+        assertEquals(listOf(OperatorMismatchReason.ELITE, null, OperatorMismatchReason.MISSING), result.groups.single())
         assertEquals(listOf("g"), match(emptyList(), box, listOf(group("a"))).training)
         assertEquals(listOf("g"), match(emptyList(), box, listOf(group("ghost"))).missing)
+    }
+
+    @Test
+    fun sameOperatorKeepsSeparateRequirementsWithinAndAcrossGroups() {
+        val ready = oper("x", skill = 1, skillLevel = 10)
+        val skill = oper("x", skill = 2, skillLevel = 10)
+        val level = oper("x", elite = 2, level = 90)
+        val result = match(
+            listOf(skill),
+            listOf(owned("x", level = 60, mastery = listOf(3, 1))),
+            listOf(CopilotGroup("g1", listOf(skill, ready)), CopilotGroup("g2", listOf(level))),
+        )
+        assertEquals(listOf(OperatorMismatchReason.SKILL), result.operators)
+        assertEquals(listOf(listOf(OperatorMismatchReason.SKILL, null), listOf(OperatorMismatchReason.LEVEL)), result.groups)
     }
 
     @Test

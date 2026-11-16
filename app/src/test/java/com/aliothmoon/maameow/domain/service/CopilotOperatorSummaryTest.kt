@@ -104,4 +104,38 @@ class CopilotOperatorSummaryTest {
         assertEquals(9, members[0].skillLevel)
         assertEquals(2, members.size)
     }
+
+    @Test
+    fun matchedSummaryStablyOrdersOnlyGroupCandidatesWithoutChangingOriginal() {
+        val candidates = listOf(
+            CopilotOperator(name = "同名", skill = 1),
+            CopilotOperator(name = "同名", skill = 2),
+            CopilotOperator(name = "同名", skill = 3),
+            CopilotOperator(name = "另一候选", skill = 1),
+        )
+        val summary = summaryOf(
+            CopilotOperator(name = "未拥有"), CopilotOperator(name = "已满足"),
+            groups = listOf(CopilotGroup("g1", candidates), CopilotGroup("g2", candidates.reversed())),
+        )
+        val reasons = listOf(OperatorMismatchReason.SKILL, null, OperatorMismatchReason.MISSING, null)
+        val displayed = summary.withMatch(OperatorMatch(
+            mode = OperatorMatchMode.BORROW,
+            missing = listOf("未拥有"),
+            training = emptyList(),
+            operators = listOf(OperatorMismatchReason.MISSING, null),
+            groups = listOf(reasons, reasons.reversed()),
+        ))
+
+        assertEquals(summary.operators.map { it.name }, displayed.operators.map { it.name })
+        assertEquals(listOf(OperatorMismatchReason.MISSING, null), displayed.operators.map { it.mismatchReason })
+        assertEquals(listOf("g1", "g2"), displayed.groups.map { it.first })
+        assertEquals(listOf(2, 1, 1, 3), displayed.groups[0].second.map { it.skill })
+        assertEquals(listOf(null, null, OperatorMismatchReason.SKILL, OperatorMismatchReason.MISSING), displayed.groups[0].second.map { it.mismatchReason })
+        assertEquals(listOf(1, 2, 3, 1), displayed.groups[1].second.map { it.skill })
+        assertEquals(summary.totalCount, displayed.totalCount)
+        // 关闭匹配重新使用原始摘要；匹配和排序未修改原始摘要或作业列表。
+        assertEquals(listOf(1, 2, 3, 1), summary.groups[0].second.map { it.skill })
+        assertEquals(listOf(1, 2, 3, 1), candidates.map { it.skill })
+        assertNull(summary.groups[0].second[0].mismatchReason)
+    }
 }

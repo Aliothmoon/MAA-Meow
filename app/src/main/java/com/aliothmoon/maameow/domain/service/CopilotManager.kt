@@ -81,6 +81,7 @@ data class OperatorDisplayItem(
     val skillLevel: Int?,
     /** 0 为不带模组，1..5 依次对应 χ γ α Δ β */
     val module: Int?,
+    val mismatchReason: OperatorMismatchReason? = null,
 )
 
 data class OperatorSummaryData(
@@ -89,6 +90,18 @@ data class OperatorSummaryData(
     val totalCount: Int,
 ) {
     val isEmpty get() = totalCount == 0
+
+    /** 只生成展示副本，先绑定原始位置的原因，再在各组内稳定排序。 */
+    fun withMatch(match: OperatorMatch): OperatorSummaryData = copy(
+        operators = operators.mapIndexed { index, oper ->
+            oper.copy(mismatchReason = match.operators.getOrNull(index))
+        },
+        groups = groups.mapIndexed { groupIndex, (name, opers) ->
+            name to opers.mapIndexed { index, oper ->
+                oper.copy(mismatchReason = match.groups.getOrNull(groupIndex)?.getOrNull(index))
+            }.sortedBy { it.mismatchReason != null }
+        },
+    )
 }
 
 class CopilotManager(

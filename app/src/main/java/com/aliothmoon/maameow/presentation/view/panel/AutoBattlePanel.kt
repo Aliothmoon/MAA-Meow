@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -98,6 +99,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
@@ -118,6 +120,7 @@ import com.aliothmoon.maameow.data.resource.CharacterInfo
 import com.aliothmoon.maameow.data.resource.CopilotResourceProvider
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.OperatorDisplayItem
+import com.aliothmoon.maameow.domain.service.OperatorMismatchReason
 import com.aliothmoon.maameow.domain.service.OperatorSummaryData
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
@@ -1640,7 +1643,8 @@ internal fun OperatorGrid(
 private fun OperatorCell(item: OperatorDisplayItem, operId: String, rarity: Int) {
     Surface(
         shape = RoundedCornerShape(6.dp),
-        color = MaterialTheme.colorScheme.surface
+        color = MaterialTheme.colorScheme.surface,
+        modifier = if (item.mismatchReason == null) Modifier else Modifier.semantics(mergeDescendants = true) {}
     ) {
         Row(
             modifier = Modifier.padding(6.dp),
@@ -1648,23 +1652,47 @@ private fun OperatorCell(item: OperatorDisplayItem, operId: String, rarity: Int)
             verticalAlignment = Alignment.CenterVertically
         ) {
             val rarityColor = if (rarity > 0) operRarityColor(rarity) else Color.Transparent
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    // 查不到头像时留底色占位
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .drawWithContent {
-                        drawContent()
-                        val bar = OPER_RARITY_BAR.toPx()
-                        drawRect(
-                            color = rarityColor,
-                            topLeft = Offset(0f, size.height - bar),
-                            size = Size(size.width, bar)
+            // 角标按文案自然宽度占位，允许超出头像，但不侵入右侧名称和属性。
+            Box(modifier = Modifier.widthIn(min = 36.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        // 查不到头像时留底色占位
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .drawWithContent {
+                            drawContent()
+                            val bar = OPER_RARITY_BAR.toPx()
+                            drawRect(
+                                color = rarityColor,
+                                topLeft = Offset(0f, size.height - bar),
+                                size = Size(size.width, bar)
+                            )
+                        }
+                ) {
+                    OperAvatar(operId = operId, modifier = Modifier.fillMaxSize())
+                }
+                item.mismatchReason?.let { reason ->
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                        modifier = Modifier.align(Alignment.TopEnd)
+                    ) {
+                        Text(
+                            text = stringResource(when (reason) {
+                                OperatorMismatchReason.MISSING -> R.string.copilot_match_badge_missing
+                                OperatorMismatchReason.ELITE -> R.string.copilot_match_badge_elite
+                                OperatorMismatchReason.LEVEL -> R.string.copilot_match_badge_level
+                                OperatorMismatchReason.SKILL -> R.string.copilot_match_badge_skill
+                                OperatorMismatchReason.MODULE -> R.string.copilot_match_badge_module
+                            }),
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
                         )
                     }
-            ) {
-                OperAvatar(operId = operId, modifier = Modifier.fillMaxSize())
+                }
             }
             Column(
                 modifier = Modifier.weight(1f),

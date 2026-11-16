@@ -1022,6 +1022,11 @@
     <string name="copilot_match_hidden">已按干员匹配隐藏 %1$d 个作业</string>
     <string name="copilot_match_missing">未拥有：%1$s</string>
     <string name="copilot_match_training">练度不足：%1$s</string>
+    <string name="copilot_match_badge_missing">× 未拥有</string>
+    <string name="copilot_match_badge_elite">× 精英化</string>
+    <string name="copilot_match_badge_level">× 等级</string>
+    <string name="copilot_match_badge_skill">× 技能</string>
+    <string name="copilot_match_badge_module">× 模组</string>
     <string name="copilot_search_added_list">已添加作业</string>
     <string name="copilot_search_tab_copilot">作业</string>
     <string name="copilot_search_tab_set">作业集</string>
