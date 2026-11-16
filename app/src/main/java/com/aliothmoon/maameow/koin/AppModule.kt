@@ -289,9 +289,9 @@ val appModule = module {
                     }
                 }
             },
-            foregroundPackage = {
+            foregroundPackages = {
                 RemoteServiceManager.useRemoteService(timeoutMs = 3_000L) {
-                    it.getTopPackage(Display.DEFAULT_DISPLAY)
+                    it.getVisiblePackages(Display.DEFAULT_DISPLAY)
                 }
             },
             appLabel = { LauncherApps.label(appContext, it) ?: it },

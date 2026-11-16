@@ -2225,6 +2225,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_log_silent_start">Phone in use; starting silently with the countdown in the notification instead of opening the app</string>
     <string name="schedule_log_blacklist_hit">Foreground app \"%1$s\" is blacklisted; skipped</string>
     <string name="schedule_log_blacklist_unknown">Could not detect the foreground app; blacklist not applied</string>
+    <string name="schedule_log_foreground_apps">Apps visible on the main display: %1$s</string>
     <string name="schedule_log_task_running_busy">A task is already running</string>
     <string name="schedule_log_backend_connecting">Connecting to the service…</string>
     <string name="schedule_log_backend_connect_cause">Service failed to start: %1$s</string>

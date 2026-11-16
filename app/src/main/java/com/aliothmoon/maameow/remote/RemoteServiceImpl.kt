@@ -539,8 +539,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
         return ActivityUtils.startActivity(intent)
     }
 
-    override fun getTopPackage(displayId: Int): String? =
-        (ActivityUtils.probeDisplay(displayId) as? ActivityUtils.DisplayOccupancy.Occupied)?.topPackage
+    override fun getVisiblePackages(displayId: Int): List<String>? = ActivityUtils.visiblePackages(displayId)
 
     override fun setForceFullscreenOnVirtualDisplay(enabled: Boolean) {
         Ln.i("$TAG: setForceFullscreenOnVirtualDisplay($enabled)")

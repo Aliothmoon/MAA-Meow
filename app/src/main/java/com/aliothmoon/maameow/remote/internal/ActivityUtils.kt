@@ -151,10 +151,7 @@ object ActivityUtils {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return DisplayOccupancy.Unknown
         if (taskDisplayIdField == null) return DisplayOccupancy.Unknown
         return runCatching {
-            val am = FakeContext.get().getSystemService(ActivityManager::class.java)
-                ?: return DisplayOccupancy.Unknown
-            @Suppress("DEPRECATION")
-            val tasks = am.getRunningTasks(100)
+            val tasks = runningTasks() ?: return DisplayOccupancy.Unknown
             val displayIds = tasks.map(::getTaskDisplayId)
             val index = displayIds.indexOf(displayId)
             when {
@@ -163,6 +160,17 @@ object ActivityUtils {
                 else -> DisplayOccupancy.Empty
             }
         }.onFailure { Ln.w("probeDisplay: failed", it) }.getOrDefault(DisplayOccupancy.Unknown)
+    }
+
+    fun visiblePackages(displayId: Int): List<String>? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+        if (taskDisplayIdField == null) return null
+        return runCatching {
+            val onDisplay = runningTasks()?.filter { getTaskDisplayId(it) == displayId }
+            if (onDisplay.isNullOrEmpty()) return null
+            val picked = if (visibilityReadable) onDisplay.filter(::isTaskVisible) else onDisplay.take(1)
+            picked.mapNotNull { it.topActivity?.packageName }.distinct()
+        }.onFailure { Ln.w("visiblePackages: failed", it) }.getOrNull()
     }
 
     /**
@@ -261,9 +269,7 @@ object ActivityUtils {
     }
 
     private fun findRecentTask(packageName: String): ActivityManager.RunningTaskInfo? {
-        val am = FakeContext.get().getSystemService(ActivityManager::class.java) ?: return null
-        @Suppress("DEPRECATION")
-        return am.getRunningTasks(100).firstOrNull { task ->
+        return runningTasks()?.firstOrNull { task ->
             task.topActivity?.packageName == packageName
                     || task.baseActivity?.packageName == packageName
         }
@@ -381,20 +387,37 @@ object ActivityUtils {
         }
     }
 
-    private val taskDisplayIdField by lazy {
-        runCatching {
-            var cls: Class<*>? = ActivityManager.RunningTaskInfo::class.java
-            var field: java.lang.reflect.Field? = null
-            while (cls != null && field == null) {
-                field = runCatching { cls.getDeclaredField("displayId") }.getOrNull()
-                cls = cls.superclass
-            }
-            field?.also { it.isAccessible = true }
-        }.onFailure { Ln.w("taskDisplayIdField: reflection failed", it) }.getOrNull()
-    }
+    private val taskDisplayIdField by lazy { taskInfoField("displayId") }
+
+    // 14 起有公开的 isVisible()，之前只能读隐藏字段
+    private val taskVisibleField by lazy { taskInfoField("isVisible") }
+
+    private val visibilityReadable: Boolean
+        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE || taskVisibleField != null
+
+    @Suppress("DEPRECATION")
+    private fun runningTasks(): List<ActivityManager.RunningTaskInfo>? =
+        FakeContext.get().getSystemService(ActivityManager::class.java)?.getRunningTasks(100)
+
+    private fun taskInfoField(name: String): java.lang.reflect.Field? = runCatching {
+        var cls: Class<*>? = ActivityManager.RunningTaskInfo::class.java
+        var field: java.lang.reflect.Field? = null
+        while (cls != null && field == null) {
+            field = runCatching { cls.getDeclaredField(name) }.getOrNull()
+            cls = cls.superclass
+        }
+        field?.also { it.isAccessible = true }
+    }.onFailure { Ln.w("taskInfoField($name): reflection failed", it) }.getOrNull()
 
     private fun getTaskDisplayId(task: ActivityManager.RunningTaskInfo): Int =
         runCatching { taskDisplayIdField?.getInt(task) ?: -1 }.getOrDefault(-1)
+
+    private fun isTaskVisible(task: ActivityManager.RunningTaskInfo): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            task.isVisible
+        } else {
+            runCatching { taskVisibleField?.getBoolean(task) == true }.getOrDefault(false)
+        }
 
     private fun startViaAmCommand(intent: Intent, displayId: Int): Boolean {
         try {

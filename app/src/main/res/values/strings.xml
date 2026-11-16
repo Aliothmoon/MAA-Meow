@@ -2281,6 +2281,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_log_silent_start">正在使用手机，静默启动：不拉起界面，改在通知栏倒计时</string>
     <string name="schedule_log_blacklist_hit">前台应用「%1$s」在黑名单中，已跳过</string>
     <string name="schedule_log_blacklist_unknown">无法判断前台应用，黑名单未生效</string>
+    <string name="schedule_log_foreground_apps">主屏可见应用：%1$s</string>
     <string name="schedule_log_task_running_busy">有任务正在运行</string>
     <string name="schedule_log_backend_connecting">连接服务…</string>
     <string name="schedule_log_backend_connect_cause">服务启动失败原因: %1$s</string>

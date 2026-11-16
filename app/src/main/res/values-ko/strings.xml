@@ -2281,6 +2281,7 @@
     <string name="schedule_log_silent_start">휴대폰 사용 중, 조용한 시작: 앱 화면을 열지 않고 알림에서 카운트다운합니다</string>
     <string name="schedule_log_blacklist_hit">포그라운드 앱 「%1$s」이(가) 블랙리스트에 있어 건너뜁니다</string>
     <string name="schedule_log_blacklist_unknown">포그라운드 앱을 확인할 수 없어 블랙리스트가 적용되지 않았습니다</string>
+    <string name="schedule_log_foreground_apps">메인 화면에 표시된 앱: %1$s</string>
     <string name="schedule_log_task_running_busy">실행 중인 작업이 있습니다</string>
     <string name="schedule_log_backend_connecting">서비스 연결 중…</string>
     <string name="schedule_log_backend_connect_cause">서비스 시작 실패 원인: %1$s</string>

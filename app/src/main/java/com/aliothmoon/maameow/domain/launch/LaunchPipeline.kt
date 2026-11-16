@@ -66,8 +66,8 @@ class LaunchPipeline(
     private val activityLauncher: suspend (LaunchRequest) -> Boolean,
     /** 提权后端用不了的原因，null = 已连上；会申请授权、等连接 */
     private val remoteAccessBlocker: suspend () -> BackendBlock?,
-    /** 主屏顶层应用包名，判不出为 null */
-    private val foregroundPackage: suspend () -> String?,
+    /** 主屏可见任务的包名，焦点任务在前；判不出为 null */
+    private val foregroundPackages: suspend () -> List<String>?,
     private val appLabel: (String) -> String,
     /** 参数为关服务前是否锁屏休眠 */
     private val terminateApp: suspend (sleep: Boolean) -> Unit,
@@ -139,8 +139,8 @@ class LaunchPipeline(
                 }
                 // 命中黑名单也别抢占在途的
                 if (isBackgroundSchedule(request) && !deviceIdle()) {
-                    (checkForeground() as? ForegroundCheck.Blacklisted)?.let {
-                        finishWithoutHold(request, ExecutionResult.SKIPPED_BLACKLIST, it.message)
+                    blacklistHit()?.let {
+                        finishWithoutHold(request, ExecutionResult.SKIPPED_BLACKLIST, it)
                         return
                     }
                 }
@@ -201,15 +201,10 @@ class LaunchPipeline(
 
             // 先于强制启动的接管，命中就别把在跑的停了
             if (inUseSchedule) {
-                when (val check = checkForeground()) {
-                    is ForegroundCheck.Blacklisted -> {
-                        terminalResult = ExecutionResult.SKIPPED_BLACKLIST
-                        terminalMessage = check.message
-                        return
-                    }
-
-                    ForegroundCheck.Unknown -> log.append(uiTextOf(R.string.schedule_log_blacklist_unknown))
-                    ForegroundCheck.Clear -> Unit
+                blacklistHit(log)?.let {
+                    terminalResult = ExecutionResult.SKIPPED_BLACKLIST
+                    terminalMessage = it
+                    return
                 }
             }
 
@@ -353,6 +348,14 @@ class LaunchPipeline(
                     log.append(uiTextOf(R.string.schedule_log_start_now))
                 } else {
                     log.append(uiTextOf(R.string.schedule_log_countdown_done))
+                    // 倒计时里可能切进了名单内的应用；点了立即开始、已不在用就不拦
+                    if (inUseSchedule && !deviceIdle()) {
+                        blacklistHit(log)?.let {
+                            terminalResult = ExecutionResult.SKIPPED_BLACKLIST
+                            terminalMessage = it
+                            return
+                        }
+                    }
                 }
             }
 
@@ -540,17 +543,12 @@ class LaunchPipeline(
     private fun deviceIdle(screen: WakeSnapshot = screenSnapshot()): Boolean =
         !screen.screenOn || screen.keyguardLocked || screenPower.poweredOff != null
 
-    private sealed interface ForegroundCheck {
-        data object Clear : ForegroundCheck
-        data object Unknown : ForegroundCheck
-        data class Blacklisted(val message: UiText) : ForegroundCheck
-    }
-
-    private suspend fun checkForeground(): ForegroundCheck {
+    /** 主屏任一可见应用在名单里就返回跳过原因；[log] 记下探到的包名，判不出也记一笔后放行 */
+    private suspend fun blacklistHit(log: ScheduleTriggerLogger.Session? = null): UiText? {
         val blacklist = appSettingsManager.scheduleAppBlacklist.value
-        if (blacklist.isEmpty()) return ForegroundCheck.Clear
-        val pkg = try {
-            foregroundPackage()
+        if (blacklist.isEmpty()) return null
+        val packages = try {
+            foregroundPackages()
         } catch (e: TimeoutCancellationException) {
             // 探测超时不是被抢占，按判不出处理
             Timber.w(e, "LaunchPipeline: foreground probe timed out")
@@ -561,14 +559,13 @@ class LaunchPipeline(
             Timber.w(e, "LaunchPipeline: foreground probe failed")
             null
         }
-        return when (pkg) {
-            null -> ForegroundCheck.Unknown
-            in blacklist -> ForegroundCheck.Blacklisted(
-                uiTextOf(R.string.schedule_log_blacklist_hit, appLabel(pkg)),
-            )
-
-            else -> ForegroundCheck.Clear
+        if (packages.isNullOrEmpty()) {
+            log?.append(uiTextOf(R.string.schedule_log_blacklist_unknown))
+            return null
         }
+        log?.append(uiTextOf(R.string.schedule_log_foreground_apps, packages.joinToString(", ")))
+        val hit = packages.firstOrNull { it in blacklist } ?: return null
+        return uiTextOf(R.string.schedule_log_blacklist_hit, appLabel(hit))
     }
 
     /** 抢占前撤掉上一轮收尾与屏保，避免 stop 边沿触发旧 autoSleep */

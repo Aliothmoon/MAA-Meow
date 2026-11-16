@@ -103,7 +103,7 @@ class LaunchPipelineTest {
     private val foregroundProbes = AtomicInteger(0)
 
     @Volatile
-    private var foregroundPkg: String? = null
+    private var foregroundPkgs: List<String>? = null
 
     @Volatile
     private var probeTimesOut = false
@@ -169,7 +169,7 @@ class LaunchPipelineTest {
         powerOffSucceeds = true
         remoteBlocker = null
         blacklist.value = emptySet()
-        foregroundPkg = null
+        foregroundPkgs = null
         foregroundProbes.set(0)
         probeTimesOut = false
         lastPresentation = null
@@ -296,10 +296,10 @@ class LaunchPipelineTest {
             true
         },
         remoteAccessBlocker = { remoteBlocker },
-        foregroundPackage = {
+        foregroundPackages = {
             foregroundProbes.incrementAndGet()
             if (probeTimesOut) withTimeout(1) { delay(1_000) }
-            foregroundPkg
+            foregroundPkgs
         },
         appLabel = { "label:$it" },
         terminateApp = { sleep -> endSteps.add("exit:$sleep") },
@@ -1348,7 +1348,7 @@ class LaunchPipelineTest {
     @Test
     fun blacklistHit_inUse_skipsBeforeUnlockAndUi() = runBlocking<Unit> {
         blacklist.value = setOf("com.game")
-        foregroundPkg = "com.game"
+        foregroundPkgs = listOf("com.game")
 
         pipeline().execute(scheduleRequest()).join()
 
@@ -1366,19 +1366,88 @@ class LaunchPipelineTest {
     @Test
     fun blacklistMiss_inUse_starts() = runBlocking<Unit> {
         blacklist.value = setOf("com.game")
-        foregroundPkg = "com.other"
+        foregroundPkgs = listOf("com.other")
 
         pipeline().execute(scheduleRequest()).join()
 
         assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
-        assertEquals(1, foregroundProbes.get())
+        // 倒计时前后各探一次
+        assertEquals(2, foregroundProbes.get())
+        verify { logSession.append(uiTextOf(R.string.schedule_log_foreground_apps, "com.other")) }
         assertEquals(1, uiLaunches.get())
+    }
+
+    // 小窗拿着焦点，压在下面的全屏游戏仍可见
+    @Test
+    fun blacklistHit_visibleBehindFocusedWindow_skips() = runBlocking<Unit> {
+        blacklist.value = setOf("com.game")
+        foregroundPkgs = listOf("com.chat", "com.game")
+
+        pipeline().execute(scheduleRequest()).join()
+
+        val reason = uiTextOf(R.string.schedule_log_blacklist_hit, "label:com.game")
+        assertEquals(listOf(ExecutionResult.SKIPPED_BLACKLIST), recorded.toList())
+        verify { logSession.append(uiTextOf(R.string.schedule_log_foreground_apps, "com.chat, com.game")) }
+        verify { logSession.end(ExecutionResult.SKIPPED_BLACKLIST, reason) }
+        assertEquals(0, startCalls.get())
+    }
+
+    /** 倒计时里切进名单内的游戏 */
+    private fun enterGameDuringCountdown(startNow: Boolean = false, screenOff: Boolean = false) =
+        object : CountdownUI {
+            override suspend fun await(
+                request: LaunchRequest,
+                onTick: (remainingSeconds: Int) -> Unit,
+                shouldAbort: () -> Boolean,
+            ): Boolean {
+                foregroundPkgs = listOf("com.game")
+                if (screenOff) screenInteractive.set(false)
+                return startNow
+            }
+        }
+
+    @Test
+    fun blacklistHit_duringCountdown_skipsStart() = runBlocking<Unit> {
+        blacklist.value = setOf("com.game")
+        foregroundPkgs = listOf("com.other")
+        val p = pipeline(countdown = enterGameDuringCountdown())
+
+        p.execute(scheduleRequest(silent = true)).join()
+
+        assertEquals(listOf(ExecutionResult.SKIPPED_BLACKLIST), recorded.toList())
+        assertEquals(2, foregroundProbes.get())
+        assertEquals(0, startCalls.get())
+        assertTrue(p.session.value is LaunchSession.Idle)
+    }
+
+    // 用户点了立即开始就不再拦
+    @Test
+    fun blacklist_startNow_notRechecked() = runBlocking<Unit> {
+        blacklist.value = setOf("com.game")
+        foregroundPkgs = listOf("com.other")
+
+        pipeline(countdown = enterGameDuringCountdown(startNow = true)).execute(scheduleRequest(silent = true)).join()
+
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        assertEquals(1, foregroundProbes.get())
+    }
+
+    // 倒计时里熄了屏，同首查一样不算在用
+    @Test
+    fun blacklist_idleAfterCountdown_notRechecked() = runBlocking<Unit> {
+        blacklist.value = setOf("com.game")
+        foregroundPkgs = listOf("com.other")
+
+        pipeline(countdown = enterGameDuringCountdown(screenOff = true)).execute(scheduleRequest(silent = true)).join()
+
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        assertEquals(1, foregroundProbes.get())
     }
 
     /** 名单命中前台应用，但这些场景不该去探测 */
     private suspend fun assertStartsWithoutProbe(request: LaunchRequest) {
         blacklist.value = setOf("com.game")
-        foregroundPkg = "com.game"
+        foregroundPkgs = listOf("com.game")
         pipeline().execute(request).join()
         assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
         assertEquals(0, foregroundProbes.get())
@@ -1410,7 +1479,7 @@ class LaunchPipelineTest {
 
     @Test
     fun blacklistEmpty_skipsProbe() = runBlocking<Unit> {
-        foregroundPkg = "com.game"
+        foregroundPkgs = listOf("com.game")
 
         pipeline().execute(scheduleRequest()).join()
 
@@ -1421,7 +1490,7 @@ class LaunchPipelineTest {
     @Test
     fun blacklist_foregroundUnknown_startsAndLogs() = runBlocking<Unit> {
         blacklist.value = setOf("com.game")
-        foregroundPkg = null
+        foregroundPkgs = null
 
         pipeline().execute(scheduleRequest()).join()
 
@@ -1446,7 +1515,7 @@ class LaunchPipelineTest {
     fun blacklistHit_forceStart_keepsRunningTask() = runBlocking<Unit> {
         compositionState.value = MaaExecutionState.RUNNING
         blacklist.value = setOf("com.game")
-        foregroundPkg = "com.game"
+        foregroundPkgs = listOf("com.game")
 
         pipeline().execute(scheduleRequest(force = true)).join()
 
@@ -1465,11 +1534,13 @@ class LaunchPipelineTest {
         withTimeout(5_000) { entered.await() }
 
         blacklist.value = setOf("com.game")
-        foregroundPkg = "com.game"
+        foregroundPkgs = listOf("com.game")
         p.execute(scheduleRequest("b", force = true)).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_BLACKLIST), recorded.toList())
         assertEquals(0, stopCalls.get())
 
+        // 已切走，a 倒计时后复查放行
+        foregroundPkgs = listOf("com.other")
         release.complete(Unit)
         first.join()
         assertEquals(listOf(ExecutionResult.SKIPPED_BLACKLIST, ExecutionResult.STARTED), recorded.toList())

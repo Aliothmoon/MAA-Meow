@@ -125,9 +125,6 @@ interface RemoteService {
     // 替被杀的上一个提权进程翻系统日志
     String dumpSystemLog(long sinceMs, long untilMs, int pid, String processPrefix) = 53;
 
-    // displayId 上顶层任务的包名，判不出返回 null
-    String getTopPackage(int displayId) = 54;
-
     // 最近一次唤醒解锁（含自测）的步骤与耗时，不含 PIN 与轨迹
     // sinceElapsedMs 为 App 发起解锁时的 elapsedRealtime，更早开始的返回空串
     String getLastWakeTrace(long sinceElapsedMs) = 55;
@@ -152,4 +149,6 @@ interface RemoteService {
 
     // 只在任务期间开，否则共用主屏组时主屏无法息屏
     void setUserActivityKeepAlive(boolean enabled) = 62;
+
+    List<String> getVisiblePackages(int displayId) = 63;
 }
