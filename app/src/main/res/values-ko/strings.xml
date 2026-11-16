@@ -1473,7 +1473,7 @@
     <string name="panel_wakeup_client_yostar_kr">한국 (Yostar)</string>
     <string name="panel_wakeup_client_txwy">TXWY (TW)</string>
     <string name="panel_wakeup_account_switch">계정 전환</string>
-    <string name="panel_wakeup_account_hint">계정이 하나뿐이면 비워 두면 됩니다. 전환할 계정을 입력하며, 비워 두면 비활성화됩니다. 로그인 화면에 표시된 내용을 입력하세요(예: 123****4567 또는 1234). 부분 일치를 지원합니다. TXWY (TW) 서버와 한국 (Yostar) 서버의 계정은 이메일이므로 별표가 없는 평문 부분(예: 01@gmail)을 입력하는 것을 권장합니다. 중국 (Official), 중국 (Bilibili), TXWY (TW), 한국 (Yostar) 서버만 지원하며, 서드파티 로그인 방식은 지원하지 않습니다.</string>
+    <string name="panel_wakeup_account_hint">계정이 하나뿐이면 비워 두면 됩니다. 전환할 계정을 입력하며, 비워 두면 비활성화됩니다. 로그인 화면에 표시된 내용을 입력하세요(예: 123****4567 또는 1234). 부분 일치를 지원하지만 화면에 연속으로 표시된 부분이어야 합니다. TXWY (TW) 서버와 한국 (Yostar) 서버의 계정은 이메일이며 ab****01@gmail.com 형식으로 표시됩니다. 별표 뒤의 연속된 평문 부분(예: 01@gmail)을 입력하는 것을 권장하며, 전체 이메일이나 별표를 뺀 문자열은 입력하지 마세요. 중국 (Official), 중국 (Bilibili), TXWY (TW), 한국 (Yostar) 서버만 지원하며, 서드파티 로그인 방식은 지원하지 않습니다.</string>
     <string name="panel_wakeup_launch_game">게임 실행</string>
 
     <!-- panel: fight -->
