@@ -191,12 +191,10 @@ presentation/viewmodel/MiniGameDelegate.kt	诡影迷踪
 data/model/activity/StageActivityInfo.kt	资源收集
 
 # 持久化数据的默认名，存盘后不随语言变
-data/preferences/TaskChainState.kt	配置-
+data/model/TaskNames.kt	配置-
 
 # 仅诊断，或 UI 层已按错误码 / 异常类型映射为资源串
-data/api/MirrorChyanApiClient.kt	数据为空
 data/api/MirrorChyanApiClient.kt	更新服务不可用
-data/api/MirrorChyanApiClient.kt	请输入正确的 CDK
 data/datasource/AssetExtractor.kt	Assets 清单文件不存在，请重新构建项目
 data/repository/CopilotRepository.kt	重命名 ${tmp.name} 失败
 data/resource/BackgroundImageStore.kt	重命名背景文件失败

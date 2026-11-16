@@ -13,6 +13,7 @@ import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.maa.task.TaskSlot
 import com.aliothmoon.maameow.utils.i18n.UiText
+import com.aliothmoon.maameow.utils.i18n.uiTextDynamic
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.serialization.Serializable
 
@@ -102,13 +103,13 @@ data class DepotMaintainConfig(
             params += MaaTaskParams(
                 MaaTaskType.DEPOT,
                 "{}",
-                logName = uiTextOf(R.string.runlog_task_with_detail, ctx.node.name, uiTextOf(R.string.maa_depot)),
+                logName = uiTextOf(R.string.runlog_task_with_detail, ctx.node.nameUiText(), uiTextOf(R.string.maa_depot)),
             )
         }
 
         // 每份库存保持的计划日志前插一条分段，跟上游 AddLogSection 对齐
         if (plans.isNotEmpty()) {
-            ctx.appendLog(uiTextOf(R.string.runlog_log_section, ctx.node.name), LogLevel.TRACE)
+            ctx.appendLog(uiTextOf(R.string.runlog_log_section, ctx.node.nameUiText()), LogLevel.TRACE)
         }
 
         // 预先评估后备计划，暂不输出日志
@@ -232,7 +233,8 @@ data class DepotMaintainConfig(
 
         fun skippedPlan() = SkippedDepotPlans.Plan(no = no, dropId = plan.dropId, dropCount = plan.dropCount)
 
-        fun logName(ctx: TaskParamContext): UiText = UiText.Dynamic("${ctx.node.name} #$no")
+        fun logName(ctx: TaskParamContext): UiText =
+            ctx.node.nameUiText("#$no")
 
         fun logLevel(): LogLevel = when (outcome) {
             DepotPlanOutcome.NoItem,
@@ -276,7 +278,7 @@ data class DepotMaintainConfig(
             medicine = if (useMedicine && plan.useMedicine) plan.medicineCount else 0,
             stone = if (useStone && plan.useStone) plan.stoneCount else 0,
             series = if (useAutoSeries) 0 else 1,
-            logLabel = no.toString(),
+            logLabel = uiTextDynamic(no.toString()),
             medicineExpireDays = if (useExpiringMedicine) EXPIRING_MEDICINE_DAYS else null,
             report = ctx.report,
             countDualChips = countDualChipAsChipPack,

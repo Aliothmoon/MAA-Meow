@@ -18,7 +18,7 @@ class TaskFallbackChainTest {
         logName = UiText.Dynamic(name),
         dropTarget = DropTarget(
             dropId = "30011", dropCount = 100, stage = name,
-            medicine = 0, stone = 0, series = 1, logLabel = name,
+            medicine = 0, stone = 0, series = 1, logLabel = UiText.Dynamic(name),
         ),
         logsBefore = logsBefore,
         logOnSuccess = UiText.Dynamic("$name 库存不足") to LogLevel.TRACE,

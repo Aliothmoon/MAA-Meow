@@ -5,6 +5,7 @@ import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.HotUpdateSync
+import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.ClientResourceProfile
 import com.aliothmoon.maameow.domain.service.CoreDataPusher
@@ -471,6 +472,8 @@ class MaaResourceLoaderTest {
             val coreDataPusher = mockk<CoreDataPusher> {
                 coEvery { prepare(any()) } returns true
             }
+            val itemHelper = mockk<ItemHelper>(relaxed = true)
+            val resourceDataManager = mockk<ResourceDataManager>(relaxed = true)
             val loadedDirs = mutableListOf<String>()
 
             fun newService(): RemoteService {
@@ -519,6 +522,8 @@ class MaaResourceLoaderTest {
                         hotUpdateSync = hotUpdateSync,
                         resourceInitService = resourceInitService,
                         coreDataPusher = coreDataPusher,
+                        itemHelper = itemHelper,
+                        resourceDataManager = resourceDataManager,
                     ),
                     loadedDirs = loadedDirs,
                     hotUpdateRevision = hotUpdateRevision,

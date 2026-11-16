@@ -90,6 +90,9 @@ fun stageDisplayName(
  * 标题行：左侧区块名，右侧「已选关卡」徽章 + 展开/收起箭头；点击标题行切换折叠
  * 展开后显示分组标题 + 每个分组下的关卡自动换行平铺
  * 默认折叠
+ *
+ * 传 [customLabel] 时列表末尾多一个自定义入口（如库存保持的「自定义关卡」），
+ * 选中后由调用方决定在哪放出输入框；[customSelected] 只负责它的选中态。
  */
 @Composable
 internal fun GroupedStageButtonGroup(
@@ -101,6 +104,9 @@ internal fun GroupedStageButtonGroup(
     /** 选关到实际下发关卡的转换（如自定义剿灭），按钮与徽章都显示转换后的关卡 */
     resolveStage: (String) -> String = { it },
     onRemove: (() -> Unit)? = null,
+    customLabel: String? = null,
+    customSelected: Boolean = false,
+    onCustomSelected: (() -> Unit)? = null,
     /** 演示指到选关时，折叠描标题行，展开描目标关卡 */
     guided: Boolean = false,
 ) {
@@ -206,6 +212,40 @@ internal fun GroupedStageButtonGroup(
                         }
                     }
                 }
+
+                // 自定义入口：手输代码或别名，样式与上面的关卡胶囊一致
+                if (customLabel != null) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp)
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable { onCustomSelected?.invoke() },
+                            color = if (customSelected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                            },
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Text(
+                                text = customLabel,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (customSelected) {
+                                    MaterialTheme.colorScheme.onPrimary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -251,6 +291,8 @@ private fun CollapsibleRowTrailing(
  *
  * 例如：龙门币 → CE-6，经验 → LS-6
  *
+ * @param commitOnChange 为 true 时每敲一下就原样回写（别名不在这里映射，留给调用方
+ *   在读取时做），因为面板里有「保存」按钮，只靠失焦提交会漏掉最后一次输入
  */
 @Composable
 internal fun StageInputField(
@@ -259,7 +301,8 @@ internal fun StageInputField(
     label: String,
     placeholder: String,
     stageCodes: List<String>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    commitOnChange: Boolean = false
 ) {
     var textValue by remember(value) { mutableStateOf(value) }
     var showConvertedHint by remember { mutableStateOf(false) }
@@ -270,6 +313,8 @@ internal fun StageInputField(
             value = textValue,
             onValueChange = { newValue ->
                 textValue = newValue
+                // 原样回写：这里映射别名的话，敲「龙门币」敲到一半就被替换成 CE-6 了
+                if (commitOnChange) onValueChange(newValue)
                 // 检查是否是已知别名，显示转换提示
                 val mapped = StageAliasMapper.mapToStageCode(newValue, stageCodes)
                 if (mapped != newValue.uppercase() && newValue.isNotBlank()) {
