@@ -3151,11 +3151,4 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="oper_progress_log_summary">干员培养本轮处理结果：成功 %1$d，失败 %2$d，跳过 %3$d（专精启动也计入成功）</string>
 
     <!-- 鹰角历星期名（库存保持/理智作战的今日关卡提示用，见 ServerTimezone.getYjDayOfWeekRes） -->
-<string name="panel_depot_summary_no_item">未选材料</string>
-<string name="panel_depot_summary_zero_target">目标为 0</string>
-<string name="panel_depot_summary_stage_required">需指定关卡</string>
-<string name="panel_depot_summary_stage_closed">今日未开放</string>
-<string name="panel_depot_summary_enough">库存已足</string>
-<string name="panel_depot_remove_plan">删除此计划</string>
-<string name="panel_depot_collapse_all">折叠</string>
 </resources>

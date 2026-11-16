@@ -3147,11 +3147,4 @@
     <string name="panel_depot_unplanned_empty">모든 물품에 계획이 있습니다</string>
     <string name="panel_depot_plan_removed">Removed "%1$s"</string>
     <string name="panel_depot_undo_remove">Undo</string>
-<string name="panel_depot_summary_no_item">재료 미선택</string>
-<string name="panel_depot_summary_zero_target">목표가 0</string>
-<string name="panel_depot_summary_stage_required">스테이지 지정 필요</string>
-<string name="panel_depot_summary_stage_closed">오늘 미개방</string>
-<string name="panel_depot_summary_enough">재고 충분</string>
-<string name="panel_depot_remove_plan">이 계획 삭제</string>
-<string name="panel_depot_collapse_all">접기</string>
 </resources>

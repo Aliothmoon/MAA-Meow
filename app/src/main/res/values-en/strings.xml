@@ -3093,11 +3093,4 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="oper_progress_log_summary">Operator training results: %1$d successful, %2$d failed, %3$d skipped (starting mastery also counts as success).</string>
 
     <!-- Weekday names of the YJ calendar (used by the today's-stage hints, see ServerTimezone.getYjDayOfWeekRes) -->
-<string name="panel_depot_summary_no_item">No item</string>
-<string name="panel_depot_summary_zero_target">Target is 0</string>
-<string name="panel_depot_summary_stage_required">Stage required</string>
-<string name="panel_depot_summary_stage_closed">Closed today</string>
-<string name="panel_depot_summary_enough">Target met</string>
-<string name="panel_depot_remove_plan">Remove this plan</string>
-<string name="panel_depot_collapse_all">Collapse</string>
 </resources>
