@@ -552,10 +552,17 @@ private fun MatchBadge(mode: OperatorMatchMode) {
         OperatorMatchMode.BORROW -> LogColorRole.INFO
         OperatorMatchMode.TRAIN -> LogColorRole.WARNING
         OperatorMatchMode.BLOCKED -> LogColorRole.ERROR
-    }.themedColor()
+    }
+    CopilotMatchBadge(stringResource(mode.labelRes), color)
+}
+
+/** 作业分类和候选原因共用配色、圆角、字体及内边距。 */
+@Composable
+internal fun CopilotMatchBadge(text: String, role: LogColorRole) {
+    val color = role.themedColor()
     Surface(shape = RoundedCornerShape(4.dp), color = color.copy(alpha = 0.14f), contentColor = color) {
         Text(
-            text = stringResource(mode.labelRes),
+            text = text,
             style = MaterialTheme.typography.labelSmall,
             maxLines = 1,
             modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)

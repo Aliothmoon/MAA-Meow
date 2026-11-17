@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -113,6 +112,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.model.LogColorRole
 import com.aliothmoon.maameow.data.model.UserAdditionalOper
 import com.aliothmoon.maameow.data.model.copilot.CopilotDocumentation
 import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
@@ -1646,14 +1646,29 @@ private fun OperatorCell(item: OperatorDisplayItem, operId: String, rarity: Int)
         color = MaterialTheme.colorScheme.surface,
         modifier = if (item.mismatchReason == null) Modifier else Modifier.semantics(mergeDescendants = true) {}
     ) {
-        Row(
+        Column(
             modifier = Modifier.padding(6.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            val rarityColor = if (rarity > 0) operRarityColor(rarity) else Color.Transparent
-            // 角标按文案自然宽度占位，允许超出头像，但不侵入右侧名称和属性。
-            Box(modifier = Modifier.widthIn(min = 36.dp)) {
+            // 角标属于整个信息块，单独占据左上方一行，避免遮挡名称和属性。
+            item.mismatchReason?.let { reason ->
+                CopilotMatchBadge(
+                    text = stringResource(when (reason) {
+                        OperatorMismatchReason.MISSING -> R.string.copilot_match_badge_missing
+                        OperatorMismatchReason.ELITE -> R.string.copilot_match_badge_elite
+                        OperatorMismatchReason.LEVEL -> R.string.copilot_match_badge_level
+                        OperatorMismatchReason.SKILL -> R.string.copilot_match_badge_skill
+                        OperatorMismatchReason.MODULE -> R.string.copilot_match_badge_module
+                    }),
+                    role = LogColorRole.ERROR
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val rarityColor = if (rarity > 0) operRarityColor(rarity) else Color.Transparent
                 Box(
                     modifier = Modifier
                         .size(36.dp)
@@ -1672,41 +1687,20 @@ private fun OperatorCell(item: OperatorDisplayItem, operId: String, rarity: Int)
                 ) {
                     OperAvatar(operId = operId, modifier = Modifier.fillMaxSize())
                 }
-                item.mismatchReason?.let { reason ->
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError,
-                        modifier = Modifier.align(Alignment.TopEnd)
-                    ) {
-                        Text(
-                            text = stringResource(when (reason) {
-                                OperatorMismatchReason.MISSING -> R.string.copilot_match_badge_missing
-                                OperatorMismatchReason.ELITE -> R.string.copilot_match_badge_elite
-                                OperatorMismatchReason.LEVEL -> R.string.copilot_match_badge_level
-                                OperatorMismatchReason.SKILL -> R.string.copilot_match_badge_skill
-                                OperatorMismatchReason.MODULE -> R.string.copilot_match_badge_module
-                            }),
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
-                        )
-                    }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = item.name,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    OperatorAttributes(item)
                 }
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                OperatorAttributes(item)
             }
         }
     }
