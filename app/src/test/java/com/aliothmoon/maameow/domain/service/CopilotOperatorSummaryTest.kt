@@ -154,7 +154,7 @@ class CopilotOperatorSummaryTest {
             missing = emptyList(), training = emptyList(),
             operators = reasons, groups = listOf(reasons),
         ))
-        val expected = listOf(2, 8, 4, 5, 1, 6, 3, 0, 7).map { "op$it" }
+        val expected = listOf(2, 8, 3, 1, 6, 5, 4, 0, 7).map { "op$it" }
         assertEquals(expected, displayed.operators.map { it.name })
         assertEquals(expected, displayed.groups.single().second.map { it.name })
         assertEquals(opers.map { it.name }, original.operators.map { it.name })

@@ -108,10 +108,10 @@ data class OperatorSummaryData(
 private val OperatorDisplayItem.matchDisplayOrder: Int
     get() = when (mismatchReason) {
         null -> 0
-        OperatorMismatchReason.ELITE -> 1
-        OperatorMismatchReason.LEVEL -> 2
-        OperatorMismatchReason.SKILL -> 3
-        OperatorMismatchReason.MODULE -> 4
+        OperatorMismatchReason.MODULE -> 1
+        OperatorMismatchReason.SKILL -> 2
+        OperatorMismatchReason.LEVEL -> 3
+        OperatorMismatchReason.ELITE -> 4
         OperatorMismatchReason.MISSING -> 5
     }
 
