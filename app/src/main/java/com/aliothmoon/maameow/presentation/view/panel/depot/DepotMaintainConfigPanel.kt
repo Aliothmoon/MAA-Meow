@@ -40,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -56,6 +57,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -648,6 +653,8 @@ private fun LazyListScope.GeneralTab(
  * 已有计划的物品不在这里重复一遍——它们就在上面的概览里，点行就是同一条计划的详情。
  * 所以这里的格子点下去一律是「新建一条计划」（[DepotItemCellUi.planIndex] 为 null）。
  *
+ * 抽屉以半屏打开；在格子上往上划一下，抽屉先顶到全屏再继续滚，一屏能多看到一倍物品。
+ *
  * @param cells 只含未计划的物品，由调用方算好，避免抽屉每次重组重跑分组
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -659,8 +666,23 @@ private fun UnplannedItemsSheet(
     onDismiss: () -> Unit,
     onPick: (DepotItemCellUi) -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // 一半屏打开、上划就顶到全屏：上百个材料铺成一张表，半屏一次只能看到十来个
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val scope = rememberCoroutineScope()
+    val expanded = sheetState.currentValue == SheetValue.Expanded
+    // 列表自己能滚，默认会把上划全部吃掉，抽屉永远停在半屏；
+    // 所以趁列表还没动时先接住这一下，把抽屉顶开，剩下的位移交回列表。
+    val expandOnScrollUp = remember(expanded) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (!expanded && available.y < 0f) {
+                    scope.launch { sheetState.expand() }
+                    return Offset(0f, available.y)
+                }
+                return Offset.Zero
+            }
+        }
+    }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
@@ -686,11 +708,13 @@ private fun UnplannedItemsSheet(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 // 上百个材料铺开比一屏高得多，抽屉里自己滚，别把面板的列表拖着动；
-                // 上限按屏高比例取，横屏/分屏时不会被父级夹裁到滚不动
-                val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.6f).dp
+                // 上限按屏高比例取，横屏/分屏时不会被父级夹裁到滚不动；
+                // 顶到全屏后这份高度就是抽屉里的可用空间，再高会把标题顶出屏幕
+                val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.8f).dp
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .nestedScroll(expandOnScrollUp)
                         .heightIn(max = maxListHeight)
                         .verticalScroll(rememberScrollState()),
                 ) {
