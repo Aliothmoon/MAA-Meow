@@ -56,7 +56,6 @@ fun MiniGamePanel(
     val miniGames by delegate.miniGames.collectAsStateWithLifecycle()
 
     val reclamationConfig by delegate.reclamationConfig.collectAsStateWithLifecycle()
-    val clientType by delegate.clientType.collectAsStateWithLifecycle()
 
     val currentGame = delegate.findGame(state.selectedTaskName)
     val isReclamation = delegate.isReclamation(state.selectedTaskName)
@@ -176,7 +175,7 @@ fun MiniGamePanel(
         // 生息演算设置，任务下发仍走底部「开始任务」
         if (isReclamation) {
             item { HorizontalDivider() }
-            reclamationSettingsItems(reclamationConfig, clientType, delegate::onReclamationConfigChanged)
+            reclamationSettingsItems(reclamationConfig, delegate::onReclamationConfigChanged)
         }
 
         // 像素画配置：选图 + 转换参数，任务下发仍走底部「开始任务」
