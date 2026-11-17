@@ -9,7 +9,8 @@ usage:
     python scripts/setup_maa_core.py                    # download latest release and deploy
     python scripts/setup_maa_core.py --tag v6.3.0       # download specific tag
     python scripts/setup_maa_core.py --skip-download     # deploy from cache only
-    python scripts/setup_maa_core.py --maafw-tag v5.13.0-beta.5  # override the MaaFramework control unit
+    python scripts/setup_maa_core.py --maafw-tag v5.13.0-beta.5  # override the MaaFramework control unit (default: DEFAULT_MAAFW_TAG)
+    python scripts/setup_maa_core.py --maafw-tag ""              # keep the control unit bundled by MAA
 
 Note: target directories (assets/MaaSync/MaaResource and jniLibs/<abi>/<MAA *.so>)
 are always cleaned before deploy to avoid stale files from previous versions.
@@ -62,6 +63,8 @@ OCR_ONNX_RE = re.compile(r"(^|/)(det|rec)/inference\.onnx$")
 MAAFW_REPO = "MaaXYZ/MaaFramework"
 MAAFW_CONTROL_UNIT_SO = "libMaaAndroidNativeControlUnit.so"
 MAAFW_ASSET_ARCH = {"arm64-v8a": "aarch64", "x86_64": "x86_64"}
+# v5.16+ 控制单元的 ControlUnitAPI RTTI 改由 MaaFramework 自带的 libMaaUtils 提供，MAA 包里的没有，dlopen 失败
+DEFAULT_MAAFW_TAG = "v5.15.0"
 
 # Target paths (relative to project root)
 ASSETS_RESOURCE_DIR = "app/src/main/assets/MaaSync/MaaResource"
@@ -364,9 +367,9 @@ def main():
     parser.add_argument("--skip-download", "-s", action="store_true", help="Skip download, use cache")
     parser.add_argument("--abi", choices=["arm64-v8a", "x86_64", "all"], default="all",
                         help="Process only specified ABI (default: all)")
-    parser.add_argument("--maafw-tag",
+    parser.add_argument("--maafw-tag", default=DEFAULT_MAAFW_TAG,
                         help=f"Replace {MAAFW_CONTROL_UNIT_SO} with the one from this MaaFramework "
-                             "release tag (e.g. v5.13.0-beta.5); default keeps MAA's bundled copy")
+                             f"release tag (default: {DEFAULT_MAAFW_TAG}); pass '' to keep MAA's bundled copy")
     args = parser.parse_args()
 
     global API_BASE
