@@ -91,18 +91,29 @@ data class OperatorSummaryData(
 ) {
     val isEmpty get() = totalCount == 0
 
-    /** 只生成展示副本，先绑定原始位置的原因，再在各组内稳定排序。 */
+    /** 只生成展示副本，先绑定原始位置的原因，再对独立干员及各组内候选按同一规则稳定排序。 */
     fun withMatch(match: OperatorMatch): OperatorSummaryData = copy(
         operators = operators.mapIndexed { index, oper ->
             oper.copy(mismatchReason = match.operators.getOrNull(index))
-        },
+        }.sortedBy { it.matchDisplayOrder },
         groups = groups.mapIndexed { groupIndex, (name, opers) ->
             name to opers.mapIndexed { index, oper ->
                 oper.copy(mismatchReason = match.groups.getOrNull(groupIndex)?.getOrNull(index))
-            }.sortedBy { it.mismatchReason != null }
+            }.sortedBy { it.matchDisplayOrder }
         },
     )
 }
+
+/** 满足在前，同一原因聚合，未拥有最后；sortedBy 保留同档原始顺序。 */
+private val OperatorDisplayItem.matchDisplayOrder: Int
+    get() = when (mismatchReason) {
+        null -> 0
+        OperatorMismatchReason.ELITE -> 1
+        OperatorMismatchReason.LEVEL -> 2
+        OperatorMismatchReason.SKILL -> 3
+        OperatorMismatchReason.MODULE -> 4
+        OperatorMismatchReason.MISSING -> 5
+    }
 
 class CopilotManager(
     private val apiService: CopilotApiService,
