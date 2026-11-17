@@ -1641,30 +1641,31 @@ internal fun OperatorGrid(
 
 @Composable
 private fun OperatorCell(item: OperatorDisplayItem, operId: String, rarity: Int) {
+    val badgeText = item.mismatchReason?.let { reason ->
+        stringResource(when (reason) {
+            OperatorMismatchReason.MISSING -> R.string.copilot_match_badge_missing
+            OperatorMismatchReason.ELITE -> R.string.copilot_match_badge_elite
+            OperatorMismatchReason.LEVEL -> R.string.copilot_match_badge_level
+            OperatorMismatchReason.SKILL -> R.string.copilot_match_badge_skill
+            OperatorMismatchReason.MODULE -> R.string.copilot_match_badge_module
+        })
+    }
+    val measurer = rememberTextMeasurer()
+    val badgeStyle = MaterialTheme.typography.labelSmall
+    val badgeWidth = remember(badgeText, badgeStyle, measurer) {
+        badgeText?.let { measurer.measure(it, style = badgeStyle, maxLines = 1).size.width } ?: 0
+    }
+    val nameEndPadding = if (badgeText == null) 0.dp else {
+        with(LocalDensity.current) { badgeWidth.toDp() } + 14.dp // 角标两侧各 5dp，加 4dp 间隔
+    }
     Surface(
         shape = RoundedCornerShape(6.dp),
         color = MaterialTheme.colorScheme.surface,
         modifier = if (item.mismatchReason == null) Modifier else Modifier.semantics(mergeDescendants = true) {}
     ) {
-        Column(
-            modifier = Modifier.padding(6.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            // 角标属于整个信息块，单独占据左上方一行，避免遮挡名称和属性。
-            item.mismatchReason?.let { reason ->
-                CopilotMatchBadge(
-                    text = stringResource(when (reason) {
-                        OperatorMismatchReason.MISSING -> R.string.copilot_match_badge_missing
-                        OperatorMismatchReason.ELITE -> R.string.copilot_match_badge_elite
-                        OperatorMismatchReason.LEVEL -> R.string.copilot_match_badge_level
-                        OperatorMismatchReason.SKILL -> R.string.copilot_match_badge_skill
-                        OperatorMismatchReason.MODULE -> R.string.copilot_match_badge_module
-                    }),
-                    role = LogColorRole.ERROR
-                )
-            }
+        Box {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(6.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1693,6 +1694,7 @@ private fun OperatorCell(item: OperatorDisplayItem, operId: String, rarity: Int)
                 ) {
                     Text(
                         text = item.name,
+                        modifier = Modifier.padding(end = nameEndPadding),
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -1700,6 +1702,14 @@ private fun OperatorCell(item: OperatorDisplayItem, operId: String, rarity: Int)
                         overflow = TextOverflow.Ellipsis
                     )
                     OperatorAttributes(item)
+                }
+            }
+            // matchParentSize 不参与固有高度计算，不会撑高当前卡片或同一行的其他卡片。
+            if (badgeText != null) {
+                Box(modifier = Modifier.matchParentSize().padding(6.dp)) {
+                    Box(modifier = Modifier.align(Alignment.TopEnd)) {
+                        CopilotMatchBadge(badgeText, LogColorRole.ERROR)
+                    }
                 }
             }
         }
