@@ -1456,7 +1456,7 @@
 
     <string name="panel_depot_update_before_start">Update inventory before starting</string>
     <string name="panel_depot_update_before_start_tip">Runs depot recognition first to refresh inventory data; queued plans recompute their deficit from the latest inventory when they start. Plans judged sufficient before the run aren\'t queued; if recognition shows they\'re actually short, it\'s only logged, and running again farms them</string>
-    <string name="panel_depot_use_auto_series">Auto Series</string>
+    <string name="panel_depot_use_auto_series">Smart Series</string>
     <string name="panel_depot_use_auto_series_tip">When unchecked, runs at 1×; when checked, runs at the highest series multiplier allowed by current sanity, so drops from a single run may exceed the target inventory limit.</string>
     <string name="panel_depot_skip_during_activity">Skip during event</string>
     <string name="panel_depot_skip_during_resource">Skip while the resource collection event is active</string>

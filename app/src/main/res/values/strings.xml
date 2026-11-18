@@ -1511,7 +1511,7 @@
     <!-- panel: depot maintain -->
     <string name="panel_depot_update_before_start">任务开始前更新库存数据</string>
     <string name="panel_depot_update_before_start_tip">任务开始时先执行一次仓库识别刷新库存数据，已加入队列的计划开始时按最新库存重算缺口。开跑前就判定已充足的计划不会加入队列，识别后若实际不足只在日志提示，重新运行即可刷取</string>
-    <string name="panel_depot_use_auto_series">AUTO 代理倍率</string>
+    <string name="panel_depot_use_auto_series">智能倍率</string>
     <string name="panel_depot_use_auto_series_tip">未勾选时以 1 倍代理；勾选后按当前理智允许的最大倍率代理，单次掉落可能超过目标库存上限。</string>
     <string name="panel_depot_skip_during_activity">活动期间跳过</string>
     <string name="panel_depot_skip_during_resource">资源收集限时全天开放期间跳过</string>
