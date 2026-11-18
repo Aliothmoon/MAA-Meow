@@ -64,6 +64,7 @@ import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.data.resource.OperAvatarLoader
 import com.aliothmoon.maameow.data.resource.OperRoleIconLoader
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
+import com.aliothmoon.maameow.data.resource.PenguinDropRateProvider
 import com.aliothmoon.maameow.data.resource.StageApCostHelper
 import com.aliothmoon.maameow.domain.launch.BackendBlock
 import com.aliothmoon.maameow.domain.launch.CountdownUI
@@ -419,6 +420,7 @@ val appModule = module {
 
     singleOf(::ItemHelper)
     singleOf(::StageApCostHelper)
+    single { PenguinDropRateProvider(androidContext(), get()) }
     singleOf(::ItemIconLoader)
     singleOf(::OperAvatarLoader)
     singleOf(::OperRoleIconLoader)

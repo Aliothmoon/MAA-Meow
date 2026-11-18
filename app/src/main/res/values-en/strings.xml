@@ -1483,7 +1483,7 @@
     <!-- Plan overview / add-remove plan strings of the upstream depot panel (still used by it) -->
     <string name="panel_depot_add_plan">Add</string>
     <string name="panel_depot_use_auto_series">Auto Series</string>
-    <string name="panel_depot_use_auto_series_tip">When unchecked, runs at 1×; when checked, runs at the highest series multiplier allowed by current sanity, so drops from a single run may exceed the target inventory limit.</string>
+    <string name="panel_depot_use_auto_series_tip">When unchecked, runs at 1×; when checked, runs at the highest series multiplier allowed by current sanity, so drops from a single run may exceed the target inventory limit. While enabled the log also estimates how many runs the shortfall needs from Penguin Stats drop rates (rounded; a reference only).</string>
     <string name="panel_depot_skip_during_activity">Skip during event</string>
     <string name="panel_depot_skip_during_resource">Skip while the resource collection event is active</string>
     <string name="panel_depot_preset">Preset</string>
@@ -2738,6 +2738,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="runlog_depot_plan_sanity_insufficient">%1$s: not enough sanity (estimated %2$d, stage costs %3$d), skipped</string>
     <string name="runlog_depot_plan_inventory_unavailable">%1$s: no inventory data is currently available, so farming was skipped. Update it via the \"Update doctor data\" task or \"Toolbox - Depot Recognition\"</string>
     <string name="runlog_depot_plan_stale_skipped">%1$s #%2$d: %3$s is actually %4$d/%5$d, insufficient. Plans skipped at the pre-check can\'t be added mid-run; run again to farm it</string>
+    <string name="runlog_depot_plan_expected_runs">#%1$d: %2$s at expected drop rate %3$s, about %4$d runs; farming at the highest series multiplier until enough</string>
+    <string name="runlog_depot_plan_no_drop_rate">#%1$d: no drop-rate data, no run estimate (still farming at the highest series multiplier until enough)</string>
     <string name="runlog_depot_delta_summary">Depot: %2$d items changed since %1$s. See Tools → Depot</string>
     <string name="runlog_depot_delta_none">No depot changes (vs %1$s)</string>
     <string name="runlog_depot_drop_write_skipped">Drops from this run were not saved: the profile chosen at start was deleted or never had an inventory baseline</string>

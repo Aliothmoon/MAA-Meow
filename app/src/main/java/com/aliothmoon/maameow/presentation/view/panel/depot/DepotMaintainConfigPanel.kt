@@ -938,7 +938,8 @@ private fun ColumnScope.AdvancedTab(
         label = stringResource(R.string.panel_depot_skip_during_resource),
     )
 
-    // 倍率开关：勾选后把 series=0 交给 core 取当前可用的最大倍率（对齐上游 AUTO 代理倍率）。
+    // 倍率开关：勾选后把 series=0 交给 core 取当前可用的最大倍率（对齐上游 AUTO 代理倍率）；
+    // 同时按企鹅物流掉率把缺口折算成战斗次数写进日志（只估不截止）。
     CheckBoxWithExpandableTip(
         checked = config.useAutoSeries,
         onCheckedChange = { onConfigChange(config.copy(useAutoSeries = it)) },
