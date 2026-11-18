@@ -51,6 +51,7 @@ fun MainScreen(
     backgroundTaskViewModel: BackgroundTaskViewModel,
     onViewAnnouncement: () -> Unit = {},
     onViewOnboarding: () -> Unit = {},
+    onTabChanged: (route: String) -> Unit = {},
     visible: Boolean = true,
     fullscreen: Boolean = false,
     parallax: MutableFloatState,
@@ -61,6 +62,11 @@ fun MainScreen(
     val chromeHidden = fullscreen || LocalIsInPip.current
     val inputFocus = LocalInputFocusManager.current
     val mainVisible = rememberUpdatedState(visible)
+    val tabChanged by rememberUpdatedState(onTabChanged)
+
+    LaunchedEffect(pagerState) {
+        snapshotFlow { BottomNavTab.all[pagerState.currentPage].route }.collect { tabChanged(it) }
+    }
 
     // 把分页位置实时上报给背景层做视差，归一化到 -1~1。
     // 不能只用 currentPageOffsetFraction：它在滑过中点时随 currentPage 进位翻符号，背景会瞬移。
