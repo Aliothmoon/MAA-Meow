@@ -147,6 +147,7 @@ import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.components.horizontalBleed
+import com.aliothmoon.maameow.presentation.components.textFieldHeightCap
 import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
 import com.aliothmoon.maameow.presentation.navigation.MainTabNavigator
 import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
@@ -1253,6 +1254,7 @@ private fun SettingPenguinIdField(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
         modifier = Modifier
             .fillMaxWidth()
+            .textFieldHeightCap()
             .padding(horizontal = MaaDesignTokens.Spacing.lg, vertical = 8.dp)
             .onFocusChanged { focused = it.isFocused },
     )
@@ -1302,6 +1304,7 @@ internal fun SettingSecretField(
         },
         modifier = Modifier
             .fillMaxWidth()
+            .textFieldHeightCap()
             .onFocusChanged { focused = it.isFocused },
     )
 }

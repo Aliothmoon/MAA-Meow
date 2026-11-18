@@ -38,6 +38,7 @@ import com.aliothmoon.maameow.data.achievement.AchievementField
 import com.aliothmoon.maameow.data.achievement.AchievementState
 import com.aliothmoon.maameow.presentation.components.InfoCard
 import com.aliothmoon.maameow.presentation.components.TopAppBar
+import com.aliothmoon.maameow.presentation.components.textFieldHeightCap
 import com.aliothmoon.maameow.presentation.viewmodel.AchievementEvent
 import com.aliothmoon.maameow.presentation.viewmodel.AchievementViewModel
 import com.aliothmoon.maameow.theme.MaaDesignTokens
@@ -81,7 +82,7 @@ fun AchievementView(
                 OutlinedTextField(
                     value = uiState.searchQuery,
                     onValueChange = { viewModel.onEvent(AchievementEvent.UpdateSearchText(it)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().textFieldHeightCap(),
                     singleLine = true,
                     label = { Text(stringResource(R.string.achievement_search_hint)) },
                 )

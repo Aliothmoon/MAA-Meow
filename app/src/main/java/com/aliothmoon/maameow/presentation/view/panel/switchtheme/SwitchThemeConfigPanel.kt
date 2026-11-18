@@ -37,6 +37,7 @@ import com.aliothmoon.maameow.presentation.components.GuideAnchor
 import com.aliothmoon.maameow.presentation.components.guideHighlight
 import com.aliothmoon.maameow.presentation.components.guideHighlighted
 import com.aliothmoon.maameow.presentation.components.outlinedFieldLabelInset
+import com.aliothmoon.maameow.presentation.components.textFieldHeightCap
 
 @Composable
 fun SwitchThemeConfigPanel(
@@ -75,6 +76,7 @@ fun SwitchThemeConfigPanel(
                         singleLine = true,
                         modifier = Modifier
                             .weight(1f)
+                            .textFieldHeightCap()
                             .guideHighlight(
                                 GuideAnchor.THEME_FIELD,
                                 index.toString(),

@@ -143,6 +143,7 @@ import com.aliothmoon.maameow.presentation.components.horizontalBleed
 import com.aliothmoon.maameow.presentation.components.rememberBackendReadyFixState
 import com.aliothmoon.maameow.presentation.components.rememberPageVisible
 import com.aliothmoon.maameow.presentation.components.rememberStagedBeyondViewportCount
+import com.aliothmoon.maameow.presentation.components.textFieldHeightCap
 import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
 import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
 import com.aliothmoon.maameow.presentation.onboarding.OnboardingTarget
@@ -1558,6 +1559,7 @@ private fun RunDurationInputDialog(
             keyboardActions = KeyboardActions(onDone = { submit() }),
             modifier = Modifier
                 .fillMaxWidth()
+                .textFieldHeightCap()
                 .focusRequester(focusRequester),
         )
     }
