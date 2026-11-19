@@ -54,6 +54,7 @@ fun TaskListDetailLayout(
     onDeleteProfile: (String) -> Unit,
     onCreateProfile: () -> Unit,
     onReorderProfile: (Int, Int) -> Unit,
+    onProfileRunDurationLimitChange: (String, Int?) -> Unit,
     modifier: Modifier = Modifier,
     /** 后台任务页右侧配置区包一层 Card；悬浮窗已有外层 Card 时关闭 */
     wrapDetailInCard: Boolean = false,
@@ -121,6 +122,7 @@ fun TaskListDetailLayout(
                     onDeleteProfile = onDeleteProfile,
                     onCreateProfile = onCreateProfile,
                     onReorderProfile = onReorderProfile,
+                    onProfileRunDurationLimitChange = onProfileRunDurationLimitChange,
                     modifier = Modifier.fillMaxSize(),
                     runFromNodeBlocked = runFromNodeBlocked,
                 )

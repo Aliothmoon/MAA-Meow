@@ -173,6 +173,12 @@ class ExpandedControlPanelViewModel(
         }
     }
 
+    fun onProfileRunDurationLimitChange(profileId: String, minutes: Int?) {
+        viewModelScope.launch {
+            chainState.setProfileRunDurationLimit(profileId, minutes)
+        }
+    }
+
     fun onReorderProfile(fromIndex: Int, toIndex: Int) {
         viewModelScope.launch {
             runCatching { chainState.reorderProfiles(fromIndex, toIndex) }

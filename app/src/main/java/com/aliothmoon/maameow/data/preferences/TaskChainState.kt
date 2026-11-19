@@ -20,6 +20,7 @@ import com.aliothmoon.maameow.data.model.TaskParamProvider
 import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import com.aliothmoon.maameow.data.model.WakeUpConfig
+import com.aliothmoon.maameow.domain.models.RunDurationLimit
 import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
 import kotlinx.coroutines.CancellationException
@@ -94,6 +95,10 @@ class TaskChainState(
 
     val clientType: String
         get() = resolveClientType(findFirstEnabledConfig<WakeUpConfig>()?.clientType, _lastUsedClientType.value)
+
+    /** 当前 Profile 单独设置的运行时长上限（分钟），null 跟随全局 */
+    val activeRunDurationLimitMinutes: Int?
+        get() = _profiles.value.find { it.id == _profileId.value }?.runDurationLimitMinutes
 
     /** 最近一次成功启动的会话所用客户端；运行中即本次会话的服务器，不随切换 Profile 变 */
     val lastUsedClientType: String?
@@ -506,6 +511,22 @@ class TaskChainState(
         Timber.d("Renamed profile %s to: %s", profileId, trimmed)
     }
 
+    /** [minutes] 为 null 时恢复跟随全局设置 */
+    suspend fun setProfileRunDurationLimit(profileId: String, minutes: Int?) {
+        val clamped = minutes?.coerceIn(RunDurationLimit.MIN_MINUTES, RunDurationLimit.MAX_MINUTES)
+        val currentProfiles = _profiles.value
+        val target = currentProfiles.find { it.id == profileId } ?: run {
+            Timber.w("setProfileRunDurationLimit: profile %s not found", profileId)
+            return
+        }
+        if (target.runDurationLimitMinutes == clamped) return
+        _profiles.value = currentProfiles.map { p ->
+            if (p.id == profileId) p.copy(runDurationLimitMinutes = clamped) else p
+        }
+        doSync()
+        Timber.d("Set run duration limit of profile %s to: %s", profileId, clamped)
+    }
+
     suspend fun duplicateProfile(profileId: String): String? {
         val currentProfiles = _profiles.value
         // 先保存当前活跃 Profile 的链
@@ -519,7 +540,9 @@ class TaskChainState(
         // 复制链时为每个节点生成新 ID
         val duplicatedChain = source.chain.map { it.copy(id = UUID.randomUUID().toString()) }
         val newProfile = TaskProfile(
-            name = nextProfileName(savedProfiles), chain = duplicatedChain
+            name = nextProfileName(savedProfiles),
+            chain = duplicatedChain,
+            runDurationLimitMinutes = source.runDurationLimitMinutes,
         )
         val updatedProfiles = savedProfiles + newProfile
         _profiles.value = updatedProfiles

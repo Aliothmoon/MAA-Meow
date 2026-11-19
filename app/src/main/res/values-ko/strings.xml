@@ -766,6 +766,7 @@
     <string name="bg_auto_run_duration_limit_input_title">실행 시간 제한</string>
     <string name="bg_auto_run_duration_limit_input_label">분</string>
     <string name="bg_auto_run_duration_limit_input_hint">범위 %1$d–%2$d분</string>
+    <string name="bg_auto_run_duration_limit_profile_override">현재 프로필 개별 설정: %1$d분</string>
     <string name="bg_toast_mute_failed">음소거에 실패했습니다. 음량 버튼으로 미디어 음량을 직접 낮춰 주세요</string>
     <string name="bg_auto_hardware_screen_off">화면 꺼짐 모드에서 화면 전원 끄기</string>
     <string name="bg_auto_show_touch_preview">터치 미리보기 표시</string>
@@ -900,6 +901,9 @@
     <string name="panel_profile_delete_message">프로필 「%1$s」을(를) 삭제하시겠습니까? 삭제하면 되돌릴 수 없습니다.</string>
     <string name="panel_profile_copy_id">프로필 ID 복사</string>
     <string name="panel_profile_id_copied">프로필 ID를 복사했습니다</string>
+    <string name="panel_profile_run_duration_limit">개별 실행 시간 제한</string>
+    <string name="panel_profile_run_duration_limit_hint">꺼져 있으면 전역 「1회 실행 시간 제한」 설정을 따릅니다. 켜면 전역 스위치와 관계없이 이 시간으로 제한합니다.</string>
+    <string name="panel_profile_run_duration_limit_badge">제한 %1$d분</string>
 
     <!-- panel: oper box -->
     <string name="panel_operbox_tab_owned">보유 (%1$d)</string>
