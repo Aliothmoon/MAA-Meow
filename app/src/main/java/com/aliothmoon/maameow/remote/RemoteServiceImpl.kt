@@ -88,6 +88,11 @@ class RemoteServiceImpl : RemoteService.Stub() {
     private var setup = false
     private val coreData = CoreDataStore()
 
+    // 主屏真实触摸会占满全局 userActivity 节流，预览或任务期间单独给 VD 续命
+    private val keepAliveLock = Any()
+    private var taskKeepAlive = false
+    private var previewKeepAlive = false
+
     init {
         // ctor 必须轻量：重活放 setup()，attach 前零阻塞
         Workarounds.apply()
@@ -339,6 +344,11 @@ class RemoteServiceImpl : RemoteService.Stub() {
     override fun setMonitorSurface(surface: Surface?) {
         Ln.i("$TAG: setMonitorSurface(${surface != null})")
         NativeBridgeLib.setPreviewSurface(surface)
+        synchronized(keepAliveLock) {
+            previewKeepAlive = surface != null
+            if (previewKeepAlive) backgroundDisplayId()?.let { PowerController.ensureDisplayAwake(it) }
+            syncUserActivityKeepAlive()
+        }
     }
 
     override fun setTouchCallback(callback: ITouchEventCallback?) {
@@ -385,21 +395,50 @@ class RemoteServiceImpl : RemoteService.Stub() {
         Ln.i("$TAG: startVirtualDisplay() ${virtualDisplayMode.get()}")
         return when (virtualDisplayMode.get()) {
             DisplayMode.PRIMARY -> PrimaryDisplayManager.start()
-            DisplayMode.BACKGROUND -> BackgroundDisplay.start()
+            DisplayMode.BACKGROUND -> startBackgroundDisplay()
             else -> DefaultDisplayConfig.DISPLAY_NONE
         }
     }
 
-    @Synchronized
-    override fun setUserActivityKeepAlive(enabled: Boolean) {
-        val displayId = BackgroundDisplay.displayId()
-        if (!enabled || virtualDisplayMode.get() != DisplayMode.BACKGROUND
-            || displayId == DefaultDisplayConfig.DISPLAY_NONE
-        ) {
-            PowerController.stopUserActivityKeepAlive()
-            return
+
+    private fun startBackgroundDisplay(): Int {
+        val reused = BackgroundDisplay.displayId()
+        if (reused != DefaultDisplayConfig.DISPLAY_NONE && !PowerController.ensureDisplayAwake(reused)) {
+            Ln.w("$TAG: display $reused asleep, recreating")
+            stopBackgroundDisplay()
         }
-        PowerController.startUserActivityKeepAlive(displayId)
+        return BackgroundDisplay.start().also { syncUserActivityKeepAlive() }
+    }
+
+    private fun stopBackgroundDisplay() {
+        GameFpsMonitor.stop()
+        StaleFrameGuard.stop()
+        BackgroundDisplay.stop()
+        syncUserActivityKeepAlive()
+    }
+
+    private fun backgroundDisplayId(): Int? = BackgroundDisplay.displayId().takeIf {
+        virtualDisplayMode.get() == DisplayMode.BACKGROUND && it != DefaultDisplayConfig.DISPLAY_NONE
+    }
+
+    override fun setUserActivityKeepAlive(enabled: Boolean) {
+        synchronized(keepAliveLock) {
+            taskKeepAlive = enabled
+            syncUserActivityKeepAlive()
+        }
+    }
+
+    private fun syncUserActivityKeepAlive() = synchronized(keepAliveLock) {
+        val target = PowerController.targetKeepAliveDisplay(
+            backgroundDisplayId(),
+            taskKeepAlive,
+            previewKeepAlive,
+        )
+        if (target != null) {
+            PowerController.startUserActivityKeepAlive(target)
+        } else {
+            PowerController.stopUserActivityKeepAlive()
+        }
     }
 
     @Synchronized
@@ -407,12 +446,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
         Ln.i("$TAG: stopVirtualDisplay() ${virtualDisplayMode.get()}")
         when (virtualDisplayMode.get()) {
             DisplayMode.PRIMARY -> PrimaryDisplayManager.stop()
-            DisplayMode.BACKGROUND -> {
-                GameFpsMonitor.stop()
-                StaleFrameGuard.stop()
-                PowerController.stopUserActivityKeepAlive()
-                BackgroundDisplay.stop()
-            }
+            DisplayMode.BACKGROUND -> stopBackgroundDisplay()
         }
         GameAudioMuteController.restoreAll()
     }
@@ -556,6 +590,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
     override fun setVirtualDisplayResolution(width: Int, height: Int, dpi: Int) {
         Ln.i("$TAG: setVirtualDisplayResolution(${width}x${height}, dpi=$dpi)")
         BackgroundDisplay.setResolution(width, height, dpi)
+        syncUserActivityKeepAlive()
     }
 
     @Synchronized
@@ -577,8 +612,8 @@ class RemoteServiceImpl : RemoteService.Stub() {
     override fun setVirtualDisplayMode(mode: Int): Boolean {
         when (mode) {
             DisplayMode.PRIMARY -> {
-                BackgroundDisplay.stop()
                 virtualDisplayMode.set(mode)
+                stopBackgroundDisplay()
                 return true
             }
 
