@@ -3027,6 +3027,8 @@
     <string name="maa_switch_theme">테마 변경</string>
     <string name="maa_switch_theme_skipped">후보 테마가 설정되지 않아 게임 테마 전환을 건너뜁니다</string>
     <string name="maa_annihilation_entry_not_found">터미널 할 일 목록에서 섬멸 작전을 찾을 수 없습니다. 이번 주 섬멸 작전이 이미 완료되었을 수 있습니다. 섬멸 작전을 건너뜁니다</string>
+    <string name="fight_prts_locked">대리 지휘를 켤 수 없습니다: 스테이지를 3성으로 클리어하지 않았거나, 클리어하지 않은 하드 모드가 켜져 있을 수 있습니다. 게임에서 확인해 주세요</string>
+    <string name="fight_annihilation_prts_locked">이번 섬멸 작전을 아직 직접 클리어하지 않아 대리 지휘를 사용할 수 없습니다. 먼저 한 번 직접 클리어해 주세요</string>
     <string name="maa_switch_theme_succeeded">게임 테마 전환 완료: %1$s</string>
     <string name="maa_switch_theme_already_set">이미 설정된 테마: %1$s</string>
     <string name="maa_switch_theme_locked">테마가 아직 잠금 해제되지 않음: %1$s</string>

@@ -2970,6 +2970,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="maa_switch_theme">Switch Theme</string>
     <string name="maa_switch_theme_skipped">No theme candidates configured; skipping game theme switch</string>
     <string name="maa_annihilation_entry_not_found">Annihilation entry not found in the Terminal to-do list, possibly already completed this week. Skipped Annihilation</string>
+    <string name="fight_prts_locked">Cannot enable PRTS proxy: the stage may not be cleared with 3 stars, or an uncleared Challenge Mode is on. Please check in game</string>
+    <string name="fight_annihilation_prts_locked">This Annihilation has not been cleared manually yet, so PRTS proxy is unavailable. Clear it manually once first</string>
     <string name="maa_switch_theme_succeeded">Game theme switched to: %1$s</string>
     <string name="maa_switch_theme_already_set">Theme already set: %1$s</string>
     <string name="maa_switch_theme_locked">Theme is locked: %1$s</string>

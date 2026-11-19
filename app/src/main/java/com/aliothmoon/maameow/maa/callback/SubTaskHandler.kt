@@ -206,6 +206,7 @@ class SubTaskHandler(
             }
 
             "ProcessTask" -> {
+                val preTask = details.getString("pre_task").orEmpty()
                 // 匹配列表引用了未定义任务，说明资源与 core 不匹配，按资源损坏处理
                 if (details.getString("what") == "UnknownTask") {
                     stopForBrokenResource(str("UnknownTaskInChain", detailNames(details, "tasks")))
@@ -214,6 +215,9 @@ class SubTaskHandler(
                 ) {
                     // 访问好友失败被 Core 忽略、任务链仍报完成，单独提示（只认最外层 VisitBegin）
                     append(str("TaskError") + str("Visiting"), LogLevel.WARNING)
+                } else if (preTask.substringAfterLast('@') == "UsePrts" && !preTask.startsWith("StageQueue@")) {
+                    // UsePrts 点满次数仍未勾上，代理指挥被锁；关卡队列由 core 另报 StageQueueUnableToAgent
+                    append(resources.getString(R.string.fight_prts_locked), LogLevel.ERROR)
                 }
                 reportSubTaskError(subtask)
             }
@@ -294,6 +298,14 @@ class SubTaskHandler(
                 val message = str("FightMissionFailedAndStop")
                 append(message, LogLevel.ERROR)
                 notificationCenter.notifySubTaskFailure(message)
+            }
+
+            // Annihilation@UnableToAgent2 无后继，命中即剿灭失败；资源关同名任务是降级流程，不提示
+            "UnableToAgent2" -> {
+                val preTask = details.getString("pre_task").orEmpty()
+                if (preTask.substringAfterLast('@') == "Annihilation") {
+                    append(resources.getString(R.string.fight_annihilation_prts_locked), LogLevel.ERROR)
+                }
             }
 
             // 奇象巡展遇到暂未收录的奇象，core 已停任务，交给玩家手动战斗
