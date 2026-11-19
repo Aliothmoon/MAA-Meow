@@ -776,6 +776,7 @@
     <string name="bg_auto_run_duration_limit_input_title">运行时长上限</string>
     <string name="bg_auto_run_duration_limit_input_label">分钟</string>
     <string name="bg_auto_run_duration_limit_input_hint">范围 %1$d–%2$d 分钟</string>
+    <string name="bg_auto_run_duration_limit_profile_override">当前配置单独设置为 %1$d 分钟</string>
     <string name="bg_toast_mute_failed">静音失败，建议直接用系统音量键调低媒体音量</string>
     <string name="bg_auto_hardware_screen_off">熄屏挂机时关闭屏幕电源</string>
     <string name="bg_auto_show_touch_preview">显示触摸预览</string>
@@ -910,6 +911,9 @@
     <string name="panel_profile_delete_message">确定要删除配置「%1$s」吗？此操作不可撤销。</string>
     <string name="panel_profile_copy_id">复制 Profile ID</string>
     <string name="panel_profile_id_copied">已复制 Profile ID</string>
+    <string name="panel_profile_run_duration_limit">单独设置运行时长上限</string>
+    <string name="panel_profile_run_duration_limit_hint">未开启时跟随全局「限制单次运行时长」；开启后不论全局开关，均按此时长计时</string>
+    <string name="panel_profile_run_duration_limit_badge">限时 %1$d 分钟</string>
 
     <!-- panel: oper box -->
     <string name="panel_operbox_tab_owned">已拥有 (%1$d)</string>

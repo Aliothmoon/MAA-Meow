@@ -181,6 +181,7 @@ fun ExpandedControlPanel(
                                 onDeleteProfile = viewModel::onDeleteProfile,
                                 onCreateProfile = viewModel::onCreateProfile,
                                 onReorderProfile = viewModel::onReorderProfile,
+                                onProfileRunDurationLimitChange = viewModel::onProfileRunDurationLimitChange,
                                 modifier = Modifier.fillMaxSize(),
                             )
                         }

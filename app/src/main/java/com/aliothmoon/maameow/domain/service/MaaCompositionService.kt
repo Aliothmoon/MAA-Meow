@@ -15,6 +15,7 @@ import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.models.RemoteBackend
+import com.aliothmoon.maameow.domain.models.RunDurationLimit
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
 import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
@@ -348,7 +349,12 @@ class MaaCompositionService(
         successMessage = context.getString(R.string.runlog_task_started),
         preflightLogs = preflightLogs,
         onSessionStarted = onSessionStarted,
-        limitRunDuration = true,
+        // 任务是按当前配置组装的，在此取值，启动途中切换配置也不串
+        runDurationLimitMinutes = RunDurationLimit.resolve(
+            profileMinutes = taskChainState.activeRunDurationLimitMinutes,
+            globalEnabled = appSettings.runDurationLimitEnabled.value,
+            globalMinutes = appSettings.runDurationLimitMinutes.value,
+        ),
     )
 
     // 抄作业 / 工具箱 / 小游戏不受运行时长上限约束
@@ -700,7 +706,7 @@ class MaaCompositionService(
         fallbacks: Map<TaskSlot, TaskFallbackChain>,
         successMessage: String,
         mode: RunMode,
-        limitRunDuration: Boolean,
+        runDurationLimitMinutes: Int?,
     ): StartResult {
         // 独立目录：先投递用户文件，送不过去 core 那边就是 file-not-found，直接报资源错误
         if (!coreDataPusher.pushUserData()) {
@@ -746,9 +752,8 @@ class MaaCompositionService(
             )
         }
         // 计时与后台监视都先于 RUNNING 起，秒完的回调置 IDLE 时才能撤掉
-        if (limitRunDuration && appSettings.runDurationLimitEnabled.value) {
-            val limitMinutes = appSettings.runDurationLimitMinutes.value
-            runDeadlineGuard.arm(limitMinutes) { stopByRunDurationLimit(limitMinutes) }
+        if (runDurationLimitMinutes != null) {
+            runDeadlineGuard.arm(runDurationLimitMinutes) { stopByRunDurationLimit(runDurationLimitMinutes) }
         }
         if (mode == RunMode.BACKGROUND) {
             startBackgroundMonitors()
@@ -794,11 +799,11 @@ class MaaCompositionService(
         preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
         fallbacks: Map<TaskSlot, TaskFallbackChain> = emptyMap(),
         onSessionStarted: (suspend () -> Unit)? = null,
-        limitRunDuration: Boolean = false,
+        runDurationLimitMinutes: Int? = null,
     ): StartResult = startMutex.withLock {
         executeStartLocked(
             kind, tasks, clientType, startMessage, successMessage, preflightLogs, fallbacks, onSessionStarted,
-            limitRunDuration,
+            runDurationLimitMinutes,
         )
     }
 
@@ -811,7 +816,7 @@ class MaaCompositionService(
         preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
         fallbacks: Map<TaskSlot, TaskFallbackChain> = emptyMap(),
         onSessionStarted: (suspend () -> Unit)? = null,
-        limitRunDuration: Boolean,
+        runDurationLimitMinutes: Int?,
     ): StartResult {
         // 会话与日志先开；STARTING/FGS 必须在前置检查通过后再进入。
         // 否则竖屏等快速失败会 stop 尚未 startForeground 的 FGS，触发
@@ -883,7 +888,7 @@ class MaaCompositionService(
                         displayBackend,
                     )?.let { return@useRemoteService it }
                     val result = appendTasksAndStart(
-                        maa, tasks, fallbacks, successMessage, mode, limitRunDuration,
+                        maa, tasks, fallbacks, successMessage, mode, runDurationLimitMinutes,
                     )
                     if (result is StartResult.Success) {
                         taskChainState.saveLastUsedClientType(clientType)

@@ -157,6 +157,7 @@ internal fun TaskDemoStage(state: OnboardingState, demo: TaskDemoState) {
                             onDeleteProfile = {},
                             onCreateProfile = {},
                             onReorderProfile = { _, _ -> },
+                            onProfileRunDurationLimitChange = { _, _ -> },
                             wrapDetailInCard = true,
                         )
                     }
