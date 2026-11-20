@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.presentation.view.panel.depot
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,15 +10,17 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
@@ -27,27 +28,27 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.UnfoldLess
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,7 +57,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -71,6 +76,7 @@ import com.aliothmoon.maameow.data.model.depotPlanOutcome
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
+import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.data.resource.StageGroup
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.domain.models.DepotActivityPreset
@@ -92,55 +98,71 @@ import com.aliothmoon.maameow.presentation.view.panel.common.stageDisplayName
 import com.aliothmoon.maameow.theme.LocalReduceMotion
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.theme.MaaMotion
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
-
-/** 目标库存上限，对齐 WPF NumericUpDown 的 Maximum */
-private const val MAX_TARGET_INVENTORY = 1145141919
 
 @Composable
 fun DepotMaintainConfigPanel(
     config: DepotMaintainConfig,
     onConfigChange: (DepotMaintainConfig) -> Unit,
+    nodeEnabled: Boolean = true,
     modifier: Modifier = Modifier,
     depotRepository: DepotRepository = koinInject(),
     itemHelper: ItemHelper = koinInject(),
     activityManager: ActivityManager = koinInject(),
+    iconLoader: ItemIconLoader = koinInject(),
 ) {
     val snapshot by depotRepository.snapshot.collectAsStateWithLifecycle()
-    val dropItems by itemHelper.dropItems.collectAsStateWithLifecycle()
+    // 物品源与名字都取仓库口径：dropItems 是战斗掉落口径（含声望 / 龙门币这类永不进仓库的东西，
+    // 又把芯片助剂等合法材料排除在外），拿它当库存保持的物品源会既多出死格、又漏掉材料
+    val itemIds = rememberDepotItemIds(itemHelper)
+    val itemIndex by itemHelper.items.collectAsStateWithLifecycle()
     val activityStages by activityManager.activityStages.collectAsStateWithLifecycle()
 
-    // 排除「当期剿灭」：库存保持按材料刷取，剿灭无指定掉落。对齐上游 RefreshStageList
-    // 另排除「当前/上次」不知道打哪关就算不出缺口，选了必被 toTaskParams 拒掉
-    val stageGroups = remember(activityStages) {
-        activityManager.getMergedStageGroups()
-            .map { group ->
-                group.copy(stages = group.stages.filterNot {
-                    it.code == "Annihilation" || it.code.isEmpty()
-                })
-            }
-            .filter { it.stages.isNotEmpty() }
-    }
-    val stageCodes = remember(stageGroups) {
-        stageGroups.flatMap { group -> group.stages.map { it.code } }
-    }
-    val itemNameMap = remember(dropItems) { dropItems.associate { it.id to it.name } }
+    // 名字映射用全表：老计划里可能存着已经不在识别列表里的 id
+    val itemNameMap = remember(itemIndex) { itemIndex.mapValues { it.value.name } }
     val planOutcomes = remember(config.plans, config.countDualChipAsChipPack, snapshot, activityStages) {
         config.plans.map { plan ->
             val current = DualChipConversion.count(plan.dropId, config.countDualChipAsChipPack, snapshot::countOf)
             depotPlanOutcome(plan, current) { activityManager.isStageOpen(it) }
         }
     }
-    val itemIds =
-        if (dropItems.isNotEmpty()) dropItems.map { it.id } else UiUsageConstants.dropItems
 
-    // 删除计划时同步展开下标，防止串到相邻项
-    val expandedIndices = remember { mutableStateListOf<Int>() }
+    // 概览与详情面板都按「折算后」的库存算缺口：勾了双芯片折算的档，
+    // 两处显示的「现在有多少」才和执行层一致。
+    // 键集合取并集：快照只收录 count > 0 的物品，芯片组自身为 0 时不会出现，
+    // 但折算后它可能「有货」（只掉了双芯片没掉芯片组），漏键会比执行层少算
+    val effectiveInventory = remember(snapshot, config.countDualChipAsChipPack) {
+        if (!config.countDualChipAsChipPack) {
+            snapshot.items
+        } else {
+            (snapshot.items.keys + DualChipConversion.DUAL_CHIP_BY_PACK.keys).associateWith { id ->
+                snapshot.countOf(id) + DualChipConversion.extra(id, snapshot::countOf)
+            }
+        }
+    }
+    // 点开的那一格；planIndex 为空 = 这一格还没有计划，点开是新建。
+    var sheetTarget by remember { mutableStateOf<DepotPlanSheetTarget?>(null) }
+    // 「添加」抽屉：把还没有计划的物品摊成一张表，点一格就是新建一条计划。
+    var itemPickerVisible by remember { mutableStateOf(false) }
+    // 抽屉只列未计划的物品；已有计划的在上面概览里点行就能改，不必再铺一遍格子。
+    val notSelectedLabel = stringResource(R.string.panel_depot_not_selected)
+    val unplannedCells = remember(config.plans, itemIds, itemNameMap, effectiveInventory, notSelectedLabel) {
+        depotMaintainItemCells(
+            plans = config.plans,
+            itemIds = itemIds,
+            itemNameMap = itemNameMap,
+            inventory = effectiveInventory,
+            notSelectedLabel = notSelectedLabel,
+        ).unplanned
+    }
     var presetPanelExpanded by remember { mutableStateOf(false) }
-    // 只在展开期间有效，应用或取消后清掉
+    // 只在展开期间有效，应用或取消后清除。
     var selectedPreset by remember { mutableStateOf<DepotPresetSelection?>(null) }
-    val knownItemIds = itemHelper.items.collectAsStateWithLifecycle().value.keys
+    // 物品索引只订阅一次：itemIds / 名字表 / 活动预设键集都从这份快照派生
+    val knownItemIds = itemIndex.keys
     // 展开或导入落空时以当下时刻重算，对齐上游 PresetDropDownVisibilityChanged
     var presetClock by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val activityPresets = remember(activityStages, knownItemIds, presetClock) {
@@ -150,7 +172,7 @@ fun DepotMaintainConfigPanel(
     val validPresetSelection = selectedPreset?.takeIf { selection ->
         selection !is DepotPresetSelection.Activity || activityPresets.any { it.key == selection.key }
     }
-    // 活动按 key 现查，面板开着期间到期或被移除就不导入，转而刷新列表
+    // 活动的 key 现查，面板开着期间到期或被移除就不导入，转而刷新列表
     val applyPreset: (DepotPresetSelection) -> Boolean = { selection ->
         val now = System.currentTimeMillis()
         val plans = when (selection) {
@@ -200,7 +222,7 @@ fun DepotMaintainConfigPanel(
                     else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                     // 用 selectable 而非 clickable，读屏才会播报选中态
-                    // 同 PanelHeader 页签，不要涟漪
+                    // 用 PanelHeader 页签，不要涟漪
                     modifier = Modifier.selectable(
                         selected = selected,
                         interactionSource = null,
@@ -235,13 +257,10 @@ fun DepotMaintainConfigPanel(
                         config = config,
                         onConfigChange = onConfigChange,
                         planOutcomes = planOutcomes,
-                        stageGroups = stageGroups,
-                        stageCodes = stageCodes,
-                        itemIds = itemIds,
                         itemNameMap = itemNameMap,
-                        inventory = snapshot.items,
+                        inventory = effectiveInventory,
                         inventorySynced = snapshot.hasSynced,
-                        expandedIndices = expandedIndices,
+                        iconLoader = iconLoader,
                         presetPanelExpanded = presetPanelExpanded,
                         onPresetPanelExpandedChange = {
                             presetPanelExpanded = it
@@ -253,6 +272,8 @@ fun DepotMaintainConfigPanel(
                         onApplyPreset = applyPreset,
                         showClearConfirm = showClearConfirm,
                         onShowClearConfirmChange = { showClearConfirm = it },
+                        onOpenPlan = { sheetTarget = it },
+                        onAddPlan = { itemPickerVisible = true },
                     )
 
                     else -> item(key = "advanced") {
@@ -264,33 +285,128 @@ fun DepotMaintainConfigPanel(
             }
         }
     }
+
+    // 详情面板挂在滚动容器外面：它自己就是一层模态，跟着页面滚没有意义。
+    sheetTarget?.let { target ->
+        val index = target.planIndex
+        DepotPlanEditorSheet(
+            itemId = target.itemId,
+            itemName = target.itemName,
+            // 与概览同一口径：勾了双芯片折算的档，这里显示的「现在有多少」也跟着折算
+            count = effectiveInventory[target.itemId] ?: 0,
+            // 计划里的 dropId 与点开的那一行不一定相同（历史数据/导入），按它自己取库存。
+            countOf = { id -> effectiveInventory[id] ?: 0 },
+            existing = index?.let { config.plans.getOrNull(it) },
+            existingOutcome = index?.let { planOutcomes.getOrNull(it) },
+            context = DepotPlanContext(nodeEnabled = nodeEnabled),
+            synced = snapshot.hasSynced,
+            showMedicine = config.useMedicine,
+            showStone = config.useStone,
+            onDismiss = { sheetTarget = null },
+            onSave = { plan ->
+                val plans = config.plans.toMutableList()
+                if (index != null && index in plans.indices) {
+                    plans[index] = plan
+                } else {
+                    plans.add(plan)
+                }
+                onConfigChange(config.copy(plans = plans))
+            },
+            onRemove = {
+                val plans = config.plans.toMutableList()
+                if (index != null && index in plans.indices) plans.removeAt(index)
+                onConfigChange(config.copy(plans = plans))
+            },
+        )
+    }
+
+    // 「添加」抽屉：只有未计划的物品，点一格关抽屉、进新建计划的详情面板。
+    if (itemPickerVisible) {
+        UnplannedItemsSheet(
+            cells = unplannedCells,
+            synced = snapshot.hasSynced,
+            iconLoader = iconLoader,
+            onDismiss = { itemPickerVisible = false },
+            onPick = { cell ->
+                itemPickerVisible = false
+                sheetTarget = DepotPlanSheetTarget(
+                    itemId = cell.itemId,
+                    itemName = cell.name,
+                    planIndex = null,
+                )
+            },
+        )
+    }
 }
 
 /**
- * 计划概览
- * 序号与计划卡、运行日志的编号同源（1 起、按原始位置），右侧给出本次会不会跑
+ * 计划概览：一条计划一行，可拖动排序、左划删除、两秒内可撤销，点行进详情面板。
  *
- * @param outcomes 与 [plans] 同序，由调用方算好，避免每次重组重跑判定
+ * 抓手在行首，名称与进度在中间，右侧给出这一趟会不会白跑。
+ * 逐条的缺口由行自己讲，这里只回答「会跑几条」。
+ *
+ * 不再沿用计划卡片就地展开编辑：展开态挂在行下标上，一旦支持拖动排序，
+ * 顺序一变展开的就是隔壁那条计划；七个字段挤在卡片里也会把物料按钮组折行。
+ *
+ * @param outcomes 与 [plans] 同序且等长，由调用方算好，避免每次重组重跑判定
+ * @param onMove 松手后回调：从 [from] 条挪到了第 [to] 条
+ * @param onDelete 划开并点了删除：删掉第 [index] 条
+ * @param onRestore 撤销：把 [plan] 放回第 [index] 条
+ * @param onAddPlan 点了列表末尾的「添加」：打开未计划物品的抽屉
  */
 @Composable
-private fun PlanSummary(
+private fun PlanOverview(
     plans: List<DepotMaintainPlan>,
     outcomes: List<DepotPlanOutcome>,
-    stageGroups: List<StageGroup>,
     itemNameMap: Map<String, String>,
     inventory: Map<String, Int>,
     inventorySynced: Boolean,
-    countDualChips: Boolean,
+    iconLoader: ItemIconLoader,
+    onClick: (Int) -> Unit,
+    onMove: (from: Int, to: Int) -> Unit,
+    onDelete: (Int) -> Unit,
+    onRestore: (index: Int, plan: DepotMaintainPlan) -> Unit,
+    onAddPlan: () -> Unit,
 ) {
     val notSelectedLabel = stringResource(R.string.panel_depot_not_selected)
+    val entries = remember(plans, outcomes, inventory, itemNameMap, notSelectedLabel) {
+        depotPlanOrderEntries(
+            plans = plans,
+            outcomes = outcomes,
+            inventory = inventory,
+            itemNameMap = itemNameMap,
+            notSelectedLabel = notSelectedLabel,
+        )
+    }
     val runnableCount = outcomes.count { it == DepotPlanOutcome.Runnable }
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+    // 划掉的那一条。撤销之后不清空：收起动画还在播的时候文案不该先空掉
+    var pendingRemoval by remember { mutableStateOf<DepotPlanRemoval?>(null) }
+    var undoVisible by remember { mutableStateOf(false) }
+    var undoJob by remember { mutableStateOf<Job?>(null) }
+    val scope = rememberCoroutineScope()
+
+    val removePlan: (Int) -> Unit = { index ->
+        plans.getOrNull(index)?.let { plan ->
+            pendingRemoval = DepotPlanRemoval(
+                index = index,
+                plan = plan,
+                name = itemNameMap[plan.dropId] ?: notSelectedLabel,
+            )
+            undoVisible = true
+            // 又划掉一条就重新计时：上一个计时器到点也不该把新的这条收掉
+            undoJob?.cancel()
+            undoJob = scope.launch {
+                delay(DepotPlanUndoMillis)
+                undoVisible = false
+            }
+            onDelete(index)
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        // 列表空的时候不画汇总：0/0 那一行说明不了任何事
+        if (plans.isNotEmpty()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = stringResource(R.string.panel_depot_summary_title),
@@ -305,119 +421,125 @@ private fun PlanSummary(
                         plans.size,
                     ),
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (runnableCount == 0) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (runnableCount == 0) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                 )
             }
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 6.dp),
-                color = MaterialTheme.colorScheme.outlineVariant,
-                thickness = 0.5.dp,
+            Text(
+                text = stringResource(R.string.depot_inventory_order_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+        PlanRemovalUndoBar(
+            name = pendingRemoval?.name,
+            visible = undoVisible,
+            onUndo = {
+                undoVisible = false
+                undoJob?.cancel()
+                pendingRemoval?.let {
+                    onRestore(it.index, it.plan)
+                    pendingRemoval = null
+                }
+            },
+        )
+        DepotPlanOrderColumn(
+            entries = entries,
+            synced = inventorySynced,
+            iconLoader = iconLoader,
+            onMove = onMove,
+            onClick = onClick,
+            onDelete = removePlan,
+        )
+        // 加计划只剩这一个入口：列表末尾的「添加」把未计划物品摊到抽屉里。
+        // 已有计划的物品不再另铺一排格子（那些行就在上面，点一下就是同一条计划）
+        OutlinedButton(
+            onClick = onAddPlan,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(stringResource(R.string.panel_depot_add_plan))
+        }
+    }
+}
 
-            plans.forEachIndexed { index, plan ->
-                val outcome = outcomes[index]
-                val muted =
-                    outcome != DepotPlanOutcome.Runnable && outcome != DepotPlanOutcome.Enough
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "${index + 1}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.width(18.dp),
-                    )
-                    if (plan.dropId.isNotEmpty()) {
-                        ItemIcon(itemId = plan.dropId, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                    }
-                    Text(
-                        text = stageDisplayName(plan.stage, stageGroups) +
-                                " · " + (itemNameMap[plan.dropId] ?: notSelectedLabel),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant
-                        else MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    when (outcome) {
-                        DepotPlanOutcome.NoItem -> SummaryTag(
-                            text = stringResource(R.string.panel_depot_summary_no_item),
-                            color = MaterialTheme.colorScheme.error,
-                        )
+/** 刚划掉、还能撤回的那一条：计划本体 + 原来的位置 + 列表里显示的名字 */
+private data class DepotPlanRemoval(
+    val index: Int,
+    val plan: DepotMaintainPlan,
+    val name: String,
+)
 
-                        DepotPlanOutcome.ZeroTarget -> SummaryTag(
-                            text = stringResource(R.string.panel_depot_summary_zero_target),
-                            color = MaterialTheme.colorScheme.error,
-                        )
+/** 划掉之后「撤销」亮多久 */
+private const val DepotPlanUndoMillis = 2_000L
 
-                        DepotPlanOutcome.StageRequired -> SummaryTag(
-                            text = stringResource(R.string.panel_depot_summary_stage_required),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-
-                        DepotPlanOutcome.StageClosed -> SummaryTag(
-                            text = stringResource(R.string.panel_depot_summary_stage_closed),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-
-                        DepotPlanOutcome.Enough -> SummaryTag(
-                            text = stringResource(R.string.panel_depot_summary_enough),
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        // 未识别过库存时用「--」表达「无数据」，而非误导性的 0；折算部分以「原始 (+折算)」显示
-                        DepotPlanOutcome.Runnable -> SummaryTag(
-                            text = inventoryText(plan.dropId, inventory, inventorySynced, countDualChips) +
-                                    " / ${plan.dropCount}",
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
+/**
+ * 划掉一条计划之后浮出来的撤销条：左边说划掉了谁，右边一个「撤销」。
+ *
+ * 就摆在概览标题下面——划的是列表里的行，提示也在同一片区域里。
+ *
+ * @param name 被划掉的那条计划叫什么；null = 还没划过
+ */
+@Composable
+private fun PlanRemovalUndoBar(
+    name: String?,
+    visible: Boolean,
+    onUndo: () -> Unit,
+) {
+    // 一直留在组合里（收起时内容不组合）：第一次划掉时 visible 是由 false 翻上来的，
+    // 展开动效才播得出来。
+    MaaAnimatedVisibility(visible = visible) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.panel_depot_plan_removed, name.orEmpty()),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onUndo) {
+                    Text(stringResource(R.string.panel_depot_undo_remove))
                 }
             }
         }
     }
 }
 
-private fun inventoryText(
-    dropId: String,
-    inventory: Map<String, Int>,
-    synced: Boolean,
-    countDualChips: Boolean,
-): String {
-    if (!synced) return "--"
-    val raw = inventory[dropId] ?: 0
-    val extra = if (countDualChips) DualChipConversion.extra(dropId) { inventory[it] ?: 0 } else 0
-    return if (extra > 0) "$raw (+$extra)" else "$raw"
-}
-
-@Composable
-private fun SummaryTag(text: String, color: Color) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = color,
-        maxLines = 1,
-    )
-}
+/** 要点开哪一条计划的详情设置；[planIndex] 为空 = 这一格还没有计划，点开是新建 */
+private data class DepotPlanSheetTarget(
+    val itemId: String,
+    val itemName: String,
+    val planIndex: Int?,
+)
 
 private fun LazyListScope.GeneralTab(
     config: DepotMaintainConfig,
     onConfigChange: (DepotMaintainConfig) -> Unit,
     planOutcomes: List<DepotPlanOutcome>,
-    stageGroups: List<StageGroup>,
-    stageCodes: List<String>,
-    itemIds: List<String>,
     itemNameMap: Map<String, String>,
     inventory: Map<String, Int>,
     inventorySynced: Boolean,
-    expandedIndices: MutableList<Int>,
+    iconLoader: ItemIconLoader,
     presetPanelExpanded: Boolean,
     onPresetPanelExpandedChange: (Boolean) -> Unit,
     activityPresets: List<DepotActivityPreset>,
@@ -426,73 +548,76 @@ private fun LazyListScope.GeneralTab(
     onApplyPreset: (DepotPresetSelection) -> Boolean,
     showClearConfirm: Boolean,
     onShowClearConfirmChange: (Boolean) -> Unit,
+    onOpenPlan: (DepotPlanSheetTarget) -> Unit,
+    onAddPlan: () -> Unit,
 ) {
-    if (config.plans.isNotEmpty()) {
-        item(key = "summary", contentType = "summary") {
-            PlanSummary(
-                plans = config.plans,
-                outcomes = planOutcomes,
-                stageGroups = stageGroups,
-                itemNameMap = itemNameMap,
-                inventory = inventory,
-                inventorySynced = inventorySynced,
-                countDualChips = config.countDualChipAsChipPack,
-            )
-        }
+    // 概览不论列表是否为空都要组合：最后一条被划掉时撤销条还得在
+    item(key = "summary", contentType = "summary") {
+        val notSelectedLabel = stringResource(R.string.panel_depot_not_selected)
+        PlanOverview(
+            plans = config.plans,
+            outcomes = planOutcomes,
+            itemNameMap = itemNameMap,
+            inventory = inventory,
+            inventorySynced = inventorySynced,
+            iconLoader = iconLoader,
+            onClick = { index ->
+                config.plans.getOrNull(index)?.let { plan ->
+                    onOpenPlan(
+                        DepotPlanSheetTarget(
+                            itemId = plan.dropId,
+                            itemName = itemNameMap[plan.dropId] ?: notSelectedLabel,
+                            planIndex = index,
+                        )
+                    )
+                }
+            },
+            onMove = { from, to ->
+                // 拖动改的就是执行顺序：执行侧按节点内 plans 的下标依次跑
+                if (from != to && from in config.plans.indices && to in config.plans.indices) {
+                    onConfigChange(
+                        config.copy(
+                            plans = config.plans.toMutableList()
+                                .also { it.add(to, it.removeAt(from)) }
+                        )
+                    )
+                }
+            },
+            onDelete = { index ->
+                val plans = config.plans.toMutableList()
+                if (index in plans.indices) plans.removeAt(index)
+                onConfigChange(config.copy(plans = plans))
+            },
+            onRestore = { index, plan ->
+                val plans = config.plans.toMutableList()
+                // 撤销窗口里列表还可能被拖动过，原位放不下就贴到末尾。
+                plans.add(index.coerceIn(0, plans.size), plan)
+                onConfigChange(config.copy(plans = plans))
+            },
+            onAddPlan = onAddPlan,
+        )
     }
     item(key = "controls", contentType = "controls") {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(
+            OutlinedButton(
+                onClick = {
+                    onShowClearConfirmChange(true)
+                    onPresetPanelExpandedChange(false)
+                },
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                enabled = config.plans.isNotEmpty(),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
             ) {
-                Button(
-                    onClick = {
-                        onConfigChange(config.copy(plans = config.plans + DepotMaintainPlan()))
-                    },
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 8.dp),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.panel_depot_add_plan))
-                }
-                OutlinedButton(
-                    onClick = { expandedIndices.clear() },
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 8.dp),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Icon(
-                        Icons.Default.UnfoldLess,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.panel_depot_collapse_all))
-                }
-                OutlinedButton(
-                    onClick = {
-                        onShowClearConfirmChange(true)
-                        onPresetPanelExpandedChange(false)
-                    },
-                    modifier = Modifier.weight(1f),
-                    enabled = config.plans.isNotEmpty(),
-                    contentPadding = PaddingValues(horizontal = 8.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    ),
-                ) {
-                    Icon(
-                        Icons.Default.DeleteSweep,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.panel_depot_clear_plans))
-                }
+                Icon(
+                    Icons.Default.DeleteSweep,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(stringResource(R.string.panel_depot_clear_plans))
             }
             PresetPicker(
                 expanded = presetPanelExpanded,
@@ -513,7 +638,6 @@ private fun LazyListScope.GeneralTab(
                     config.plans.size,
                 ),
                 onConfirm = {
-                    expandedIndices.clear()
                     onConfigChange(config.copy(plans = emptyList()))
                     onShowClearConfirmChange(false)
                 },
@@ -521,44 +645,93 @@ private fun LazyListScope.GeneralTab(
             )
         }
     }
-    itemsIndexed(config.plans, key = { index, _ -> "plan-$index" }, contentType = { _, _ -> "plan" }) { index, plan ->
-        PlanCard(
-            plan = plan,
-            expanded = index in expandedIndices,
-            onToggleExpand = {
-                if (index in expandedIndices) expandedIndices.remove(index)
-                else expandedIndices.add(index)
-            },
-            customStageCode = config.customStageCode,
-            showMedicine = config.useMedicine,
-            showStone = config.useStone,
-            stageGroups = stageGroups,
-            stageCodes = stageCodes,
-            itemIds = itemIds,
-            itemNameMap = itemNameMap,
-            onPlanChange = { updated ->
-                onConfigChange(
-                    config.copy(
-                        plans = config.plans.toMutableList().also { it[index] = updated })
+}
+
+/**
+ * 「添加」打开的抽屉：把还没有计划的物品铺成一张表。
+ *
+ * 已有计划的物品不在这里重复一遍——它们就在上面的概览里，点行就是同一条计划的详情。
+ * 所以这里的格子点下去一律是「新建一条计划」（[DepotItemCellUi.planIndex] 为 null）。
+ *
+ * 抽屉以半屏打开；在格子上往上划一下，抽屉先顶到全屏再继续滚，一屏能多看到一倍物品。
+ *
+ * @param cells 只含未计划的物品，由调用方算好，避免抽屉每次重组重跑分组
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun UnplannedItemsSheet(
+    cells: List<DepotItemCellUi>,
+    synced: Boolean,
+    iconLoader: ItemIconLoader,
+    onDismiss: () -> Unit,
+    onPick: (DepotItemCellUi) -> Unit,
+) {
+    // 一半屏打开、上划就顶到全屏：上百个材料铺成一张表，半屏一次只能看到十来个
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val scope = rememberCoroutineScope()
+    val expanded = sheetState.currentValue == SheetValue.Expanded
+    // 列表自己能滚，默认会把上划全部吃掉，抽屉永远停在半屏；
+    // 所以趁列表还没动时先接住这一下，把抽屉顶开，剩下的位移交回列表。
+    val expandOnScrollUp = remember(expanded) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (!expanded && available.y < 0f) {
+                    scope.launch { sheetState.expand() }
+                    return Offset(0f, available.y)
+                }
+                return Offset.Zero
+            }
+        }
+    }
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.panel_depot_section_unplanned, cells.size),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            if (cells.isEmpty()) {
+                // 全部物品都已计划时按钮仍可点：不给空态就只剩一个空抽屉，像卡死
+                Text(
+                    text = stringResource(R.string.panel_depot_unplanned_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            },
-            onRemove = {
-                // 删除 index 后：>index 的展开下标整体 -1，==index 移除
-                val remapped = expandedIndices.mapNotNull { i ->
-                    when {
-                        i < index -> i
-                        i == index -> null
-                        else -> i - 1
-                    }
-                }.distinct()
-                expandedIndices.clear()
-                expandedIndices.addAll(remapped)
-                onConfigChange(
-                    config.copy(
-                        plans = config.plans.toMutableList().also { it.removeAt(index) })
+            } else {
+                Text(
+                    text = stringResource(R.string.panel_depot_unplanned_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            },
-        )
+                // 上百个材料铺开比一屏高得多，抽屉里自己滚，别把面板的列表拖着动；
+                // 上限按屏高比例取，横屏/分屏时不会被父级夹裁到滚不动；
+                // 顶到全屏后这份高度就是抽屉里的可用空间，再高会把标题顶出屏幕
+                val maxListHeight = (LocalConfiguration.current.screenHeightDp * 0.8f).dp
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .nestedScroll(expandOnScrollUp)
+                        .heightIn(max = maxListHeight)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    DepotItemFlow(
+                        cells = cells,
+                        synced = synced,
+                        iconLoader = iconLoader,
+                        onClick = { cell ->
+                            // 先收抽屉再开详情面板：两层模态同时在场会互相盖住
+                            scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                if (!sheetState.isVisible) onPick(cell)
+                            }
+                        },
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -708,7 +881,7 @@ private fun PresetOptionRow(
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
         )
-        // 提前告知会加几条，芯片预设一次进 8 条
+        // 提前告知会加几条，芯片预设一次进 8 个。
         Text(
             text = stringResource(R.string.panel_depot_preset_plan_count, planCount),
             style = MaterialTheme.typography.bodySmall,
@@ -765,18 +938,8 @@ private fun ColumnScope.AdvancedTab(
         label = stringResource(R.string.panel_depot_skip_during_resource),
     )
 
-    SectionHeader(
-        title = stringResource(R.string.panel_depot_group_stage_battle),
-        modifier = Modifier.padding(top = 4.dp),
-    )
-
-    CheckBoxWithExpandableTip(
-        checked = config.customStageCode,
-        onCheckedChange = { onConfigChange(config.copy(customStageCode = it)) },
-        label = stringResource(R.string.panel_fight_custom_stage_code),
-        tipText = stringResource(R.string.panel_fight_custom_stage_code_tip),
-    )
-
+    // 倍率开关：勾选后把 series=0 交给 core 取当前可用的最大倍率（对齐上游 AUTO 代理倍率）；
+    // 同时按企鹅物流掉率把缺口折算成战斗次数写进日志（只估不截止）。
     CheckBoxWithExpandableTip(
         checked = config.useAutoSeries,
         onCheckedChange = { onConfigChange(config.copy(useAutoSeries = it)) },
@@ -809,159 +972,3 @@ private fun ColumnScope.AdvancedTab(
     )
 }
 
-@Composable
-private fun PlanCard(
-    plan: DepotMaintainPlan,
-    expanded: Boolean,
-    onToggleExpand: () -> Unit,
-    customStageCode: Boolean,
-    showMedicine: Boolean,
-    showStone: Boolean,
-    stageGroups: List<StageGroup>,
-    stageCodes: List<String>,
-    itemIds: List<String>,
-    itemNameMap: Map<String, String>,
-    onPlanChange: (DepotMaintainPlan) -> Unit,
-    onRemove: () -> Unit,
-) {
-    val notSelectedLabel = stringResource(R.string.panel_depot_not_selected)
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        color = MaterialTheme.colorScheme.surface
-    ) {
-        Column(
-            modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(4.dp))
-                    .clickable { onToggleExpand() },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (plan.dropId.isNotEmpty()) {
-                    ItemIcon(itemId = plan.dropId, modifier = Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                }
-                Text(
-                    text = stageDisplayName(
-                        plan.stage,
-                        stageGroups,
-                    ) + " · ${itemNameMap[plan.dropId] ?: notSelectedLabel}" + " x${plan.dropCount}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(1f)
-                )
-                Icon(
-                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            MaaAnimatedVisibility(visible = expanded) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (customStageCode) {
-                        StageRow(onRemove = null) {
-                            StageInputField(
-                                value = plan.stage,
-                                onValueChange = { onPlanChange(plan.copy(stage = it)) },
-                                label = stringResource(R.string.panel_fight_primary_stage_label),
-                                placeholder = stringResource(R.string.panel_fight_primary_stage_placeholder),
-                                stageCodes = stageCodes,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    } else {
-                        GroupedStageButtonGroup(
-                            label = stringResource(R.string.panel_fight_primary_stage_label),
-                            selectedValue = plan.stage,
-                            stageGroups = stageGroups,
-                            onItemSelected = { onPlanChange(plan.copy(stage = it)) })
-                    }
-
-                    ItemButtonGroup(
-                        label = stringResource(R.string.panel_fight_material),
-                        selectedValue = plan.dropId,
-                        items = itemIds,
-                        onItemSelected = { onPlanChange(plan.copy(dropId = it)) },
-                        displayMapper = { id -> itemNameMap[id] ?: id })
-
-                    INumericField(
-                        value = plan.dropCount,
-                        onValueChange = { onPlanChange(plan.copy(dropCount = it)) },
-                        label = stringResource(R.string.panel_depot_target_inventory),
-                        // 展开时 dropCount <= 0 会被按 ERROR 拒绝，UI 不该放行 0
-                        minimum = 1,
-                        maximum = MAX_TARGET_INVENTORY,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    // 任务级总开关关掉时整行隐藏，勾选值原样留着，重新打开即恢复
-                    if (showMedicine) {
-                        CheckBoxWithLabel(
-                            checked = plan.useMedicine,
-                            onCheckedChange = { onPlanChange(plan.copy(useMedicine = it)) },
-                            label = stringResource(R.string.panel_fight_use_medicine),
-                        )
-                        MaaAnimatedVisibility(visible = plan.useMedicine) {
-                            INumericField(
-                                value = plan.medicineCount,
-                                onValueChange = { onPlanChange(plan.copy(medicineCount = it)) },
-                                label = stringResource(R.string.panel_fight_use_medicine_count),
-                                minimum = 0,
-                                maximum = 999,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-
-                    if (showStone) {
-                        CheckBoxWithLabel(
-                            checked = plan.useStone,
-                            onCheckedChange = { onPlanChange(plan.copy(useStone = it)) },
-                            label = stringResource(R.string.panel_stone_use),
-                        )
-                        MaaAnimatedVisibility(visible = plan.useStone) {
-                            INumericField(
-                                value = plan.stoneCount,
-                                onValueChange = { onPlanChange(plan.copy(stoneCount = it)) },
-                                label = stringResource(R.string.panel_depot_stone_count),
-                                minimum = 0,
-                                maximum = 999,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-
-                    HorizontalDivider()
-
-                    // 移动端无 hover，删除按钮在展开态底部常驻（上游为 hover 显示）
-                    OutlinedButton(
-                        onClick = onRemove,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        ),
-                        border = BorderStroke(
-                            1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
-                        ),
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.panel_depot_remove_plan))
-                    }
-                }
-            }
-        }
-    }
-}

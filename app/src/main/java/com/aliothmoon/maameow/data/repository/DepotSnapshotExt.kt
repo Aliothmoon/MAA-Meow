@@ -27,3 +27,18 @@ fun DepotSnapshot.delta(): DepotDelta? {
 }
 
 fun formatDepotDelta(value: Int): String = if (value > 0) "+$value" else "$value"
+/**
+ * 企鹅物流 / ArkPlanner 的仓库 JSON。
+ *
+ * 按原始快照导出，不做任何物品过滤（抽卡资源也在内），与识别结果同源。
+ * 工具页面与库存页共用，别在两处各写一份格式。
+ */
+fun DepotSnapshot.toArkPlannerJson(itemMap: Map<String, ItemInfo>): String {
+    val itemsJson = toSortedItems(itemMap)
+        .joinToString(",") { """{"id":"${it.id}","have":${it.count}}""" }
+    return """{"@type":"@penguin-statistics/depot","items":[$itemsJson]}"""
+}
+
+/** Lolicon 的仓库 JSON，口径同 [toArkPlannerJson]。 */
+fun DepotSnapshot.toLoliconJson(itemMap: Map<String, ItemInfo>): String =
+    "{${toSortedItems(itemMap).joinToString(",") { "\"${it.id}\":${it.count}" }}}"
