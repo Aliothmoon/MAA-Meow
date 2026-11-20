@@ -1022,6 +1022,11 @@
     <string name="copilot_match_hidden">오퍼레이터 매칭으로 숨긴 작업: %1$d개</string>
     <string name="copilot_match_missing">미보유: %1$s</string>
     <string name="copilot_match_training">육성 부족: %1$s</string>
+    <string name="copilot_match_badge_missing">미보유</string>
+    <string name="copilot_match_badge_elite">정예화</string>
+    <string name="copilot_match_badge_level">레벨</string>
+    <string name="copilot_match_badge_skill">스킬</string>
+    <string name="copilot_match_badge_module">모듈</string>
     <string name="copilot_search_added_list">추가된 작업</string>
     <string name="copilot_search_tab_copilot">작업</string>
     <string name="copilot_search_tab_set">작업 세트</string>
