@@ -21,6 +21,7 @@ import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.resolve
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -90,6 +91,9 @@ class MiniGameDelegate(
 
     val strongholdProtocolConfig: StateFlow<StrongholdProtocolConfig> = appSettingsManager.strongholdProtocolConfig
 
+    // 失焦保存是异步落盘，点「开始任务」时等完本次写入，避免发出旧值
+    private var pendingStrongholdSave: Job? = null
+
     fun isSecretFront(selectedTaskName: String): Boolean =
         selectedTaskName == SECRET_FRONT_VALUE
 
@@ -138,7 +142,11 @@ class MiniGameDelegate(
     }
 
     fun onStrongholdProtocolConfigChanged(transform: (StrongholdProtocolConfig) -> StrongholdProtocolConfig) {
-        scope.launch { appSettingsManager.updateStrongholdProtocolConfig(transform) }
+        val prev = pendingStrongholdSave
+        pendingStrongholdSave = scope.launch {
+            prev?.join()
+            appSettingsManager.updateStrongholdProtocolConfig(transform)
+        }
     }
 
     fun findGame(selectedTaskName: String): MiniGame? =
@@ -249,9 +257,10 @@ class MiniGameDelegate(
         }
 
         scope.launch {
+            awaitPendingStrongholdSave()
             val task = buildTaskParams()
             _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_starting)) }
-            val result = compositionService.startCopilot(listOf(task))
+            val result = compositionService.startCopilot(listOf(task), clientType.value)
             if (result is MaaCompositionService.StartResult.Success) {
                 achievementRepository.report {
                     event = AchievementEvents.MINI_GAME_STARTED
@@ -279,6 +288,14 @@ class MiniGameDelegate(
                     ),
                 )
             }
+        }
+    }
+
+    private suspend fun awaitPendingStrongholdSave() {
+        while (true) {
+            val save = pendingStrongholdSave ?: return
+            save.join()
+            if (pendingStrongholdSave === save) return
         }
     }
 

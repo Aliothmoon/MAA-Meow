@@ -23,7 +23,7 @@ object MiniGameTextRegistry {
         "Toolbox.MiniGame.MaterialSynthesis" -> R.string.mini_game_name_material_synthesis
         "Toolbox.MiniGame.CursedRelic" -> R.string.mini_game_name_cursed_relic
         "Toolbox.MiniGame.PV" -> R.string.mini_game_name_pv
-        "Toolbox.MiniGame.SPA" -> R.string.mini_game_name_spa
+        "Toolbox.MiniGame.SPA", "Toolbox.MiniGame.StrongholdProtocol" -> R.string.mini_game_name_spa
         "Toolbox.MiniGame.OS" -> R.string.mini_game_name_os
         "Toolbox.MiniGame.RMTR1" -> R.string.mini_game_name_rm_tr_1
         "Toolbox.MiniGame.RM1" -> R.string.mini_game_name_rm_1
@@ -80,7 +80,7 @@ object MiniGameTextRegistry {
             R.string.mini_game_name_cursed_relic
 
         "MiniGame@PV", "MiniGame@PV@Begin" -> R.string.mini_game_name_pv
-        "MiniGame@SPA", "MiniGame@SPA@Begin" -> R.string.mini_game_name_spa
+        "MiniGame@SPA", "MiniGame@SPA@Begin", "StrongholdProtocol@Farm@Begin" -> R.string.mini_game_name_spa
         "MiniGame@OS", "MiniGame@OS@Begin" -> R.string.mini_game_name_os
         "MiniGame@RM-TR-1", "MiniGame@RM-TR-1@Begin" -> R.string.mini_game_name_rm_tr_1
         "MiniGame@RM-1", "MiniGame@RM-1@Begin" -> R.string.mini_game_name_rm_1

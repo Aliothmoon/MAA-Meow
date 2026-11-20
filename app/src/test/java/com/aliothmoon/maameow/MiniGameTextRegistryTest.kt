@@ -233,6 +233,26 @@ class MiniGameTextRegistryTest {
     }
 
     @Test
+    fun resolveDisplay_strongholdProtocolKeyAndValue_mapToSpaName() {
+        assertEquals(
+            UiText.Resource(R.string.mini_game_name_spa),
+            MiniGameTextRegistry.resolveDisplay(
+                display = null,
+                displayKey = "Toolbox.MiniGame.StrongholdProtocol",
+                value = "StrongholdProtocol@Farm@Begin"
+            )
+        )
+        assertEquals(
+            UiText.Resource(R.string.mini_game_name_spa),
+            MiniGameTextRegistry.resolveDisplay(
+                display = null,
+                displayKey = null,
+                value = "StrongholdProtocol@Farm@Begin"
+            )
+        )
+    }
+
+    @Test
     fun resolveTip_allEmpty_returnsEmptyTip() {
         val result = MiniGameTextRegistry.resolveTip(
             tip = null,

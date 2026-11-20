@@ -140,13 +140,15 @@ class AppSettingsManager internal constructor(
     /** 首次快照的所有字段发布后才放行业务初始化 */
     suspend fun awaitLoaded() = loaded.await()
 
-    private fun <T> setting(read: (AppSettings) -> T): StateFlow<T> {
+    private fun <T> mutableSetting(read: (AppSettings) -> T): MutableStateFlow<T> {
         val state = MutableStateFlow(read(defaults))
         settingUpdates += { state.value = read(it) }
         // 晚于 init 块声明的设置项在此补发
         initialSettings?.let { state.value = read(it) }
-        return state.asStateFlow()
+        return state
     }
+
+    private fun <T> setting(read: (AppSettings) -> T): StateFlow<T> = mutableSetting(read).asStateFlow()
 
     suspend fun setSettings(settings: AppSettings) {
         with(AppSettingsSchema) { context.dataStore.update(settings) }
@@ -976,16 +978,21 @@ class AppSettingsManager internal constructor(
         return config.copy(mode = config.sanitizedMode())
     }
 
-    val strongholdProtocolConfig: StateFlow<StrongholdProtocolConfig> =
-        setting { parseStrongholdProtocolConfig(it.strongholdProtocolConfig) }
+    private val _strongholdProtocolConfig =
+        mutableSetting { parseStrongholdProtocolConfig(it.strongholdProtocolConfig) }
+    val strongholdProtocolConfig: StateFlow<StrongholdProtocolConfig> = _strongholdProtocolConfig.asStateFlow()
 
-    /** 在事务内读改写，连续修改不会互相覆盖 */
+    /** 在事务内读改写，连续修改不会互相覆盖；落盘后立即同步内存态，避免调用方 join 后仍读到旧快照 */
     suspend fun updateStrongholdProtocolConfig(transform: (StrongholdProtocolConfig) -> StrongholdProtocolConfig) {
         with(AppSettingsSchema) {
+            var updated: StrongholdProtocolConfig? = null
             context.dataStore.edit {
                 val current = parseStrongholdProtocolConfig(it[strongholdProtocolConfig].orEmpty())
-                it[strongholdProtocolConfig] = JsonUtils.common.encodeToString(transform(current))
+                val next = transform(current)
+                it[strongholdProtocolConfig] = JsonUtils.common.encodeToString(next)
+                updated = next
             }
+            updated?.let { _strongholdProtocolConfig.value = it }
         }
     }
 

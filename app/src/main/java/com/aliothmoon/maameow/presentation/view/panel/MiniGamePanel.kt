@@ -112,8 +112,8 @@ fun MiniGamePanel(
             }
         }
 
-        // Tip 提示，生息演算与卫戍协议的说明随设置展示
-        if (tip.isNotBlank() && !isReclamation && !isStrongholdProtocol) {
+        // Tip 提示，生息演算与卫戍协议的说明随设置展示；版本不支持时仍显示警告
+        if (tip.isNotBlank() && (isUnsupported || (!isReclamation && !isStrongholdProtocol))) {
             item {
                 Surface(
                     shape = RoundedCornerShape(8.dp),

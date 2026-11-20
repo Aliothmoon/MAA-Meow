@@ -6,11 +6,20 @@ import com.aliothmoon.maameow.data.model.StrongholdProtocolConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.StrongholdPriority
+import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -27,25 +36,28 @@ class MiniGameEventShopBlacklistTest {
     private val reclamation = MutableStateFlow(ReclamationConfig())
     private val stronghold = MutableStateFlow(StrongholdProtocolConfig())
     private val clientType = MutableStateFlow("Official")
+    private val testScope = TestScope()
+    private val compositionService = mockk<MaaCompositionService>(relaxed = true)
+    private val appSettingsManager = mockk<AppSettingsManager> {
+        every { eventShopBlacklistPresets } returns presets
+        every { eventShopBlacklistCustom } returns custom
+        every { reclamationConfig } returns reclamation
+        every { strongholdProtocolConfig } returns stronghold
+    }
 
     private val delegate = MiniGameDelegate(
         appContext = mockk(relaxed = true),
         activityManager = mockk<ActivityManager> {
             every { miniGames } returns MutableStateFlow(emptyList())
         },
-        compositionService = mockk(relaxed = true),
-        scope = TestScope(),
+        compositionService = compositionService,
+        scope = testScope,
         achievementRepository = mockk(relaxed = true),
         pixelArt = mockk {
             every { state } returns MutableStateFlow(PixelArtUiState())
         },
         sessionLogger = mockk(relaxed = true),
-        appSettingsManager = mockk<AppSettingsManager> {
-            every { eventShopBlacklistPresets } returns presets
-            every { eventShopBlacklistCustom } returns custom
-            every { reclamationConfig } returns reclamation
-            every { strongholdProtocolConfig } returns stronghold
-        },
+        appSettingsManager = appSettingsManager,
         clientType = clientType,
         strongholdPriority = MutableStateFlow(StrongholdPriority.EMPTY),
     )
@@ -102,6 +114,36 @@ class MiniGameEventShopBlacklistTest {
         val json = Json.parseToJsonElement(delegate.buildTaskParams().params).jsonObject
         assertEquals(3, json.getValue("target").jsonPrimitive.content.toInt())
         assertEquals(1, json.getValue("runs").jsonPrimitive.content.toInt())
+    }
+
+    /** 失焦写入与立刻点「开始任务」并发时，必须等本次写入落定后再读取参数 */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun strongholdProtocol_onStart_awaitsPendingConfigSave() {
+        val gate = CompletableDeferred<Unit>()
+        coEvery { appSettingsManager.updateStrongholdProtocolConfig(any()) } coAnswers {
+            gate.await()
+            val transform = firstArg<(StrongholdProtocolConfig) -> StrongholdProtocolConfig>()
+            stronghold.value = transform(stronghold.value)
+        }
+        val startedTasks = slot<List<MaaTaskParams>>()
+        coEvery {
+            compositionService.startCopilot(capture(startedTasks), any())
+        } returns MaaCompositionService.StartResult.Success("v6.23.0-beta.1")
+
+        delegate.onTaskSelected("StrongholdProtocol@Farm@Begin")
+        delegate.onStrongholdProtocolConfigChanged { it.copy(runs = 10) }
+        delegate.onStart()
+        testScope.runCurrent()
+
+        coVerify(exactly = 0) { compositionService.startCopilot(any(), any()) }
+
+        gate.complete(Unit)
+        testScope.advanceUntilIdle()
+
+        coVerify(exactly = 1) { compositionService.startCopilot(any(), any()) }
+        val json = Json.parseToJsonElement(startedTasks.captured.single().params).jsonObject
+        assertEquals(10, json.getValue("runs").jsonPrimitive.content.toInt())
     }
 
     @Test

@@ -38,7 +38,7 @@ class GameMetadata(
  * 卫戍协议·规程的推荐干员，按显示语言本地化
  * [squad] 为自选编队优先名单，[shop] 为商店满级后的购买顺序，见 stronghold_protocol/regulation/purchase.json
  */
-class StrongholdPriority(val squad: List<String>, val shop: List<String>) {
+data class StrongholdPriority(val squad: List<String>, val shop: List<String>) {
     companion object {
         val EMPTY = StrongholdPriority(emptyList(), emptyList())
     }

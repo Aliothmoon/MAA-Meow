@@ -19,7 +19,6 @@ data class StrongholdProtocolConfig(
     companion object {
         const val MODE_BADGE = "badge"
         const val MODE_SCORE = "score"
-        val MODES = listOf(MODE_BADGE, MODE_SCORE)
 
         const val TARGET_GOLD = 3
         const val TARGET_COLOR = 6

@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.presentation.view.panel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -66,9 +65,7 @@ fun LazyListScope.strongholdProtocolSettingsItems(
                     onValueChange = { runs -> onUpdate { it.copy(runs = runs) } },
                     minimum = 1,
                     maximum = StrongholdProtocolConfig.MAX_RUNS,
-                    modifier = Modifier
-                        .fillMaxWidth(0.5f)
-                        .height(56.dp)
+                    modifier = Modifier.fillMaxWidth(0.5f)
                 )
             }
         }
