@@ -281,6 +281,10 @@ data class AppSettings(
     @PrefKey(default = "")
     val reclamationConfig: String = "",
 
+    /** 牛杂卫戍协议设置 JSON；空串表示从未保存 */
+    @PrefKey(default = "")
+    val strongholdProtocolConfig: String = "",
+
     /** 帮助改进本项目：匿名上报崩溃、任务统计与失败现场 */
     @PrefKey(default = "true")
     val telemetryEnabled: String = "true",

@@ -18,6 +18,7 @@ class GameMetadata(
     /** key=标签中文名, value=(显示名, 客户端名) */
     val recruitTags: Map<String, Pair<String, String>>,
     val mapData: List<MapInfo>,
+    val strongholdPriority: StrongholdPriority = StrongholdPriority.EMPTY,
 ) {
     companion object {
         val EMPTY = GameMetadata(
@@ -30,5 +31,15 @@ class GameMetadata(
             recruitTags = emptyMap(),
             mapData = emptyList(),
         )
+    }
+}
+
+/**
+ * 卫戍协议·规程的推荐干员，按显示语言本地化
+ * [squad] 为自选编队优先名单，[shop] 为商店满级后的购买顺序，见 stronghold_protocol/regulation/purchase.json
+ */
+class StrongholdPriority(val squad: List<String>, val shop: List<String>) {
+    companion object {
+        val EMPTY = StrongholdPriority(emptyList(), emptyList())
     }
 }

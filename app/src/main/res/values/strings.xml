@@ -99,6 +99,12 @@
     <string name="maa_deep_exploration_not_unlocked_complain">深入调查未解锁</string>
     <string name="maa_reclamation_pns_mode_error">当前使用无存档任务模式。请手动删除现有存档后再尝试。若您希望保留存档，请考虑切换模式。</string>
     <string name="maa_reclamation_pis_mode_error">当前任务模式需要您拥有可合成道具的存档。请考虑切换模式。</string>
+    <string name="maa_stronghold_protocol">卫戍协议</string>
+    <string name="maa_stronghold_strategy_log">%1$s：通过 %2$d/%3$d</string>
+    <string name="maa_stronghold_settlement_log">%1$s，已通关 %2$d/%3$d</string>
+    <string name="maa_stronghold_cleared">本局通关</string>
+    <string name="maa_stronghold_failed">本局失败</string>
+    <string name="maa_stronghold_strategies_completed">所有策略均已通过 %1$d 次，任务结束</string>
     <string name="maa_complete_combat">完成战斗</string>
 
     <!-- subtask_completed -->
@@ -1624,6 +1630,15 @@
     <string name="panel_reclamation_mode_ra15">RA-15</string>
     <string name="panel_reclamation_increment_click">连点</string>
     <string name="panel_reclamation_increment_hold">长按</string>
+    <string name="panel_stronghold_mode">模式</string>
+    <string name="panel_stronghold_mode_badge">刷角标（完整通关）</string>
+    <string name="panel_stronghold_mode_score">刷分（放生速通）</string>
+    <string name="panel_stronghold_target">角标目标</string>
+    <string name="panel_stronghold_target_gold">金色角标（通关 3 次）</string>
+    <string name="panel_stronghold_target_color">彩色角标（通关 6 次）</string>
+    <string name="panel_stronghold_runs">通关局数</string>
+    <string name="panel_stronghold_tip_badge">请使用活动默认皮肤，在有 ｢极速模拟｣ 的活动主界面启动任务。已有存档时，请先手动放弃。\nMAA 会选择未达标的策略，并打完每一局。目前仅适配国服简体中文界面。\n\n本模式最多可借用 30 名助战干员。\n建议先借齐商店优先名单中的干员，再借齐 VI 阶输出干员，名额允许时也尽量借齐 V 阶输出干员，可提高通过率。\n\n自选编队只选六星干员，每阶最多 2 名。优先顺序如下：\n%1$s\n\n商店满级后，优先购买以下干员：\n%2$s\n其余干员按以下顺序购买：\n自选 VI 阶 → 自选 V 阶 → 普通 VI 阶 → 账号替补（自有干员不足时由游戏提供）→ 普通 V 阶。\n建议场上只留 1 名医疗干员。已有医疗时，只购买能替换场上低阶医疗的更高阶医疗。</string>
+    <string name="panel_stronghold_tip_score">在活动主界面（有 ｢极速模拟｣ 处）开始任务\n需要使用活动默认皮肤\n在有存档时需要先手动放弃\n不干预对局，快速过回合刷等级奖励</string>
 
     <!-- panel: roguelike -->
     <string name="panel_roguelike_theme">肉鸽主题</string>

@@ -56,9 +56,12 @@ fun MiniGamePanel(
     val miniGames by delegate.miniGames.collectAsStateWithLifecycle()
 
     val reclamationConfig by delegate.reclamationConfig.collectAsStateWithLifecycle()
+    val strongholdConfig by delegate.strongholdProtocolConfig.collectAsStateWithLifecycle()
+    val strongholdPriority by delegate.strongholdPriority.collectAsStateWithLifecycle()
 
     val currentGame = delegate.findGame(state.selectedTaskName)
     val isReclamation = delegate.isReclamation(state.selectedTaskName)
+    val isStrongholdProtocol = delegate.isStrongholdProtocol(state.selectedTaskName)
     val tip = currentGame?.tip.asString().ifBlank { MiniGameTextRegistry.EMPTY_TIP.asString() }
     val isUnsupported = currentGame?.isUnsupported == true
     val currentGameDisplay = currentGame?.display.asString()
@@ -109,8 +112,8 @@ fun MiniGamePanel(
             }
         }
 
-        // Tip 提示，生息演算的说明随设置展示
-        if (tip.isNotBlank() && !isReclamation) {
+        // Tip 提示，生息演算与卫戍协议的说明随设置展示
+        if (tip.isNotBlank() && !isReclamation && !isStrongholdProtocol) {
             item {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
@@ -176,6 +179,15 @@ fun MiniGamePanel(
         if (isReclamation) {
             item { HorizontalDivider() }
             reclamationSettingsItems(reclamationConfig, delegate::onReclamationConfigChanged)
+        }
+
+        if (isStrongholdProtocol) {
+            item { HorizontalDivider() }
+            strongholdProtocolSettingsItems(
+                strongholdConfig,
+                strongholdPriority,
+                delegate::onStrongholdProtocolConfigChanged,
+            )
         }
 
         // 像素画配置：选图 + 转换参数，任务下发仍走底部「开始任务」

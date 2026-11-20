@@ -99,6 +99,12 @@
     <string name="maa_deep_exploration_not_unlocked_complain">심층 조사 미해금</string>
     <string name="maa_reclamation_pns_mode_error">현재 세이브 X 모드를 사용 중입니다. 기존 세이브를 수동으로 삭제한 후 다시 시도해 주세요. 세이브를 유지하려면 모드 전환을 고려하세요.</string>
     <string name="maa_reclamation_pis_mode_error">현재 세이브 O 모드는 합성 가능한 도구가 있는 세이브가 필요합니다. 모드 전환을 고려하세요.</string>
+    <string name="maa_stronghold_protocol">위수 협의</string>
+    <string name="maa_stronghold_strategy_log">%1$s: 클리어 %2$d/%3$d</string>
+    <string name="maa_stronghold_settlement_log">%1$s, 클리어 %2$d/%3$d</string>
+    <string name="maa_stronghold_cleared">이번 판 클리어</string>
+    <string name="maa_stronghold_failed">이번 판 실패</string>
+    <string name="maa_stronghold_strategies_completed">모든 전략이 %1$d회 클리어를 달성하여 임무를 종료합니다</string>
     <string name="maa_complete_combat">작전 완료</string>
 
     <!-- subtask_completed -->
@@ -1624,6 +1630,15 @@
     <string name="panel_reclamation_mode_ra15">RA-15</string>
     <string name="panel_reclamation_increment_click">연타</string>
     <string name="panel_reclamation_increment_hold">길게 누르기</string>
+    <string name="panel_stronghold_mode">모드</string>
+    <string name="panel_stronghold_mode_badge">배지 파밍 (완전 클리어)</string>
+    <string name="panel_stronghold_mode_score">점수 파밍 (방치 속행)</string>
+    <string name="panel_stronghold_target">배지 목표</string>
+    <string name="panel_stronghold_target_gold">금색 배지 (3회 클리어)</string>
+    <string name="panel_stronghold_target_color">색상 배지 (6회 클리어)</string>
+    <string name="panel_stronghold_runs">클리어 횟수</string>
+    <string name="panel_stronghold_tip_badge">이벤트 기본 스킨을 적용하고 ｢고속 시뮬레이션｣이 있는 이벤트 메인 화면에서 시작하세요. 저장된 게임이 있으면 먼저 직접 포기하세요.\nMAA는 목표 클리어 횟수를 채우지 못한 전략을 선택해 매 판 끝까지 진행합니다. 현재 중국 서버 간체 중국어 화면만 지원합니다.\n\n이 모드에서는 지원 유닛을 최대 30명까지 빌릴 수 있습니다.\n클리어 확률을 높이려면 먼저 상점 우선순위에 있는 오퍼레이터를 모두 빌리고, 다음으로 VI등급 딜러를 모두 빌리세요. 자리가 남으면 V등급 딜러도 최대한 빌리는 것이 좋습니다.\n\n사용자 지정 편성에는 등급별로 6성 오퍼레이터를 최대 2명까지 선택합니다. 우선순위는 다음과 같습니다.\n%1$s\n\n상점이 최고 레벨에 도달하면 다음 순서로 우선 구매합니다.\n%2$s\n나머지 오퍼레이터의 구매 순서는 다음과 같습니다.\n사용자 지정 VI등급 → 사용자 지정 V등급 → 일반 VI등급 → 보유 인원이 부족할 때 게임에서 제공하는 대체 오퍼레이터 → 일반 V등급.\n전장에는 메딕을 1명만 배치하는 것이 좋습니다. 이미 메딕이 있다면 배치 중인 낮은 등급의 메딕을 더 높은 등급으로 교체할 수 있을 때만 구매합니다.</string>
+    <string name="panel_stronghold_tip_score">이벤트 메인 화면에서 임무 시작 (아래에 ｢고속 시뮬레이션｣)\n기본 이벤트 스킨을 사용해야 합니다\n저장 데이터가 있는 경우 먼저 수동으로 포기해야 합니다\n판에 개입하지 않고 빠르게 라운드를 넘겨 레벨 보상을 획득합니다</string>
 
     <!-- panel: roguelike -->
     <string name="panel_roguelike_theme">통합 전략 테마</string>

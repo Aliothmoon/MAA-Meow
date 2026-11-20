@@ -2,8 +2,10 @@ package com.aliothmoon.maameow.presentation.viewmodel
 
 import com.aliothmoon.maameow.data.model.EventShopPreset
 import com.aliothmoon.maameow.data.model.ReclamationConfig
+import com.aliothmoon.maameow.data.model.StrongholdProtocolConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.resource.ActivityManager
+import com.aliothmoon.maameow.data.resource.StrongholdPriority
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import io.mockk.every
 import io.mockk.mockk
@@ -23,6 +25,7 @@ class MiniGameEventShopBlacklistTest {
     private val presets = MutableStateFlow(emptySet<EventShopPreset>())
     private val custom = MutableStateFlow("")
     private val reclamation = MutableStateFlow(ReclamationConfig())
+    private val stronghold = MutableStateFlow(StrongholdProtocolConfig())
     private val clientType = MutableStateFlow("Official")
 
     private val delegate = MiniGameDelegate(
@@ -41,8 +44,10 @@ class MiniGameEventShopBlacklistTest {
             every { eventShopBlacklistPresets } returns presets
             every { eventShopBlacklistCustom } returns custom
             every { reclamationConfig } returns reclamation
+            every { strongholdProtocolConfig } returns stronghold
         },
         clientType = clientType,
+        strongholdPriority = MutableStateFlow(StrongholdPriority.EMPTY),
     )
 
     private fun params() = Json.parseToJsonElement(delegate.buildTaskParams().params).jsonObject
@@ -64,6 +69,39 @@ class MiniGameEventShopBlacklistTest {
         val json = Json.parseToJsonElement(task.params).jsonObject
         assertEquals("Tales", json.getValue("theme").jsonPrimitive.content)
         assertEquals(listOf("Glow Stick"), json.getValue("tools_to_craft").jsonArray.map { it.jsonPrimitive.content })
+    }
+
+    @Test
+    fun strongholdProtocol_badge_sendsRegulationParams() {
+        stronghold.value = StrongholdProtocolConfig(target = StrongholdProtocolConfig.TARGET_COLOR, runs = 12)
+        delegate.onTaskSelected("StrongholdProtocol@Farm@Begin")
+
+        val task = delegate.buildTaskParams()
+
+        assertEquals(MaaTaskType.STRONGHOLD_PROTOCOL, task.type)
+        assertEquals(
+            Json.parseToJsonElement("""{"mode":"badge","theme":"Regulation","target":6,"runs":12,"attempts":0}"""),
+            Json.parseToJsonElement(task.params),
+        )
+    }
+
+    @Test
+    fun strongholdProtocol_score_sendsModeOnly() {
+        stronghold.value = StrongholdProtocolConfig(mode = StrongholdProtocolConfig.MODE_SCORE)
+        delegate.onTaskSelected("StrongholdProtocol@Farm@Begin")
+
+        assertEquals(Json.parseToJsonElement("""{"mode":"score"}"""), Json.parseToJsonElement(delegate.buildTaskParams().params))
+    }
+
+    /** core 对越界 target / runs 直接拒绝追加任务 */
+    @Test
+    fun strongholdProtocol_outOfRangeValues_areCoerced() {
+        stronghold.value = StrongholdProtocolConfig(target = 5, runs = 0)
+        delegate.onTaskSelected("StrongholdProtocol@Farm@Begin")
+
+        val json = Json.parseToJsonElement(delegate.buildTaskParams().params).jsonObject
+        assertEquals(3, json.getValue("target").jsonPrimitive.content.toInt())
+        assertEquals(1, json.getValue("runs").jsonPrimitive.content.toInt())
     }
 
     @Test

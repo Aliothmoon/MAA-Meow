@@ -5,7 +5,7 @@ import com.aliothmoon.maameow.R
 
 /**
  * 默认小游戏列表
- * 分组对齐上游 StageManager.BuildDefaultMiniGameEntries：隐秘战线、生息演算归「常驻活动」，其余归「常驻功能」
+ * 分组对齐上游 StageManager.BuildDefaultMiniGameEntries：隐秘战线、生息演算、卫戍协议归「常驻活动」，其余归「常驻功能」
  */
 object DefaultMiniGames {
     data class DefaultMiniGameEntry(
@@ -26,6 +26,12 @@ object DefaultMiniGames {
         DefaultMiniGameEntry(
             R.string.mini_game_name_reclamation,
             "Reclamation",
+            null,
+            R.string.mini_game_category_permanent
+        ),
+        DefaultMiniGameEntry(
+            R.string.mini_game_name_spa,
+            "StrongholdProtocol@Farm@Begin",
             null,
             R.string.mini_game_category_permanent
         ),

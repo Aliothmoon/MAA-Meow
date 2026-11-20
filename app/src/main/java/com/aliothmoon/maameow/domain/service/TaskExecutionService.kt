@@ -45,6 +45,7 @@ class TaskExecutionService : Service() {
             "SSSCopilot" to R.string.maa_sss_copilot,
             "ParadoxCopilot" to R.string.maa_paradox_copilot,
             "Reclamation" to R.string.maa_reclamation,
+            "StrongholdProtocol" to R.string.maa_stronghold_protocol,
             "Custom" to R.string.maa_custom,
             "CloseDown" to R.string.maa_close_down,
             "StartUp" to R.string.maa_start_up,

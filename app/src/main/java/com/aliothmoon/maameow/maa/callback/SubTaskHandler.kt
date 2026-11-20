@@ -871,6 +871,35 @@ class SubTaskHandler(
                 append("${str("AlgorithmDoneSmeltGold")} $times ${str("UnitTime")}", LogLevel.TRACE)
             }
 
+            "StrongholdStrategy" -> append(
+                str(
+                    "StrongholdStrategyLog",
+                    subDetails?.getString("name").orEmpty(),
+                    subDetails?.getIntValue("passed") ?: 0,
+                    subDetails?.getIntValue("target") ?: 0,
+                ),
+                LogLevel.INFO,
+            )
+
+            "StrongholdSettlement" -> {
+                val cleared = subDetails?.getBooleanValue("cleared") ?: false
+                append(
+                    str(
+                        "StrongholdSettlementLog",
+                        str(if (cleared) "StrongholdCleared" else "StrongholdFailed"),
+                        subDetails?.getIntValue("progress") ?: 0,
+                        subDetails?.getIntValue("total") ?: 0,
+                    ),
+                    if (cleared) LogLevel.SUCCESS else LogLevel.WARNING,
+                )
+            }
+
+            // WPF 未处理；策略全部达标时任务提前结束，留一条说明
+            "StrongholdStrategiesCompleted" -> append(
+                str("StrongholdStrategiesCompleted", subDetails?.getIntValue("target") ?: 0),
+                LogLevel.SUCCESS,
+            )
+
             // 多作业模式辅助编队预匹配前报一次，core 传的是绝对路径，只显示文件名
             "CopilotPrecheckFile" -> {
                 val navName = subDetails?.getString("nav_name").orEmpty()

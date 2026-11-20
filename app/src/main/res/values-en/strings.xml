@@ -692,6 +692,12 @@
     <string name="maa_deep_exploration_not_unlocked_complain">Deep Investigation not unlocked yet</string>
     <string name="maa_reclamation_pns_mode_error">Currently using no-save task mode. Please manually delete existing save and try again. If you wish to keep the save, please consider switching modes.</string>
     <string name="maa_reclamation_pis_mode_error">Current task mode requires you to have a save with craftable items. Please consider switching modes.</string>
+    <string name="maa_stronghold_protocol">Stronghold Protocol</string>
+    <string name="maa_stronghold_strategy_log">%1$s: passed %2$d/%3$d</string>
+    <string name="maa_stronghold_settlement_log">%1$s, cleared %2$d/%3$d</string>
+    <string name="maa_stronghold_cleared">Run cleared</string>
+    <string name="maa_stronghold_failed">Run failed</string>
+    <string name="maa_stronghold_strategies_completed">Every strategy has been passed %1$d times. Task finished</string>
     <string name="maa_complete_combat">Complete combat</string>
     <string name="maa_clue_exchange_unlocked">Clue Exchange Unlocked</string>
     <string name="maa_clues_sent">Clues sent</string>
@@ -1569,6 +1575,15 @@
     <string name="panel_reclamation_mode_ra15">RA-15</string>
     <string name="panel_reclamation_increment_click">Click</string>
     <string name="panel_reclamation_increment_hold">Hold</string>
+    <string name="panel_stronghold_mode">Mode</string>
+    <string name="panel_stronghold_mode_badge">Farm badges (full clear)</string>
+    <string name="panel_stronghold_mode_score">Farm score (idle rush)</string>
+    <string name="panel_stronghold_target">Badge goal</string>
+    <string name="panel_stronghold_target_gold">Gold badge (3 clears)</string>
+    <string name="panel_stronghold_target_color">Colored badge (6 clears)</string>
+    <string name="panel_stronghold_runs">Clears</string>
+    <string name="panel_stronghold_tip_badge">Use the default event skin and start from the main event screen with the ｢Express Simulation｣ option. Manually abandon any saved run first.\nMAA picks a strategy that still needs clears and plays each run to the end. Only the CN client in Simplified Chinese is supported for now.\n\nYou can borrow up to 30 support units in this mode.\nFor a better chance of clearing, borrow everyone on the shop priority list first, then all tier VI damage dealers. Fill any remaining slots with tier V damage dealers.\n\nThe custom squad takes only 6-star operators, up to two per tier. First picks, in order:\n%1$s\n\nOnce the shop reaches its highest level, MAA buys these operators first, in order:\n%2$s\nFor other operators, the purchase order is:\nCustom squad tier VI → custom squad tier V → regular tier VI → substitutes the game provides for unfilled roster slots → regular tier V.\nAim to keep one Medic on the field. Once you have one deployed, only buy another to replace a low-tier Medic with a higher-tier one.</string>
+    <string name="panel_stronghold_tip_score">Start the task from the main event screen (where ｢Express Simulation｣ is located)\nThe default event skin must be used\nIf there is a saved game, you need to manually abandon it first\nLeaves the run alone and quickly clears rounds for level rewards</string>
 
     <!-- panel: roguelike -->
     <string name="panel_roguelike_theme">I.S. Theme</string>

@@ -17,6 +17,7 @@ import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.EventShopBlacklist
 import com.aliothmoon.maameow.data.model.EventShopPreset
 import com.aliothmoon.maameow.data.model.ReclamationConfig
+import com.aliothmoon.maameow.data.model.StrongholdProtocolConfig
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager.Companion.FONT_SIZE_SCALE_AUTO
@@ -974,6 +975,26 @@ class AppSettingsManager internal constructor(
         } ?: ReclamationConfig()
         return config.copy(mode = config.sanitizedMode())
     }
+
+    val strongholdProtocolConfig: StateFlow<StrongholdProtocolConfig> =
+        setting { parseStrongholdProtocolConfig(it.strongholdProtocolConfig) }
+
+    /** 在事务内读改写，连续修改不会互相覆盖 */
+    suspend fun updateStrongholdProtocolConfig(transform: (StrongholdProtocolConfig) -> StrongholdProtocolConfig) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                val current = parseStrongholdProtocolConfig(it[strongholdProtocolConfig].orEmpty())
+                it[strongholdProtocolConfig] = JsonUtils.common.encodeToString(transform(current))
+            }
+        }
+    }
+
+    private fun parseStrongholdProtocolConfig(raw: String): StrongholdProtocolConfig =
+        raw.takeIf { it.isNotBlank() }?.let {
+            runCatching { JsonUtils.common.decodeFromString<StrongholdProtocolConfig>(it) }
+                .onFailure { e -> Timber.w(e, "卫戍协议设置解析失败") }
+                .getOrNull()
+        } ?: StrongholdProtocolConfig()
 
     // 放在类体末尾，启动收集器时 setting() 已全部注册
     init {
