@@ -100,9 +100,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.text
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
@@ -1334,14 +1336,15 @@ private fun CopilotOperatorSection(summary: OperatorSummaryData, characters: Map
     }
 }
 
-/** 组内按序取首个可用干员，默认只露首选 */
+/** 默认只露列表首个候选，开匹配时已按满足程度排序 */
 @Composable
 internal fun OperatorGroup(
     name: String,
     opers: List<OperatorDisplayItem>,
     characters: Map<String, CharacterInfo?>,
+    resetKey: Any = opers,
 ) {
-    var expanded by rememberSaveable(opers) { mutableStateOf(false) }
+    var expanded by rememberSaveable(resetKey) { mutableStateOf(false) }
     val hidden = opers.size - 1
     Surface(
         shape = RoundedCornerShape(8.dp),
@@ -1641,8 +1644,9 @@ internal fun OperatorGrid(
 
 @Composable
 private fun OperatorCell(item: OperatorDisplayItem, operId: String, rarity: Int) {
-    val badgeText = item.mismatchReason?.let { reason ->
-        stringResource(when (reason) {
+    val reason = item.mismatchReason
+    val reasonLabel = reason?.let {
+        stringResource(when (it) {
             OperatorMismatchReason.MISSING -> R.string.copilot_match_badge_missing
             OperatorMismatchReason.ELITE -> R.string.copilot_match_badge_elite
             OperatorMismatchReason.LEVEL -> R.string.copilot_match_badge_level
@@ -1650,67 +1654,69 @@ private fun OperatorCell(item: OperatorDisplayItem, operId: String, rarity: Int)
             OperatorMismatchReason.MODULE -> R.string.copilot_match_badge_module
         })
     }
-    val measurer = rememberTextMeasurer()
-    val badgeStyle = MaterialTheme.typography.labelSmall
-    val badgeWidth = remember(badgeText, badgeStyle, measurer) {
-        badgeText?.let { measurer.measure(it, style = badgeStyle, maxLines = 1).size.width } ?: 0
+    val spokenReason = when {
+        reasonLabel == null -> null
+        reason == OperatorMismatchReason.MISSING -> reasonLabel
+        else -> stringResource(R.string.copilot_match_training, reasonLabel)
     }
-    val nameEndPadding = if (badgeText == null) 0.dp else {
-        with(LocalDensity.current) { badgeWidth.toDp() } + 14.dp // 角标两侧各 5dp，加 4dp 间隔
-    }
+    val badgeRole = if (reason == OperatorMismatchReason.MISSING) LogColorRole.ERROR else LogColorRole.WARNING
     Surface(
         shape = RoundedCornerShape(6.dp),
         color = MaterialTheme.colorScheme.surface,
-        modifier = if (item.mismatchReason == null) Modifier else Modifier.semantics(mergeDescendants = true) {}
+        modifier = Modifier.semantics(mergeDescendants = true) {}
     ) {
-        Box {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(6.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
+        Row(
+            modifier = Modifier.padding(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val rarityColor = if (rarity > 0) operRarityColor(rarity) else Color.Transparent
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    // 查不到头像时留底色占位
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .drawWithContent {
+                        drawContent()
+                        val bar = OPER_RARITY_BAR.toPx()
+                        drawRect(
+                            color = rarityColor,
+                            topLeft = Offset(0f, size.height - bar),
+                            size = Size(size.width, bar)
+                        )
+                    }
             ) {
-                val rarityColor = if (rarity > 0) operRarityColor(rarity) else Color.Transparent
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        // 查不到头像时留底色占位
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .drawWithContent {
-                            drawContent()
-                            val bar = OPER_RARITY_BAR.toPx()
-                            drawRect(
-                                color = rarityColor,
-                                topLeft = Offset(0f, size.height - bar),
-                                size = Size(size.width, bar)
-                            )
-                        }
-                ) {
-                    OperAvatar(operId = operId, modifier = Modifier.fillMaxSize())
-                }
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                OperAvatar(operId = operId, modifier = Modifier.fillMaxSize())
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = item.name,
-                        modifier = Modifier.padding(end = nameEndPadding),
+                        modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    OperatorAttributes(item)
-                }
-            }
-            // matchParentSize 不参与固有高度计算，不会撑高当前卡片或同一行的其他卡片。
-            if (badgeText != null) {
-                Box(modifier = Modifier.matchParentSize().padding(6.dp)) {
-                    Box(modifier = Modifier.align(Alignment.TopEnd)) {
-                        CopilotMatchBadge(badgeText, LogColorRole.ERROR)
+                    if (reasonLabel != null) {
+                        CopilotMatchBadge(
+                            text = "× $reasonLabel",
+                            role = badgeRole,
+                            // 读屏念原因，不念「×」
+                            modifier = Modifier.clearAndSetSemantics { text = AnnotatedString(spokenReason.orEmpty()) },
+                        )
                     }
                 }
+                OperatorAttributes(item)
             }
         }
     }

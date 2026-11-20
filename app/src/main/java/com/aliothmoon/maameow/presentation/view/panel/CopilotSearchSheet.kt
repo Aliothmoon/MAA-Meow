@@ -556,15 +556,21 @@ private fun MatchBadge(mode: OperatorMatchMode) {
     CopilotMatchBadge(stringResource(mode.labelRes), color)
 }
 
-/** 作业分类和候选原因共用配色、圆角、字体及内边距。 */
+/** 作业分类和候选原因共用配色、圆角、字体及内边距 */
 @Composable
-internal fun CopilotMatchBadge(text: String, role: LogColorRole) {
+internal fun CopilotMatchBadge(text: String, role: LogColorRole, modifier: Modifier = Modifier) {
     val color = role.themedColor()
-    Surface(shape = RoundedCornerShape(4.dp), color = color.copy(alpha = 0.14f), contentColor = color) {
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = color.copy(alpha = 0.14f),
+        contentColor = color,
+        modifier = modifier,
+    ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
         )
     }
@@ -1064,8 +1070,8 @@ private fun CopilotRowDetails(
         if (summary.operators.isNotEmpty()) {
             OperatorGrid { OperatorCells(summary.operators, characters) }
         }
-        summary.groups.forEach { (name, opers) ->
-            OperatorGroup(name, opers, characters)
+        summary.groups.forEachIndexed { index, (name, opers) ->
+            OperatorGroup(name, opers, characters, resetKey = item.summary.groups[index].second)
         }
     }
 }

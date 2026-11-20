@@ -91,20 +91,28 @@ data class OperatorSummaryData(
 ) {
     val isEmpty get() = totalCount == 0
 
-    /** 只生成展示副本，先绑定原始位置的原因，再对独立干员及各组内候选按同一规则稳定排序。 */
-    fun withMatch(match: OperatorMatch): OperatorSummaryData = copy(
-        operators = operators.mapIndexed { index, oper ->
-            oper.copy(mismatchReason = match.operators.getOrNull(index))
-        }.sortedBy { it.matchDisplayOrder },
-        groups = groups.mapIndexed { groupIndex, (name, opers) ->
-            name to opers.mapIndexed { index, oper ->
-                oper.copy(mismatchReason = match.groups.getOrNull(groupIndex)?.getOrNull(index))
-            }.sortedBy { it.matchDisplayOrder }
-        },
-    )
+    /** 只生成展示副本，先绑定原始位置的原因，再对独立干员及各组内候选按同一规则稳定排序 */
+    fun withMatch(match: OperatorMatch): OperatorSummaryData {
+        if (
+            match.operators.size != operators.size ||
+            match.groups.size != groups.size ||
+            groups.indices.any { match.groups[it].size != groups[it].second.size }
+        ) return this
+        return copy(
+            operators = operators.mapIndexed { index, oper ->
+                oper.copy(mismatchReason = match.operators[index])
+            }.sortedBy { it.matchDisplayOrder },
+            groups = groups.mapIndexed { groupIndex, (name, opers) ->
+                val reasons = match.groups[groupIndex]
+                name to opers.mapIndexed { index, oper ->
+                    oper.copy(mismatchReason = reasons[index])
+                }.sortedBy { it.matchDisplayOrder }
+            },
+        )
+    }
 }
 
-/** 满足在前，同一原因聚合，未拥有最后；sortedBy 保留同档原始顺序。 */
+/** 满足在前，同一原因聚合，未拥有最后；sortedBy 保留同档原始顺序 */
 private val OperatorDisplayItem.matchDisplayOrder: Int
     get() = when (mismatchReason) {
         null -> 0

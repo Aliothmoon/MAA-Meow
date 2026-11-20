@@ -157,7 +157,7 @@ class CopilotOperatorMatcherTest {
         val inferred = oper("x", level = 60)
         assertEquals(OperatorMismatchReason.ELITE, CopilotOperatorMatcher.firstMismatch(inferred, owned("x", elite = 0, level = 50)))
         assertEquals(OperatorMismatchReason.LEVEL, CopilotOperatorMatcher.firstMismatch(inferred, owned("x", elite = 1, level = 59)))
-        // 精二 1 级的累计等级已超过精一 60 级，不能按裸等级判为不足。
+        // 精二 1 级的累计等级已超过精一 60 级，不能按裸等级判为不足
         assertNull(CopilotOperatorMatcher.firstMismatch(inferred, owned("x", elite = 2, level = 1)))
         assertNull(CopilotOperatorMatcher.firstMismatch(oper("x", elite = 1, level = 60), owned("x", elite = 2, level = 1)))
     }

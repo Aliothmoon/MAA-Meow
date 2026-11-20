@@ -133,7 +133,7 @@ class CopilotOperatorSummaryTest {
         assertEquals(listOf(null, null, OperatorMismatchReason.SKILL, OperatorMismatchReason.MISSING), displayed.groups[0].second.map { it.mismatchReason })
         assertEquals(listOf(1, 2, 1, 3), displayed.groups[1].second.map { it.skill })
         assertEquals(summary.totalCount, displayed.totalCount)
-        // 关闭匹配重新使用原始摘要；匹配和排序未修改原始摘要或作业列表。
+        // 关闭匹配重新使用原始摘要；匹配和排序未修改原始摘要或作业列表
         assertEquals(listOf(1, 2, 3, 1), summary.groups[0].second.map { it.skill })
         assertEquals(listOf(1, 2, 3, 1), candidates.map { it.skill })
         assertNull(summary.groups[0].second[0].mismatchReason)
@@ -159,5 +159,33 @@ class CopilotOperatorSummaryTest {
         assertEquals(expected, displayed.groups.single().second.map { it.name })
         assertEquals(opers.map { it.name }, original.operators.map { it.name })
         assertEquals(opers.map { it.name }, original.groups.single().second.map { it.name })
+    }
+
+    @Test
+    fun withMatchFallsBackToOriginalOnMismatchedOperatorCount() {
+        val summary = summaryOf(CopilotOperator(name = "a"), CopilotOperator(name = "b"))
+        val displayed = summary.withMatch(OperatorMatch(
+            mode = OperatorMatchMode.BLOCKED,
+            missing = listOf("a"),
+            training = emptyList(),
+            operators = listOf(OperatorMismatchReason.MISSING),
+            groups = emptyList(),
+        ))
+        assertEquals(summary, displayed)
+    }
+
+    @Test
+    fun withMatchFallsBackToOriginalOnMismatchedGroupCandidateCount() {
+        val summary = summaryOf(
+            groups = listOf(CopilotGroup("g", listOf(CopilotOperator(name = "a"), CopilotOperator(name = "b")))),
+        )
+        val displayed = summary.withMatch(OperatorMatch(
+            mode = OperatorMatchMode.BLOCKED,
+            missing = listOf("g"),
+            training = emptyList(),
+            operators = emptyList(),
+            groups = listOf(listOf(OperatorMismatchReason.MISSING)),
+        ))
+        assertEquals(summary, displayed)
     }
 }

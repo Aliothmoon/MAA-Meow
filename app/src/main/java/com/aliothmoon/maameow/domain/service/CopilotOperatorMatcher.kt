@@ -15,8 +15,8 @@ data class OperatorMatch(
     val missing: List<String>,
     val training: List<String>,
     /** 与原作业位置一一对应；null 表示满足，不按名称或 ID 合并 */
-    val operators: List<OperatorMismatchReason?> = emptyList(),
-    val groups: List<List<OperatorMismatchReason?>> = emptyList(),
+    val operators: List<OperatorMismatchReason?>,
+    val groups: List<List<OperatorMismatchReason?>>,
 )
 
 /**
@@ -83,7 +83,7 @@ object CopilotOperatorMatcher {
     internal fun meets(oper: CopilotOperator, owned: OperBoxOperator): Boolean =
         firstMismatch(oper, owned) == null
 
-    /** 只返回首个不足原因，null 表示满足；分类与候选角标共用此结果。 */
+    /** 只返回首个不足原因，null 表示满足；分类与候选角标共用此结果 */
     internal fun firstMismatch(oper: CopilotOperator, owned: OperBoxOperator?): OperatorMismatchReason? {
         if (owned == null) return OperatorMismatchReason.MISSING
         val req = oper.requirements ?: return null
@@ -93,7 +93,7 @@ object CopilotOperatorMatcher {
             // 只写了等级时按等级反推精英阶段
             val elite = if (req.elite > 0) req.elite else inferElite(owned.rarity, level)
             if (progress(owned.rarity, owned.elite, owned.level) < progress(owned.rarity, elite, level)) {
-                // 先沿用累计等级判定是否不足，再区分原因，不能拆成两个独立门槛。
+                // 先沿用累计等级判定是否不足，再区分原因，不能拆成两个独立门槛
                 return if (owned.elite < elite) OperatorMismatchReason.ELITE else OperatorMismatchReason.LEVEL
             }
         }
