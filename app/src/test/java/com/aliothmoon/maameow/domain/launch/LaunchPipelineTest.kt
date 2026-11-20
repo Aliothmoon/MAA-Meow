@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.domain.launch
 
+import android.content.Intent
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskProfile
@@ -14,6 +15,7 @@ import com.aliothmoon.maameow.domain.service.ScreenSaverController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.UnlockAttempt
 import com.aliothmoon.maameow.domain.service.UnlockGestureReader
+import com.aliothmoon.maameow.domain.service.WakeCredentialSource
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
@@ -191,7 +193,7 @@ class LaunchPipelineTest {
             every { scheduleAppBlacklist } returns blacklist
         }
         wake = mockk(relaxed = true)
-        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.OK
+        givenWakeResult(WakeUnlockEngine.WakeResult.OK)
         coEvery { wake.lockAndSleep() } returns WakeUnlockEngine.WakeResult.OK
 
         gestures = mockk(relaxed = true)
@@ -272,12 +274,23 @@ class LaunchPipelineTest {
         scope.cancel()
     }
 
-    private fun pipeline(countdown: CountdownUI = instantCountdown()) = LaunchPipeline(
+    private fun waker() = ScheduleWaker(
+        engine = wake,
+        credentials = WakeCredentialSource(settings, gestures),
+        screenSaver = screenSaver,
+        keyguardLocked = { keyguardLocked.get() },
+        deviceLocked = { deviceLocked.get() },
+        showIntent = { mockk(relaxed = true) },
+    )
+
+    private fun pipeline(
+        countdown: CountdownUI = instantCountdown(),
+    ) = LaunchPipeline(
         scope = scope,
         mutex = mutex,
         appSettingsManager = settings,
         wakeUnlockEngine = wake,
-        unlockGestures = gestures,
+        waker = waker(),
         chainState = chainState,
         compositionService = composition,
         triggerLogger = logger,
@@ -289,12 +302,7 @@ class LaunchPipelineTest {
         taskEndRegistry = taskEndRegistry,
         notificationCenter = notificationCenter,
         keyguardLocked = { keyguardLocked.get() },
-        deviceLocked = { deviceLocked.get() },
         screenInteractive = { screenInteractive.get() },
-        activityLauncher = {
-            uiLaunches.incrementAndGet()
-            true
-        },
         remoteAccessBlocker = { remoteBlocker },
         foregroundPackages = {
             foregroundProbes.incrementAndGet()
@@ -351,12 +359,19 @@ class LaunchPipelineTest {
         countdownSeconds = 1,
     )
 
+    /** 同提权侧：解锁成了或锁屏已不在才拉界面 */
+    private fun givenWakeResult(result: WakeUnlockEngine.WakeResult, onWake: () -> Unit = {}) {
+        coEvery { wake.wakeAndLaunch(any(), any()) } coAnswers {
+            onWake()
+            val launched = secondArg<Intent?>() != null && (result.isSuccess || !keyguardLocked.get())
+            if (launched) uiLaunches.incrementAndGet()
+            WakeUnlockEngine.WakeLaunch(result, launched)
+        }
+    }
+
     private fun givenIdleThenWakes() {
         screenInteractive.set(false)
-        coEvery { wake.unlock(any()) } coAnswers {
-            screenInteractive.set(true)
-            WakeUnlockEngine.WakeResult.OK
-        }
+        givenWakeResult(WakeUnlockEngine.WakeResult.OK) { screenInteractive.set(true) }
     }
 
     /** StateFlow 合并，赋值间须留窗口 */
@@ -389,7 +404,7 @@ class LaunchPipelineTest {
 
         assertEquals(listOf(ExecutionResult.FAILED_START), recorded.toList())
         verify { logSession.end(ExecutionResult.FAILED_START, reason) }
-        coVerify(exactly = 0) { wake.unlock(any()) }
+        coVerify(exactly = 0) { wake.wakeAndLaunch(any(), any()) }
         assertEquals(0, uiLaunches.get())
         assertEquals(0, startCalls.get())
         // 界面没拉起来，toast 没人看得到
@@ -905,7 +920,8 @@ class LaunchPipelineTest {
             listOf(ExecutionResult.STARTED, ExecutionResult.STARTED),
             recorded.toList(),
         )
-        io.mockk.coVerify(exactly = 0) { wake.unlock(any()) }
+        // 只拉界面，不碰锁屏
+        io.mockk.coVerify(exactly = 0) { wake.wakeAndLaunch(isNull(inverse = true), any()) }
         io.mockk.coVerify(exactly = 0) { screenSaver.hide() }
     }
 
@@ -935,7 +951,7 @@ class LaunchPipelineTest {
         givenWakeGate(keyguard = true, locked = false, type = "swipe")
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
-        io.mockk.coVerify { wake.unlock(UnlockCredential.Swipe) }
+        io.mockk.coVerify { wake.wakeAndLaunch(UnlockCredential.Swipe, any()) }
     }
 
     @Test
@@ -943,7 +959,7 @@ class LaunchPipelineTest {
         givenWakeGate(interactive = false, locked = false, type = "swipe")
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
-        io.mockk.coVerify { wake.unlock(UnlockCredential.Swipe) }
+        io.mockk.coVerify { wake.wakeAndLaunch(UnlockCredential.Swipe, any()) }
     }
 
     @Test
@@ -951,7 +967,7 @@ class LaunchPipelineTest {
         givenWakeGate(keyguard = true, locked = true, type = "pin", pin = "2580")
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
-        io.mockk.coVerify { wake.unlock(UnlockCredential.Pin("2580")) }
+        io.mockk.coVerify { wake.wakeAndLaunch(UnlockCredential.Pin("2580"), any()) }
     }
 
     @Test
@@ -959,7 +975,7 @@ class LaunchPipelineTest {
         givenWakeGate(keyguard = true, locked = true, type = "gesture", gestureJson = GESTURE_JSON)
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
-        io.mockk.coVerify { wake.unlock(UnlockCredential.Gesture(GESTURE_JSON)) }
+        io.mockk.coVerify { wake.wakeAndLaunch(UnlockCredential.Gesture(GESTURE_JSON), any()) }
     }
 
     @Test
@@ -968,13 +984,13 @@ class LaunchPipelineTest {
         givenWakeGate(keyguard = true, locked = false, type = "gesture", gestureJson = "")
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
-        io.mockk.coVerify { wake.unlock(UnlockCredential.Swipe) }
+        io.mockk.coVerify { wake.wakeAndLaunch(UnlockCredential.Swipe, any()) }
     }
 
     @Test
     fun usageGestureLock_replayRejected_skipsAsLocked() = runBlocking<Unit> {
         givenWakeGate(keyguard = true, locked = true, type = "gesture", gestureJson = GESTURE_JSON)
-        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REJECTED
+        givenWakeResult(WakeUnlockEngine.WakeResult.CREDENTIAL_REJECTED)
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
         assertEquals(0, startCalls.get())
@@ -983,7 +999,7 @@ class LaunchPipelineTest {
     @Test
     fun unlockFailed_logsSetupAndTrace_andHandsAttemptToTelemetry() = runBlocking<Unit> {
         givenWakeGate(interactive = false, keyguard = true, locked = true, type = "gesture", gestureJson = GESTURE_JSON)
-        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REJECTED
+        givenWakeResult(WakeUnlockEngine.WakeResult.CREDENTIAL_REJECTED)
         coEvery { wake.lastTrace() } returns "+0ms unlock, gesture"
         coEvery { gestures.recordedAtMs() } returns null
         pipeline().execute(scheduleRequest()).join()
@@ -1011,7 +1027,7 @@ class LaunchPipelineTest {
     @Test
     fun unlockDiagnosticsThrowing_keepsSkippedLocked() = runBlocking<Unit> {
         givenWakeGate(keyguard = true, locked = true, type = "pin", pin = "1234")
-        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REJECTED
+        givenWakeResult(WakeUnlockEngine.WakeResult.CREDENTIAL_REJECTED)
         coEvery { wake.lastTrace() } throws IllegalStateException("binder gone")
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
@@ -1035,36 +1051,36 @@ class LaunchPipelineTest {
     @Test
     fun schedulePasswordLock_swipeSetting_triesUnlockThenSkips() = runBlocking<Unit> {
         givenWakeGate(keyguard = true, locked = true, type = "swipe")
-        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED
+        givenWakeResult(WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED)
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
-        io.mockk.coVerify { wake.unlock(UnlockCredential.Swipe) }
+        io.mockk.coVerify { wake.wakeAndLaunch(UnlockCredential.Swipe, any()) }
     }
 
     @Test
     fun scheduleDeviceLocked_pinTypeButBlank_triesUnlockThenSkips() = runBlocking<Unit> {
         givenWakeGate(keyguard = true, locked = true, type = "pin", pin = "")
-        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED
+        givenWakeResult(WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED)
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
         // 空 PIN 照样试一把（注入空串），但不算备好凭证
-        io.mockk.coVerify { wake.unlock(UnlockCredential.Pin("")) }
+        io.mockk.coVerify { wake.wakeAndLaunch(UnlockCredential.Pin(""), any()) }
     }
 
     @Test
     fun scheduleScreenOff_passwordLockWithoutPin_triesUnlockThenSkips() = runBlocking<Unit> {
         givenWakeGate(interactive = false, keyguard = true, locked = true, type = "swipe")
-        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED
+        givenWakeResult(WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED)
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
-        io.mockk.coVerify { wake.unlock(UnlockCredential.Swipe) }
+        io.mockk.coVerify { wake.wakeAndLaunch(UnlockCredential.Swipe, any()) }
     }
 
     @Test
     fun scheduleForeground_passwordLockWithoutPin_triesUnlockThenSkips() = runBlocking<Unit> {
         runMode.value = RunMode.FOREGROUND
         givenWakeGate(keyguard = true, locked = true, type = "swipe")
-        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED
+        givenWakeResult(WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED)
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
         assertEquals(0, startCalls.get())
@@ -1073,7 +1089,7 @@ class LaunchPipelineTest {
     @Test
     fun scheduleWakeFailed_stillLocked_skips() = runBlocking<Unit> {
         givenWakeGate(keyguard = true, locked = false, type = "swipe")
-        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED
+        givenWakeResult(WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED)
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
         assertEquals(0, startCalls.get())
@@ -1082,7 +1098,7 @@ class LaunchPipelineTest {
     @Test
     fun scheduleWakeFailed_keyguardGone_starts() = runBlocking<Unit> {
         givenWakeGate(keyguard = false, locked = false, type = "swipe")
-        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.WAKE_FAILED
+        givenWakeResult(WakeUnlockEngine.WakeResult.WAKE_FAILED)
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
         assertEquals(1, startCalls.get())
@@ -1091,17 +1107,17 @@ class LaunchPipelineTest {
     @Test
     fun scheduleWakeFailed_stillLocked_skipsAsLocked() = runBlocking<Unit> {
         givenWakeGate(interactive = false, keyguard = true, locked = true, type = "pin", pin = "1234")
-        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.WAKE_FAILED
+        givenWakeResult(WakeUnlockEngine.WakeResult.WAKE_FAILED)
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
         assertEquals(0, startCalls.get())
-        io.mockk.coVerify { wake.unlock(UnlockCredential.Pin("1234")) }
+        io.mockk.coVerify { wake.wakeAndLaunch(UnlockCredential.Pin("1234"), any()) }
     }
 
     @Test
     fun scheduleAutoScreenSaverNotShowing_passwordLock_skipsBeforeShow() = runBlocking<Unit> {
         givenWakeGate(keyguard = true, locked = true, type = "swipe", saverShowing = false)
-        coEvery { wake.unlock(any()) } returns WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED
+        givenWakeResult(WakeUnlockEngine.WakeResult.CREDENTIAL_REQUIRED)
         pipeline().execute(scheduleRequest(autoScreenSaver = true)).join()
         assertEquals(listOf(ExecutionResult.SKIPPED_LOCKED), recorded.toList())
         io.mockk.coVerify(exactly = 0) { screenSaver.show() }
@@ -1112,7 +1128,7 @@ class LaunchPipelineTest {
         givenWakeGate(type = "swipe")
         pipeline().execute(scheduleRequest()).join()
         assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
-        io.mockk.coVerify { wake.unlock(UnlockCredential.Swipe) }
+        io.mockk.coVerify { wake.wakeAndLaunch(UnlockCredential.Swipe, any()) }
     }
 
     @Test
@@ -1358,7 +1374,7 @@ class LaunchPipelineTest {
         verify(exactly = 1) {
             notificationCenter.notifyLaunchNotStarted("Test", ExecutionResult.SKIPPED_BLACKLIST, reason, any())
         }
-        coVerify(exactly = 0) { wake.unlock(any()) }
+        coVerify(exactly = 0) { wake.wakeAndLaunch(any(), any()) }
         assertEquals(0, uiLaunches.get())
         assertEquals(0, startCalls.get())
     }
@@ -1612,6 +1628,127 @@ class LaunchPipelineTest {
         job.join()
         assertEquals(listOf(ExecutionResult.CANCELLED), recorded.toList())
         assertEquals(0, startCalls.get())
+    }
+
+    @Test
+    fun saverShowing_launchesUiWithoutUnlock() = runBlocking<Unit> {
+        givenWakeGate(keyguard = true, locked = true, saverShowing = true)
+
+        pipeline().execute(scheduleRequest()).join()
+
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        coVerify(exactly = 1) { wake.wakeAndLaunch(isNull(), isNull(inverse = true)) }
+        verify { logSession.append(uiTextOf(R.string.schedule_log_launch_ui)) }
+        assertEquals(1, uiLaunches.get())
+    }
+
+    @Test
+    fun saverShowing_uiLaunchFailed_logsTraceAndEndsFailedUiLaunch() = runBlocking<Unit> {
+        every { screenSaver.isShowing() } returns true
+        coEvery { wake.wakeAndLaunch(any(), any()) } returns
+            WakeUnlockEngine.WakeLaunch(WakeUnlockEngine.WakeResult.OK, uiLaunched = false)
+        coEvery { wake.lastTrace() } returns "+0ms unlock, skipped\n+4500ms ui launch failed"
+
+        pipeline().execute(scheduleRequest()).join()
+
+        val reason = uiTextOf(R.string.schedule_log_ui_launch_failed)
+        assertEquals(listOf(ExecutionResult.FAILED_UI_LAUNCH), recorded.toList())
+        assertEquals(0, startCalls.get())
+        verify { logSession.append(uiTextOf(R.string.schedule_log_wake_trace, "+0ms unlock, skipped\n+4500ms ui launch failed")) }
+        verify { logSession.end(ExecutionResult.FAILED_UI_LAUNCH, reason) }
+        verify(exactly = 1) {
+            notificationCenter.notifyLaunchNotStarted("Test", ExecutionResult.FAILED_UI_LAUNCH, reason, any())
+        }
+    }
+
+    @Test
+    fun wakeAndLaunch_uiLaunchFailed_logsTraceAndEndsFailedUiLaunch() = runBlocking<Unit> {
+        coEvery { wake.wakeAndLaunch(any(), any()) } returns
+            WakeUnlockEngine.WakeLaunch(WakeUnlockEngine.WakeResult.OK, uiLaunched = false)
+        coEvery { wake.lastTrace() } returns "+0ms unlock, PIN\n+2500ms ui launch failed"
+
+        pipeline().execute(scheduleRequest()).join()
+
+        val reason = uiTextOf(R.string.schedule_log_ui_launch_failed)
+        assertEquals(listOf(ExecutionResult.FAILED_UI_LAUNCH), recorded.toList())
+        assertEquals(0, startCalls.get())
+        verify { logSession.append(uiTextOf(R.string.schedule_log_wake_ok)) }
+        // 解锁成功说明提权侧拉过了，不再补拉
+        coVerify(exactly = 1) { wake.wakeAndLaunch(any(), any()) }
+        verify { logSession.append(uiTextOf(R.string.schedule_log_wake_trace, "+0ms unlock, PIN\n+2500ms ui launch failed")) }
+        verify { logSession.end(ExecutionResult.FAILED_UI_LAUNCH, reason) }
+    }
+
+    @Test
+    fun unlockFailed_keyguardGone_uiLaunchedByRemote_starts() = runBlocking<Unit> {
+        givenWakeGate(keyguard = false, locked = false, type = "pin", pin = "1234")
+        givenWakeResult(WakeUnlockEngine.WakeResult.CREDENTIAL_REJECTED)
+
+        pipeline().execute(scheduleRequest()).join()
+
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        assertEquals(1, uiLaunches.get())
+        verify {
+            logSession.end(
+                ExecutionResult.STARTED,
+                any(),
+                UnlockAttempt(type = "pin", ready = true, result = "credential_rejected"),
+            )
+        }
+    }
+
+    // 提权侧判不出锁屏（反射失败）时不会拉，主进程确认锁屏不在后补拉一次
+    @Test
+    fun unlockFailed_keyguardGone_remoteSkippedLaunch_relaunches() = runBlocking<Unit> {
+        givenWakeGate(keyguard = false, locked = false)
+        coEvery { wake.wakeAndLaunch(isNull(inverse = true), any()) } returns
+            WakeUnlockEngine.WakeLaunch(WakeUnlockEngine.WakeResult.UNSUPPORTED, uiLaunched = false)
+        coEvery { wake.wakeAndLaunch(isNull(), any()) } returns
+            WakeUnlockEngine.WakeLaunch(WakeUnlockEngine.WakeResult.OK, uiLaunched = true)
+
+        pipeline().execute(scheduleRequest()).join()
+
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        coVerify(exactly = 1) { wake.wakeAndLaunch(isNull(), isNull(inverse = true)) }
+        verify {
+            logSession.end(
+                ExecutionResult.STARTED,
+                any(),
+                UnlockAttempt(type = "swipe", ready = false, result = "unsupported"),
+            )
+        }
+    }
+
+    // 补拉也没成（比如 IPC 断了）不能当成功往下走
+    @Test
+    fun unlockFailed_keyguardGone_uiNotLaunched_endsFailedUiLaunch() = runBlocking<Unit> {
+        givenWakeGate(keyguard = false, locked = false)
+        coEvery { wake.wakeAndLaunch(any(), any()) } returns
+            WakeUnlockEngine.WakeLaunch(WakeUnlockEngine.WakeResult.IPC_FAILED, uiLaunched = false)
+
+        pipeline().execute(scheduleRequest()).join()
+
+        assertEquals(listOf(ExecutionResult.FAILED_UI_LAUNCH), recorded.toList())
+        coVerify(exactly = 1) { wake.wakeAndLaunch(isNull(), isNull(inverse = true)) }
+        verify {
+            logSession.end(
+                ExecutionResult.FAILED_UI_LAUNCH,
+                uiTextOf(R.string.schedule_log_ui_launch_failed),
+                UnlockAttempt(type = "swipe", ready = false, result = "ipc_failed"),
+            )
+        }
+    }
+
+    @Test
+    fun wakeAndLaunch_slowSuccess_logsWakeTrace() = runBlocking<Unit> {
+        coEvery { wake.wakeAndLaunch(any(), any()) } returns
+            WakeUnlockEngine.WakeLaunch(WakeUnlockEngine.WakeResult.OK, uiLaunched = true, elapsedMs = 6_000L)
+        coEvery { wake.lastTrace() } returns "+0ms unlock, PIN\n+2300ms ui foreground confirmed"
+
+        pipeline().execute(scheduleRequest()).join()
+
+        assertEquals(listOf(ExecutionResult.STARTED), recorded.toList())
+        verify { logSession.append(uiTextOf(R.string.schedule_log_wake_trace, "+0ms unlock, PIN\n+2300ms ui foreground confirmed")) }
     }
 
     private companion object {

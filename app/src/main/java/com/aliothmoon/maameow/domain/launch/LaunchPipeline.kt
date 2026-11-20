@@ -4,14 +4,12 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.models.RunMode
-import com.aliothmoon.maameow.domain.models.UnlockCredential
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
 import com.aliothmoon.maameow.domain.service.ScreenPowerController
 import com.aliothmoon.maameow.domain.service.ScreenSaverController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.UnlockAttempt
-import com.aliothmoon.maameow.domain.service.UnlockGestureReader
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
@@ -48,7 +46,7 @@ class LaunchPipeline(
     private val mutex: LaunchMutex,
     private val appSettingsManager: AppSettingsManager,
     private val wakeUnlockEngine: WakeUnlockEngine,
-    private val unlockGestures: UnlockGestureReader,
+    private val waker: ScheduleWaker,
     private val chainState: TaskChainState,
     private val compositionService: MaaCompositionService,
     private val triggerLogger: ScheduleTriggerLogger,
@@ -60,10 +58,7 @@ class LaunchPipeline(
     private val taskEndRegistry: TaskEndRegistry,
     private val notificationCenter: MaaNotificationCenter,
     private val keyguardLocked: () -> Boolean,
-    /** 此刻要密码才能进桌面；不是 isDeviceSecure（只说明设过密码） */
-    private val deviceLocked: () -> Boolean,
     private val screenInteractive: () -> Boolean,
-    private val activityLauncher: suspend (LaunchRequest) -> Boolean,
     /** 提权后端用不了的原因，null = 已连上；会申请授权、等连接 */
     private val remoteAccessBlocker: suspend () -> BackendBlock?,
     /** 主屏可见任务的包名，焦点任务在前；判不出为 null */
@@ -215,49 +210,6 @@ class LaunchPipeline(
                 compositionService.stopVirtualDisplay()
             }
 
-            if (request.source == LaunchSource.Schedule) {
-                val unlockType = appSettingsManager.wakeUnlockType.value
-                val credential = UnlockCredential.of(
-                    type = unlockType,
-                    pin = appSettingsManager.wakeCredential.value,
-                    gestureJson = if (unlockType == UnlockCredential.TYPE_GESTURE) {
-                        unlockGestures.readJson()
-                    } else {
-                        ""
-                    },
-                )
-                // 1. 快捷选项熄屏挂机已盖上：KEEP_SCREEN_ON，多轮定时不解、不收
-                // 2. 其余交给凭证自己决定注入 PIN、回放手势还是只试 dismissKeyguard，
-                //    别拿 isDeviceLocked 预跳过
-                val saverKeepScreenOn = screenSaver.isShowing()
-                if (saverKeepScreenOn) {
-                    log.append(uiTextOf(R.string.schedule_log_wake_skipped_screensaver))
-                } else {
-                    log.append(uiTextOf(R.string.schedule_log_wake_start))
-                    val wake = wakeUnlockEngine.unlock(credential)
-                    if (wake.isSuccess) {
-                        log.append(uiTextOf(R.string.schedule_log_wake_ok))
-                    } else {
-                        log.append(uiTextOf(R.string.schedule_log_wake_failed, wake.message))
-                        outcome.unlock = UnlockAttempt(
-                            type = unlockType,
-                            ready = credential.isReady,
-                            result = wake.name.lowercase(),
-                        )
-                        recordWakeDiagnostics(log, unlockType, credential, beforeWake)
-                        if (keyguardLocked()) {
-                            terminalResult = ExecutionResult.SKIPPED_LOCKED
-                            terminalMessage = if (deviceLocked() && !credential.isReady) {
-                                uiTextOf(R.string.notification_schedule_pin_required)
-                            } else {
-                                uiTextOf(R.string.notification_schedule_device_locked)
-                            }
-                            return
-                        }
-                    }
-                }
-            }
-
             log.append(uiTextOf(R.string.schedule_log_wait_profile))
             chainState.isLoaded.first { it }
             if (chainState.profileId.value != request.profileId) {
@@ -293,6 +245,25 @@ class LaunchPipeline(
                 log.append(uiTextOf(R.string.schedule_log_silent_start))
             }
 
+            if (request.source == LaunchSource.Schedule) {
+                val wake = waker.wake(request, launchUi = needsActivityLaunch, before = beforeWake, log = log)
+                outcome.unlock = wake.failed
+                when (wake) {
+                    is WakeStep.Ready -> Unit
+                    is WakeStep.Locked -> {
+                        terminalResult = ExecutionResult.SKIPPED_LOCKED
+                        terminalMessage = wake.message
+                        return
+                    }
+
+                    is WakeStep.UiLaunchFailed -> {
+                        terminalResult = ExecutionResult.FAILED_UI_LAUNCH
+                        terminalMessage = uiTextOf(R.string.schedule_log_ui_launch_failed)
+                        return
+                    }
+                }
+            }
+
             // 后台 + 待机才盖；用户已开的熄屏挂机不收走，好连跑多轮
             var screenOffPending = false
             if (request.autoScreenSaver && outcome.backgroundRun && outcome.tookOverIdleDevice) {
@@ -311,16 +282,6 @@ class LaunchPipeline(
                             },
                         )
                     }
-                }
-            }
-
-            if (needsActivityLaunch) {
-                log.append(uiTextOf(R.string.schedule_log_launch_ui))
-                val launched = activityLauncher(request)
-                if (!launched) {
-                    terminalResult = ExecutionResult.FAILED_UI_LAUNCH
-                    terminalMessage = uiTextOf(R.string.schedule_log_ui_launch_failed)
-                    return
                 }
             }
 
@@ -500,37 +461,6 @@ class LaunchPipeline(
         compositionService.stopVirtualDisplay()
         mutex.releaseAny()
         Timber.i("LaunchPipeline: force preempt for %s", incoming.requestId)
-    }
-
-    /**
-     * 解锁没成：配置摘要与提权侧过程写进触发日志；不带 PIN 与轨迹
-     * 只是取证，出错也不能改掉这一轮的结局
-     */
-    private suspend fun recordWakeDiagnostics(
-        log: ScheduleTriggerLogger.Session,
-        unlockType: String,
-        credential: UnlockCredential,
-        before: WakeSnapshot,
-    ) {
-        try {
-            log.append(
-                wakeConfigText(
-                    unlockType = unlockType,
-                    credential = credential,
-                    gestureRecordedAtMs = (credential as? UnlockCredential.Gesture)
-                        ?.let { unlockGestures.recordedAtMs() },
-                    passwordRequired = deviceLocked(),
-                    before = before,
-                ),
-            )
-            wakeUnlockEngine.lastTrace()?.let {
-                log.append(uiTextOf(R.string.schedule_log_wake_trace, it))
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Timber.w(e, "LaunchPipeline: record wake failure diagnostics failed")
-        }
     }
 
     private fun isBackgroundSchedule(request: LaunchRequest): Boolean =

@@ -14,6 +14,21 @@ sealed interface UnlockCredential {
 
     data class Gesture(val json: String) : UnlockCredential
 
+    val type: String
+        get() = when (this) {
+            Swipe -> TYPE_SWIPE
+            is Pin -> TYPE_PIN
+            is Gesture -> TYPE_GESTURE
+        }
+
+    /** 跨进程传给提权侧：PIN 数字或手势 JSON */
+    val payload: String
+        get() = when (this) {
+            Swipe -> ""
+            is Pin -> digits
+            is Gesture -> json
+        }
+
     /** 设备真要密码时，这份凭证能不能解开 */
     val isReady: Boolean
         get() = when (this) {

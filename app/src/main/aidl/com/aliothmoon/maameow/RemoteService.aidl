@@ -8,6 +8,7 @@ import com.aliothmoon.maameow.MaaCoreService;
 import com.aliothmoon.maameow.remote.PermissionGrantRequest;
 import com.aliothmoon.maameow.remote.PermissionStateInfo;
 import com.aliothmoon.maameow.remote.ProcessExitRecord;
+import com.aliothmoon.maameow.remote.WakeOutcome;
 
 interface RemoteService {
 
@@ -66,8 +67,6 @@ interface RemoteService {
 
     oneway void setTouchCallback(ITouchEventCallback callback) = 26;
 
-    boolean startActivity(in Intent intent) = 27;
-
     boolean isPackageInstalled(String packageName) = 28;
 
     boolean isAppOnVirtualDisplay(String packageName) = 29;
@@ -81,21 +80,16 @@ interface RemoteService {
     // 把漂移到其它 display 的应用任务拉回虚拟显示器，成功返回 true
     boolean moveAppToVirtualDisplay(String packageName) = 32;
 
-    int unlock(String credential) = 33;
-
     int lockAndSleep() = 34;
 
-    int testUnlock(String credential) = 35;
+    // 设置页自测：先锁屏息屏再解锁；type 为 UnlockCredential.TYPE_*
+    int testUnlock(String type, String payload) = 35;
 
     oneway void startGestureRecord(int timeoutMs) = 36;
 
     String pollGestureRecord() = 37;
 
     oneway void cancelGestureRecord() = 38;
-
-    int unlockWithGesture(String gestureJson) = 39;
-
-    int testUnlockGesture(String gestureJson) = 40;
 
     // HyperOS 发岛时短断 com.xiaomi.xmsf 网络
     boolean setPackageNetworkingEnabled(String packageName, boolean enabled) = 41;
@@ -151,4 +145,7 @@ interface RemoteService {
     void setUserActivityKeepAlive(boolean enabled) = 62;
 
     List<String> getVisiblePackages(int displayId) = 63;
+
+    // 解锁后接着拉起并确认界面，一次做完，免得主进程在返回点被冻结；type 为 null 只拉界面
+    WakeOutcome wakeAndLaunch(String type, String payload, in Intent launchIntent) = 64;
 }

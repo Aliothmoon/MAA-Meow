@@ -8,9 +8,9 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.UnlockGestureStore
 import com.aliothmoon.maameow.domain.models.GestureRecordResult
 import com.aliothmoon.maameow.domain.models.GestureRecordStatus
-import com.aliothmoon.maameow.domain.models.UnlockCredential
 import com.aliothmoon.maameow.domain.models.UnlockGesture
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.service.WakeCredentialSource
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
@@ -29,6 +29,7 @@ class ScheduleWakeUnlockViewModel(
     private val application: Application,
     private val appSettingsManager: AppSettingsManager,
     private val wakeUnlockEngine: WakeUnlockEngine,
+    private val wakeCredentials: WakeCredentialSource,
     private val unlockGestureStore: UnlockGestureStore,
     private val compositionService: MaaCompositionService,
     private val scheduleAlarmManager: ScheduleAlarmManager,
@@ -84,16 +85,7 @@ class ScheduleWakeUnlockViewModel(
         }
         viewModelScope.launch {
             _wakeTestState.value = WakeTestState.Testing
-            val type = appSettingsManager.wakeUnlockType.value
-            val credential = UnlockCredential.of(
-                type = type,
-                pin = appSettingsManager.wakeCredential.value,
-                gestureJson = if (type == UnlockCredential.TYPE_GESTURE) {
-                    unlockGestureStore.readJson()
-                } else {
-                    ""
-                },
-            )
+            val credential = wakeCredentials.current().credential
             // 测试会先息屏，没人持锁的话 CPU 可能在等待期间睡下去，解锁要拖到下次被唤醒
             val wakeLock = ScheduleWakeLock.acquire(application, TEST_WAKE_TIMEOUT_MS)
             val result = try {

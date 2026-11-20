@@ -145,8 +145,9 @@ public final class ActivityManager {
                     /* bOptions */ options,
                     /* userId */ /* UserHandle.USER_CURRENT */ -2);
         } catch (Throwable e) {
-            Ln.e("Could not invoke method", e);
-            return 0;
+            Ln.e("Could not invoke startActivityAsUser", e);
+            // 返回 -1 避免把调用异常当成 START_SUCCESS 吞掉
+            return -1;
         }
     }
 

@@ -1,15 +1,17 @@
 package com.aliothmoon.maameow.remote.internal
 
+import android.content.Intent
 import android.os.SystemClock
 import android.view.KeyEvent
 import com.aliothmoon.maameow.constant.WakeUnlockResult
+import com.aliothmoon.maameow.domain.models.UnlockCredential
 import com.aliothmoon.maameow.domain.models.UnlockGesture
 import com.aliothmoon.maameow.maa.InputControlUtils
+import com.aliothmoon.maameow.remote.WakeOutcome
 import com.aliothmoon.maameow.remote.internal.ScreenPowerAttempts.SleepAction
 import com.aliothmoon.maameow.remote.internal.ScreenPowerAttempts.WakeAction
 import com.aliothmoon.maameow.remote.internal.WakeUnlockController.LOCK_SETTLE_MS
 import com.aliothmoon.maameow.remote.internal.WakeUnlockController.lockAndSleep
-import com.aliothmoon.maameow.remote.internal.WakeUnlockController.unlock
 import com.aliothmoon.maameow.third.wrappers.PowerManager
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
 import com.aliothmoon.maameow.third.wrappers.WindowManager
@@ -34,6 +36,9 @@ object WakeUnlockController {
     /** 手势回放前等锁屏首屏稳定；不弹 bouncer，比 PIN 那条路要短 */
     private const val GESTURE_SETTLE_MS = 800L
 
+    /** 解锁后等锁屏退场与桌面恢复，避免紧跟的 startActivity 被过渡吞掉 */
+    private const val POST_UNLOCK_SETTLE_MS = 500L
+
     /** 测试：上锁/息屏后等待系统稳定再解锁 */
     private const val LOCK_SETTLE_MS = 500L
     private const val SCREEN_OFF_TIMEOUT_MS = 3_000L
@@ -50,16 +55,12 @@ object WakeUnlockController {
         last?.takeIf { it.startMs >= sinceElapsedMs }?.render().orEmpty()
 
     /**
-     * 设置页自测：先 [lockAndSleep]，等待 [LOCK_SETTLE_MS] 后再 [unlock]
+     * 设置页自测：先 [lockAndSleep]，等待 [LOCK_SETTLE_MS] 后再解锁
      * 整段在提权进程内完成，避免息屏后 App 侧协程被挂起
+     * @param type [UnlockCredential.type]
      */
-    fun testUnlock(credential: String): Int = traced("test unlock, ${credentialKind(credential)}") {
-        lockForTest(it) ?: doUnlock(credential, it)
-    }
-
-    /** 设置页自测：手势版 */
-    fun testUnlockGesture(gestureJson: String): Int = traced("test unlock, gesture") {
-        lockForTest(it) ?: doUnlockWithGesture(gestureJson, it)
+    fun testUnlock(type: String, payload: String): Int = traced("test unlock, $type") {
+        lockForTest(it) ?: unlockBy(type, payload, it)
     }
 
     /** @return 非 null 即上锁失败的结果码 */
@@ -129,11 +130,36 @@ object WakeUnlockController {
         return null
     }
 
-    /** 亮屏并解除锁屏；@param credential 纯数字 PIN，无凭证锁屏传空串 */
-    fun unlock(credential: String): Int = traced("unlock, ${credentialKind(credential)}") {
-        doUnlock(credential, it)
+    /**
+     * 解锁后按需拉起并确认界面到主屏前台；解锁没成但锁屏已不在也照拉
+     * @param type [UnlockCredential.type]，null 不碰锁屏
+     */
+    fun wakeAndLaunch(type: String?, payload: String, launchIntent: Intent?): WakeOutcome =
+        traced("unlock, ${type ?: "skipped"}") { trace ->
+            val code = unlockBy(type, payload, trace)
+            WakeOutcome(code, launchIntent != null && launchUi(type, code, launchIntent, trace))
+        }
+
+    private fun unlockBy(type: String?, payload: String, trace: WakeTrace): Int = when (type) {
+        null -> WakeUnlockResult.OK
+        UnlockCredential.TYPE_PIN -> doUnlock(payload, trace)
+        UnlockCredential.TYPE_GESTURE -> doUnlockWithGesture(payload, trace)
+        else -> doUnlock("", trace)
     }
 
+    private fun launchUi(type: String?, unlockCode: Int, intent: Intent, trace: WakeTrace): Boolean {
+        if (unlockCode != WakeUnlockResult.OK && ServiceManager.getWindowManager().isKeyguardLocked != false) {
+            trace.w("still locked, ui launch skipped")
+            return false
+        }
+        if (type != null) {
+            trace.i("settle ${POST_UNLOCK_SETTLE_MS}ms before ui launch")
+            Thread.sleep(POST_UNLOCK_SETTLE_MS)
+        }
+        return ActivityUtils.launchAndConfirm(intent, onInfo = trace::i, onWarn = trace::w)
+    }
+
+    /** @param credential 纯数字 PIN，无凭证锁屏传空串 */
     private fun doUnlock(credential: String, trace: WakeTrace): Int {
         val pm = ServiceManager.getPowerManager()
         val wm = ServiceManager.getWindowManager()
@@ -184,9 +210,11 @@ object WakeUnlockController {
             InputControlUtils.keyUp(keyCode, 0)
             Thread.sleep(DIGIT_GAP_MS)
         }
-        // 部分 ROM 会自动提交；补 ENTER 兼容需确认的 PIN
-        InputControlUtils.keyDown(KeyEvent.KEYCODE_ENTER, 0)
-        InputControlUtils.keyUp(KeyEvent.KEYCODE_ENTER, 0)
+        // 部分 ROM 输完自动解锁，仍锁着才补 ENTER
+        if (wm.isKeyguardLocked != false) {
+            InputControlUtils.keyDown(KeyEvent.KEYCODE_ENTER, 0)
+            InputControlUtils.keyUp(KeyEvent.KEYCODE_ENTER, 0)
+        }
         val padMs = PIN_INJECT_BUDGET_MS - (SystemClock.elapsedRealtime() - injectStartMs)
         if (padMs > 0) Thread.sleep(padMs)
         trace.i("PIN injected")
@@ -209,10 +237,6 @@ object WakeUnlockController {
      * 亮屏并回放录制的解锁手势
      * @param gestureJson 空串表示未录制
      */
-    fun unlockWithGesture(gestureJson: String): Int = traced("unlock, gesture") {
-        doUnlockWithGesture(gestureJson, it)
-    }
-
     private fun doUnlockWithGesture(gestureJson: String, trace: WakeTrace): Int {
         val gesture = UnlockGesture.parseOrNull(gestureJson) { trace.w(it) }
         if (gesture == null || gesture.steps.isEmpty()) {
@@ -292,7 +316,7 @@ object WakeUnlockController {
     fun wakeScreen(): Boolean = ensureScreenOn(ServiceManager.getPowerManager(), WakeTrace())
 
     /** 每次解锁换一份 trace，异常时也留下已走到的步骤 */
-    private inline fun traced(what: String, block: (WakeTrace) -> Int): Int {
+    private inline fun <T> traced(what: String, block: (WakeTrace) -> T): T {
         val trace = WakeTrace()
         trace.note(what)
         try {
@@ -301,8 +325,6 @@ object WakeUnlockController {
             last = trace
         }
     }
-
-    private fun credentialKind(credential: String) = if (credential.isEmpty()) "no credential" else "PIN"
 
     private fun ensureScreenOn(pm: PowerManager, trace: WakeTrace): Boolean =
         ScreenPowerAttempts.run(

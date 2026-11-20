@@ -2236,6 +2236,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_log_backend_connect_cause">Service failed to start: %1$s</string>
     <string name="schedule_log_force_stop_running">Force start: stopping the running task</string>
     <string name="schedule_log_wake_start">Waking and unlocking…</string>
+    <string name="schedule_log_wake_and_launch_start">Waking, unlocking, and launching UI…</string>
     <string name="schedule_log_wake_ok">Wake and unlock succeeded</string>
     <string name="schedule_log_auto_sleep_skipped_awake">Device was already unlocked at start, skipping sleep after task</string>
     <string name="schedule_log_auto_sleep_skipped_screensaver">Screen Off still active; skipped sleep after task</string>

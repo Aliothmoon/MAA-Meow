@@ -2292,6 +2292,7 @@
     <string name="schedule_log_backend_connect_cause">서비스 시작 실패 원인: %1$s</string>
     <string name="schedule_log_force_stop_running">강제 예약 시작: 실행 중인 작업을 중지합니다</string>
     <string name="schedule_log_wake_start">화면 깨우기 및 잠금 해제 실행 중…</string>
+    <string name="schedule_log_wake_and_launch_start">화면 깨우기, 잠금 해제 및 앱 화면 여는 중…</string>
     <string name="schedule_log_wake_ok">화면 깨우기 및 잠금 해제 성공</string>
     <string name="schedule_log_auto_sleep_skipped_awake">시작 시 기기가 이미 잠금 해제되어 있어 종료 후 화면 끄기를 건너뜁니다</string>
     <string name="schedule_log_auto_sleep_skipped_screensaver">화면 꺼짐 모드가 아직 켜져 있어 종료 후 화면 끄기를 건너뜁니다</string>

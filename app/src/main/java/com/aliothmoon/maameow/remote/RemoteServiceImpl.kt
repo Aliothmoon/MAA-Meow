@@ -513,23 +513,14 @@ class RemoteServiceImpl : RemoteService.Stub() {
     }
 
     /** @return [com.aliothmoon.maameow.constant.WakeUnlockResult] */
-    override fun unlock(credential: String?): Int =
-        WakeUnlockController.unlock(credential.orEmpty())
-
-    /** @return [com.aliothmoon.maameow.constant.WakeUnlockResult] */
     override fun lockAndSleep(): Int = WakeUnlockController.lockAndSleep()
 
     /** @return [com.aliothmoon.maameow.constant.WakeUnlockResult] */
-    override fun testUnlock(credential: String?): Int =
-        WakeUnlockController.testUnlock(credential.orEmpty())
+    override fun testUnlock(type: String?, payload: String?): Int =
+        WakeUnlockController.testUnlock(type.orEmpty(), payload.orEmpty())
 
-    /** @return [com.aliothmoon.maameow.constant.WakeUnlockResult] */
-    override fun unlockWithGesture(gestureJson: String?): Int =
-        WakeUnlockController.unlockWithGesture(gestureJson.orEmpty())
-
-    /** @return [com.aliothmoon.maameow.constant.WakeUnlockResult] */
-    override fun testUnlockGesture(gestureJson: String?): Int =
-        WakeUnlockController.testUnlockGesture(gestureJson.orEmpty())
+    override fun wakeAndLaunch(type: String?, payload: String?, launchIntent: Intent?): WakeOutcome =
+        WakeUnlockController.wakeAndLaunch(type, payload.orEmpty(), launchIntent)
 
     override fun getLastWakeTrace(sinceElapsedMs: Long): String =
         WakeUnlockController.lastTrace(sinceElapsedMs)
@@ -567,10 +558,6 @@ class RemoteServiceImpl : RemoteService.Stub() {
             Ln.w("$TAG: read low_resolution_switch failed", e)
             false
         }
-    }
-
-    override fun startActivity(intent: Intent): Boolean {
-        return ActivityUtils.startActivity(intent)
     }
 
     override fun getVisiblePackages(displayId: Int): List<String>? = ActivityUtils.visiblePackages(displayId)
