@@ -24,17 +24,22 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,13 +54,22 @@ import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskProfile
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ITextField
+import com.aliothmoon.maameow.presentation.view.background.RunDurationInputDialog
+import com.aliothmoon.maameow.presentation.view.background.RunDurationStepperRow
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
+import com.aliothmoon.maameow.theme.MaaThemeAlphas
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -72,11 +86,19 @@ fun ProfileManagementPanel(
     onDelete: (String) -> Unit,
     onCreate: () -> Unit,
     onReorder: (Int, Int) -> Unit,
-    modifier: Modifier = Modifier
+    onRunDurationLimitChange: (String, Int?) -> Unit,
+    modifier: Modifier = Modifier,
+    compositionService: MaaCompositionService = koinInject(),
+    appSettingsManager: AppSettingsManager = koinInject(),
 ) {
     var editingProfileId by remember { mutableStateOf<String?>(null) }
     var editingName by remember { mutableStateOf("") }
     var deleteConfirmProfileId by remember { mutableStateOf<String?>(null) }
+    var runDurationInputProfileId by remember { mutableStateOf<String?>(null) }
+    val maaState by compositionService.state.collectAsStateWithLifecycle()
+    // 本轮已按开始时的设置计时，运行中禁改，与快捷选项的全局设置一致
+    val isTaskActive = maaState != MaaExecutionState.IDLE && maaState != MaaExecutionState.ERROR
+    val globalRunDurationMinutes by appSettingsManager.runDurationLimitMinutes.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier
@@ -153,7 +175,14 @@ fun ProfileManagementPanel(
                             editingProfileId = null
                         },
                         onDuplicate = { onDuplicate(profile.id) },
-                        onDelete = { deleteConfirmProfileId = profile.id }
+                        onDelete = { deleteConfirmProfileId = profile.id },
+                        runDurationEditable = !isTaskActive,
+                        onRunDurationLimitEnabledChange = { enabled ->
+                            // 开启时从全局时长起步，再按需微调
+                            onRunDurationLimitChange(profile.id, globalRunDurationMinutes.takeIf { enabled })
+                        },
+                        onRunDurationLimitChange = { onRunDurationLimitChange(profile.id, it) },
+                        onRunDurationEditClick = { runDurationInputProfileId = profile.id },
                     )
                 }
             }
@@ -178,6 +207,24 @@ fun ProfileManagementPanel(
         },
         onDismissRequest = { deleteConfirmProfileId = null }
     )
+
+    // 任务开始即收起，结束后不再冒出来
+    LaunchedEffect(isTaskActive) {
+        if (isTaskActive) runDurationInputProfileId = null
+    }
+    val runDurationInputMinutes = runDurationInputProfileId?.let { id ->
+        profiles.find { it.id == id }?.runDurationLimitMinutes
+    }
+    if (runDurationInputMinutes != null && !isTaskActive) {
+        RunDurationInputDialog(
+            minutes = runDurationInputMinutes,
+            onDismissRequest = { runDurationInputProfileId = null },
+            onConfirm = { minutes ->
+                runDurationInputProfileId?.let { onRunDurationLimitChange(it, minutes) }
+                runDurationInputProfileId = null
+            },
+        )
+    }
 }
 
 @Composable
@@ -194,7 +241,11 @@ private fun ProfileCard(
     onRenameChange: (String) -> Unit,
     onRenameConfirm: () -> Unit,
     onDuplicate: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    runDurationEditable: Boolean,
+    onRunDurationLimitEnabledChange: (Boolean) -> Unit,
+    onRunDurationLimitChange: (Int) -> Unit,
+    onRunDurationEditClick: () -> Unit,
 ) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -238,19 +289,29 @@ private fun ProfileCard(
 
                 Spacer(modifier = Modifier.width(4.dp))
 
-                Text(
-                    text = profile.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (isActive) FontWeight.Medium else FontWeight.Normal,
-                    color = if (isActive) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = profile.name,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (isActive) FontWeight.Medium else FontWeight.Normal,
+                        color = if (isActive) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    profile.runDurationLimitMinutes?.let { minutes ->
+                        Text(
+                            text = stringResource(R.string.panel_profile_run_duration_limit_badge, minutes),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
 
                 // 操作按钮
                 IconButton(
@@ -325,6 +386,13 @@ private fun ProfileCard(
                             )
                         }
                     }
+                    ProfileRunDurationLimitSection(
+                        minutes = profile.runDurationLimitMinutes,
+                        enabled = runDurationEditable,
+                        onEnabledChange = onRunDurationLimitEnabledChange,
+                        onMinutesChange = onRunDurationLimitChange,
+                        onEditClick = onRunDurationEditClick,
+                    )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "ID: ${profile.id}",
@@ -354,6 +422,71 @@ private fun ProfileCard(
                     }
                 }
             }
+        }
+    }
+}
+
+/** 单独设置运行时长上限：未勾选跟随全局，勾选后按此时长计时 */
+@Composable
+private fun ProfileRunDurationLimitSection(
+    minutes: Int?,
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    onMinutesChange: (Int) -> Unit,
+    onEditClick: () -> Unit,
+) {
+    val checked = minutes != null
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(32.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .clickable(enabled = enabled) { onEnabledChange(!checked) },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Timer,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = stringResource(R.string.panel_profile_run_duration_limit),
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (enabled) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = MaaThemeAlphas.DISABLED)
+                },
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                Checkbox(
+                    checked = checked,
+                    onCheckedChange = onEnabledChange,
+                    enabled = enabled,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+        if (minutes != null) {
+            RunDurationStepperRow(
+                minutes = minutes,
+                enabled = enabled,
+                onMinutesChange = onMinutesChange,
+                onEditClick = onEditClick,
+            )
+        } else {
+            Text(
+                text = stringResource(R.string.panel_profile_run_duration_limit_hint),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.padding(start = 26.dp)
+            )
         }
     }
 }
