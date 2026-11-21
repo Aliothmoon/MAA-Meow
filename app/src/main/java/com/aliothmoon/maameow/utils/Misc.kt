@@ -11,6 +11,9 @@ import android.provider.OpenableColumns
 import android.util.DisplayMetrics
 import android.view.WindowManager
 import androidx.core.net.toUri
+import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.utils.i18n.LocalizedException
+import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import timber.log.Timber
 import kotlin.math.abs
 

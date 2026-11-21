@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.domain.usecase
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.model.CollectingPreflightLogSink
+import com.aliothmoon.maameow.data.model.DepotMaintainConfig
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskParamContext
@@ -87,6 +88,7 @@ class AnalyzeTaskChainUseCase(
             reportToYituliu = appSettingsManager.reportToYituliu.value,
             penguinId = appSettingsManager.penguinId.value,
         )
+
         val log = CollectingPreflightLogSink()
         val fallbacks = mutableMapOf<TaskSlot, TaskFallbackChain>()
         val sideTasks = mutableListOf<PlanSideTask>()

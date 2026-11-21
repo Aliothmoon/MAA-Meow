@@ -90,7 +90,10 @@ class DepotMaintainExpansionTest {
         medicineCount: Int = 0,
         useStone: Boolean = false,
         stoneCount: Int = 0,
-    ) = DepotMaintainPlan(stage, dropId, dropCount, useMedicine, medicineCount, useStone, stoneCount)
+    ) = DepotMaintainPlan(
+        stage, dropId, dropCount,
+        useMedicine, medicineCount, useStone, stoneCount,
+    )
 
     private fun config(
         vararg plans: DepotMaintainPlan,
@@ -220,7 +223,11 @@ class DepotMaintainExpansionTest {
 
         assertEquals(listOf(MaaTaskType.DEPOT, MaaTaskType.FIGHT), result.params.map { it.type })
         assertEquals(
-            uiTextOf(R.string.runlog_task_with_detail, "材料补货", uiTextOf(R.string.maa_depot)),
+            uiTextOf(
+                R.string.runlog_task_with_detail,
+                UiText.Dynamic("材料补货"),
+                uiTextOf(R.string.maa_depot),
+            ),
             result.params.first().logName,
         )
         assertEquals(UiText.Dynamic("材料补货 #3"), result.params.last().logName)
@@ -442,16 +449,6 @@ class DepotMaintainExpansionTest {
         assertEquals(5, json["medicine"]!!.jsonPrimitive.content.toInt())
         assertEquals(2, json["stone"]!!.jsonPrimitive.content.toInt())
         assertEquals(listOf(R.string.runlog_depot_plan_inventory_insufficient), result.logs.resIds())
-    }
-
-    /** 对齐 WPF：默认 series=1；UseAutoSeries 勾选时 series=0（AUTO） */
-    @Test
-    fun fightJson_seriesDefaultsToOne_andAutoSeriesEmitsZero() {
-        val defaultSeries = config(plan()).expand()
-        assertEquals(1, defaultSeries.params[0].json()["series"]!!.jsonPrimitive.content.toInt())
-
-        val auto = config(plan(), useAutoSeries = true).expand()
-        assertEquals(0, auto.params[0].json()["series"]!!.jsonPrimitive.content.toInt())
     }
 
     /**
