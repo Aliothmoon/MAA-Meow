@@ -92,8 +92,7 @@ object MiniGameTextRegistry {
         "MiniGame@InteractiveExhibition", "MiniGame@InteractiveExhibition@Begin" ->
             R.string.mini_game_name_interactive_exhibition
 
-        "MiniGame@WartimePressCommittee", "MiniGame@WartimePressCommittee@Begin" ->
-            R.string.mini_game_name_tl_wartime_press_committee
+        "MiniGame@TL", "MiniGame@TL@Begin" -> R.string.mini_game_name_tl_wartime_press_committee
 
         else -> null
     }
@@ -127,8 +126,7 @@ object MiniGameTextRegistry {
         "MiniGame@InteractiveExhibition", "MiniGame@InteractiveExhibition@Begin" ->
             R.string.mini_game_tip_interactive_exhibition
 
-        "MiniGame@WartimePressCommittee", "MiniGame@WartimePressCommittee@Begin" ->
-            R.string.mini_game_tip_tl_wartime_press_committee
+        "MiniGame@TL", "MiniGame@TL@Begin" -> R.string.mini_game_tip_tl_wartime_press_committee
 
         else -> null
     }

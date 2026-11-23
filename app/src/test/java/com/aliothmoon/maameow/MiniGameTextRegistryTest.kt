@@ -163,11 +163,11 @@ class MiniGameTextRegistryTest {
 
     @Test
     fun resolveWartimePressCommittee_liveOfficialEntry() {
-        // 上游 v6.21.1 新增，线上条目只带 DisplayKey + 内联 Tip，无 TipKey
+        // 上游 v6.21.1 新增，v6.23.1 任务改名 MiniGame@TL；线上条目只带 DisplayKey + 内联 Tip，无 TipKey
         val display = MiniGameTextRegistry.resolveDisplay(
             display = "TL-战时新闻委员会",
             displayKey = "Toolbox.MiniGame.TL.WartimePressCommittee",
-            value = "MiniGame@WartimePressCommittee@Begin"
+            value = "MiniGame@TL@Begin"
         )
         assertEquals(UiText.Resource(R.string.mini_game_name_tl_wartime_press_committee), display)
         assertEquals(
@@ -177,7 +177,7 @@ class MiniGameTextRegistryTest {
                 tipKey = null,
                 display = display,
                 displayKey = "Toolbox.MiniGame.TL.WartimePressCommittee",
-                value = "MiniGame@WartimePressCommittee@Begin"
+                value = "MiniGame@TL@Begin"
             )
         )
         assertEquals(
@@ -187,7 +187,21 @@ class MiniGameTextRegistryTest {
                 tipKey = null,
                 display = display,
                 displayKey = "Toolbox.MiniGame.TL.WartimePressCommittee",
-                value = "MiniGame@WartimePressCommittee@Begin"
+                value = "MiniGame@TL@Begin"
+            )
+        )
+        assertEquals(
+            UiText.Resource(R.string.mini_game_name_tl_wartime_press_committee),
+            MiniGameTextRegistry.resolveDisplay(display = null, displayKey = null, value = "MiniGame@TL@Begin")
+        )
+        assertEquals(
+            UiText.Resource(R.string.mini_game_tip_tl_wartime_press_committee),
+            MiniGameTextRegistry.resolveTip(
+                tip = null,
+                tipKey = null,
+                display = UiText.Empty,
+                displayKey = null,
+                value = "MiniGame@TL@Begin"
             )
         )
     }
