@@ -67,6 +67,10 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.koin.java.KoinJavaComponent.inject
 import timber.log.Timber
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
@@ -279,8 +283,9 @@ class MaaCompositionService(
                     context.getString(R.string.runlog_game_process_gone, packageName),
                     LogLevel.ERROR
                 )
-                // 系统记下的死因当场进应用日志，任务日志只留上面这条
-                processExitJournal.recordGame(packageName)
+                processExitJournal.recordGame(packageName)?.let {
+                    sessionLogger.appendAndWait(describeGameExit(it), LogLevel.WARNING)
+                }
                 // 游戏没了剩下的任务链也是白跑，整轮中止
                 if (_state.value == MaaExecutionState.RUNNING) {
                     notificationCenter.notifySubTaskFailure(
@@ -300,6 +305,11 @@ class MaaCompositionService(
                 notificationCenter.notifySubTaskFailure(message)
             }
         }
+    }
+
+    private fun describeGameExit(cause: GameExitCause): String {
+        val time = EXIT_TIME.format(Instant.ofEpochMilli(cause.timestamp).atZone(ZoneId.systemDefault()))
+        return context.getString(cause.kind.messageRes, time, cause.tag)
     }
 
     fun handleCallback(msg: Int, json: String?) {
@@ -1076,6 +1086,8 @@ private const val DISPLAY_CALL_TIMEOUT_MS = 15_000L
 
 // VDM 关联最长 17s，另加逐档回退
 private const val START_DISPLAY_TIMEOUT_MS = 30_000L
+
+private val EXIT_TIME = DateTimeFormatter.ofPattern("HH:mm:ss", Locale.ROOT)
 
 // 虚拟屏上要等钉屏校验 10s 和首帧 5s
 private const val LAUNCH_GAME_TIMEOUT_MS = 30_000L

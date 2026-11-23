@@ -1,8 +1,10 @@
 package com.aliothmoon.maameow.data.log
 
+import com.aliothmoon.maameow.domain.service.GameExitCause.Kind
 import com.aliothmoon.maameow.remote.ProcessExitRecord
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.ZoneId
@@ -111,6 +113,52 @@ class ProcessExitLogTest {
                 record(1, reason = 10, reasonName = "USER_REQUESTED", description = "stop com.example due to from pid 1"),
             )
         )
+    }
+
+    private fun kindOf(record: ProcessExitRecord, servicePid: Int? = 4993) =
+        ProcessExitLog.explain(record, servicePid)?.kind
+
+    @Test
+    fun explain_romKillsAreBackgroundOrLowMemory() {
+        assertEquals(Kind.LOW_MEMORY, kindOf(record(1)))
+        assertEquals(Kind.BACKGROUND_KILL, kindOf(record(1, reason = 2, reasonName = "SIGNALED", status = 9)))
+        assertEquals(Kind.BACKGROUND_KILL, kindOf(record(1, reason = 13, reasonName = "OTHER KILLS BY APP", description = "kill background")))
+        assertEquals(Kind.BACKGROUND_KILL, kindOf(record(1, reason = 14, reasonName = "FREEZER")))
+    }
+
+    @Test
+    fun explain_crashesAreNotBlamedOnTheSystem() {
+        assertEquals(Kind.CRASH, kindOf(record(1, reason = 5, reasonName = "CRASH_NATIVE")))
+        assertEquals(Kind.CRASH, kindOf(record(1, reason = 6, reasonName = "ANR")))
+        assertEquals(Kind.CRASH, kindOf(record(1, reason = 2, reasonName = "SIGNALED", status = 11)))
+    }
+
+    @Test
+    fun explain_forceStopByOurServiceIsNotACause() {
+        assertNull(ProcessExitLog.explain(record(1, reason = 10, description = "stop com.hypergryph.arknights due to from pid 4993"), 4993))
+        assertNull(ProcessExitLog.explain(record(1, reason = 10, description = "stop com.hypergryph.arknights due to from process:4993"), 4993))
+        assertEquals(Kind.FORCE_STOPPED, kindOf(record(1, reason = 10, description = "stop com.hypergryph.arknights due to from pid 1234")))
+        assertEquals(Kind.FORCE_STOPPED, kindOf(record(1, reason = 10, description = "stop com.hypergryph.arknights due to from pid 4993"), servicePid = null))
+    }
+
+    @Test
+    fun explain_miuiLockScreenCleanIsForceStopWithItsTag() {
+        val cause = ProcessExitLog.explain(
+            record(1, reason = 10, reasonName = "USER REQUESTED", description = "stop com.hypergryph.arknights due to AutoLockOffClean"),
+            4993,
+        )
+
+        assertEquals(Kind.FORCE_STOPPED, cause?.kind)
+        assertEquals("USER REQUESTED, AutoLockOffClean", cause?.tag)
+    }
+
+    @Test
+    fun explain_tagCarriesSignalSubreasonAndFirstDescriptionLine() {
+        assertEquals("SIGNALED 9", ProcessExitLog.explain(record(1, reason = 2, reasonName = "SIGNALED", status = 9), null)?.tag)
+
+        val crash = record(1, reason = 4, reasonName = "CRASH", description = "java.lang.IllegalStateException\n\tat a.b.C")
+            .copy(detail = 7, detailName = "EXCESSIVE CPU")
+        assertEquals("CRASH, EXCESSIVE CPU, java.lang.IllegalStateException", ProcessExitLog.explain(crash, null)?.tag)
     }
 
     @Test

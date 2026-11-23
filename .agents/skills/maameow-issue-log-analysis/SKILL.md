@@ -288,7 +288,7 @@ zip 内路径相对 App 的 `debug/` 目录。`LOCAL_TMP` 模式下，下文标"
 - `启动 MaaCore 超时或失败` / `MaaCore connection timed out or failed` — `AsyncConnect` 2 秒内没回 `AsyncCallInfo`
 - `MaaCore 启动失败` / `Failed to start MaaCore` — `AsstStart` 返回 false
 - `任务加入队列失败：<任务名>` — core 拒绝了任务参数，对照同一文件里的 `[TaskParams]` 行
-- `游戏进程未启动或被异常关闭(<包名>)` — 游戏崩溃或被杀
+- `游戏进程未启动或被异常关闭(<包名>)` — 游戏崩溃或被杀；紧跟的 `退出原因（时间）：… [reason, …]` / `Exit cause (...)` 是系统 `ApplicationExitInfo` 的归类，方括号里是原始 reason / 细分 / 描述。没有这行 = API < 30、系统没记录，或最后一次退出是 MaaMeow 自己强停后没再拉起来
 - `游戏窗口已离开虚拟显示器且自动拉回失败` — 游戏跑到主屏去了
 - `游戏画面帧率仅 N FPS` — 帧率过低，自动战斗时机会不准
 - `已达到运行时长上限` — 是设置项主动停的，不是故障
