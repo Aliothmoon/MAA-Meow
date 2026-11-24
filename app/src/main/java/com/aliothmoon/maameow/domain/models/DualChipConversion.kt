@@ -7,7 +7,7 @@ object DualChipConversion {
     private const val PACKS_PER_DUAL_CHIP = 2
 
     /** 芯片组 → 同职业双芯片：3212 先锋芯片组 → 3213 先锋双芯片，依次到特种 3282 → 3283 */
-    private val DUAL_CHIP_BY_PACK = (1..8).associate { "32${it}2" to "32${it}3" }
+    internal val DUAL_CHIP_BY_PACK = (1..8).associate { "32${it}2" to "32${it}3" }
 
     /** 开启折算时计入双芯片后的数量，其余物品原样 */
     fun count(dropId: String, enabled: Boolean, countOf: (String) -> Int): Int =

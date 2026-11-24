@@ -4,6 +4,7 @@ import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
+import com.aliothmoon.maameow.data.resource.PenguinDropRateProvider
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.data.resource.StageItem
 import com.aliothmoon.maameow.domain.models.ReportOptions
@@ -29,6 +30,8 @@ fun testTaskParamContext(
     operBoxRepository: OperBoxRepository = mockk(relaxed = true),
     itemHelper: ItemHelper = mockk(relaxed = true),
     resourceDataManager: ResourceDataManager = mockk(relaxed = true),
+    /** 默认 relaxed mock：getRate 返回 null，等价于「无掉率数据」→ 逐场刷 */
+    dropRateProvider: PenguinDropRateProvider = mockk(relaxed = true),
     dropsRefresher: FightDropsRefresher = mockk(relaxed = true),
     logSink: PreflightLogSink = CollectingPreflightLogSink(),
     report: ReportOptions = ReportOptions.DEFAULT,
@@ -42,6 +45,7 @@ fun testTaskParamContext(
     operBoxRepository = operBoxRepository,
     itemHelper = itemHelper,
     resourceDataManager = resourceDataManager,
+    dropRateProvider = dropRateProvider,
     dropsRefresher = dropsRefresher,
     logSink = logSink,
     report = report,

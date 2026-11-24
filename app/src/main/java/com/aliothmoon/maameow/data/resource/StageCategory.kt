@@ -2,6 +2,9 @@ package com.aliothmoon.maameow.data.resource
 
 /**
  * 关卡分类
+ *
+ * displayName 已删：原硬编码中文名（"主线"/"龙门币"…）全仓无任何显示消费点，
+ * 属死代码。将来若要在 UI 展示分类名，按 stage_name_* 的先例建 string 资源。
  */
 enum class StageCategory {
     MAIN,           // 主线关卡

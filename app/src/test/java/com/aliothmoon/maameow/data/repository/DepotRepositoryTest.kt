@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.data.repository
 
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.data.model.toolbox.DepotItem
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.utils.JsonUtils
@@ -40,10 +41,20 @@ class DepotRepositoryTest {
         repository = DepotRepository(store, fakeChainState())
     }
 
-    private fun fakeChainState(): TaskChainState = mockk {
+    private fun mockProfiles(ids: List<String>): List<TaskProfile> =
+        ids.map { pid -> mockk<TaskProfile> { every { this@mockk.id } returns pid } }
+
+    private fun fakeChainState(
+        profileIds: List<String>? = null,
+        profilesFlow: MutableStateFlow<List<TaskProfile>>? = null,
+    ): TaskChainState = mockk {
         every { this@mockk.profileId } returns this@DepotRepositoryTest.activeProfileId
         every { isLoaded } returns MutableStateFlow(true)
         every { this@mockk.profileDeleted } returns this@DepotRepositoryTest.profileDeleted
+        when {
+            profilesFlow != null -> every { this@mockk.profiles } returns profilesFlow
+            profileIds != null -> every { this@mockk.profiles } returns MutableStateFlow(mockProfiles(profileIds))
+        }
     }
 
     private suspend fun rawShardOf(profileId: String): String? =
@@ -100,6 +111,51 @@ class DepotRepositoryTest {
         repository.merge(listOf("30011" to 20))
 
         assertEquals(120, repository.countOf("30011"))
+    }
+
+    @Test
+    fun merge_intoNonActiveProfile_staysInTargetShard() {
+        repository.set(listOf(DepotItem("30011", 100)))
+        repository.set(listOf(DepotItem("30011", 80)), PROFILE_B)
+
+        val written = repository.merge(listOf("30011" to 20), PROFILE_B)
+
+        assertTrue(written)
+        // 活跃档原样不动，累加落在目标档自己的分片上
+        assertEquals(100, repository.countOf("30011"))
+        assertEquals(100, repository.countOf("30011", PROFILE_B))
+        assertTrue(repository.hasSynced(PROFILE_B))
+    }
+
+    @Test
+    fun merge_intoProfileWithoutBaseline_isRejected() {
+        // 没有识别基线时累加只会得到残缺数据，宁可丢弃（返回 false 让调用方报警）
+        assertFalse(repository.merge(listOf("30011" to 20), PROFILE_B))
+        assertEquals(0, repository.countOf("30011", PROFILE_B))
+    }
+
+    @Test
+    fun merge_intoDeletedProfile_isRejected() = runBlocking {
+        // 先给 B 建好基线（分片存在且 hasSynced=true），再把 B 从配置档列表里去掉：
+        // 只有闸门生效时才会拒绝写入。以前这条用例里 B 连分片都没有，
+        // 闸门即使完全失效也会走「无基线不建键」，三条断言照样全过（等于没测）
+        repository.set(listOf(DepotItem("30011", 80)), PROFILE_B)
+        withTimeout(AWAIT_TIMEOUT_MS) {
+            while (rawShardOf(PROFILE_B) == null) yield()
+        }
+
+        val profilesFlow = MutableStateFlow(mockProfiles(listOf(PROFILE_A, PROFILE_B)))
+        val target = DepotRepository(store, fakeChainState(profilesFlow = profilesFlow))
+        withTimeout(AWAIT_TIMEOUT_MS) { target.isLoaded.first { it } }
+
+        // 装载时 B 还在列表里（分片不会被当成孤儿清掉），装载后用户又删了 B
+        profilesFlow.value = mockProfiles(listOf(PROFILE_A))
+
+        val written = target.merge(listOf("30011" to 20), PROFILE_B)
+
+        assertFalse(written)
+        // 基线还在（80），没有被这次 merge 叠成 100
+        assertEquals(80, target.countOf("30011", PROFILE_B))
     }
 
     @Test
@@ -314,6 +370,27 @@ class DepotRepositoryTest {
         repository.set(listOf(DepotItem("30011", 100)))
         repository.merge(listOf("30011" to 7))
         assertEquals(107, repository.countOf("30011"))
+    }
+
+    @Test
+    fun merge_shardExistsButNotSynced_isRejected() = runBlocking {
+        // 清空某档后分片还在、hasSynced=false：这时 transform 原样返回，
+        // 老实现拿「写入结果值」判成功 → merge 返回 true 但一个数都没落（本提交修的就是这条）
+        repository.set(listOf(DepotItem("30011", 80)))
+        awaitDiskShard(PROFILE_A)
+        repository.clear(PROFILE_A)
+        awaitSnapshot { !it.hasSynced }
+        // 清空是异步落盘的：不等盘上也变空，下面读到的会是 set 那一版的旧时间戳
+        withTimeout(AWAIT_TIMEOUT_MS) {
+            while (awaitDiskShard(PROFILE_A).hasSynced) yield()
+        }
+
+        val written = repository.merge(listOf("30011" to 5))
+
+        assertFalse("分片存在但没有识别基线时不得报成功", written)
+        assertEquals(0, repository.countOf("30011"))
+        // 断言「没写进去」要看内容：merge 本来就不改 syncTimeMillis，那个断言恒真
+        assertTrue("也不该把掉落写进空分片", awaitDiskShard(PROFILE_A).items.isEmpty())
     }
 
     @Test

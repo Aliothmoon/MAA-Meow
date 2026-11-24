@@ -313,7 +313,7 @@ data class FightConfig(
                 ctx.appendLog(
                     uiTextOf(
                         R.string.runlog_fight_stage_unavailable,
-                        ctx.node.name,
+                        ctx.node.nameUiText(),
                         ctx.activityManager.getStageDisplayName(stage1),
                     ),
                     LogLevel.WARNING,
@@ -339,7 +339,7 @@ data class FightConfig(
         val need = if (isSpecifiedDrops && isInventoryTarget && dropsItemId.isNotBlank()) {
             if (!ctx.depotRepository.snapshot.value.hasSynced) {
                 ctx.appendLog(
-                    uiTextOf(R.string.runlog_fight_inventory_unavailable, ctx.node.name),
+                    uiTextOf(R.string.runlog_fight_inventory_unavailable, ctx.node.nameUiText()),
                     LogLevel.WARNING,
                 )
                 return emptyList()
@@ -355,7 +355,7 @@ data class FightConfig(
                 ctx.appendLog(
                     uiTextOf(
                         R.string.runlog_depot_plan_inventory_enough,
-                        ctx.node.name,
+                        ctx.node.nameUiText(),
                         dropName,
                         current,
                         dropsQuantity,
@@ -367,7 +367,7 @@ data class FightConfig(
             ctx.appendLog(
                 uiTextOf(
                     R.string.runlog_depot_plan_inventory_insufficient,
-                    ctx.node.name,
+                    ctx.node.nameUiText(),
                     dropName,
                     current,
                     dropsQuantity,
@@ -406,7 +406,7 @@ data class FightConfig(
                     medicine = actualMedicine,
                     stone = actualStone,
                     series = series,
-                    logLabel = ctx.node.name,
+                    logLabel = ctx.node.nameUiText(),
                     medicineExpireDays = expireDays,
                     drGrandet = isDrGrandet,
                     report = ctx.report,

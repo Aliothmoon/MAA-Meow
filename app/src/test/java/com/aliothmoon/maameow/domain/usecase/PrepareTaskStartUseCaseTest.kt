@@ -51,6 +51,7 @@ class PrepareTaskStartUseCaseTest {
             every { snapshot } returns MutableStateFlow(OperBoxSnapshot())
         },
         itemHelper = mockk(relaxed = true),
+        dropRateProvider = mockk(relaxed = true),
         dropsRefresher = mockk(relaxed = true),
         appSettingsManager = mockk {
             every { reportToPenguin } returns MutableStateFlow(true)

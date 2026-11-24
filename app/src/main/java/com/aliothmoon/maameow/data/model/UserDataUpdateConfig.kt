@@ -53,14 +53,14 @@ data class UserDataUpdateConfig(
                 MaaTaskParams(
                     MaaTaskType.OPER_BOX,
                     "{}",
-                    logName = uiTextOf(R.string.runlog_task_with_detail, ctx.node.name, uiTextOf(R.string.maa_oper_box)),
+                    logName = uiTextOf(R.string.runlog_task_with_detail, ctx.node.nameUiText(), uiTextOf(R.string.maa_oper_box)),
                 )
             )
             if (depotDue) add(
                 MaaTaskParams(
                     MaaTaskType.DEPOT,
                     "{}",
-                    logName = uiTextOf(R.string.runlog_task_with_detail, ctx.node.name, uiTextOf(R.string.maa_depot)),
+                    logName = uiTextOf(R.string.runlog_task_with_detail, ctx.node.nameUiText(), uiTextOf(R.string.maa_depot)),
                 )
             )
         }

@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.data.resource
 
 import android.content.Context
+import androidx.annotation.StringRes
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.activity.ActivityStage
 import com.aliothmoon.maameow.data.model.activity.ClientStageActivity
