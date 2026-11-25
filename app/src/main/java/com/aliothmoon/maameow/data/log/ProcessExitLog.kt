@@ -37,8 +37,8 @@ internal object ProcessExitLog {
     private const val SIGKILL = 9
     private const val MAX_TAG_DESC = 80
 
-    private val FORCE_STOP_BY_CALLER = Regex(""" due to from (?:pid |process:)(\d+)""")
-    private val STOP_PREFIX = Regex("""^stop \S+ due to """)
+    private val FORCE_STOP_BY_CALLER = Regex(""" due to (?:from (?:pid |process:)|stop by )(\d+)""")
+    private val STOP_PREFIX = Regex("""^(?:\[[^\]]+] )?stop \S+ due to """)
 
     private val TIME = DateTimeFormatter.ofPattern("MM-dd HH:mm:ss.SSS", Locale.ROOT)
 
@@ -73,7 +73,7 @@ internal object ProcessExitLog {
         // 14 以下覆盖安装没有 PACKAGE_UPDATED，记成 USER_REQUESTED "... due to installPackageLI"
         record.reason == REASON_USER_REQUESTED && record.description?.contains("installPackageLI") == true -> true
         record.reason == REASON_EXIT_SELF && record.status == 0 -> true
-        // forceStopPackage 记成 "stop <包> due to from pid N"（MIUI 是 from process:N），任务启动和重启游戏都走它
+        // forceStopPackage 记成 "stop <包> due to from pid N"（MIUI: from process:N，vivo: stop by N），任务启动和重启游戏都走它
         subject == ExitSubject.GAME && record.reason == REASON_USER_REQUESTED &&
                 record.description?.let(FORCE_STOP_BY_CALLER::containsMatchIn) == true -> true
 

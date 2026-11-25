@@ -86,11 +86,17 @@ class ProcessExitLogTest {
                 record(1, reason = 10, reasonName = "USER_REQUESTED", description = "stop com.hypergryph.arknights due to from pid 4993"),
             )
         )
-        // MIUI 的写法
+        // MIUI / vivo 的写法
         assertTrue(
             ProcessExitLog.isExpected(
                 ExitSubject.GAME,
                 record(1, reason = 10, reasonName = "USER REQUESTED", description = "stop com.hypergryph.arknights due to from process:8818"),
+            )
+        )
+        assertTrue(
+            ProcessExitLog.isExpected(
+                ExitSubject.GAME,
+                record(1, reason = 10, reasonName = "USER REQUESTED", description = "[FORCE STOP] stop com.hypergryph.arknights due to stop by 29477"),
             )
         )
     }
@@ -106,11 +112,24 @@ class ProcessExitLogTest {
             )
         )
         assertFalse(ProcessExitLog.isExpected(ExitSubject.SELF, record(1, reason = 1, reasonName = "EXIT_SELF", status = 1)))
+        // vivo 单划/系统清理不是自身重启，必须 WARN
+        assertFalse(
+            ProcessExitLog.isExpected(
+                ExitSubject.GAME,
+                record(1, reason = 10, reasonName = "USER REQUESTED", description = "[FORCE STOP] stop com.hypergryph.arknights due to single-cleaner"),
+            )
+        )
         // App 自身被强行停止要 WARN：排查时据此排除「用户自己关的」
         assertFalse(
             ProcessExitLog.isExpected(
                 ExitSubject.SELF,
                 record(1, reason = 10, reasonName = "USER_REQUESTED", description = "stop com.example due to from pid 1"),
+            )
+        )
+        assertFalse(
+            ProcessExitLog.isExpected(
+                ExitSubject.SELF,
+                record(1, reason = 10, reasonName = "USER REQUESTED", description = "[FORCE STOP] stop com.example due to stop by 22346"),
             )
         )
     }
@@ -137,7 +156,9 @@ class ProcessExitLogTest {
     fun explain_forceStopByOurServiceIsNotACause() {
         assertNull(ProcessExitLog.explain(record(1, reason = 10, description = "stop com.hypergryph.arknights due to from pid 4993"), 4993))
         assertNull(ProcessExitLog.explain(record(1, reason = 10, description = "stop com.hypergryph.arknights due to from process:4993"), 4993))
+        assertNull(ProcessExitLog.explain(record(1, reason = 10, description = "[FORCE STOP] stop com.hypergryph.arknights due to stop by 4993"), 4993))
         assertEquals(Kind.FORCE_STOPPED, kindOf(record(1, reason = 10, description = "stop com.hypergryph.arknights due to from pid 1234")))
+        assertEquals(Kind.FORCE_STOPPED, kindOf(record(1, reason = 10, description = "[FORCE STOP] stop com.hypergryph.arknights due to stop by 1234")))
         assertEquals(Kind.FORCE_STOPPED, kindOf(record(1, reason = 10, description = "stop com.hypergryph.arknights due to from pid 4993"), servicePid = null))
     }
 
@@ -150,6 +171,18 @@ class ProcessExitLogTest {
 
         assertEquals(Kind.FORCE_STOPPED, cause?.kind)
         assertEquals("USER REQUESTED, AutoLockOffClean", cause?.tag)
+    }
+
+    @Test
+    fun explain_vivoForceStopPrefixIsStrippedFromTag() {
+        val cause = ProcessExitLog.explain(
+            record(1, reason = 10, reasonName = "USER REQUESTED", description = "[FORCE STOP] stop com.hypergryph.arknights due to single-cleaner")
+                .copy(detail = 21, detailName = "FORCE STOP"),
+            4993,
+        )
+
+        assertEquals(Kind.FORCE_STOPPED, cause?.kind)
+        assertEquals("USER REQUESTED, FORCE STOP, single-cleaner", cause?.tag)
     }
 
     @Test
