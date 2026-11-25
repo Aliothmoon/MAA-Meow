@@ -225,6 +225,8 @@ class LaunchPipeline(
                 return
             }
             val enabled = chainState.chain.value.filter { it.enabled }
+            // 与链同时取，倒计时期间切换配置不串
+            val profileRunDurationLimit = chainState.activeRunDurationLimitMinutes
             if (enabled.isEmpty()) {
                 terminalResult = ExecutionResult.FAILED_VALIDATION
                 terminalMessage = uiTextOf(R.string.schedule_log_empty_chain)
@@ -338,6 +340,7 @@ class LaunchPipeline(
             when (
                 val result = startTaskChain(
                     chain = enabled,
+                    profileRunDurationLimitMinutes = profileRunDurationLimit,
                     context = TaskStartContext(mode = TaskStartMode.SCHEDULED),
                     scheduleLabel = request.displayName,
                 )

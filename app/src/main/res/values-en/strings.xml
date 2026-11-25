@@ -508,6 +508,7 @@
     <string name="bg_auto_run_duration_limit_input_title">Run duration limit</string>
     <string name="bg_auto_run_duration_limit_input_label">Minutes</string>
     <string name="bg_auto_run_duration_limit_input_hint">Range: %1$d–%2$d min</string>
+    <string name="bg_auto_run_duration_limit_profile_override">Current profile uses its own limit: %1$d min, unaffected by this setting</string>
     <string name="bg_toast_mute_failed">Mute failed. Use the volume keys to lower media volume instead</string>
     <string name="bg_auto_hardware_screen_off">Turn off display power for Screen Off</string>
     <string name="bg_auto_show_touch_preview">Show touch preview</string>
@@ -856,6 +857,8 @@
     <string name="panel_profile_delete_message">Delete profile \"%1$s\"? This action cannot be undone.</string>
     <string name="panel_profile_copy_id">Copy Profile ID</string>
     <string name="panel_profile_id_copied">Profile ID copied</string>
+    <string name="panel_profile_run_duration_limit">Own run duration limit</string>
+    <string name="panel_profile_run_duration_limit_hint">When off, follows the global \"Limit run duration\" setting. When on, this limit applies regardless of the global switch.</string>
 
     <!-- panel: oper box -->
     <string name="panel_operbox_tab_owned">Owned (%1$d)</string>

@@ -259,6 +259,7 @@ class LaunchPipelineTest {
         coEvery {
             startTaskChain.invoke(
                 chain = any(),
+                profileRunDurationLimitMinutes = any(),
                 context = any(),
                 scheduleLabel = any(),
             )
@@ -465,7 +466,12 @@ class LaunchPipelineTest {
     fun coreStartFailure_replacesStartFailureNotification() = runBlocking<Unit> {
         val reason = uiTextOf(R.string.task_start_error_start_failed)
         coEvery {
-            startTaskChain.invoke(chain = any(), context = any(), scheduleLabel = any())
+            startTaskChain.invoke(
+                chain = any(),
+                profileRunDurationLimitMinutes = any(),
+                context = any(),
+                scheduleLabel = any(),
+            )
         } returns StartTaskChainUseCase.Result.Failed(
             executionResult = ExecutionResult.FAILED_START,
             message = reason,
@@ -650,7 +656,12 @@ class LaunchPipelineTest {
     fun autoScreenSaver_startFails_hidesImmediately() = runBlocking<Unit> {
         screenInteractive.set(false)
         coEvery {
-            startTaskChain.invoke(chain = any(), context = any(), scheduleLabel = any())
+            startTaskChain.invoke(
+                chain = any(),
+                profileRunDurationLimitMinutes = any(),
+                context = any(),
+                scheduleLabel = any(),
+            )
         } returns StartTaskChainUseCase.Result.Failed(
             executionResult = ExecutionResult.FAILED_START,
             message = mockk(relaxed = true),
@@ -698,7 +709,12 @@ class LaunchPipelineTest {
         val release = CompletableDeferred<Unit>()
         val p = pipeline(gatedCountdown(entered, release))
         coEvery {
-            startTaskChain.invoke(chain = any(), context = any(), scheduleLabel = any())
+            startTaskChain.invoke(
+                chain = any(),
+                profileRunDurationLimitMinutes = any(),
+                context = any(),
+                scheduleLabel = any(),
+            )
         } coAnswers {
             assertEquals(listOf(ScreenPowerController.Origin.SCHEDULE), powerOffCalls.toList())
             startCalls.incrementAndGet()
@@ -857,7 +873,12 @@ class LaunchPipelineTest {
     fun taskEndsBeforeArming_stillRunsPostActions() = runBlocking<Unit> {
         screenInteractive.set(false)
         coEvery {
-            startTaskChain.invoke(chain = any(), context = any(), scheduleLabel = any())
+            startTaskChain.invoke(
+                chain = any(),
+                profileRunDurationLimitMinutes = any(),
+                context = any(),
+                scheduleLabel = any(),
+            )
         } coAnswers {
             startCalls.incrementAndGet()
             compositionState.value = MaaExecutionState.RUNNING
