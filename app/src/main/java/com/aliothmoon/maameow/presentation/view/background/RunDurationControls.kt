@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.background
 
+import android.text.InputType
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -10,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -20,10 +20,8 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,18 +29,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.models.RunDurationLimit
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
-import com.aliothmoon.maameow.presentation.components.textFieldHeightCap
+import com.aliothmoon.maameow.presentation.components.ITextFieldWithFocus
 import com.aliothmoon.maameow.theme.MaaThemeAlphas
 
 // 快捷选项与配置管理共用的运行时长上限控件
@@ -128,46 +121,32 @@ internal fun RunDurationInputDialog(
     onDismissRequest: () -> Unit,
     onConfirm: (Int) -> Unit,
 ) {
-    var input by remember {
-        val text = minutes.toString()
-        mutableStateOf(TextFieldValue(text, selection = TextRange(0, text.length)))
-    }
-    val focusRequester = remember { FocusRequester() }
-    val submit = {
-        val parsed = RunDurationStep.parseInput(input.text)
-        if (parsed == null) onDismissRequest() else onConfirm(parsed)
-    }
+    var input by remember { mutableStateOf(minutes.toString()) }
     AdaptiveTaskPromptDialog(
         visible = true,
         title = stringResource(R.string.bg_auto_run_duration_limit_input_title),
         onDismissRequest = onDismissRequest,
-        onConfirm = submit,
+        onConfirm = {
+            val parsed = RunDurationStep.parseInput(input)
+            if (parsed == null) onDismissRequest() else onConfirm(parsed)
+        },
         icon = Icons.Filled.Timer,
     ) {
-        OutlinedTextField(
+        val hint = stringResource(
+            R.string.bg_auto_run_duration_limit_input_hint,
+            RunDurationLimit.MIN_MINUTES,
+            RunDurationLimit.MAX_MINUTES,
+        )
+        ITextFieldWithFocus(
             value = input,
-            onValueChange = { if (RunDurationStep.acceptsInput(it.text)) input = it },
-            label = { Text(stringResource(R.string.bg_auto_run_duration_limit_input_label)) },
-            supportingText = {
-                Text(
-                    stringResource(
-                        R.string.bg_auto_run_duration_limit_input_hint,
-                        RunDurationLimit.MIN_MINUTES,
-                        RunDurationLimit.MAX_MINUTES,
-                    )
-                )
-            },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Number,
-                imeAction = ImeAction.Done,
-            ),
-            keyboardActions = KeyboardActions(onDone = { submit() }),
-            modifier = Modifier
-                .fillMaxWidth()
-                .textFieldHeightCap()
-                .focusRequester(focusRequester),
+            onValueChange = { input = it },
+            onFocusLost = {},
+            label = stringResource(R.string.bg_auto_run_duration_limit_input_label),
+            placeholder = hint,
+            supportingText = { Text(hint) },
+            inputFilter = RunDurationStep::acceptsInput,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            inputType = InputType.TYPE_CLASS_NUMBER,
         )
     }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
 }

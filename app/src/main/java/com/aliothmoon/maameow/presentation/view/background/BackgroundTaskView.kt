@@ -798,6 +798,7 @@ fun BackgroundTaskView(
                                                     onCreateProfile = viewModel::onCreateProfile,
                                                     onReorderProfile = viewModel::onReorderProfile,
                                                     onProfileRunDurationLimitChange = viewModel::onProfileRunDurationLimitChange,
+                                                    onProfileRunDurationLimitEnabledChange = viewModel::onProfileRunDurationLimitEnabledChange,
                                                     modifier = Modifier.fillMaxSize(),
                                                     wrapDetailInCard = true,
                                                     runFromNodeBlocked = startBlocked,
@@ -1232,31 +1233,27 @@ private fun BackgroundMoreActionsOverlay(
                                     coroutineScope.launch { appSettingsManager.setRunDurationLimitEnabled(it) }
                                 })
                         }
-                        if (runDeadline != null) {
-                            RunDurationRemainingRow(deadline = runDeadline)
-                        } else {
-                            if (runDurationLimitEnabled) {
-                                RunDurationStepperRow(
-                                    minutes = runDurationLimitMinutes,
-                                    enabled = !isTaskActive,
-                                    onMinutesChange = {
-                                        coroutineScope.launch { appSettingsManager.setRunDurationLimitMinutes(it) }
-                                    },
-                                    onEditClick = { showRunDurationInput = true })
+                        when {
+                            runDeadline != null -> RunDurationRemainingRow(deadline = runDeadline)
+                            // 配置单独设置的优先，全局开关与时长都管不到它；运行中（抄作业等不计时）不提示
+                            profileRunDurationLimitMinutes != null && !isTaskActive -> RunDurationSubRow {
+                                Text(
+                                    text = stringResource(
+                                        R.string.bg_auto_run_duration_limit_profile_override,
+                                        profileRunDurationLimitMinutes,
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
-                            // 配置单独设置的优先，全局开关管不到它
-                            if (profileRunDurationLimitMinutes != null) {
-                                RunDurationSubRow {
-                                    Text(
-                                        text = stringResource(
-                                            R.string.bg_auto_run_duration_limit_profile_override,
-                                            profileRunDurationLimitMinutes,
-                                        ),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
+
+                            runDurationLimitEnabled -> RunDurationStepperRow(
+                                minutes = runDurationLimitMinutes,
+                                enabled = !isTaskActive,
+                                onMinutesChange = {
+                                    coroutineScope.launch { appSettingsManager.setRunDurationLimitMinutes(it) }
+                                },
+                                onEditClick = { showRunDurationInput = true })
                         }
                         SettingSearchTarget(R.string.bg_auto_hardware_screen_off) {
                             SettingSwitchRow(

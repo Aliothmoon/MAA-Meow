@@ -6,6 +6,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
@@ -48,10 +50,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -59,7 +63,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskProfile
-import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
@@ -86,10 +89,10 @@ fun ProfileManagementPanel(
     onDelete: (String) -> Unit,
     onCreate: () -> Unit,
     onReorder: (Int, Int) -> Unit,
-    onRunDurationLimitChange: (String, Int?) -> Unit,
+    onRunDurationLimitChange: (String, Int) -> Unit,
+    onRunDurationLimitEnabledChange: (String, Boolean) -> Unit,
     modifier: Modifier = Modifier,
     compositionService: MaaCompositionService = koinInject(),
-    appSettingsManager: AppSettingsManager = koinInject(),
 ) {
     var editingProfileId by remember { mutableStateOf<String?>(null) }
     var editingName by remember { mutableStateOf("") }
@@ -98,7 +101,6 @@ fun ProfileManagementPanel(
     val maaState by compositionService.state.collectAsStateWithLifecycle()
     // 本轮已按开始时的设置计时，运行中禁改，与快捷选项的全局设置一致
     val isTaskActive = maaState != MaaExecutionState.IDLE && maaState != MaaExecutionState.ERROR
-    val globalRunDurationMinutes by appSettingsManager.runDurationLimitMinutes.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier
@@ -178,8 +180,7 @@ fun ProfileManagementPanel(
                         onDelete = { deleteConfirmProfileId = profile.id },
                         runDurationEditable = !isTaskActive,
                         onRunDurationLimitEnabledChange = { enabled ->
-                            // 开启时从全局时长起步，再按需微调
-                            onRunDurationLimitChange(profile.id, globalRunDurationMinutes.takeIf { enabled })
+                            onRunDurationLimitEnabledChange(profile.id, enabled)
                         },
                         onRunDurationLimitChange = { onRunDurationLimitChange(profile.id, it) },
                         onRunDurationEditClick = { runDurationInputProfileId = profile.id },
@@ -208,12 +209,12 @@ fun ProfileManagementPanel(
         onDismissRequest = { deleteConfirmProfileId = null }
     )
 
-    // 任务开始即收起，结束后不再冒出来
-    LaunchedEffect(isTaskActive) {
-        if (isTaskActive) runDurationInputProfileId = null
-    }
     val runDurationInputMinutes = runDurationInputProfileId?.let { id ->
         profiles.find { it.id == id }?.runDurationLimitMinutes
+    }
+    // 任务开始或上限被别处清空即收起，之后不再冒出来
+    LaunchedEffect(isTaskActive, runDurationInputMinutes == null) {
+        if (isTaskActive || runDurationInputMinutes == null) runDurationInputProfileId = null
     }
     if (runDurationInputMinutes != null && !isTaskActive) {
         RunDurationInputDialog(
@@ -289,29 +290,19 @@ private fun ProfileCard(
 
                 Spacer(modifier = Modifier.width(4.dp))
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = profile.name,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = if (isActive) FontWeight.Medium else FontWeight.Normal,
-                        color = if (isActive) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        },
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    profile.runDurationLimitMinutes?.let { minutes ->
-                        Text(
-                            text = stringResource(R.string.panel_profile_run_duration_limit_badge, minutes),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
+                Text(
+                    text = profile.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (isActive) FontWeight.Medium else FontWeight.Normal,
+                    color = if (isActive) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
 
                 // 操作按钮
                 IconButton(
@@ -436,13 +427,19 @@ private fun ProfileRunDurationLimitSection(
     onEditClick: () -> Unit,
 ) {
     val checked = minutes != null
-    Column {
+    // 禁用的控件不消费点击，会冒泡到卡片切换配置，这里吞掉
+    Column(modifier = if (enabled) Modifier else Modifier.pointerInput(Unit) { detectTapGestures { } }) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(32.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .clickable(enabled = enabled) { onEnabledChange(!checked) },
+                .toggleable(
+                    value = checked,
+                    enabled = enabled,
+                    role = Role.Checkbox,
+                    onValueChange = onEnabledChange,
+                ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -465,9 +462,10 @@ private fun ProfileRunDurationLimitSection(
                 modifier = Modifier.weight(1f)
             )
             CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                // 由整行 toggleable 处理，读屏只聚焦一次
                 Checkbox(
                     checked = checked,
-                    onCheckedChange = onEnabledChange,
+                    onCheckedChange = null,
                     enabled = enabled,
                     modifier = Modifier.size(20.dp)
                 )

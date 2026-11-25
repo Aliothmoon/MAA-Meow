@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.LogItem
 import com.aliothmoon.maameow.data.model.TaskParamProvider
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.launch.PlanSideTaskRunner
 import com.aliothmoon.maameow.domain.service.AchievementReporter
@@ -44,6 +45,7 @@ class ExpandedControlPanelViewModel(
     private val sessionLogger: MaaSessionLogger,
     private val achievementReporter: AchievementReporter,
     private val sideTaskRunner: PlanSideTaskRunner,
+    private val appSettingsManager: AppSettingsManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(FloatingPanelState())
@@ -173,7 +175,15 @@ class ExpandedControlPanelViewModel(
         }
     }
 
-    fun onProfileRunDurationLimitChange(profileId: String, minutes: Int?) {
+    fun onProfileRunDurationLimitChange(profileId: String, minutes: Int) {
+        viewModelScope.launch {
+            chainState.setProfileRunDurationLimit(profileId, minutes)
+        }
+    }
+
+    /** 开启时从全局时长起步，再按需微调 */
+    fun onProfileRunDurationLimitEnabledChange(profileId: String, enabled: Boolean) {
+        val minutes = appSettingsManager.runDurationLimitMinutes.value.takeIf { enabled }
         viewModelScope.launch {
             chainState.setProfileRunDurationLimit(profileId, minutes)
         }
@@ -288,6 +298,8 @@ class ExpandedControlPanelViewModel(
 
     private fun launchManualStart(context: TaskStartContext) {
         viewModelScope.launch {
+            // 与链同时取，准备期间切换配置不串
+            val profileRunDurationLimit = chainState.activeRunDurationLimitMinutes
             val plan = when (
                 val decision = prepareTaskStart(
                     chain = chainState.chain.value,
@@ -334,6 +346,7 @@ class ExpandedControlPanelViewModel(
             val result = compositionService.start(
                 tasks = plan.params,
                 clientType = plan.clientType,
+                profileRunDurationLimitMinutes = profileRunDurationLimit,
                 preflightLogs = plan.logs,
                 fallbacks = plan.fallbacks,
             )

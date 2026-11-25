@@ -100,7 +100,8 @@ fun TaskConfigPanel(
     onDeleteProfile: (String) -> Unit,
     onCreateProfile: () -> Unit,
     onReorderProfile: (Int, Int) -> Unit,
-    onProfileRunDurationLimitChange: (String, Int?) -> Unit,
+    onProfileRunDurationLimitChange: (String, Int) -> Unit,
+    onProfileRunDurationLimitEnabledChange: (String, Boolean) -> Unit,
     modifier: Modifier = Modifier,
     /** 启动条件不满足：「从此处运行」显示为禁用态，点击只提示 */
     runFromNodeBlocked: Boolean = false,
@@ -118,7 +119,8 @@ fun TaskConfigPanel(
                     onDelete = onDeleteProfile,
                     onCreate = onCreateProfile,
                     onReorder = onReorderProfile,
-                    onRunDurationLimitChange = onProfileRunDurationLimitChange
+                    onRunDurationLimitChange = onProfileRunDurationLimitChange,
+                    onRunDurationLimitEnabledChange = onProfileRunDurationLimitEnabledChange,
                 )
             }
             // 编辑模式：正在新增任务

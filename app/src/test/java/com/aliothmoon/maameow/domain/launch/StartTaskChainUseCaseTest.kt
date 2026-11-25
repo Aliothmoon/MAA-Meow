@@ -48,7 +48,7 @@ class StartTaskChainUseCaseTest {
         val decision = TaskStartDecision.Blocked(TaskStartDecisionReason.GAME_NOT_ON_BACKGROUND_DISPLAY)
         coEvery { prepare(any(), any()) } returns decision
 
-        val result = useCase(emptyList(), TaskStartContext(mode = TaskStartMode.SCHEDULED))
+        val result = useCase(emptyList(), null, TaskStartContext(mode = TaskStartMode.SCHEDULED))
 
         assertEquals(
             StartTaskChainUseCase.Result.Failed(
@@ -66,11 +66,11 @@ class StartTaskChainUseCaseTest {
         coEvery { sideTaskRunner.runWithoutCore(any(), any()) } returns
                 PlanSideTaskRunner.Outcome(ok = true, message = message)
 
-        val result = useCase(emptyList(), TaskStartContext(mode = TaskStartMode.SCHEDULED))
+        val result = useCase(emptyList(), null, TaskStartContext(mode = TaskStartMode.SCHEDULED))
 
         assertEquals(StartTaskChainUseCase.Result.SuccessWithoutCore(message), result)
         // 等在这里才有前台服务与唤醒锁；Core 一次都不能起
-        coVerify(exactly = 0) { composition.start(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { composition.start(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -80,7 +80,7 @@ class StartTaskChainUseCaseTest {
         coEvery { sideTaskRunner.runWithoutCore(any(), any()) } returns
                 PlanSideTaskRunner.Outcome(ok = false, message = message)
 
-        val result = useCase(emptyList(), TaskStartContext(mode = TaskStartMode.SCHEDULED))
+        val result = useCase(emptyList(), null, TaskStartContext(mode = TaskStartMode.SCHEDULED))
 
         assertEquals(
             StartTaskChainUseCase.Result.Failed(ExecutionResult.FAILED_START, message),

@@ -334,9 +334,11 @@ class MaaCompositionService(
         return true
     }
 
+    /** [profileRunDurationLimitMinutes] 须与 [tasks] 的任务链同一时刻从同一配置取，启动途中切换配置才不串 */
     suspend fun start(
         tasks: List<MaaTaskParams>,
         clientType: String,
+        profileRunDurationLimitMinutes: Int?,
         preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
         fallbacks: Map<TaskSlot, TaskFallbackChain> = emptyMap(),
         onSessionStarted: (suspend () -> Unit)? = null
@@ -349,9 +351,8 @@ class MaaCompositionService(
         successMessage = context.getString(R.string.runlog_task_started),
         preflightLogs = preflightLogs,
         onSessionStarted = onSessionStarted,
-        // 任务是按当前配置组装的，在此取值，启动途中切换配置也不串
         runDurationLimitMinutes = RunDurationLimit.resolve(
-            profileMinutes = taskChainState.activeRunDurationLimitMinutes,
+            profileMinutes = profileRunDurationLimitMinutes,
             globalEnabled = appSettings.runDurationLimitEnabled.value,
             globalMinutes = appSettings.runDurationLimitMinutes.value,
         ),

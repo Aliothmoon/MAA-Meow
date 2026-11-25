@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.io.IOException
@@ -514,17 +515,15 @@ class TaskChainState(
     /** [minutes] 为 null 时恢复跟随全局设置 */
     suspend fun setProfileRunDurationLimit(profileId: String, minutes: Int?) {
         val clamped = minutes?.coerceIn(RunDurationLimit.MIN_MINUTES, RunDurationLimit.MAX_MINUTES)
-        val currentProfiles = _profiles.value
-        val target = currentProfiles.find { it.id == profileId } ?: run {
-            Timber.w("setProfileRunDurationLimit: profile %s not found", profileId)
-            return
+        var changed = false
+        // CAS 更新，IO 线程上的 mutate 同时改 profiles 时不互相覆盖
+        _profiles.update { current ->
+            changed = current.any { it.id == profileId && it.runDurationLimitMinutes != clamped }
+            if (!changed) current else current.map { p ->
+                if (p.id == profileId) p.copy(runDurationLimitMinutes = clamped) else p
+            }
         }
-        if (target.runDurationLimitMinutes == clamped) return
-        _profiles.value = currentProfiles.map { p ->
-            if (p.id == profileId) p.copy(runDurationLimitMinutes = clamped) else p
-        }
-        doSync()
-        Timber.d("Set run duration limit of profile %s to: %s", profileId, clamped)
+        if (changed) doSync()
     }
 
     suspend fun duplicateProfile(profileId: String): String? {
@@ -591,11 +590,13 @@ class TaskChainState(
         if (others == null && current == _chain.value) return ret
         val snapshot = current.toList()
         _chain.value = snapshot
-        _profiles.value = _profiles.value.map { p ->
-            when {
-                p.id == _profileId.value -> p.copy(chain = snapshot)
-                others != null -> p.copy(chain = others(p.chain))
-                else -> p
+        _profiles.update { profiles ->
+            profiles.map { p ->
+                when {
+                    p.id == _profileId.value -> p.copy(chain = snapshot)
+                    others != null -> p.copy(chain = others(p.chain))
+                    else -> p
+                }
             }
         }
         doSync()
@@ -645,9 +646,14 @@ class TaskChainState(
         Timber.d("Imported %d profiles, active: %s", profiles.size, resolvedActiveId)
     }
 
-    /** 旧配置迁移，两个解码入口（DataStore 载入与导入备份）共用 */
+    /** 旧配置迁移与取值校正，两个解码入口（DataStore 载入与导入备份）共用 */
     private fun List<TaskProfile>.migrated(): List<TaskProfile> = map { profile ->
-        profile.copy(chain = profile.chain.map { it.copy(config = it.config.migrate()) })
+        profile.copy(
+            chain = profile.chain.map { it.copy(config = it.config.migrate()) },
+            // 手改的备份可能越界，界面显示与实际生效须一致
+            runDurationLimitMinutes = profile.runDurationLimitMinutes
+                ?.coerceIn(RunDurationLimit.MIN_MINUTES, RunDurationLimit.MAX_MINUTES),
+        )
     }
 
     /**

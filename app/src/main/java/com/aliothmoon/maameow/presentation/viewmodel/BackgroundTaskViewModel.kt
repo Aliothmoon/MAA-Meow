@@ -475,7 +475,15 @@ class BackgroundTaskViewModel(
         }
     }
 
-    fun onProfileRunDurationLimitChange(profileId: String, minutes: Int?) {
+    fun onProfileRunDurationLimitChange(profileId: String, minutes: Int) {
+        viewModelScope.launch {
+            chainState.setProfileRunDurationLimit(profileId, minutes)
+        }
+    }
+
+    /** 开启时从全局时长起步，再按需微调 */
+    fun onProfileRunDurationLimitEnabledChange(profileId: String, enabled: Boolean) {
+        val minutes = appSettingsManager.runDurationLimitMinutes.value.takeIf { enabled }
         viewModelScope.launch {
             chainState.setProfileRunDurationLimit(profileId, minutes)
         }
@@ -569,6 +577,8 @@ class BackgroundTaskViewModel(
     private suspend fun startTasksInternal(
         context: TaskStartContext,
     ): UiText? {
+        // 与链同时取，准备期间切换配置不串
+        val profileRunDurationLimit = chainState.activeRunDurationLimitMinutes
         val plan = when (
             val decision = prepareTaskStart(
                 chain = chainState.chain.value,
@@ -616,6 +626,7 @@ class BackgroundTaskViewModel(
         val result = compositionService.start(
             tasks = plan.params,
             clientType = plan.clientType,
+            profileRunDurationLimitMinutes = profileRunDurationLimit,
             preflightLogs = plan.logs,
             fallbacks = plan.fallbacks,
         )
