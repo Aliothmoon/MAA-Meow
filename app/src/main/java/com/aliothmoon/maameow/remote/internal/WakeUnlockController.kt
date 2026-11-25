@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.remote.internal
 
 import android.content.Intent
 import android.os.SystemClock
+import android.view.Display
 import android.view.KeyEvent
 import com.aliothmoon.maameow.constant.WakeUnlockResult
 import com.aliothmoon.maameow.domain.models.UnlockCredential
@@ -12,6 +13,7 @@ import com.aliothmoon.maameow.remote.internal.ScreenPowerAttempts.SleepAction
 import com.aliothmoon.maameow.remote.internal.ScreenPowerAttempts.WakeAction
 import com.aliothmoon.maameow.remote.internal.WakeUnlockController.LOCK_SETTLE_MS
 import com.aliothmoon.maameow.remote.internal.WakeUnlockController.lockAndSleep
+import com.aliothmoon.maameow.third.wrappers.DisplayManager
 import com.aliothmoon.maameow.third.wrappers.PowerManager
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
 import com.aliothmoon.maameow.third.wrappers.WindowManager
@@ -20,11 +22,17 @@ import com.aliothmoon.maameow.third.wrappers.WindowManager
 object WakeUnlockController {
 
     private const val SCREEN_ON_TIMEOUT_MS = 5_000L
+    private const val DISPLAY_ON_TIMEOUT_MS = 2_000L
+    private const val DISPLAY_ON_POLL_MS = 50L
     private const val KEY_WAKE_TIMEOUT_MS = 2_000L
     private const val KEYGUARD_GONE_TIMEOUT_MS = 5_000L
 
-    /** bouncer 就绪基线，设备本就活跃时够用 */
+    /** 息屏/AOD 刚切到 Display.STATE_ON 时再让 Keyguard 稳一下，避免 dismissKeyguard 在过渡期被吞 */
+    private const val POST_WAKE_DISMISS_DELAY_MS = 300L
+
+    /** bouncer 就绪基线：亮屏热机 1.2s，息屏/Doze 冷唤醒 2.0s */
     private const val BOUNCER_SETTLE_MS = 1_200L
+    private const val COLD_BOUNCER_SETTLE_MS = 2_000L
 
     /** 限制稳定等待，避免拉长定时任务启动耗时 */
     private const val BOUNCER_SETTLE_MAX_MS = 5_000L
@@ -102,32 +110,72 @@ object WakeUnlockController {
         return WakeUnlockResult.OK
     }
 
-    internal fun bouncerSettleMs(wakeCostMs: Long): Long =
-        (BOUNCER_SETTLE_MS + wakeCostMs * 2).coerceAtMost(BOUNCER_SETTLE_MAX_MS)
+    internal fun bouncerSettleMs(wakeCostMs: Long, coldWake: Boolean = false): Long {
+        val base = if (coldWake) COLD_BOUNCER_SETTLE_MS else BOUNCER_SETTLE_MS
+        return (base + wakeCostMs * 2).coerceAtMost(BOUNCER_SETTLE_MAX_MS)
+    }
+
+    private sealed interface WakeCheck {
+        data class Ready(val wasOn: Boolean, val wakeCostMs: Long) : WakeCheck
+        data class Done(val resultCode: Int) : WakeCheck
+    }
 
     /**
-     * 亮屏并确认 keyguard 还在
-     * @return 非 null 即调用方应当直接返回的结果码
+     * 亮屏（含等待主屏进入 Display.STATE_ON）并确认 keyguard 还在
      */
-    private fun wakeAndRequireKeyguard(pm: PowerManager, wm: WindowManager, trace: WakeTrace): Int? {
+    private fun wakeAndRequireKeyguard(
+        pm: PowerManager,
+        dm: DisplayManager,
+        wm: WindowManager,
+        trace: WakeTrace,
+    ): WakeCheck {
         val startMs = SystemClock.elapsedRealtime()
         val screenWasOn = pm.isScreenOn(0)
+        val initialDisplay = dm.getDisplayState(0)
         if (!ensureScreenOn(pm, trace)) {
             trace.w("screen did not turn on after wakeUp and key fallback")
-            return WakeUnlockResult.WAKE_FAILED
+            return WakeCheck.Done(WakeUnlockResult.WAKE_FAILED)
         }
-        trace.i("screen on in ${SystemClock.elapsedRealtime() - startMs}ms, wasOn=$screenWasOn")
+        val interactiveMs = SystemClock.elapsedRealtime() - startMs
+
+        // isDisplayInteractive 在 system_server 里几十 ms 就翻 true，但面板与 SystemUI 可能还在 OFF/DOZE 过渡
+        val displayWaitStartMs = SystemClock.elapsedRealtime()
+        val finalDisplay = waitForDisplayOn(dm, initialDisplay)
+        val displayWaitMs = SystemClock.elapsedRealtime() - displayWaitStartMs
+        val totalWakeMs = SystemClock.elapsedRealtime() - startMs
+
+        val displayNote = if (initialDisplay != Display.STATE_UNKNOWN) {
+            ", display=${displayStateName(initialDisplay)}->${displayStateName(finalDisplay)} (+${displayWaitMs}ms)"
+        } else {
+            ""
+        }
+        trace.i("screen on in ${interactiveMs}ms, wasOn=$screenWasOn$displayNote")
+        if (!screenWasOn) {
+            // 续一下锁屏亮屏计时，避免短超时 ROM 在等 bouncer 期间自己熄回去
+            pm.userActivity(0)
+        }
 
         val locked = wm.isKeyguardLocked
         if (locked == null) {
             trace.w("isKeyguardLocked unavailable")
-            return WakeUnlockResult.UNSUPPORTED
+            return WakeCheck.Done(WakeUnlockResult.UNSUPPORTED)
         }
         if (!locked) {
             trace.i("keyguard not showing, nothing to do")
-            return WakeUnlockResult.OK
+            return WakeCheck.Done(WakeUnlockResult.OK)
         }
-        return null
+        return WakeCheck.Ready(wasOn = screenWasOn, wakeCostMs = totalWakeMs)
+    }
+
+    private fun waitForDisplayOn(dm: DisplayManager, initialState: Int): Int {
+        if (initialState == Display.STATE_UNKNOWN) return Display.STATE_UNKNOWN
+        var state = dm.getDisplayState(0)
+        if (state == Display.STATE_ON || state == Display.STATE_UNKNOWN) return state
+        pollUntil(DISPLAY_ON_TIMEOUT_MS, intervalMs = DISPLAY_ON_POLL_MS) {
+            state = dm.getDisplayState(0)
+            state == Display.STATE_ON || state == Display.STATE_UNKNOWN
+        }
+        return state
     }
 
     /**
@@ -162,16 +210,26 @@ object WakeUnlockController {
     /** @param credential 纯数字 PIN，无凭证锁屏传空串 */
     private fun doUnlock(credential: String, trace: WakeTrace): Int {
         val pm = ServiceManager.getPowerManager()
+        val dm = ServiceManager.getDisplayManager()
         val wm = ServiceManager.getWindowManager()
 
-        val wakeStartMs = SystemClock.elapsedRealtime()
-        wakeAndRequireKeyguard(pm, wm, trace)?.let { return it }
-        val wakeCostMs = SystemClock.elapsedRealtime() - wakeStartMs
+        val wake = when (val check = wakeAndRequireKeyguard(pm, dm, wm, trace)) {
+            is WakeCheck.Done -> return check.resultCode
+            is WakeCheck.Ready -> check
+        }
 
         val secure = wm.isKeyguardSecure(0) ?: false
         trace.i("keyguard locked, secure=$secure")
 
-        if (!wm.dismissKeyguard()) {
+        if (!wake.wasOn) {
+            Thread.sleep(POST_WAKE_DISMISS_DELAY_MS)
+            keyguardGoneBeforeInject(wm, "dismiss", trace)?.let { return it }
+        }
+
+        val dismissWatcher = KeyguardDismissWatcher { event ->
+            trace.i("dismissKeyguard callback: ${event.label}")
+        }
+        if (!wm.dismissKeyguard(dismissWatcher.proxy)) {
             trace.w("dismissKeyguard unavailable on this ROM")
             return WakeUnlockResult.UNSUPPORTED
         }
@@ -183,6 +241,7 @@ object WakeUnlockController {
                 WakeUnlockResult.OK
             } else {
                 trace.w("insecure keyguard did not dismiss")
+                logFailureSnapshot(pm, dm, dismissWatcher, trace)
                 WakeUnlockResult.CREDENTIAL_REJECTED
             }
         }
@@ -196,28 +255,60 @@ object WakeUnlockController {
             return WakeUnlockResult.CREDENTIAL_REQUIRED
         }
 
-        // bouncer 弹出期间 isKeyguardLocked 仍为 true，先 settle
-        val settleMs = bouncerSettleMs(wakeCostMs)
-        Thread.sleep(settleMs)
-        keyguardGoneBeforeInject(wm, "PIN", trace)?.let { return it }
+        // bouncer 弹出期间 isKeyguardLocked 仍为 true；轮询等待，中途若被系统取消则补请求一次 dismissKeyguard
+        val coldWake = !wake.wasOn
+        val settleMs = bouncerSettleMs(wake.wakeCostMs, coldWake = coldWake)
+        val settleStartMs = SystemClock.elapsedRealtime()
+        when (
+            awaitBouncerReady(
+                initialSettleMs = settleMs,
+                maxTotalMs = BOUNCER_SETTLE_MAX_MS,
+                redismissDelayMs = POST_WAKE_DISMISS_DELAY_MS,
+                retrySettleMs = BOUNCER_SETTLE_MS,
+                isKeyguardLocked = { wm.isKeyguardLocked },
+                consumeRetryableDismiss = dismissWatcher::consumeRetryable,
+                retryDismiss = { wm.dismissKeyguard(dismissWatcher.proxy) },
+                onRetry = { event, ok ->
+                    trace.w("dismissKeyguard ${event.label} during settle, retrying once (ok=$ok)")
+                },
+            )
+        ) {
+            SettleOutcome.ALREADY_UNLOCKED -> {
+                trace.i("keyguard gone before PIN injection, skipped")
+                return WakeUnlockResult.OK
+            }
+
+            SettleOutcome.UNSUPPORTED -> {
+                trace.w("isKeyguardLocked unavailable before PIN injection")
+                return WakeUnlockResult.UNSUPPORTED
+            }
+
+            SettleOutcome.READY_TO_INJECT -> Unit
+        }
+        val actualSettleMs = SystemClock.elapsedRealtime() - settleStartMs
         // 位数不进任何日志：logcat 也会在提权进程死亡时被补报
-        trace.i("injecting PIN after ${settleMs}ms settle (wake ${wakeCostMs}ms)")
+        trace.i("injecting PIN after ${actualSettleMs}ms settle (wake ${wake.wakeCostMs}ms, cold=$coldWake)")
 
         val injectStartMs = SystemClock.elapsedRealtime()
+        var events = 0
+        var eventsOk = 0
         for (c in credential) {
             val keyCode = KeyEvent.KEYCODE_0 + (c - '0')
-            InputControlUtils.keyDown(keyCode, 0)
-            InputControlUtils.keyUp(keyCode, 0)
+            events += 2
+            if (InputControlUtils.keyDown(keyCode, 0)) eventsOk++
+            if (InputControlUtils.keyUp(keyCode, 0)) eventsOk++
             Thread.sleep(DIGIT_GAP_MS)
         }
         // 部分 ROM 输完自动解锁，仍锁着才补 ENTER
         if (wm.isKeyguardLocked != false) {
-            InputControlUtils.keyDown(KeyEvent.KEYCODE_ENTER, 0)
-            InputControlUtils.keyUp(KeyEvent.KEYCODE_ENTER, 0)
+            events += 2
+            if (InputControlUtils.keyDown(KeyEvent.KEYCODE_ENTER, 0)) eventsOk++
+            if (InputControlUtils.keyUp(KeyEvent.KEYCODE_ENTER, 0)) eventsOk++
         }
+        val delivery = Delivery.of(eventsOk, events)
         val padMs = PIN_INJECT_BUDGET_MS - (SystemClock.elapsedRealtime() - injectStartMs)
         if (padMs > 0) Thread.sleep(padMs)
-        trace.i("PIN injected")
+        trace.i("PIN injected, delivery=${delivery.label}")
 
         val pollStartMs = SystemClock.elapsedRealtime()
         return if (pollUntil(KEYGUARD_GONE_TIMEOUT_MS) { wm.isKeyguardLocked == false }) {
@@ -225,10 +316,13 @@ object WakeUnlockController {
             WakeUnlockResult.OK
         } else {
             // 不重试，避免连续输错触发系统锁定
-            trace.w(
-                "still locked ${SystemClock.elapsedRealtime() - pollStartMs}ms after PIN" +
-                        " injection — wrong PIN, or bouncer was not ready and swallowed the keys"
-            )
+            val cause = if (delivery == Delivery.ALL) {
+                "wrong PIN, or bouncer was not ready and swallowed the keys"
+            } else {
+                "key delivery=${delivery.label}: events likely blocked by the system"
+            }
+            trace.w("still locked ${SystemClock.elapsedRealtime() - pollStartMs}ms after PIN injection — $cause")
+            logFailureSnapshot(pm, dm, dismissWatcher, trace)
             WakeUnlockResult.CREDENTIAL_REJECTED
         }
     }
@@ -245,9 +339,13 @@ object WakeUnlockController {
         }
 
         val pm = ServiceManager.getPowerManager()
+        val dm = ServiceManager.getDisplayManager()
         val wm = ServiceManager.getWindowManager()
 
-        wakeAndRequireKeyguard(pm, wm, trace)?.let { return it }
+        when (val check = wakeAndRequireKeyguard(pm, dm, wm, trace)) {
+            is WakeCheck.Done -> return check.resultCode
+            is WakeCheck.Ready -> Unit
+        }
 
         // 与录制一致，在 keyguard 还在时采样
         val screen = ScreenGeometry.current() ?: run {
@@ -290,8 +388,24 @@ object WakeUnlockController {
                 "some injections not delivered: events likely blocked by the system"
             }
             trace.w("still locked ${SystemClock.elapsedRealtime() - pollStartMs}ms after gesture replay — $cause")
+            logFailureSnapshot(pm, dm, dismissWatcher = null, trace = trace)
             WakeUnlockResult.CREDENTIAL_REJECTED
         }
+    }
+
+    /** 解锁失败时补记当前屏幕状态、回调结果与焦点窗口类名，辅助区分防误触/未弹 bouncer/已息屏 */
+    private fun logFailureSnapshot(
+        pm: PowerManager,
+        dm: DisplayManager,
+        dismissWatcher: KeyguardDismissWatcher?,
+        trace: WakeTrace,
+    ) {
+        val screenOn = pm.isScreenOnOrNull(0)
+        val displayState = displayStateName(dm.getDisplayState(0))
+        val dismiss = dismissWatcher?.lastEvent?.label ?: "none"
+        val focus = captureWindowFocusSummary()
+        val extra = if (focus != null) ", $focus" else ""
+        trace.w("snapshot: screenOn=$screenOn, display=$displayState, dismiss=$dismiss$extra")
     }
 
     /**
@@ -400,5 +514,4 @@ object WakeUnlockController {
         InputControlUtils.keyDown(keyCode, 0)
         InputControlUtils.keyUp(keyCode, 0)
     }
-
 }

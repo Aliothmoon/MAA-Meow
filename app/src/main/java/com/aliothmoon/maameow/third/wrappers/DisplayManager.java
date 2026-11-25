@@ -137,6 +137,19 @@ public final class DisplayManager {
         }
     }
 
+    // Display.STATE_*（STATE_ON=2）；反射失败返回 Display.STATE_UNKNOWN (0)
+    public int getDisplayState(int displayId) {
+        try {
+            Object displayInfo = getGetDisplayInfoMethod().invoke(manager, displayId);
+            if (displayInfo == null) {
+                return Display.STATE_UNKNOWN;
+            }
+            return displayInfo.getClass().getDeclaredField("state").getInt(displayInfo);
+        } catch (ReflectiveOperationException e) {
+            return Display.STATE_UNKNOWN;
+        }
+    }
+
     public int[] getDisplayIds() {
         try {
             return (int[]) manager.getClass().getMethod("getDisplayIds").invoke(manager);

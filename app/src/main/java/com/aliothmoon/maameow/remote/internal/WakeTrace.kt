@@ -21,11 +21,13 @@ internal class WakeTrace {
         note(msg)
     }
 
-    /** 只进 trace，不重复打日志 */
+    /** 只进 trace，不重复打日志；Binder 回调线程也会写，须同步 */
+    @Synchronized
     fun note(msg: String) {
         if (lines.size < MAX_LINES) lines += "+${SystemClock.elapsedRealtime() - startMs}ms $msg"
     }
 
+    @Synchronized
     fun render(): String = lines.joinToString("\n")
 
     private companion object {

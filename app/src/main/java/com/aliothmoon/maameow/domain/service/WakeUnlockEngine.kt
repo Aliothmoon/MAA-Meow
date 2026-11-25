@@ -105,10 +105,17 @@ class WakeUnlockEngine {
     }
 
     /** 设置页自测：先锁屏息屏再解锁 */
-    suspend fun testUnlock(credential: UnlockCredential): WakeResult =
-        call("testUnlock", WakeResult.IPC_FAILED) {
-            WakeResult.fromCode(it.testUnlock(credential.type, credential.payload))
+    suspend fun testUnlock(credential: UnlockCredential): WakeResult {
+        val startMs = SystemClock.elapsedRealtime()
+        return call("testUnlock", WakeResult.IPC_FAILED) { svc ->
+            val result = WakeResult.fromCode(svc.testUnlock(credential.type, credential.payload))
+            runCatching { svc.getLastWakeTrace(startMs) }
+                .getOrNull()
+                ?.takeIf { it.isNotBlank() }
+                ?.let { Timber.i("testUnlock trace:\n%s", it) }
+            result
         }
+    }
 
     /** 锁屏并息屏（任务结束后自动休眠） */
     suspend fun lockAndSleep(): WakeResult =
