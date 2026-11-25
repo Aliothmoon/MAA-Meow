@@ -685,14 +685,6 @@ class SubTaskHandler(
             "BlackFlowStartRun" -> handleBlackFlowStartRun(subDetails)
             "BlackFlowMilestoneChanged" -> handleBlackFlowMilestoneChanged(subDetails)
             "BlackFlowInventoryCleanup" -> handleBlackFlowInventoryCleanup(subDetails)
-            "BlackFlowScrapTradeAborted" -> {
-                val item = subDetails?.getString("item").orEmpty()
-                val reason = subDetails?.getString("reason")
-                append(
-                    resources.getString(BlackFlowLogText.scrapTradeAborted(reason), item),
-                    LogLevel.WARNING,
-                )
-            }
 
             "StageDrops" -> handleStageDrops(subDetails)
             "AccountSwitch" -> {

@@ -1437,7 +1437,7 @@
     <string name="mini_game_name_all_honey_fruit">듀얼 채널: 허니듀</string>
     <string name="mini_game_name_all_ivy_vine">듀얼 채널: 아이비바인</string>
     <string name="mini_game_tip_all_duel_channel">튜토리얼 대화를 수동으로 건너뛴 후, 바로 종료할 수 있어요\n이벤트 메인 화면에서 임무를 시작하세요 (오른쪽 아래 ｢경기 진행｣)\n\n덕로드만 믿고 따라가면 손해는 없을거에요.</string>
-    <string name="mini_game_name_pf">진지 축구 선수권 대회</string>
+    <string name="mini_game_name_pf">진지 축구 챔피언십</string>
     <string name="mini_game_tip_pf">튜토리얼 스테이지를 수동으로 클리어한 후, PF-1에 진입하여 수동으로 편성하세요. ｢크루스｣만 단독으로 편성하고, 이벤트 스테이지 화면으로 돌아가 PF-1을 탭하여 임무를 시작하세요.</string>
     <string name="mini_game_name_interactive_exhibition">기상 순회전 - 미수록 기상 찾기</string>
     <string name="mini_game_tip_interactive_exhibition">선택한 맵의 고급 구역 초원 오른쪽 아래에서 작업을 시작합니다.\n초원을 왔다 갔다 하며 미수록 생물을 찾고, 발견하면 자동으로 중지됩니다.\n생물은 초원에서만 만날 수 있습니다.</string>
@@ -1624,7 +1624,7 @@
     <string name="panel_reclamation_theme_fire">모래 속의 불 (종료됨)</string>
     <string name="panel_reclamation_theme_relaunch_anchor">리런치 앵커</string>
     <string name="panel_reclamation_relaunch_anchor_tip_ra1">리런치 앵커 RA-1\n\n수익 참고: 회당 약 159 토큰 + 통합 포인트, 소요 시간 약 2분 10초\n\n오퍼레이터 요구 사항: 없음\n\n사전 조건: 메인 스토리에서 RA-1을 클리어해야 합니다\n\n맵에서 RA-1을 열고 오른쪽 아래에 ｢시작하기｣가 나타나면 작업을 시작하여 자동 순환할 수 있습니다\n\n참고: 초기 추가 아이템 휴대 관련 기술을 해제한 경우, 기지 내에서 초기 추가 아이템을 휴대하게 하는 시설(식품 공급소, 음료 공급소, 축사 등)을 철거하세요\n\n작업 흐름: 정밀농경, 건설, 자원 납품, 정산을 자동 실행</string>
-    <string name="panel_reclamation_relaunch_anchor_tip_ra4">리런치 앵커 RA-4\n\n수익 참고: 회당 약 417 토큰 + 통합 포인트, 소요 시간 약 1분 40초\n\n오퍼레이터 요구 사항: 위셔델 (지원 유닛 사용 가능)\n\n사전 조건:\n1. 메인 스토리에서 RA-4를 클리어해야 합니다\n2. ｢경영기획｣을 해금합니다 (힌트: RA-3에서 리드 더 플레임 섀도우 활용)\n3. 자신이 위셔델을 보유한 경우, 수동으로 스테이지를 열고 한 번 편성합니다. 위셔델보다 코스트가 낮은 임의의 5명의 오퍼레이터 + 위셔델로 하고, 위셔델을 6번째 슬롯(마지막으로 선택하는 자리)에 배치합니다. 그 후 ｢모집 확인｣을 누르고, 이번 건설을 포기한 후 ｢건설 시작｣에서 시작합니다\n4. 지원 유닛 위셔델을 사용하는 경우, 위셔델이 스나이퍼 지원 첫 페이지에 있는지 확인합니다(절친 우선 고려). 수동으로 스테이지를 열어 위셔델보다 코스트가 낮은 임의의 5명의 오퍼레이터를 편성하고, 6번째 슬롯에 지원 유닛 위셔델을 선택한 후 ｢모집 확인｣을 누릅니다. 그 후 이번 건설을 포기하고 ｢건설 시작｣에서 시작합니다 (앞의 5개 슬롯에 오퍼레이터가 있고 6번째는 비어 있는지 확인)\n\n맵에서 RA-4를 열고 오른쪽 아래에 ｢시작하기｣가 나타나면 작업을 시작하여 자동 순환할 수 있습니다\n\n참고: 초기 추가 아이템 휴대 관련 기술을 해제한 경우, 기지 내에서 초기 추가 아이템을 휴대하게 하는 시설(식품 공급소, 음료 공급소, 축사 등)을 철거하세요\n\n작업 흐름: ｢경영기획｣으로 얻은 순금 원석을 사용하여 지역을 해금하고, 위셔델로 보스 처치 임무를 완료합니다</string>
+    <string name="panel_reclamation_relaunch_anchor_tip_ra4">리런치 앵커 RA-4\n\n수익 참고: 회당 약 417 토큰 + 통합 포인트, 소요 시간 약 1분 40초\n\n오퍼레이터 요구 사항: 위셔델 (지원 유닛 사용 가능)\n\n사전 조건:\n1. 메인 스토리에서 RA-4를 클리어해야 합니다\n2. ｢경영기획｣을 해금합니다 (힌트: RA-3에서 리드 더 플레임 섀도우 활용)\n3. 자신이 위셔델을 보유한 경우, 수동으로 스테이지를 열고 한 번 편성합니다. 위셔델보다 코스트가 낮은 임의의 5명의 오퍼레이터 + 위셔델로 하고, 위셔델을 6번째 슬롯(마지막으로 선택하는 자리)에 배치합니다. 그 후 ｢모집 확인｣을 누르고, 이번 건설을 포기한 후 ｢건설 시작｣에서 시작합니다\n4. 지원 유닛 위셔델을 사용하는 경우, 위셔델이 스나이퍼 지원 첫 페이지에 있는지 확인합니다(절친 우선 고려). 수동으로 스테이지를 열어 위셔델보다 코스트가 낮은 임의의 5명의 오퍼레이터를 편성하고, 6번째 슬롯에 지원 유닛 위셔델을 선택한 후 ｢모집 확인｣을 누릅니다. 그 후 이번 건설을 포기하고 ｢건설 시작｣에서 시작합니다 (앞의 5개 슬롯에 오퍼레이터가 있고 6번째는 비어 있는지 확인)\n\n맵에서 RA-4를 열고 오른쪽 아래에 ｢시작하기｣가 나타나면 작업을 시작하여 자동 순환할 수 있습니다\n\n참고:\n1. 초기 추가 아이템 휴대 관련 기술을 해제한 경우, 기지 내에서 초기 추가 아이템을 휴대하게 하는 시설(식품 공급소, 음료 공급소, 축사 등)을 철거하세요\n2. 게임의 프레임 속도를 60 FPS로 유지해야 하며, 그렇지 않으면 스와이프 오류로 작업이 실패할 수 있습니다\n\n작업 흐름: ｢경영기획｣으로 얻은 순금 원석을 사용하여 지역을 해금하고, 위셔델로 보스 처치 임무를 완료합니다</string>
     <string name="panel_reclamation_relaunch_anchor_tip_ra15">리런치 앵커 RA-15\n\n수익 참고: 회당 약 500 토큰 + 통합 포인트, 소요 시간 약 3분\n\n오퍼레이터 요구 사항: 프라마닉스 더 프레리타 (지원 유닛 사용 가능)\n\n사전 조건:\n1. 메인 스토리에서 RA-15를 클리어해야 합니다\n2. ｢경영기획｣을 해금합니다 (힌트: RA-3에서 리드 더 플레임 섀도우 활용)\n3. 프라마닉스 더 프레리타를 보유한 경우, 직접 RA-15를 열고 한 번 편성합니다. 뱅가드 5명(육성 요구 없음) + 프라마닉스 더 프레리타로 하고, 프라마닉스 더 프레리타를 6번째 슬롯(마지막으로 선택하는 자리)에 배치합니다. 그 후 편성을 저장하고 스테이지를 나갑니다\n4. 지원 유닛 프라마닉스 더 프레리타를 사용하는 경우, 프라마닉스 더 프레리타가 캐스터 지원 첫 페이지에 있는지 확인합니다 (절친 우선 고려)\n\n맵에서 RA-15를 열고 오른쪽 아래에 ｢시작하기｣가 나타나면 작업을 시작하여 자동 순환할 수 있습니다\n\n참고: 초기 추가 아이템 휴대 관련 기술을 해제한 경우, 기지 내에서 초기 추가 아이템을 휴대하게 하는 시설(식품 공급소, 음료 공급소, 축사 등)을 철거하세요\n\n작업 흐름: 프라마닉스 더 프레리타로 ｢적 60명 처치｣ 임무를 완료합니다</string>
     <string name="panel_reclamation_mode_no_save">세이브 X (스테이지 반복으로 점수 획득)</string>
     <string name="panel_reclamation_mode_with_save">세이브 O (도구 제작으로 점수 획득)</string>
@@ -1641,8 +1641,8 @@
     <string name="panel_stronghold_target_gold">금색 배지 (3회 클리어)</string>
     <string name="panel_stronghold_target_color">색상 배지 (6회 클리어)</string>
     <string name="panel_stronghold_runs">클리어 횟수</string>
-    <string name="panel_stronghold_tip_badge">이벤트 기본 스킨을 적용하고 ｢고속 시뮬레이션｣이 있는 이벤트 메인 화면에서 시작하세요. 저장된 게임이 있으면 먼저 직접 포기하세요.\nMAA는 목표 클리어 횟수를 채우지 못한 전략을 선택해 매 판 끝까지 진행합니다. 현재 중국 서버 간체 중국어 화면만 지원합니다.\n\n이 모드에서는 지원 유닛을 최대 30명까지 빌릴 수 있습니다.\n클리어 확률을 높이려면 먼저 상점 우선순위에 있는 오퍼레이터를 모두 빌리고, 다음으로 VI등급 딜러를 모두 빌리세요. 자리가 남으면 V등급 딜러도 최대한 빌리는 것이 좋습니다.\n\n사용자 지정 편성에는 등급별로 6성 오퍼레이터를 최대 2명까지 선택합니다. 우선순위는 다음과 같습니다.\n%1$s\n\n상점이 최고 레벨에 도달하면 다음 순서로 우선 구매합니다.\n%2$s\n나머지 오퍼레이터의 구매 순서는 다음과 같습니다.\n사용자 지정 VI등급 → 사용자 지정 V등급 → 일반 VI등급 → 보유 인원이 부족할 때 게임에서 제공하는 대체 오퍼레이터 → 일반 V등급.\n전장에는 메딕을 1명만 배치하는 것이 좋습니다. 이미 메딕이 있다면 배치 중인 낮은 등급의 메딕을 더 높은 등급으로 교체할 수 있을 때만 구매합니다.</string>
-    <string name="panel_stronghold_tip_score">이벤트 메인 화면에서 임무 시작 (아래에 ｢고속 시뮬레이션｣)\n기본 이벤트 스킨을 사용해야 합니다\n저장 데이터가 있는 경우 먼저 수동으로 포기해야 합니다\n판에 개입하지 않고 빠르게 라운드를 넘겨 레벨 보상을 획득합니다</string>
+    <string name="panel_stronghold_tip_badge">위수 협의 기본 테마 UI를 적용하고 ｢고속 시뮬레이션｣이 있는 이벤트 메인 화면에서 시작하세요. 저장된 게임이 있으면 먼저 직접 포기하세요.\nMAA는 ｢고속 시뮬레이션｣에서 사용할 수 없는 전략을 제외하고, 목표 클리어 횟수를 채우지 못한 전략을 선택해 매 판 끝까지 진행합니다. 현재 중국 서버 간체 중국어 화면만 지원합니다.\n\n이 모드에서는 지원 유닛을 최대 30명까지 빌릴 수 있습니다.\n클리어 확률을 높이려면 먼저 상점 우선순위에 있는 오퍼레이터(아래 참조)를 모두 빌리고, 다음으로 VI등급 딜러를 모두 빌리세요. 자리가 남으면 V등급 딜러도 최대한 빌리는 것이 좋습니다.\n\nMAA는 사용자 지정 편성에서 등급별로 6성 오퍼레이터를 2명씩 선택합니다. 우선순위는 다음과 같습니다.\n%1$s\n\n상점이 최고 레벨에 도달하면 다음 순서로 우선 구매합니다.\n%2$s\n나머지 오퍼레이터의 구매 순서는 다음과 같습니다.\n사용자 지정 VI등급 → 사용자 지정 V등급 → 일반 VI등급 → 보유 인원이 부족할 때 게임에서 제공하는 대체 오퍼레이터 → 일반 V등급.</string>
+    <string name="panel_stronghold_tip_score">이벤트 메인 화면에서 임무 시작 (아래에 ｢고속 시뮬레이션｣)\n위수 협의 기본 테마 UI를 사용해야 합니다\n저장 데이터가 있는 경우 먼저 수동으로 포기해야 합니다\n판에 개입하지 않고 빠르게 라운드를 넘겨 레벨 보상을 획득합니다</string>
 
     <!-- panel: roguelike -->
     <string name="panel_roguelike_theme">통합 전략 테마</string>
@@ -2912,13 +2912,6 @@
     <string name="blackflow_inventory_cleanup_discarded">버린 부품: %1$s</string>
     <string name="blackflow_inventory_cleanup_completed">부품 상자 정리 완료</string>
     <string name="blackflow_inventory_cleanup_failed">부품 상자 정리 실패</string>
-    <string name="blackflow_scrap_trade_aborted_market_unavailable">신비한 상인의 아이템 데이터를 사용할 수 없어 거래하지 않고 나갑니다</string>
-    <string name="blackflow_scrap_trade_aborted_inventory_incomplete">신비한 상인에서 보유품 확인에 실패해 거래를 중단하고 나갑니다</string>
-    <string name="blackflow_scrap_trade_aborted_page_switch_failed">신비한 상인에서 구매·판매 페이지 전환에 실패해 거래를 중단하고 나갑니다</string>
-    <string name="blackflow_scrap_trade_aborted_sale_search_failed">신비한 상인에서 판매 목록 검색에 실패해 거래를 중단하고 나갑니다</string>
-    <string name="blackflow_scrap_trade_aborted_sell_back_search_failed">신비한 상인에서 되팔 「%1$s」을(를) 찾지 못해 거래를 중단하고 나갑니다</string>
-    <string name="blackflow_scrap_trade_aborted_sale_failed">신비한 상인에서 「%1$s」 판매가 확인되지 않아 거래를 중단하고 나갑니다</string>
-    <string name="blackflow_scrap_trade_aborted_unknown">신비한 상인 거래 중 이상이 발생해 거래를 중단하고 나갑니다</string>
     <string name="blackflow_milestone_unknown">알 수 없는 단계 목표</string>
     <string name="blackflow_milestone_status_available">실행 가능</string>
     <string name="blackflow_milestone_status_satisfied">완료됨</string>
@@ -3021,6 +3014,7 @@
     <string name="blackflow_outcome_node_dispatch_failed">노드 배치 실패</string>
     <string name="blackflow_outcome_node_result_failed">노드 결과 처리 실패</string>
     <string name="blackflow_outcome_internal_failure">내부 상태 오류</string>
+    <string name="blackflow_outcome_scrap_trade_aborted">신비한 상인 거래 중단</string>
     <string name="blackflow_outcome_unknown">로그라이크 오류</string>
     <string name="blackflow_termination_investment_finished">투자가 완료되어 이번 판 종료</string>
     <string name="blackflow_termination_investment_shop_window_closed">1층을 떠났는데 투자하지 않아 이번 판 재시작</string>
@@ -3039,6 +3033,13 @@
     <string name="blackflow_termination_no_bosky_passage">3층에서 잘못 들어선 비경을 발견하지 못해 이번 경로 완료</string>
     <string name="blackflow_termination_action_points_exhausted_before_cultivation">3층에서 행동력이 소진되어 육성을 완료하지 못함</string>
     <string name="blackflow_termination_scrap_shop_never_reached">신비한 상인에 도달하지 못해 이번 판 종료</string>
+    <string name="blackflow_termination_scrap_trade_inventory_incomplete">보유품 확인 실패</string>
+    <string name="blackflow_termination_scrap_trade_market_unavailable">아이템 데이터를 사용할 수 없음</string>
+    <string name="blackflow_termination_scrap_trade_page_switch_failed">구매·판매 페이지 전환 실패</string>
+    <string name="blackflow_termination_scrap_trade_purchase_failed">구매 확인 창이 나타나지 않음</string>
+    <string name="blackflow_termination_scrap_trade_sale_failed">판매가 확인되지 않음</string>
+    <string name="blackflow_termination_scrap_trade_sale_search_failed">판매 목록 검색 실패</string>
+    <string name="blackflow_termination_scrap_trade_sell_back_search_failed">되팔 물품을 찾지 못함</string>
     <string name="blackflow_termination_recovery_port_unavailable">지도 복구 인터페이스를 사용할 수 없음</string>
     <string name="blackflow_termination_perception_port_unavailable">지도 인식·작업 인터페이스를 사용할 수 없음</string>
     <string name="blackflow_termination_map_rebuild_failed_twice">지도 재구축 2회 연속 실패</string>

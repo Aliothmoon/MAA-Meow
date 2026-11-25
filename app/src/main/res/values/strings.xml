@@ -1624,7 +1624,7 @@
     <string name="panel_reclamation_theme_fire">沙中之火（已关闭）</string>
     <string name="panel_reclamation_theme_relaunch_anchor">重启锚点</string>
     <string name="panel_reclamation_relaunch_anchor_tip_ra1">重启锚点 RA-1\n\n收益参考：每把约 159 代币 + 统筹点数，单轮耗时约 2 分 10 秒\n\n干员要求：无\n\n前置步骤：推进主线至 RA-1 已通关状态\n\n在大地图打开 RA-1，右下角出现「开启建设」时启动任务，即可自动循环\n\n注意：如果已解锁开局额外携带物品的相关科技，请将基地内会导致开局额外携带物品的设施拆除，如食品供给站、饮品供给站、兽栏等\n\n任务流程：自动执行精耕细作、建设、交付资源、结算循环</string>
-    <string name="panel_reclamation_relaunch_anchor_tip_ra4">重启锚点 RA-4\n\n收益参考：每把约 417 代币 + 统筹点数，单轮耗时约 1 分 40 秒\n\n干员要求：维什戴尔（可以借助战）\n\n前置步骤：\n1. 推进主线至 RA-4 已通关状态\n2. 解锁策略筹划经营（提示：RA-3 配合焰影苇草）\n3. 如果自己有维什戴尔，请手动打开关卡并配队一次，保证为任意 5 个费用比维什戴尔低的干员+ 维什戴尔，且维什戴尔位于六号位即最后一个选的人，然后确认招募，放弃本次建设并在开始建设处开始\n4. 如果使用助战维什戴尔，请保证维什戴尔在狙击助战首页（考虑挚友），请手动打开关卡编入任意 5 个费用比维什戴尔低的干员，六号位选择维什戴尔助战后确认招募，放弃本次建设并在开始建设处开始（保证队伍前五位有人且六号位为空）\n\n在大地图打开 RA-4，右下角出现「开启建设」时启动任务，即可自动循环\n\n注意：如果已解锁开局额外携带物品的相关科技，请将基地内会导致开局额外携带物品的设施拆除，如食品供给站、饮品供给站、兽栏等\n\n任务流程：使用筹划经营策略给予的赤金解锁区域，使用维什戴尔完成击杀 boss 任务</string>
+    <string name="panel_reclamation_relaunch_anchor_tip_ra4">重启锚点 RA-4\n\n收益参考：每把约 417 代币 + 统筹点数，单轮耗时约 1 分 40 秒\n\n干员要求：维什戴尔（可以借助战）\n\n前置步骤：\n1. 推进主线至 RA-4 已通关状态\n2. 解锁策略筹划经营（提示：RA-3 配合焰影苇草）\n3. 如果自己有维什戴尔，请手动打开关卡并配队一次，保证为任意 5 个费用比维什戴尔低的干员+ 维什戴尔，且维什戴尔位于六号位即最后一个选的人，然后确认招募，放弃本次建设并在开始建设处开始\n4. 如果使用助战维什戴尔，请保证维什戴尔在狙击助战首页（考虑挚友），请手动打开关卡编入任意 5 个费用比维什戴尔低的干员，六号位选择维什戴尔助战后确认招募，放弃本次建设并在开始建设处开始（保证队伍前五位有人且六号位为空）\n\n在大地图打开 RA-4，右下角出现「开启建设」时启动任务，即可自动循环\n\n注意：\n1. 如果已解锁开局额外携带物品的相关科技，请将基地内会导致开局额外携带物品的设施拆除，如食品供给站、饮品供给站、兽栏等\n2. 需要保证游戏帧率为 60 帧，否则可能出现滑动异常导致任务出错\n\n任务流程：使用筹划经营策略给予的赤金解锁区域，使用维什戴尔完成击杀 boss 任务</string>
     <string name="panel_reclamation_relaunch_anchor_tip_ra15">重启锚点 RA-15\n\n收益参考：每把约 500 代币 + 统筹点数，单轮耗时约 3 分钟\n\n干员要求：圣聆初雪（可以借助战）\n\n前置步骤：\n1. 推进主线至 RA-15 已通关状态\n2. 解锁策略筹划经营（提示：RA-3 配合焰影苇草）\n3. 如果自己有圣聆初雪，请手动打开关卡并配队一次，保证为五先锋（无练度要求）+ 初雪，且初雪位于六号位即最后一个选的人，然后保存配队并退出关卡\n4. 如果使用助战圣聆初雪，请保证圣聆初雪在术士助战首页（考虑挚友）\n\n在大地图打开 RA-15，右下角出现「开启建设」时启动任务，即可自动循环\n\n注意：如果已解锁开局额外携带物品的相关科技，请将基地内会导致开局额外携带物品的设施拆除，如食品供给站、饮品供给站、兽栏等\n\n任务流程：用圣聆初雪完成 60 杀任务</string>
     <string name="panel_reclamation_mode_no_save">无存档（进出关卡刷点数）</string>
     <string name="panel_reclamation_mode_with_save">有存档（组装道具刷点数）</string>
@@ -1641,8 +1641,8 @@
     <string name="panel_stronghold_target_gold">金色角标（通关 3 次）</string>
     <string name="panel_stronghold_target_color">彩色角标（通关 6 次）</string>
     <string name="panel_stronghold_runs">通关局数</string>
-    <string name="panel_stronghold_tip_badge">请使用活动默认皮肤，在有 ｢极速模拟｣ 的活动主界面启动任务。已有存档时，请先手动放弃。\nMAA 会选择未达标的策略，并打完每一局。目前仅适配国服简体中文界面。\n\n本模式最多可借用 30 名助战干员。\n建议先借齐商店优先名单中的干员，再借齐 VI 阶输出干员，名额允许时也尽量借齐 V 阶输出干员，可提高通过率。\n\n自选编队只选六星干员，每阶最多 2 名。优先顺序如下：\n%1$s\n\n商店满级后，优先购买以下干员：\n%2$s\n其余干员按以下顺序购买：\n自选 VI 阶 → 自选 V 阶 → 普通 VI 阶 → 账号替补（自有干员不足时由游戏提供）→ 普通 V 阶。\n建议场上只留 1 名医疗干员。已有医疗时，只购买能替换场上低阶医疗的更高阶医疗。</string>
-    <string name="panel_stronghold_tip_score">在活动主界面（有 ｢极速模拟｣ 处）开始任务\n需要使用活动默认皮肤\n在有存档时需要先手动放弃\n不干预对局，快速过回合刷等级奖励</string>
+    <string name="panel_stronghold_tip_badge">请使用卫戍默认主题 UI，在有 ｢极速模拟｣ 的活动主界面启动任务。已有存档时，请先手动放弃。\nMAA 会选择未达标的策略（不包含 ｢极速模拟｣ 无法使用的策略），并打完每一局。目前仅适配国服简体中文界面。\n\n本模式最多可借用 30 名助战干员。\n建议先借齐商店优先名单中的干员（见下），再借齐 VI 阶输出干员，名额允许时也尽量借齐 V 阶输出干员，可提高通过率。\n\nMAA 会从自选编队中每阶选 2 名六星干员，优先顺序如下：\n%1$s\n\n商店满级后，优先购买以下干员：\n%2$s\n其余干员按以下顺序购买：\n自选 VI 阶 → 自选 V 阶 → 普通 VI 阶 → 账号替补（自有干员不足时由游戏提供）→ 普通 V 阶。</string>
+    <string name="panel_stronghold_tip_score">在活动主界面（有 ｢极速模拟｣ 处）开始任务\n需要使用卫戍默认主题 UI\n在有存档时需要先手动放弃\n不干预对局，快速过回合刷等级奖励</string>
 
     <!-- panel: roguelike -->
     <string name="panel_roguelike_theme">肉鸽主题</string>
@@ -2912,13 +2912,6 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="blackflow_inventory_cleanup_discarded">已丢弃零件：%1$s</string>
     <string name="blackflow_inventory_cleanup_completed">零件箱清理完成</string>
     <string name="blackflow_inventory_cleanup_failed">零件箱清理失败</string>
-    <string name="blackflow_scrap_trade_aborted_market_unavailable">秘境行商的物品数据不可用，跳过交易并离店</string>
-    <string name="blackflow_scrap_trade_aborted_inventory_incomplete">秘境行商持有物清点失败，停止交易并离店</string>
-    <string name="blackflow_scrap_trade_aborted_page_switch_failed">秘境行商买入与出售页面切换失败，停止交易并离店</string>
-    <string name="blackflow_scrap_trade_aborted_sale_search_failed">秘境行商出售列表查找失败，停止交易并离店</string>
-    <string name="blackflow_scrap_trade_aborted_sell_back_search_failed">秘境行商未能找到要卖回的「%1$s」，停止交易并离店</string>
-    <string name="blackflow_scrap_trade_aborted_sale_failed">秘境行商出售「%1$s」未得到确认，停止交易并离店</string>
-    <string name="blackflow_scrap_trade_aborted_unknown">秘境行商交易出现异常，停止交易并离店</string>
     <string name="blackflow_milestone_unknown">未知阶段目标</string>
     <string name="blackflow_milestone_status_available">可以执行</string>
     <string name="blackflow_milestone_status_satisfied">已经完成</string>
@@ -3021,6 +3014,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="blackflow_outcome_node_dispatch_failed">节点分派失败</string>
     <string name="blackflow_outcome_node_result_failed">节点结果处理失败</string>
     <string name="blackflow_outcome_internal_failure">内部状态异常</string>
+    <string name="blackflow_outcome_scrap_trade_aborted">秘境行商交易中止</string>
     <string name="blackflow_outcome_unknown">肉鸽出现异常</string>
     <string name="blackflow_termination_investment_finished">投资已经完成，本局结束</string>
     <string name="blackflow_termination_investment_shop_window_closed">已经离开第一层且尚未投资，本局重开</string>
@@ -3039,6 +3033,13 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="blackflow_termination_no_bosky_passage">第三层未发现误入奇境，本局路线完成</string>
     <string name="blackflow_termination_action_points_exhausted_before_cultivation">第三层行动力耗尽，未完成培育</string>
     <string name="blackflow_termination_scrap_shop_never_reached">没有到达秘境行商，本局结束</string>
+    <string name="blackflow_termination_scrap_trade_inventory_incomplete">持有物清点失败</string>
+    <string name="blackflow_termination_scrap_trade_market_unavailable">物品数据不可用</string>
+    <string name="blackflow_termination_scrap_trade_page_switch_failed">买入与出售页面切换失败</string>
+    <string name="blackflow_termination_scrap_trade_purchase_failed">购买确认框没有出现</string>
+    <string name="blackflow_termination_scrap_trade_sale_failed">出售未得到确认</string>
+    <string name="blackflow_termination_scrap_trade_sale_search_failed">出售列表查找失败</string>
+    <string name="blackflow_termination_scrap_trade_sell_back_search_failed">要卖回的物品查找失败</string>
     <string name="blackflow_termination_recovery_port_unavailable">地图恢复接口不可用</string>
     <string name="blackflow_termination_perception_port_unavailable">地图识别与任务接口不可用</string>
     <string name="blackflow_termination_map_rebuild_failed_twice">连续两次地图重建失败</string>
