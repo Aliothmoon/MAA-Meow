@@ -23,6 +23,7 @@ import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager.Companion.FONT_SIZE_SCALE_AUTO
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.AppSettings
+import com.aliothmoon.maameow.domain.models.AutoDownloadPolicy
 import com.aliothmoon.maameow.domain.models.AppSettingsSchema
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
@@ -244,12 +245,13 @@ class AppSettingsManager internal constructor(
         }
     }
 
-    // 启动时自动下载更新
-    val autoDownloadUpdate: StateFlow<Boolean> = setting { it.autoDownloadUpdate.toBooleanStrictOrNull() ?: false }
+    // 启动时自动下载更新策略
+    val autoDownloadPolicy: StateFlow<AutoDownloadPolicy> =
+        setting { AutoDownloadPolicy.fromStored(it.autoDownloadUpdate) }
 
-    suspend fun setAutoDownloadUpdate(enabled: Boolean) {
+    suspend fun setAutoDownloadPolicy(policy: AutoDownloadPolicy) {
         with(AppSettingsSchema) {
-            context.dataStore.edit { it[autoDownloadUpdate] = enabled.toString() }
+            context.dataStore.edit { it[autoDownloadUpdate] = policy.name }
         }
     }
 

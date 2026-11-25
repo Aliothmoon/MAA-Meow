@@ -32,8 +32,9 @@ data class AppSettings(
     @PrefKey(default = "true")
     val autoCheckUpdate: String = "true",
 
-    @PrefKey(default = "false")
-    val autoDownloadUpdate: String = "false",
+    /** 自动下载更新策略，取值见 [AutoDownloadPolicy]，兼容旧版布尔值 */
+    @PrefKey(default = "OFF")
+    val autoDownloadUpdate: String = "OFF",
 
     @PrefKey(default = "SHIZUKU")
     val startupBackend: String = "SHIZUKU",

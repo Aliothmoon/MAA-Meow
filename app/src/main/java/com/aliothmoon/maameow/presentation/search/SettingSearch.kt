@@ -99,7 +99,12 @@ object SettingSearchIndex {
     val entries: List<SettingSearchEntry> = listOf(
         SettingSearchEntry(R.string.settings_reinit_resource_title, update, R.string.settings_reinit_resource_desc),
         SettingSearchEntry(R.string.settings_auto_check_update_title, update, R.string.settings_auto_check_update_desc),
-        SettingSearchEntry(R.string.settings_auto_download_update_title, update, R.string.settings_auto_download_update_desc),
+        SettingSearchEntry(
+            R.string.settings_auto_download_update_title,
+            update,
+            R.string.settings_auto_download_update_desc,
+            keywordsRes = R.string.search_keywords_auto_download_update,
+        ),
         SettingSearchEntry(R.string.settings_update_channel_title, update, R.string.settings_update_channel_desc),
 
         SettingSearchEntry(R.string.settings_log_history_title, log, R.string.settings_log_history_desc),

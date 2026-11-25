@@ -298,6 +298,7 @@
     <string name="search_keywords_mute">음소거 소리 볼륨</string>
     <string name="search_keywords_run_duration">지속 시간 시간 제한 시간 초과 실행 시간</string>
     <string name="search_keywords_screen_off">화면 꺼짐 화면 끄기 검은 화면 잠금 화면 절전</string>
+    <string name="search_keywords_auto_download_update">Wi-Fi wifi 와이파이 모바일 데이터 요금제 네트워크</string>
 
     <!-- settings: update section -->
     <string name="settings_section_update">업데이트 관리</string>
@@ -306,7 +307,10 @@
     <string name="settings_auto_check_update_title">시작 시 업데이트 확인</string>
     <string name="settings_auto_check_update_desc">앱 시작 시 앱 및 리소스 업데이트를 자동으로 확인</string>
     <string name="settings_auto_download_update_title">업데이트 자동 다운로드</string>
-    <string name="settings_auto_download_update_desc">업데이트가 감지되면 수동 확인 없이 자동으로 다운로드</string>
+    <string name="settings_auto_download_update_desc">네트워크 정책에 따라 감지된 업데이트를 자동 다운로드하며, 조건에 맞지 않으면 확인 창을 표시합니다</string>
+    <string name="settings_auto_download_off">끄기</string>
+    <string name="settings_auto_download_wifi_only">Wi-Fi만</string>
+    <string name="settings_auto_download_always">항상</string>
     <string name="settings_update_channel_title">업데이트 채널</string>
     <string name="settings_update_channel_desc">안정 버전 또는 베타 버전 업데이트 중 선택</string>
 

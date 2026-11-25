@@ -208,7 +208,9 @@ fun <T> SettingChoiceItem(
                         Text(
                             text = label(entry),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = MaterialTheme.colorScheme.onSurface.let {
+                                if (enabled) it else it.copy(alpha = 0.38f)
+                            },
                             maxLines = 1,
                         )
                     }

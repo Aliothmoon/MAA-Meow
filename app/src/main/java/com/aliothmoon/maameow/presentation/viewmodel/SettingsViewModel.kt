@@ -14,6 +14,7 @@ import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.ConfigBackupManager
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
+import com.aliothmoon.maameow.domain.models.AutoDownloadPolicy
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
@@ -157,12 +158,12 @@ class SettingsViewModel(
         }
     }
 
-    val autoDownloadUpdate: StateFlow<Boolean> = appSettingsManager.autoDownloadUpdate
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val autoDownloadPolicy: StateFlow<AutoDownloadPolicy> = appSettingsManager.autoDownloadPolicy
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AutoDownloadPolicy.OFF)
 
-    fun setAutoDownloadUpdate(enabled: Boolean) {
+    fun setAutoDownloadPolicy(policy: AutoDownloadPolicy) {
         viewModelScope.launch {
-            appSettingsManager.setAutoDownloadUpdate(enabled)
+            appSettingsManager.setAutoDownloadPolicy(policy)
         }
     }
 

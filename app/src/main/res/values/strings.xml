@@ -298,6 +298,7 @@
     <string name="search_keywords_mute">静音 声音 音量</string>
     <string name="search_keywords_run_duration">时长 限时 超时 运行时间</string>
     <string name="search_keywords_screen_off">熄屏 息屏 黑屏 关屏 锁屏 省电</string>
+    <string name="search_keywords_auto_download_update">Wi-Fi wifi 无线 流量 移动网络 计费</string>
 
     <!-- settings: update section -->
     <string name="settings_section_update">更新管理</string>
@@ -306,7 +307,10 @@
     <string name="settings_auto_check_update_title">启动时检查更新</string>
     <string name="settings_auto_check_update_desc">启动应用时自动检查应用和资源更新</string>
     <string name="settings_auto_download_update_title">自动下载更新</string>
-    <string name="settings_auto_download_update_desc">检测到更新后自动下载，无需手动确认</string>
+    <string name="settings_auto_download_update_desc">检测到更新后按网络策略自动下载，不满足条件时改为弹窗确认</string>
+    <string name="settings_auto_download_off">关闭</string>
+    <string name="settings_auto_download_wifi_only">仅 Wi-Fi</string>
+    <string name="settings_auto_download_always">始终</string>
     <string name="settings_update_channel_title">更新渠道</string>
     <string name="settings_update_channel_desc">选择接收稳定版或公测版更新</string>
 

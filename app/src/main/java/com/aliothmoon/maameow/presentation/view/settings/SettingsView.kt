@@ -128,6 +128,7 @@ import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
+import com.aliothmoon.maameow.domain.models.AutoDownloadPolicy
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
 import com.aliothmoon.maameow.domain.service.AchievementReporter
@@ -199,7 +200,7 @@ fun SettingsView(
     val currentChangelog by viewModel.currentChangelog.collectAsStateWithLifecycle()
     val debugMode by viewModel.debugMode.collectAsStateWithLifecycle()
     val autoCheckUpdate by viewModel.autoCheckUpdate.collectAsStateWithLifecycle()
-    val autoDownloadUpdate by viewModel.autoDownloadUpdate.collectAsStateWithLifecycle()
+    val autoDownloadPolicy by viewModel.autoDownloadPolicy.collectAsStateWithLifecycle()
     val startupBackend by viewModel.startupBackend.collectAsStateWithLifecycle()
     val coreDataLocation by viewModel.coreDataLocation.collectAsStateWithLifecycle()
     val pendingCoreDataLocation by viewModel.pendingCoreDataLocation.collectAsStateWithLifecycle()
@@ -491,13 +492,15 @@ fun SettingsView(
                         }
                         SettingsSegment {
                             SettingSearchTarget(R.string.settings_auto_download_update_title) {
-                                SettingSwitchItem(
+                                SettingChoiceItem(
                                     title = stringResource(R.string.settings_auto_download_update_title),
-                                    contentColor = contentColor,
-                                    checked = autoDownloadUpdate,
-                                    enabled = autoCheckUpdate,
+                                    info = stringResource(R.string.settings_auto_download_update_desc),
                                     icon = Icons.Rounded.Download,
-                                    onCheckedChange = { viewModel.setAutoDownloadUpdate(it) }
+                                    entries = AutoDownloadPolicy.entries,
+                                    selected = autoDownloadPolicy,
+                                    label = { stringResource(it.labelRes) },
+                                    onSelected = { viewModel.setAutoDownloadPolicy(it) },
+                                    enabled = autoCheckUpdate,
                                 )
                             }
                         }

@@ -17,7 +17,10 @@ import com.aliothmoon.maameow.data.model.update.UpdateInfo
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.models.AutoDownloadPolicy
+import com.aliothmoon.maameow.domain.service.update.UnmeteredNetworkChecker
 import com.aliothmoon.maameow.domain.service.update.UpdateService
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
@@ -46,6 +49,8 @@ class UpdateViewModel(
     private val appSettingsManager: AppSettingsManager,
     private val pathConfig: MaaPathConfig,
     private val cdkStatus: MirrorChyanCdkStatus,
+    private val unmeteredNetworkChecker: UnmeteredNetworkChecker,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
 
     // ==================== 资源更新 ====================
@@ -105,7 +110,7 @@ class UpdateViewModel(
     private suspend fun loadResourceVersion(): String {
         val dir = pathConfig.resourceDir
         return runCatching {
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 File(dir, VERSION_FILE).takeIf { it.exists() }?.source()?.buffer()
                     ?.readUtf8()
                     ?.let { JSON.parseObject(it).getString("last_updated") }.orEmpty()
@@ -199,11 +204,20 @@ class UpdateViewModel(
 
             saveAppChangelog(appAvailable)
 
-            if (appSettingsManager.autoDownloadUpdate.value) {
+            val policy = appSettingsManager.autoDownloadPolicy.value
+            val isUnmetered = if (policy == AutoDownloadPolicy.WIFI_ONLY) {
+                unmeteredNetworkChecker.isUnmetered()
+            } else {
+                false
+            }
+            if (policy.allowsAutoDownload(isUnmetered)) {
                 // 自动下载模式
                 autoDownload(appAvailable, resAvailable)
             } else {
-                // 手动确认模式（现有行为）
+                if (policy == AutoDownloadPolicy.WIFI_ONLY) {
+                    Timber.i("当前为计费网络，跳过自动下载并回退确认弹窗")
+                }
+                // 手动确认模式
                 _startupUpdateDialog.value = StartupUpdateResult(
                     appUpdate = appAvailable,
                     resourceUpdate = resAvailable

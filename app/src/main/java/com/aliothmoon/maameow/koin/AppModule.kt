@@ -21,6 +21,7 @@ import com.aliothmoon.maameow.data.datasource.AppDownloader
 import com.aliothmoon.maameow.data.datasource.AssetExtractor
 import com.aliothmoon.maameow.data.datasource.ResourceDownloader
 import com.aliothmoon.maameow.data.datasource.ZipExtractor
+import com.aliothmoon.maameow.data.datasource.update.AndroidUnmeteredNetworkChecker
 import com.aliothmoon.maameow.data.datasource.update.MirrorChyanAppVersionChecker
 import com.aliothmoon.maameow.data.datasource.update.MirrorChyanResourceVersionChecker
 import com.aliothmoon.maameow.data.log.ApplicationLogWriter
@@ -114,6 +115,7 @@ import com.aliothmoon.maameow.data.log.ProcessExitRecorder
 import com.aliothmoon.maameow.domain.service.UnlockGestureReader
 import com.aliothmoon.maameow.domain.service.WakeCredentialSource
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
+import com.aliothmoon.maameow.domain.service.update.UnmeteredNetworkChecker
 import com.aliothmoon.maameow.domain.service.update.UpdateService
 import com.aliothmoon.maameow.domain.service.update.checker.AppVersionChecker
 import com.aliothmoon.maameow.domain.service.update.checker.ResourceVersionChecker
@@ -312,6 +314,7 @@ val appModule = module {
     single<AppVersionChecker> { MirrorChyanAppVersionChecker(get(), get()) }
     single<ResourceVersionChecker> { MirrorChyanResourceVersionChecker(get()) }
 
+    single<UnmeteredNetworkChecker> { AndroidUnmeteredNetworkChecker(get()) }
     singleOf(::UpdateService)
 
     // 与 MaaCompositionService 循环依赖，只能懒取
