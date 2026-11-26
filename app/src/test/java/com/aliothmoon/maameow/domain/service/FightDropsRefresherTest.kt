@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.domain.service
 
-import android.content.Context
 import com.aliothmoon.maameow.MaaCoreService
 import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.data.repository.DepotRepository
@@ -12,8 +11,6 @@ import com.aliothmoon.maameow.domain.models.DropTarget
 import com.aliothmoon.maameow.maa.callback.SubTaskHandler
 import com.aliothmoon.maameow.maa.task.TaskSlot
 import com.aliothmoon.maameow.manager.RemoteServiceManager
-import com.aliothmoon.maameow.utils.i18n.UiText
-import com.aliothmoon.maameow.utils.i18n.resolve
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -43,7 +40,6 @@ class FightDropsRefresherTest {
         // 没显式给库存的用例：开跑档读数为 0（与「从未识别过」一致）
         every { countOf(any(), any()) } returns 0
     }
-    private val appContext: Context = mockk()
     private val itemHelper: ItemHelper = mockk()
     private val stageApCostHelper: StageApCostHelper = mockk()
     private val subTaskHandler: SubTaskHandler = mockk {
@@ -77,7 +73,6 @@ class FightDropsRefresherTest {
         every { stageApCostHelper.getApCost(any()) } returns null
 
         refresher = FightDropsRefresher(
-            appContext,
             depotRepository,
             itemHelper,
             stageApCostHelper,
@@ -111,7 +106,7 @@ class FightDropsRefresherTest {
         medicine: Int = 3,
         stone: Int = 1,
         series: Int = 1,
-        logLabel: UiText = UiText.Dynamic("1"),
+        logLabel: String = "1",
     ) = DropTarget(dropId, dropCount, stage, medicine, stone, series, logLabel)
 
     /** 模拟 Analyze stage + Composition bind */
@@ -204,7 +199,7 @@ class FightDropsRefresherTest {
         assertEquals(100, sufficient.current)
         assertEquals(100, sufficient.target)
         assertEquals("源岩", sufficient.dropName)
-        assertEquals("1", sufficient.logLabel.resolve(appContext))
+        assertEquals("1", sufficient.logLabel)
 
         assertEquals(0, json["times"]!!.jsonPrimitive.content.toInt())
         assertEquals(1, json["drops"]!!.jsonObject[ITEM]!!.jsonPrimitive.content.toInt())
@@ -250,8 +245,7 @@ class FightDropsRefresherTest {
         val outcome = refresher.onTaskStarted(1)
         val json = Json.parseToJsonElement(lastParamsJson!!).jsonObject
 
-        assertTrue(outcome is FightDropsRefresher.RefreshOutcome.InventoryUnavailable)
-        assertTrue((outcome as FightDropsRefresher.RefreshOutcome.InventoryUnavailable).applied)
+        assertEquals(FightDropsRefresher.RefreshOutcome.InventoryUnavailable("1", applied = true), outcome)
         assertEquals(0, json["times"]!!.jsonPrimitive.content.toInt())
     }
 
@@ -347,6 +341,17 @@ class FightDropsRefresherTest {
         assertEquals(70, outcome.need)
         // hasSynced 也必须落到开跑档上：否则实现退回活跃档时这条用例就测不出来了
         verify { depotRepository.hasSynced("B") }
+    }
+
+    @Test
+    fun currencyTarget_refreshesEvenWhenDepotNeverSynced() {
+        every { depotRepository.hasSynced(any()) } returns false
+        every { depotRepository.countOf("4001", any()) } returns 10000
+        stageAndBind(1, target(dropId = "4001", dropCount = 50000))
+
+        val outcome = refresher.onTaskStarted(1) as FightDropsRefresher.RefreshOutcome.Updated
+        assertEquals(10000, outcome.current)
+        assertEquals(40000, outcome.need)
     }
 
     // ==================== 理智不足跳过 ====================

@@ -89,6 +89,7 @@ class StartTaskChainUseCase(
             profileRunDurationLimitMinutes = profileRunDurationLimitMinutes,
             preflightLogs = plan.logs,
             fallbacks = plan.fallbacks,
+            profileId = plan.profileId,
         ) {
             if (scheduleLabel != null) {
                 sessionLogger.appendAndWait(

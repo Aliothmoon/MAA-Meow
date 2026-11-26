@@ -318,7 +318,7 @@ val appModule = module {
     singleOf(::UpdateService)
 
     // 与 MaaCompositionService 循环依赖，只能懒取
-    single { ResourceInitService(get(), get(), get(), inject(), get(), get()) }
+    single { ResourceInitService(get(), get(), get(), inject()) }
     singleOf(::MaaResourceLoader)
     // scope 走构造默认值
     single {
@@ -373,7 +373,7 @@ val appModule = module {
     singleOf(::CopilotOperatorMatching)
     single { PlanSideTaskRunner(androidContext(), get(), get()) }
     singleOf(::TaskChainStatusTracker)
-    single { FightDropsRefresher(androidContext(), get(), get(), get(), get()) }
+    singleOf(::FightDropsRefresher)
     singleOf(::TaskChainHandler)
     singleOf(::SubTaskHandler)
     single<AppAliveChecker> { RemoteAppAliveChecker() }

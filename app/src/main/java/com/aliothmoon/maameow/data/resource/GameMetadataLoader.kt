@@ -64,8 +64,8 @@ class GameMetadataLoader(
     // 失败档靠它重放
     private val retryToken = MutableStateFlow(0)
 
-    // 只在收集协程里读写
-    private var itemsRevision: Int? = null
+    // 只在收集协程里读写：(clientType, revision)
+    private var loadedItemsKey: Pair<String, Int>? = null
 
     fun start() {
         if (!started.compareAndSet(false, true)) return
@@ -98,14 +98,15 @@ class GameMetadataLoader(
         templateImageLoaders.forEach { it.invalidateMissing() }
         _state.value = State.Loading(key)
         val mark = TimeSource.Monotonic.markNow()
-        val reloadItems = itemsRevision != key.revision
+        val itemsKey = key.clientType to key.revision
+        val reloadItems = loadedItemsKey != itemsKey
         // 活动关卡单独兜错，不连累干员表
         runCatching { activityManager.load(key.clientType, hotUpdateSync.stageActivity()) }
             .onFailure { Timber.e(it, "Activity data load failed: %s", key) }
         try {
             coroutineScope {
                 launch { resourceDataManager.load(key.clientType, key.language, key.revision) }
-                // 材料表只跟资源版本有关，但名称要按客户端档（全球服在 global/{clientType}/resource 下）
+                // 物品名称随客户端资源档变化，换服或换资源版本都要重载
                 if (reloadItems) launch { itemHelper.load(key.clientType) }
             }
         } catch (e: CancellationException) {
@@ -116,7 +117,7 @@ class GameMetadataLoader(
             _state.value = State.Failed(key, e)
             return
         }
-        if (reloadItems) itemsRevision = key.revision
+        if (reloadItems) loadedItemsKey = itemsKey
         _state.value = State.Ready(key)
         Timber.i("UI metadata ready %s in %dms", key, mark.elapsedNow().inWholeMilliseconds)
     }

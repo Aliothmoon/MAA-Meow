@@ -107,11 +107,12 @@ internal fun GroupedStageButtonGroup(
     customLabel: String? = null,
     customSelected: Boolean = false,
     onCustomSelected: (() -> Unit)? = null,
+    emptyLabel: String = stringResource(R.string.panel_fight_stage_reset_current),
     /** 演示指到选关时，折叠描标题行，展开描目标关卡 */
     guided: Boolean = false,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedDisplay = stageDisplayName(resolveStage(selectedValue), stageGroups)
+    val selectedDisplay = stageDisplayName(resolveStage(selectedValue), stageGroups, emptyLabel)
     val guideKey = LocalGuideHighlight.current
         ?.takeIf { guided && it.anchor == GuideAnchor.STAGE_ITEM }?.key
 
@@ -179,36 +180,19 @@ internal fun GroupedStageButtonGroup(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         group.stages.forEach { stage ->
-                            val isSelected = stage.code == selectedValue
-                            val isOpen = stage.isOpenToday
+                            val isSelected = !customSelected && stage.code == selectedValue
                             val resolved = resolveStage(stage.code)
-                            Surface(
-                                modifier = Modifier
-                                    .guideHighlight(guideKey == stage.code, corner = 16.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .clickable { onItemSelected(stage.code) },
-                                color = when {
-                                    isSelected -> MaterialTheme.colorScheme.primary
-                                    !isOpen -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f)
-                                    else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                            StagePill(
+                                text = if (resolved == stage.code) {
+                                    stage.displayName
+                                } else {
+                                    stageDisplayName(resolved, stageGroups, emptyLabel)
                                 },
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Text(
-                                    text = if (resolved == stage.code) {
-                                        stage.displayName
-                                    } else {
-                                        stageDisplayName(resolved, stageGroups)
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = when {
-                                        isSelected -> MaterialTheme.colorScheme.onPrimary
-                                        !isOpen -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
-                                        else -> MaterialTheme.colorScheme.onSurface
-                                    },
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                )
-                            }
+                                selected = isSelected,
+                                open = stage.isOpenToday,
+                                onClick = { onItemSelected(stage.code) },
+                                modifier = Modifier.guideHighlight(guideKey == stage.code, corner = 16.dp),
+                            )
                         }
                     }
                 }
@@ -222,32 +206,48 @@ internal fun GroupedStageButtonGroup(
                             .fillMaxWidth()
                             .padding(top = 4.dp)
                     ) {
-                        Surface(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .clickable { onCustomSelected?.invoke() },
-                            color = if (customSelected) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                            },
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Text(
-                                text = customLabel,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (customSelected) {
-                                    MaterialTheme.colorScheme.onPrimary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                },
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                            )
-                        }
+                        StagePill(
+                            text = customLabel,
+                            selected = customSelected,
+                            open = true,
+                            onClick = { onCustomSelected?.invoke() },
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun StagePill(
+    text: String,
+    selected: Boolean,
+    open: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick),
+        color = when {
+            selected -> MaterialTheme.colorScheme.primary
+            !open -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f)
+            else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+        },
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = when {
+                selected -> MaterialTheme.colorScheme.onPrimary
+                !open -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
+                else -> MaterialTheme.colorScheme.onSurface
+            },
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+        )
     }
 }
 

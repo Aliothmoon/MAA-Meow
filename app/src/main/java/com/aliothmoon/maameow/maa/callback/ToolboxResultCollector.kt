@@ -119,7 +119,7 @@ class ToolboxResultCollector(
         return stored
     }
 
-    fun onOperBoxResult(details: JSONObject?) {
+    fun onOperBoxResult(details: JSONObject?, profileId: String? = null) {
         details ?: return
         if (!details.getBooleanValue("done")) return
 
@@ -136,7 +136,7 @@ class ToolboxResultCollector(
             )
         } ?: return
 
-        applyOperBoxResult(ownOpers)
+        applyOperBoxResult(ownOpers, profileId)
     }
 
     /** 落库 + 成就，Core 识别与一图流拉取共用 */

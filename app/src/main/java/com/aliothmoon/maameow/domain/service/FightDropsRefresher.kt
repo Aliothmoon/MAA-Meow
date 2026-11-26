@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.domain.service
 
-import android.content.Context
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.StageApCostHelper
@@ -11,8 +10,6 @@ import com.aliothmoon.maameow.domain.models.StaleSkippedPlan
 import com.aliothmoon.maameow.maa.callback.SubTaskHandler
 import com.aliothmoon.maameow.maa.task.TaskSlot
 import com.aliothmoon.maameow.manager.RemoteServiceManager
-import com.aliothmoon.maameow.utils.i18n.UiText
-import com.aliothmoon.maameow.utils.i18n.resolve
 import timber.log.Timber
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -24,7 +21,6 @@ import kotlin.math.ceil
  * 直接走 [RemoteServiceManager] 改参，避免 Composition 构造环；回调线程同步执行。
  */
 class FightDropsRefresher(
-    private val appContext: Context,
     private val depotRepository: DepotRepository,
     private val itemHelper: ItemHelper,
     private val stageApCostHelper: StageApCostHelper,
@@ -99,13 +95,13 @@ class FightDropsRefresher(
         if (expireDays <= 0 || t.dropId.isBlank() || t.dropCount <= 0) return
         // 只看一次开跑档，避免同一回调里前后两次读到不同档
         val profileId = subTaskHandler.runProfileId
-        // 无库存数据判不出是否达标，不构成耗尽证明
-        if (!depotRepository.hasSynced(profileId)) return
+        // 无库存基线判不出是否达标，不构成耗尽证明
+        if (t.dropId !in ItemHelper.CURRENCY_ITEM_IDS && !depotRepository.hasSynced(profileId)) return
         // 已达标说明结束原因与理智无关，不构成耗尽证明
         if (currentCount(t, profileId) >= t.dropCount) return
         if (expireDays > provenExhaustedMedicineDays) {
             provenExhaustedMedicineDays = expireDays
-            Timber.i("临期药窗口已证明耗尽：%d 天（来自 %s）", expireDays, t.logLabel.resolve(appContext))
+            Timber.i("临期药窗口已证明耗尽：%d 天（来自 %s）", expireDays, t.logLabel)
         }
     }
 
@@ -141,9 +137,9 @@ class FightDropsRefresher(
         if (t.dropId.isBlank() || t.dropCount <= 0) return RefreshOutcome.Skipped
 
         // 从没识别过仓库，缺口无从谈起，按 0 计会把目标量全额下发
-        // 开跑档只读一次：同一回调里 hasSynced 与 countOf 必须落在同一个档上
+        // 开跑档只读一次：同一回调里基线检查与 countOf 必须落在同一个档上
         val profileId = subTaskHandler.runProfileId
-        if (!depotRepository.hasSynced(profileId)) {
+        if (t.dropId !in ItemHelper.CURRENCY_ITEM_IDS && !depotRepository.hasSynced(profileId)) {
             val ok = setParams(taskId, t.toFightParamsJson(0))
             return RefreshOutcome.InventoryUnavailable(logLabel = t.logLabel, applied = ok)
         }
@@ -165,7 +161,7 @@ class FightDropsRefresher(
         } else if (shortfall != null) {
             Timber.i(
                 "FightTask %d (%s) 理智不足跳过: 预估 %d < 关卡消耗 %d",
-                taskId, t.logLabel.resolve(appContext), shortfall.estimatedSanity, shortfall.apCost,
+                taskId, t.logLabel, shortfall.estimatedSanity, shortfall.apCost,
             )
             RefreshOutcome.SanityInsufficient(
                 logLabel = t.logLabel,
@@ -176,7 +172,7 @@ class FightDropsRefresher(
         } else {
             Timber.i(
                 "FightTask %d (%s) 重算缺口: %s 需要 %d（当前 %d / 目标 %d），下发%s",
-                taskId, t.logLabel.resolve(appContext), dropName, need, current, t.dropCount,
+                taskId, t.logLabel, dropName, need, current, t.dropCount,
                 if (ok) "成功" else "失败",
             )
             RefreshOutcome.Updated(
@@ -214,18 +210,18 @@ class FightDropsRefresher(
 
         /** 改过参数、需要写运行日志的结果 */
         sealed interface Reported : RefreshOutcome {
-            val logLabel: UiText
+            val logLabel: String
             val applied: Boolean
         }
 
         /** 没有任何库存数据，本任务整体跳过 */
         data class InventoryUnavailable(
-            override val logLabel: UiText,
+            override val logLabel: String,
             override val applied: Boolean,
         ) : Reported
 
         data class Sufficient(
-            override val logLabel: UiText,
+            override val logLabel: String,
             val dropName: String,
             val current: Int,
             val target: Int,
@@ -233,7 +229,7 @@ class FightDropsRefresher(
         ) : Reported
 
         data class Updated(
-            override val logLabel: UiText,
+            override val logLabel: String,
             val dropName: String,
             val need: Int,
             val current: Int,
@@ -243,7 +239,7 @@ class FightDropsRefresher(
 
         /** 缺口还在，但理智跑不动，本任务整体跳过 */
         data class SanityInsufficient(
-            override val logLabel: UiText,
+            override val logLabel: String,
             val estimatedSanity: Int,
             val apCost: Int,
             override val applied: Boolean,

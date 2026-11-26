@@ -5,7 +5,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragIndicator
@@ -27,9 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,8 +43,14 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -53,71 +58,75 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.DepotMaintainPlan
 import com.aliothmoon.maameow.data.model.DepotPlanOutcome
 import com.aliothmoon.maameow.data.model.LogColorRole
+import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
+import com.aliothmoon.maameow.data.resource.StageGroup
+import com.aliothmoon.maameow.domain.models.DualChipConversion
 import com.aliothmoon.maameow.presentation.components.ItemIcon
+import com.aliothmoon.maameow.presentation.view.panel.common.stageDisplayName
 import com.aliothmoon.maameow.theme.LocalReduceMotion
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.theme.MaaMotion
 import com.aliothmoon.maameow.theme.themedColor
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
-import sh.calvin.reorderable.ReorderableColumn
+import sh.calvin.reorderable.ReorderableCollectionItemScope
 import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.ReorderableListItemScope
+import sh.calvin.reorderable.ReorderableLazyListState
+import kotlin.math.roundToInt
 
-/**
- * 排序列表里的一行。
- *
- * [key] 拖动期间用来认住这一组组合：重排时让它整体挪过去而不是重建，
- * 重建的话 [ItemIcon] 要重新走一遍取图，图标闪一下。
- */
+/** 排序列表单行数据；[key] 按物品与出现次序生成，拖动重排时保持组合复用 */
 internal data class DepotPlanOrderEntry(
     val key: String,
+    val no: Int,
+    val stage: String,
     val itemId: String,
     val itemName: String,
     val current: Int,
+    val dualChipExtra: Int = 0,
     val target: Int,
     val need: Int,
     val outcome: DepotPlanOutcome,
 )
 
-/**
- * 后台任务那边的计划 → 排序列表的行。
- *
- * [outcomes] 与 [plans] 同序且等长，由调用方算好（同一次重组里只算一遍）。
- * 未选物品的计划也照样列出来 —— 那种计划执行侧会跳过，但用户得能在这里看到它、拖动它，
- * 不然它会在列表里凭空少一行，和下面的计划格子对不上。
- */
+/** 将库存保持计划转为可排序概览行；[inventory] 传原始快照，开启 [countDualChips] 时自动折算双芯片 */
 internal fun depotPlanOrderEntries(
     plans: List<DepotMaintainPlan>,
     outcomes: List<DepotPlanOutcome>,
     inventory: Map<String, Int>,
     itemNameMap: Map<String, String>,
     notSelectedLabel: String,
-): List<DepotPlanOrderEntry> = plans.mapIndexed { index, plan ->
-    val current = inventory[plan.dropId] ?: 0
-    DepotPlanOrderEntry(
-        key = "plan-order-$index",
-        itemId = plan.dropId,
-        itemName = itemNameMap[plan.dropId] ?: notSelectedLabel,
-        current = current,
-        target = plan.dropCount,
-        need = (plan.dropCount - current).coerceAtLeast(0),
-        outcome = outcomes[index],
-    )
+    countDualChips: Boolean = false,
+): List<DepotPlanOrderEntry> {
+    val seen = mutableMapOf<String, Int>()
+    return plans.mapIndexed { index, plan ->
+        val idKey = plan.dropId.ifEmpty { "empty" }
+        val occurrence = seen[idKey] ?: 0
+        seen[idKey] = occurrence + 1
+        val raw = inventory[plan.dropId] ?: 0
+        val extra = if (countDualChips) {
+            DualChipConversion.extra(plan.dropId) { inventory[it] ?: 0 }
+        } else {
+            0
+        }
+        val current = raw + extra
+        DepotPlanOrderEntry(
+            key = "plan-$idKey-$occurrence",
+            no = index + 1,
+            stage = plan.stage,
+            itemId = plan.dropId,
+            itemName = itemNameMap[plan.dropId] ?: notSelectedLabel,
+            current = current,
+            dualChipExtra = extra,
+            target = plan.dropCount,
+            need = (plan.dropCount - current).coerceAtLeast(0),
+            outcome = outcomes[index],
+        )
+    }
 }
 
-/**
- * 一条计划的去向文案：会去刷 → 缺多少；已集齐 → 已够；其余是配了也跑不起来的原因。
- *
- * 面板提示与后台任务的计划概览走的都是这一份 —— 同一个状态不能一处说「未选材料」
- * 另一处说「未选物品」。
- *
- * @param short 列表里的窄格子用短标签（「关卡未开放」）；面板里带上关卡号，
- *   省得用户再回去对是哪一关。[DepotPlanOutcome.Runnable] 在短标签下返回空串：
- *   行左边已经写着「当前 / 目标」，再标一次「缺 3」是把同一个差值说两遍
- */
+/** 单条计划去向文案，列表短标签与编辑页详述共用 */
 @Composable
 internal fun depotPlanOutcomeLabel(
     outcome: DepotPlanOutcome,
@@ -138,7 +147,6 @@ internal fun depotPlanOutcomeLabel(
 
     DepotPlanOutcome.Enough -> stringResource(R.string.depot_inventory_maintain_enough)
 
-    // 概览行里不写「缺多少」：左边已经有「30 / 33」，再标一次「缺 3」是重复信息
     DepotPlanOutcome.Runnable -> if (short) {
         ""
     } else {
@@ -146,27 +154,64 @@ internal fun depotPlanOutcomeLabel(
     }
 }
 
-/**
- * 排序列表里的一行：拖拽手柄 + 图标 + 名称/进度 + 去向，手柄在行首，没有序号。
- *
- * 只有手柄能拖；行的其余区域在 [onClick] 非空时保持点击语义。
- * 已集齐的执行时会被跳过，标绿；未集齐的才是真要去刷的，用正常前景色；
- * 其余是「配了也跑不起来」，按错误色标出来。
- */
+/** 计划概览单行：合并为单个无障碍语义节点，避免滚动时重排大量子节点 */
 @Composable
-internal fun ReorderableListItemScope.DepotPlanOrderRow(
+internal fun ReorderableCollectionItemScope.DepotPlanOrderRow(
     entry: DepotPlanOrderEntry,
     isDragging: Boolean,
     synced: Boolean,
+    stageGroups: List<StageGroup>,
     iconLoader: ItemIconLoader,
     onClick: (() -> Unit)?,
     onDragStarted: () -> Unit,
+    onDragStopped: () -> Unit = {},
+    onDeleteAction: (() -> Unit)? = null,
 ) {
-    val accent = when (entry.outcome) {
-        DepotPlanOutcome.Enough -> LogColorRole.SUCCESS.themedColor()
-        DepotPlanOutcome.Runnable -> MaterialTheme.colorScheme.onSurface
-        else -> MaterialTheme.colorScheme.error
+    val muted = entry.outcome != DepotPlanOutcome.Runnable && entry.outcome != DepotPlanOutcome.Enough
+    val titleColor = if (muted) {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    } else {
+        MaterialTheme.colorScheme.onSurface
     }
+    val successColor = LogColorRole.SUCCESS.themedColor()
+    val (badgeContainerColor, badgeContentColor) = when (entry.outcome) {
+        DepotPlanOutcome.Enough -> successColor.copy(alpha = 0.14f) to successColor
+        DepotPlanOutcome.StageClosed -> depotWarningColors()
+        else -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+    }
+    val hasBaseline = synced || entry.itemId in ItemHelper.CURRENCY_ITEM_IDS
+    val progressText = depotProgressText(
+        current = entry.current,
+        target = entry.target,
+        synced = hasBaseline,
+        dualChipExtra = entry.dualChipExtra,
+    )
+    val stageLabel = if (entry.stage.isNotBlank()) {
+        stageDisplayName(entry.stage, stageGroups, emptyLabel = "")
+    } else {
+        ""
+    }
+    val subtitleText = if (stageLabel.isNotEmpty()) "$stageLabel · $progressText" else progressText
+    val outcomeLabel = depotPlanOutcomeLabel(
+        outcome = entry.outcome,
+        need = entry.need,
+        stage = "",
+        short = true,
+    )
+    val removeLabel = stringResource(R.string.depot_inventory_plan_remove)
+    val rowDescription = buildString {
+        append('#')
+        append(entry.no)
+        append(' ')
+        append(entry.itemName)
+        append(' ')
+        append(subtitleText)
+        if (outcomeLabel.isNotEmpty()) {
+            append(' ')
+            append(outcomeLabel)
+        }
+    }
+
     Surface(
         shape = RoundedCornerShape(MaaDesignTokens.CornerRadius.inner),
         color = if (isDragging) {
@@ -185,6 +230,24 @@ internal fun ReorderableListItemScope.DepotPlanOrderRow(
         shadowElevation = if (isDragging) 4.dp else 0.dp,
         modifier = Modifier
             .fillMaxWidth()
+            .clearAndSetSemantics {
+                contentDescription = rowDescription
+                if (onClick != null) {
+                    role = Role.Button
+                    onClick {
+                        onClick()
+                        true
+                    }
+                }
+                if (onDeleteAction != null) {
+                    customActions = listOf(
+                        CustomAccessibilityAction(removeLabel) {
+                            onDeleteAction()
+                            true
+                        },
+                    )
+                }
+            }
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
     ) {
         Row(
@@ -194,107 +257,88 @@ internal fun ReorderableListItemScope.DepotPlanOrderRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
         ) {
-            // 抓手放在行首：整行没有别的序号/前缀，拖动的位置一眼可见；
-            // 编号原来在行首，占位且和「按进度排序」后的顺序无关，已去掉
             Icon(
                 imageVector = Icons.Default.DragIndicator,
-                contentDescription = stringResource(R.string.depot_inventory_order_drag),
+                contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
-                    .draggableHandle(onDragStarted = { onDragStarted() })
+                    .draggableHandle(
+                        onDragStarted = { onDragStarted() },
+                        onDragStopped = onDragStopped,
+                    )
                     .size(32.dp)
                     .padding(6.dp),
             )
             ItemIcon(
                 itemId = entry.itemId,
                 modifier = Modifier.size(32.dp),
-                contentDescription = entry.itemName,
+                contentDescription = null,
                 loader = iconLoader,
             )
             Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = "#${entry.no}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = entry.itemName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = titleColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 Text(
-                    text = entry.itemName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = accent,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = depotProgressText(entry.current, entry.target, synced),
+                    text = subtitleText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            val outcomeLabel = depotPlanOutcomeLabel(
-                outcome = entry.outcome,
-                need = entry.need,
-                stage = "",
-                short = true,
-            )
             if (outcomeLabel.isNotEmpty()) {
-                Text(
-                    text = outcomeLabel,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = accent,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.End,
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = badgeContainerColor,
+                    contentColor = badgeContentColor,
                     modifier = Modifier.widthIn(max = 104.dp),
-                )
+                ) {
+                    Text(
+                        text = outcomeLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
             }
         }
     }
 }
 
-/**
- * 一列可拖动排序的计划行。
- *
- * 用 ReorderableColumn 而不是 Lazy 那一版：Lazy 版要求每滑过一格就把数据重排一次，
- * 一次拖动能把整页重组几十遍（图标也跟着重开取图），滑起来就是一卡一卡的。
- * 这一版拖动期间只动它自己内部的 offset，而且是画的时候才读（不走重组），
- * 等到落手、位移动画播完，才回调一次 [onMove]。后台任务列表用的也是它。
- *
- * @param onMove 松手后回调：这一行从 [from] 挪到了 [to]，调用方按这个顺序写回自己的数据
- * @param onClick 行被点击，参数是这一行在 [entries] 里的下标；null = 这一列只做拖动排序，
- *   不响应点击。给下标而不是给 [DepotPlanOrderEntry]，是因为调用方手里的原始数据
- *   （计划对象）没进 entry，按下标回查比让 entry 再带一份引用干净
- * @param onDelete 向左划开一行、点露出来的删除按钮，参数是这一行的下标；null = 这一列划不开
- */
-@Composable
-internal fun DepotPlanOrderColumn(
-    entries: List<DepotPlanOrderEntry>,
-    synced: Boolean,
-    iconLoader: ItemIconLoader,
-    onMove: (from: Int, to: Int) -> Unit,
-    modifier: Modifier = Modifier,
-    onClick: ((Int) -> Unit)? = null,
-    onDelete: ((Int) -> Unit)? = null,
-    verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
+/** 左滑删除展开状态，跨重组与列表重排按行键跟踪 */
+internal class DepotPlanSwipeState(
+    private val scope: CoroutineScope,
+    private val reduceMotion: Boolean,
 ) {
-    val haptic = LocalHapticFeedback.current
-    val reduceMotion = LocalReduceMotion.current
-    val scope = rememberCoroutineScope()
-    val actionWidthPx = with(LocalDensity.current) { RevealActionWidth.toPx() }
+    var revealedKey by mutableStateOf<Any?>(null)
+        private set
+    var revealWidth by mutableFloatStateOf(0f)
+        private set
+    private var settleJob: Job? = null
 
-    // 露出来的删除按钮归整列所有，不记在行里：一次只可能露一条，而状态要是记在行上，
-    // 划掉一行之后下标整体前移，接手的那一行会顶着别人剩下的位移出现 ——
-    // 组合位置是按下标复用的，行内那个动画值会跟着位置一起被继承
-    var revealedIndex by remember { mutableStateOf<Int?>(null) }
-    // 露出的宽度（像素，正值）。拖动时由手指直接写，松手后交给 settleTo 收敛
-    var revealWidth by remember { mutableFloatStateOf(0f) }
-    var settleJob by remember { mutableStateOf<Job?>(null) }
-
-    // 把露出的宽度收到 target。animated = false 时立刻到位（开始拖动排序、划掉那一条）：
-    // 这两种情况下这一行马上要干别的，等一段动画反而会跟别的位移叠在一起。
-    // 收起动画期间 revealedIndex 一直留着 —— 这一行还得继续画那条带子，播完才摘
     fun settleTo(target: Float, animated: Boolean) {
         settleJob?.cancel()
         if (!animated) {
             revealWidth = target
-            if (target <= 0f) revealedIndex = null
+            if (target <= 0f) revealedKey = null
             return
         }
         settleJob = scope.launch {
@@ -303,107 +347,116 @@ internal fun DepotPlanOrderColumn(
                 targetValue = target,
                 animationSpec = MaaMotion.spec(reduceMotion, MaaMotion.Fast),
             ) { value, _ -> revealWidth = value }
-            if (target <= 0f) revealedIndex = null
+            if (target <= 0f) revealedKey = null
         }
     }
 
-    // 列表短到露出来的那条已经不在了（清空、删到不够下标）就一并收掉：
-    // 留着的话，之后再添够行数，那一行会莫名其妙带着删除按钮冒出来
-    LaunchedEffect(entries.size) {
-        val index = revealedIndex
-        if (index != null && index >= entries.size) {
-            settleJob?.cancel()
-            revealedIndex = null
+    fun collapse(animated: Boolean) = settleTo(0f, animated)
+
+    fun startDrag(key: Any) {
+        settleJob?.cancel()
+        if (revealedKey != key) {
+            revealedKey = key
             revealWidth = 0f
         }
     }
 
-    ReorderableColumn(
-        list = entries,
-        onSettle = onMove,
-        modifier = modifier,
-        verticalArrangement = verticalArrangement,
-    ) { index, entry, isDragging ->
-        key(entry.key) {
-            ReorderableItem {
-                val row: @Composable () -> Unit = {
-                    DepotPlanOrderRow(
-                        entry = entry,
-                        isDragging = isDragging,
-                        synced = synced,
-                        iconLoader = iconLoader,
-                        onClick = onClick?.let { callback -> { callback(index) } },
-                        onDragStarted = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            // 开始拖动排序就把删除按钮收回去，且不播动画：这一行接下来跟着
-                            // 手指走，留着半个身位的横向偏移会和拖动位移叠在一起
-                            settleJob?.cancel()
-                            revealedIndex = null
-                            revealWidth = 0f
-                        },
-                    )
+    fun updateDrag(delta: Float, maxPx: Float) {
+        revealWidth = (revealWidth - delta).coerceIn(0f, maxPx)
+    }
+
+    fun endDrag(maxPx: Float) {
+        settleTo(
+            target = if (revealWidth > maxPx / 2f) maxPx else 0f,
+            animated = true,
+        )
+    }
+}
+
+@Composable
+internal fun rememberDepotPlanSwipeState(): DepotPlanSwipeState {
+    val scope = rememberCoroutineScope()
+    val reduceMotion = LocalReduceMotion.current
+    return remember(scope, reduceMotion) { DepotPlanSwipeState(scope, reduceMotion) }
+}
+
+/** 挂载到 LazyColumn 的可拖动排序 + 左滑删除计划行，拖至视口边缘自动滚动 */
+internal fun LazyListScope.depotPlanOrderItems(
+    entries: List<DepotPlanOrderEntry>,
+    keys: List<Any>,
+    reorderableState: ReorderableLazyListState,
+    swipeState: DepotPlanSwipeState,
+    synced: Boolean,
+    stageGroups: List<StageGroup>,
+    iconLoader: ItemIconLoader,
+    onDragStopped: () -> Unit,
+    onClick: ((Int) -> Unit)? = null,
+    onDelete: ((Int) -> Unit)? = null,
+) {
+    itemsIndexed(
+        items = entries,
+        key = { index, _ -> keys[index] },
+        contentType = { _, _ -> "depot-plan-row" },
+    ) { index, entry ->
+        val haptic = LocalHapticFeedback.current
+        val actionWidthPx = with(LocalDensity.current) { RevealActionWidth.toPx() }
+        val rowKey = keys[index]
+
+        ReorderableItem(reorderableState, key = rowKey) { isDragging ->
+            val isRowRevealed = swipeState.revealedKey == rowKey && swipeState.revealWidth > 0.5f
+            val deleteAt: (() -> Unit)? = onDelete?.let { del ->
+                {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    swipeState.collapse(animated = false)
+                    del(index)
                 }
-                if (onDelete == null) {
-                    row()
-                } else {
-                    SwipeRevealDeleteRow(
-                        revealWidth = if (revealedIndex == index) revealWidth else 0f,
-                        actionWidthPx = actionWidthPx,
-                        onDragStart = {
-                            settleJob?.cancel()
-                            // 露着的是别的行就先收掉：这一行从头开始跟手
-                            if (revealedIndex != index) {
-                                revealedIndex = index
-                                revealWidth = 0f
-                            }
-                        },
-                        onDrag = { delta ->
-                            // 往左划 = delta 为负 = 露出的宽度变大
-                            revealWidth = (revealWidth - delta).coerceIn(0f, actionWidthPx)
-                        },
-                        onDragEnd = {
-                            // 划过小半行就停在露出的位置，不够就弹回去
-                            settleTo(
-                                target = if (revealWidth > actionWidthPx / 2f) actionWidthPx else 0f,
-                                animated = true,
-                            )
-                        },
-                        onCollapse = { settleTo(target = 0f, animated = true) },
-                        onDelete = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            // 先收回去再删：这一格马上会被下一行接手
-                            settleJob?.cancel()
-                            revealedIndex = null
-                            revealWidth = 0f
-                            onDelete(index)
-                        },
-                        content = row,
-                    )
+            }
+            val rowOnClick: (() -> Unit)? = when {
+                // 划开删除钮时点该行优先收起，避免子 Surface.clickable 截走点击直接进编辑
+                isRowRevealed -> {
+                    { swipeState.collapse(animated = true) }
                 }
+
+                onClick != null -> {
+                    { onClick(index) }
+                }
+
+                else -> null
+            }
+            val row: @Composable () -> Unit = {
+                DepotPlanOrderRow(
+                    entry = entry,
+                    isDragging = isDragging,
+                    synced = synced,
+                    stageGroups = stageGroups,
+                    iconLoader = iconLoader,
+                    onClick = rowOnClick,
+                    onDragStarted = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        swipeState.collapse(animated = false)
+                    },
+                    onDragStopped = onDragStopped,
+                    onDeleteAction = deleteAt,
+                )
+            }
+            if (deleteAt == null) {
+                row()
+            } else {
+                SwipeRevealDeleteRow(
+                    revealWidth = if (swipeState.revealedKey == rowKey) swipeState.revealWidth else 0f,
+                    actionWidthPx = actionWidthPx,
+                    onDragStart = { swipeState.startDrag(rowKey) },
+                    onDrag = { delta -> swipeState.updateDrag(delta, actionWidthPx) },
+                    onDragEnd = { swipeState.endDrag(actionWidthPx) },
+                    onDelete = deleteAt,
+                    content = row,
+                )
             }
         }
     }
 }
 
-/**
- * 向左划开一行，右端露出一个删除按钮 —— 和配置档列表那张卡片
- * （见 `SwipeRevealProfileCard`）是同一套手势：跟手划开、松手过小半行就停住、
- * 不够则弹回去，点那个红块才真的删。
- *
- * 位移由调用方给（[revealWidth]），这一格自己不记：划掉一行之后下标整体前移，
- * 组合位置按下标复用，位移要是记在这一格里，顶上来的一行会带着别人的位移出现。
- * 用 material3 的 SwipeToDismissBox 也是栽在同一个地方，另外它的 confirmValueChange
- * 在一次拖动里会被反复回调（实测一次划动删掉三条计划），拿它当删除的触发点不行。
- *
- * 按钮只在整条完全露出来之后才可点：收回动画正在播的时候它还是可见的，
- * 那时候要是还能点，用户看着它缩回去却把行删了。
- *
- * 红块左右留 [RevealActionInset]、四角用 [MaaDesignTokens.CornerRadius.inner]，
- * 和行卡片同一套圆角、同一个高度。贴着行的右边缘只圆靠右那两个角不行：行的右上角也是圆的，
- * 两个圆角在接缝处各自往里让，会裂出一块背景色。
- *
- * @param onCollapse 露出状态下点了这一行：收回去（这时候点进来多半是想改主意）
- */
+/** 左滑露出独立圆角删除按钮的行容器，完全展开后才可点删 */
 @Composable
 private fun SwipeRevealDeleteRow(
     revealWidth: Float,
@@ -411,32 +464,23 @@ private fun SwipeRevealDeleteRow(
     onDragStart: () -> Unit,
     onDrag: (Float) -> Unit,
     onDragEnd: () -> Unit,
-    onCollapse: () -> Unit,
     onDelete: () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    // 手势块只装一次，里面闭包捕获到的会一直是最初那一版 lambda：
-    // 删除要按当前下标取计划、划开要写当前这一列的状态，拿旧的会删错一条
+    val currentRevealWidth by rememberUpdatedState(revealWidth)
     val currentOnDragStart by rememberUpdatedState(onDragStart)
     val currentOnDrag by rememberUpdatedState(onDrag)
     val currentOnDragEnd by rememberUpdatedState(onDragEnd)
-    val currentOnCollapse by rememberUpdatedState(onCollapse)
     val currentOnDelete by rememberUpdatedState(onDelete)
     val fullyOpen = revealWidth >= actionWidthPx - 0.5f
     val revealed = revealWidth > 0.5f
 
     Box(modifier = Modifier.fillMaxWidth()) {
         if (revealed) {
-            // 垫在下面：行往左挪开多少，右端就露出多少。
-            // matchParentSize 只跟行等高，不参与父 Box 的尺寸测量（行高是行自己撑的）
             Box(
                 modifier = Modifier.matchParentSize(),
                 contentAlignment = Alignment.CenterEnd,
             ) {
-                // 窗口跟着行的右边缘一起长，窗口里左右再留一条缝：红块要四周都圆，
-                // 就得和行卡片一样是块独立的圆角矩形。贴着行的右边缘只圆右边两角是不行的 ——
-                // 行的右上角本身是圆的，两个圆角在接缝处各自往里让，会裂出一块背景色。
-                // 上下不留缝：红块和行卡片一样高，矮一圈看着就是没对齐
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
@@ -470,18 +514,13 @@ private fun SwipeRevealDeleteRow(
                         onDragEnd = { currentOnDragEnd() },
                         onDragCancel = { currentOnDragEnd() },
                         onHorizontalDrag = { change, dragAmount ->
-                            change.consume()
-                            currentOnDrag(dragAmount)
+                            // 未展开时右滑不消费，避免无故截断外层翻页手势
+                            if (currentRevealWidth > 0f || dragAmount < 0f) {
+                                change.consume()
+                                currentOnDrag(dragAmount)
+                            }
                         },
                     )
-                }
-                // 露着的时候点这一行是「收回去」，不是行本身那件事（进详情、进设置）。
-                // 挂在行的外层、不另盖一层：盖一层会把右侧的拖拽手柄挡在命中测试之外，
-                // 而手柄是这一层的后代，先收到事件，拖动排序照样起得来。
-                // 用 pointerInput 而不是 clickable：后者会把这一行的语义节点合并掉
-                // （展开期间读屏读不到行里的字）
-                .pointerInput(revealed) {
-                    if (revealed) detectTapGestures { currentOnCollapse() }
                 },
         ) {
             content()
@@ -489,15 +528,6 @@ private fun SwipeRevealDeleteRow(
     }
 }
 
-/** 划开后整列让出的宽度：行往左挪这么多，右端就空出这么多 */
 private val RevealActionWidth = 72.dp
-
-/**
- * 红块左右留的边距。留出这一条缝，它才是块四周都圆的独立按钮，而不是贴着行的一条红边。
- *
- * 只管左右：上下和行卡片齐平 —— 上下也留一圈的话，红块会比行卡片矮一圈，看着就是没对齐。
- */
 private val RevealActionInset = MaaDesignTokens.Spacing.xs
-
-/** 删除按钮里那个图标多大 */
 private val RevealIconSize = 20.dp

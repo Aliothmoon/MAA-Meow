@@ -1,32 +1,43 @@
 package com.aliothmoon.maameow.presentation.view.panel.depot
 
-import androidx.compose.animation.AnimatedContent
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.WarningAmber
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -37,17 +48,22 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.DepotMaintainPlan
 import com.aliothmoon.maameow.data.model.DepotPlanOutcome
 import com.aliothmoon.maameow.data.model.LogColorRole
+import com.aliothmoon.maameow.data.model.depotPlanOutcome
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
@@ -55,109 +71,60 @@ import com.aliothmoon.maameow.data.resource.StageAliasMapper
 import com.aliothmoon.maameow.presentation.components.ItemIcon
 import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.theme.LocalReduceMotion
+import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.theme.MaaMotion
 import com.aliothmoon.maameow.theme.OpaqueTheme
 import com.aliothmoon.maameow.theme.themedColor
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
-/**
- * 一条库存保持计划的详情设置面板。
- *
- * 后台任务的库存保持面板里，「添加」抽屉点一格、计划概览点一行，弹出来的都是这一份 ——
- * 字段、校验、保存/移除的节奏只有一处实现。写回落到哪里由调用方在 [onSave] /
- * [onRemove] 里决定。
- *
- * 这里只有「这一条计划」的字段：作用于全部计划的执行类选项（任务行为 / 连战 / 药石）
- * 在库存保持面板顶部的「高级设置」里，不跟着计划走，所以面板拿不到整份 config。
- *
- * 面板的三种形态。声明顺序就是「越往后越深」，切换方向按它算：
- * 摘要卡 → 编辑表单是往前推，反着来（目前没有这条路）就往回推。
- */
-private enum class DepotPlanSheetMode { UNSUPPORTED, SUMMARY, EDITOR }
+internal data class DepotPlanSheetTarget(
+    val itemId: String,
+    val itemName: String,
+    val planIndex: Int?,
+)
 
 /**
- * @param itemId 要配的物品；空串 = 老配置里「添加计划」留下的空行。面板里不提供物品选择，
- *   这种行只能删掉（它本来也跑不起来，dropId 空会被执行侧拒掉）
- * @param itemName 物品名，调用方解析好（认不出来的按「未选择」兜底）
- * @param count 该物品当前的库存数量
- * @param existing 这个物品已有的计划；null = 还没有，先出一张摘要卡再进表单
- * @param existingOutcome 已有计划在本次运行里的去向，用来提示「配了也跑不起来」；null = 没有计划
+ * 统一的库存保持底部抽屉（主界面使用，不用于悬浮窗）
+ * - [initialTarget] 为 null：新建流程，固定高度内平滑淡入淡出切换「选物品」与「编计划」，避免锚点重算卡顿与返回误拉全屏
+ * - [initialTarget] 非 null：编辑已有计划，按内容自适应高度
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun DepotPlanEditorSheet(
-    itemId: String,
-    itemName: String,
-    count: Int,
-    /**
-     * 按物品 id 取当前库存：老计划里的 dropId 与点开的那一行不一定相同（历史数据、导入的配置），
-     * 「现在有多少」要按计划自己的 dropId 取；默认仍返回 [count]，兼容只传数量的调用方。
-     */
-    countOf: (String) -> Int = { count },
-    existing: DepotMaintainPlan?,
-    existingOutcome: DepotPlanOutcome?,
-    context: DepotPlanContext,
+internal fun DepotPlanFlowSheet(
+    initialTarget: DepotPlanSheetTarget?,
+    unplannedCells: List<DepotItemCellUi>,
+    existingForIndex: (Int) -> DepotMaintainPlan?,
+    countOf: (String) -> Int,
+    dualChipExtraOf: (String) -> Int,
+    nodeEnabled: Boolean,
     synced: Boolean,
-    showMedicine: Boolean = false,
-    showStone: Boolean = false,
+    showMedicine: Boolean,
+    showStone: Boolean,
+    iconLoader: ItemIconLoader,
     onDismiss: () -> Unit,
-    onSave: (DepotMaintainPlan) -> Unit,
-    onRemove: () -> Unit,
+    onSave: (planIndex: Int?, plan: DepotMaintainPlan) -> Unit,
+    onRemove: (planIndex: Int) -> Unit,
     itemHelper: ItemHelper = koinInject(),
     activityManager: ActivityManager = koinInject(),
-    iconLoader: ItemIconLoader = koinInject(),
 ) {
+    val isAddFlow = initialTarget == null
+    // 跳过半展开锚点：避免短内容表单自动删掉半展开锚点后，返回高网格时被拉满全屏
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
-
-    // 关卡表与材料表都是全 App 同一份，别再各写一遍过滤逻辑（见 DepotPlanFields）
-    val stageGroups = rememberDepotStageGroups(activityManager)
-    val stageCodes = remember(stageGroups) { stageGroups.allStageCodes() }
-    val itemIds = rememberDepotItemIds(itemHelper)
-    // 名字映射用全表：老计划里可能存着已经不在识别列表里的 id
-    val itemIndex by itemHelper.items.collectAsStateWithLifecycle()
-    val itemNameMap = remember(itemIndex) { itemIndex.mapValues { it.value.name } }
-    // 已经有计划的物品永远可编辑：老数据里可能留着识别集合之外的物品（比如赤金），
-    // 只按列表放行的话那条计划在这里既改不了也删不掉
-    val maintainable = existing != null || itemId in itemIds
-
-    // 没计划的物品不直接铺表单：先出一张只讲「是什么、现在有多少」的摘要卡。
-    // 直接进表单会凭空算出一个「144 / 144 · 已够」的计划，
-    // 看着像已经配好了，其实什么都没配。
-    var creating by remember(itemId) { mutableStateOf(false) }
-    val mode = when {
-        !maintainable -> DepotPlanSheetMode.UNSUPPORTED
-        existing != null || creating -> DepotPlanSheetMode.EDITOR
-        else -> DepotPlanSheetMode.SUMMARY
-    }
     val reduceMotion = LocalReduceMotion.current
+    val gridState = rememberLazyGridState()
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val addFlowHeight = (screenHeight * 0.68f).coerceAtMost((screenHeight - 72.dp).coerceAtLeast(240.dp))
+    val editMaxHeight = (screenHeight * 0.85f).coerceAtMost((screenHeight - 72.dp).coerceAtLeast(240.dp))
 
-    var draft by remember(itemId, existing) {
-        mutableStateOf(
-            existing ?: DepotMaintainPlan(
-                dropId = itemId,
-                // 默认保到现在的数量：不抬高目标就不会凭空多刷
-                dropCount = count.coerceAtLeast(1),
-            ),
-        )
-    }
-    // 当前草稿所指物品的库存（面板里换过物品之后，不能再拿点开那一格的数）
-    val currentCount = countOf(draft.dropId)
+    var pickedTarget by remember(initialTarget) { mutableStateOf<DepotPlanSheetTarget?>(null) }
+    // 退场淡出期间保留最后一次选中的物品，避免淡出半途内容突然变空
+    var lastPickedTarget by remember(initialTarget) { mutableStateOf<DepotPlanSheetTarget?>(null) }
+    val canGoBack = isAddFlow && pickedTarget != null
 
-    // 关卡列表里选「自定义」才放出输入框；已有计划用的是列表外的代码时默认就是它。
-    // 不再有任务级的「手动输入关卡名」开关：手动输入是「这一条计划」的编辑动作，
-    // 入口就在表单里的「自定义」按钮上，全局开关带不来任何额外能力。
-    // 只按 itemId 初始化：这是用户意图，不能被关卡表的热更新重置掉。
-    var customStage by remember(itemId) {
-        mutableStateOf(existing?.stage?.let { it.isNotBlank() && it !in stageCodes } ?: false)
-    }
-
-    // 数字框被清空时（中间态）不要静默沿用上一个值，直接禁掉保存
-    var targetBlank by remember(itemId) { mutableStateOf(false) }
-
-    // 面板收起来之后才落库：先滑下去再改数据，动画期间不会看到标题/按钮跳变
     var closing by remember { mutableStateOf(false) }
     val closeWithAnimation: (() -> Unit) -> Unit = { action ->
         if (!closing) {
@@ -165,263 +132,467 @@ internal fun DepotPlanEditorSheet(
             scope.launch {
                 try {
                     sheetState.hide()
-                } finally {
-                    onDismiss()
-                    action()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    // 非取消异常时仍继续完成保存/移除回调
                 }
+                onDismiss()
+                action()
             }
         }
     }
 
-    // 目标库存跟着草稿实时算，改数字时右上的「已够/缺多少」立刻跟着变
-    val draftTarget = draft.dropCount.coerceIn(1, MAX_DEPOT_TARGET_INVENTORY)
-    val short = draftTarget > currentCount
-    // 放开物品选择时草稿里的物品会被换掉，抬头得跟着它走；定死的那几处就是点开时那一个
-    val headerItemId = draft.dropId.ifBlank { itemId }
-    val headerName = itemNameMap[headerItemId] ?: itemName
-
-    // 玻璃背景下面板会透出底下的内容，这里换回不透明配色
     OpaqueTheme {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
-            // M3 的面板默认取 surfaceContainerLow，而本 App 的配色只定义了 surface 一族，
-            // 那一档会落回 M3 基线的紫调中性色，和页面底色（background）不是一个颜色。
-            // 面板要跟页面同色，就直接取 background。
             containerColor = MaterialTheme.colorScheme.background,
         ) {
-            // 摘要卡 → 编辑表单是同一张面板换形态：横向推入推出，高度交给 SizeTransform 收放，
-            // 参数与导出面板的 一级↔二级 完全一致；系统关掉动画时直接换
-            AnimatedContent(
-                targetState = mode,
-                transitionSpec = {
-                    if (reduceMotion) {
-                        (EnterTransition.None togetherWith ExitTransition.None).using(null)
-                    } else {
-                        val forward = targetState.ordinal > initialState.ordinal
-                        val spec = tween<IntOffset>(MaaMotion.Medium, easing = MaaMotion.Emphasized)
-                        // 推 1/3 屏：面板里换的是「一整屏设置」，只挪一点点会被当成直接换掉了
-                        val enter = slideInHorizontally(animationSpec = spec) {
-                            if (forward) it / 3 else -it / 3
-                        } + fadeIn(tween(durationMillis = MaaMotion.Fast, easing = MaaMotion.Linear))
-                        val exit = slideOutHorizontally(animationSpec = spec) {
-                            if (forward) -it / 3 else it / 3
-                        } + fadeOut(tween(durationMillis = MaaMotion.Fast, easing = MaaMotion.Linear))
-                        (enter togetherWith exit).using(SizeTransform())
-                    }
-                },
-                label = "depot-plan-mode",
-                modifier = Modifier.fillMaxWidth(),
-            ) { current ->
-                val editing = current == DepotPlanSheetMode.EDITOR
-                Column(
+            BackHandler(enabled = canGoBack) {
+                pickedTarget = null
+            }
+
+            if (isAddFlow) {
+                // 底层网格轻微左移视差 + 压暗，顶层编辑卡片整页右进右出，纯 GPU 变换不触发重排
+                val editorProgress by animateFloatAsState(
+                    targetValue = if (pickedTarget != null) 1f else 0f,
+                    animationSpec = MaaMotion.spec(reduceMotion, MaaMotion.Medium),
+                    label = "depot-sheet-card-progress",
+                )
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                        .navigationBarsPadding()
-                        .padding(
-                            start = MaaDesignTokens.Spacing.lg,
-                            end = MaaDesignTokens.Spacing.lg,
-                            bottom = MaaDesignTokens.Spacing.lg,
-                        ),
-                    verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
+                        .height(addFlowHeight)
+                        .clipToBounds(),
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.md),
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                translationX = -size.width * 0.12f * editorProgress
+                                alpha = 1f - 0.35f * editorProgress
+                            }
+                            .then(if (pickedTarget != null) Modifier.clearAndSetSemantics {} else Modifier)
+                            .navigationBarsPadding()
+                            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        ItemIcon(
-                            itemId = headerItemId,
-                            modifier = Modifier.size(40.dp),
-                            contentDescription = headerName,
-                            loader = iconLoader,
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
+                        if (unplannedCells.isEmpty()) {
                             Text(
-                                text = headerName,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                                text = stringResource(R.string.panel_depot_unplanned_empty),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                        } else {
                             Text(
-                                text = if (editing) {
-                                    // 与格子、与后台任务的计划概览同一个顺序、同一份实现
-                                    depotProgressText(currentCount, draftTarget, synced)
-                                } else {
-                                    stringResource(
-                                        R.string.depot_inventory_plan_current,
-                                        if (synced) "$currentCount" else "--",
-                                    )
-                                },
+                                text = stringResource(R.string.panel_depot_unplanned_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                        }
-                        // 已够/缺多少贴在面板最右，两行高的大字，绿=够 红=缺。
-                        // 只在编辑态出现：没有计划时谈「够不够」是空话
-                        if (editing) {
-                            Text(
-                                text = if (short) {
-                                    stringResource(
-                                        R.string.depot_inventory_maintain_need,
-                                        draftTarget - currentCount,
+                            DepotItemLazyGrid(
+                                cells = unplannedCells,
+                                synced = synced,
+                                iconLoader = iconLoader,
+                                gridState = gridState,
+                                onClick = { cell ->
+                                    val next = DepotPlanSheetTarget(
+                                        itemId = cell.itemId,
+                                        itemName = cell.name,
+                                        planIndex = null,
                                     )
-                                } else {
-                                    stringResource(R.string.depot_inventory_maintain_enough)
+                                    lastPickedTarget = next
+                                    pickedTarget = next
                                 },
-                                style = MaterialTheme.typography.headlineLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = if (short) {
-                                    MaterialTheme.colorScheme.error
-                                } else {
-                                    LogColorRole.SUCCESS.themedColor()
-                                },
-                                textAlign = TextAlign.End,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                                // 无约束的话 10 位缺口会先把左边的物品名挤没
-                                modifier = Modifier.widthIn(max = 132.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f),
                             )
                         }
                     }
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                    if (headerItemId in itemHelper.currencyItemIds) {
-                        Text(
-                            text = stringResource(R.string.depot_plan_currency_inventory_tip),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-
-                    if (current == DepotPlanSheetMode.UNSUPPORTED) {
-                        Text(
-                            text = stringResource(R.string.depot_inventory_plan_unsupported),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    } else if (current == DepotPlanSheetMode.SUMMARY) {
-                        // 摘要卡到此为止：设置留到下一屏，按钮是卡片唯一的出口
-                        Button(
-                            onClick = { creating = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(horizontal = 8.dp),
-                        ) {
-                            Text(stringResource(R.string.depot_inventory_plan_new))
-                        }
-                    } else {
-                        SectionHeader(
-                            title = if (existing == null) {
-                                stringResource(R.string.depot_inventory_plan_new)
-                            } else {
-                                stringResource(R.string.depot_inventory_maintain_title)
-                            },
-                        )
-
-                        // 字段本体与任务配置页共用一份，见 DepotPlanFields
-                        DepotPlanFields(
-                            plan = draft,
-                            onPlanChange = { draft = it },
-                            stageGroups = stageGroups,
-                            stageCodes = stageCodes,
-                            customStageCode = customStage,
-                            onCustomStageSelected = { customStage = true },
-                            showStageListWithCustom = true,
-                            onStageSelected = {
-                                draft = draft.copy(stage = it)
-                                customStage = false
-                            },
-                            // 物品种类由入口定死（点开的格子 / 那一行），表单里不再出选择器
-                            // 药/石是任务级选项：任务配置页逐条给开关，计划面板不给
-                            showMedicine = showMedicine,
-                            showStone = showStone,
-                            onTargetBlankChange = { targetBlank = it },
-                        )
-
-                        if (existing != null && existingOutcome != null) {
-                            PlanOutcomeHint(existingOutcome, existing.needAgainst(currentCount), existing.stage)
-                        }
-
-                        // 手输的关卡码可能写错或今天没开，提前说一声，别等跑起来才发现被跳过。
-                        // 已有计划的 StageClosed 已经由上面的 PlanOutcomeHint 说过一次，这里不重复
-                        if (draft.stage.isNotBlank() &&
-                            existingOutcome != DepotPlanOutcome.StageClosed &&
-                            !activityManager.isStageOpen(draft.stage)
-                        ) {
-                            Text(
-                                text = stringResource(
-                                    R.string.depot_inventory_maintain_stage_closed,
-                                    draft.stage,
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        }
-
-                        if (!context.nodeEnabled) {
-                            Text(
-                                text = stringResource(R.string.depot_inventory_plan_node_disabled),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        }
-
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
-                        ) {
-                            if (existing != null) {
-                                OutlinedButton(
-                                    onClick = { closeWithAnimation(onRemove) },
-                                    modifier = Modifier.weight(1f),
-                                    contentPadding = PaddingValues(horizontal = 8.dp),
-                                ) {
-                                    Text(stringResource(R.string.depot_inventory_plan_remove))
-                                }
-                            }
-                            Button(
-                                onClick = {
-                                    closeWithAnimation {
-                                        onSave(
-                                            draft.copy(
-                                                dropCount = draftTarget,
-                                                // 点「保存」时输入框可能还带着焦点，别名在这里兜一次
-                                                stage = StageAliasMapper
-                                                    .mapToStageCode(draft.stage, stageCodes),
-                                            ),
-                                        )
-                                    }
-                                },
-                                // 目标框空着就别让保存，免得把上一次的数字当成新目标写进去
-                                enabled = !targetBlank,
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(horizontal = 8.dp),
+                    MaaAnimatedVisibility(
+                        visible = pickedTarget != null,
+                        enter = if (reduceMotion) {
+                            EnterTransition.None
+                        } else {
+                            slideInHorizontally(MaaMotion.spec(false, MaaMotion.Medium)) { it }
+                        },
+                        exit = if (reduceMotion) {
+                            ExitTransition.None
+                        } else {
+                            slideOutHorizontally(MaaMotion.spec(false, MaaMotion.Medium)) { it }
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        val target = pickedTarget ?: lastPickedTarget
+                        if (target != null) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.background,
+                                shadowElevation = 6.dp,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = {},
+                                    ),
                             ) {
-                                Text(stringResource(R.string.depot_inventory_plan_save))
+                                DepotPlanEditorContent(
+                                    itemId = target.itemId,
+                                    itemName = target.itemName,
+                                    count = countOf(target.itemId),
+                                    countOf = countOf,
+                                    dualChipExtraOf = dualChipExtraOf,
+                                    existing = null,
+                                    nodeEnabled = nodeEnabled,
+                                    synced = synced,
+                                    showMedicine = showMedicine,
+                                    showStone = showStone,
+                                    fillHeight = true,
+                                    onBack = { pickedTarget = null },
+                                    onSave = { plan ->
+                                        closeWithAnimation { onSave(null, plan) }
+                                    },
+                                    onRemove = {},
+                                    itemHelper = itemHelper,
+                                    activityManager = activityManager,
+                                    iconLoader = iconLoader,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
                             }
                         }
                     }
                 }
+            } else {
+                val target = initialTarget
+                val existing = target.planIndex?.let(existingForIndex)
+                DepotPlanEditorContent(
+                    itemId = target.itemId,
+                    itemName = target.itemName,
+                    count = countOf(target.itemId),
+                    countOf = countOf,
+                    dualChipExtraOf = dualChipExtraOf,
+                    existing = existing,
+                    nodeEnabled = nodeEnabled,
+                    synced = synced,
+                    showMedicine = showMedicine,
+                    showStone = showStone,
+                    fillHeight = false,
+                    onBack = null,
+                    onSave = { plan ->
+                        closeWithAnimation { onSave(target.planIndex, plan) }
+                    },
+                    onRemove = {
+                        target.planIndex?.let { index ->
+                            closeWithAnimation { onRemove(index) }
+                        }
+                    },
+                    itemHelper = itemHelper,
+                    activityManager = activityManager,
+                    iconLoader = iconLoader,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = editMaxHeight),
+                )
             }
         }
     }
 }
 
-/** 已保存计划里那些「配了也跑不起来」的原因，与运行日志同一套口径。 */
+/** 单条库存保持计划编辑表单内容；头尾固定、中间表单区独立滚动 */
 @Composable
-private fun PlanOutcomeHint(outcome: DepotPlanOutcome, need: Int, stage: String) {
-    // 能跑的计划，缺口由 DepotPlanFields 按草稿实时算
-    if (outcome == DepotPlanOutcome.Enough || outcome == DepotPlanOutcome.Runnable) return
-    Text(
-        text = depotPlanOutcomeLabel(outcome = outcome, need = need, stage = stage),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.error,
-    )
+private fun DepotPlanEditorContent(
+    itemId: String,
+    itemName: String,
+    count: Int,
+    countOf: (String) -> Int,
+    dualChipExtraOf: (String) -> Int,
+    existing: DepotMaintainPlan?,
+    nodeEnabled: Boolean,
+    synced: Boolean,
+    showMedicine: Boolean,
+    showStone: Boolean,
+    fillHeight: Boolean,
+    onBack: (() -> Unit)?,
+    onSave: (DepotMaintainPlan) -> Unit,
+    onRemove: () -> Unit,
+    itemHelper: ItemHelper,
+    activityManager: ActivityManager,
+    iconLoader: ItemIconLoader,
+    modifier: Modifier = Modifier,
+) {
+    val stageGroups = rememberDepotStageGroups(activityManager)
+    val stageCodes = remember(stageGroups) { stageGroups.allStageCodes() }
+    val itemIndex by itemHelper.items.collectAsStateWithLifecycle()
+    val itemNameMap = remember(itemIndex) { itemIndex.mapValues { it.value.name } }
+
+    var draft by remember(itemId, existing) {
+        mutableStateOf(
+            existing ?: DepotMaintainPlan(
+                dropId = itemId,
+                dropCount = count.coerceAtLeast(1),
+            ),
+        )
+    }
+    val currentCount = countOf(draft.dropId)
+    val currentDualChipExtra = dualChipExtraOf(draft.dropId)
+
+    var customStage by remember(itemId, existing) {
+        mutableStateOf(existing?.stage?.let { it.isNotBlank() && it !in stageCodes } ?: false)
+    }
+    var targetInvalid by remember(itemId, existing) { mutableStateOf(false) }
+    var medicineBlank by remember(itemId, existing) { mutableStateOf(false) }
+    var stoneBlank by remember(itemId, existing) { mutableStateOf(false) }
+
+    val draftTarget = draft.dropCount.coerceIn(1, MAX_DEPOT_TARGET_INVENTORY)
+    val headerItemId = draft.dropId.ifBlank { itemId }
+    val headerName = itemNameMap[headerItemId] ?: itemName
+    val isCurrency = headerItemId in ItemHelper.CURRENCY_ITEM_IDS
+    val hasBaseline = synced || isCurrency
+    val short = draftTarget > currentCount
+
+    // 按当前草稿实时映射别名并评估去向，改关后提示立即同步
+    val resolvedStage = remember(draft.stage, stageCodes) {
+        StageAliasMapper.mapToStageCode(draft.stage, stageCodes)
+    }
+    val liveOutcome = remember(draft, resolvedStage, currentCount, hasBaseline, stageGroups) {
+        depotPlanOutcome(
+            plan = draft.copy(stage = resolvedStage, dropCount = draftTarget),
+            currentCount = if (hasBaseline) currentCount else 0,
+            isStageOpen = { activityManager.isStageOpen(it) },
+        )
+    }
+    val canSave = !targetInvalid &&
+        draft.dropId.isNotBlank() &&
+        resolvedStage.isNotBlank() &&
+        resolvedStage != "Annihilation"
+
+    Column(
+        modifier = modifier
+            .navigationBarsPadding()
+            .padding(
+                start = MaaDesignTokens.Spacing.lg,
+                end = MaaDesignTokens.Spacing.lg,
+                bottom = MaaDesignTokens.Spacing.lg,
+            ),
+        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
+        ) {
+            if (onBack != null) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.common_back),
+                    )
+                }
+            }
+            ItemIcon(
+                itemId = headerItemId,
+                modifier = Modifier.size(40.dp),
+                contentDescription = null,
+                loader = iconLoader,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = headerName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = depotProgressText(currentCount, draftTarget, hasBaseline, currentDualChipExtra),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            // 仅具备库存基线时显示「缺 N / 已够」，未识别仓库不误报缺口
+            if (hasBaseline) {
+                val successColor = LogColorRole.SUCCESS.themedColor()
+                Surface(
+                    shape = RoundedCornerShape(MaaDesignTokens.CornerRadius.inner),
+                    color = if (short) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        successColor.copy(alpha = 0.14f)
+                    },
+                    contentColor = if (short) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        successColor
+                    },
+                    modifier = Modifier.widthIn(max = 132.dp),
+                ) {
+                    Text(
+                        text = if (short) {
+                            stringResource(
+                                R.string.depot_inventory_maintain_need,
+                                draftTarget - currentCount,
+                            )
+                        } else {
+                            stringResource(R.string.depot_inventory_maintain_enough)
+                        },
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    )
+                }
+            }
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = fillHeight)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
+        ) {
+            if (isCurrency) {
+                Text(
+                    text = stringResource(R.string.depot_plan_currency_inventory_tip),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            SectionHeader(
+                title = if (existing == null) {
+                    stringResource(R.string.depot_inventory_plan_new)
+                } else {
+                    stringResource(R.string.depot_inventory_maintain_title)
+                },
+            )
+
+            DepotPlanFields(
+                plan = draft,
+                onPlanChange = { draft = it },
+                stageGroups = stageGroups,
+                stageCodes = stageCodes,
+                customStageCode = customStage,
+                onCustomStageSelected = { customStage = true },
+                showStageListWithCustom = true,
+                onStageSelected = {
+                    draft = draft.copy(stage = it)
+                    customStage = false
+                },
+                showMedicine = showMedicine,
+                showStone = showStone,
+                onTargetBlankChange = { targetInvalid = it },
+                onMedicineBlankChange = { medicineBlank = it },
+                onStoneBlankChange = { stoneBlank = it },
+            )
+
+            if (liveOutcome != DepotPlanOutcome.Enough && liveOutcome != DepotPlanOutcome.Runnable) {
+                val (noticeBg, noticeFg) = when (liveOutcome) {
+                    DepotPlanOutcome.StageClosed -> depotWarningColors()
+                    DepotPlanOutcome.StageRequired ->
+                        MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+
+                    else -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+                }
+                DepotEditorNoticeBanner(
+                    icon = if (liveOutcome == DepotPlanOutcome.StageRequired) {
+                        Icons.Outlined.Info
+                    } else {
+                        Icons.Default.WarningAmber
+                    },
+                    text = depotPlanOutcomeLabel(
+                        outcome = liveOutcome,
+                        need = (draftTarget - currentCount).coerceAtLeast(0),
+                        stage = resolvedStage,
+                    ),
+                    containerColor = noticeBg,
+                    contentColor = noticeFg,
+                )
+            }
+
+            if (!nodeEnabled) {
+                DepotEditorNoticeBanner(
+                    icon = Icons.Default.WarningAmber,
+                    text = stringResource(R.string.depot_inventory_plan_node_disabled),
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+        val buttonShape = RoundedCornerShape(MaaDesignTokens.CornerRadius.inner)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
+        ) {
+            if (existing != null) {
+                OutlinedButton(
+                    onClick = onRemove,
+                    modifier = Modifier.weight(1f),
+                    shape = buttonShape,
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                ) {
+                    Text(stringResource(R.string.depot_inventory_plan_remove))
+                }
+            }
+            Button(
+                onClick = {
+                    onSave(
+                        draft.copy(
+                            dropCount = draftTarget,
+                            stage = resolvedStage,
+                            medicineCount = if (medicineBlank) 0 else draft.medicineCount,
+                            stoneCount = if (stoneBlank) 0 else draft.stoneCount,
+                        ),
+                    )
+                },
+                enabled = canSave,
+                modifier = Modifier.weight(1f),
+                shape = buttonShape,
+                contentPadding = PaddingValues(horizontal = 8.dp),
+            ) {
+                Text(stringResource(R.string.depot_inventory_plan_save))
+            }
+        }
+    }
 }
 
-/** 还差多少才到目标；目标为 0 或已超目标时算 0，别报负数 */
-private fun DepotMaintainPlan.needAgainst(current: Int): Int = (dropCount - current).coerceAtLeast(0)
+@Composable
+private fun DepotEditorNoticeBanner(
+    icon: ImageVector,
+    text: String,
+    containerColor: Color,
+    contentColor: Color,
+) {
+    Surface(
+        shape = RoundedCornerShape(MaaDesignTokens.CornerRadius.inner),
+        color = containerColor,
+        contentColor = contentColor,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}

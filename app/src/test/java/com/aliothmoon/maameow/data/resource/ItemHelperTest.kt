@@ -137,56 +137,20 @@ class ItemHelperTest {
         assertEquals(listOf("30011", "30061", "30093"), itemHelper.dropItems.value.map { it.id })
     }
 
-    /**
-     * 库存页只认仓库识别认得出的物品：Core 的 `ItemConfig::parse` 只把
-     * `classifyType == "MATERIAL"` 收进模板表，声望（NONE）/龙门币（NORMAL）都不在里面。
-     */
     @Test
-    fun depotItemsKeepOnlyMaterialsSortedBySortId() {
+    fun dropItemsKeepCurrenciesAndExcludeUnfarmableMats() {
         val itemHelper = helper()
         writeIndexJson(
             baseDir,
             """
             {
-              "5001":{"name":"声望","sortId":-10000,"classifyType":"NONE"},
-              "4001":{"name":"龙门币","sortId":10201,"classifyType":"NORMAL"},
-              "30061":{"name":"破损装置","sortId":100044,"classifyType":"MATERIAL"},
-              "30011":{"name":"源岩","sortId":100040,"classifyType":"MATERIAL"},
-              "3213":{"name":"先锋双芯片","sortId":400020,"classifyType":"MATERIAL"}
-            }
-            """.trimIndent(),
-        )
-
-        itemHelper.load("Official")
-
-        // sortId 升序（30011 < 30061 < 3213），与 Core get_ordered_material_item_id 同序；
-        // 3213 是双芯片，掉落列表按 WPF 口径排除它，仓库列表必须留着
-        assertEquals(
-            listOf("30011", "30061", "3213"),
-            itemHelper.depotItems.value.map { it.id },
-        )
-        // 掉落列表是另一套口径，声望还在里面：两者不能混用
-        assertTrue(itemHelper.dropItems.value.map { it.id }.contains("5001"))
-    }
-
-    /**
-     * 刷取目标 = 材料 + 两样货币（龙门币 / 采购凭证）。
-     *
-     * 仓库识别认不出货币，但关卡掉落会带，所以它们得能当目标；
-     * 家具零件是基建产出、没有可刷关卡，声望是每场必掉的杂项，两者都不能进集合。
-     */
-    @Test
-    fun depotTargetItemsAddCurrenciesButNoReputation() {
-        val itemHelper = helper()
-        writeIndexJson(
-            baseDir,
-            """
-            {
-              "5001":{"name":"声望","sortId":-10000,"classifyType":"NONE"},
               "4001":{"name":"龙门币","sortId":10201,"classifyType":"NORMAL"},
               "4006":{"name":"采购凭证","sortId":10205,"classifyType":"NORMAL"},
-              "3401":{"name":"家具零件","sortId":200002,"classifyType":"NORMAL"},
-              "30011":{"name":"源岩","sortId":100040,"classifyType":"MATERIAL"}
+              "3114":{"name":"碳素组","sortId":100060,"classifyType":"NORMAL"},
+              "30011":{"name":"源岩","sortId":100040,"classifyType":"MATERIAL"},
+              "3213":{"name":"先锋双芯片","sortId":400020,"classifyType":"MATERIAL"},
+              "30115":{"name":"聚合剂","sortId":100010,"classifyType":"MATERIAL"},
+              "mod_unlock_token":{"name":"模组数据块","sortId":500001,"classifyType":"MATERIAL"}
             }
             """.trimIndent(),
         )
@@ -194,30 +158,10 @@ class ItemHelperTest {
         assertTrue(itemHelper.load("Official"))
 
         assertEquals(
-            listOf("4001", "4006", "30011"),
-            itemHelper.depotTargetItems.value.map { it.id },
+            listOf("30011", "3114", "4001", "4006"),
+            itemHelper.dropItems.value.map { it.id },
         )
-        assertTrue(itemHelper.isDepotTargetItem("4001"))
-        assertTrue(itemHelper.isDepotTargetItem("4006"))
-        // 家具零件不是关卡掉落，不能当刷取目标
-        assertFalse(itemHelper.isDepotTargetItem("3401"))
-        assertFalse(itemHelper.isDepotTargetItem("5001"))
-        assertEquals(setOf("5001"), itemHelper.nonTargetItemIds)
-        assertEquals(setOf("4001", "4006"), itemHelper.currencyItemIds)
-    }
-
-    /**
-     * 索引还没载入时（首次安装、资源没就绪）不能把整批掉落吞掉：除已知杂项外一律放行。
-     * 真正的杂项过滤还有 DepotRepository 的第二道闸，这里只保证「不丢数据」。
-     */
-    @Test
-    fun isDepotTargetItemFailsOpenBeforeIndexLoads() {
-        val fresh = helper()
-
-        assertTrue(fresh.depotTargetItems.value.isEmpty())
-        assertTrue(fresh.isDepotTargetItem("30011"))
-        assertTrue(fresh.isDepotTargetItem("99999"))
-        assertFalse(fresh.isDepotTargetItem("5001"))
+        assertEquals(setOf("4001", "4006"), ItemHelper.CURRENCY_ITEM_IDS)
     }
 
     private companion object {

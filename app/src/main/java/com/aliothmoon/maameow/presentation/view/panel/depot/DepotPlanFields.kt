@@ -23,15 +23,10 @@ import com.aliothmoon.maameow.presentation.view.panel.common.StageInputField
 import com.aliothmoon.maameow.presentation.view.panel.common.StageRow
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 
-/** 目标库存上限，对齐 WPF NumericUpDown 的 Maximum（上游面板另有同名私有常量，这里换个名字避免同包冲突） */
+/** 目标库存上限，对齐 WPF NumericUpDown 的 Maximum */
 internal const val MAX_DEPOT_TARGET_INVENTORY = 1145141919
 
-/**
- * 库存保持可选的关卡分组：排除「当期剿灭」与「当前/上次」。
- *
- * 剿灭没有指定掉落，当前/上次不知道打哪关，都算不出缺口，选了必被 toTaskParams 拒掉。
- * 对齐上游 RefreshStageList。
- */
+/** 库存保持可选关卡分组：排除当期剿灭与空串（当前/上次） */
 @Composable
 internal fun rememberDepotStageGroups(activityManager: ActivityManager): List<StageGroup> {
     val activityStages by activityManager.activityStages.collectAsStateWithLifecycle()
@@ -49,40 +44,23 @@ internal fun rememberDepotStageGroups(activityManager: ActivityManager): List<St
 internal fun List<StageGroup>.allStageCodes(): List<String> =
     flatMap { group -> group.stages.map { it.code } }
 
-/**
- * 库存保持可选的物品列表 = 仓库识别认得出的那批材料 + 三样货币（[ItemHelper.depotTargetItems]），
- * 不是关卡掉落列表：掉落列表里的声望做库存保持没有意义，也识别不出来。
- *
- * 索引还没加载出来时退回内置的那份，别让面板空着。
- */
+/** 库存保持排除项：赤金、家具零件、合成玉、声望 */
+private val DEPOT_EXCLUDED_ITEM_IDS = setOf("3003", "3401", "4003", "5001")
+
+/** 库存保持可选物品列表（沿用 dropItems 可掉落口径，排除非刷取杂项），索引未就绪时回退内置表 */
 @Composable
 internal fun rememberDepotItemIds(itemHelper: ItemHelper): List<String> {
-    val depotTargets by itemHelper.depotTargetItems.collectAsStateWithLifecycle()
-    return remember(depotTargets) {
-        if (depotTargets.isNotEmpty()) depotTargets.map { it.id } else UiUsageConstants.dropItems
+    val dropItems by itemHelper.dropItems.collectAsStateWithLifecycle()
+    return remember(dropItems) {
+        if (dropItems.isNotEmpty()) {
+            dropItems.filterNot { it.id in DEPOT_EXCLUDED_ITEM_IDS }.map { it.id }
+        } else {
+            UiUsageConstants.dropItems
+        }
     }
 }
 
-/**
- * 一条库存保持计划的可编辑字段：关卡（列表 / 自定义代码）、目标数量，
- * 以及由调用方决定要不要露出来的理智药与源石。
- *
- * 物品**不在这里选**：计划总是从某个物品点开的（物品网格的一格、列表的一行），
- * 物品种类由入口决定。老计划里残留的其它 dropId 照样显示、照样能保存，只是不能换成另一种物品。
- *
- * 任务配置页的展开卡与计划编辑面板共用这一份，免得两边的字段、上下限、关卡过滤各写一套。
- *
- * 计划面板不传 [showMedicine] / [showStone]：药石是任务级执行选项，留在高级设置里配，
- * 新建的计划按 [DepotMaintainPlan] 的默认值走。
- *
- * 所有输入都走 [INumericField] / [StageInputField] 的 `commitOnChange`：面板里有「保存」
- * 按钮，只靠失焦提交的话，用户敲完直接点保存，写下去的还是上一次的值。
- *
- * @param showStageListWithCustom true = 选了自定义关卡也保留关卡列表，方便再点回列表里的关卡
- * @param onStageSelected 从关卡列表里点了某一关；默认写回 [onPlanChange]，
- *   库存页用它顺手退出自定义态
- * @param onTargetBlankChange 目标框被清空时回调，调用方据此禁用「保存」
- */
+/** 单条库存保持计划的可编辑字段（关卡、目标数量、理智药与源石） */
 @Composable
 internal fun DepotPlanFields(
     plan: DepotMaintainPlan,
@@ -97,6 +75,8 @@ internal fun DepotPlanFields(
     showStageListWithCustom: Boolean = false,
     onStageSelected: ((String) -> Unit)? = null,
     onTargetBlankChange: ((Boolean) -> Unit)? = null,
+    onMedicineBlankChange: ((Boolean) -> Unit)? = null,
+    onStoneBlankChange: ((Boolean) -> Unit)? = null,
 ) {
     val pickStage: (String) -> Unit = onStageSelected ?: { onPlanChange(plan.copy(stage = it)) }
 
@@ -114,10 +94,10 @@ internal fun DepotPlanFields(
                 },
                 customSelected = customStageCode,
                 onCustomSelected = onCustomStageSelected,
+                emptyLabel = stringResource(R.string.panel_depot_not_selected),
             )
         }
 
-        // 关卡资源还没加载、或用户选了自定义时，只能手输
         if (customStageCode || stageGroups.isEmpty()) {
             StageRow(onRemove = null) {
                 StageInputField(
@@ -136,7 +116,6 @@ internal fun DepotPlanFields(
             value = plan.dropCount,
             onValueChange = { onPlanChange(plan.copy(dropCount = it)) },
             label = stringResource(R.string.panel_depot_target_inventory),
-            // dropCount <= 0 会被执行侧按 ERROR 拒掉，UI 不该放行 0
             minimum = 1,
             maximum = MAX_DEPOT_TARGET_INVENTORY,
             commitOnChange = true,
@@ -144,10 +123,6 @@ internal fun DepotPlanFields(
             modifier = Modifier.fillMaxWidth(),
         )
 
-        // AUTO 代理倍率是任务级开关（高级设置），挪到计划里只会让同一次运行
-        // 出现 1 倍/最大倍率混刷，没有收益，所以这里不再放开关。
-
-        // 任务级总开关关掉时整行隐藏，勾选值原样留着，重新打开即恢复
         if (showMedicine) {
             CheckBoxWithLabel(
                 checked = plan.useMedicine,
@@ -162,6 +137,7 @@ internal fun DepotPlanFields(
                     minimum = 0,
                     maximum = MAX_MEDICINE_OR_STONE,
                     commitOnChange = true,
+                    onBlankChange = onMedicineBlankChange,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -181,6 +157,7 @@ internal fun DepotPlanFields(
                     minimum = 0,
                     maximum = MAX_MEDICINE_OR_STONE,
                     commitOnChange = true,
+                    onBlankChange = onStoneBlankChange,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -188,5 +165,4 @@ internal fun DepotPlanFields(
     }
 }
 
-/** 理智药 / 源石单次上限，与任务配置页同一个数 */
 private const val MAX_MEDICINE_OR_STONE = 999

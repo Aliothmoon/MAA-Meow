@@ -9,8 +9,6 @@ import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.HotUpdateSync
-import com.aliothmoon.maameow.data.resource.ItemHelper
-import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.ClientResourceProfile
 import com.aliothmoon.maameow.manager.LogcatServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
@@ -19,23 +17,16 @@ import com.aliothmoon.maameow.remote.ResourceFiles
 import com.aliothmoon.maameow.remote.SetupResult
 import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -53,16 +44,11 @@ class MaaResourceLoader(
     private val hotUpdateSync: HotUpdateSync,
     private val resourceInitService: ResourceInitService,
     private val coreDataPusher: CoreDataPusher,
-    private val itemHelper: ItemHelper,
-    private val resourceDataManager: ResourceDataManager,
 ) {
     // 换档重启期间抑制 reset()，主动解绑会触发 onServiceDisconnected
     private val fullReloadInProgress = AtomicBoolean(false)
 
     private val loadMutex = Mutex()
-
-    /** deps 信息加载超时；测试里调小以覆盖超时分支 */
-    internal var depsInfoTimeoutMs: Long = 30_000L
 
     /** 当前提权进程已加载资源的客户端，null = 该进程还没被任何资源档污染 */
     @Volatile
@@ -120,21 +106,6 @@ class MaaResourceLoader(
             return Result.failure(Exception("Resource not ready"))
         }
         Timber.i("MaaCore resources loading, client type=$clientType")
-        // 干员/物品/活动 JSON 按「当前客户端」读：core 拉起前先备好，避免任务链里再解析
-        try {
-            doLoadDepsInfo(clientType)
-        } catch (e: TimeoutCancellationException) {
-            // `withTimeout` 的超时也是 CancellationException 子类：必须排在下面那支之前，
-            // 否则会被当成「上层取消」原样抛出，绕过 `_state = Failed`，
-            // 状态永久停在 Loading、`ensureLoaded` 的等待者永远不醒
-            Timber.w(e, "doLoadDepsInfo timed out, continuing without deps info")
-            currentCoroutineContext().ensureActive()
-        } catch (e: CancellationException) {
-            // 协程取消不能被当成「依赖数据加载失败」吞掉，否则上层取消语义就断了
-            throw e
-        } catch (e: Exception) {
-            Timber.e(e, "doLoadDepsInfo error")
-        }
 
         return try {
             if (restartNeeded) {
@@ -251,24 +222,6 @@ class MaaResourceLoader(
         }
         // destroy 是 oneway，给旧进程留点退出窗口
         delay(SERVICE_RESTART_SETTLE_MS.milliseconds)
-    }
-
-    /** 干员/物品/活动 JSON 与物品索引：都按当前客户端档读 */
-    private suspend fun doLoadDepsInfo(clientType: String) {
-        val displayLanguage = appSettings.displayLanguage
-        // revision 必须和 GameMetadataLoader 用同一套记账：传默认 0 会让
-        // ResourceDataManager 的 cachedBase 校验失配 —— 每次 core 加载都重新解析一遍
-        // 干员/物品/活动 JSON，还会把缓存键写成 revision 0
-        val revision = resourceInitService.revision.value
-        withTimeout(depsInfoTimeoutMs.milliseconds) {
-            withContext(Dispatchers.IO) {
-                listOf(
-                    async { resourceDataManager.load(clientType, displayLanguage, revision) },
-                    // 物品索引也按客户端档读：全球服的名字在 global/{clientType}/resource 下
-                    async { itemHelper.load(clientType) },
-                )
-            }.awaitAll()
-        }
     }
 
     /** 存在性按 App 侧目录判断：独立目录下内置资源、热更、用户文件两侧一致 */

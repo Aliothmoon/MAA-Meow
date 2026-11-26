@@ -142,8 +142,7 @@ class TaskParamProviderContractTest {
             refresher.stage(
                 slot = match { it.nodeId == context.node.id && it.index == 0 },
                 target = match {
-                    it.dropId == "30011" && it.dropCount == 100 &&
-                        it.logLabel == context.node.nameUiText()
+                    it.dropId == "30011" && it.dropCount == 100 && it.logLabel == context.node.name
                 },
             )
         }

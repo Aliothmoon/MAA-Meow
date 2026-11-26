@@ -63,7 +63,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskProfile
-import com.aliothmoon.maameow.data.model.displayName
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
@@ -98,7 +97,6 @@ fun ProfileManagementPanel(
     var editingProfileId by remember { mutableStateOf<String?>(null) }
     var editingName by remember { mutableStateOf("") }
     var deleteConfirmProfileId by remember { mutableStateOf<String?>(null) }
-    val context = LocalContext.current
     var runDurationInputProfileId by remember { mutableStateOf<String?>(null) }
     val maaState by compositionService.state.collectAsStateWithLifecycle()
     // 本轮已按开始时的设置计时，运行中禁改，与快捷选项的全局设置一致
@@ -162,20 +160,18 @@ fun ProfileManagementPanel(
                         isActive = isActive,
                         isEditing = isEditing,
                         isDragging = isDragging,
-                        editingName = if (isEditing) editingName else profile.displayName(context),
+                        editingName = if (isEditing) editingName else profile.name,
                         canDelete = profiles.size > 1,
                         modifier = Modifier.longPressDraggableHandle(),
                         onSwitch = { onSwitch(profile.id) },
                         onStartRename = {
                             editingProfileId = profile.id
-                            editingName = profile.displayName(context)
+                            editingName = profile.name
                         },
                         onRenameChange = { editingName = it },
                         onRenameConfirm = {
                             val trimmed = editingName.trim()
-                            if (trimmed.isNotEmpty() && trimmed.length <= 20 &&
-                                trimmed != profile.displayName(context)
-                            ) {
+                            if (trimmed.isNotEmpty() && trimmed.length <= 20 && trimmed != profile.name) {
                                 onRename(profile.id, trimmed)
                             }
                             editingProfileId = null
@@ -196,7 +192,7 @@ fun ProfileManagementPanel(
 
     // 删除确认对话框
     val deleteProfileName = deleteConfirmProfileId?.let { id ->
-        profiles.find { it.id == id }?.displayName(context)
+        profiles.find { it.id == id }?.name
     } ?: ""
     AdaptiveTaskPromptDialog(
         visible = deleteConfirmProfileId != null,
@@ -295,7 +291,7 @@ private fun ProfileCard(
                 Spacer(modifier = Modifier.width(4.dp))
 
                 Text(
-                    text = profile.displayName(context),
+                    text = profile.name,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (isActive) FontWeight.Medium else FontWeight.Normal,
                     color = if (isActive) {

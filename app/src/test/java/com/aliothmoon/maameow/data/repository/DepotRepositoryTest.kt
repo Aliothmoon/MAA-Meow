@@ -373,24 +373,40 @@ class DepotRepositoryTest {
     }
 
     @Test
-    fun merge_shardExistsButNotSynced_isRejected() = runBlocking {
-        // 清空某档后分片还在、hasSynced=false：这时 transform 原样返回，
-        // 老实现拿「写入结果值」判成功 → merge 返回 true 但一个数都没落（本提交修的就是这条）
-        repository.set(listOf(DepotItem("30011", 80)))
-        awaitDiskShard(PROFILE_A)
-        repository.clear(PROFILE_A)
-        awaitSnapshot { !it.hasSynced }
-        // 清空是异步落盘的：不等盘上也变空，下面读到的会是 set 那一版的旧时间戳
-        withTimeout(AWAIT_TIMEOUT_MS) {
-            while (awaitDiskShard(PROFILE_A).hasSynced) yield()
+    fun merge_shardExistsButNotSynced_isRejectedForMaterial() = runBlocking {
+        // 分片存在但 syncTimeMillis=0（未做过仓库识别）时，普通材料仍须被拒写
+        val unsyncedStore = FakePreferencesDataStore()
+        unsyncedStore.edit {
+            it[stringPreferencesKey("depot_$PROFILE_A")] =
+                JsonUtils.common.encodeToString(DepotSnapshot())
         }
+        val repo = DepotRepository(unsyncedStore, fakeChainState())
+        withTimeout(AWAIT_TIMEOUT_MS) { repo.isLoaded.first { it } }
 
-        val written = repository.merge(listOf("30011" to 5))
+        val written = repo.merge(listOf("30011" to 5))
 
         assertFalse("分片存在但没有识别基线时不得报成功", written)
-        assertEquals(0, repository.countOf("30011"))
-        // 断言「没写进去」要看内容：merge 本来就不改 syncTimeMillis，那个断言恒真
-        assertTrue("也不该把掉落写进空分片", awaitDiskShard(PROFILE_A).items.isEmpty())
+        assertEquals(0, repo.countOf("30011"))
+    }
+
+    @Test
+    fun merge_currencyAccumulatesWithoutDepotSync_andSurvivesSet() {
+        // 龙门币与采购凭证未同步仓库时也可直接由战斗掉落累加
+        assertTrue(repository.merge(listOf("4001" to 10000, "4006" to 21, "30011" to 3)))
+        assertEquals(10000, repository.countOf("4001"))
+        assertEquals(21, repository.countOf("4006"))
+        assertEquals("未同步时普通材料不得混入", 0, repository.countOf("30011"))
+        assertTrue(repository.hasBaselineFor("4001"))
+        assertTrue(repository.hasBaselineFor("4006"))
+        assertFalse(repository.hasBaselineFor("30011"))
+
+        // 仓库识别不包含货币，set() 须保留已累计的货币计数
+        repository.set(listOf(DepotItem("30011", 50)))
+        assertEquals(10000, repository.countOf("4001"))
+        assertEquals(21, repository.countOf("4006"))
+        assertEquals(50, repository.countOf("30011"))
+        // scanItems 仅记录识别原值，不影响 delta 口径
+        assertEquals(mapOf("30011" to 50), repository.snapshot.value.scanItems)
     }
 
     @Test

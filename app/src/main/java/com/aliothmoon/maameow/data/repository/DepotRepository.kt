@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.aliothmoon.maameow.data.model.toolbox.DepotItem
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.resource.ItemHelper
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.Serializable
 import timber.log.Timber
@@ -25,8 +26,12 @@ data class DepotSnapshot(
     val prevScanItems: Map<String, Int> = emptyMap(),
     val prevSyncTimeMillis: Long = 0L,
 ) {
-    /** 至少完整识别过一次仓库，掉落累加与缺口重算都以此为基线 */
+    /** 至少完整识别过一次仓库，普通材料的掉落累加与缺口重算以此为基线 */
     val hasSynced: Boolean get() = syncTimeMillis > 0L
+
+    /** 物品是否具备库存基线：普通材料需全量识别过，货币类靠战斗累计自带初值 0 */
+    fun hasBaselineFor(itemId: String): Boolean =
+        hasSynced || itemId in ItemHelper.CURRENCY_ITEM_IDS
 
     fun countOf(itemId: String): Int = items[itemId] ?: 0
 }
@@ -53,8 +58,10 @@ class DepotRepository(
     fun set(items: List<DepotItem>, profileId: String? = null): DepotSnapshot? {
         val scan = items.associate { it.id to it.count }
         val transform: (DepotSnapshot) -> DepotSnapshot = { current ->
+            // 仓库识别不覆盖货币类，保留已有累计值（识别结果含该项时以识别为准）
+            val preservedCurrencies = current.items.filterKeys { it in ItemHelper.CURRENCY_ITEM_IDS }
             DepotSnapshot(
-                items = scan,
+                items = preservedCurrencies + scan,
                 syncTimeMillis = System.currentTimeMillis(),
                 scanItems = scan,
                 prevScanItems = current.scanItems,
@@ -64,36 +71,31 @@ class DepotRepository(
         return if (profileId.isNullOrEmpty()) shards.mutate(transform) else shards.mutateFor(profileId, transform)
     }
 
-    /**
-     * 把一场战斗的掉落写进仓库。
-     *
-     * [profileId] 由任务启动时捕获并一路传下来：跑起来之后再切配置档，这一场的掉落仍应记在
-     * 开跑那一档上，而不是跟着「当前活跃档」跑过去（`shards.mutate` 默认写活跃档）。
-     * 传 null 时退回活跃档，用于没有任务上下文的调用点。
-     */
+    /** 将单场战斗掉落写入指定配置档（传 null 时退回活跃档） */
     fun merge(drops: List<Pair<String, Int>>, profileId: String? = null): Boolean {
         val valid = drops.filter { (itemId, add) -> add > 0 && !shouldExclude(itemId) }
-        // 整关只掉排除集（例如 CE-6 只掉龙门币）时没有可记的条目：这不是失败，别让调用方告警
+        // 整关只掉排除集（如声望、家具零件）时无须记账，不算失败
         if (valid.isEmpty()) return true
         val transform: (DepotSnapshot) -> DepotSnapshot = { current ->
-            // 没有识别基线时累加只会得到残缺数据，留空让消费侧按无数据处理
-            if (!current.hasSynced) {
+            // 未同步仓库前仅累计货币类，普通材料留空避免产生残缺库存
+            val applicable = if (current.hasSynced) {
+                valid
+            } else {
+                valid.filter { (itemId, _) -> itemId in ItemHelper.CURRENCY_ITEM_IDS }
+            }
+            if (applicable.isEmpty()) {
                 current
             } else {
                 val merged = current.items.toMutableMap()
-                for ((itemId, add) in valid) {
+                for ((itemId, add) in applicable) {
                     merged[itemId] = (merged[itemId] ?: 0) + add
                 }
                 current.copy(items = merged)
             }
         }
-        // 用「值有没有变」判成功：目标档分片存在但 hasSynced=false 时 transform 会原样返回，
-        // 拿写入结果值判会得到「成功」而实际一个数都没落，掉落静默丢失
         val targetId = profileId?.takeIf { it.isNotEmpty() } ?: taskChainState.profileId.value
         val changed = shards.mutateForChanged(targetId, transform)
         if (!changed) {
-            // 这一场没有落账：该档从未识别过（没有累加基线）或已被删除。
-            // 以前这里完全静默，用户只看到「库存没涨」；至少留一条可查的痕迹
             Timber.w("掉落未写入仓库：配置档无基线或已删除（profileId=%s, items=%d）", targetId, valid.size)
         }
         return changed
@@ -101,24 +103,18 @@ class DepotRepository(
 
     fun countOf(itemId: String): Int = snapshot.value.countOf(itemId)
 
-    /**
-     * 按指定配置档读库存：任务链跑到一半用户切了档，判定仍要用「开跑那一档」的数据，
-     * 否则预检会按新档的库存算缺口、给 core 下发错误的 times。
-     */
+    /** 按指定配置档读库存，避免运行中切档串读其他档数据 */
     fun countOf(itemId: String, profileId: String?): Int =
         if (profileId.isNullOrEmpty()) snapshot.value.countOf(itemId)
-        else (shards.allShards.value[profileId] ?: DepotSnapshot()).countOf(itemId)
+        else (shards.all.value[profileId] ?: DepotSnapshot()).countOf(itemId)
 
     fun hasSynced(profileId: String?): Boolean =
         if (profileId.isNullOrEmpty()) snapshot.value.hasSynced
-        else shards.allShards.value[profileId]?.hasSynced == true
+        else shards.all.value[profileId]?.hasSynced == true
 
-    /** 清空指定配置档仓库快照（库存页删除；非活跃档也能清）。 */
-    fun clear(profileId: String) {
-        // 已经是空快照时原样返回，别给「从没识别过」的档建一条 syncTimeMillis=0 的分片：
-        // 那会让 hasSynced 之外的路径把它当成「有基线」，也给死档分片添来源
-        shards.mutateFor(profileId) { current -> if (current == DepotSnapshot()) current else DepotSnapshot() }
-    }
+    /** 指定档是否具备该物品的库存基线（货币类免全量识别） */
+    fun hasBaselineFor(itemId: String, profileId: String? = null): Boolean =
+        itemId in ItemHelper.CURRENCY_ITEM_IDS || hasSynced(profileId)
 
     private fun shouldExclude(itemId: String): Boolean =
         itemId.isEmpty() || !itemId.all { it in '0'..'9' } || itemId in EXCLUDED_ITEM_IDS

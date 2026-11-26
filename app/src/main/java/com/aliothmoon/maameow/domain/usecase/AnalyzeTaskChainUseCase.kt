@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.domain.usecase
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.model.CollectingPreflightLogSink
-import com.aliothmoon.maameow.data.model.DepotMaintainConfig
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskParamContext
@@ -51,7 +50,10 @@ class AnalyzeTaskChainUseCase(
     suspend operator fun invoke(
         chain: List<TaskChainNode>,
         fromNodeId: String? = null,
+        profileId: String? = null,
     ): AnalyzeTaskChainResult {
+        // 先于热更与元数据等待固定配置档，避免启动途中切档导致预检与记账串档
+        val runProfileId = profileId?.takeIf { it.isNotEmpty() } ?: taskChainState.profileId.value
         depotRepository.isLoaded.first { it }
         operBoxRepository.isLoaded.first { it }
 
@@ -113,6 +115,7 @@ class AnalyzeTaskChainUseCase(
                 report = report,
                 operBoxUseYituliuApi = appSettingsManager.operBoxUseYituliuApi.value,
                 relocatePath = relocatePath,
+                profileId = runProfileId,
             )
             val expandedNode = node.config.toTaskParams(ctx).mapIndexed { index, task ->
                 task.copy(slot = TaskSlot(node.id, index))
@@ -147,6 +150,7 @@ class AnalyzeTaskChainUseCase(
                 fallbacks = fallbacks,
                 // 开了两个同类节点会攒出两份，并发进去只有一份能拿到锁
                 sideTasks = sideTasks.distinct(),
+                profileId = runProfileId,
             )
         )
     }
@@ -189,6 +193,7 @@ data class TaskChainPlan(
     /** 任务位 → 后备候选（按序）；主任务 append 失败时才用到，目前只有库存保持「仅第一个」会产生 */
     val fallbacks: Map<TaskSlot, TaskFallbackChain> = emptyMap(),
     val sideTasks: List<PlanSideTask> = emptyList(),
+    val profileId: String? = null,
 )
 
 enum class AnalyzeTaskChainFailureReason {

@@ -42,7 +42,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -66,8 +65,6 @@ import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import com.aliothmoon.maameow.data.model.UserDataUpdateConfig
 import com.aliothmoon.maameow.data.model.WakeUpConfig
-import com.aliothmoon.maameow.data.model.displayName
-import com.aliothmoon.maameow.data.model.taskTypeInfoForConfig
 import com.aliothmoon.maameow.presentation.components.GuideAnchor
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.components.LocalGuideHighlight
@@ -345,8 +342,7 @@ private fun TaskManagementView(
     onDuplicate: () -> Unit,
     onRemove: () -> Unit
 ) {
-    val displayName = node.displayName(LocalContext.current)
-    var text by remember(node.id, displayName) { mutableStateOf(displayName) }
+    var text by remember(node.id) { mutableStateOf(node.name) }
     val typeDisplayName = taskTypeInfoForConfig(node.config)?.let { taskTypeLabel(it) }
         ?: stringResource(R.string.panel_config_unknown_task_type)
 
@@ -390,7 +386,7 @@ private fun TaskManagementView(
             onValueChange = { newText ->
                 text = newText
                 val name = newText.trim()
-                if (name.isNotEmpty() && name.length <= 20 && name != displayName) {
+                if (name.isNotEmpty() && name.length <= 20 && name != node.name) {
                     onRename(name)
                 }
             },
@@ -477,6 +473,10 @@ private fun TaskManagementView(
             Text(stringResource(R.string.panel_config_delete_task))
         }
     }
+}
+
+private fun taskTypeInfoForConfig(config: TaskParamProvider): TaskTypeInfo? {
+    return TaskTypeInfo.entries.firstOrNull { it.defaultConfig()::class == config::class }
 }
 
 @Composable

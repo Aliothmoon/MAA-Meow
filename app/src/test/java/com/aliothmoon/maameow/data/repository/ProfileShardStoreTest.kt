@@ -142,10 +142,10 @@ class ProfileShardStoreTest {
 
         val shards = storeOf(store, fakeChainState(profileIds = listOf(PROFILE_A)))
         shards.awaitLoaded()
-        assertEquals(1, shards.allShards.value[PROFILE_A]?.value)
+        assertEquals(1, shards.all.value[PROFILE_A]?.value)
         assertFalse(
-            "已删除的档不能出现在 allShards 里",
-            shards.allShards.value.containsKey(PROFILE_B),
+            "已删除的档不能出现在 all 里",
+            shards.all.value.containsKey(PROFILE_B),
         )
         // 磁盘上也要清掉，否则下次重启又读回来
         withTimeout(TIMEOUT_MS) {

@@ -45,15 +45,20 @@ fun INumericField(
     onBlankChange: ((Boolean) -> Unit)? = null,
 ) {
     var inputText by remember(value) { mutableStateOf(valueFormat.format(value)) }
+    val allowNegative = minimum < 0
 
     ITextFieldWithFocus(
         value = inputText,
         onValueChange = { raw ->
             inputText = raw
             if (commitOnChange) {
-                onBlankChange?.invoke(raw.isEmpty())
-                // 空串、溢出这些中间态不回写；value 没变，remember(value) 也就不会把框重置掉
-                raw.toIntOrNull()?.let { onValueChange(it.coerceIn(minimum, maximum)) }
+                val parsed = raw.toIntOrNull()
+                val invalid = parsed == null || parsed < minimum
+                onBlankChange?.invoke(invalid)
+                // 仅在满足下限时回写，避免界面显示空串 / "-" / 小于下限的值却静默提交旧值或下限
+                if (!invalid && parsed != null) {
+                    onValueChange(parsed.coerceAtMost(maximum))
+                }
             }
         },
         onFocusLost = {
@@ -82,11 +87,15 @@ fun INumericField(
         label = label,
         placeholder = hint,
         enabled = enabled,
-        inputFilter = { it.isEmpty() || it == "-" || it.toIntOrNull() != null },
+        inputFilter = { it.isEmpty() || (allowNegative && it == "-") || it.toIntOrNull() != null },
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Number,
             imeAction = ImeAction.Done,
         ),
-        inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED,
+        inputType = if (allowNegative) {
+            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
+        } else {
+            InputType.TYPE_CLASS_NUMBER
+        },
     )
 }

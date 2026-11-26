@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.launch
 import kotlinx.serialization.KSerializer
@@ -47,12 +46,6 @@ class ProfileShardStore<T : Any>(
     val isLoaded: StateFlow<Boolean> = _isLoaded.asStateFlow()
 
     val snapshot: StateFlow<T> = DerivedActiveSnapshot()
-
-    /**
-     * 全部配置档的分片（只读）。库存页跨配置档查看时用；
-     * 从未写入过的配置档不在 map 中，调用方按 [empty] 兜底。
-     */
-    val allShards: StateFlow<Map<String, T>> = _shards.asStateFlow()
 
     private sealed interface PersistOp {
         data class Write(val profileId: String) : PersistOp
@@ -189,24 +182,21 @@ class ProfileShardStore<T : Any>(
 
     suspend fun remove(profileId: String) {
         if (profileId.isEmpty()) return
-        // 删档事件是异步送达的：期间用户可能又导入了含同 id 的备份并写入。
-        // 这时若照删，会把刚重建的档的分片（内存 + 磁盘）一起抹掉。
-        if (profileExistence(profileId) == true) {
+        var skipped = false
+        // 在 CAS 内判定是否已重建，避免检查后重建又被旧删档事件抹掉
+        _shards.update { map ->
+            skipped = profileExistence(profileId) == true
+            if (skipped) map else map - profileId
+        }
+        if (skipped) {
             Timber.i("配置档已重建，跳过清理: %s%s", keyPrefix, profileId)
             return
         }
-        _shards.update { it - profileId }
         ops.send(PersistOp.Delete(profileId))
         awaitPersist()
     }
 
-    /**
-     * 等到本 Flush 前的写/删完成；失败抛 [IOException]。
-     *
-     * 带超时：写回队列是单协程串行消费，一旦那个协程停摆（作用域被取消、上一次
-     * `store.edit` 卡在慢盘上），`done.await()` 会永远不返回 —— 删档/导入的调用方
-     * 就会一直挂在 `viewModelScope` 里，连带把删除事件的收集也拖住。
-     */
+    /** 等到本 Flush 前的写/删完成；磁盘错误抛 [IOException]，超时记告警返回 */
     suspend fun awaitPersist() {
         val done = CompletableDeferred<Unit>()
         ops.send(PersistOp.Flush(done))
@@ -238,21 +228,17 @@ class ProfileShardStore<T : Any>(
         if (!taskChainState.isLoaded.value) {
             withTimeoutOrNull(PROFILE_LIST_WAIT_MS) { taskChainState.isLoaded.first { it } }
         }
-        val knownProfiles = runCatching { taskChainState.profiles.value }.getOrNull()
-        val reconcile = taskChainState.isLoaded.value && !knownProfiles.isNullOrEmpty()
-        val orphans = if (reconcile && knownProfiles != null) {
-            val validIds = knownProfiles.map { it.id }.toSet()
-            fromDisk.keys - validIds
-        } else {
-            emptySet()
+        var orphans = emptySet<String>()
+        // 在 CAS 内过滤已删档，避免装载窗口内并发删档被复活；磁盘清理走单写队列
+        _shards.update { current ->
+            val deleted = fromDisk.keys.filter { isProfileDeleted(it) }.toSet()
+            orphans = deleted
+            (fromDisk - deleted) + current
         }
         if (orphans.isNotEmpty()) {
             Timber.i("丢弃 %d 条孤儿分片: %s %s", orphans.size, keyPrefix, orphans)
-            runCatching {
-                store.edit { prefsEdit -> orphans.forEach { prefsEdit.remove(keyOf(it)) } }
-            }.onFailure { Timber.e(it, "清理孤儿分片失败: %s", keyPrefix) }
+            orphans.forEach { ops.trySend(PersistOp.Delete(it)) }
         }
-        _shards.update { current -> (fromDisk - orphans) + current }
         _isLoaded.value = true
     }
 
@@ -289,12 +275,16 @@ class ProfileShardStore<T : Any>(
                     }
 
                     is PersistOp.Delete -> {
-                        try {
-                            store.edit { it.remove(keyOf(op.profileId)) }
-                            pendingError = null
-                        } catch (e: IOException) {
-                            Timber.w(e, "删除分片失败: %s%s", keyPrefix, op.profileId)
-                            pendingError = e
+                        if (profileExistence(op.profileId) == true) {
+                            Timber.i("配置档已重建，跳过磁盘清理: %s%s", keyPrefix, op.profileId)
+                        } else {
+                            try {
+                                store.edit { it.remove(keyOf(op.profileId)) }
+                                pendingError = null
+                            } catch (e: IOException) {
+                                Timber.w(e, "删除分片失败: %s%s", keyPrefix, op.profileId)
+                                pendingError = e
+                            }
                         }
                     }
 

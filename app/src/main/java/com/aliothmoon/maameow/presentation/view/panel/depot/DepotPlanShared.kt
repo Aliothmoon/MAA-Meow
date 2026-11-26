@@ -1,14 +1,73 @@
 package com.aliothmoon.maameow.presentation.view.panel.depot
 
-/** 新建计划时要带上的节点状态：节点没启用时面板要提示「保存了也不会跑」 */
-data class DepotPlanContext(
-    val nodeEnabled: Boolean = true,
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import com.aliothmoon.maameow.data.model.DepotMaintainPlan
+
+/** 格式化「当前 / 目标」，未具备库存基线时显示「--」，含双芯片折算时拆分为「原始 (+折算)」 */
+internal fun depotProgressText(
+    current: Int,
+    target: Int,
+    synced: Boolean,
+    dualChipExtra: Int = 0,
+): String {
+    val currentText = when {
+        !synced -> "--"
+        dualChipExtra > 0 -> "${(current - dualChipExtra).coerceAtLeast(0)} (+$dualChipExtra)"
+        else -> current.toString()
+    }
+    return "$currentText / $target"
+}
+
+/** 警告提示配色（背景, 前景），深浅主题下均保持足够对比度 */
+@Composable
+internal fun depotWarningColors(): Pair<Color, Color> {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    return if (isDark) {
+        Color(0xFFF0B050).copy(alpha = 0.16f) to Color(0xFFF0B050)
+    } else {
+        Color(0xFFE6A23C).copy(alpha = 0.16f) to Color(0xFF9A5B00)
+    }
+}
+
+/** 供 LazyColumn 拖拽排序使用的稳定键包装（允许相同 dropId 重复出现） */
+internal data class IndexedDepotPlan(
+    val uid: Long,
+    val plan: DepotMaintainPlan,
 )
 
-/**
- * 「当前 / 目标」，库存保持概览与计划编辑面板共用这一份，两边永远同一口径。
- *
- * 没识别过仓库时当前值写「--」而不是 0：那时候缺多少算不准，写 0 会看着像真的一件都没有。
- */
-internal fun depotProgressText(current: Int, target: Int, synced: Boolean): String =
-    "${if (synced) current.toString() else "--"} / $target"
+/** 外部变更计划列表时尽量复用已有 uid，确保 LazyColumn 键稳定不闪烁 */
+internal fun reconcileOrderedPlans(
+    prev: List<IndexedDepotPlan>,
+    next: List<DepotMaintainPlan>,
+    allocUid: () -> Long,
+): List<IndexedDepotPlan> {
+    val matched = arrayOfNulls<Long>(next.size)
+    val usedUids = HashSet<Long>(prev.size)
+    val pool = LinkedHashMap<DepotMaintainPlan, ArrayDeque<Long>>()
+    for (item in prev) {
+        pool.getOrPut(item.plan) { ArrayDeque() }.addLast(item.uid)
+    }
+    for (i in next.indices) {
+        val uid = pool[next[i]]?.removeFirstOrNull()
+        if (uid != null) {
+            matched[i] = uid
+            usedUids.add(uid)
+        }
+    }
+    if (prev.size == next.size) {
+        for (i in next.indices) {
+            if (matched[i] == null) {
+                val candidate = prev[i].uid
+                if (usedUids.add(candidate)) {
+                    matched[i] = candidate
+                }
+            }
+        }
+    }
+    return next.mapIndexed { i, plan ->
+        IndexedDepotPlan(uid = matched[i] ?: allocUid(), plan = plan)
+    }
+}

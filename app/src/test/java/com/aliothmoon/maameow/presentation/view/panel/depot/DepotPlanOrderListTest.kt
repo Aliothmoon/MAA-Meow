@@ -29,7 +29,9 @@ class DepotPlanOrderListTest {
             notSelectedLabel = "未选择",
         )
 
-        assertEquals(listOf("plan-order-0", "plan-order-1"), entries.map { it.key })
+        assertEquals(listOf("plan-30012-0", "plan-30011-0"), entries.map { it.key })
+        assertEquals(listOf(1, 2), entries.map { it.no })
+        assertEquals(listOf("1-7", "CE-6"), entries.map { it.stage })
         assertEquals(listOf("30012", "30011"), entries.map { it.itemId })
         assertEquals(listOf("源岩", "龙门币"), entries.map { it.itemName })
         assertEquals(listOf(60, 8), entries.map { it.current })
@@ -96,5 +98,72 @@ class DepotPlanOrderListTest {
         assertEquals("未选择", entries.single().itemName)
         assertEquals(0, entries.single().current)
         assertEquals(30, entries.single().need)
+    }
+
+    @Test
+    fun depotPlanOrderEntries_keysStayStableOnReorderAndDisambiguateDuplicates() {
+        val a = DepotMaintainPlan(stage = "1-7", dropId = "30012", dropCount = 50)
+        val b = DepotMaintainPlan(stage = "CE-6", dropId = "4001", dropCount = 80000)
+        val aDup = DepotMaintainPlan(stage = "1-7", dropId = "30012", dropCount = 80)
+
+        val before = depotPlanOrderEntries(
+            plans = listOf(a, b, aDup),
+            outcomes = listOf(DepotPlanOutcome.Runnable, DepotPlanOutcome.Runnable, DepotPlanOutcome.Runnable),
+            inventory = emptyMap(),
+            itemNameMap = emptyMap(),
+            notSelectedLabel = "未选择",
+        )
+        val after = depotPlanOrderEntries(
+            plans = listOf(b, a, aDup),
+            outcomes = listOf(DepotPlanOutcome.Runnable, DepotPlanOutcome.Runnable, DepotPlanOutcome.Runnable),
+            inventory = emptyMap(),
+            itemNameMap = emptyMap(),
+            notSelectedLabel = "未选择",
+        )
+
+        assertEquals(listOf("plan-30012-0", "plan-4001-0", "plan-30012-1"), before.map { it.key })
+        assertEquals(listOf("plan-4001-0", "plan-30012-0", "plan-30012-1"), after.map { it.key })
+    }
+
+    @Test
+    fun depotPlanOrderEntries_computesDualChipExtraAndFormatsProgress() {
+        // 3212 = 先锋芯片组，3213 = 先锋双芯片（每片折算 2 个芯片组）
+        val entries = depotPlanOrderEntries(
+            plans = listOf(DepotMaintainPlan(stage = "PR-C-2", dropId = "3212", dropCount = 12)),
+            outcomes = listOf(DepotPlanOutcome.Runnable),
+            inventory = mapOf("3212" to 4, "3213" to 3),
+            itemNameMap = mapOf("3212" to "先锋芯片组"),
+            notSelectedLabel = "未选择",
+            countDualChips = true,
+        )
+
+        val entry = entries.single()
+        assertEquals(10, entry.current)
+        assertEquals(6, entry.dualChipExtra)
+        assertEquals(2, entry.need)
+        assertEquals("4 (+6) / 12", depotProgressText(entry.current, entry.target, synced = true, entry.dualChipExtra))
+        assertEquals("-- / 12", depotProgressText(entry.current, entry.target, synced = false, entry.dualChipExtra))
+    }
+
+    @Test
+    fun reconcileOrderedPlans_preservesUidsAcrossEditAndDuplicates() {
+        var nextId = 10L
+        val rock1 = DepotMaintainPlan(stage = "1-7", dropId = "30012", dropCount = 50)
+        val rock2 = DepotMaintainPlan(stage = "1-7", dropId = "30012", dropCount = 50)
+        val lmd = DepotMaintainPlan(stage = "CE-6", dropId = "4001", dropCount = 50000)
+        val prev = listOf(
+            IndexedDepotPlan(1L, rock1),
+            IndexedDepotPlan(2L, rock2),
+            IndexedDepotPlan(3L, lmd),
+        )
+
+        // 原地改一条计划的目标数量：沿用原 uid，重复项也互不冲突
+        val edited = reconcileOrderedPlans(prev, listOf(rock1, rock2.copy(dropCount = 80), lmd)) { nextId++ }
+        assertEquals(listOf(1L, 2L, 3L), edited.map { it.uid })
+
+        // 删除第一条并追加一条新计划：保留剩余项的 uid，仅新项分配新 uid
+        val added = DepotMaintainPlan(stage = "AP-5", dropId = "4006", dropCount = 200)
+        val afterDeleteAndAdd = reconcileOrderedPlans(prev, listOf(rock2, lmd, added)) { nextId++ }
+        assertEquals(listOf(1L, 3L, 10L), afterDeleteAndAdd.map { it.uid })
     }
 }
