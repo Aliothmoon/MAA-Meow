@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.presentation.view.panel.depot
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,6 +28,7 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.data.model.DepotMaintainPlan
@@ -178,6 +178,17 @@ internal fun DepotItemCell(
     }
 }
 
+/** 按可用宽度动态算列数并整数均分，避免 BoxWithConstraints 因高度变化反复子组合 */
+private object DepotItemGridCells : GridCells {
+    override fun Density.calculateCrossAxisCellSizes(
+        availableSize: Int,
+        spacing: Int,
+    ): List<Int> {
+        val columns = depotItemColumns(availableSize.toDp())
+        return depotCellWidthsPx(availableSize, spacing, columns)
+    }
+}
+
 /** 懒加载物品网格，仅组合可见区域格子避免抽屉打开时全量渲染 */
 @Composable
 internal fun DepotItemLazyGrid(
@@ -189,29 +200,26 @@ internal fun DepotItemLazyGrid(
     dimmed: Boolean = false,
     gridState: LazyGridState = rememberLazyGridState(),
 ) {
-    BoxWithConstraints(modifier = modifier) {
-        val columns = depotItemColumns(maxWidth)
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(columns),
-            state = gridState,
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(bottom = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(DepotCellGap),
-            verticalArrangement = Arrangement.spacedBy(DepotCellGap),
-        ) {
-            items(
-                items = cells,
-                key = { it.key },
-                contentType = { "depot-item-cell" },
-            ) { cell ->
-                DepotItemCell(
-                    cell = cell,
-                    synced = synced,
-                    iconLoader = iconLoader,
-                    dimmed = dimmed,
-                    onClick = onClick,
-                )
-            }
+    LazyVerticalGrid(
+        columns = DepotItemGridCells,
+        state = gridState,
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(bottom = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(DepotCellGap),
+        verticalArrangement = Arrangement.spacedBy(DepotCellGap),
+    ) {
+        items(
+            items = cells,
+            key = { it.key },
+            contentType = { "depot-item-cell" },
+        ) { cell ->
+            DepotItemCell(
+                cell = cell,
+                synced = synced,
+                iconLoader = iconLoader,
+                dimmed = dimmed,
+                onClick = onClick,
+            )
         }
     }
 }

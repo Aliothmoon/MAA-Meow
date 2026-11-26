@@ -4,9 +4,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.ContentDataType
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.semantics.contentDataType
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -107,7 +116,7 @@ internal fun DepotPlanFields(
                     placeholder = stringResource(R.string.panel_fight_primary_stage_placeholder),
                     stageCodes = stageCodes,
                     commitOnChange = true,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).depotInputField(),
                 )
             }
         }
@@ -120,7 +129,7 @@ internal fun DepotPlanFields(
             maximum = MAX_DEPOT_TARGET_INVENTORY,
             commitOnChange = true,
             onBlankChange = onTargetBlankChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().depotInputField(),
         )
 
         if (showMedicine) {
@@ -138,7 +147,7 @@ internal fun DepotPlanFields(
                     maximum = MAX_MEDICINE_OR_STONE,
                     commitOnChange = true,
                     onBlankChange = onMedicineBlankChange,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().depotInputField(),
                 )
             }
         }
@@ -158,7 +167,7 @@ internal fun DepotPlanFields(
                     maximum = MAX_MEDICINE_OR_STONE,
                     commitOnChange = true,
                     onBlankChange = onStoneBlankChange,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().depotInputField(),
                 )
             }
         }
@@ -166,3 +175,31 @@ internal fun DepotPlanFields(
 }
 
 private const val MAX_MEDICINE_OR_STONE = 999
+
+/**
+ * 禁用关卡与数字框的系统密码自动填充，并在聚焦时上报位置给抽屉，
+ * 让抽屉仅在输入框会被键盘遮挡时按需上移到键盘紧上方
+ */
+@Composable
+private fun Modifier.depotInputField(): Modifier {
+    val reportFocus = LocalDepotSheetFocusTracker.current
+    var coords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    var focused by remember { mutableStateOf(false) }
+    DisposableEffect(reportFocus) {
+        onDispose {
+            if (focused) reportFocus?.invoke(null)
+        }
+    }
+    return this
+        .semantics { contentDataType = ContentDataType.None }
+        .onGloballyPositioned {
+            coords = it
+            if (focused) reportFocus?.invoke(it)
+        }
+        .onFocusChanged { state ->
+            focused = state.hasFocus
+            if (state.hasFocus) {
+                reportFocus?.invoke(coords)
+            }
+        }
+}

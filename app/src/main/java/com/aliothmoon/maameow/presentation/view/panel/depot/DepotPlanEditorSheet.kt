@@ -1,26 +1,42 @@
 package com.aliothmoon.maameow.presentation.view.panel.depot
 
+import android.os.Build
+import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.imeAnimationTarget
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,35 +45,58 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.DepotMaintainPlan
@@ -88,7 +127,7 @@ internal data class DepotPlanSheetTarget(
 
 /**
  * 统一的库存保持底部抽屉（主界面使用，不用于悬浮窗）
- * - [initialTarget] 为 null：新建流程，固定高度内平滑淡入淡出切换「选物品」与「编计划」，避免锚点重算卡顿与返回误拉全屏
+ * - [initialTarget] 为 null：新建流程，固定高度内卡片侧滑切换「选物品」与「编计划」，避免锚点重算卡顿与返回误拉全屏
  * - [initialTarget] 非 null：编辑已有计划，按内容自适应高度
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -111,8 +150,6 @@ internal fun DepotPlanFlowSheet(
     activityManager: ActivityManager = koinInject(),
 ) {
     val isAddFlow = initialTarget == null
-    // 跳过半展开锚点：避免短内容表单自动删掉半展开锚点后，返回高网格时被拉满全屏
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val reduceMotion = LocalReduceMotion.current
     val gridState = rememberLazyGridState()
@@ -121,21 +158,22 @@ internal fun DepotPlanFlowSheet(
     val editMaxHeight = (screenHeight * 0.85f).coerceAtMost((screenHeight - 72.dp).coerceAtLeast(240.dp))
 
     var pickedTarget by remember(initialTarget) { mutableStateOf<DepotPlanSheetTarget?>(null) }
-    // 退场淡出期间保留最后一次选中的物品，避免淡出半途内容突然变空
+    // 退场滑出期间保留最后一次选中的物品，避免滑出半途内容突然变空
     var lastPickedTarget by remember(initialTarget) { mutableStateOf<DepotPlanSheetTarget?>(null) }
     val canGoBack = isAddFlow && pickedTarget != null
 
+    val sheetVisibleProgress = remember { Animatable(0f) }
     var closing by remember { mutableStateOf(false) }
     val closeWithAnimation: (() -> Unit) -> Unit = { action ->
         if (!closing) {
             closing = true
             scope.launch {
                 try {
-                    sheetState.hide()
+                    sheetVisibleProgress.animateTo(0f, MaaMotion.spec(reduceMotion, MaaMotion.Fast))
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: Exception) {
-                    // 非取消异常时仍继续完成保存/移除回调
+                    // 非取消异常时仍继续完成关闭回调
                 }
                 onDismiss()
                 action()
@@ -143,23 +181,34 @@ internal fun DepotPlanFlowSheet(
         }
     }
 
+    LaunchedEffect(Unit) {
+        sheetVisibleProgress.animateTo(1f, MaaMotion.spec(reduceMotion, MaaMotion.Medium))
+    }
+
     OpaqueTheme {
-        ModalBottomSheet(
-            onDismissRequest = onDismiss,
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.background,
+        DepotBottomSheetDialog(
+            visibleProgress = sheetVisibleProgress,
+            reduceMotion = reduceMotion,
+            onDismissRequest = { closeWithAnimation {} },
         ) {
+            BackHandler(enabled = !canGoBack) {
+                closeWithAnimation {}
+            }
             BackHandler(enabled = canGoBack) {
                 pickedTarget = null
             }
 
             if (isAddFlow) {
                 // 底层网格轻微左移视差 + 压暗，顶层编辑卡片整页右进右出，纯 GPU 变换不触发重排
-                val editorProgress by animateFloatAsState(
+                val editorProgressState = animateFloatAsState(
                     targetValue = if (pickedTarget != null) 1f else 0f,
                     animationSpec = MaaMotion.spec(reduceMotion, MaaMotion.Medium),
                     label = "depot-sheet-card-progress",
                 )
+                // 卡片完全盖住后跳过底层网格的测量与绘制，IME 期间零开销且返回零重建
+                val pickerOccluded by remember(initialTarget) {
+                    derivedStateOf { pickedTarget != null && editorProgressState.value >= 1f }
+                }
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -168,13 +217,23 @@ internal fun DepotPlanFlowSheet(
                 ) {
                     Column(
                         modifier = Modifier
+                            .layout { measurable, constraints ->
+                                if (pickerOccluded) {
+                                    layout(0, 0) {}
+                                } else {
+                                    val placeable = measurable.measure(constraints)
+                                    layout(placeable.width, placeable.height) {
+                                        placeable.place(0, 0)
+                                    }
+                                }
+                            }
                             .fillMaxSize()
                             .graphicsLayer {
-                                translationX = -size.width * 0.12f * editorProgress
-                                alpha = 1f - 0.35f * editorProgress
+                                val progress = editorProgressState.value
+                                translationX = -size.width * 0.12f * progress
+                                alpha = 1f - 0.35f * progress
                             }
                             .then(if (pickedTarget != null) Modifier.clearAndSetSemantics {} else Modifier)
-                            .navigationBarsPadding()
                             .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
@@ -229,7 +288,7 @@ internal fun DepotPlanFlowSheet(
                         if (target != null) {
                             Surface(
                                 color = MaterialTheme.colorScheme.background,
-                                shadowElevation = 6.dp,
+                                shadowElevation = if (pickerOccluded) 0.dp else 6.dp,
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .clickable(
@@ -295,6 +354,244 @@ internal fun DepotPlanFlowSheet(
                         .fillMaxWidth()
                         .heightIn(max = editMaxHeight),
                 )
+            }
+        }
+    }
+}
+
+/** 上报当前聚焦输入框坐标给 [DepotBottomSheetDialog]，用于按需避让输入法 */
+internal val LocalDepotSheetFocusTracker = staticCompositionLocalOf<((LayoutCoordinates?) -> Unit)?> { null }
+
+/**
+ * 轻量底部抽屉容器：结合 [WindowInsets.imeAnimationTarget] 与当前聚焦输入框坐标，
+ * 仅在输入框会被键盘遮挡时一次性把抽屉平移到输入框紧贴键盘上方，不顶起无关底部按钮，
+ * 同时避免 M3 ModalBottomSheet 逐帧重排与光标 Popup 反复 relayoutWindow 拖慢输入法
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun DepotBottomSheetDialog(
+    visibleProgress: Animatable<Float, *>,
+    reduceMotion: Boolean,
+    onDismissRequest: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    val dragOffsetPx = remember { Animatable(0f) }
+    var rootHeightPx by remember { mutableFloatStateOf(0f) }
+    var sheetHeightPx by remember { mutableFloatStateOf(0f) }
+    var sheetCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    var focusedBottomInSheetPx by remember { mutableStateOf<Float?>(null) }
+
+    val reportFocusedField: (LayoutCoordinates?) -> Unit = remember {
+        { fieldCoords ->
+            val sc = sheetCoords
+            focusedBottomInSheetPx = if (sc != null && fieldCoords != null && sc.isAttached && fieldCoords.isAttached) {
+                sc.localPositionOf(fieldCoords, Offset(0f, fieldCoords.size.height.toFloat())).y
+            } else if (fieldCoords == null) {
+                null
+            } else {
+                focusedBottomInSheetPx
+            }
+        }
+    }
+
+    val settleDrag: (Float) -> Unit = { velocityY ->
+        val shouldDismiss = velocityY > 1200f ||
+            (sheetHeightPx > 0f && dragOffsetPx.value > sheetHeightPx * 0.25f)
+        if (shouldDismiss) {
+            onDismissRequest()
+        } else if (dragOffsetPx.value > 0f) {
+            scope.launch {
+                dragOffsetPx.animateTo(0f, MaaMotion.spec(reduceMotion, MaaMotion.Fast))
+            }
+        }
+    }
+
+    val nestedScrollConnection = remember(reduceMotion) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                if (delta < 0f && dragOffsetPx.value > 0f && source == NestedScrollSource.UserInput) {
+                    val consumed = delta.coerceAtLeast(-dragOffsetPx.value)
+                    scope.launch { dragOffsetPx.snapTo((dragOffsetPx.value + consumed).coerceAtLeast(0f)) }
+                    return Offset(0f, consumed)
+                }
+                return Offset.Zero
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                val delta = available.y
+                if (delta > 0f && source == NestedScrollSource.UserInput) {
+                    scope.launch { dragOffsetPx.snapTo(dragOffsetPx.value + delta) }
+                    return Offset(0f, delta)
+                }
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                if (dragOffsetPx.value > 0f) {
+                    settleDrag(available.y)
+                    return available
+                }
+                return Velocity.Zero
+            }
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                if (dragOffsetPx.value > 0f) {
+                    settleDrag(available.y)
+                }
+                return Velocity.Zero
+            }
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false,
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false,
+        ),
+    ) {
+        val view = LocalView.current
+        val density = LocalDensity.current
+        val darkSystemBarIcons = MaterialTheme.colorScheme.background.luminance() > 0.5f
+        SideEffect {
+            val window = (view.parent as? DialogWindowProvider)?.window ?: return@SideEffect
+            window.setDimAmount(0f)
+            window.setWindowAnimations(0)
+            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+            @Suppress("DEPRECATION")
+            run {
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    window.isStatusBarContrastEnforced = false
+                    window.isNavigationBarContrastEnforced = false
+                }
+            }
+            window.setLayout(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+            )
+            window.setSoftInputMode(
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING
+                } else {
+                    @Suppress("DEPRECATION")
+                    WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+                },
+            )
+            window.attributes = window.attributes.apply {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    fitInsetsTypes = 0
+                    layoutInDisplayCutoutMode =
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    layoutInDisplayCutoutMode =
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                }
+            }
+            WindowCompat.getInsetsController(window, window.decorView).apply {
+                isAppearanceLightStatusBars = darkSystemBarIcons
+                isAppearanceLightNavigationBars = darkSystemBarIcons
+            }
+        }
+
+        val statusTopInsets = WindowInsets.statusBars.only(WindowInsetsSides.Top)
+        val navBottomInsets = WindowInsets.navigationBars.only(WindowInsetsSides.Bottom)
+        val imeTargetBottomPx = WindowInsets.imeAnimationTarget.getBottom(density)
+        val statusBarTopPx = WindowInsets.statusBars.getTop(density)
+        // 为光标水滴手柄留出 24dp 间距，避免紧贴键盘顶边被裁切
+        val imeMarginPx = with(density) { 24.dp.toPx() }
+        val focusedBottom = focusedBottomInSheetPx
+        val imePanPx = if (imeTargetBottomPx > 0 && focusedBottom != null && sheetHeightPx > 0f && rootHeightPx > 0f) {
+            val distanceFromSheetBottom = sheetHeightPx - focusedBottom
+            val rawPan = (imeTargetBottomPx + imeMarginPx - distanceFromSheetBottom).coerceAtLeast(0f)
+            val maxPanByStatusBar = (rootHeightPx - sheetHeightPx - statusBarTopPx).coerceAtLeast(0f)
+            val maxPanByIme = imeTargetBottomPx.toFloat()
+            rawPan.coerceIn(0f, minOf(maxPanByStatusBar, maxPanByIme))
+        } else {
+            0f
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .onSizeChanged { rootHeightPx = it.height.toFloat() },
+        ) {
+            // 遮罩层铺满全屏，点击空白关闭
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = visibleProgress.value }
+                    .background(BottomSheetDefaults.ScrimColor)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onDismissRequest,
+                    ),
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .windowInsetsPadding(statusTopInsets),
+                contentAlignment = Alignment.BottomCenter,
+            ) {
+                Surface(
+                    shape = BottomSheetDefaults.ExpandedShape,
+                    color = MaterialTheme.colorScheme.background,
+                    contentColor = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier
+                        .widthIn(max = BottomSheetDefaults.SheetMaxWidth)
+                        .fillMaxWidth()
+                        .offset { IntOffset(0, -imePanPx.roundToInt()) }
+                        .onGloballyPositioned { coords ->
+                            sheetCoords = coords
+                            sheetHeightPx = coords.size.height.toFloat()
+                        }
+                        .graphicsLayer {
+                            val enterOffset = (1f - visibleProgress.value) * size.height
+                            translationY = enterOffset + dragOffsetPx.value.coerceAtLeast(0f)
+                        }
+                        .nestedScroll(nestedScrollConnection)
+                        .draggable(
+                            orientation = Orientation.Vertical,
+                            state = rememberDraggableState { delta ->
+                                scope.launch {
+                                    dragOffsetPx.snapTo((dragOffsetPx.value + delta).coerceAtLeast(0f))
+                                }
+                            },
+                            onDragStopped = { velocity -> settleDrag(velocity) },
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {},
+                        ),
+                ) {
+                    CompositionLocalProvider(LocalDepotSheetFocusTracker provides reportFocusedField) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .windowInsetsPadding(navBottomInsets),
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                BottomSheetDefaults.DragHandle()
+                            }
+                            content()
+                        }
+                    }
+                }
             }
         }
     }
@@ -370,7 +667,6 @@ private fun DepotPlanEditorContent(
 
     Column(
         modifier = modifier
-            .navigationBarsPadding()
             .padding(
                 start = MaaDesignTokens.Spacing.lg,
                 end = MaaDesignTokens.Spacing.lg,
