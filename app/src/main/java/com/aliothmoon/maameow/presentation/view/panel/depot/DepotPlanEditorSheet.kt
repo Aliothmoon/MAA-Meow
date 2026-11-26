@@ -722,7 +722,7 @@ private fun DepotPlanEditorContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            // 仅具备库存基线时显示「缺 N / 已够」，未识别仓库不误报缺口
+            // 仅具备库存基线时显示「还需 N / 已达标」，未识别仓库不误报缺口
             if (synced) {
                 val successColor = LogColorRole.SUCCESS.themedColor()
                 Surface(

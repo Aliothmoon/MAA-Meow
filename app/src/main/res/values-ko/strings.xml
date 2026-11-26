@@ -3164,7 +3164,7 @@
     <string name="depot_inventory_maintain_enough">재고 충분</string>
     <string name="depot_inventory_maintain_no_item">재료 미선택</string>
     <string name="depot_inventory_maintain_zero_target">목표가 0</string>
-    <string name="depot_inventory_maintain_stage_required">스테이지 미지정</string>
+    <string name="depot_inventory_maintain_stage_required">스테이지 미선택</string>
     <string name="depot_inventory_maintain_stage_closed">스테이지 미개방 (%1$s)</string>
     <string name="depot_inventory_plan_new">새 재고 유지 계획</string>
     <string name="depot_inventory_plan_stage_custom">스테이지 직접 입력</string>
@@ -3172,8 +3172,8 @@
     <string name="depot_inventory_plan_save">저장</string>
     <string name="depot_inventory_plan_remove">계획 삭제</string>
     <string name="profile_default_name">프로필-%1$d</string>
-    <string name="panel_depot_unplanned_hint">물품을 눌러 계획을 만드세요</string>
-    <string name="panel_depot_unplanned_empty">모든 물품에 계획이 있습니다</string>
+    <string name="panel_depot_unplanned_hint">물품을 선택해 계획을 추가하세요</string>
+    <string name="panel_depot_unplanned_empty">모든 물품에 계획이 등록되어 있습니다</string>
     <string name="panel_depot_plan_removed">「%1$s」 삭제됨</string>
     <string name="panel_depot_undo_remove">실행 취소</string>
 </resources>
