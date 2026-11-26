@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -253,7 +254,6 @@ internal fun ReorderableCollectionItemScope.DepotPlanOrderRow(
                 .fillMaxWidth()
                 .padding(start = 2.dp, end = MaaDesignTokens.Spacing.sm, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
         ) {
             Icon(
                 imageVector = Icons.Default.DragIndicator,
@@ -264,8 +264,8 @@ internal fun ReorderableCollectionItemScope.DepotPlanOrderRow(
                         onDragStarted = { onDragStarted() },
                         onDragStopped = onDragStopped,
                     )
-                    .size(32.dp)
-                    .padding(6.dp),
+                    .size(width = 24.dp, height = 36.dp)
+                    .padding(vertical = 8.dp),
             )
             ItemIcon(
                 itemId = entry.itemId,
@@ -273,6 +273,7 @@ internal fun ReorderableCollectionItemScope.DepotPlanOrderRow(
                 contentDescription = null,
                 loader = iconLoader,
             )
+            Spacer(modifier = Modifier.width(MaaDesignTokens.Spacing.sm))
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -302,6 +303,7 @@ internal fun ReorderableCollectionItemScope.DepotPlanOrderRow(
                 )
             }
             if (outcomeLabel.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(6.dp))
                 Surface(
                     shape = RoundedCornerShape(6.dp),
                     color = badgeContainerColor,
