@@ -28,6 +28,7 @@ import com.aliothmoon.maameow.data.model.parseAutoProfileName
 import com.aliothmoon.maameow.data.model.parseAutoTaskName
 import com.aliothmoon.maameow.data.model.parseDefaultProfileName
 import com.aliothmoon.maameow.data.model.taskTypeInfoForConfig
+import com.aliothmoon.maameow.domain.models.RunDurationLimit
 import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
 import kotlinx.coroutines.CancellationException
@@ -48,6 +49,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -145,6 +147,10 @@ class TaskChainState(
 
     val clientType: String
         get() = resolveClientType(findFirstEnabledConfig<WakeUpConfig>()?.clientType, _lastUsedClientType.value)
+
+    /** 当前 Profile 单独设置的运行时长上限（分钟），null 跟随全局 */
+    val activeRunDurationLimitMinutes: Int?
+        get() = _profiles.value.find { it.id == _profileId.value }?.runDurationLimitMinutes
 
     /** 最近一次成功启动的会话所用客户端；运行中即本次会话的服务器，不随切换 Profile 变 */
     val lastUsedClientType: String?
@@ -599,6 +605,20 @@ class TaskChainState(
         Timber.d("Renamed profile %s to: %s", profileId, trimmed)
     }
 
+    /** [minutes] 为 null 时恢复跟随全局设置 */
+    suspend fun setProfileRunDurationLimit(profileId: String, minutes: Int?) {
+        val clamped = minutes?.coerceIn(RunDurationLimit.MIN_MINUTES, RunDurationLimit.MAX_MINUTES)
+        locked {
+            val current = _profiles.value
+            val changed = current.any { it.id == profileId && it.runDurationLimitMinutes != clamped }
+            if (!changed) return@locked
+            _profiles.value = current.map { p ->
+                if (p.id == profileId) p.copy(runDurationLimitMinutes = clamped) else p
+            }
+            doSync()
+        }
+    }
+
     suspend fun duplicateProfile(profileId: String): String? {
         val newProfileId = locked {
             val currentProfiles = _profiles.value
@@ -613,7 +633,9 @@ class TaskChainState(
             // 复制链时为每个节点生成新 ID
             val duplicatedChain = source.chain.map { it.copy(id = UUID.randomUUID().toString()) }
             val newProfile = TaskProfile(
-                name = nextProfileName(savedProfiles), chain = duplicatedChain
+                name = nextProfileName(savedProfiles),
+                chain = duplicatedChain,
+                runDurationLimitMinutes = source.runDurationLimitMinutes,
             )
             _profiles.value = savedProfiles + newProfile
             doSync()
@@ -732,7 +754,7 @@ class TaskChainState(
         Timber.d("Imported %d profiles, active: %s", profiles.size, resolvedActiveId)
     }
 
-    /** 旧配置迁移，两个解码入口（DataStore 载入与导入备份）共用 */
+    /** 旧配置迁移与取值校正，两个解码入口（DataStore 载入与导入备份）共用 */
     private fun List<TaskProfile>.migrated(): List<TaskProfile> = map { profile ->
         profile.copy(
             name = migrateProfileName(profile.name),
@@ -742,6 +764,9 @@ class TaskChainState(
                     config = node.config.migrate(),
                 )
             },
+            // 手改的备份可能越界，界面显示与实际生效须一致
+            runDurationLimitMinutes = profile.runDurationLimitMinutes
+                ?.coerceIn(RunDurationLimit.MIN_MINUTES, RunDurationLimit.MAX_MINUTES),
         )
     }
 
@@ -757,9 +782,7 @@ class TaskChainState(
         return if (isDefaultName) autoTaskName(typeInfo) + suffix else node.name
     }
 
-    /**
-     * 旧存档迁移：键 `@profile:N` 换成当前语言下的字面量；`配置-N` 这类已经是字面量，原样保留。
-     */
+    /** 旧存档迁移：键 `@profile:N` 换成当前语言下的字面量，已有字面量原样保留 */
     private fun migrateProfileName(name: String): String {
         val number = parseAutoProfileName(name) ?: return name
         return defaultProfileName(context, number)

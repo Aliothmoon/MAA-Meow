@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -69,6 +70,7 @@ import com.aliothmoon.maameow.schedule.ui.ScheduleEditView
 import com.aliothmoon.maameow.schedule.ui.ScheduleTriggerLogView
 import com.aliothmoon.maameow.schedule.ui.ScheduleAppBlacklistView
 import com.aliothmoon.maameow.schedule.ui.ScheduleWakeUnlockView
+import com.aliothmoon.maameow.telemetry.TelemetryController
 import com.aliothmoon.maameow.theme.AppBackgroundHost
 import com.aliothmoon.maameow.theme.LocalReduceMotion
 import com.aliothmoon.maameow.theme.MaaMotion
@@ -98,6 +100,7 @@ fun AppNavigation(
     achievementReporter: AchievementReporter = koinInject(),
     resourceInitService: ResourceInitService = koinInject(),
     mainTabNavigator: MainTabNavigator = koinInject(),
+    telemetry: TelemetryController = koinInject(),
     appEventsViewModel: AppEventsViewModel = koinViewModel(),
 ) {
     val navController = rememberNavController()
@@ -155,6 +158,14 @@ fun AppNavigation(
 
     // 判断是否处于主 Tab 页面
     val isOnMainTab = currentNavRoute == null || currentNavRoute in MAIN_TAB_ROUTES
+    var mainTabRoute by remember { mutableStateOf(Routes.HOME) }
+
+    // 崩溃与 ANR 上报带上当前页面，退到后台清掉
+    val visibleRoute = if (isOnMainTab) mainTabRoute else currentNavRoute
+    LifecycleStartEffect(visibleRoute) {
+        telemetry.onRouteChanged(visibleRoute)
+        onStopOrDispose { telemetry.onRouteChanged(null) }
+    }
 
     // 自定义背景：上提到导航根层，让主界面与所有子页面共用同一背景与玻璃配色
     val backgroundStore: BackgroundImageStore = koinInject()
@@ -222,6 +233,7 @@ fun AppNavigation(
                     backgroundTaskViewModel = backgroundTaskViewModel,
                     onViewAnnouncement = { forceShowAnnouncement = true },
                     onViewOnboarding = { onboardingState.start() },
+                    onTabChanged = { mainTabRoute = it },
                     visible = isOnMainTab,
                     fullscreen = isFullscreen,
                     parallax = backgroundParallax,

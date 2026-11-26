@@ -8,9 +8,11 @@ import com.aliothmoon.maameow.data.model.EventShopBlacklist
 import com.aliothmoon.maameow.data.model.EventShopPreset
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.model.ReclamationConfig
+import com.aliothmoon.maameow.data.model.StrongholdProtocolConfig
 import com.aliothmoon.maameow.data.model.activity.MiniGame
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.resource.ActivityManager
+import com.aliothmoon.maameow.data.resource.StrongholdPriority
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
@@ -19,6 +21,7 @@ import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.resolve
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,6 +55,9 @@ private const val AUTO_RAISE_POTENTIAL_VALUE = "MiniGame@AutoRaisePotential@Begi
 /** 生息演算不走 CustomTask，直接以 Reclamation 任务类型下发，对齐上游 AsstReclamation */
 private const val RECLAMATION_VALUE = "Reclamation"
 
+/** 卫戍协议以 StrongholdProtocol 任务类型下发，对齐上游 AsstStrongholdProtocol */
+private const val STRONGHOLD_PROTOCOL_VALUE = "StrongholdProtocol@Farm@Begin"
+
 data class MiniGameUiState(
     val selectedTaskName: String = DEFAULT_TASK_NAME,
     val selectedEnding: String = "A",
@@ -70,6 +76,7 @@ class MiniGameDelegate(
     private val sessionLogger: MaaSessionLogger,
     private val appSettingsManager: AppSettingsManager,
     val clientType: StateFlow<String>,
+    val strongholdPriority: StateFlow<StrongholdPriority>,
 ) {
 
     private val _state = MutableStateFlow(MiniGameUiState())
@@ -81,6 +88,11 @@ class MiniGameDelegate(
     val eventShopCustom: StateFlow<String> = appSettingsManager.eventShopBlacklistCustom
 
     val reclamationConfig: StateFlow<ReclamationConfig> = appSettingsManager.reclamationConfig
+
+    val strongholdProtocolConfig: StateFlow<StrongholdProtocolConfig> = appSettingsManager.strongholdProtocolConfig
+
+    // 失焦保存是异步落盘，点「开始任务」时等完本次写入，避免发出旧值
+    private var pendingStrongholdSave: Job? = null
 
     fun isSecretFront(selectedTaskName: String): Boolean =
         selectedTaskName == SECRET_FRONT_VALUE
@@ -96,6 +108,9 @@ class MiniGameDelegate(
 
     fun isReclamation(selectedTaskName: String): Boolean =
         selectedTaskName == RECLAMATION_VALUE
+
+    fun isStrongholdProtocol(selectedTaskName: String): Boolean =
+        selectedTaskName == STRONGHOLD_PROTOCOL_VALUE
 
     fun onTaskSelected(value: String) {
         _state.update { it.copy(selectedTaskName = value) }
@@ -126,6 +141,14 @@ class MiniGameDelegate(
         scope.launch { appSettingsManager.updateReclamationConfig(transform) }
     }
 
+    fun onStrongholdProtocolConfigChanged(transform: (StrongholdProtocolConfig) -> StrongholdProtocolConfig) {
+        val prev = pendingStrongholdSave
+        pendingStrongholdSave = scope.launch {
+            prev?.join()
+            appSettingsManager.updateStrongholdProtocolConfig(transform)
+        }
+    }
+
     fun findGame(selectedTaskName: String): MiniGame? =
         miniGames.value.find { it.value == selectedTaskName }
 
@@ -144,6 +167,9 @@ class MiniGameDelegate(
     internal fun buildTaskParams(): MaaTaskParams {
         if (isReclamation(_state.value.selectedTaskName)) {
             return reclamationConfig.value.toTaskParams(clientType.value)
+        }
+        if (isStrongholdProtocol(_state.value.selectedTaskName)) {
+            return strongholdProtocolConfig.value.toTaskParams()
         }
         val taskName = buildTaskName()
         val params = buildJsonObject {
@@ -231,9 +257,10 @@ class MiniGameDelegate(
         }
 
         scope.launch {
+            awaitPendingStrongholdSave()
             val task = buildTaskParams()
             _state.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_starting)) }
-            val result = compositionService.startCopilot(listOf(task))
+            val result = compositionService.startCopilot(listOf(task), clientType.value)
             if (result is MaaCompositionService.StartResult.Success) {
                 achievementRepository.report {
                     event = AchievementEvents.MINI_GAME_STARTED
@@ -261,6 +288,14 @@ class MiniGameDelegate(
                     ),
                 )
             }
+        }
+    }
+
+    private suspend fun awaitPendingStrongholdSave() {
+        while (true) {
+            val save = pendingStrongholdSave ?: return
+            save.join()
+            if (pendingStrongholdSave === save) return
         }
     }
 

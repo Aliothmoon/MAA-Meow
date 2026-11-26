@@ -59,18 +59,6 @@ object BlackFlowLogText {
         else -> R.string.blackflow_warning_unknown
     }
 
-    /** 秘境行商交易中止原因，带物品名的两种由调用方传入 item */
-    @StringRes
-    fun scrapTradeAborted(reason: String?): Int = when (reason) {
-        "market_unavailable" -> R.string.blackflow_scrap_trade_aborted_market_unavailable
-        "inventory_incomplete" -> R.string.blackflow_scrap_trade_aborted_inventory_incomplete
-        "page_switch_failed" -> R.string.blackflow_scrap_trade_aborted_page_switch_failed
-        "sale_search_failed" -> R.string.blackflow_scrap_trade_aborted_sale_search_failed
-        "sell_back_search_failed" -> R.string.blackflow_scrap_trade_aborted_sell_back_search_failed
-        "sale_failed" -> R.string.blackflow_scrap_trade_aborted_sale_failed
-        else -> R.string.blackflow_scrap_trade_aborted_unknown
-    }
-
     @StringRes
     fun milestoneStatus(code: String?): Int = when (code) {
         "available" -> R.string.blackflow_milestone_status_available
@@ -146,6 +134,7 @@ object BlackFlowLogText {
         "node_dispatch_failed" -> R.string.blackflow_outcome_node_dispatch_failed
         "node_result_failed" -> R.string.blackflow_outcome_node_result_failed
         "internal_failure" -> R.string.blackflow_outcome_internal_failure
+        "scrap_trade_aborted" -> R.string.blackflow_outcome_scrap_trade_aborted
         else -> R.string.blackflow_outcome_unknown
     }
 
@@ -184,6 +173,23 @@ object BlackFlowLogText {
             R.string.blackflow_termination_action_points_exhausted_before_cultivation
 
         "scrap_shop_never_reached" -> R.string.blackflow_termination_scrap_shop_never_reached
+        "scrap_trade_inventory_incomplete" ->
+            R.string.blackflow_termination_scrap_trade_inventory_incomplete
+
+        "scrap_trade_market_unavailable" ->
+            R.string.blackflow_termination_scrap_trade_market_unavailable
+
+        "scrap_trade_page_switch_failed" ->
+            R.string.blackflow_termination_scrap_trade_page_switch_failed
+
+        "scrap_trade_purchase_failed" -> R.string.blackflow_termination_scrap_trade_purchase_failed
+        "scrap_trade_sale_failed" -> R.string.blackflow_termination_scrap_trade_sale_failed
+        "scrap_trade_sale_search_failed" ->
+            R.string.blackflow_termination_scrap_trade_sale_search_failed
+
+        "scrap_trade_sell_back_search_failed" ->
+            R.string.blackflow_termination_scrap_trade_sell_back_search_failed
+
         "map recovery port is unavailable" ->
             R.string.blackflow_termination_recovery_port_unavailable
 

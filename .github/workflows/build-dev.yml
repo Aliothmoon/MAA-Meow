@@ -19,7 +19,7 @@ on:
         required: false
         default: 'latest'
       maafw_tag:
-        description: 'MaaFramework tag to override libMaaAndroidNativeControlUnit.so (empty = keep the one bundled by MAA)'
+        description: 'MaaFramework tag to override libMaaAndroidNativeControlUnit.so (empty = DEFAULT_MAAFW_TAG in scripts/setup_maa_core.py)'
         required: false
         default: ''
 

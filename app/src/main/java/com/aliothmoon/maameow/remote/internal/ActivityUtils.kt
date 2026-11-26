@@ -20,6 +20,10 @@ object ActivityUtils {
     // android.app.WindowConfiguration.WINDOWING_MODE_FULLSCREEN
     private const val WINDOWING_MODE_FULLSCREEN = 1
 
+    // android.app.ActivityManager.START_SUCCESS .. START_SWITCHES_CANCELED - 1
+    private const val START_SUCCESS = 0
+    private const val START_SWITCHES_CANCELED = 100
+
     // getAppDisplayId：包名无任何运行中任务
     private const val DISPLAY_NO_TASK = -2
 
@@ -29,6 +33,12 @@ object ActivityUtils {
 
     // 拉回操作后等系统完成 reparent 的时间
     private const val REPIN_SETTLE_MS = 1_000L
+
+    // 拉起后确认到主屏前台：解锁刚完成时部分 ROM 会吞掉首跳或停在桌面
+    private const val CONFIRM_MAX_ATTEMPTS = 3
+    private const val CONFIRM_TIMEOUT_MS = 1_500L
+    private const val CONFIRM_POLL_INTERVAL_MS = 150L
+    private const val CONFIRM_RETRY_DELAY_MS = 500L
 
     @Volatile
     var forceFullscreenOnVirtualDisplay: Boolean = false
@@ -45,9 +55,7 @@ object ActivityUtils {
      * 以 shell 身份启动指定 Intent 的 Activity，绕过 BAL 限制。
      * [forceFullscreen] 为 true 时无视用户设置强制 FULLSCREEN 窗口模式（用于漂移拉回重试）。
      */
-    @JvmStatic
-    @JvmOverloads
-    fun startActivity(
+    private fun startActivity(
         intent: Intent,
         displayId: Int = 0,
         forceFullscreen: Boolean = false
@@ -71,15 +79,80 @@ object ActivityUtils {
                 Ln.w("startActivity failed, returning -1", e)
                 -1
             }
-            if (ret < 0) {
-                Ln.w("startActivity returned error code $ret, fallback to am command")
+            if (!isStartResultSuccessful(ret)) {
+                Ln.w("startActivity returned $ret for ${intent.component?.flattenToShortString()} (display=$displayId), fallback to am command")
                 return startViaAmCommand(intent, displayId)
             }
+            Ln.i("startActivity ok: ${intent.component?.flattenToShortString()} display=$displayId ret=$ret")
             return true
         } catch (e: Exception) {
             Ln.w("startActivity failed, fallback to am command", e)
             return startViaAmCommand(intent, displayId)
         }
+    }
+
+    /** 未到主屏前台则重试；可见包名读不出（null 或全程空列表）时宽松放行 */
+    fun launchAndConfirm(intent: Intent, onInfo: (String) -> Unit, onWarn: (String) -> Unit): Boolean =
+        launchAndConfirm(
+            targetPackage = intent.component?.packageName ?: intent.`package`,
+            startActivity = { startActivity(intent) },
+            visiblePackages = { visiblePackages(Display.DEFAULT_DISPLAY) },
+            onInfo = onInfo,
+            onWarn = onWarn,
+        )
+
+    internal fun launchAndConfirm(
+        targetPackage: String?,
+        startActivity: () -> Boolean,
+        visiblePackages: () -> List<String>?,
+        onInfo: (String) -> Unit = {},
+        onWarn: (String) -> Unit = {},
+        clockMs: () -> Long = SystemClock::elapsedRealtime,
+        sleepMs: (Long) -> Unit = Thread::sleep,
+    ): Boolean {
+        var lastPackages: List<String>? = null
+        for (attempt in 1..CONFIRM_MAX_ATTEMPTS) {
+            if (attempt > 1) {
+                onWarn("ui launch retry $attempt/$CONFIRM_MAX_ATTEMPTS, foreground=$lastPackages")
+                sleepMs(CONFIRM_RETRY_DELAY_MS)
+            }
+            if (!startActivity()) {
+                lastPackages = visiblePackages()?.takeIf { it.isNotEmpty() }
+                onWarn("startActivity attempt=$attempt failed, foreground=$lastPackages")
+                continue
+            }
+            onInfo("startActivity attempt=$attempt ok")
+            if (targetPackage.isNullOrBlank()) return true
+
+            val startMs = clockMs()
+            lastPackages = null
+            while (true) {
+                val pkgs = visiblePackages()
+                when {
+                    pkgs == null -> {
+                        onInfo("foreground unreadable, accepting launch")
+                        return true
+                    }
+
+                    targetPackage in pkgs -> {
+                        onInfo("ui foreground confirmed in ${clockMs() - startMs}ms (attempt=$attempt)")
+                        return true
+                    }
+
+                    pkgs.isNotEmpty() -> lastPackages = pkgs
+                }
+                val remaining = startMs + CONFIRM_TIMEOUT_MS - clockMs()
+                if (remaining <= 0L) break
+                sleepMs(CONFIRM_POLL_INTERVAL_MS.coerceAtMost(remaining))
+            }
+            if (lastPackages == null) {
+                onInfo("foreground empty, accepting launch")
+                return true
+            }
+            onWarn("ui not in foreground after ${CONFIRM_TIMEOUT_MS}ms: $lastPackages")
+        }
+        onWarn("ui launch failed after $CONFIRM_MAX_ATTEMPTS attempts, foreground=$lastPackages")
+        return false
     }
 
     /** API < Q 读不出任务在哪块屏上，只能拿「上次是我们把它拉到这块屏上的」当它占着屏的依据 */
@@ -439,6 +512,10 @@ object ActivityUtils {
                 Ln.w("startViaAmCommand: am exited with code $exitCode")
                 return false
             }
+            if (isAmStartOutputFailure(stdout, stderr)) {
+                Ln.w("startViaAmCommand: am reported failure despite exitCode=0")
+                return false
+            }
             Ln.i("startViaAmCommand: success (exitCode=0)")
             return true
         } catch (e: Exception) {
@@ -446,4 +523,22 @@ object ActivityUtils {
             return false
         }
     }
+
+    /** 同 AOSP isStartResultSuccessful：0..99 为成功 */
+    internal fun isStartResultSuccessful(result: Int): Boolean =
+        result in START_SUCCESS until START_SWITCHES_CANCELED
+
+    /** am start 失败时 exitCode 也可能为 0，按输出兜底 */
+    internal fun isAmStartOutputFailure(stdout: String, stderr: String): Boolean =
+        "$stdout\n$stderr".lineSequence().any { rawLine ->
+            val line = rawLine.trim().lowercase()
+            when {
+                line.isEmpty() || line.startsWith("starting:") -> false
+                line.startsWith("error:") || line.startsWith("error type ") -> true
+                line.contains("exception") -> true
+                line.contains("activity not started") ->
+                    !line.contains("delivered") && !line.contains("brought to the front")
+                else -> false
+            }
+        }
 }

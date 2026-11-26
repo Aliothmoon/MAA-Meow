@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,21 +33,16 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NotificationsPaused
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PowerSettingsNew
-import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Screenshot
 import androidx.compose.material.icons.filled.StayCurrentPortrait
 import androidx.compose.material.icons.filled.Timer
@@ -66,7 +60,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -88,9 +81,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -103,11 +93,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -122,7 +108,6 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RunMode
-import com.aliothmoon.maameow.domain.models.RunDurationLimit
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -812,6 +797,8 @@ fun BackgroundTaskView(
                                                     onDeleteProfile = viewModel::onDeleteProfile,
                                                     onCreateProfile = viewModel::onCreateProfile,
                                                     onReorderProfile = viewModel::onReorderProfile,
+                                                    onProfileRunDurationLimitChange = viewModel::onProfileRunDurationLimitChange,
+                                                    onProfileRunDurationLimitEnabledChange = viewModel::onProfileRunDurationLimitEnabledChange,
                                                     modifier = Modifier.fillMaxSize(),
                                                     wrapDetailInCard = true,
                                                     runFromNodeBlocked = startBlocked,
@@ -870,6 +857,7 @@ fun BackgroundTaskView(
                     onDismissRequest = { showMoreActions = false },
                     isTaskActive = isTaskActive,
                     runDeadline = runDeadline,
+                    profileRunDurationLimitMinutes = profiles.find { it.id == profileId }?.runDurationLimitMinutes,
                     isGameMuted = isGameMuted,
                     onToggleGameSound = viewModel::onToggleGameSound,
                     onScreenOff = viewModel::onScreenOff,
@@ -1061,6 +1049,7 @@ private fun BackgroundMoreActionsOverlay(
     onDismissRequest: () -> Unit,
     isTaskActive: Boolean,
     runDeadline: Long?,
+    profileRunDurationLimitMinutes: Int?,
     isGameMuted: Boolean,
     onToggleGameSound: () -> Unit,
     onScreenOff: () -> Unit,
@@ -1244,10 +1233,21 @@ private fun BackgroundMoreActionsOverlay(
                                     coroutineScope.launch { appSettingsManager.setRunDurationLimitEnabled(it) }
                                 })
                         }
-                        if (runDeadline != null) {
-                            RunDurationRemainingRow(deadline = runDeadline)
-                        } else if (runDurationLimitEnabled) {
-                            RunDurationStepperRow(
+                        when {
+                            runDeadline != null -> RunDurationRemainingRow(deadline = runDeadline)
+                            // 配置单独设置的优先，全局开关与时长都管不到它；运行中（抄作业等不计时）不提示
+                            profileRunDurationLimitMinutes != null && !isTaskActive -> RunDurationSubRow {
+                                Text(
+                                    text = stringResource(
+                                        R.string.bg_auto_run_duration_limit_profile_override,
+                                        profileRunDurationLimitMinutes,
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+
+                            runDurationLimitEnabled -> RunDurationStepperRow(
                                 minutes = runDurationLimitMinutes,
                                 enabled = !isTaskActive,
                                 onMinutesChange = {
@@ -1439,130 +1439,6 @@ private fun SettingSwitchRow(
 
 // 开关行按它外扩，涟漪铺满卡片
 private val ActionsCardPadding = 10.dp
-
-/** 与开关行文字对齐的缩进行 */
-@Composable
-private fun RunDurationSubRow(content: @Composable RowScope.() -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(32.dp)
-            .padding(start = 26.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        content = content,
-    )
-}
-
-@Composable
-private fun RunDurationStepperRow(
-    minutes: Int,
-    enabled: Boolean,
-    onMinutesChange: (Int) -> Unit,
-    onEditClick: () -> Unit,
-) {
-    RunDurationSubRow {
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(8.dp))
-                .clickable(
-                    enabled = enabled,
-                    onClickLabel = stringResource(R.string.bg_auto_run_duration_limit_edit),
-                    onClick = onEditClick,
-                ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val valueColor = if (enabled) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = MaaThemeAlphas.DISABLED)
-            }
-            Text(
-                text = stringResource(R.string.bg_auto_run_duration_limit_value, minutes),
-                style = MaterialTheme.typography.bodyMedium,
-                color = valueColor,
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Icon(
-                imageVector = Icons.Filled.Edit,
-                contentDescription = null,
-                modifier = Modifier.size(14.dp),
-                tint = valueColor,
-            )
-        }
-        IconButton(
-            onClick = { onMinutesChange(RunDurationStep.decrease(minutes)) },
-            enabled = enabled && RunDurationStep.canDecrease(minutes),
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Remove,
-                contentDescription = stringResource(R.string.bg_auto_run_duration_limit_decrease),
-                modifier = Modifier.size(18.dp)
-            )
-        }
-        IconButton(
-            onClick = { onMinutesChange(RunDurationStep.increase(minutes)) },
-            enabled = enabled && RunDurationStep.canIncrease(minutes),
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Add,
-                contentDescription = stringResource(R.string.bg_auto_run_duration_limit_increase),
-                modifier = Modifier.size(18.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun RunDurationInputDialog(
-    minutes: Int,
-    onDismissRequest: () -> Unit,
-    onConfirm: (Int) -> Unit,
-) {
-    var input by remember {
-        val text = minutes.toString()
-        mutableStateOf(TextFieldValue(text, selection = TextRange(0, text.length)))
-    }
-    val focusRequester = remember { FocusRequester() }
-    val submit = {
-        val parsed = RunDurationStep.parseInput(input.text)
-        if (parsed == null) onDismissRequest() else onConfirm(parsed)
-    }
-    AdaptiveTaskPromptDialog(
-        visible = true,
-        title = stringResource(R.string.bg_auto_run_duration_limit_input_title),
-        onDismissRequest = onDismissRequest,
-        onConfirm = submit,
-        icon = Icons.Filled.Timer,
-    ) {
-        OutlinedTextField(
-            value = input,
-            onValueChange = { if (RunDurationStep.acceptsInput(it.text)) input = it },
-            label = { Text(stringResource(R.string.bg_auto_run_duration_limit_input_label)) },
-            supportingText = {
-                Text(
-                    stringResource(
-                        R.string.bg_auto_run_duration_limit_input_hint,
-                        RunDurationLimit.MIN_MINUTES,
-                        RunDurationLimit.MAX_MINUTES,
-                    )
-                )
-            },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Number,
-                imeAction = ImeAction.Done,
-            ),
-            keyboardActions = KeyboardActions(onDone = { submit() }),
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester),
-        )
-    }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
-}
 
 @Composable
 private fun RunDurationRemainingRow(deadline: Long) {

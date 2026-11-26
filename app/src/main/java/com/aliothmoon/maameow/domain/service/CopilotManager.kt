@@ -81,6 +81,7 @@ data class OperatorDisplayItem(
     val skillLevel: Int?,
     /** 0 为不带模组，1..5 依次对应 χ γ α Δ β */
     val module: Int?,
+    val mismatchReason: OperatorMismatchReason? = null,
 )
 
 data class OperatorSummaryData(
@@ -89,7 +90,38 @@ data class OperatorSummaryData(
     val totalCount: Int,
 ) {
     val isEmpty get() = totalCount == 0
+
+    /** 只生成展示副本，先绑定原始位置的原因，再对独立干员及各组内候选按同一规则稳定排序 */
+    fun withMatch(match: OperatorMatch): OperatorSummaryData {
+        if (
+            match.operators.size != operators.size ||
+            match.groups.size != groups.size ||
+            groups.indices.any { match.groups[it].size != groups[it].second.size }
+        ) return this
+        return copy(
+            operators = operators.mapIndexed { index, oper ->
+                oper.copy(mismatchReason = match.operators[index])
+            }.sortedBy { it.matchDisplayOrder },
+            groups = groups.mapIndexed { groupIndex, (name, opers) ->
+                val reasons = match.groups[groupIndex]
+                name to opers.mapIndexed { index, oper ->
+                    oper.copy(mismatchReason = reasons[index])
+                }.sortedBy { it.matchDisplayOrder }
+            },
+        )
+    }
 }
+
+/** 满足在前，同一原因聚合，未拥有最后；sortedBy 保留同档原始顺序 */
+private val OperatorDisplayItem.matchDisplayOrder: Int
+    get() = when (mismatchReason) {
+        null -> 0
+        OperatorMismatchReason.MODULE -> 1
+        OperatorMismatchReason.SKILL -> 2
+        OperatorMismatchReason.LEVEL -> 3
+        OperatorMismatchReason.ELITE -> 4
+        OperatorMismatchReason.MISSING -> 5
+    }
 
 class CopilotManager(
     private val apiService: CopilotApiService,

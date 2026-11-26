@@ -138,6 +138,7 @@ fun CollapsibleSecretField(
                     placeholder = { Text(placeholder) },
                     modifier = Modifier
                         .weight(1f)
+                        .textFieldHeightCap()
                         .onFocusChanged { focused = it.isFocused },
                     singleLine = true,
                     visualTransformation = if (visible) {

@@ -427,12 +427,17 @@ public final class WindowManager {
      */
     @TargetApi(AndroidVersions.API_26_ANDROID_8_0)
     public boolean dismissKeyguard() {
+        return dismissKeyguard(null);
+    }
+
+    @TargetApi(AndroidVersions.API_26_ANDROID_8_0)
+    public boolean dismissKeyguard(Object callback) {
         try {
             if (dismissKeyguardMethod == null) {
                 Class<?> callbackClass = Class.forName("com.android.internal.policy.IKeyguardDismissCallback");
                 dismissKeyguardMethod = manager.getClass().getMethod("dismissKeyguard", callbackClass, CharSequence.class);
             }
-            dismissKeyguardMethod.invoke(manager, null, null);
+            dismissKeyguardMethod.invoke(manager, callback, null);
             return true;
         } catch (ReflectiveOperationException e) {
             Ln.e("Could not invoke dismissKeyguard", e);

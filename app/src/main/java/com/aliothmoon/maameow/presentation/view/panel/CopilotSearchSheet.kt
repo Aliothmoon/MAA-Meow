@@ -552,12 +552,25 @@ private fun MatchBadge(mode: OperatorMatchMode) {
         OperatorMatchMode.BORROW -> LogColorRole.INFO
         OperatorMatchMode.TRAIN -> LogColorRole.WARNING
         OperatorMatchMode.BLOCKED -> LogColorRole.ERROR
-    }.themedColor()
-    Surface(shape = RoundedCornerShape(4.dp), color = color.copy(alpha = 0.14f), contentColor = color) {
+    }
+    CopilotMatchBadge(stringResource(mode.labelRes), color)
+}
+
+/** 作业分类和候选原因共用配色、圆角、字体及内边距 */
+@Composable
+internal fun CopilotMatchBadge(text: String, role: LogColorRole, modifier: Modifier = Modifier) {
+    val color = role.themedColor()
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = color.copy(alpha = 0.14f),
+        contentColor = color,
+        modifier = modifier,
+    ) {
         Text(
-            text = stringResource(mode.labelRes),
+            text = text,
             style = MaterialTheme.typography.labelSmall,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
         )
     }
@@ -1038,6 +1051,9 @@ private fun CopilotRowDetails(
     match: OperatorMatch?,
     characters: Map<String, CharacterInfo?>,
 ) {
+    val summary = remember(item.summary, match) {
+        match?.let { item.summary.withMatch(it) } ?: item.summary
+    }
     Column(
         modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -1051,11 +1067,11 @@ private fun CopilotRowDetails(
             }
         }
         if (item.details.isNotBlank()) CopilotDetails(item.details)
-        if (item.summary.operators.isNotEmpty()) {
-            OperatorGrid { OperatorCells(item.summary.operators, characters) }
+        if (summary.operators.isNotEmpty()) {
+            OperatorGrid { OperatorCells(summary.operators, characters) }
         }
-        item.summary.groups.forEach { (name, opers) ->
-            OperatorGroup(name, opers, characters)
+        summary.groups.forEachIndexed { index, (name, opers) ->
+            OperatorGroup(name, opers, characters, resetKey = item.summary.groups[index].second)
         }
     }
 }

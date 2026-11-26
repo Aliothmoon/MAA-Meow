@@ -42,13 +42,17 @@
     <string name="search_keywords_mute">mute sound audio volume</string>
     <string name="search_keywords_run_duration">duration time limit timeout runtime</string>
     <string name="search_keywords_screen_off">screen off black display lock battery</string>
+    <string name="search_keywords_auto_download_update">Wi-Fi wifi cellular mobile data metered network</string>
     <string name="settings_section_update">Updates</string>
     <string name="settings_reinit_resource_title">Reinitialize Resources</string>
     <string name="settings_reinit_resource_desc">Re-extract from the bundled resource pack</string>
     <string name="settings_auto_check_update_title">Check for updates on startup</string>
     <string name="settings_auto_check_update_desc">Automatically check for app and resource updates at launch</string>
     <string name="settings_auto_download_update_title">Auto-download updates</string>
-    <string name="settings_auto_download_update_desc">Download updates automatically when detected</string>
+    <string name="settings_auto_download_update_desc">Automatically download detected updates based on network policy; prompts for confirmation otherwise</string>
+    <string name="settings_auto_download_off">Off</string>
+    <string name="settings_auto_download_wifi_only">Wi-Fi only</string>
+    <string name="settings_auto_download_always">Always</string>
     <string name="settings_update_channel_title">Update Channel</string>
     <string name="settings_update_channel_desc">Choose stable or beta release channel</string>
     <string name="settings_section_log">Logs</string>
@@ -523,6 +527,7 @@
     <string name="bg_auto_run_duration_limit_input_title">Run duration limit</string>
     <string name="bg_auto_run_duration_limit_input_label">Minutes</string>
     <string name="bg_auto_run_duration_limit_input_hint">Range: %1$d–%2$d min</string>
+    <string name="bg_auto_run_duration_limit_profile_override">Current profile uses its own limit: %1$d min, unaffected by this setting</string>
     <string name="bg_toast_mute_failed">Mute failed. Use the volume keys to lower media volume instead</string>
     <string name="bg_auto_hardware_screen_off">Turn off display power for Screen Off</string>
     <string name="bg_auto_show_touch_preview">Show touch preview</string>
@@ -711,6 +716,12 @@
     <string name="maa_deep_exploration_not_unlocked_complain">Deep Investigation not unlocked yet</string>
     <string name="maa_reclamation_pns_mode_error">Currently using no-save task mode. Please manually delete existing save and try again. If you wish to keep the save, please consider switching modes.</string>
     <string name="maa_reclamation_pis_mode_error">Current task mode requires you to have a save with craftable items. Please consider switching modes.</string>
+    <string name="maa_stronghold_protocol">Stronghold Protocol</string>
+    <string name="maa_stronghold_strategy_log">%1$s: passed %2$d/%3$d</string>
+    <string name="maa_stronghold_settlement_log">%1$s, cleared %2$d/%3$d</string>
+    <string name="maa_stronghold_cleared">Run cleared</string>
+    <string name="maa_stronghold_failed">Run failed</string>
+    <string name="maa_stronghold_strategies_completed">Every strategy has been passed %1$d times. Task finished</string>
     <string name="maa_complete_combat">Complete combat</string>
     <string name="maa_clue_exchange_unlocked">Clue Exchange Unlocked</string>
     <string name="maa_clues_sent">Clues sent</string>
@@ -870,6 +881,8 @@
     <string name="panel_profile_copy_id">Copy Profile ID</string>
     <string name="panel_profile_id_copied">Profile ID copied</string>
     <string name="profile_default_name">Profile %1$d</string>
+    <string name="panel_profile_run_duration_limit">Own run duration limit</string>
+    <string name="panel_profile_run_duration_limit_hint">When off, follows the global \"Limit run duration\" setting. When on, this limit applies regardless of the global switch.</string>
 
     <!-- panel: oper box -->
     <string name="panel_operbox_tab_owned">Owned (%1$d)</string>
@@ -992,6 +1005,11 @@
     <string name="copilot_match_hidden">Hidden by operator match: %1$d</string>
     <string name="copilot_match_missing">Not owned: %1$s</string>
     <string name="copilot_match_training">Under-trained: %1$s</string>
+    <string name="copilot_match_badge_missing">Missing</string>
+    <string name="copilot_match_badge_elite">Elite</string>
+    <string name="copilot_match_badge_level">Level</string>
+    <string name="copilot_match_badge_skill">Skill</string>
+    <string name="copilot_match_badge_module">Module</string>
     <string name="copilot_search_added_list">Added copilots</string>
     <string name="copilot_search_tab_copilot">Copilots</string>
     <string name="copilot_search_tab_set">Copilot sets</string>
@@ -1577,7 +1595,7 @@
     <string name="panel_reclamation_theme_fire">Fire Within the Sand (Closed)</string>
     <string name="panel_reclamation_theme_relaunch_anchor">RELAUNCH ANCHOR</string>
     <string name="panel_reclamation_relaunch_anchor_tip_ra1">Relaunch Anchor RA-1\n\nReward estimate: ~159 Mission Acceptance Slip + ~2 Points per run, ~2 min per round\n\nOperator requirement: None\n\nPrerequisite: Clear RA-1 in the main story\n\nOpen RA-1 on the map and start the task when \"Start\" appears at the bottom-right to loop automatically\n\nNote: Please dismantle the buildings in the base that cause starting with extra items, such as Supply Stations and Corrals...\n\nTask flow: Automatically executes farming, construction, resource delivery, and settlement loop</string>
-    <string name="panel_reclamation_relaunch_anchor_tip_ra4">Relaunch Anchor RA-4\n\nReward estimate: ~421 Mission Acceptance Slip + ~5 Points per run, ~1 min 40 sec per round\n\nOperator requirement: Wis\'adel (support unit allowed)\n\nPrerequisite:\n1. Advance the main story until RA-4 is cleared.\n2. Unlock Strategy Business Management. (Hint: RA-3 with Reed the Flame Shadow)\n3. If you have your own Wis\'adel, manually enter the stage and form a team once, ensuring any 5 operators with lower DP cost than Wis\'adel + Wis\'adel, and Wis\'adel is in the 6th slot (i.e., the last one selected). Then confirm recruitment, abandon the current construction, and start from \"Start\".\n4. If using a support Wis\'adel, ensure that Wis\'adel is on the front page of sniper support units (consider using a friend). Manually enter the stage and add any 5 operators with lower DP cost than Wis\'adel, select support Wis\'adel for the 6th slot, then confirm recruitment, abandon the current construction, and start from \"Start\" (ensure the first five slots have operators and the 6th slot is empty).\n\nOpen RA-4 on the map and start the task when \"Start\" appears at the bottom-right to loop automatically\n\nNote: Please dismantle the buildings in the base that cause starting with extra items, such as Supply Stations and Corrals...\n\nTask flow: Use the Gold from Strategy Business Management to unlock areas, and use Wis\'adel to complete the boss elimination mission.</string>
+    <string name="panel_reclamation_relaunch_anchor_tip_ra4">Relaunch Anchor RA-4\n\nReward estimate: ~421 Mission Acceptance Slip + ~5 Points per run, ~1 min 40 sec per round\n\nOperator requirement: Wis\'adel (support unit allowed)\n\nPrerequisite:\n1. Advance the main story until RA-4 is cleared.\n2. Unlock Strategy Business Management. (Hint: RA-3 with Reed the Flame Shadow)\n3. If you have your own Wis\'adel, manually enter the stage and form a team once, ensuring any 5 operators with lower DP cost than Wis\'adel + Wis\'adel, and Wis\'adel is in the 6th slot (i.e., the last one selected). Then confirm recruitment, abandon the current construction, and start from \"Start\".\n4. If using a support Wis\'adel, ensure that Wis\'adel is on the front page of sniper support units (consider using a friend). Manually enter the stage and add any 5 operators with lower DP cost than Wis\'adel, select support Wis\'adel for the 6th slot, then confirm recruitment, abandon the current construction, and start from \"Start\" (ensure the first five slots have operators and the 6th slot is empty).\n\nOpen RA-4 on the map and start the task when \"Start\" appears at the bottom-right to loop automatically\n\nNote:\n1. Please dismantle the buildings in the base that cause starting with extra items, such as Supply Stations and Corrals...\n2. Keep the game at 60 FPS, otherwise swipes may misbehave and cause the task to fail.\n\nTask flow: Use the Gold from Strategy Business Management to unlock areas, and use Wis\'adel to complete the boss elimination mission.</string>
     <string name="panel_reclamation_relaunch_anchor_tip_ra15">Relaunch Anchor RA-15\n\nReward estimate: ~500 Mission Acceptance Slip + Points per run, ~2 min per round\n\nOperator requirement: Pramanix the Prerita (support unit allowed)\n\nPrerequisite:\n1. Clear RA-15 in the main story\n2. Unlock Strategy Business Management. (Hint: RA-3 with Reed the Flame Shadow)\n3. If you have Pramanix the Prerita, manually open RA-15 and form a squad once. Use 5 Vanguards (no level requirement) + Pramanix the Prerita, pick her last, then save the squad and exit the stage\n4. If you use support Pramanix the Prerita, make sure she is on the first page of the Caster support list (consider adding as friend)\n\nOpen RA-15 on the map and start the task when \"Start\" appears at the bottom-right to loop automatically\n\nNote: Please dismantle the buildings in the base that cause starting with extra items, such as Supply Stations and Corrals...\n\nTask flow: Automatically use support operator to execute 60-kill mission</string>
     <string name="panel_reclamation_mode_no_save">No save (farm prosperity by entering and exiting stages)</string>
     <string name="panel_reclamation_mode_with_save">Existing save (farm prosperity by crafting props)</string>
@@ -1587,6 +1605,15 @@
     <string name="panel_reclamation_mode_ra15">RA-15</string>
     <string name="panel_reclamation_increment_click">Click</string>
     <string name="panel_reclamation_increment_hold">Hold</string>
+    <string name="panel_stronghold_mode">Mode</string>
+    <string name="panel_stronghold_mode_badge">Farm badges (full clear)</string>
+    <string name="panel_stronghold_mode_score">Farm score (idle rush)</string>
+    <string name="panel_stronghold_target">Badge goal</string>
+    <string name="panel_stronghold_target_gold">Gold badge (3 clears)</string>
+    <string name="panel_stronghold_target_color">Colored badge (6 clears)</string>
+    <string name="panel_stronghold_runs">Clears</string>
+    <string name="panel_stronghold_tip_badge">Use the default Stronghold Protocol theme UI and start from the main event screen with the ｢Express Simulation｣ option. Manually abandon any saved run first.\nMAA picks a strategy that still needs clears (excluding strategies unavailable in ｢Express Simulation｣) and plays each run to the end. Only the CN client in Simplified Chinese is supported for now.\n\nYou can borrow up to 30 support units in this mode.\nFor a better chance of clearing, borrow everyone on the shop priority list (see below) first, then all tier VI damage dealers. Fill any remaining slots with tier V damage dealers.\n\nFrom the custom squad, MAA picks 2 six-star operators per tier, in this order:\n%1$s\n\nOnce the shop reaches its highest level, MAA buys these operators first, in order:\n%2$s\nFor other operators, the purchase order is:\nCustom squad tier VI → custom squad tier V → regular tier VI → substitutes the game provides for unfilled roster slots → regular tier V.</string>
+    <string name="panel_stronghold_tip_score">Start the task from the main event screen (where ｢Express Simulation｣ is located)\nThe default Stronghold Protocol theme UI must be used\nIf there is a saved game, you need to manually abandon it first\nLeaves the run alone and quickly clears rounds for level rewards</string>
 
     <!-- panel: roguelike -->
     <string name="panel_roguelike_theme">I.S. Theme</string>
@@ -2254,6 +2281,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_log_backend_connect_cause">Service failed to start: %1$s</string>
     <string name="schedule_log_force_stop_running">Force start: stopping the running task</string>
     <string name="schedule_log_wake_start">Waking and unlocking…</string>
+    <string name="schedule_log_wake_and_launch_start">Waking, unlocking, and launching UI…</string>
     <string name="schedule_log_wake_ok">Wake and unlock succeeded</string>
     <string name="schedule_log_auto_sleep_skipped_awake">Device was already unlocked at start, skipping sleep after task</string>
     <string name="schedule_log_auto_sleep_skipped_screensaver">Screen Off still active; skipped sleep after task</string>
@@ -2766,6 +2794,13 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="runlog_run_duration_limit_reached">Run duration limit reached (%1$d min), stopping tasks</string>
     <string name="runlog_service_terminated">MAA service terminated unexpectedly</string>
     <string name="runlog_game_process_gone">Game process not started or closed unexpectedly (%1$s)</string>
+    <string name="runlog_game_exit_low_memory">Exit cause (%1$s): the system ran low on memory and reclaimed the game [%2$s]. Close other memory-heavy apps</string>
+    <string name="runlog_game_exit_background_kill">Exit cause (%1$s): the system\'s background management killed the game [%2$s], typical of vendor ROM power or memory policies. Allow the game to run in the background in system settings or the phone manager (e.g. set its battery policy to Unrestricted, turn off background freezing)</string>
+    <string name="runlog_game_exit_force_stopped">Exit cause (%1$s): the game was force-stopped [%2$s]. If you did not close it yourself, the usual cause is a phone manager\'s lock-screen or one-tap cleanup, or a cleaner app; add the game to its allowlist</string>
+    <string name="runlog_game_exit_crash">Exit cause (%1$s): the game itself crashed or stopped responding [%2$s]; it was not killed by the system</string>
+    <string name="runlog_game_exit_self">Exit cause (%1$s): the game exited on its own [%2$s]</string>
+    <string name="runlog_game_exit_package_change">Exit cause (%1$s): the game was updated, disabled or had its permissions changed [%2$s]</string>
+    <string name="runlog_game_exit_other">Exit cause (%1$s): %2$s</string>
     <string name="runlog_game_fps_low">Game frame rate is only %1$d FPS (below 30); copilot may misbehave. Enable the high frame rate option in the game settings and turn off battery saver</string>
     <string name="runlog_game_fps_degraded">Game frame rate is %1$d FPS (below 50); combat timing may be off. Enable the high frame rate option in the game settings and turn off battery saver</string>
     <string name="runlog_game_left_virtual_display">Game window left the virtual display and could not be moved back (%1$s). Try enabling \"Force fullscreen in background mode\" or switch to foreground mode</string>
@@ -2847,13 +2882,6 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="blackflow_inventory_cleanup_discarded">Discarded part: %1$s</string>
     <string name="blackflow_inventory_cleanup_completed">Parts box cleanup completed</string>
     <string name="blackflow_inventory_cleanup_failed">Parts box cleanup failed</string>
-    <string name="blackflow_scrap_trade_aborted_market_unavailable">Scrap trader item data is unavailable; skipping the trade and leaving</string>
-    <string name="blackflow_scrap_trade_aborted_inventory_incomplete">Could not count holdings at the scrap trader; stopping the trade and leaving</string>
-    <string name="blackflow_scrap_trade_aborted_page_switch_failed">Could not switch between the buy and sell pages at the scrap trader; stopping the trade and leaving</string>
-    <string name="blackflow_scrap_trade_aborted_sale_search_failed">Could not search the sell list at the scrap trader; stopping the trade and leaving</string>
-    <string name="blackflow_scrap_trade_aborted_sell_back_search_failed">Could not find \"%1$s\" to sell back at the scrap trader; stopping the trade and leaving</string>
-    <string name="blackflow_scrap_trade_aborted_sale_failed">Selling \"%1$s\" at the scrap trader was not confirmed; stopping the trade and leaving</string>
-    <string name="blackflow_scrap_trade_aborted_unknown">The trade at the scrap trader ran into an error; stopping the trade and leaving</string>
     <string name="blackflow_milestone_unknown">Unknown objective</string>
     <string name="blackflow_milestone_status_available">Available</string>
     <string name="blackflow_milestone_status_satisfied">Completed</string>
@@ -2956,6 +2984,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="blackflow_outcome_node_dispatch_failed">Node dispatch failed</string>
     <string name="blackflow_outcome_node_result_failed">Node result handling failed</string>
     <string name="blackflow_outcome_internal_failure">Internal state error</string>
+    <string name="blackflow_outcome_scrap_trade_aborted">Trade at the scrap trader aborted</string>
     <string name="blackflow_outcome_unknown">Roguelike encountered an error</string>
     <string name="blackflow_termination_investment_finished">Investment completed; this run has ended</string>
     <string name="blackflow_termination_investment_shop_window_closed">Left the first floor without investing; restarting this run</string>
@@ -2974,6 +3003,13 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="blackflow_termination_no_bosky_passage">No bosky passage was found on floor 3; this run\'s route is complete</string>
     <string name="blackflow_termination_action_points_exhausted_before_cultivation">Action points were exhausted on floor 3 before cultivation was completed</string>
     <string name="blackflow_termination_scrap_shop_never_reached">No scrap trader was reached; this run has ended</string>
+    <string name="blackflow_termination_scrap_trade_inventory_incomplete">Could not count holdings</string>
+    <string name="blackflow_termination_scrap_trade_market_unavailable">Item data is unavailable</string>
+    <string name="blackflow_termination_scrap_trade_page_switch_failed">Could not switch between the buy and sell pages</string>
+    <string name="blackflow_termination_scrap_trade_purchase_failed">The purchase confirmation did not appear</string>
+    <string name="blackflow_termination_scrap_trade_sale_failed">The sale was not confirmed</string>
+    <string name="blackflow_termination_scrap_trade_sale_search_failed">Could not search the sell list</string>
+    <string name="blackflow_termination_scrap_trade_sell_back_search_failed">Could not find the item to sell back</string>
     <string name="blackflow_termination_recovery_port_unavailable">Map recovery interface is unavailable</string>
     <string name="blackflow_termination_perception_port_unavailable">Map perception and task interfaces are unavailable</string>
     <string name="blackflow_termination_map_rebuild_failed_twice">Map rebuild failed twice consecutively</string>
@@ -2994,6 +3030,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="maa_switch_theme">Switch Theme</string>
     <string name="maa_switch_theme_skipped">No theme candidates configured; skipping game theme switch</string>
     <string name="maa_annihilation_entry_not_found">Annihilation entry not found in the Terminal to-do list, possibly already completed this week. Skipped Annihilation</string>
+    <string name="fight_prts_locked">Cannot enable PRTS proxy: the stage may not be cleared with 3 stars, or an uncleared Challenge Mode is on. Please check in game</string>
+    <string name="fight_annihilation_prts_locked">This Annihilation has not been cleared manually yet, so PRTS proxy is unavailable. Clear it manually once first</string>
     <string name="maa_switch_theme_succeeded">Game theme switched to: %1$s</string>
     <string name="maa_switch_theme_already_set">Theme already set: %1$s</string>
     <string name="maa_switch_theme_locked">Theme is locked: %1$s</string>

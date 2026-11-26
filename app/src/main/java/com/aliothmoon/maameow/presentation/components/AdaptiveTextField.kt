@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
@@ -73,6 +74,9 @@ private fun rememberBufferedTextState(
 
 // 多行也限高，LazyColumn 里高度无约束
 internal const val MULTI_LINE_MAX_LINES = 8
+
+// 无界高度下 M3 输入框偶发测出数十万 px，外框 Constraints 越界闪退
+internal fun Modifier.textFieldHeightCap(): Modifier = heightIn(max = 800.dp)
 
 private fun maxLinesOf(singleLine: Boolean): Int = if (singleLine) 1 else MULTI_LINE_MAX_LINES
 
@@ -155,7 +159,7 @@ fun ITextField(
                 editingValue = next
                 if (textChanged) bufferedOnChange(next.text)
             },
-            modifier = modifier.fillMaxWidth(),
+            modifier = modifier.fillMaxWidth().textFieldHeightCap(),
             label = label?.let { { Text(it) } },
             placeholder = { Text(placeholder) },
             singleLine = singleLine && !wrap,
@@ -232,6 +236,7 @@ fun ITextFieldWithFocus(
             onValueChange = bufferedOnChange,
             modifier = modifier
                 .fillMaxWidth()
+                .textFieldHeightCap()
                 .onFocusChanged { focusState ->
                     if (!focusState.isFocused) {
                         onFocusLost()

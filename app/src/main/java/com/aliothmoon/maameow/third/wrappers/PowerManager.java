@@ -20,13 +20,14 @@ public final class PowerManager {
     private Method userActivityMethod;
     private Method wakeUpMethod;
     private int wakeUpMethodVersion = -1;
+    private Method wakeUpWithDisplayIdMethod;
     private Method goToSleepMethod;
     private int goToSleepMethodVersion = -1;
 
     // ───────────────── wakeUp ─────────────────
     // 比注入 KEYCODE_WAKEUP 可靠：不经过 PhoneWindowManager 的按键策略
 
-    private PowerManager(IInterface manager) {
+    PowerManager(IInterface manager) {
         this.manager = manager;
     }
 
@@ -171,6 +172,24 @@ public final class PowerManager {
             return handlePowerInvokeError("wakeUp", e);
         } catch (ReflectiveOperationException e) {
             Ln.e("Could not invoke wakeUp", e);
+            return false;
+        }
+    }
+
+    /** API 36+：只唤醒 displayId 所在的电源组 */
+    public boolean wakeUp(int displayId) {
+        try {
+            if (wakeUpWithDisplayIdMethod == null) {
+                wakeUpWithDisplayIdMethod = manager.getClass().getMethod("wakeUpWithDisplayId",
+                        long.class, int.class, String.class, String.class, int.class);
+            }
+            wakeUpWithDisplayIdMethod.invoke(manager, SystemClock.uptimeMillis(), WAKE_REASON_APPLICATION,
+                    "maameow:wake", FakeContext.PACKAGE_NAME, displayId);
+            return true;
+        } catch (InvocationTargetException e) {
+            return handlePowerInvokeError("wakeUpWithDisplayId", e);
+        } catch (ReflectiveOperationException e) {
+            Ln.e("Could not invoke wakeUpWithDisplayId", e);
             return false;
         }
     }

@@ -32,8 +32,9 @@ data class AppSettings(
     @PrefKey(default = "true")
     val autoCheckUpdate: String = "true",
 
-    @PrefKey(default = "false")
-    val autoDownloadUpdate: String = "false",
+    /** 自动下载更新策略，取值见 [AutoDownloadPolicy]，兼容旧版布尔值 */
+    @PrefKey(default = "OFF")
+    val autoDownloadUpdate: String = "OFF",
 
     @PrefKey(default = "SHIZUKU")
     val startupBackend: String = "SHIZUKU",
@@ -280,6 +281,10 @@ data class AppSettings(
     /** 牛杂生息演算设置 JSON；空串表示从未保存，可接收旧任务链迁入 */
     @PrefKey(default = "")
     val reclamationConfig: String = "",
+
+    /** 牛杂卫戍协议设置 JSON；空串表示从未保存 */
+    @PrefKey(default = "")
+    val strongholdProtocolConfig: String = "",
 
     /** 帮助改进本项目：匿名上报崩溃、任务统计与失败现场 */
     @PrefKey(default = "true")

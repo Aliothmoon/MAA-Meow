@@ -15,6 +15,7 @@ import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.domain.models.RemoteBackend
+import com.aliothmoon.maameow.domain.models.RunDurationLimit
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
 import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
@@ -67,6 +68,10 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.koin.java.KoinJavaComponent.inject
 import timber.log.Timber
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
@@ -279,8 +284,9 @@ class MaaCompositionService(
                     context.getString(R.string.runlog_game_process_gone, packageName),
                     LogLevel.ERROR
                 )
-                // 系统记下的死因当场进应用日志，任务日志只留上面这条
-                processExitJournal.recordGame(packageName)
+                processExitJournal.recordGame(packageName)?.let {
+                    sessionLogger.appendAndWait(describeGameExit(it), LogLevel.WARNING)
+                }
                 // 游戏没了剩下的任务链也是白跑，整轮中止
                 if (_state.value == MaaExecutionState.RUNNING) {
                     notificationCenter.notifySubTaskFailure(
@@ -300,6 +306,11 @@ class MaaCompositionService(
                 notificationCenter.notifySubTaskFailure(message)
             }
         }
+    }
+
+    private fun describeGameExit(cause: GameExitCause): String {
+        val time = EXIT_TIME.format(Instant.ofEpochMilli(cause.timestamp).atZone(ZoneId.systemDefault()))
+        return context.getString(cause.kind.messageRes, time, cause.tag)
     }
 
     fun handleCallback(msg: Int, json: String?) {
@@ -323,9 +334,11 @@ class MaaCompositionService(
         return true
     }
 
+    /** [profileRunDurationLimitMinutes] 须与 [tasks] 的任务链同一时刻从同一配置取，启动途中切换配置才不串 */
     suspend fun start(
         tasks: List<MaaTaskParams>,
         clientType: String,
+        profileRunDurationLimitMinutes: Int?,
         preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
         fallbacks: Map<TaskSlot, TaskFallbackChain> = emptyMap(),
         onSessionStarted: (suspend () -> Unit)? = null
@@ -338,7 +351,11 @@ class MaaCompositionService(
         successMessage = context.getString(R.string.runlog_task_started),
         preflightLogs = preflightLogs,
         onSessionStarted = onSessionStarted,
-        limitRunDuration = true,
+        runDurationLimitMinutes = RunDurationLimit.resolve(
+            profileMinutes = profileRunDurationLimitMinutes,
+            globalEnabled = appSettings.runDurationLimitEnabled.value,
+            globalMinutes = appSettings.runDurationLimitMinutes.value,
+        ),
     )
 
     // 抄作业 / 工具箱 / 小游戏不受运行时长上限约束
@@ -690,7 +707,7 @@ class MaaCompositionService(
         fallbacks: Map<TaskSlot, TaskFallbackChain>,
         successMessage: String,
         mode: RunMode,
-        limitRunDuration: Boolean,
+        runDurationLimitMinutes: Int?,
     ): StartResult {
         // 独立目录：先投递用户文件，送不过去 core 那边就是 file-not-found，直接报资源错误
         if (!coreDataPusher.pushUserData()) {
@@ -736,9 +753,8 @@ class MaaCompositionService(
             )
         }
         // 计时与后台监视都先于 RUNNING 起，秒完的回调置 IDLE 时才能撤掉
-        if (limitRunDuration && appSettings.runDurationLimitEnabled.value) {
-            val limitMinutes = appSettings.runDurationLimitMinutes.value
-            runDeadlineGuard.arm(limitMinutes) { stopByRunDurationLimit(limitMinutes) }
+        if (runDurationLimitMinutes != null) {
+            runDeadlineGuard.arm(runDurationLimitMinutes) { stopByRunDurationLimit(runDurationLimitMinutes) }
         }
         if (mode == RunMode.BACKGROUND) {
             startBackgroundMonitors()
@@ -784,11 +800,11 @@ class MaaCompositionService(
         preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
         fallbacks: Map<TaskSlot, TaskFallbackChain> = emptyMap(),
         onSessionStarted: (suspend () -> Unit)? = null,
-        limitRunDuration: Boolean = false,
+        runDurationLimitMinutes: Int? = null,
     ): StartResult = startMutex.withLock {
         executeStartLocked(
             kind, tasks, clientType, startMessage, successMessage, preflightLogs, fallbacks, onSessionStarted,
-            limitRunDuration,
+            runDurationLimitMinutes,
         )
     }
 
@@ -801,7 +817,7 @@ class MaaCompositionService(
         preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
         fallbacks: Map<TaskSlot, TaskFallbackChain> = emptyMap(),
         onSessionStarted: (suspend () -> Unit)? = null,
-        limitRunDuration: Boolean,
+        runDurationLimitMinutes: Int?,
     ): StartResult {
         // 会话与日志先开；STARTING/FGS 必须在前置检查通过后再进入。
         // 否则竖屏等快速失败会 stop 尚未 startForeground 的 FGS，触发
@@ -876,7 +892,7 @@ class MaaCompositionService(
                         displayBackend,
                     )?.let { return@useRemoteService it }
                     val result = appendTasksAndStart(
-                        maa, tasks, fallbacks, successMessage, mode, limitRunDuration,
+                        maa, tasks, fallbacks, successMessage, mode, runDurationLimitMinutes,
                     )
                     if (result is StartResult.Success) {
                         taskChainState.saveLastUsedClientType(clientType)
@@ -1079,6 +1095,8 @@ private const val DISPLAY_CALL_TIMEOUT_MS = 15_000L
 
 // VDM 关联最长 17s，另加逐档回退
 private const val START_DISPLAY_TIMEOUT_MS = 30_000L
+
+private val EXIT_TIME = DateTimeFormatter.ofPattern("HH:mm:ss", Locale.ROOT)
 
 // 虚拟屏上要等钉屏校验 10s 和首帧 5s
 private const val LAUNCH_GAME_TIMEOUT_MS = 30_000L

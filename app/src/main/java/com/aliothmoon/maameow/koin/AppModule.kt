@@ -21,6 +21,7 @@ import com.aliothmoon.maameow.data.datasource.AppDownloader
 import com.aliothmoon.maameow.data.datasource.AssetExtractor
 import com.aliothmoon.maameow.data.datasource.ResourceDownloader
 import com.aliothmoon.maameow.data.datasource.ZipExtractor
+import com.aliothmoon.maameow.data.datasource.update.AndroidUnmeteredNetworkChecker
 import com.aliothmoon.maameow.data.datasource.update.MirrorChyanAppVersionChecker
 import com.aliothmoon.maameow.data.datasource.update.MirrorChyanResourceVersionChecker
 import com.aliothmoon.maameow.data.log.ApplicationLogWriter
@@ -69,8 +70,8 @@ import com.aliothmoon.maameow.domain.launch.BackendBlock
 import com.aliothmoon.maameow.domain.launch.CountdownUI
 import com.aliothmoon.maameow.domain.launch.LaunchMutex
 import com.aliothmoon.maameow.domain.launch.LaunchPipeline
-import com.aliothmoon.maameow.domain.launch.LaunchRequest
 import com.aliothmoon.maameow.domain.launch.PlanSideTaskRunner
+import com.aliothmoon.maameow.domain.launch.ScheduleWaker
 import com.aliothmoon.maameow.domain.launch.StartTaskChainUseCase
 import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
@@ -112,7 +113,9 @@ import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.domain.service.ProcessExitJournal
 import com.aliothmoon.maameow.data.log.ProcessExitRecorder
 import com.aliothmoon.maameow.domain.service.UnlockGestureReader
+import com.aliothmoon.maameow.domain.service.WakeCredentialSource
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
+import com.aliothmoon.maameow.domain.service.update.UnmeteredNetworkChecker
 import com.aliothmoon.maameow.domain.service.update.UpdateService
 import com.aliothmoon.maameow.domain.service.update.checker.AppVersionChecker
 import com.aliothmoon.maameow.domain.service.update.checker.ResourceVersionChecker
@@ -154,7 +157,6 @@ import com.aliothmoon.maameow.utils.log.LogTreeHolder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidApplication
 import org.koin.android.ext.koin.androidContext
@@ -165,7 +167,6 @@ import org.koin.dsl.bind
 import org.koin.dsl.module
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
-import kotlin.time.Duration.Companion.seconds
 
 val appModule = module {
 
@@ -226,12 +227,25 @@ val appModule = module {
     }
     single {
         val appContext = get<Context>()
+        val km = appContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        ScheduleWaker(
+            engine = get(),
+            credentials = get(),
+            screenSaver = get(),
+            keyguardLocked = { km.isKeyguardLocked },
+            deviceLocked = { km.isDeviceLocked },
+            showIntent = { LaunchIntentMapper.toShowIntent(appContext, it) },
+        )
+    }
+    single {
+        val appContext = get<Context>()
+        val km = appContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
         LaunchPipeline(
             scope = get(named("launchPipeline")),
             mutex = get(),
             appSettingsManager = get(),
             wakeUnlockEngine = get(),
-            unlockGestures = get(),
+            waker = get(),
             chainState = get(),
             compositionService = get(),
             triggerLogger = get(),
@@ -242,26 +256,10 @@ val appModule = module {
             screenPower = get(),
             taskEndRegistry = get(),
             notificationCenter = get(),
-            keyguardLocked = {
-                val km = appContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-                km.isKeyguardLocked
-            },
-            deviceLocked = {
-                val km = appContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-                km.isDeviceLocked
-            },
+            keyguardLocked = { km.isKeyguardLocked },
             screenInteractive = {
                 val pm = appContext.getSystemService(Context.POWER_SERVICE) as PowerManager
                 pm.isInteractive
-            },
-            activityLauncher = { request: LaunchRequest ->
-                withTimeoutOrNull(10.seconds) {
-                    runCatching {
-                        RemoteServiceManager.useRemoteService(timeoutMs = 8_000L) {
-                            it.startActivity(LaunchIntentMapper.toShowIntent(appContext, request))
-                        }
-                    }.getOrDefault(false)
-                } ?: false
             },
             // 与 MaaCompositionService 启动前检查同口径，免得倒计时走完才被拒
             remoteAccessBlocker = {
@@ -316,6 +314,7 @@ val appModule = module {
     single<AppVersionChecker> { MirrorChyanAppVersionChecker(get(), get()) }
     single<ResourceVersionChecker> { MirrorChyanResourceVersionChecker(get()) }
 
+    single<UnmeteredNetworkChecker> { AndroidUnmeteredNetworkChecker(get()) }
     singleOf(::UpdateService)
 
     // 与 MaaCompositionService 循环依赖，只能懒取
@@ -395,6 +394,7 @@ val appModule = module {
 
     // 定时唤醒 + 解锁
     singleOf(::WakeUnlockEngine)
+    singleOf(::WakeCredentialSource)
 
     singleOf(::UnifiedStateDispatcher)
     singleOf(::ProcessExitRecorder) { bind<ProcessExitJournal>() }

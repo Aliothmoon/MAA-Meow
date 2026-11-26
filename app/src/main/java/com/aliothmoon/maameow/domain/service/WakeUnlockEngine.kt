@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.domain.service
 
+import android.content.Intent
 import android.os.SystemClock
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.RemoteService
@@ -10,7 +11,9 @@ import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
@@ -80,34 +83,46 @@ class WakeUnlockEngine {
         }
     }
 
-    /** 最近一次 [unlock] 的发起时刻，[lastTrace] 只认这之后开始的解锁 */
+    /** [uiLaunched] 只在传了 launchIntent 时有意义；[elapsedMs] 为整次调用耗时 */
+    data class WakeLaunch(val result: WakeResult, val uiLaunched: Boolean, val elapsedMs: Long = 0L)
+
+    /** 最近一次 [wakeAndLaunch] 的发起时刻，[lastTrace] 只认这之后开始的解锁 */
     @Volatile
     private var unlockStartedAtMs = 0L
 
-    /** 亮屏并解锁 */
-    suspend fun unlock(credential: UnlockCredential): WakeResult {
-        unlockStartedAtMs = SystemClock.elapsedRealtime()
-        return when (credential) {
-            UnlockCredential.Swipe -> call("unlock") { it.unlock("") }
-            is UnlockCredential.Pin -> call("unlock") { it.unlock(credential.digits) }
-            is UnlockCredential.Gesture ->
-                call("unlockWithGesture") { it.unlockWithGesture(credential.json) }
+    /** [credential] 为 null 时不碰锁屏，只拉界面 */
+    suspend fun wakeAndLaunch(credential: UnlockCredential?, launchIntent: Intent?): WakeLaunch {
+        val startMs = SystemClock.elapsedRealtime()
+        unlockStartedAtMs = startMs
+        return call("wakeAndLaunch", WakeLaunch(WakeResult.IPC_FAILED, uiLaunched = false)) {
+            val outcome = it.wakeAndLaunch(credential?.type, credential?.payload.orEmpty(), launchIntent)
+            WakeLaunch(
+                result = WakeResult.fromCode(outcome.unlockCode),
+                uiLaunched = outcome.uiLaunched,
+                elapsedMs = SystemClock.elapsedRealtime() - startMs,
+            )
         }
     }
 
     /** 设置页自测：先锁屏息屏再解锁 */
-    suspend fun testUnlock(credential: UnlockCredential): WakeResult = when (credential) {
-        UnlockCredential.Swipe -> call("testUnlock") { it.testUnlock("") }
-        is UnlockCredential.Pin -> call("testUnlock") { it.testUnlock(credential.digits) }
-        is UnlockCredential.Gesture ->
-            call("testUnlockGesture") { it.testUnlockGesture(credential.json) }
+    suspend fun testUnlock(credential: UnlockCredential): WakeResult {
+        val startMs = SystemClock.elapsedRealtime()
+        return call("testUnlock", WakeResult.IPC_FAILED) { svc ->
+            val result = WakeResult.fromCode(svc.testUnlock(credential.type, credential.payload))
+            runCatching { svc.getLastWakeTrace(startMs) }
+                .getOrNull()
+                ?.takeIf { it.isNotBlank() }
+                ?.let { Timber.i("testUnlock trace:\n%s", it) }
+            result
+        }
     }
 
     /** 锁屏并息屏（任务结束后自动休眠） */
-    suspend fun lockAndSleep(): WakeResult = call("lockAndSleep") { it.lockAndSleep() }
+    suspend fun lockAndSleep(): WakeResult =
+        call("lockAndSleep", WakeResult.IPC_FAILED) { WakeResult.fromCode(it.lockAndSleep()) }
 
     /**
-     * 提权侧本次 [unlock] 的步骤与耗时
+     * 提权侧本次 [wakeAndLaunch] 的步骤与耗时
      * 只问已有连接；没连上、调用没到提权侧或提权进程是旧版本返回 null
      */
     suspend fun lastTrace(): String? = withContext(Dispatchers.IO) {
@@ -118,18 +133,18 @@ class WakeUnlockEngine {
             ?.takeIf { it.isNotBlank() }
     }
 
-    /** 提权侧返回的都是 [WakeUnlockResult] 码，IPC 失败统一落到 [WakeResult.IPC_FAILED] */
-    private suspend fun call(
+    private suspend fun <T> call(
         name: String,
-        block: (RemoteService) -> Int,
-    ): WakeResult = withContext(Dispatchers.IO) {
-        val result = runCatching {
-            RemoteServiceManager.useRemoteService(timeoutMs = IPC_TIMEOUT_MS) { svc ->
-                WakeResult.fromCode(block(svc))
-            }
-        }.getOrElse { t ->
-            Timber.w(t, "%s: IPC failed", name)
-            WakeResult.IPC_FAILED
+        ipcFailed: T,
+        block: (RemoteService) -> T,
+    ): T = withContext(Dispatchers.IO) {
+        val result = try {
+            RemoteServiceManager.useRemoteService(timeoutMs = IPC_TIMEOUT_MS) { svc -> block(svc) }
+        } catch (e: Exception) {
+            // 等连接超时不算取消
+            if (e is CancellationException && e !is TimeoutCancellationException) throw e
+            Timber.w(e, "%s: IPC failed", name)
+            ipcFailed
         }
         Timber.i("%s -> %s", name, result)
         result

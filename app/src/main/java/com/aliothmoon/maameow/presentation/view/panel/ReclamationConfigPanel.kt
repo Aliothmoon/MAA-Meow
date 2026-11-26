@@ -28,7 +28,6 @@ import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
  */
 fun LazyListScope.reclamationSettingsItems(
     config: ReclamationConfig,
-    clientType: String,
     onUpdate: ((ReclamationConfig) -> ReclamationConfig) -> Unit,
 ) {
     val isRelaunchAnchor = config.theme == "RelaunchAnchor"
@@ -38,7 +37,7 @@ fun LazyListScope.reclamationSettingsItems(
         SelectableChipGroup(
             label = stringResource(R.string.panel_reclamation_theme),
             selectedValue = config.theme,
-            options = localizedReclamationThemeOptions(clientType),
+            options = localizedReclamationThemeOptions(),
             onSelected = { theme ->
                 onUpdate {
                     if (theme == "RelaunchAnchor") {
@@ -222,16 +221,14 @@ private fun TipLines(
 }
 
 @Composable
-private fun localizedReclamationThemeOptions(clientType: String): List<Pair<String, String>> =
+private fun localizedReclamationThemeOptions(): List<Pair<String, String>> =
     ReclamationConfig.THEME_KEYS.map { theme ->
-        val label = when (theme) {
+        theme to when (theme) {
             "Tales" -> stringResource(R.string.panel_reclamation_theme_tales)
             "Fire" -> stringResource(R.string.panel_reclamation_theme_fire)
             "RelaunchAnchor" -> stringResource(R.string.panel_reclamation_theme_relaunch_anchor)
             else -> theme
         }
-        theme to if (ReclamationConfig.isThemeAdapted(theme, clientType)) label
-        else stringResource(R.string.common_theme_not_adapted, label)
     }
 
 @Composable

@@ -21,6 +21,7 @@ import com.aliothmoon.maameow.schedule.ui.ScheduleTriggerLogViewModel
 import com.aliothmoon.maameow.schedule.ui.ScheduleAppBlacklistViewModel
 import com.aliothmoon.maameow.schedule.ui.ScheduleWakeUnlockViewModel
 import org.koin.core.module.dsl.singleOf
+import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
@@ -30,7 +31,8 @@ val viewModelModule = module {
     viewModelOf(::AchievementViewModel)
     viewModelOf(::AppEventsViewModel)
     viewModelOf(::SettingsViewModel)
-    viewModelOf(::UpdateViewModel)
+    // ioDispatcher 走构造默认值
+    viewModel { UpdateViewModel(get(), get(), get(), get(), get(), get()) }
     viewModelOf(::LogHistoryViewModel)
     viewModelOf(::ErrorLogViewModel)
     viewModelOf(::BackgroundTaskViewModel)

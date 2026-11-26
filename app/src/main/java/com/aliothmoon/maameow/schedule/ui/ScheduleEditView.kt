@@ -82,6 +82,7 @@ import com.aliothmoon.maameow.presentation.components.WheelTimeFormatToggle
 import com.aliothmoon.maameow.presentation.components.WheelTimePicker
 import com.aliothmoon.maameow.presentation.components.dayOfWeekLabel
 import com.aliothmoon.maameow.presentation.components.rememberWheelTimePickerState
+import com.aliothmoon.maameow.presentation.components.textFieldHeightCap
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.schedule.model.ScheduleHealthIssue
@@ -243,6 +244,7 @@ fun ScheduleEditView(
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .textFieldHeightCap()
                 )
             }
 
@@ -384,7 +386,8 @@ fun ScheduleEditView(
                             singleLine = true,
                             label = { Text(stringResource(R.string.schedule_first_execution_time)) },
                             modifier = Modifier
-                                .fillMaxWidth(),
+                                .fillMaxWidth()
+                                .textFieldHeightCap(),
                             interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }.also { source ->
                                 LaunchedEffect(source) {
                                     source.interactions.collect { interaction ->
@@ -470,7 +473,7 @@ fun ScheduleEditView(
                                 label = { Text(stringResource(R.string.schedule_days_unit)) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
-                                modifier = Modifier.width(80.dp)
+                                modifier = Modifier.width(80.dp).textFieldHeightCap()
                             )
                             OutlinedTextField(
                                 value = if (state.intervalHours > 0) state.intervalHours.toString() else "",
@@ -482,7 +485,7 @@ fun ScheduleEditView(
                                 label = { Text(stringResource(R.string.schedule_hours_unit)) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
-                                modifier = Modifier.width(80.dp)
+                                modifier = Modifier.width(80.dp).textFieldHeightCap()
                             )
                             val totalMinutes =
                                 state.intervalDays * 24 * 60 + state.intervalHours * 60

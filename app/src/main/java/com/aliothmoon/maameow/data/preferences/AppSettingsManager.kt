@@ -17,11 +17,13 @@ import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.EventShopBlacklist
 import com.aliothmoon.maameow.data.model.EventShopPreset
 import com.aliothmoon.maameow.data.model.ReclamationConfig
+import com.aliothmoon.maameow.data.model.StrongholdProtocolConfig
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager.Companion.FONT_SIZE_SCALE_AUTO
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.AppSettings
+import com.aliothmoon.maameow.domain.models.AutoDownloadPolicy
 import com.aliothmoon.maameow.domain.models.AppSettingsSchema
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
@@ -139,13 +141,15 @@ class AppSettingsManager internal constructor(
     /** 首次快照的所有字段发布后才放行业务初始化 */
     suspend fun awaitLoaded() = loaded.await()
 
-    private fun <T> setting(read: (AppSettings) -> T): StateFlow<T> {
+    private fun <T> mutableSetting(read: (AppSettings) -> T): MutableStateFlow<T> {
         val state = MutableStateFlow(read(defaults))
         settingUpdates += { state.value = read(it) }
         // 晚于 init 块声明的设置项在此补发
         initialSettings?.let { state.value = read(it) }
-        return state.asStateFlow()
+        return state
     }
+
+    private fun <T> setting(read: (AppSettings) -> T): StateFlow<T> = mutableSetting(read).asStateFlow()
 
     suspend fun setSettings(settings: AppSettings) {
         with(AppSettingsSchema) { context.dataStore.update(settings) }
@@ -241,12 +245,13 @@ class AppSettingsManager internal constructor(
         }
     }
 
-    // 启动时自动下载更新
-    val autoDownloadUpdate: StateFlow<Boolean> = setting { it.autoDownloadUpdate.toBooleanStrictOrNull() ?: false }
+    // 启动时自动下载更新策略
+    val autoDownloadPolicy: StateFlow<AutoDownloadPolicy> =
+        setting { AutoDownloadPolicy.fromStored(it.autoDownloadUpdate) }
 
-    suspend fun setAutoDownloadUpdate(enabled: Boolean) {
+    suspend fun setAutoDownloadPolicy(policy: AutoDownloadPolicy) {
         with(AppSettingsSchema) {
-            context.dataStore.edit { it[autoDownloadUpdate] = enabled.toString() }
+            context.dataStore.edit { it[autoDownloadUpdate] = policy.name }
         }
     }
 
@@ -974,6 +979,31 @@ class AppSettingsManager internal constructor(
         } ?: ReclamationConfig()
         return config.copy(mode = config.sanitizedMode())
     }
+
+    private val _strongholdProtocolConfig =
+        mutableSetting { parseStrongholdProtocolConfig(it.strongholdProtocolConfig) }
+    val strongholdProtocolConfig: StateFlow<StrongholdProtocolConfig> = _strongholdProtocolConfig.asStateFlow()
+
+    /** 在事务内读改写，连续修改不会互相覆盖；落盘后立即同步内存态，避免调用方 join 后仍读到旧快照 */
+    suspend fun updateStrongholdProtocolConfig(transform: (StrongholdProtocolConfig) -> StrongholdProtocolConfig) {
+        with(AppSettingsSchema) {
+            var updated: StrongholdProtocolConfig? = null
+            context.dataStore.edit {
+                val current = parseStrongholdProtocolConfig(it[strongholdProtocolConfig].orEmpty())
+                val next = transform(current)
+                it[strongholdProtocolConfig] = JsonUtils.common.encodeToString(next)
+                updated = next
+            }
+            updated?.let { _strongholdProtocolConfig.value = it }
+        }
+    }
+
+    private fun parseStrongholdProtocolConfig(raw: String): StrongholdProtocolConfig =
+        raw.takeIf { it.isNotBlank() }?.let {
+            runCatching { JsonUtils.common.decodeFromString<StrongholdProtocolConfig>(it) }
+                .onFailure { e -> Timber.w(e, "卫戍协议设置解析失败") }
+                .getOrNull()
+        } ?: StrongholdProtocolConfig()
 
     // 放在类体末尾，启动收集器时 setting() 已全部注册
     init {

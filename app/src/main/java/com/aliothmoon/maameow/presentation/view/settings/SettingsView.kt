@@ -128,6 +128,7 @@ import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.CoreDataLocation
+import com.aliothmoon.maameow.domain.models.AutoDownloadPolicy
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
 import com.aliothmoon.maameow.domain.service.AchievementReporter
@@ -147,6 +148,7 @@ import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.components.horizontalBleed
+import com.aliothmoon.maameow.presentation.components.textFieldHeightCap
 import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
 import com.aliothmoon.maameow.presentation.navigation.MainTabNavigator
 import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
@@ -198,7 +200,7 @@ fun SettingsView(
     val currentChangelog by viewModel.currentChangelog.collectAsStateWithLifecycle()
     val debugMode by viewModel.debugMode.collectAsStateWithLifecycle()
     val autoCheckUpdate by viewModel.autoCheckUpdate.collectAsStateWithLifecycle()
-    val autoDownloadUpdate by viewModel.autoDownloadUpdate.collectAsStateWithLifecycle()
+    val autoDownloadPolicy by viewModel.autoDownloadPolicy.collectAsStateWithLifecycle()
     val startupBackend by viewModel.startupBackend.collectAsStateWithLifecycle()
     val coreDataLocation by viewModel.coreDataLocation.collectAsStateWithLifecycle()
     val pendingCoreDataLocation by viewModel.pendingCoreDataLocation.collectAsStateWithLifecycle()
@@ -490,13 +492,15 @@ fun SettingsView(
                         }
                         SettingsSegment {
                             SettingSearchTarget(R.string.settings_auto_download_update_title) {
-                                SettingSwitchItem(
+                                SettingChoiceItem(
                                     title = stringResource(R.string.settings_auto_download_update_title),
-                                    contentColor = contentColor,
-                                    checked = autoDownloadUpdate,
-                                    enabled = autoCheckUpdate,
+                                    info = stringResource(R.string.settings_auto_download_update_desc),
                                     icon = Icons.Rounded.Download,
-                                    onCheckedChange = { viewModel.setAutoDownloadUpdate(it) }
+                                    entries = AutoDownloadPolicy.entries,
+                                    selected = autoDownloadPolicy,
+                                    label = { stringResource(it.labelRes) },
+                                    onSelected = { viewModel.setAutoDownloadPolicy(it) },
+                                    enabled = autoCheckUpdate,
                                 )
                             }
                         }
@@ -1253,6 +1257,7 @@ private fun SettingPenguinIdField(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
         modifier = Modifier
             .fillMaxWidth()
+            .textFieldHeightCap()
             .padding(horizontal = MaaDesignTokens.Spacing.lg, vertical = 8.dp)
             .onFocusChanged { focused = it.isFocused },
     )
@@ -1302,6 +1307,7 @@ internal fun SettingSecretField(
         },
         modifier = Modifier
             .fillMaxWidth()
+            .textFieldHeightCap()
             .onFocusChanged { focused = it.isFocused },
     )
 }

@@ -1,5 +1,7 @@
 package com.aliothmoon.maameow.data.log
 
+import com.aliothmoon.maameow.domain.service.GameExitCause
+import com.aliothmoon.maameow.domain.service.GameExitCause.Kind
 import com.aliothmoon.maameow.remote.ProcessExitRecord
 import java.time.Instant
 import java.time.ZoneId
@@ -18,10 +20,25 @@ internal object ProcessExitLog {
 
     // 对应 ApplicationExitInfo.REASON_*，平台常量要 API 30+ 才认
     private const val REASON_EXIT_SELF = 1
+    private const val REASON_SIGNALED = 2
+    private const val REASON_LOW_MEMORY = 3
+    private const val REASON_CRASH = 4
+    private const val REASON_CRASH_NATIVE = 5
+    private const val REASON_ANR = 6
+    private const val REASON_INITIALIZATION_FAILURE = 7
+    private const val REASON_PERMISSION_CHANGE = 8
+    private const val REASON_EXCESSIVE_RESOURCE_USAGE = 9
     private const val REASON_USER_REQUESTED = 10
+    private const val REASON_OTHER = 13
+    private const val REASON_FREEZER = 14
+    private const val REASON_PACKAGE_STATE_CHANGE = 15
     private const val REASON_PACKAGE_UPDATED = 16
 
-    private val FORCE_STOP_BY_CALLER = Regex(""" due to from (pid |process:)\d+""")
+    private const val SIGKILL = 9
+    private const val MAX_TAG_DESC = 80
+
+    private val FORCE_STOP_BY_CALLER = Regex(""" due to (?:from (?:pid |process:)|stop by )(\d+)""")
+    private val STOP_PREFIX = Regex("""^(?:\[[^\]]+] )?stop \S+ due to """)
 
     private val TIME = DateTimeFormatter.ofPattern("MM-dd HH:mm:ss.SSS", Locale.ROOT)
 
@@ -56,12 +73,42 @@ internal object ProcessExitLog {
         // 14 以下覆盖安装没有 PACKAGE_UPDATED，记成 USER_REQUESTED "... due to installPackageLI"
         record.reason == REASON_USER_REQUESTED && record.description?.contains("installPackageLI") == true -> true
         record.reason == REASON_EXIT_SELF && record.status == 0 -> true
-        // forceStopPackage 记成 "stop <包> due to from pid N"（MIUI 是 from process:N），任务启动和重启游戏都走它
+        // forceStopPackage 记成 "stop <包> due to from pid N"（MIUI: from process:N，vivo: stop by N），任务启动和重启游戏都走它
         subject == ExitSubject.GAME && record.reason == REASON_USER_REQUESTED &&
                 record.description?.let(FORCE_STOP_BY_CALLER::containsMatchIn) == true -> true
 
         else -> false
     }
+
+    /** 调用方是本次提权进程的强停是 MaaMeow 自己停的，不算死因 */
+    fun explain(record: ProcessExitRecord, servicePid: Int?): GameExitCause? {
+        val desc = record.description.orEmpty()
+        val kind = when (record.reason) {
+            REASON_LOW_MEMORY -> Kind.LOW_MEMORY
+            // 不经 AMS 的 SIGKILL 多是厂商守护进程直接杀，其他信号是崩了
+            REASON_SIGNALED -> if (record.status == SIGKILL) Kind.BACKGROUND_KILL else Kind.CRASH
+            REASON_OTHER, REASON_EXCESSIVE_RESOURCE_USAGE, REASON_FREEZER -> Kind.BACKGROUND_KILL
+            REASON_USER_REQUESTED -> when {
+                servicePid != null && FORCE_STOP_BY_CALLER.find(desc)?.groupValues?.get(1)?.toIntOrNull() == servicePid -> return null
+                "installPackageLI" in desc -> Kind.PACKAGE_CHANGE
+                else -> Kind.FORCE_STOPPED
+            }
+
+            REASON_CRASH, REASON_CRASH_NATIVE, REASON_ANR, REASON_INITIALIZATION_FAILURE -> Kind.CRASH
+            REASON_EXIT_SELF -> Kind.EXIT_SELF
+            REASON_PERMISSION_CHANGE, REASON_PACKAGE_STATE_CHANGE, REASON_PACKAGE_UPDATED -> Kind.PACKAGE_CHANGE
+            else -> Kind.OTHER
+        }
+        return GameExitCause(kind, record.timestamp, tag(record))
+    }
+
+    private fun tag(record: ProcessExitRecord): String = buildList {
+        val reason = record.reasonName.ifEmpty { "reason ${record.reason}" }
+        add(if (record.reason == REASON_EXIT_SELF || record.reason == REASON_SIGNALED) "$reason ${record.status}" else reason)
+        if (record.detail != 0) add(record.detailName.ifEmpty { "detail ${record.detail}" })
+        record.description?.lineSequence()?.firstOrNull()?.replace(STOP_PREFIX, "")?.trim()
+            ?.takeIf { it.isNotEmpty() }?.let { add(it.take(MAX_TAG_DESC)) }
+    }.joinToString(", ")
 
     fun format(subject: ExitSubject, record: ProcessExitRecord, zone: ZoneId = ZoneId.systemDefault()): String =
         buildString {

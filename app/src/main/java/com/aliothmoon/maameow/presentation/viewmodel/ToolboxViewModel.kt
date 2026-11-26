@@ -16,6 +16,7 @@ import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.repository.toSortedItems
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
+import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
@@ -94,6 +95,7 @@ class ToolboxViewModel(
     private val appSettingsManager: AppSettingsManager,
     private val sessionLogger: MaaSessionLogger,
     private val operBoxYituliuSync: OperBoxYituliuSync,
+    resourceDataManager: ResourceDataManager,
 ) : ViewModel() {
 
     val pixelArt = PixelArtDelegate(appContext, collector, compositionService.state, viewModelScope)
@@ -109,6 +111,7 @@ class ToolboxViewModel(
         appSettingsManager,
         clientType = chainState.clientTypeFlow
             .stateIn(viewModelScope, SharingStarted.Eagerly, chainState.clientType),
+        strongholdPriority = resourceDataManager.strongholdPriority,
     )
 
     private val _currentTab = MutableStateFlow(ToolboxTab.MINI_GAME)

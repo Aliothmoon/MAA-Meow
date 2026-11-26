@@ -43,8 +43,10 @@ class StartTaskChainUseCase(
         ) : Result
     }
 
+    /** [profileRunDurationLimitMinutes] 与 [chain] 同取自一个配置 */
     suspend operator fun invoke(
         chain: List<TaskChainNode>,
+        profileRunDurationLimitMinutes: Int?,
         context: TaskStartContext,
         scheduleLabel: String? = null,
     ): Result {
@@ -84,6 +86,7 @@ class StartTaskChainUseCase(
         val startResult = composition.start(
             tasks = plan.params,
             clientType = plan.clientType,
+            profileRunDurationLimitMinutes = profileRunDurationLimitMinutes,
             preflightLogs = plan.logs,
             fallbacks = plan.fallbacks,
         ) {

@@ -23,6 +23,7 @@ enum class MaaTaskType(val value: String) {
     // 特殊任务
     ROGUELIKE("Roguelike"),
     RECLAMATION("Reclamation"),
+    STRONGHOLD_PROTOCOL("StrongholdProtocol"),
 
     // 辅助任务
     COPILOT("Copilot"),

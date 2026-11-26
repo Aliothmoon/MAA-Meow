@@ -81,6 +81,10 @@ class TelemetryController(
     /** 写到 Scope 上的环境 tag 留一份，任务 Span 开跑时抄过去 */
     private val envTags = ConcurrentHashMap<String, String>()
 
+    /** 前台页面的路由模板，退到后台为 null */
+    @Volatile
+    private var route: String? = null
+
     private val tracer = RunTracer(
         startTransaction = { name, op -> Sentry.startTransaction(name, op) },
         environment = { envTags.toMap() },
@@ -116,6 +120,12 @@ class TelemetryController(
 
     /** 首次按开关初始化完成；之前的上报会被丢弃 */
     suspend fun awaitConfigured() = configured.await()
+
+    /** 崩溃与 ANR 据此带上出事时的页面；Android 11 起的 ANR 靠 Sentry 落盘的 Scope 回填 */
+    fun onRouteChanged(route: String?) {
+        this.route = route
+        if (active) applyRoute()
+    }
 
     /** 须在设置读完盘之后调：读盘前开关还是默认值，照着初始化会绕过用户的关闭 */
     fun setup() {
@@ -424,7 +434,11 @@ class TelemetryController(
                     .onFailure { Timber.w(it, "[telemetry] ANR 原因补充失败") }
                 runCatching { TelemetryFgs.enrich(event) }
                     .onFailure { Timber.w(it, "[telemetry] 前台服务耗时补充失败") }
+                TelemetryRoute.filter(event)
                 event
+            }
+            options.beforeSendTransaction = SentryOptions.BeforeSendTransactionCallback { transaction, _ ->
+                transaction.apply { TelemetryRoute.strip(this) }
             }
             // 不关的话每条消息事件都会附上发送线程的调用栈
             options.isAttachStacktrace = false
@@ -447,6 +461,11 @@ class TelemetryController(
         if (rom.version.isNotBlank()) setEnvTag("rom.version", rom.version)
         Sentry.configureScope { it.setContexts("hardware", hardware) }
         refreshRunTags()
+        applyRoute()
+    }
+
+    private fun applyRoute() {
+        route?.let { Sentry.setTag(TelemetryRoute.TAG, it) } ?: Sentry.removeTag(TelemetryRoute.TAG)
     }
 
     private fun refreshRunTags() {

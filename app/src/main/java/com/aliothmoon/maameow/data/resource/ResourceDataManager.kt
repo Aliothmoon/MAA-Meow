@@ -16,6 +16,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
@@ -47,6 +48,7 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
     val mapData: StateFlow<List<MapInfo>> = _snapshot.mapState { it.mapData }
     val roguelikeCoreCharacters: StateFlow<Map<String, List<String>>> =
         _snapshot.mapState { it.roguelikeCoreCharacters }
+    val strongholdPriority: StateFlow<StrongholdPriority> = _snapshot.mapState { it.strongholdPriority }
 
     /** 只随资源版本变的部分，切客户端或语言时复用，不再重读大 JSON */
     private class Base(
@@ -67,6 +69,7 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
         private const val ROGUELIKE_DIR = "roguelike"
         private const val RECRUITMENT_FILE = "recruitment.json"
         private const val MAP_DATA_FILE = "Arknights-Tile-Pos/overview.json"
+        private const val STRONGHOLD_PURCHASE_FILE = "stronghold_protocol/regulation/purchase.json"
 
         // 自动公招标签 key 列表 (中文名作为 key)
         // see WPF: RecruitSettingsUserControlModel._autoRecruitTagList
@@ -192,6 +195,7 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
         roguelikeCoreCharacters = doLoadRoguelikeThemes(key.clientType, base.nameIndex),
         recruitTags = doLoadRecruitTags(key.clientType, key.language),
         mapData = base.mapData,
+        strongholdPriority = doLoadStrongholdPriority(base.characters, key.language),
     )
 
     fun isValidCharacterName(name: String): Boolean {
@@ -488,6 +492,31 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
             }
         }
         return names
+    }
+
+    /** see WPF ToolboxViewModel.GetRegulationBadgeTip */
+    private fun doLoadStrongholdPriority(
+        characters: Map<String, CharacterInfo>, displayLanguage: String
+    ): StrongholdPriority {
+        val file = File(pathConfig.resourceDir, STRONGHOLD_PURCHASE_FILE)
+        if (!file.exists()) return StrongholdPriority.EMPTY
+        return try {
+            val priority = json.parseToJsonElement(file.readText()).jsonObject["priority"]?.jsonArray
+                ?: return StrongholdPriority.EMPTY
+            val squad = mutableListOf<String>()
+            val shop = mutableListOf<String>()
+            for (entry in priority) {
+                val obj = entry.jsonObject
+                val info = obj["id"]?.jsonPrimitive?.contentOrNull?.let(characters::get) ?: continue
+                val name = getLocalizedCharacterName(info, displayLanguage)?.takeIf { it.isNotBlank() } ?: continue
+                shop += name
+                if (obj["squad"]?.jsonPrimitive?.booleanOrNull == true) squad += name
+            }
+            StrongholdPriority(squad, shop)
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to load stronghold protocol priority")
+            StrongholdPriority.EMPTY
+        }
     }
 
     private fun doParseBattleDataJson(content: String): Map<String, CharacterInfo> {

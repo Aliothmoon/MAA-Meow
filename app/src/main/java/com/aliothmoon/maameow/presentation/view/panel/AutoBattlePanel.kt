@@ -98,10 +98,13 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.text
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
@@ -111,6 +114,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.model.LogColorRole
 import com.aliothmoon.maameow.data.model.UserAdditionalOper
 import com.aliothmoon.maameow.data.model.copilot.CopilotDocumentation
 import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
@@ -118,6 +122,7 @@ import com.aliothmoon.maameow.data.resource.CharacterInfo
 import com.aliothmoon.maameow.data.resource.CopilotResourceProvider
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.OperatorDisplayItem
+import com.aliothmoon.maameow.domain.service.OperatorMismatchReason
 import com.aliothmoon.maameow.domain.service.OperatorSummaryData
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
@@ -1331,14 +1336,15 @@ private fun CopilotOperatorSection(summary: OperatorSummaryData, characters: Map
     }
 }
 
-/** 组内按序取首个可用干员，默认只露首选 */
+/** 默认只露列表首个候选，开匹配时已按满足程度排序 */
 @Composable
 internal fun OperatorGroup(
     name: String,
     opers: List<OperatorDisplayItem>,
     characters: Map<String, CharacterInfo?>,
+    resetKey: Any = opers,
 ) {
-    var expanded by rememberSaveable(opers) { mutableStateOf(false) }
+    var expanded by rememberSaveable(resetKey) { mutableStateOf(false) }
     val hidden = opers.size - 1
     Surface(
         shape = RoundedCornerShape(8.dp),
@@ -1638,9 +1644,26 @@ internal fun OperatorGrid(
 
 @Composable
 private fun OperatorCell(item: OperatorDisplayItem, operId: String, rarity: Int) {
+    val reason = item.mismatchReason
+    val reasonLabel = reason?.let {
+        stringResource(when (it) {
+            OperatorMismatchReason.MISSING -> R.string.copilot_match_badge_missing
+            OperatorMismatchReason.ELITE -> R.string.copilot_match_badge_elite
+            OperatorMismatchReason.LEVEL -> R.string.copilot_match_badge_level
+            OperatorMismatchReason.SKILL -> R.string.copilot_match_badge_skill
+            OperatorMismatchReason.MODULE -> R.string.copilot_match_badge_module
+        })
+    }
+    val spokenReason = when {
+        reasonLabel == null -> null
+        reason == OperatorMismatchReason.MISSING -> reasonLabel
+        else -> stringResource(R.string.copilot_match_training, reasonLabel)
+    }
+    val badgeRole = if (reason == OperatorMismatchReason.MISSING) LogColorRole.ERROR else LogColorRole.WARNING
     Surface(
         shape = RoundedCornerShape(6.dp),
-        color = MaterialTheme.colorScheme.surface
+        color = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.semantics(mergeDescendants = true) {}
     ) {
         Row(
             modifier = Modifier.padding(6.dp),
@@ -1670,14 +1693,29 @@ private fun OperatorCell(item: OperatorDisplayItem, operId: String, rarity: Int)
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = item.name,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (reasonLabel != null) {
+                        CopilotMatchBadge(
+                            text = "× $reasonLabel",
+                            role = badgeRole,
+                            // 读屏念原因，不念「×」
+                            modifier = Modifier.clearAndSetSemantics { text = AnnotatedString(spokenReason.orEmpty()) },
+                        )
+                    }
+                }
                 OperatorAttributes(item)
             }
         }

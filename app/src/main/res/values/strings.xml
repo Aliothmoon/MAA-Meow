@@ -99,6 +99,12 @@
     <string name="maa_deep_exploration_not_unlocked_complain">深入调查未解锁</string>
     <string name="maa_reclamation_pns_mode_error">当前使用无存档任务模式。请手动删除现有存档后再尝试。若您希望保留存档，请考虑切换模式。</string>
     <string name="maa_reclamation_pis_mode_error">当前任务模式需要您拥有可合成道具的存档。请考虑切换模式。</string>
+    <string name="maa_stronghold_protocol">卫戍协议</string>
+    <string name="maa_stronghold_strategy_log">%1$s：通过 %2$d/%3$d</string>
+    <string name="maa_stronghold_settlement_log">%1$s，已通关 %2$d/%3$d</string>
+    <string name="maa_stronghold_cleared">本局通关</string>
+    <string name="maa_stronghold_failed">本局失败</string>
+    <string name="maa_stronghold_strategies_completed">所有策略均已通过 %1$d 次，任务结束</string>
     <string name="maa_complete_combat">完成战斗</string>
 
     <!-- subtask_completed -->
@@ -296,6 +302,7 @@
     <string name="search_keywords_mute">静音 声音 音量</string>
     <string name="search_keywords_run_duration">时长 限时 超时 运行时间</string>
     <string name="search_keywords_screen_off">熄屏 息屏 黑屏 关屏 锁屏 省电</string>
+    <string name="search_keywords_auto_download_update">Wi-Fi wifi 无线 流量 移动网络 计费</string>
 
     <!-- settings: update section -->
     <string name="settings_section_update">更新管理</string>
@@ -304,7 +311,10 @@
     <string name="settings_auto_check_update_title">启动时检查更新</string>
     <string name="settings_auto_check_update_desc">启动应用时自动检查应用和资源更新</string>
     <string name="settings_auto_download_update_title">自动下载更新</string>
-    <string name="settings_auto_download_update_desc">检测到更新后自动下载，无需手动确认</string>
+    <string name="settings_auto_download_update_desc">检测到更新后按网络策略自动下载，不满足条件时改为弹窗确认</string>
+    <string name="settings_auto_download_off">关闭</string>
+    <string name="settings_auto_download_wifi_only">仅 Wi-Fi</string>
+    <string name="settings_auto_download_always">始终</string>
     <string name="settings_update_channel_title">更新渠道</string>
     <string name="settings_update_channel_desc">选择接收稳定版或公测版更新</string>
 
@@ -790,6 +800,7 @@
     <string name="bg_auto_run_duration_limit_input_title">运行时长上限</string>
     <string name="bg_auto_run_duration_limit_input_label">分钟</string>
     <string name="bg_auto_run_duration_limit_input_hint">范围 %1$d–%2$d 分钟</string>
+    <string name="bg_auto_run_duration_limit_profile_override">当前配置单独设置为 %1$d 分钟，不受此处设置影响</string>
     <string name="bg_toast_mute_failed">静音失败，建议直接用系统音量键调低媒体音量</string>
     <string name="bg_auto_hardware_screen_off">熄屏挂机时关闭屏幕电源</string>
     <string name="bg_auto_show_touch_preview">显示触摸预览</string>
@@ -925,6 +936,8 @@
     <string name="panel_profile_copy_id">复制 Profile ID</string>
     <string name="panel_profile_id_copied">已复制 Profile ID</string>
     <string name="profile_default_name">配置-%1$d</string>
+    <string name="panel_profile_run_duration_limit">单独设置运行时长上限</string>
+    <string name="panel_profile_run_duration_limit_hint">未开启时跟随全局「限制单次运行时长」；开启后不论全局开关，均按此时长计时</string>
 
     <!-- panel: oper box -->
     <string name="panel_operbox_tab_owned">已拥有 (%1$d)</string>
@@ -1047,6 +1060,11 @@
     <string name="copilot_match_hidden">已按干员匹配隐藏 %1$d 个作业</string>
     <string name="copilot_match_missing">未拥有：%1$s</string>
     <string name="copilot_match_training">练度不足：%1$s</string>
+    <string name="copilot_match_badge_missing">未拥有</string>
+    <string name="copilot_match_badge_elite">精英化</string>
+    <string name="copilot_match_badge_level">等级</string>
+    <string name="copilot_match_badge_skill">技能</string>
+    <string name="copilot_match_badge_module">模组</string>
     <string name="copilot_search_added_list">已添加作业</string>
     <string name="copilot_search_tab_copilot">作业</string>
     <string name="copilot_search_tab_set">作业集</string>
@@ -1633,7 +1651,7 @@
     <string name="panel_reclamation_theme_fire">沙中之火（已关闭）</string>
     <string name="panel_reclamation_theme_relaunch_anchor">重启锚点</string>
     <string name="panel_reclamation_relaunch_anchor_tip_ra1">重启锚点 RA-1\n\n收益参考：每把约 159 代币 + 统筹点数，单轮耗时约 2 分 10 秒\n\n干员要求：无\n\n前置步骤：推进主线至 RA-1 已通关状态\n\n在大地图打开 RA-1，右下角出现「开启建设」时启动任务，即可自动循环\n\n注意：如果已解锁开局额外携带物品的相关科技，请将基地内会导致开局额外携带物品的设施拆除，如食品供给站、饮品供给站、兽栏等\n\n任务流程：自动执行精耕细作、建设、交付资源、结算循环</string>
-    <string name="panel_reclamation_relaunch_anchor_tip_ra4">重启锚点 RA-4\n\n收益参考：每把约 417 代币 + 统筹点数，单轮耗时约 1 分 40 秒\n\n干员要求：维什戴尔（可以借助战）\n\n前置步骤：\n1. 推进主线至 RA-4 已通关状态\n2. 解锁策略筹划经营（提示：RA-3 配合焰影苇草）\n3. 如果自己有维什戴尔，请手动打开关卡并配队一次，保证为任意 5 个费用比维什戴尔低的干员+ 维什戴尔，且维什戴尔位于六号位即最后一个选的人，然后确认招募，放弃本次建设并在开始建设处开始\n4. 如果使用助战维什戴尔，请保证维什戴尔在狙击助战首页（考虑挚友），请手动打开关卡编入任意 5 个费用比维什戴尔低的干员，六号位选择维什戴尔助战后确认招募，放弃本次建设并在开始建设处开始（保证队伍前五位有人且六号位为空）\n\n在大地图打开 RA-4，右下角出现「开启建设」时启动任务，即可自动循环\n\n注意：如果已解锁开局额外携带物品的相关科技，请将基地内会导致开局额外携带物品的设施拆除，如食品供给站、饮品供给站、兽栏等\n\n任务流程：使用筹划经营策略给予的赤金解锁区域，使用维什戴尔完成击杀 boss 任务</string>
+    <string name="panel_reclamation_relaunch_anchor_tip_ra4">重启锚点 RA-4\n\n收益参考：每把约 417 代币 + 统筹点数，单轮耗时约 1 分 40 秒\n\n干员要求：维什戴尔（可以借助战）\n\n前置步骤：\n1. 推进主线至 RA-4 已通关状态\n2. 解锁策略筹划经营（提示：RA-3 配合焰影苇草）\n3. 如果自己有维什戴尔，请手动打开关卡并配队一次，保证为任意 5 个费用比维什戴尔低的干员+ 维什戴尔，且维什戴尔位于六号位即最后一个选的人，然后确认招募，放弃本次建设并在开始建设处开始\n4. 如果使用助战维什戴尔，请保证维什戴尔在狙击助战首页（考虑挚友），请手动打开关卡编入任意 5 个费用比维什戴尔低的干员，六号位选择维什戴尔助战后确认招募，放弃本次建设并在开始建设处开始（保证队伍前五位有人且六号位为空）\n\n在大地图打开 RA-4，右下角出现「开启建设」时启动任务，即可自动循环\n\n注意：\n1. 如果已解锁开局额外携带物品的相关科技，请将基地内会导致开局额外携带物品的设施拆除，如食品供给站、饮品供给站、兽栏等\n2. 需要保证游戏帧率为 60 帧，否则可能出现滑动异常导致任务出错\n\n任务流程：使用筹划经营策略给予的赤金解锁区域，使用维什戴尔完成击杀 boss 任务</string>
     <string name="panel_reclamation_relaunch_anchor_tip_ra15">重启锚点 RA-15\n\n收益参考：每把约 500 代币 + 统筹点数，单轮耗时约 3 分钟\n\n干员要求：圣聆初雪（可以借助战）\n\n前置步骤：\n1. 推进主线至 RA-15 已通关状态\n2. 解锁策略筹划经营（提示：RA-3 配合焰影苇草）\n3. 如果自己有圣聆初雪，请手动打开关卡并配队一次，保证为五先锋（无练度要求）+ 初雪，且初雪位于六号位即最后一个选的人，然后保存配队并退出关卡\n4. 如果使用助战圣聆初雪，请保证圣聆初雪在术士助战首页（考虑挚友）\n\n在大地图打开 RA-15，右下角出现「开启建设」时启动任务，即可自动循环\n\n注意：如果已解锁开局额外携带物品的相关科技，请将基地内会导致开局额外携带物品的设施拆除，如食品供给站、饮品供给站、兽栏等\n\n任务流程：用圣聆初雪完成 60 杀任务</string>
     <string name="panel_reclamation_mode_no_save">无存档（进出关卡刷点数）</string>
     <string name="panel_reclamation_mode_with_save">有存档（组装道具刷点数）</string>
@@ -1643,6 +1661,15 @@
     <string name="panel_reclamation_mode_ra15">RA-15</string>
     <string name="panel_reclamation_increment_click">连点</string>
     <string name="panel_reclamation_increment_hold">长按</string>
+    <string name="panel_stronghold_mode">模式</string>
+    <string name="panel_stronghold_mode_badge">刷角标（完整通关）</string>
+    <string name="panel_stronghold_mode_score">刷分（放生速通）</string>
+    <string name="panel_stronghold_target">角标目标</string>
+    <string name="panel_stronghold_target_gold">金色角标（通关 3 次）</string>
+    <string name="panel_stronghold_target_color">彩色角标（通关 6 次）</string>
+    <string name="panel_stronghold_runs">通关局数</string>
+    <string name="panel_stronghold_tip_badge">请使用卫戍默认主题 UI，在有 ｢极速模拟｣ 的活动主界面启动任务。已有存档时，请先手动放弃。\nMAA 会选择未达标的策略（不包含 ｢极速模拟｣ 无法使用的策略），并打完每一局。目前仅适配国服简体中文界面。\n\n本模式最多可借用 30 名助战干员。\n建议先借齐商店优先名单中的干员（见下），再借齐 VI 阶输出干员，名额允许时也尽量借齐 V 阶输出干员，可提高通过率。\n\nMAA 会从自选编队中每阶选 2 名六星干员，优先顺序如下：\n%1$s\n\n商店满级后，优先购买以下干员：\n%2$s\n其余干员按以下顺序购买：\n自选 VI 阶 → 自选 V 阶 → 普通 VI 阶 → 账号替补（自有干员不足时由游戏提供）→ 普通 V 阶。</string>
+    <string name="panel_stronghold_tip_score">在活动主界面（有 ｢极速模拟｣ 处）开始任务\n需要使用卫戍默认主题 UI\n在有存档时需要先手动放弃\n不干预对局，快速过回合刷等级奖励</string>
 
     <!-- panel: roguelike -->
     <string name="panel_roguelike_theme">肉鸽主题</string>
@@ -2311,6 +2338,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_log_backend_connect_cause">服务启动失败原因: %1$s</string>
     <string name="schedule_log_force_stop_running">强制启动: 停止当前运行任务</string>
     <string name="schedule_log_wake_start">执行唤醒解锁…</string>
+    <string name="schedule_log_wake_and_launch_start">执行唤醒解锁并拉起界面…</string>
     <string name="schedule_log_wake_ok">唤醒解锁成功</string>
     <string name="schedule_log_auto_sleep_skipped_awake">启动时设备已解锁，跳过结束熄屏</string>
     <string name="schedule_log_auto_sleep_skipped_screensaver">熄屏挂机仍开启，跳过结束熄屏</string>
@@ -2824,6 +2852,13 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="runlog_run_duration_limit_reached">已达到运行时长上限（%1$d 分钟），停止任务</string>
     <string name="runlog_service_terminated">MAA服务异常终止</string>
     <string name="runlog_game_process_gone">游戏进程未启动或被异常关闭(%1$s)</string>
+    <string name="runlog_game_exit_low_memory">退出原因（%1$s）：系统内存不足，游戏被回收 [%2$s]。请关闭其他占用内存的应用</string>
+    <string name="runlog_game_exit_background_kill">退出原因（%1$s）：游戏被系统的后台管控结束 [%2$s]，常见于各家 ROM 的省电或内存管理策略。请在系统设置或手机管家里允许游戏后台运行（如省电策略设为「无限制」、关闭后台冻结）</string>
+    <string name="runlog_game_exit_force_stopped">退出原因（%1$s）：游戏被强行停止 [%2$s]。若不是手动关闭，多为手机管家的锁屏清理、一键清理或清理类应用所致，请把游戏加入其白名单</string>
+    <string name="runlog_game_exit_crash">退出原因（%1$s）：游戏自身崩溃或无响应 [%2$s]，不是被系统查杀</string>
+    <string name="runlog_game_exit_self">退出原因（%1$s）：游戏自行退出 [%2$s]</string>
+    <string name="runlog_game_exit_package_change">退出原因（%1$s）：游戏被更新、停用或改了权限 [%2$s]</string>
+    <string name="runlog_game_exit_other">退出原因（%1$s）：%2$s</string>
     <string name="runlog_game_fps_low">游戏画面帧率仅 %1$d FPS，低于 30，自动战斗可能出错；请在游戏设置中开启高帧率模式，并关闭省电模式</string>
     <string name="runlog_game_fps_degraded">游戏画面帧率 %1$d FPS，低于 50，战斗时机可能不准；建议在游戏设置中开启高帧率模式，并关闭省电模式</string>
     <string name="runlog_game_left_virtual_display">游戏窗口已离开虚拟显示器且自动拉回失败(%1$s)，请尝试开启「后台模式强制全屏模式」或改用前台模式</string>
@@ -2905,13 +2940,6 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="blackflow_inventory_cleanup_discarded">已丢弃零件：%1$s</string>
     <string name="blackflow_inventory_cleanup_completed">零件箱清理完成</string>
     <string name="blackflow_inventory_cleanup_failed">零件箱清理失败</string>
-    <string name="blackflow_scrap_trade_aborted_market_unavailable">秘境行商的物品数据不可用，跳过交易并离店</string>
-    <string name="blackflow_scrap_trade_aborted_inventory_incomplete">秘境行商持有物清点失败，停止交易并离店</string>
-    <string name="blackflow_scrap_trade_aborted_page_switch_failed">秘境行商买入与出售页面切换失败，停止交易并离店</string>
-    <string name="blackflow_scrap_trade_aborted_sale_search_failed">秘境行商出售列表查找失败，停止交易并离店</string>
-    <string name="blackflow_scrap_trade_aborted_sell_back_search_failed">秘境行商未能找到要卖回的「%1$s」，停止交易并离店</string>
-    <string name="blackflow_scrap_trade_aborted_sale_failed">秘境行商出售「%1$s」未得到确认，停止交易并离店</string>
-    <string name="blackflow_scrap_trade_aborted_unknown">秘境行商交易出现异常，停止交易并离店</string>
     <string name="blackflow_milestone_unknown">未知阶段目标</string>
     <string name="blackflow_milestone_status_available">可以执行</string>
     <string name="blackflow_milestone_status_satisfied">已经完成</string>
@@ -3014,6 +3042,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="blackflow_outcome_node_dispatch_failed">节点分派失败</string>
     <string name="blackflow_outcome_node_result_failed">节点结果处理失败</string>
     <string name="blackflow_outcome_internal_failure">内部状态异常</string>
+    <string name="blackflow_outcome_scrap_trade_aborted">秘境行商交易中止</string>
     <string name="blackflow_outcome_unknown">肉鸽出现异常</string>
     <string name="blackflow_termination_investment_finished">投资已经完成，本局结束</string>
     <string name="blackflow_termination_investment_shop_window_closed">已经离开第一层且尚未投资，本局重开</string>
@@ -3032,6 +3061,13 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="blackflow_termination_no_bosky_passage">第三层未发现误入奇境，本局路线完成</string>
     <string name="blackflow_termination_action_points_exhausted_before_cultivation">第三层行动力耗尽，未完成培育</string>
     <string name="blackflow_termination_scrap_shop_never_reached">没有到达秘境行商，本局结束</string>
+    <string name="blackflow_termination_scrap_trade_inventory_incomplete">持有物清点失败</string>
+    <string name="blackflow_termination_scrap_trade_market_unavailable">物品数据不可用</string>
+    <string name="blackflow_termination_scrap_trade_page_switch_failed">买入与出售页面切换失败</string>
+    <string name="blackflow_termination_scrap_trade_purchase_failed">购买确认框没有出现</string>
+    <string name="blackflow_termination_scrap_trade_sale_failed">出售未得到确认</string>
+    <string name="blackflow_termination_scrap_trade_sale_search_failed">出售列表查找失败</string>
+    <string name="blackflow_termination_scrap_trade_sell_back_search_failed">要卖回的物品查找失败</string>
     <string name="blackflow_termination_recovery_port_unavailable">地图恢复接口不可用</string>
     <string name="blackflow_termination_perception_port_unavailable">地图识别与任务接口不可用</string>
     <string name="blackflow_termination_map_rebuild_failed_twice">连续两次地图重建失败</string>
@@ -3052,6 +3088,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="maa_switch_theme">更换主题</string>
     <string name="maa_switch_theme_skipped">未配置候选主题，跳过更换游戏主题</string>
     <string name="maa_annihilation_entry_not_found">未在终端待办中找到剿灭入口，可能本周剿灭已完成，跳过剿灭</string>
+    <string name="fight_prts_locked">代理指挥无法勾选：关卡可能未三星通关，或开着未通关的突袭模式，请在游戏内确认</string>
+    <string name="fight_annihilation_prts_locked">本期剿灭尚未手动通关，无法使用代理指挥，请先手动完成一次</string>
     <string name="maa_switch_theme_succeeded">已更换游戏主题：%1$s</string>
     <string name="maa_switch_theme_already_set">当前已是主题：%1$s</string>
     <string name="maa_switch_theme_locked">主题尚未解锁：%1$s</string>

@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.res.Resources
 import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
-import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
@@ -20,7 +19,7 @@ import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
 
-/** 上游 v6.20.0-beta.1 自定义排班保持原样/候选未命中与秘境行商中止回调，对齐 WPF AsstProxy */
+/** 上游 v6.20.0-beta.1 自定义排班保持原样/候选未命中回调，对齐 WPF AsstProxy */
 class SubTaskHandlerInfrastCustomPlanTest {
     private val pkg = "com.aliothmoon.maameow"
     private val resources = mockk<Resources>()
@@ -64,12 +63,6 @@ class SubTaskHandlerInfrastCustomPlanTest {
         stubFormat("maa_infrast_assistant_working_excluded", 8, "协助者在班：")
         stubFormat("maa_infrast_assistant_not_found", 9, "协助者未命中：")
         stubPlain("maa_room_groups_match_recog_failed", 10, "编组识别失败")
-        every {
-            resources.getString(R.string.blackflow_scrap_trade_aborted_sale_failed, *anyVararg())
-        } answers { "出售「${secondArg<Array<Any>>()[0]}」未确认" }
-        every {
-            resources.getString(R.string.blackflow_scrap_trade_aborted_unknown, *anyVararg())
-        } returns "交易异常"
     }
 
     @After
@@ -167,23 +160,5 @@ class SubTaskHandlerInfrastCustomPlanTest {
     fun groupsMatchFailed_recognitionFailedHasNoGroupList() {
         extra("CustomInfrastRoomGroupsMatchFailed", "reason", "recognition_failed")
         verify { logger.append("编组识别失败", LogLevel.TRACE) }
-    }
-
-    @Test
-    fun scrapTradeAborted_carriesItemAndFallsBackToUnknown() {
-        handler.onSubTaskExtraInfo(
-            JSONObject.of(
-                "taskchain", "Roguelike", "what", "BlackFlowScrapTradeAborted",
-                "details", JSONObject.of("reason", "sale_failed", "item", "报废轮子"),
-            )
-        )
-        handler.onSubTaskExtraInfo(
-            JSONObject.of(
-                "taskchain", "Roguelike", "what", "BlackFlowScrapTradeAborted",
-                "details", JSONObject.of("reason", "something_new"),
-            )
-        )
-        verify { logger.append("出售「报废轮子」未确认", LogLevel.WARNING) }
-        verify { logger.append("交易异常", LogLevel.WARNING) }
     }
 }

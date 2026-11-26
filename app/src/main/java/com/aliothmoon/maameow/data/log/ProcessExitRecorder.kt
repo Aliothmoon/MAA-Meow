@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Build
 import androidx.core.content.edit
 import com.aliothmoon.maameow.constant.Packages
+import com.aliothmoon.maameow.domain.service.GameExitCause
 import com.aliothmoon.maameow.domain.service.ProcessExitJournal
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.remote.ProcessExitRecord
@@ -40,10 +41,16 @@ class ProcessExitRecorder(context: Context) : ProcessExitJournal {
         for ((_, packageName) in Packages) recordGame(packageName)
     }
 
-    override suspend fun recordGame(packageName: String) = guarded(packageName) {
-        val since = mutex.withLock { watermark(packageName) }?.timestamp ?: 0L
-        val records = fetch(packageName, since) ?: return@guarded
-        record(ExitSubject.GAME, packageName, records)
+    override suspend fun recordGame(packageName: String): GameExitCause? {
+        var cause: GameExitCause? = null
+        guarded(packageName) {
+            val since = mutex.withLock { watermark(packageName) }?.timestamp ?: 0L
+            val records = fetch(packageName, since) ?: return@guarded
+            cause = record(ExitSubject.GAME, packageName, records)
+                .lastOrNull { it.processName == packageName }
+                ?.let { ProcessExitLog.explain(it, RemoteServiceManager.lastServicePid) }
+        }
+        return cause
     }
 
     /** 只是记日志，出什么错都不能挡住调用方：启动、连上服务、游戏死亡后的中止；取消照常上抛 */
@@ -66,18 +73,22 @@ class ProcessExitRecorder(context: Context) : ProcessExitJournal {
         }
     }
 
-    private suspend fun record(subject: ExitSubject, packageName: String, records: List<ProcessExitRecord>) =
-        mutex.withLock {
-            val watermark = watermark(packageName)
-            val fresh = ProcessExitLog.selectNew(records, watermark)
-            for (item in fresh) {
-                val line = ProcessExitLog.format(subject, item)
-                if (ProcessExitLog.isExpected(subject, item)) Timber.i(line) else Timber.w(line)
-            }
-            val next = fresh.lastOrNull()?.let { ProcessExitLog.Watermark(it.timestamp, it.pid) }
-                ?: ProcessExitLog.Watermark(0L, 0).takeIf { watermark == null }
-            if (next != null) saveWatermark(packageName, next)
+    private suspend fun record(
+        subject: ExitSubject,
+        packageName: String,
+        records: List<ProcessExitRecord>,
+    ): List<ProcessExitRecord> = mutex.withLock {
+        val watermark = watermark(packageName)
+        val fresh = ProcessExitLog.selectNew(records, watermark)
+        for (item in fresh) {
+            val line = ProcessExitLog.format(subject, item)
+            if (ProcessExitLog.isExpected(subject, item)) Timber.i(line) else Timber.w(line)
         }
+        val next = fresh.lastOrNull()?.let { ProcessExitLog.Watermark(it.timestamp, it.pid) }
+            ?: ProcessExitLog.Watermark(0L, 0).takeIf { watermark == null }
+        if (next != null) saveWatermark(packageName, next)
+        fresh
+    }
 
     private fun watermark(packageName: String): ProcessExitLog.Watermark? {
         if (!prefs.contains(tsKey(packageName))) return null
