@@ -378,10 +378,15 @@ internal fun rememberDepotPlanSwipeState(): DepotPlanSwipeState {
     return remember(scope, reduceMotion) { DepotPlanSwipeState(scope, reduceMotion) }
 }
 
+/** 携带稳定 LazyColumn 键的计划概览项，避免外置键表与列表长度异步错位 */
+internal data class KeyedDepotPlanOrderEntry(
+    val key: Any,
+    val entry: DepotPlanOrderEntry,
+)
+
 /** 挂载到 LazyColumn 的可拖动排序 + 左滑删除计划行，拖至视口边缘自动滚动 */
 internal fun LazyListScope.depotPlanOrderItems(
-    entries: List<DepotPlanOrderEntry>,
-    keys: List<Any>,
+    items: List<KeyedDepotPlanOrderEntry>,
     reorderableState: ReorderableLazyListState,
     swipeState: DepotPlanSwipeState,
     synced: Boolean,
@@ -392,13 +397,14 @@ internal fun LazyListScope.depotPlanOrderItems(
     onDelete: ((Int) -> Unit)? = null,
 ) {
     itemsIndexed(
-        items = entries,
-        key = { index, _ -> keys[index] },
+        items = items,
+        key = { _, item -> item.key },
         contentType = { _, _ -> "depot-plan-row" },
-    ) { index, entry ->
+    ) { index, item ->
         val haptic = LocalHapticFeedback.current
         val actionWidthPx = with(LocalDensity.current) { RevealActionWidth.toPx() }
-        val rowKey = keys[index]
+        val rowKey = item.key
+        val entry = item.entry
 
         ReorderableItem(reorderableState, key = rowKey) { isDragging ->
             val isRowRevealed = swipeState.revealedKey == rowKey && swipeState.revealWidth > 0.5f

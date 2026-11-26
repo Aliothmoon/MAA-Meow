@@ -105,20 +105,21 @@ fun DepotMaintainConfigPanel(
 
     val itemNameMap = remember(itemIndex) { itemIndex.mapValues { it.value.name } }
 
-    // 拖拽中只改本地顺序，松手再落盘；异步写回若逐格触发会按旧列表回跳
-    var nextPlanUid by remember { mutableLongStateOf(0L) }
-    var orderedPlans by remember {
-        mutableStateOf(config.plans.map { IndexedDepotPlan(nextPlanUid++, it) })
-    }
-    val currentConfig by rememberUpdatedState(config)
-    val currentOnConfigChange by rememberUpdatedState(onConfigChange)
+    // 拖拽中只改本地覆盖顺序，松手落盘后等新 config.plans 回流再切回同步列表，避免逐格写盘回跳或键值错位
+    val planUidAllocator = remember { DepotPlanUidAllocator() }
+    val syncedPlans = remember(config.plans) { planUidAllocator.reconcile(config.plans) }
+    var dragOverride by remember { mutableStateOf<DragPlanOverride?>(null) }
     LaunchedEffect(config.plans) {
-        if (orderedPlans.map { it.plan } != config.plans) {
-            orderedPlans = reconcileOrderedPlans(orderedPlans, config.plans) { nextPlanUid++ }
+        if (dragOverride?.basePlans != config.plans) {
+            dragOverride = null
         }
     }
-    val displayPlans = remember(isFloatingWindow, config.plans, orderedPlans) {
-        if (isFloatingWindow) config.plans else orderedPlans.map { it.plan }
+    val currentOrderedPlans = dragOverride?.takeIf { it.basePlans == config.plans }?.ordered ?: syncedPlans
+    val currentConfig by rememberUpdatedState(config)
+    val currentSyncedPlans by rememberUpdatedState(syncedPlans)
+    val currentOnConfigChange by rememberUpdatedState(onConfigChange)
+    val displayPlans = remember(isFloatingWindow, config.plans, currentOrderedPlans) {
+        if (isFloatingWindow) config.plans else currentOrderedPlans.map { it.plan }
     }
     val planOutcomes = remember(displayPlans, config.countDualChipAsChipPack, snapshot, activityStages) {
         displayPlans.map { plan ->
@@ -167,7 +168,8 @@ fun DepotMaintainConfigPanel(
         pendingRemoval = null
     }
     val deletePlanWithUndo: (Int) -> Unit = { index ->
-        config.plans.getOrNull(index)?.let { plan ->
+        val basePlans = currentOrderedPlans.map { it.plan }
+        basePlans.getOrNull(index)?.let { plan ->
             pendingRemoval = DepotPlanRemoval(
                 index = index,
                 plan = plan,
@@ -179,8 +181,9 @@ fun DepotMaintainConfigPanel(
                 delay(DepotPlanUndoMillis)
                 undoVisible = false
             }
-            val plans = config.plans.toMutableList()
+            val plans = basePlans.toMutableList()
             plans.removeAt(index)
+            dragOverride = null
             onConfigChange(config.copy(plans = plans))
         }
     }
@@ -224,7 +227,8 @@ fun DepotMaintainConfigPanel(
     val generalScrollState = rememberLazyListState()
     val advancedScrollState = rememberLazyListState()
     val reorderableState = rememberReorderableLazyListState(generalScrollState) { from, to ->
-        val list = orderedPlans.toMutableList()
+        val base = dragOverride?.takeIf { it.basePlans == currentConfig.plans }?.ordered ?: currentSyncedPlans
+        val list = base.toMutableList()
         val fromIndex = list.indexOfFirst { it.uid == from.key }
         val toIndex = list.indexOfFirst { it.uid == to.key }
         // 控制区、概览标题等非计划项取不到下标，直接忽略
@@ -232,18 +236,24 @@ fun DepotMaintainConfigPanel(
             return@rememberReorderableLazyListState
         }
         list.add(toIndex, list.removeAt(fromIndex))
-        orderedPlans = list
+        dragOverride = DragPlanOverride(currentConfig.plans, list)
     }
     val persistPlanOrder: () -> Unit = {
-        val updated = orderedPlans.map { it.plan }
-        if (updated != currentConfig.plans) {
-            currentOnConfigChange(currentConfig.copy(plans = updated))
+        val active = dragOverride?.takeIf { it.basePlans == currentConfig.plans }?.ordered
+        if (active != null) {
+            val updated = active.map { it.plan }
+            if (updated != currentConfig.plans) {
+                planUidAllocator.seed(active)
+                currentOnConfigChange(currentConfig.copy(plans = updated))
+            } else {
+                dragOverride = null
+            }
         }
     }
     val swipeState = rememberDepotPlanSwipeState()
-    LaunchedEffect(orderedPlans) {
+    LaunchedEffect(currentOrderedPlans) {
         val revealed = swipeState.revealedKey
-        if (revealed != null && orderedPlans.none { it.uid == revealed }) {
+        if (revealed != null && currentOrderedPlans.none { it.uid == revealed }) {
             swipeState.collapse(animated = false)
         }
     }
@@ -263,6 +273,11 @@ fun DepotMaintainConfigPanel(
             notSelectedLabel = notSelectedLabel,
             countDualChips = config.countDualChipAsChipPack,
         )
+    }
+    val keyedOrderEntries = remember(currentOrderedPlans, orderEntries) {
+        currentOrderedPlans.zip(orderEntries) { indexed, entry ->
+            KeyedDepotPlanOrderEntry(key = indexed.uid, entry = entry)
+        }
     }
 
     Column(
@@ -344,9 +359,9 @@ fun DepotMaintainConfigPanel(
                     } else {
                         GeneralTab(
                             config = config,
-                            orderedPlans = orderedPlans,
+                            orderedPlans = currentOrderedPlans,
                             planOutcomes = planOutcomes,
-                            entries = orderEntries,
+                            items = keyedOrderEntries,
                             reorderableState = reorderableState,
                             swipeState = swipeState,
                             stageGroups = stageGroups,
@@ -437,6 +452,11 @@ fun DepotMaintainConfigPanel(
 
 
 
+private data class DragPlanOverride(
+    val basePlans: List<DepotMaintainPlan>,
+    val ordered: List<IndexedDepotPlan>,
+)
+
 private data class DepotPlanRemoval(
     val index: Int,
     val plan: DepotMaintainPlan,
@@ -491,7 +511,7 @@ private fun LazyListScope.GeneralTab(
     config: DepotMaintainConfig,
     orderedPlans: List<IndexedDepotPlan>,
     planOutcomes: List<DepotPlanOutcome>,
-    entries: List<DepotPlanOrderEntry>,
+    items: List<KeyedDepotPlanOrderEntry>,
     reorderableState: ReorderableLazyListState,
     swipeState: DepotPlanSwipeState,
     stageGroups: List<StageGroup>,
@@ -582,11 +602,11 @@ private fun LazyListScope.GeneralTab(
             )
         }
     }
-    if (entries.isNotEmpty() || undoVisible) {
+    if (items.isNotEmpty() || undoVisible) {
         item(key = "summary_header", contentType = "summary_header") {
             val runnableCount = planOutcomes.count { it == DepotPlanOutcome.Runnable }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (entries.isNotEmpty()) {
+                if (items.isNotEmpty()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = stringResource(R.string.panel_depot_summary_title),
@@ -598,7 +618,7 @@ private fun LazyListScope.GeneralTab(
                             text = stringResource(
                                 R.string.panel_depot_summary_runnable,
                                 runnableCount,
-                                entries.size,
+                                items.size,
                             ),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -614,8 +634,7 @@ private fun LazyListScope.GeneralTab(
         }
     }
     depotPlanOrderItems(
-        entries = entries,
-        keys = orderedPlans.map { it.uid },
+        items = items,
         reorderableState = reorderableState,
         swipeState = swipeState,
         synced = inventorySynced,
@@ -627,7 +646,7 @@ private fun LazyListScope.GeneralTab(
                 onOpenPlan(
                     DepotPlanSheetTarget(
                         itemId = plan.dropId,
-                        itemName = entries.getOrNull(index)?.itemName.orEmpty(),
+                        itemName = items.getOrNull(index)?.entry?.itemName.orEmpty(),
                         planIndex = index,
                     )
                 )

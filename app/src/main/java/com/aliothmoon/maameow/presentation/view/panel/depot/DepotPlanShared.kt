@@ -71,3 +71,19 @@ internal fun reconcileOrderedPlans(
         IndexedDepotPlan(uid = matched[i] ?: allocUid(), plan = plan)
     }
 }
+
+/** 为外部计划列表维护稳定 uid，并支持拖拽落盘前提前登记新顺序以防回流闪烁 */
+internal class DepotPlanUidAllocator {
+    private var nextUid = 0L
+    private var last: List<IndexedDepotPlan> = emptyList()
+
+    fun reconcile(plans: List<DepotMaintainPlan>): List<IndexedDepotPlan> {
+        val result = reconcileOrderedPlans(last, plans) { nextUid++ }
+        last = result
+        return result
+    }
+
+    fun seed(ordered: List<IndexedDepotPlan>) {
+        last = ordered
+    }
+}

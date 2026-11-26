@@ -327,7 +327,7 @@ internal fun DepotPlanFlowSheet(
                         }
                     }
                 }
-            } else if (initialTarget != null) {
+            } else {
                 val target = initialTarget
                 val existing = target.planIndex?.let(existingForIndex)
                 DepotPlanEditorContent(
@@ -632,11 +632,19 @@ private fun DepotPlanEditorContent(
 
     var draft by remember(itemId, existing) {
         mutableStateOf(
-            existing?.let { if (it.dropId.isBlank()) it.copy(dropId = itemId) else it }
-                ?: DepotMaintainPlan(
-                    dropId = itemId,
-                    dropCount = count.coerceAtLeast(1),
-                ),
+            existing?.let {
+                if (it.dropId.isBlank()) {
+                    it.copy(
+                        dropId = itemId,
+                        dropCount = if (it.dropCount > 0) it.dropCount else count.coerceAtLeast(1),
+                    )
+                } else {
+                    it
+                }
+            } ?: DepotMaintainPlan(
+                dropId = itemId,
+                dropCount = count.coerceAtLeast(1),
+            ),
         )
     }
     val currentCount = countOf(draft.dropId)

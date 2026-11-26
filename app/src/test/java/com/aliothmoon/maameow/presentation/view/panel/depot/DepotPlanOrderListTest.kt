@@ -166,4 +166,25 @@ class DepotPlanOrderListTest {
         val afterDeleteAndAdd = reconcileOrderedPlans(prev, listOf(rock2, lmd, added)) { nextId++ }
         assertEquals(listOf(1L, 3L, 10L), afterDeleteAndAdd.map { it.uid })
     }
+
+    @Test
+    fun uidAllocator_handlesDeleteToEmptyAndPreservesSeededDragOrder() {
+        val allocator = DepotPlanUidAllocator()
+        val rock = DepotMaintainPlan(stage = "1-7", dropId = "30012", dropCount = 50)
+        val sugar = DepotMaintainPlan(stage = "S3-1", dropId = "30022", dropCount = 40)
+
+        val initial = allocator.reconcile(listOf(rock, sugar))
+        assertEquals(listOf(0L, 1L), initial.map { it.uid })
+
+        // 拖拽互换顺序后提前 seed，等落盘回流应沿用原 uid
+        val dragged = listOf(initial[1], initial[0])
+        allocator.seed(dragged)
+        val afterPersist = allocator.reconcile(listOf(sugar, rock))
+        assertEquals(listOf(1L, 0L), afterPersist.map { it.uid })
+
+        // 删空后再撤销回来不抛越界且分配新 uid
+        assertEquals(emptyList<IndexedDepotPlan>(), allocator.reconcile(emptyList()))
+        val restored = allocator.reconcile(listOf(rock))
+        assertEquals(listOf(2L), restored.map { it.uid })
+    }
 }
