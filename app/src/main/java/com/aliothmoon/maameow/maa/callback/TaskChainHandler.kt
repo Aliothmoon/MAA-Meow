@@ -120,9 +120,7 @@ class TaskChainHandler(
                 outcome.apCost,
             ) to LogLevel.INFO
         }
-        // 参数没下发成功时，前面那句「已跳过 / 已更新」就不成立了：
-        // core 手里还是预检那版参数（times 拉满），这条计划会照原样真跑起来。
-        // 这时只打一条说明实情的警告，别再把「已跳过」也写进日志。
+        // 参数没下发成功时 core 仍按预检参数跑，只打一条警告，不写「已跳过 / 已更新」
         if (!outcome.applied) {
             sessionLogger.append(
                 appContext.getString(

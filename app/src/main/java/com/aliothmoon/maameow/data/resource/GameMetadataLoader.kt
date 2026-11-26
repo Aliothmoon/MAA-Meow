@@ -103,11 +103,12 @@ class GameMetadataLoader(
         // 活动关卡单独兜错，不连累干员表
         runCatching { activityManager.load(key.clientType, hotUpdateSync.stageActivity()) }
             .onFailure { Timber.e(it, "Activity data load failed: %s", key) }
+        var itemsLoaded = false
         try {
             coroutineScope {
                 launch { resourceDataManager.load(key.clientType, key.language, key.revision) }
                 // 物品名称随客户端资源档变化，换服或换资源版本都要重载
-                if (reloadItems) launch { itemHelper.load(key.clientType) }
+                if (reloadItems) launch { itemsLoaded = itemHelper.load(key.clientType) }
             }
         } catch (e: CancellationException) {
             throw e
@@ -117,7 +118,7 @@ class GameMetadataLoader(
             _state.value = State.Failed(key, e)
             return
         }
-        if (reloadItems) loadedItemsKey = itemsKey
+        if (itemsLoaded) loadedItemsKey = itemsKey
         _state.value = State.Ready(key)
         Timber.i("UI metadata ready %s in %dms", key, mark.elapsedNow().inWholeMilliseconds)
     }

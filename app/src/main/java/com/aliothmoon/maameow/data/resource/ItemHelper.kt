@@ -32,18 +32,10 @@ class ItemHelper(
     companion object {
         private const val INDEX_JSON = "item_index.json"
 
-        /** 仓库识别覆盖不到、仅靠战斗结算累积库存的货币目标（龙门币 / 采购凭证） */
-        val CURRENCY_ITEM_IDS: Set<String> = setOf("4001", "4006")
-
         /** 没有独立资源档的客户端，只有根目录那一份索引 */
         const val DEFAULT_CLIENT = "Official"
 
-        /**
-         * 有 global 资源档的客户端。
-         *
-         * 从 [ResourceDataManager] 的资源目录表反推，别再抄一份名单：
-         * 那边加了新服而这里忘了加，物品名会静默退回中文。
-         */
+        /** 有 global 资源档的客户端，从 [ResourceDataManager] 的目录表反推，不另抄名单 */
         private val GLOBAL_CLIENTS: Set<String> = ResourceDataManager.CLIENT_LANGUAGE_MAPPER
             .filterValues { language ->
                 ResourceDataManager.CLIENT_DIRECTORY_MAPPER[language].orEmpty().isNotEmpty()
@@ -69,14 +61,9 @@ class ItemHelper(
     }
 
     /**
-     * 读取物品索引。
+     * 读取物品索引：根目录与客户端两份取并集，同 ID 以客户端为准，缺的退回根目录中文名
      *
-     * 两份索引取并集，同 ID 以客户端那份为准：根目录那份条目更全（新素材先上国服），
-     * 客户端那份语言对。所以选了国际服之后，国际服有的 ID 用国际服的名字，
-     * 国际服还没有的 ID 退回根目录那份的中文名——总比显示成一串数字强。
-     *
-     * 解析不出来时**保留上一份可用数据**——直接清空会让界面整局把所有物品
-     * 显示成 ID，比留着旧名字更糟。
+     * 解析不出来时保留上一份数据，不清空成 ID
      *
      * @return 是否拿到了非空索引
      */

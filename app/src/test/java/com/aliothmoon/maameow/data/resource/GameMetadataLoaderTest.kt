@@ -125,6 +125,18 @@ class GameMetadataLoaderTest {
     }
 
     @Test
+    fun failedItemLoad_retriesOnNextReload() = runTest {
+        every { itemHelper.load("Official") } returns false
+        initState.value = ResourceInitState.Ready
+        startLoader()
+
+        languageFlow.value = "en-us"
+        runCurrent()
+
+        verify(exactly = 2) { itemHelper.load("Official") }
+    }
+
+    @Test
     fun languageChangeSkipsItemTable_revisionReloadsBoth() = runTest {
         initState.value = ResourceInitState.Ready
         startLoader()

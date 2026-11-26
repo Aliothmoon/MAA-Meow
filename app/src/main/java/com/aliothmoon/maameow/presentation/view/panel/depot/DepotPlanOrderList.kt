@@ -58,7 +58,6 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.DepotMaintainPlan
 import com.aliothmoon.maameow.data.model.DepotPlanOutcome
 import com.aliothmoon.maameow.data.model.LogColorRole
-import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.data.resource.StageGroup
 import com.aliothmoon.maameow.domain.models.DualChipConversion
@@ -179,11 +178,10 @@ internal fun ReorderableCollectionItemScope.DepotPlanOrderRow(
         DepotPlanOutcome.StageClosed -> depotWarningColors()
         else -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
     }
-    val hasBaseline = synced || entry.itemId in ItemHelper.CURRENCY_ITEM_IDS
     val progressText = depotProgressText(
         current = entry.current,
         target = entry.target,
-        synced = hasBaseline,
+        synced = synced,
         dualChipExtra = entry.dualChipExtra,
     )
     val stageLabel = if (entry.stage.isNotBlank()) {

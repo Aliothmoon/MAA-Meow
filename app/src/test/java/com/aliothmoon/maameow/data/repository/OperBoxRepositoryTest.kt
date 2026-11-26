@@ -41,6 +41,7 @@ class OperBoxRepositoryTest {
     private fun fakeChainState(): TaskChainState = mockk {
         every { this@mockk.profileId } returns this@OperBoxRepositoryTest.activeProfileId
         every { isLoaded } returns MutableStateFlow(true)
+        every { profileListRecreated } returns false
         every { this@mockk.profileDeleted } returns this@OperBoxRepositoryTest.profileDeleted
     }
 

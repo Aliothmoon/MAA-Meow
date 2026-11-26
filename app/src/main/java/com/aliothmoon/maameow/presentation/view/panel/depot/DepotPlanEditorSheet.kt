@@ -56,9 +56,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -128,7 +128,7 @@ internal data class DepotPlanSheetTarget(
 /**
  * 统一的库存保持底部抽屉（主界面使用，不用于悬浮窗）
  * - [initialTarget] 为 null：新建流程，固定高度内卡片侧滑切换「选物品」与「编计划」，避免锚点重算卡顿与返回误拉全屏
- * - [initialTarget] 非 null：编辑已有计划，按内容自适应高度
+ * - [initialTarget] 非 null：编辑已有计划，按内容自适应高度；未选物品的空计划先走选物品，保存回原位
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -149,7 +149,7 @@ internal fun DepotPlanFlowSheet(
     itemHelper: ItemHelper = koinInject(),
     activityManager: ActivityManager = koinInject(),
 ) {
-    val isAddFlow = initialTarget == null
+    val isAddFlow = initialTarget == null || initialTarget.itemId.isBlank()
     val scope = rememberCoroutineScope()
     val reduceMotion = LocalReduceMotion.current
     val gridState = rememberLazyGridState()
@@ -258,7 +258,7 @@ internal fun DepotPlanFlowSheet(
                                     val next = DepotPlanSheetTarget(
                                         itemId = cell.itemId,
                                         itemName = cell.name,
-                                        planIndex = null,
+                                        planIndex = initialTarget?.planIndex,
                                     )
                                     lastPickedTarget = next
                                     pickedTarget = next
@@ -303,7 +303,7 @@ internal fun DepotPlanFlowSheet(
                                     count = countOf(target.itemId),
                                     countOf = countOf,
                                     dualChipExtraOf = dualChipExtraOf,
-                                    existing = null,
+                                    existing = target.planIndex?.let(existingForIndex),
                                     nodeEnabled = nodeEnabled,
                                     synced = synced,
                                     showMedicine = showMedicine,
@@ -311,9 +311,13 @@ internal fun DepotPlanFlowSheet(
                                     fillHeight = true,
                                     onBack = { pickedTarget = null },
                                     onSave = { plan ->
-                                        closeWithAnimation { onSave(null, plan) }
+                                        closeWithAnimation { onSave(target.planIndex, plan) }
                                     },
-                                    onRemove = {},
+                                    onRemove = {
+                                        target.planIndex?.let { index ->
+                                            closeWithAnimation { onRemove(index) }
+                                        }
+                                    },
                                     itemHelper = itemHelper,
                                     activityManager = activityManager,
                                     iconLoader = iconLoader,
@@ -323,7 +327,7 @@ internal fun DepotPlanFlowSheet(
                         }
                     }
                 }
-            } else {
+            } else if (initialTarget != null) {
                 val target = initialTarget
                 val existing = target.planIndex?.let(existingForIndex)
                 DepotPlanEditorContent(
@@ -461,8 +465,9 @@ private fun DepotBottomSheetDialog(
         val view = LocalView.current
         val density = LocalDensity.current
         val darkSystemBarIcons = MaterialTheme.colorScheme.background.luminance() > 0.5f
-        SideEffect {
-            val window = (view.parent as? DialogWindowProvider)?.window ?: return@SideEffect
+        // IME 动画逐帧重组，窗口配置不能放 SideEffect
+        DisposableEffect(view, darkSystemBarIcons) {
+            val window = (view.parent as? DialogWindowProvider)?.window ?: return@DisposableEffect onDispose {}
             window.setDimAmount(0f)
             window.setWindowAnimations(0)
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
@@ -501,6 +506,7 @@ private fun DepotBottomSheetDialog(
                 isAppearanceLightStatusBars = darkSystemBarIcons
                 isAppearanceLightNavigationBars = darkSystemBarIcons
             }
+            onDispose {}
         }
 
         val statusTopInsets = WindowInsets.statusBars.only(WindowInsetsSides.Top)
@@ -626,10 +632,11 @@ private fun DepotPlanEditorContent(
 
     var draft by remember(itemId, existing) {
         mutableStateOf(
-            existing ?: DepotMaintainPlan(
-                dropId = itemId,
-                dropCount = count.coerceAtLeast(1),
-            ),
+            existing?.let { if (it.dropId.isBlank()) it.copy(dropId = itemId) else it }
+                ?: DepotMaintainPlan(
+                    dropId = itemId,
+                    dropCount = count.coerceAtLeast(1),
+                ),
         )
     }
     val currentCount = countOf(draft.dropId)
@@ -645,18 +652,16 @@ private fun DepotPlanEditorContent(
     val draftTarget = draft.dropCount.coerceIn(1, MAX_DEPOT_TARGET_INVENTORY)
     val headerItemId = draft.dropId.ifBlank { itemId }
     val headerName = itemNameMap[headerItemId] ?: itemName
-    val isCurrency = headerItemId in ItemHelper.CURRENCY_ITEM_IDS
-    val hasBaseline = synced || isCurrency
     val short = draftTarget > currentCount
 
     // 按当前草稿实时映射别名并评估去向，改关后提示立即同步
     val resolvedStage = remember(draft.stage, stageCodes) {
         StageAliasMapper.mapToStageCode(draft.stage, stageCodes)
     }
-    val liveOutcome = remember(draft, resolvedStage, currentCount, hasBaseline, stageGroups) {
+    val liveOutcome = remember(draft, resolvedStage, currentCount, synced, stageGroups) {
         depotPlanOutcome(
             plan = draft.copy(stage = resolvedStage, dropCount = draftTarget),
-            currentCount = if (hasBaseline) currentCount else 0,
+            currentCount = if (synced) currentCount else 0,
             isStageOpen = { activityManager.isStageOpen(it) },
         )
     }
@@ -704,13 +709,13 @@ private fun DepotPlanEditorContent(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = depotProgressText(currentCount, draftTarget, hasBaseline, currentDualChipExtra),
+                    text = depotProgressText(currentCount, draftTarget, synced, currentDualChipExtra),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             // 仅具备库存基线时显示「缺 N / 已够」，未识别仓库不误报缺口
-            if (hasBaseline) {
+            if (synced) {
                 val successColor = LogColorRole.SUCCESS.themedColor()
                 Surface(
                     shape = RoundedCornerShape(MaaDesignTokens.CornerRadius.inner),
@@ -754,14 +759,6 @@ private fun DepotPlanEditorContent(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
         ) {
-            if (isCurrency) {
-                Text(
-                    text = stringResource(R.string.depot_plan_currency_inventory_tip),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
             SectionHeader(
                 title = if (existing == null) {
                     stringResource(R.string.depot_inventory_plan_new)

@@ -49,9 +49,11 @@ class ProfileShardStoreTest {
     private fun fakeChainState(
         profileIdFlow: StateFlow<String> = activeProfileId,
         profileIds: List<String>? = null,
+        recreated: Boolean = false,
     ): TaskChainState = mockk {
         every { this@mockk.profileId } returns profileIdFlow
         every { isLoaded } returns MutableStateFlow(true)
+        every { profileListRecreated } returns recreated
         every { this@mockk.profileDeleted } returns this@ProfileShardStoreTest.profileDeleted
         if (profileIds != null) {
             val known = profileIds.map { pid ->
@@ -65,6 +67,7 @@ class ProfileShardStoreTest {
         mockk {
             every { this@mockk.profileId } returns activeProfileId
             every { isLoaded } returns MutableStateFlow(true)
+            every { profileListRecreated } returns false
             every { this@mockk.profileDeleted } returns this@ProfileShardStoreTest.profileDeleted
             every { this@mockk.profiles } returns profilesFlow
         }
@@ -151,6 +154,19 @@ class ProfileShardStoreTest {
         withTimeout(TIMEOUT_MS) {
             while (rawShardOf(store, PROFILE_B) != null) yield()
         }
+    }
+
+    @Test
+    fun load_keepsShardsWhenProfileListRecreated() = runBlocking {
+        val store = FakePreferencesDataStore()
+        seed(store, PROFILE_B, 2)
+
+        val shards = storeOf(store, fakeChainState(profileIds = listOf(PROFILE_A), recreated = true))
+        shards.awaitLoaded()
+
+        assertEquals(2, shards.all.value[PROFILE_B]?.value)
+        shards.awaitPersist()
+        assertNotNull(rawShardOf(store, PROFILE_B))
     }
 
     /** 未加载过的档、盘上确实没有的档，一律是空快照而非上一个档的残留。 */

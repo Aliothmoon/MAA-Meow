@@ -11,7 +11,6 @@ import com.aliothmoon.maameow.maa.task.MaaTaskType
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -24,10 +23,10 @@ class UserDataUpdateConfigTest {
         operBoxUseYituliuApi: Boolean = false,
     ): TaskParamContext {
         val operRepo = mockk<OperBoxRepository> {
-            every { snapshot } returns MutableStateFlow(OperBoxSnapshot(syncTimeMillis = operSync))
+            every { snapshotOf(any()) } returns OperBoxSnapshot(syncTimeMillis = operSync)
         }
         val depotRepo = mockk<DepotRepository> {
-            every { snapshot } returns MutableStateFlow(DepotSnapshot(syncTimeMillis = depotSync))
+            every { snapshotOf(any()) } returns DepotSnapshot(syncTimeMillis = depotSync)
         }
         return testTaskParamContext(
             node = testTaskChainNode(name = "同步数据"),
@@ -64,6 +63,21 @@ class UserDataUpdateConfigTest {
     fun onlyDepot_producesDepotOnly() {
         val result = UserDataUpdateConfig(updateOperBox = false, updateDepot = true)
             .toTaskParams(ctx())
+        assertEquals(listOf(MaaTaskType.DEPOT), result.map { it.type })
+    }
+
+    @Test
+    fun daily_judgesRunProfileNotActiveProfile() {
+        val now = System.currentTimeMillis()
+        val depotRepo = mockk<DepotRepository> {
+            every { snapshotOf(null) } returns DepotSnapshot(syncTimeMillis = now)
+            every { snapshotOf("run") } returns DepotSnapshot(syncTimeMillis = 1L)
+        }
+        val result = UserDataUpdateConfig(
+            updateOperBox = false,
+            triggerInterval = UserDataUpdateTriggerInterval.DAILY,
+        ).toTaskParams(testTaskParamContext(depotRepository = depotRepo, profileId = "run"))
+
         assertEquals(listOf(MaaTaskType.DEPOT), result.map { it.type })
     }
 

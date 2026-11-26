@@ -344,14 +344,12 @@ class FightDropsRefresherTest {
     }
 
     @Test
-    fun currencyTarget_refreshesEvenWhenDepotNeverSynced() {
+    fun currencyTarget_withoutDepotSync_isInventoryUnavailable() {
         every { depotRepository.hasSynced(any()) } returns false
         every { depotRepository.countOf("4001", any()) } returns 10000
         stageAndBind(1, target(dropId = "4001", dropCount = 50000))
 
-        val outcome = refresher.onTaskStarted(1) as FightDropsRefresher.RefreshOutcome.Updated
-        assertEquals(10000, outcome.current)
-        assertEquals(40000, outcome.need)
+        assertTrue(refresher.onTaskStarted(1) is FightDropsRefresher.RefreshOutcome.InventoryUnavailable)
     }
 
     // ==================== 理智不足跳过 ====================
@@ -456,6 +454,29 @@ class FightDropsRefresherTest {
         assertTrue(
             refresher.onTaskStarted(2) is FightDropsRefresher.RefreshOutcome.SanityInsufficient
         )
+    }
+
+    @Test
+    fun timesLimitedTarget_refreshKeepsTimesLimit() {
+        withInventory(mapOf(ITEM to 30))
+        stageAndBind(1, target().copy(maxTimes = 10))
+
+        assertTrue(refresher.onTaskStarted(1) is FightDropsRefresher.RefreshOutcome.Updated)
+        val json = Json.parseToJsonElement(lastParamsJson!!).jsonObject
+        assertEquals(10, json["times"]!!.jsonPrimitive.content.toInt())
+        assertEquals(70, json["drops"]!!.jsonObject[ITEM]!!.jsonPrimitive.content.toInt())
+    }
+
+    @Test
+    fun timesLimitedTaskCompletedShort_doesNotProveExhaustion() {
+        every { stageApCostHelper.getApCost(STAGE) } returns 21
+        sanity(current = 0)
+        withInventory(mapOf(ITEM to 0))
+        stageAndBind(1, budgetlessTarget(expireDays = 2).copy(maxTimes = 10))
+        refresher.onTaskCompleted(1)
+
+        stageAndBind(2, budgetlessTarget(expireDays = 2), index = 1)
+        assertTrue(refresher.onTaskStarted(2) is FightDropsRefresher.RefreshOutcome.Updated)
     }
 
     @Test

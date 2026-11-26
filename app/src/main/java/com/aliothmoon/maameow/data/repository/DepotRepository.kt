@@ -8,7 +8,6 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.aliothmoon.maameow.data.model.toolbox.DepotItem
 import com.aliothmoon.maameow.data.preferences.TaskChainState
-import com.aliothmoon.maameow.data.resource.ItemHelper
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.Serializable
 import timber.log.Timber
@@ -26,12 +25,8 @@ data class DepotSnapshot(
     val prevScanItems: Map<String, Int> = emptyMap(),
     val prevSyncTimeMillis: Long = 0L,
 ) {
-    /** 至少完整识别过一次仓库，普通材料的掉落累加与缺口重算以此为基线 */
+    /** 至少完整识别过一次仓库，掉落累加与缺口重算以此为基线 */
     val hasSynced: Boolean get() = syncTimeMillis > 0L
-
-    /** 物品是否具备库存基线：普通材料需全量识别过，货币类靠战斗累计自带初值 0 */
-    fun hasBaselineFor(itemId: String): Boolean =
-        hasSynced || itemId in ItemHelper.CURRENCY_ITEM_IDS
 
     fun countOf(itemId: String): Int = items[itemId] ?: 0
 }
@@ -58,10 +53,8 @@ class DepotRepository(
     fun set(items: List<DepotItem>, profileId: String? = null): DepotSnapshot? {
         val scan = items.associate { it.id to it.count }
         val transform: (DepotSnapshot) -> DepotSnapshot = { current ->
-            // 仓库识别不覆盖货币类，保留已有累计值（识别结果含该项时以识别为准）
-            val preservedCurrencies = current.items.filterKeys { it in ItemHelper.CURRENCY_ITEM_IDS }
             DepotSnapshot(
-                items = preservedCurrencies + scan,
+                items = scan,
                 syncTimeMillis = System.currentTimeMillis(),
                 scanItems = scan,
                 prevScanItems = current.scanItems,
@@ -76,18 +69,15 @@ class DepotRepository(
         val valid = drops.filter { (itemId, add) -> add > 0 && !shouldExclude(itemId) }
         // 整关只掉排除集（如声望、家具零件）时无须记账，不算失败
         if (valid.isEmpty()) return true
+        var noBaseline = false
         val transform: (DepotSnapshot) -> DepotSnapshot = { current ->
-            // 未同步仓库前仅累计货币类，普通材料留空避免产生残缺库存
-            val applicable = if (current.hasSynced) {
-                valid
-            } else {
-                valid.filter { (itemId, _) -> itemId in ItemHelper.CURRENCY_ITEM_IDS }
-            }
-            if (applicable.isEmpty()) {
+            // 没有识别基线时累加只会得到残缺数据，留空让消费侧按无数据处理
+            noBaseline = !current.hasSynced
+            if (noBaseline) {
                 current
             } else {
                 val merged = current.items.toMutableMap()
-                for ((itemId, add) in applicable) {
+                for ((itemId, add) in valid) {
                     merged[itemId] = (merged[itemId] ?: 0) + add
                 }
                 current.copy(items = merged)
@@ -95,26 +85,24 @@ class DepotRepository(
         }
         val targetId = profileId?.takeIf { it.isNotEmpty() } ?: taskChainState.profileId.value
         val changed = shards.mutateForChanged(targetId, transform)
+        // 无基线是正常状态，不算写入失败
+        if (noBaseline) return true
         if (!changed) {
-            Timber.w("掉落未写入仓库：配置档无基线或已删除（profileId=%s, items=%d）", targetId, valid.size)
+            Timber.w("掉落未写入仓库：配置档已删除（profileId=%s, items=%d）", targetId, valid.size)
         }
         return changed
     }
 
     fun countOf(itemId: String): Int = snapshot.value.countOf(itemId)
 
-    /** 按指定配置档读库存，避免运行中切档串读其他档数据 */
-    fun countOf(itemId: String, profileId: String?): Int =
-        if (profileId.isNullOrEmpty()) snapshot.value.countOf(itemId)
-        else (shards.all.value[profileId] ?: DepotSnapshot()).countOf(itemId)
+    /** 按指定配置档读，避免运行中切档串读 */
+    fun snapshotOf(profileId: String?): DepotSnapshot =
+        if (profileId.isNullOrEmpty()) snapshot.value
+        else shards.all.value[profileId] ?: DepotSnapshot()
 
-    fun hasSynced(profileId: String?): Boolean =
-        if (profileId.isNullOrEmpty()) snapshot.value.hasSynced
-        else shards.all.value[profileId]?.hasSynced == true
+    fun countOf(itemId: String, profileId: String?): Int = snapshotOf(profileId).countOf(itemId)
 
-    /** 指定档是否具备该物品的库存基线（货币类免全量识别） */
-    fun hasBaselineFor(itemId: String, profileId: String? = null): Boolean =
-        itemId in ItemHelper.CURRENCY_ITEM_IDS || hasSynced(profileId)
+    fun hasSynced(profileId: String?): Boolean = snapshotOf(profileId).hasSynced
 
     private fun shouldExclude(itemId: String): Boolean =
         itemId.isEmpty() || !itemId.all { it in '0'..'9' } || itemId in EXCLUDED_ITEM_IDS

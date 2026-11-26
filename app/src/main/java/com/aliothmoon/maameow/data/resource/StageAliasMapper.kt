@@ -80,13 +80,7 @@ object StageAliasMapper {
         return upperInput
     }
 
-    /**
-     * 全角转半角。
-     *
-     * 中文输入法下敲「1-7」送上来的是「1－7」（U+FF0D），不归一化就会把这个
-     * 全角连字符原样存进计划，MaaCore 认不出这个关卡。
-     * 全角 ！～（U+FF01–U+FF5E）与半角 0x21–0x7E 一一对应，差 0xFEE0。
-     */
+    /** 全角转半角：中文输入法的「1－7」MaaCore 认不出；U+FF01–U+FF5E 与 0x21–0x7E 差 0xFEE0 */
     private fun normalizeFullWidth(input: String): String = buildString(input.length) {
         input.forEach { char ->
             append(

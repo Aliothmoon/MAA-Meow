@@ -47,7 +47,6 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.DepotMaintainConfig
 import com.aliothmoon.maameow.data.model.DepotMaintainPlan
 import com.aliothmoon.maameow.data.model.DepotPlanOutcome
-import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.StageGroup
 import com.aliothmoon.maameow.domain.models.DepotActivityPreset
 import com.aliothmoon.maameow.domain.models.DualChipConversion
@@ -337,7 +336,7 @@ private fun FloatingPlanSummary(
                             text = floatingInventoryText(
                                 plan.dropId,
                                 inventory,
-                                inventorySynced || plan.dropId in ItemHelper.CURRENCY_ITEM_IDS,
+                                inventorySynced,
                                 countDualChips,
                             ) + " / ${plan.dropCount}",
                             color = MaterialTheme.colorScheme.onSurface,
@@ -486,14 +485,6 @@ private fun FloatingPlanCard(
                         onItemSelected = { onPlanChange(plan.copy(dropId = it)) },
                         displayMapper = { id -> itemNameMap[id] ?: id }
                     )
-
-                    if (plan.dropId in ItemHelper.CURRENCY_ITEM_IDS) {
-                        Text(
-                            text = stringResource(R.string.depot_plan_currency_inventory_tip),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
 
                     INumericField(
                         value = plan.dropCount,

@@ -92,7 +92,7 @@ fun stageDisplayName(
  * 默认折叠
  *
  * 传 [customLabel] 时列表末尾多一个自定义入口（如库存保持的「自定义关卡」），
- * 选中后由调用方决定在哪放出输入框；[customSelected] 只负责它的选中态。
+ * 选中后由调用方决定在哪放出输入框；[customSelected] 只负责它的选中态
  */
 @Composable
 internal fun GroupedStageButtonGroup(

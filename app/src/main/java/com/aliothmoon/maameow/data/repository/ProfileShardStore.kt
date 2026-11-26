@@ -69,8 +69,7 @@ class ProfileShardStore<T : Any>(
     /** 订阅 [TaskChainState.profileDeleted] → [remove]。 */
     fun start() {
         scope.launch {
-            // 逐条 try/catch：一条删档失败（磁盘 IOException 经由 awaitPersist 抛上来）不能让
-            // 整个收集协程退出——start 只在 AppModule 里调一次，退出后该 store 永久不再清理分片。
+            // 逐条兜错：收集协程只启动一次，退出后不再清理分片
             taskChainState.profileDeleted.collect { profileId ->
                 try {
                     remove(profileId)
@@ -107,12 +106,7 @@ class ProfileShardStore<T : Any>(
     fun mutateFor(profileId: String, transform: (T) -> T): T? =
         mutateForInternal(profileId, transform).value
 
-    /**
-     * 同 [mutateFor]，但返回「值到底有没有变」。
-     *
-     * 调用方若靠返回值判断「写成功没有」，不能用 [mutateFor]：目标档分片存在但守卫拒绝写
-     * （例如 `hasSynced == false` 时 transform 原样返回）时返回值非空却什么都没写。
-     */
+    /** 同 [mutateFor]，但返回值有没有变；守卫拒写时 [mutateFor] 仍返回非空，判成败要用这个 */
     fun mutateForChanged(profileId: String, transform: (T) -> T): Boolean =
         mutateForInternal(profileId, transform).changed
 
@@ -126,18 +120,13 @@ class ProfileShardStore<T : Any>(
         if (!_isLoaded.value) {
             Timber.w("分片尚未装载完成即写入，基准值可能为空: %s%s", keyPrefix, profileId)
         }
-        // 配置档已被删掉时不要再建分片：运行中删档后，这一场的识别结果仍会按开跑档写进来，
-        // 没有这道闸就会给死档留一条完整分片（UI 看不到、磁盘不回收，导入同 id 备份时还会复活）。
-        // 检查必须放进 _shards.update 的 lambda 里：与 remove() 的 `it - profileId` 在同一个
-        // 原子顺序点上判定，否则「检查通过 → 删档先落地 → 我们再写回」仍会复活死档。
-        // 列表为空/读不到视为「还没载入」——那种情况下没有依据判断某个 id 是死档，照常放行。
+        // 已删的档不再建分片，免得运行中删档后识别结果复活死档
+        // 判定放在 CAS 内，与 remove() 同一原子点；列表未载入时照常放行
         var result: T? = null
         var changed = false
         var ignored = false
         _shards.update { map ->
-            // _shards.update 的 lambda 可能被 CAS 重试执行多次：标志必须在每次尝试开头重置，
-            // 否则上一次尝试算出的 changed=true 会带着「ignored」一起返回，出现
-            // 「内存写了、磁盘没排队」的错位。
+            // CAS 可能重试，每次尝试先重置标志
             result = null
             changed = false
             ignored = false
@@ -165,11 +154,9 @@ class ProfileShardStore<T : Any>(
     }
 
     /**
-     * 目标档是否还在配置档列表里：null = 还没载入/读不到，无法判断。
+     * 目标档是否还在列表里，null 表示列表未载入
      *
-     * 写路径只在「确定已删除」时拦（fail-open：未知就照常写），
-     * 删除路径只在「确定还在」时跳过（未知就照删）——两者的容错方向相反，
-     * 所以必须暴露三态，不能共用一个布尔。
+     * 写路径只拦确定已删的，删除路径只跳过确定还在的，容错方向相反所以用三态
      */
     private fun profileExistence(profileId: String): Boolean? {
         val knownProfiles = runCatching { taskChainState.profiles.value }.getOrNull() ?: return null
@@ -220,18 +207,17 @@ class ProfileShardStore<T : Any>(
                 put(profileId, decode(value as? String))
             }
         }
-        // 按配置档列表对账：删除事件可能丢（无订阅者/进程被杀）、删除落盘可能失败，
-        // 这些孤儿分片如果原样灌进内存，`countOf/hasSynced` 会把死档当有效基线
-        // （表现：库存永远不涨、判定照旧）。列表未载入或为空时不做对账，避免误删。
-        // 与 TaskChainState.init 的加载顺序不确定：先等列表就绪再对账。
-        // load 在 init 里只跑一次，跳过就永远不会再有机会，孤儿分片会成为假基线。
+        // 按配置档列表对账：删除事件可能丢，孤儿分片不能当有效基线
+        // 先等列表就绪，未载入或为空时不对账
         if (!taskChainState.isLoaded.value) {
             withTimeoutOrNull(PROFILE_LIST_WAIT_MS) { taskChainState.isLoaded.first { it } }
         }
+        // 列表是新建的默认档时旧 id 全对不上，保留分片以便导入同 id 备份找回
+        val reconcile = !taskChainState.profileListRecreated
         var orphans = emptySet<String>()
         // 在 CAS 内过滤已删档，避免装载窗口内并发删档被复活；磁盘清理走单写队列
         _shards.update { current ->
-            val deleted = fromDisk.keys.filter { isProfileDeleted(it) }.toSet()
+            val deleted = if (reconcile) fromDisk.keys.filter { isProfileDeleted(it) }.toSet() else emptySet()
             orphans = deleted
             (fromDisk - deleted) + current
         }

@@ -2,7 +2,6 @@ package com.aliothmoon.maameow.data.model
 
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.ActivityManager
-import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.domain.models.DropTarget
 import com.aliothmoon.maameow.domain.models.putReportFields
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
@@ -336,14 +335,13 @@ data class FightConfig(
         }
 
         // 目标库存：未识别 skip；need≤0 直接不 append，省掉一次空任务往返
-        // times 双轨（预期）：append 用 actualTimes 兜底；Start 刷新改 MAX + drops 收束。
         val need = if (isSpecifiedDrops && isInventoryTarget && dropsItemId.isNotBlank()) {
             val synced = if (ctx.profileId.isNullOrEmpty()) {
                 ctx.depotRepository.snapshot.value.hasSynced
             } else {
                 ctx.depotRepository.hasSynced(ctx.profileId)
             }
-            if (dropsItemId !in ItemHelper.CURRENCY_ITEM_IDS && !synced) {
+            if (!synced) {
                 ctx.appendLog(
                     uiTextOf(R.string.runlog_fight_inventory_unavailable, ctx.node.name),
                     LogLevel.WARNING,
@@ -421,6 +419,7 @@ data class FightConfig(
                     medicineExpireDays = expireDays,
                     drGrandet = isDrGrandet,
                     report = ctx.report,
+                    maxTimes = actualTimes,
                 ),
             )
         }

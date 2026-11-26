@@ -161,7 +161,6 @@ class ItemHelperTest {
             listOf("30011", "3114", "4001", "4006"),
             itemHelper.dropItems.value.map { it.id },
         )
-        assertEquals(setOf("4001", "4006"), ItemHelper.CURRENCY_ITEM_IDS)
     }
 
     private companion object {

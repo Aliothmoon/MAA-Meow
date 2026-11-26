@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.data.model.DepotMaintainPlan
 import com.aliothmoon.maameow.data.model.LogColorRole
-import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.presentation.components.ItemIcon
 import com.aliothmoon.maameow.theme.MaaDesignTokens
@@ -117,18 +116,17 @@ internal fun DepotItemCell(
     dimmed: Boolean = false,
 ) {
     val target = cell.target
-    val hasBaseline = synced || cell.itemId in ItemHelper.CURRENCY_ITEM_IDS
-    val unmet = hasBaseline && target != null && target > 0 && cell.count < target
+    val unmet = synced && target != null && target > 0 && cell.count < target
     val accent = when {
         target == null -> MaterialTheme.colorScheme.onSurfaceVariant
-        !hasBaseline -> MaterialTheme.colorScheme.onSurfaceVariant
+        !synced -> MaterialTheme.colorScheme.onSurfaceVariant
         unmet -> MaterialTheme.colorScheme.primary
         else -> LogColorRole.SUCCESS.themedColor()
     }
     val valueText = if (target == null) {
-        if (hasBaseline) "${cell.count}" else "--"
+        if (synced) "${cell.count}" else "--"
     } else {
-        depotProgressText(cell.count, target, hasBaseline)
+        depotProgressText(cell.count, target, synced)
     }
 
     Surface(

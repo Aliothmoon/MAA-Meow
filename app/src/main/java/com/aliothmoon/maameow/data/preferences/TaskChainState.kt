@@ -85,17 +85,19 @@ class TaskChainState(
     private val _isLoaded = MutableStateFlow(false)
     val isLoaded: StateFlow<Boolean> = _isLoaded.asStateFlow()
 
+    /** 本次启动的配置档列表是新建的默认档（首装或解码失败），isLoaded 之后有效 */
+    @Volatile
+    var profileListRecreated: Boolean = false
+        private set
+
     private val _profileDeleted = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val profileDeleted: SharedFlow<String> = _profileDeleted.asSharedFlow()
 
     /**
-     * 删除事件没有第二次机会：列表已经改完，调用方恰好被取消就会丢掉「清分片」，
-     * 重启 load 又把死档读回来。
+     * 删除事件只发一次，调用方被取消也不能丢
      *
-     * 无订阅者时 `tryEmit` 直接成功但**不入队**（replay=0 → 事件丢弃），所以这里
-     * 只记一条 warn，真正的兜底是 [ProfileShardStore.load] 按 profiles 对账。
-     * 有订阅者时 `tryEmit` 成功即入队；仅在缓冲满（一次导入顶掉 ≥8 个档）时才退化成
-     * 挂起 `emit`，用 `NonCancellable` 挡住「用户离开设置页 → viewModelScope 取消」。
+     * 无订阅者时事件直接丢弃，兜底靠 [ProfileShardStore.load] 对账；
+     * 缓冲满才挂起 emit，NonCancellable 挡住 viewModelScope 取消
      */
     private suspend fun emitProfileDeleted(profileId: String) {
         if (_profileDeleted.subscriptionCount.value == 0) {
@@ -109,15 +111,10 @@ class TaskChainState(
     private val _lastUsedClientType = MutableStateFlow<String?>(null)
 
     /**
-     * 串行化 [_chain] / [_profiles] 的读改写。
+     * 串行化 [_chain] / [_profiles] 的读改写
      *
-     * 这两份状态有两个写入方：界面在 Main（改任务配置、库存保持计划），
-     * 任务回调在 [Dispatchers.IO]（SubTaskHandler / TaskChainHandler 里的
-     * `recordCreditFightCompleted`、`clearRecruitUseExpeditedFlags`）。
-     * 都是「读出来 → 改 → 写回去」，不加锁就会互相覆盖：跑任务时保存一条
-     * 库存保持计划，可能被同一时刻到达的信用战回调整份吞掉。
-     *
-     * 锁内只放非挂起代码，所以不会和 [_isLoaded] 互相等待。
+     * 界面（Main）与任务回调（IO）都会读改写，不加锁会互相覆盖；
+     * 锁内只放非挂起代码，不会与 [_isLoaded] 互等
      */
     private val chainLock = Mutex()
 
@@ -253,6 +250,7 @@ class TaskChainState(
                         storedProfiles !== decodedProfiles
 
                 locked {
+                    profileListRecreated = needsDefaultProfile
                     _profiles.value = profiles
                     _profileId.value = activeProfile.id
                     _chain.value = activeProfile.chain
@@ -490,7 +488,7 @@ class TaskChainState(
             // 持久化
             doSync()
         }
-        Timber.d("Switched to profile: %s (%s)", targetName, profileId)
+        targetName?.let { Timber.d("Switched to profile: %s (%s)", it, profileId) }
     }
 
     suspend fun createProfile(): String {
@@ -676,13 +674,14 @@ class TaskChainState(
         }
     }
 
-    private fun localizedContext(): Context {
-        val tag = resolveSelectedLanguage(appSettings.language.value).tag
-        return context.createConfigurationContext(
+    private fun localizedContext(): Context =
+        contextFor(resolveSelectedLanguage(appSettings.language.value).tag)
+
+    private fun contextFor(tag: String): Context =
+        context.createConfigurationContext(
             Configuration(context.resources.configuration).apply {
                 setLocale(Locale.forLanguageTag(tag))
             })
-    }
 
     private fun defaultTaskName(typeInfo: TaskTypeInfo): String =
         typeInfo.defaultName(localizedContext())
@@ -704,14 +703,12 @@ class TaskChainState(
             _chain.value = activeChain
             doSync()
         }
-        // 导入会整体替换列表：被顶掉的档不走 removeProfile，必须补发删除事件，
-        // 否则它们的分片留在磁盘上（UI 看不到、重启 load 又会读回，导入同 id 备份时还会复活）。
-        // 交接语义见 emitProfileDeleted：有订阅者才真正入队，无订阅者靠 load() 对账兜底。
+        // 导入是用户可见的终态操作（随后会提示「导入成功」），必须确认落盘再返回
+        flush()
+        // 新列表落盘后再清被顶掉的档，落盘失败时旧档分片还在
         previousIds
             .filter { id -> profiles.none { it.id == id } }
             .forEach { emitProfileDeleted(it) }
-        // 导入是用户可见的终态操作（随后会提示「导入成功」），必须确认落盘再返回
-        flush()
         Timber.d("Imported %d profiles, active: %s", profiles.size, resolvedActiveId)
     }
 
@@ -744,16 +741,23 @@ class TaskChainState(
     }
 
     private fun nextProfileName(profiles: List<TaskProfile>): String {
-        val maxNum = profiles.mapNotNull { trailingNumber(it.name) }.maxOrNull() ?: 0
+        val patterns = defaultNamePatterns()
+        val maxNum = profiles.mapNotNull { p ->
+            val name = p.name.trim()
+            patterns.firstNotNullOfOrNull { it.matchEntire(name)?.groupValues?.get(1)?.toIntOrNull() }
+        }.maxOrNull() ?: 0
         return defaultProfileName(maxNum + 1)
     }
 
-    /**
-     * 切过界面语言后，旧默认名可能是别的语言的字面量（`Profile 2` / `配置-2`），
-     * 当前语言的正则认不出来；取末尾数字参与编号去重，避免新档与旧档编号撞车。
-     */
-    private fun trailingNumber(name: String): Int? =
-        Regex("(\\d+)\\s*$").find(name.trim())?.groupValues?.getOrNull(1)?.toIntOrNull()
+    /** 切过界面语言后旧默认名是别的语言，各语言都认；位数封顶防溢出 */
+    private fun defaultNamePatterns(): List<Regex> =
+        AppSettingsManager.AppLanguage.entries
+            .filter { it.tag.isNotEmpty() }
+            .map { lang ->
+                val parts = contextFor(lang.tag).getString(R.string.profile_default_name)
+                    .split("%1\$d", limit = 2)
+                Regex(Regex.escape(parts[0]) + "(\\d{1,9})" + Regex.escape(parts.getOrElse(1) { "" }))
+            }
 }
 
 /**
