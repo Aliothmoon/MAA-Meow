@@ -165,6 +165,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      # 派发 mirrorchyan_release_note
+      actions: write
 
     steps:
       - name: Checkout
@@ -223,3 +225,13 @@ jobs:
             apks/*.apk
             mapping-*.zip
           body_path: RELEASE_NOTES.md
+
+      # GITHUB_TOKEN 建的 Release 触发不了 release 事件，直接派发；Mirror酱 收到更新说明会自动建版本
+      - name: Sync release note to MirrorChyan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run mirrorchyan_release_note.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "$GITHUB_REF_NAME" \
+            -f tag="$GITHUB_REF_NAME"
