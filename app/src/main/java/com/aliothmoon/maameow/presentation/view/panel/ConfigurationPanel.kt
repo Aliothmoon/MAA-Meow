@@ -194,7 +194,10 @@ fun TaskConfigPanel(
                         )
 
                         is DepotMaintainConfig -> DepotMaintainConfigPanel(
-                            config = cfg, onConfigChange = onConfigChange
+                            config = cfg,
+                            onConfigChange = onConfigChange,
+                            // 节点没启用时详情面板要提示「保存了也不会跑」
+                            nodeEnabled = selectedNode.enabled,
                         )
 
                         is SwitchThemeConfig -> SwitchThemeConfigPanel(

@@ -120,13 +120,21 @@ class TaskChainHandler(
                 outcome.apCost,
             ) to LogLevel.INFO
         }
-        sessionLogger.append(text, level)
+        // 参数没下发成功时 core 仍按预检参数跑，只打一条警告，不写「已跳过 / 已更新」
         if (!outcome.applied) {
             sessionLogger.append(
-                appContext.getString(R.string.runlog_depot_set_params_failed, outcome.logLabel),
+                appContext.getString(
+                    R.string.runlog_depot_set_params_failed,
+                    outcome.logLabel,
+                ),
                 LogLevel.WARNING,
             )
+            // 原本的意图也留痕（TRACE 级）：排查时能看出「本来因为库存不可用/已够而打算怎么处理」，
+            // 只留一句「将按原参数执行」会让人以为是计算错了
+            sessionLogger.append(text, LogLevel.TRACE)
+            return
         }
+        sessionLogger.append(text, level)
     }
 
     /**

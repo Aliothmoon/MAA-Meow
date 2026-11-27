@@ -20,7 +20,7 @@ class PrepareTaskStartUseCase(
         chain: List<TaskChainNode>,
         context: TaskStartContext,
     ): TaskStartDecision {
-        val plan = when (val analyzeResult = analyzeTaskChainUseCase(chain, context.fromNodeId)) {
+        val plan = when (val analyzeResult = analyzeTaskChainUseCase(chain, context.fromNodeId, context.profileId)) {
             is AnalyzeTaskChainResult.Ready -> analyzeResult.plan
             is AnalyzeTaskChainResult.Blocked -> {
                 return TaskStartDecision.Blocked(
@@ -68,6 +68,8 @@ data class TaskStartContext(
     val acknowledgements: Set<TaskStartAcknowledgement> = emptySet(),
     /** 从此节点起运行，之前的节点本轮跳过；null 为整条链 */
     val fromNodeId: String? = null,
+    /** 启动瞬间捕获的配置档 ID，缺省时由分析阶段读取当前活跃档 */
+    val profileId: String? = null,
 ) {
     fun acknowledged(acknowledgement: TaskStartAcknowledgement): TaskStartContext {
         return copy(acknowledgements = acknowledgements + acknowledgement)

@@ -578,11 +578,12 @@ class BackgroundTaskViewModel(
         context: TaskStartContext,
     ): UiText? {
         // 与链同时取，准备期间切换配置不串
+        val runProfileId = context.profileId ?: chainState.profileId.value
         val profileRunDurationLimit = chainState.activeRunDurationLimitMinutes
         val plan = when (
             val decision = prepareTaskStart(
                 chain = chainState.chain.value,
-                context = context,
+                context = context.copy(profileId = runProfileId),
             )
         ) {
             is TaskStartDecision.Ready -> {
@@ -629,6 +630,7 @@ class BackgroundTaskViewModel(
             profileRunDurationLimitMinutes = profileRunDurationLimit,
             preflightLogs = plan.logs,
             fallbacks = plan.fallbacks,
+            profileId = plan.profileId,
         )
         if (result is MaaCompositionService.StartResult.Success) {
             // 晚于 startSession 发出，拉取日志才有会话接住

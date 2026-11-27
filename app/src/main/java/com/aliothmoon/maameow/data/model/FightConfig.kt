@@ -335,16 +335,25 @@ data class FightConfig(
         }
 
         // 目标库存：未识别 skip；need≤0 直接不 append，省掉一次空任务往返
-        // times 双轨（预期）：append 用 actualTimes 兜底；Start 刷新改 MAX + drops 收束。
         val need = if (isSpecifiedDrops && isInventoryTarget && dropsItemId.isNotBlank()) {
-            if (!ctx.depotRepository.snapshot.value.hasSynced) {
+            val synced = if (ctx.profileId.isNullOrEmpty()) {
+                ctx.depotRepository.snapshot.value.hasSynced
+            } else {
+                ctx.depotRepository.hasSynced(ctx.profileId)
+            }
+            if (!synced) {
                 ctx.appendLog(
                     uiTextOf(R.string.runlog_fight_inventory_unavailable, ctx.node.name),
                     LogLevel.WARNING,
                 )
                 return emptyList()
             }
-            dropsQuantity - ctx.depotRepository.countOf(dropsItemId)
+            val currentCount = if (ctx.profileId.isNullOrEmpty()) {
+                ctx.depotRepository.countOf(dropsItemId)
+            } else {
+                ctx.depotRepository.countOf(dropsItemId, ctx.profileId)
+            }
+            dropsQuantity - currentCount
         } else {
             null
         }
@@ -410,6 +419,7 @@ data class FightConfig(
                     medicineExpireDays = expireDays,
                     drGrandet = isDrGrandet,
                     report = ctx.report,
+                    maxTimes = actualTimes,
                 ),
             )
         }

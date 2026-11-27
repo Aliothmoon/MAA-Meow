@@ -26,13 +26,13 @@ data class UserDataUpdateConfig(
         val yjToday = ServerTimezone.getYjDate(ctx.clientType)
         val yjZone = ServerTimezone.getServerZone(ctx.clientType)
         val operDue = updateOperBox && isUserDataUpdateDue(
-            lastSyncMillis = ctx.operBoxRepository.snapshot.value.syncTimeMillis,
+            lastSyncMillis = ctx.operBoxRepository.snapshotOf(ctx.profileId).syncTimeMillis,
             interval = triggerInterval,
             yjToday = yjToday,
             yjZone = yjZone,
         )
         val depotDue = updateDepot && isUserDataUpdateDue(
-            lastSyncMillis = ctx.depotRepository.snapshot.value.syncTimeMillis,
+            lastSyncMillis = ctx.depotRepository.snapshotOf(ctx.profileId).syncTimeMillis,
             interval = triggerInterval,
             yjToday = yjToday,
             yjZone = yjZone,

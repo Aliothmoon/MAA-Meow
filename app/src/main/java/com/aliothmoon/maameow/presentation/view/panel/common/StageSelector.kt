@@ -31,6 +31,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,6 +41,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.StageAliasMapper
 import com.aliothmoon.maameow.data.resource.StageGroup
 import com.aliothmoon.maameow.data.resource.StageInfo
+import com.aliothmoon.maameow.presentation.clearInputFocus
 import com.aliothmoon.maameow.presentation.components.GuideAnchor
 import com.aliothmoon.maameow.presentation.components.ITextFieldWithFocus
 import com.aliothmoon.maameow.presentation.components.LocalGuideHighlight
@@ -90,6 +94,9 @@ fun stageDisplayName(
  * 标题行：左侧区块名，右侧「已选关卡」徽章 + 展开/收起箭头；点击标题行切换折叠
  * 展开后显示分组标题 + 每个分组下的关卡自动换行平铺
  * 默认折叠
+ *
+ * 传 [customLabel] 时列表末尾多一个自定义入口（如库存保持的「自定义关卡」），
+ * 选中后由调用方决定在哪放出输入框；[customSelected] 只负责它的选中态
  */
 @Composable
 internal fun GroupedStageButtonGroup(
@@ -101,11 +108,20 @@ internal fun GroupedStageButtonGroup(
     /** 选关到实际下发关卡的转换（如自定义剿灭），按钮与徽章都显示转换后的关卡 */
     resolveStage: (String) -> String = { it },
     onRemove: (() -> Unit)? = null,
+    customLabel: String? = null,
+    customSelected: Boolean = false,
+    onCustomSelected: (() -> Unit)? = null,
+    emptyLabel: String = stringResource(R.string.panel_fight_stage_reset_current),
     /** 演示指到选关时，折叠描标题行，展开描目标关卡 */
     guided: Boolean = false,
+    /** 展开选关列表前清除当前输入焦点并收起软键盘，避免抽屉场景键盘遮挡展开内容与下方输入框 */
+    clearFocusOnExpand: Boolean = false,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedDisplay = stageDisplayName(resolveStage(selectedValue), stageGroups)
+    val focusManager = LocalFocusManager.current
+    val hostView = LocalView.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val selectedDisplay = stageDisplayName(resolveStage(selectedValue), stageGroups, emptyLabel)
     val guideKey = LocalGuideHighlight.current
         ?.takeIf { guided && it.anchor == GuideAnchor.STAGE_ITEM }?.key
 
@@ -119,7 +135,12 @@ internal fun GroupedStageButtonGroup(
                 .fillMaxWidth()
                 .guideHighlight(guideKey != null && !expanded, corner = 4.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .clickable { expanded = !expanded }
+                .clickable {
+                    if (clearFocusOnExpand && !expanded) {
+                        clearInputFocus(focusManager, hostView, keyboardController)
+                    }
+                    expanded = !expanded
+                }
                 .padding(vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -173,41 +194,74 @@ internal fun GroupedStageButtonGroup(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         group.stages.forEach { stage ->
-                            val isSelected = stage.code == selectedValue
-                            val isOpen = stage.isOpenToday
+                            val isSelected = !customSelected && stage.code == selectedValue
                             val resolved = resolveStage(stage.code)
-                            Surface(
-                                modifier = Modifier
-                                    .guideHighlight(guideKey == stage.code, corner = 16.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .clickable { onItemSelected(stage.code) },
-                                color = when {
-                                    isSelected -> MaterialTheme.colorScheme.primary
-                                    !isOpen -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f)
-                                    else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                            StagePill(
+                                text = if (resolved == stage.code) {
+                                    stage.displayName
+                                } else {
+                                    stageDisplayName(resolved, stageGroups, emptyLabel)
                                 },
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Text(
-                                    text = if (resolved == stage.code) {
-                                        stage.displayName
-                                    } else {
-                                        stageDisplayName(resolved, stageGroups)
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = when {
-                                        isSelected -> MaterialTheme.colorScheme.onPrimary
-                                        !isOpen -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
-                                        else -> MaterialTheme.colorScheme.onSurface
-                                    },
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                )
-                            }
+                                selected = isSelected,
+                                open = stage.isOpenToday,
+                                onClick = { onItemSelected(stage.code) },
+                                modifier = Modifier.guideHighlight(guideKey == stage.code, corner = 16.dp),
+                            )
                         }
+                    }
+                }
+
+                // 自定义入口：手输代码或别名，样式与上面的关卡胶囊一致
+                if (customLabel != null) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp)
+                    ) {
+                        StagePill(
+                            text = customLabel,
+                            selected = customSelected,
+                            open = true,
+                            onClick = { onCustomSelected?.invoke() },
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun StagePill(
+    text: String,
+    selected: Boolean,
+    open: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick),
+        color = when {
+            selected -> MaterialTheme.colorScheme.primary
+            !open -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f)
+            else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+        },
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = when {
+                selected -> MaterialTheme.colorScheme.onPrimary
+                !open -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
+                else -> MaterialTheme.colorScheme.onSurface
+            },
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+        )
     }
 }
 
@@ -251,6 +305,8 @@ private fun CollapsibleRowTrailing(
  *
  * 例如：龙门币 → CE-6，经验 → LS-6
  *
+ * @param commitOnChange 为 true 时每敲一下就原样回写（别名不在这里映射，留给调用方
+ *   在读取时做），因为面板里有「保存」按钮，只靠失焦提交会漏掉最后一次输入
  */
 @Composable
 internal fun StageInputField(
@@ -259,7 +315,8 @@ internal fun StageInputField(
     label: String,
     placeholder: String,
     stageCodes: List<String>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    commitOnChange: Boolean = false
 ) {
     var textValue by remember(value) { mutableStateOf(value) }
     var showConvertedHint by remember { mutableStateOf(false) }
@@ -270,6 +327,8 @@ internal fun StageInputField(
             value = textValue,
             onValueChange = { newValue ->
                 textValue = newValue
+                // 原样回写：这里映射别名的话，敲「龙门币」敲到一半就被替换成 CE-6 了
+                if (commitOnChange) onValueChange(newValue)
                 // 检查是否是已知别名，显示转换提示
                 val mapped = StageAliasMapper.mapToStageCode(newValue, stageCodes)
                 if (mapped != newValue.uppercase() && newValue.isNotBlank()) {

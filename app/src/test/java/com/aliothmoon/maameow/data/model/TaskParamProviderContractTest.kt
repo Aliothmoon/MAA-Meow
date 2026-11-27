@@ -149,6 +149,27 @@ class TaskParamProviderContractTest {
     }
 
     @Test
+    fun fightConfig_inventoryTarget_stagesTimesLimit() {
+        val depot = mockk<DepotRepository> {
+            every { snapshot } returns MutableStateFlow(DepotSnapshot(syncTimeMillis = 1L))
+            every { countOf("30011") } returns 90
+        }
+        val refresher = mockk<FightDropsRefresher>(relaxed = true)
+        val config = FightConfig(
+            stage1 = "1-7",
+            hasTimesLimited = true,
+            maxTimes = 10,
+            isSpecifiedDrops = true,
+            isInventoryTarget = true,
+            dropsItemId = "30011",
+            dropsQuantity = 100,
+        )
+        config.toTaskParams(ctx(depotRepository = depot, dropsRefresher = refresher))
+
+        verify(exactly = 1) { refresher.stage(any(), match { it.maxTimes == 10 }) }
+    }
+
+    @Test
     fun fightConfig_inventoryTarget_alreadyEnough_skipsAppend() {
         val depot = mockk<DepotRepository> {
             every { snapshot } returns MutableStateFlow(DepotSnapshot(syncTimeMillis = 1L))

@@ -36,10 +36,16 @@ import org.junit.Test
  */
 class FightDropsRefresherTest {
 
-    private val depotRepository: DepotRepository = mockk()
+    private val depotRepository: DepotRepository = mockk {
+        // 没显式给库存的用例：开跑档读数为 0（与「从未识别过」一致）
+        every { countOf(any(), any()) } returns 0
+    }
     private val itemHelper: ItemHelper = mockk()
     private val stageApCostHelper: StageApCostHelper = mockk()
-    private val subTaskHandler: SubTaskHandler = mockk()
+    private val subTaskHandler: SubTaskHandler = mockk {
+        // 默认按「没有指定开跑档」处理，即沿用活跃配置档
+        every { runProfileId } returns null
+    }
     private val remoteService: RemoteService = mockk()
     private val maaCore: MaaCoreService = mockk()
     private lateinit var refresher: FightDropsRefresher
@@ -117,10 +123,11 @@ class FightDropsRefresherTest {
 
     private fun withSynced(synced: Boolean) {
         every { depotRepository.snapshot } returns MutableStateFlow(DepotSnapshot(syncTimeMillis = if (synced) 1L else 0L))
+        every { depotRepository.hasSynced(any()) } returns synced
     }
 
     private fun withInventory(inventory: Map<String, Int>) {
-        every { depotRepository.countOf(any()) } answers { inventory[firstArg()] ?: 0 }
+        every { depotRepository.countOf(any(), any()) } answers { inventory[firstArg()] ?: 0 }
     }
 
     @Test
@@ -269,7 +276,7 @@ class FightDropsRefresherTest {
 
     @Test
     fun setTaskParamsFailure_stillReportsOutcome() {
-        every { depotRepository.countOf(any()) } returns 0
+        every { depotRepository.countOf(any(), any()) } returns 0
         every { maaCore.SetTaskParams(any(), any()) } returns false
         stageAndBind(1, target(dropCount = 10))
         val outcome = refresher.onTaskStarted(1)
@@ -279,7 +286,7 @@ class FightDropsRefresherTest {
 
     @Test
     fun setTaskParamsFailure_onSufficient_stillReportsAppliedFalse() {
-        every { depotRepository.countOf(any()) } returns 100
+        every { depotRepository.countOf(any(), any()) } returns 100
         every { maaCore.SetTaskParams(any(), any()) } returns false
         stageAndBind(1, target(dropCount = 50))
         val outcome = refresher.onTaskStarted(1)
@@ -289,7 +296,7 @@ class FightDropsRefresherTest {
 
     @Test
     fun serviceUnavailable_reportsAppliedFalse() {
-        every { depotRepository.countOf(any()) } returns 0
+        every { depotRepository.countOf(any(), any()) } returns 0
         every { RemoteServiceManager.getInstanceOrNull() } returns null
         stageAndBind(1, target(dropCount = 10))
         val outcome = refresher.onTaskStarted(1)
@@ -313,11 +320,36 @@ class FightDropsRefresherTest {
 
     @Test
     fun unknownItemName_fallsBackToId() {
-        every { depotRepository.countOf(any()) } returns 5
+        every { depotRepository.countOf(any(), any()) } returns 5
         stageAndBind(1, target(dropId = "99999", dropCount = 1))
         val outcome = refresher.onTaskStarted(1)
         assertTrue(outcome is FightDropsRefresher.RefreshOutcome.Sufficient)
         assertEquals("99999", (outcome as FightDropsRefresher.RefreshOutcome.Sufficient).dropName)
+    }
+
+    @Test
+    fun readsInventoryOfRunProfile_whenActiveProfileSwitched() {
+        // 运行中切档：这一场的库存要按「开跑那一档」算，不能读活跃档
+        every { subTaskHandler.runProfileId } returns "B"
+        every { depotRepository.snapshot } returns MutableStateFlow(DepotSnapshot(syncTimeMillis = 1L))
+        every { depotRepository.hasSynced("B") } returns true
+        every { depotRepository.countOf(any(), "B") } returns 30
+        stageAndBind(1, target(dropCount = 100))
+
+        val outcome = refresher.onTaskStarted(1) as FightDropsRefresher.RefreshOutcome.Updated
+        assertEquals(30, outcome.current)
+        assertEquals(70, outcome.need)
+        // hasSynced 也必须落到开跑档上：否则实现退回活跃档时这条用例就测不出来了
+        verify { depotRepository.hasSynced("B") }
+    }
+
+    @Test
+    fun currencyTarget_withoutDepotSync_isInventoryUnavailable() {
+        every { depotRepository.hasSynced(any()) } returns false
+        every { depotRepository.countOf("4001", any()) } returns 10000
+        stageAndBind(1, target(dropId = "4001", dropCount = 50000))
+
+        assertTrue(refresher.onTaskStarted(1) is FightDropsRefresher.RefreshOutcome.InventoryUnavailable)
     }
 
     // ==================== 理智不足跳过 ====================
@@ -422,6 +454,29 @@ class FightDropsRefresherTest {
         assertTrue(
             refresher.onTaskStarted(2) is FightDropsRefresher.RefreshOutcome.SanityInsufficient
         )
+    }
+
+    @Test
+    fun timesLimitedTarget_refreshKeepsTimesLimit() {
+        withInventory(mapOf(ITEM to 30))
+        stageAndBind(1, target().copy(maxTimes = 10))
+
+        assertTrue(refresher.onTaskStarted(1) is FightDropsRefresher.RefreshOutcome.Updated)
+        val json = Json.parseToJsonElement(lastParamsJson!!).jsonObject
+        assertEquals(10, json["times"]!!.jsonPrimitive.content.toInt())
+        assertEquals(70, json["drops"]!!.jsonObject[ITEM]!!.jsonPrimitive.content.toInt())
+    }
+
+    @Test
+    fun timesLimitedTaskCompletedShort_doesNotProveExhaustion() {
+        every { stageApCostHelper.getApCost(STAGE) } returns 21
+        sanity(current = 0)
+        withInventory(mapOf(ITEM to 0))
+        stageAndBind(1, budgetlessTarget(expireDays = 2).copy(maxTimes = 10))
+        refresher.onTaskCompleted(1)
+
+        stageAndBind(2, budgetlessTarget(expireDays = 2), index = 1)
+        assertTrue(refresher.onTaskStarted(2) is FightDropsRefresher.RefreshOutcome.Updated)
     }
 
     @Test

@@ -31,6 +31,8 @@ class TaskParamContext(
     val operBoxUseYituliuApi: Boolean = false,
     /** App 侧绝对路径映射到 core 读的路径（独立目录模式），见 MaaPathConfig.toCorePath */
     val relocatePath: (String) -> String = { it },
+    /** 启动时捕获的配置档 ID，预检读库存与运行时保持同一档 */
+    val profileId: String? = null,
 ) {
     private val _fallbacks = mutableMapOf<Int, TaskFallbackChain>()
 

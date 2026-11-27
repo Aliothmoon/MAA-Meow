@@ -334,14 +334,15 @@ class MaaCompositionService(
         return true
     }
 
-    /** [profileRunDurationLimitMinutes] 须与 [tasks] 的任务链同一时刻从同一配置取，启动途中切换配置才不串 */
+    /** [profileRunDurationLimitMinutes] 与 [profileId] 须与 [tasks] 同一时刻取自同一配置 */
     suspend fun start(
         tasks: List<MaaTaskParams>,
         clientType: String,
         profileRunDurationLimitMinutes: Int?,
         preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
         fallbacks: Map<TaskSlot, TaskFallbackChain> = emptyMap(),
-        onSessionStarted: (suspend () -> Unit)? = null
+        profileId: String? = null,
+        onSessionStarted: (suspend () -> Unit)? = null,
     ): StartResult = executeStart(
         kind = RunKind.CHAIN,
         tasks = tasks,
@@ -356,6 +357,7 @@ class MaaCompositionService(
             globalEnabled = appSettings.runDurationLimitEnabled.value,
             globalMinutes = appSettings.runDurationLimitMinutes.value,
         ),
+        profileId = profileId,
     )
 
     // 抄作业 / 工具箱 / 小游戏不受运行时长上限约束
@@ -801,10 +803,11 @@ class MaaCompositionService(
         fallbacks: Map<TaskSlot, TaskFallbackChain> = emptyMap(),
         onSessionStarted: (suspend () -> Unit)? = null,
         runDurationLimitMinutes: Int? = null,
+        profileId: String? = null,
     ): StartResult = startMutex.withLock {
         executeStartLocked(
             kind, tasks, clientType, startMessage, successMessage, preflightLogs, fallbacks, onSessionStarted,
-            runDurationLimitMinutes,
+            runDurationLimitMinutes, profileId,
         )
     }
 
@@ -818,6 +821,7 @@ class MaaCompositionService(
         fallbacks: Map<TaskSlot, TaskFallbackChain> = emptyMap(),
         onSessionStarted: (suspend () -> Unit)? = null,
         runDurationLimitMinutes: Int?,
+        profileId: String?,
     ): StartResult {
         // 会话与日志先开；STARTING/FGS 必须在前置检查通过后再进入。
         // 否则竖屏等快速失败会 stop 尚未 startForeground 的 FGS，触发
@@ -838,6 +842,8 @@ class MaaCompositionService(
         // 凭这行能从会话日志找到遥测里的那一轮
         telemetry.onRunStarted(kind, tasks)?.let { sessionLogger.appendToFileOnly("[Telemetry] run_id=$it") }
         subTaskHandler.resetSessionState()
+        // 使用启动瞬间捕获的配置档钉住记账目标，缺省时退回当前活跃档（如工具箱/抄作业）
+        subTaskHandler.beginSession(profileId?.takeIf { it.isNotEmpty() } ?: taskChainState.profileId.value)
         toolboxResultCollector.onSessionStart()
         onSessionStarted?.invoke()
         sessionLogger.appendAndWait(startMessage, LogLevel.INFO)
