@@ -13,6 +13,7 @@ import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.bridge.NativeBridgeLib
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.DisplayMode
+import com.aliothmoon.maameow.constant.TextInjectResult
 import com.aliothmoon.maameow.constant.MaaFiles
 import com.aliothmoon.maameow.constant.VirtualDisplayBackendMode
 import com.aliothmoon.maameow.maa.DriverClass
@@ -387,6 +388,24 @@ class RemoteServiceImpl : RemoteService.Stub() {
         if (displayId != DefaultDisplayConfig.DISPLAY_NONE) {
             InputControlUtils.cancel(displayId)
         }
+    }
+
+    override fun injectText(text: String?): Int {
+        if (text.isNullOrEmpty()) return TextInjectResult.UNMAPPABLE
+        val displayId = ownFocusDisplayId() ?: return TextInjectResult.REJECTED
+        return InputControlUtils.injectAsciiText(text, displayId)
+    }
+
+    override fun sendKey(keyCode: Int, metaState: Int): Boolean {
+        val displayId = ownFocusDisplayId() ?: return false
+        return InputControlUtils.sendKey(keyCode, metaState, displayId)
+    }
+
+    private fun ownFocusDisplayId(): Int? {
+        if (virtualDisplayMode.get() != DisplayMode.BACKGROUND) return null
+        val st = BackgroundDisplay.status()
+        if (st.displayId == DefaultDisplayConfig.DISPLAY_NONE || !st.hasOwnFocus) return null
+        return st.displayId
     }
 
     override fun setDisplayPower(on: Boolean): Boolean = PowerController.setDisplayPower(on)

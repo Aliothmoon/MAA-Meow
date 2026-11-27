@@ -39,6 +39,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NotificationsPaused
 import androidx.compose.material.icons.filled.PlayArrow
@@ -915,74 +916,108 @@ fun BackgroundTaskView(
                 }
             }
 
-            BackHandler { viewModel.onToggleFullscreenMonitor() }
+            BackHandler {
+                if (state.isInputBarVisible) viewModel.onDismissInputBar()
+                else viewModel.onToggleFullscreenMonitor()
+            }
 
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black)
-                    .pointerInput(Unit) {
-                        val slots = PreviewPointerSlots()
-                        try {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    for (change in event.changes) {
-                                        val pointerId = change.id.value
-                                        val down = change.changedToDownIgnoreConsumed()
-                                        val up = change.changedToUpIgnoreConsumed()
-                                        if (!down && !up && !change.positionChangedIgnoreConsumed()) continue
+                    .background(Color.Black),
+                contentAlignment = Alignment.Center,
+            ) {
+                // 触控转发仅绑在画面层，避免右上角按钮和输入栏点击穿透到虚拟屏
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            val slots = PreviewPointerSlots()
+                            try {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent()
+                                        for (change in event.changes) {
+                                            val pointerId = change.id.value
+                                            val down = change.changedToDownIgnoreConsumed()
+                                            val up = change.changedToUpIgnoreConsumed()
+                                            if (!down && !up && !change.positionChangedIgnoreConsumed()) continue
 
-                                        // 画面外按下忽略；拖出画面钳到边缘，保证抬起送达
-                                        val point = viewToVirtualDisplay(
-                                            change.position,
-                                            size,
-                                            displayResolution
-                                        )
-                                        val (x, y) = point.offset
-                                        when {
-                                            down -> {
-                                                if (!point.inside) continue
-                                                val contact = slots.acquire(pointerId)
-                                                if (contact < 0) continue
-                                                viewModel.onTouchDown(x, y, contact)
-                                            }
+                                            // 画面外按下忽略；拖出画面钳到边缘，保证抬起送达
+                                            val point = viewToVirtualDisplay(
+                                                change.position,
+                                                size,
+                                                displayResolution
+                                            )
+                                            val (x, y) = point.offset
+                                            when {
+                                                down -> {
+                                                    if (!point.inside) continue
+                                                    val contact = slots.acquire(pointerId)
+                                                    if (contact < 0) continue
+                                                    viewModel.onTouchDown(x, y, contact)
+                                                }
 
-                                            up -> {
-                                                val contact = slots.release(pointerId)
-                                                if (contact < 0) continue
-                                                viewModel.onTouchUp(x, y, contact)
-                                            }
+                                                up -> {
+                                                    val contact = slots.release(pointerId)
+                                                    if (contact < 0) continue
+                                                    viewModel.onTouchUp(x, y, contact)
+                                                }
 
-                                            else -> {
-                                                val contact = slots.indexOf(pointerId)
-                                                if (contact < 0) continue
-                                                viewModel.onTouchMove(x, y, contact)
+                                                else -> {
+                                                    val contact = slots.indexOf(pointerId)
+                                                    if (contact < 0) continue
+                                                    viewModel.onTouchMove(x, y, contact)
+                                                }
                                             }
+                                            change.consume()
                                         }
-                                        change.consume()
                                     }
                                 }
+                            } finally {
+                                // 预览退出时仍按着的手指由远端整体 CANCEL
+                                viewModel.onTouchCancel()
                             }
-                        } finally {
-                            // 预览退出时仍按着的手指由远端整体 CANCEL
-                            viewModel.onTouchCancel()
-                        }
-                    }, contentAlignment = Alignment.Center
-            ) {
-                previewContent()
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    previewContent()
+                }
 
-                IconButton(
-                    onClick = { viewModel.onToggleFullscreenMonitor() },
+                Column(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = 8.dp, end = 8.dp)
+                        .padding(top = 8.dp, end = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.task_close_preview_cd),
-                        tint = Color.White.copy(alpha = 0.7f),
-                        modifier = Modifier.size(28.dp)
+                    IconButton(onClick = { viewModel.onToggleFullscreenMonitor() }) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(R.string.task_close_preview_cd),
+                            tint = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.size(28.dp),
+                        )
+                    }
+                    if (state.canInjectInput) {
+                        IconButton(onClick = { viewModel.onToggleInputBar() }) {
+                            Icon(
+                                imageVector = Icons.Default.Keyboard,
+                                contentDescription = stringResource(R.string.preview_input_toggle_cd),
+                                tint = if (state.isInputBarVisible) MaterialTheme.colorScheme.primary
+                                else Color.White.copy(alpha = 0.7f),
+                                modifier = Modifier.size(26.dp),
+                            )
+                        }
+                    }
+                }
+
+                if (state.isInputBarVisible) {
+                    VirtualDisplayInputBar(
+                        onSendText = viewModel::onSendVirtualText,
+                        onSendKey = viewModel::onSendVirtualKey,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 10.dp, start = 64.dp, end = 64.dp),
                     )
                 }
             }

@@ -88,6 +88,9 @@ class VirtualDisplayManagerTest {
         )
         assertEquals("[TOUCH_FEEDBACK_DISABLED]", VirtualDisplayManager.describeDisplayFlags(1 shl 10))
         assertEquals("[]", VirtualDisplayManager.describeDisplayFlags(0))
+        assertTrue(VirtualDisplayManager.hasOwnFocusFlag(flags))
+        assertFalse(VirtualDisplayManager.hasOwnFocusFlag(1 shl 10))
+        assertFalse(VirtualDisplayManager.hasOwnFocusFlag(0))
     }
 
     @Test

@@ -746,6 +746,11 @@
     <string name="task_btn_stop">작업 중지</string>
     <string name="task_btn_quick_options">빠른 옵션</string>
     <string name="task_close_preview_cd">미리보기 닫기</string>
+    <string name="preview_input_toggle_cd">텍스트 입력</string>
+    <string name="preview_input_placeholder">보낼 텍스트 입력</string>
+    <string name="preview_input_backspace_cd">백스페이스</string>
+    <string name="preview_input_enter_cd">엔터</string>
+    <string name="preview_input_send_cd">보내기</string>
 
     <!-- dialog: close app confirm -->
     <string name="dialog_close_app_title">종료 확인</string>

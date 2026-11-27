@@ -11,4 +11,5 @@ data class VirtualDisplayStatus(
     val displayGroupId: Int,
     /** [com.aliothmoon.maameow.constant.VirtualDisplayUpgradeOutcome] */
     val upgradeOutcome: Int,
+    val hasOwnFocus: Boolean = false,
 ) : Parcelable

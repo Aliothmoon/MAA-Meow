@@ -492,6 +492,11 @@
     <string name="task_btn_stop">Stop Task</string>
     <string name="task_btn_quick_options">Options</string>
     <string name="task_close_preview_cd">Close preview</string>
+    <string name="preview_input_toggle_cd">Text input</string>
+    <string name="preview_input_placeholder">Type text to send</string>
+    <string name="preview_input_backspace_cd">Backspace</string>
+    <string name="preview_input_enter_cd">Enter</string>
+    <string name="preview_input_send_cd">Send</string>
 
     <!-- dialog: close app confirm -->
     <string name="dialog_close_app_title">Confirm Close</string>

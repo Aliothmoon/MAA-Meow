@@ -5,17 +5,21 @@ import android.os.SystemClock;
 import android.view.Display;
 import android.view.InputDevice;
 import android.view.InputEvent;
+import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 
 import com.aliothmoon.maameow.ITouchEventCallback;
+import com.aliothmoon.maameow.constant.TextInjectResult;
 import com.aliothmoon.maameow.third.Ln;
 import com.aliothmoon.maameow.third.wrappers.InputManager;
 import com.aliothmoon.maameow.third.wrappers.ServiceManager;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -228,5 +232,84 @@ public final class InputControlUtils {
         }
 
         return getManager().injectInputEvent(keyEvent, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC);
+    }
+
+    public static boolean sendKey(int keyCode, int metaState, int displayId) {
+        long downTime = SystemClock.uptimeMillis();
+        KeyEvent down = new KeyEvent(
+                downTime, downTime, KeyEvent.ACTION_DOWN, keyCode, 0, metaState,
+                KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, InputDevice.SOURCE_KEYBOARD
+        );
+        if (!injectKeyEvent(down, displayId)) {
+            return false;
+        }
+        long upTime = SystemClock.uptimeMillis();
+        KeyEvent up = new KeyEvent(
+                downTime, upTime, KeyEvent.ACTION_UP, keyCode, 0, metaState,
+                KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, InputDevice.SOURCE_KEYBOARD
+        );
+        return injectKeyEvent(up, displayId);
+    }
+
+    public static int injectAsciiText(String text, int displayId) {
+        if (text == null || text.isEmpty()) {
+            return TextInjectResult.UNMAPPABLE;
+        }
+        KeyCharacterMap kcm = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD);
+        KeyEvent[] events = kcm.getEvents(text.toCharArray());
+        if (events == null || events.length == 0) {
+            return TextInjectResult.UNMAPPABLE;
+        }
+        for (KeyEvent ev : events) {
+            int action = ev.getAction();
+            if (action != KeyEvent.ACTION_DOWN && action != KeyEvent.ACTION_UP) {
+                return TextInjectResult.UNMAPPABLE;
+            }
+        }
+        Map<Integer, Long> pressedDownTimes = new LinkedHashMap<>();
+        for (KeyEvent ev : events) {
+            long now = SystemClock.uptimeMillis();
+            int action = ev.getAction();
+            int keyCode = ev.getKeyCode();
+            long downTime;
+            if (action == KeyEvent.ACTION_DOWN) {
+                downTime = now;
+                pressedDownTimes.put(keyCode, now);
+            } else {
+                Long recorded = pressedDownTimes.remove(keyCode);
+                downTime = recorded != null ? recorded : now;
+            }
+            KeyEvent stamped = new KeyEvent(
+                    downTime, now, action, keyCode, ev.getRepeatCount(),
+                    ev.getMetaState(), ev.getDeviceId(), ev.getScanCode(),
+                    ev.getFlags(), InputDevice.SOURCE_KEYBOARD
+            );
+            if (!injectKeyEvent(stamped, displayId)) {
+                releasePressedKeys(pressedDownTimes, displayId);
+                return TextInjectResult.FAILED;
+            }
+        }
+        return TextInjectResult.OK;
+    }
+
+    private static void releasePressedKeys(Map<Integer, Long> pressedDownTimes, int displayId) {
+        List<Map.Entry<Integer, Long>> remaining = new ArrayList<>(pressedDownTimes.entrySet());
+        for (int i = remaining.size() - 1; i >= 0; i--) {
+            Map.Entry<Integer, Long> entry = remaining.get(i);
+            long now = SystemClock.uptimeMillis();
+            KeyEvent up = new KeyEvent(
+                    entry.getValue(), now, KeyEvent.ACTION_UP, entry.getKey(), 0, 0,
+                    KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, InputDevice.SOURCE_KEYBOARD
+            );
+            injectKeyEvent(up, displayId);
+        }
+        pressedDownTimes.clear();
+    }
+
+    private static boolean injectKeyEvent(KeyEvent event, int displayId) {
+        if (!setDisplayId(event, displayId)) {
+            return false;
+        }
+        return getManager().injectInputEvent(event, InputManager.INJECT_INPUT_EVENT_MODE_WAIT_FOR_FINISH);
     }
 }

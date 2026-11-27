@@ -21,6 +21,7 @@ object BackgroundDisplay {
         fun legacyDisplayId(): Int
         fun legacyFlagTier(): Int
         fun legacyDisplayGroupId(): Int
+        fun legacyHasOwnFocus(): Boolean
 
         fun isVdmSupported(): Boolean
         fun startVdm(): Int
@@ -29,6 +30,7 @@ object BackgroundDisplay {
         fun vdmDisplayId(): Int
         fun vdmFlagTier(): Int
         fun vdmDisplayGroupId(): Int
+        fun vdmHasOwnFocus(): Boolean
     }
 
     private object SystemBackendOps : BackendOps {
@@ -39,6 +41,7 @@ object BackgroundDisplay {
         override fun legacyDisplayId(): Int = VirtualDisplayManager.getDisplayId()
         override fun legacyFlagTier(): Int = VirtualDisplayManager.getFlagTier()
         override fun legacyDisplayGroupId(): Int = VirtualDisplayManager.getDisplayGroupId()
+        override fun legacyHasOwnFocus(): Boolean = VirtualDisplayManager.hasOwnFocus()
 
         override fun isVdmSupported(): Boolean =
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && VdmDisplayController.isSupported()
@@ -70,6 +73,9 @@ object BackgroundDisplay {
         override fun vdmDisplayGroupId(): Int =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) VdmDisplayController.getDisplayGroupId()
             else VirtualDisplayManager.DISPLAY_GROUP_UNKNOWN
+
+        override fun vdmHasOwnFocus(): Boolean =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && VdmDisplayController.hasOwnFocus()
     }
 
     @VisibleForTesting
@@ -127,6 +133,7 @@ object BackgroundDisplay {
             flagTier = ops.vdmFlagTier(),
             displayGroupId = ops.vdmDisplayGroupId(),
             upgradeOutcome = upgradeOutcome,
+            hasOwnFocus = ops.vdmHasOwnFocus(),
         )
 
         ActiveBackend.LEGACY -> VirtualDisplayStatus(
@@ -135,6 +142,7 @@ object BackgroundDisplay {
             flagTier = ops.legacyFlagTier(),
             displayGroupId = ops.legacyDisplayGroupId(),
             upgradeOutcome = upgradeOutcome,
+            hasOwnFocus = ops.legacyHasOwnFocus(),
         )
 
         ActiveBackend.NONE -> VirtualDisplayStatus(
@@ -143,6 +151,7 @@ object BackgroundDisplay {
             flagTier = VirtualDisplayManager.FLAG_TIER_NONE,
             displayGroupId = VirtualDisplayManager.DISPLAY_GROUP_UNKNOWN,
             upgradeOutcome = upgradeOutcome,
+            hasOwnFocus = false,
         )
     }
 

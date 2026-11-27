@@ -20,6 +20,7 @@ import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
 import com.aliothmoon.maameow.third.wrappers.VirtualDeviceManager.VirtualDevice
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
@@ -65,6 +66,7 @@ object VdmDisplayController {
     private val displayId = AtomicInteger(DefaultDisplayConfig.DISPLAY_NONE)
     private val flagTier = AtomicInteger(VirtualDisplayManager.FLAG_TIER_NONE)
     private val displayGroupId = AtomicInteger(VirtualDisplayManager.DISPLAY_GROUP_UNKNOWN)
+    private val ownFocus = AtomicBoolean(false)
     private var session: Session? = null
     // 本进程建过或复用过关联，stop 时拆掉
     private var associated = false
@@ -85,6 +87,8 @@ object VdmDisplayController {
     fun getFlagTier(): Int = flagTier.get()
 
     fun getDisplayGroupId(): Int = displayGroupId.get()
+
+    fun hasOwnFocus(): Boolean = ownFocus.get()
 
     fun isSupported(): Boolean =
         Process.myUid() == Process.SHELL_UID &&
@@ -154,8 +158,10 @@ object VdmDisplayController {
         displayId.set(display.displayId)
         flagTier.set(tier)
         displayGroupId.set(groupId)
+        ownFocus.set(VirtualDisplayManager.hasOwnFocusFlag(display.flags))
         Ln.i(
             "$TAG started: displayId=${display.displayId}, group=$groupId, " +
+                "flags=${VirtualDisplayManager.describeDisplayFlags(display.flags)}, " +
                 "${cfg.width}x${cfg.height}@${cfg.dpi}, tier=$tier ${tiers[tier]}"
         )
         VirtualDisplayManager.fixRotation(display, cfg, physicalRotation)
@@ -189,6 +195,7 @@ object VdmDisplayController {
         val id = displayId.getAndSet(DefaultDisplayConfig.DISPLAY_NONE)
         flagTier.set(VirtualDisplayManager.FLAG_TIER_NONE)
         displayGroupId.set(VirtualDisplayManager.DISPLAY_GROUP_UNKNOWN)
+        ownFocus.set(false)
         runCatching { releaseDisplay(active.display) }
             .onFailure { Ln.w("$TAG: release displayId=$id failed: ${it.message}") }
         runCatching { active.device.close() }

@@ -150,4 +150,9 @@ interface RemoteService {
     boolean setVirtualDisplayBackend(int mode) = 65;
 
     VirtualDisplayStatus getVirtualDisplayStatus() = 66;
+
+    // 仅后台 OWN_FOCUS 生效时可用；injectText 返回 TextInjectResult
+    int injectText(String text) = 67;
+
+    boolean sendKey(int keyCode, int metaState) = 68;
 }

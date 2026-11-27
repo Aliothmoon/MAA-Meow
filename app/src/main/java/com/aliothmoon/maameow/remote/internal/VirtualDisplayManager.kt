@@ -11,6 +11,7 @@ import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig.VD_NAME
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
@@ -43,6 +44,7 @@ object VirtualDisplayManager {
     const val DISPLAY_NONE = -1
     const val FLAG_TIER_NONE = -1
     const val DISPLAY_GROUP_UNKNOWN = -1
+    internal const val DISPLAY_FLAG_OWN_FOCUS = 1 shl 11
 
     data class DisplayConfig(
         val width: Int = DefaultDisplayConfig.WIDTH,
@@ -55,6 +57,7 @@ object VirtualDisplayManager {
     private val displayId = AtomicInteger(DISPLAY_NONE)
     private val flagTier = AtomicInteger(FLAG_TIER_NONE)
     private val displayGroupId = AtomicInteger(DISPLAY_GROUP_UNKNOWN)
+    private val ownFocus = AtomicBoolean(false)
     private val virtualDisplay = AtomicReference<VirtualDisplay?>()
 
     fun start(): Int {
@@ -96,6 +99,8 @@ object VirtualDisplayManager {
 
     fun getDisplayGroupId(): Int = displayGroupId.get()
 
+    fun hasOwnFocus(): Boolean = ownFocus.get()
+
     private fun startInternal(): Int {
         try {
             val cfg = config.get()
@@ -117,6 +122,7 @@ object VirtualDisplayManager {
         displayId.set(DISPLAY_NONE)
         flagTier.set(FLAG_TIER_NONE)
         displayGroupId.set(DISPLAY_GROUP_UNKNOWN)
+        ownFocus.set(false)
     }
 
     private fun createVirtualDisplay(surface: Surface, cfg: DisplayConfig) {
@@ -144,6 +150,7 @@ object VirtualDisplayManager {
         )
         val groupId = logEffective(vdId, flags, d.flags)
         displayGroupId.set(groupId)
+        ownFocus.set(hasOwnFocusFlag(d.flags))
         fixRotation(d, cfg, physicalRotation)
     }
 
@@ -194,13 +201,16 @@ object VirtualDisplayManager {
     internal fun isOwnDisplayGroupMissed(requested: Int, groupId: Int): Boolean =
         requested and VIRTUAL_DISPLAY_FLAG_OWN_DISPLAY_GROUP != 0 && groupId == 0
 
+    internal fun hasOwnFocusFlag(displayFlags: Int): Boolean =
+        displayFlags and DISPLAY_FLAG_OWN_FOCUS != 0
+
     /** Display 的隐藏位，13～17 未变 */
     internal fun describeDisplayFlags(flags: Int): String = listOf(
         1 shl 7 to "TRUSTED",
         1 shl 8 to "OWN_DISPLAY_GROUP",
         1 shl 9 to "ALWAYS_UNLOCKED",
         1 shl 10 to "TOUCH_FEEDBACK_DISABLED",
-        1 shl 11 to "OWN_FOCUS",
+        DISPLAY_FLAG_OWN_FOCUS to "OWN_FOCUS",
         1 shl 12 to "STEAL_TOP_FOCUS_DISABLED",
     ).filter { (bit, _) -> flags and bit != 0 }
         .joinToString(prefix = "[", postfix = "]") { it.second }

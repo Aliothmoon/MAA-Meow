@@ -60,6 +60,7 @@ class BackgroundDisplayTest {
         assertEquals(5, status.displayId)
         assertEquals(0, status.flagTier)
         assertEquals(2, status.displayGroupId)
+        assertTrue(status.hasOwnFocus)
         assertEquals(VirtualDisplayUpgradeOutcome.NONE, status.upgradeOutcome)
         assertEquals(1, fake.legacyStartCalls)
         assertEquals(0, fake.vdmStartCalls)
@@ -83,6 +84,7 @@ class BackgroundDisplayTest {
         assertTrue(status.usingVdm)
         assertEquals(12, status.displayId)
         assertEquals(3, status.displayGroupId)
+        assertTrue(status.hasOwnFocus)
         assertEquals(VirtualDisplayUpgradeOutcome.UPGRADED, status.upgradeOutcome)
         assertEquals(1, fake.legacyStartCalls)
         assertEquals(1, fake.legacyStopCalls)
@@ -219,7 +221,9 @@ class BackgroundDisplayTest {
         assertEquals(1, fake.vdmStopCalls)
 
         BackgroundDisplay.stop()
-        assertEquals(VirtualDisplayUpgradeOutcome.NONE, BackgroundDisplay.status().upgradeOutcome)
+        val stopped = BackgroundDisplay.status()
+        assertEquals(VirtualDisplayUpgradeOutcome.NONE, stopped.upgradeOutcome)
+        assertFalse(stopped.hasOwnFocus)
     }
 
     @Test
@@ -266,10 +270,12 @@ class BackgroundDisplayTest {
         var legacyId: Int = 5,
         var legacyTier: Int = 0,
         var legacyGroupId: Int = 2,
+        var legacyOwnFocus: Boolean = true,
         var vdmSupported: Boolean = true,
         var vdmId: Int = 10,
         var vdmTier: Int = 0,
         var vdmGroupId: Int = 3,
+        var vdmOwnFocus: Boolean = true,
         var vdmError: Throwable? = null,
     ) : BackgroundDisplay.BackendOps {
         var legacyActive = false
@@ -296,6 +302,7 @@ class BackgroundDisplayTest {
         override fun legacyFlagTier(): Int = if (legacyActive) legacyTier else VirtualDisplayManager.FLAG_TIER_NONE
         override fun legacyDisplayGroupId(): Int =
             if (legacyActive) legacyGroupId else VirtualDisplayManager.DISPLAY_GROUP_UNKNOWN
+        override fun legacyHasOwnFocus(): Boolean = legacyActive && legacyOwnFocus
 
         override fun isVdmSupported(): Boolean = vdmSupported
 
@@ -317,5 +324,6 @@ class BackgroundDisplayTest {
         override fun vdmFlagTier(): Int = if (vdmActive) vdmTier else VirtualDisplayManager.FLAG_TIER_NONE
         override fun vdmDisplayGroupId(): Int =
             if (vdmActive) vdmGroupId else VirtualDisplayManager.DISPLAY_GROUP_UNKNOWN
+        override fun vdmHasOwnFocus(): Boolean = vdmActive && vdmOwnFocus
     }
 }
