@@ -182,24 +182,27 @@ private const val MAX_MEDICINE_OR_STONE = 999
  */
 @Composable
 private fun Modifier.depotInputField(): Modifier {
-    val reportFocus = LocalDepotSheetFocusTracker.current
+    val imeController = LocalDepotSheetImeController.current
+    val fieldToken = remember { Any() }
     var coords by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var focused by remember { mutableStateOf(false) }
-    DisposableEffect(reportFocus) {
+    DisposableEffect(imeController, fieldToken) {
         onDispose {
-            if (focused) reportFocus?.invoke(null)
+            imeController?.clearField(fieldToken)
         }
     }
     return this
         .semantics { contentDataType = ContentDataType.None }
         .onGloballyPositioned {
             coords = it
-            if (focused) reportFocus?.invoke(it)
+            if (focused) imeController?.updateFocusedCoords(fieldToken, it)
         }
         .onFocusChanged { state ->
             focused = state.hasFocus
             if (state.hasFocus) {
-                reportFocus?.invoke(coords)
+                imeController?.focusField(fieldToken, coords)
+            } else {
+                imeController?.clearField(fieldToken)
             }
         }
 }

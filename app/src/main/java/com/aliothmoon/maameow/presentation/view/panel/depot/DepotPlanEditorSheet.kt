@@ -9,11 +9,13 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
@@ -59,14 +62,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -363,13 +369,137 @@ internal fun DepotPlanFlowSheet(
     }
 }
 
-/** 上报当前聚焦输入框坐标给 [DepotBottomSheetDialog]，用于按需避让输入法 */
-internal val LocalDepotSheetFocusTracker = staticCompositionLocalOf<((LayoutCoordinates?) -> Unit)?> { null }
+/** 抽屉二段键盘避让结果：先按状态栏余量平移抽屉，不足部分由内层滚动区留白并一次性滚动补齐 */
+internal data class DepotSheetImePlan(
+    val sheetPanPx: Float,
+    val scrollBottomClearancePx: Float,
+    val scrollDeltaPx: Float,
+)
+
+/** 纯几何计算抽屉平移量、内层底部留白与追加滚动距离 */
+internal fun computeDepotSheetImePlan(
+    rootHeightPx: Float,
+    statusBarTopPx: Float,
+    imeTargetBottomPx: Float,
+    imeMarginPx: Float,
+    sheetHeightPx: Float,
+    viewportBottomInSheetPx: Float,
+    focusedBottomInSheetPx: Float?,
+    currentSheetPanPx: Float = 0f,
+): DepotSheetImePlan {
+    if (imeTargetBottomPx <= 0f || sheetHeightPx <= 0f || rootHeightPx <= 0f) {
+        return DepotSheetImePlan(0f, 0f, 0f)
+    }
+    val maxPanByStatusBar = (rootHeightPx - sheetHeightPx - statusBarTopPx).coerceAtLeast(0f)
+    val maxPan = minOf(maxPanByStatusBar, imeTargetBottomPx)
+    val clampedCurrentPan = currentSheetPanPx.coerceIn(0f, maxPan)
+
+    val footerBelowViewportPx = if (viewportBottomInSheetPx in 1f..sheetHeightPx) {
+        (sheetHeightPx - viewportBottomInSheetPx).coerceAtLeast(0f)
+    } else {
+        0f
+    }
+    val bottomFieldNeedPan = (imeTargetBottomPx + imeMarginPx - footerBelowViewportPx).coerceAtLeast(0f)
+    val scrollBottomClearancePx = (bottomFieldNeedPan - maxPanByStatusBar).coerceAtLeast(0f)
+
+    if (focusedBottomInSheetPx == null) {
+        return DepotSheetImePlan(
+            sheetPanPx = clampedCurrentPan,
+            scrollBottomClearancePx = scrollBottomClearancePx,
+            scrollDeltaPx = 0f,
+        )
+    }
+
+    val distanceFromSheetBottom = sheetHeightPx - focusedBottomInSheetPx
+    val shortfall = (imeTargetBottomPx + imeMarginPx - distanceFromSheetBottom - clampedCurrentPan)
+        .coerceAtLeast(0f)
+    val extraPan = shortfall.coerceAtMost((maxPan - clampedCurrentPan).coerceAtLeast(0f))
+    val nextPan = clampedCurrentPan + extraPan
+    val scrollDeltaPx = (shortfall - extraPan).coerceAtLeast(0f)
+
+    return DepotSheetImePlan(
+        sheetPanPx = nextPan,
+        scrollBottomClearancePx = scrollBottomClearancePx,
+        scrollDeltaPx = scrollDeltaPx,
+    )
+}
+
+/** 协调抽屉与内层滚动区的键盘避让状态，滚动期更新聚焦坐标不触发抽屉重组 */
+internal class DepotSheetImeController {
+    var appliedPanPx by mutableFloatStateOf(0f)
+    var viewportBottomInSheetPx by mutableFloatStateOf(0f)
+        private set
+    var focusSeq by mutableIntStateOf(0)
+        private set
+
+    var scrollState: ScrollState? = null
+        private set
+    var focusedCoords: LayoutCoordinates? = null
+        private set
+
+    private var activeToken: Any? = null
+    private var sheetCoords: LayoutCoordinates? = null
+    private var viewportCoords: LayoutCoordinates? = null
+
+    fun focusField(token: Any, coords: LayoutCoordinates?) {
+        activeToken = token
+        focusedCoords = coords
+        focusSeq++
+    }
+
+    fun updateFocusedCoords(token: Any, coords: LayoutCoordinates) {
+        if (activeToken != token) return
+        val wasNull = focusedCoords == null
+        focusedCoords = coords
+        if (wasNull) focusSeq++
+    }
+
+    fun clearField(token: Any) {
+        if (activeToken != token) return
+        activeToken = null
+        focusedCoords = null
+    }
+
+    fun attachScrollState(state: ScrollState) {
+        scrollState = state
+    }
+
+    fun detachScrollState(state: ScrollState) {
+        if (scrollState !== state) return
+        scrollState = null
+        viewportCoords = null
+        viewportBottomInSheetPx = 0f
+    }
+
+    fun updateViewportCoords(coords: LayoutCoordinates) {
+        viewportCoords = coords
+        recomputeViewportBottom()
+    }
+
+    fun refreshViewportBottom(sheet: LayoutCoordinates) {
+        sheetCoords = sheet
+        recomputeViewportBottom()
+    }
+
+    private fun recomputeViewportBottom() {
+        val sc = sheetCoords
+        val vc = viewportCoords
+        if (sc != null && vc != null && sc.isAttached && vc.isAttached) {
+            viewportBottomInSheetPx = sc.localPositionOf(vc, Offset(0f, vc.size.height.toFloat())).y
+        }
+    }
+}
+
+/** 在 [DepotBottomSheetDialog] 与表单输入/滚动区之间共享键盘避让协调器 */
+internal val LocalDepotSheetImeController = staticCompositionLocalOf<DepotSheetImeController?> { null }
+
+/** 仅向内层滚动区传递一次性底部留白，避免组合期写 MutableState 或触发无关子树重组 */
+private val LocalDepotSheetScrollClearancePx = compositionLocalOf { 0f }
 
 /**
- * 轻量底部抽屉容器：结合 [WindowInsets.imeAnimationTarget] 与当前聚焦输入框坐标，
- * 仅在输入框会被键盘遮挡时一次性把抽屉平移到输入框紧贴键盘上方，不顶起无关底部按钮，
- * 同时避免 M3 ModalBottomSheet 逐帧重排与光标 Popup 反复 relayoutWindow 拖慢输入法
+ * 轻量底部抽屉容器：结合 [WindowInsets.imeAnimationTarget] 与当前聚焦输入框坐标做二段避让，
+ * 短抽屉一次性平移到位，长抽屉顶到状态栏后由内层滚动区补齐滚动，
+ * 全程不逐帧重排，避免光标 Popup 反复 relayoutWindow 拖慢输入法
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -381,23 +511,10 @@ private fun DepotBottomSheetDialog(
 ) {
     val scope = rememberCoroutineScope()
     val dragOffsetPx = remember { Animatable(0f) }
+    val imeController = remember { DepotSheetImeController() }
     var rootHeightPx by remember { mutableFloatStateOf(0f) }
     var sheetHeightPx by remember { mutableFloatStateOf(0f) }
     var sheetCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
-    var focusedBottomInSheetPx by remember { mutableStateOf<Float?>(null) }
-
-    val reportFocusedField: (LayoutCoordinates?) -> Unit = remember {
-        { fieldCoords ->
-            val sc = sheetCoords
-            focusedBottomInSheetPx = if (sc != null && fieldCoords != null && sc.isAttached && fieldCoords.isAttached) {
-                sc.localPositionOf(fieldCoords, Offset(0f, fieldCoords.size.height.toFloat())).y
-            } else if (fieldCoords == null) {
-                null
-            } else {
-                focusedBottomInSheetPx
-            }
-        }
-    }
 
     val settleDrag: (Float) -> Unit = { velocityY ->
         val shouldDismiss = velocityY > 1200f ||
@@ -515,15 +632,71 @@ private fun DepotBottomSheetDialog(
         val statusBarTopPx = WindowInsets.statusBars.getTop(density)
         // 为光标水滴手柄留出 24dp 间距，避免紧贴键盘顶边被裁切
         val imeMarginPx = with(density) { 24.dp.toPx() }
-        val focusedBottom = focusedBottomInSheetPx
-        val imePanPx = if (imeTargetBottomPx > 0 && focusedBottom != null && sheetHeightPx > 0f && rootHeightPx > 0f) {
-            val distanceFromSheetBottom = sheetHeightPx - focusedBottom
-            val rawPan = (imeTargetBottomPx + imeMarginPx - distanceFromSheetBottom).coerceAtLeast(0f)
+
+        val scrollBottomClearancePx = computeDepotSheetImePlan(
+            rootHeightPx = rootHeightPx,
+            statusBarTopPx = statusBarTopPx.toFloat(),
+            imeTargetBottomPx = imeTargetBottomPx.toFloat(),
+            imeMarginPx = imeMarginPx,
+            sheetHeightPx = sheetHeightPx,
+            viewportBottomInSheetPx = imeController.viewportBottomInSheetPx,
+            focusedBottomInSheetPx = null,
+            currentSheetPanPx = imeController.appliedPanPx,
+        ).scrollBottomClearancePx
+
+        val maxPanNow = if (imeTargetBottomPx > 0 && sheetHeightPx > 0f && rootHeightPx > 0f) {
             val maxPanByStatusBar = (rootHeightPx - sheetHeightPx - statusBarTopPx).coerceAtLeast(0f)
-            val maxPanByIme = imeTargetBottomPx.toFloat()
-            rawPan.coerceIn(0f, minOf(maxPanByStatusBar, maxPanByIme))
+            minOf(maxPanByStatusBar, imeTargetBottomPx.toFloat())
         } else {
             0f
+        }
+        val effectivePanPx = imeController.appliedPanPx.coerceIn(0f, maxPanNow)
+
+        LaunchedEffect(imeTargetBottomPx, imeController.focusSeq) {
+            if (imeTargetBottomPx <= 0) {
+                imeController.appliedPanPx = 0f
+                return@LaunchedEffect
+            }
+            val sc = sheetCoords ?: return@LaunchedEffect
+            val fc = imeController.focusedCoords ?: return@LaunchedEffect
+            if (!sc.isAttached || !fc.isAttached) return@LaunchedEffect
+
+            val focusedBottom = sc.localPositionOf(fc, Offset(0f, fc.size.height.toFloat())).y
+            val initialPlan = computeDepotSheetImePlan(
+                rootHeightPx = rootHeightPx,
+                statusBarTopPx = statusBarTopPx.toFloat(),
+                imeTargetBottomPx = imeTargetBottomPx.toFloat(),
+                imeMarginPx = imeMarginPx,
+                sheetHeightPx = sheetHeightPx,
+                viewportBottomInSheetPx = imeController.viewportBottomInSheetPx,
+                focusedBottomInSheetPx = focusedBottom,
+                currentSheetPanPx = imeController.appliedPanPx,
+            )
+            imeController.appliedPanPx = initialPlan.sheetPanPx
+
+            val scrollState = imeController.scrollState ?: return@LaunchedEffect
+            if (initialPlan.scrollDeltaPx > 0.5f) {
+                // 等一帧让滚动区末尾留白完成测量并更新 maxValue，再一次性滚动到位，避免动画逐帧触发光标 Popup 重排
+                withFrameNanos {}
+                val scAfter = sheetCoords ?: return@LaunchedEffect
+                val fcAfter = imeController.focusedCoords ?: return@LaunchedEffect
+                if (!scAfter.isAttached || !fcAfter.isAttached) return@LaunchedEffect
+                val afterBottom = scAfter.localPositionOf(fcAfter, Offset(0f, fcAfter.size.height.toFloat())).y
+                val afterPlan = computeDepotSheetImePlan(
+                    rootHeightPx = rootHeightPx,
+                    statusBarTopPx = statusBarTopPx.toFloat(),
+                    imeTargetBottomPx = imeTargetBottomPx.toFloat(),
+                    imeMarginPx = imeMarginPx,
+                    sheetHeightPx = sheetHeightPx,
+                    viewportBottomInSheetPx = imeController.viewportBottomInSheetPx,
+                    focusedBottomInSheetPx = afterBottom,
+                    currentSheetPanPx = imeController.appliedPanPx,
+                )
+                imeController.appliedPanPx = afterPlan.sheetPanPx
+                if (afterPlan.scrollDeltaPx > 0.5f) {
+                    scrollState.scrollBy(afterPlan.scrollDeltaPx)
+                }
+            }
         }
 
         Box(
@@ -557,10 +730,11 @@ private fun DepotBottomSheetDialog(
                     modifier = Modifier
                         .widthIn(max = BottomSheetDefaults.SheetMaxWidth)
                         .fillMaxWidth()
-                        .offset { IntOffset(0, -imePanPx.roundToInt()) }
+                        .offset { IntOffset(0, -effectivePanPx.roundToInt()) }
                         .onGloballyPositioned { coords ->
                             sheetCoords = coords
                             sheetHeightPx = coords.size.height.toFloat()
+                            imeController.refreshViewportBottom(coords)
                         }
                         .graphicsLayer {
                             val enterOffset = (1f - visibleProgress.value) * size.height
@@ -582,7 +756,10 @@ private fun DepotBottomSheetDialog(
                             onClick = {},
                         ),
                 ) {
-                    CompositionLocalProvider(LocalDepotSheetFocusTracker provides reportFocusedField) {
+                    CompositionLocalProvider(
+                        LocalDepotSheetImeController provides imeController,
+                        LocalDepotSheetScrollClearancePx provides scrollBottomClearancePx,
+                    ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -760,71 +937,102 @@ private fun DepotPlanEditorContent(
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
+        val density = LocalDensity.current
+        val imeController = LocalDepotSheetImeController.current
+        val scrollState = rememberScrollState()
+        var scrollContentHeightPx by remember { mutableIntStateOf(0) }
+        val scrollBottomClearancePx = LocalDepotSheetScrollClearancePx.current
+
+        DisposableEffect(imeController, scrollState) {
+            imeController?.attachScrollState(scrollState)
+            onDispose {
+                imeController?.detachScrollState(scrollState)
+            }
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = fillHeight)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
-        ) {
-            SectionHeader(
-                title = if (existing == null) {
-                    stringResource(R.string.depot_inventory_plan_new)
-                } else {
-                    stringResource(R.string.depot_inventory_maintain_title)
-                },
-            )
-
-            DepotPlanFields(
-                plan = draft,
-                onPlanChange = { draft = it },
-                stageGroups = stageGroups,
-                stageCodes = stageCodes,
-                customStageCode = customStage,
-                onCustomStageSelected = { customStage = true },
-                showStageListWithCustom = true,
-                onStageSelected = {
-                    draft = draft.copy(stage = it)
-                    customStage = false
-                },
-                showMedicine = showMedicine,
-                showStone = showStone,
-                onTargetBlankChange = { targetInvalid = it },
-                onMedicineBlankChange = { medicineBlank = it },
-                onStoneBlankChange = { stoneBlank = it },
-            )
-
-            if (liveOutcome != DepotPlanOutcome.Enough && liveOutcome != DepotPlanOutcome.Runnable) {
-                val (noticeBg, noticeFg) = when (liveOutcome) {
-                    DepotPlanOutcome.StageClosed -> depotWarningColors()
-                    DepotPlanOutcome.StageRequired ->
-                        MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
-
-                    else -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
-                }
-                DepotEditorNoticeBanner(
-                    icon = if (liveOutcome == DepotPlanOutcome.StageRequired) {
-                        Icons.Outlined.Info
+                // 非固定高度抽屉加上末尾留白时以真实内容高封顶，防止留白反推撑高抽屉
+                .then(
+                    if (!fillHeight && scrollBottomClearancePx > 0f && scrollContentHeightPx > 0) {
+                        Modifier.heightIn(max = with(density) { scrollContentHeightPx.toDp() })
                     } else {
-                        Icons.Default.WarningAmber
+                        Modifier
                     },
-                    text = depotPlanOutcomeLabel(
-                        outcome = liveOutcome,
-                        need = (draftTarget - currentCount).coerceAtLeast(0),
-                        stage = resolvedStage,
-                    ),
-                    containerColor = noticeBg,
-                    contentColor = noticeFg,
                 )
-            }
+                .onGloballyPositioned { imeController?.updateViewportCoords(it) }
+                .verticalScroll(scrollState),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onSizeChanged { scrollContentHeightPx = it.height },
+                verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
+            ) {
+                SectionHeader(
+                    title = if (existing == null) {
+                        stringResource(R.string.depot_inventory_plan_new)
+                    } else {
+                        stringResource(R.string.depot_inventory_maintain_title)
+                    },
+                )
 
-            if (!nodeEnabled) {
-                DepotEditorNoticeBanner(
-                    icon = Icons.Default.WarningAmber,
-                    text = stringResource(R.string.depot_inventory_plan_node_disabled),
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                DepotPlanFields(
+                    plan = draft,
+                    onPlanChange = { draft = it },
+                    stageGroups = stageGroups,
+                    stageCodes = stageCodes,
+                    customStageCode = customStage,
+                    onCustomStageSelected = { customStage = true },
+                    showStageListWithCustom = true,
+                    onStageSelected = {
+                        draft = draft.copy(stage = it)
+                        customStage = false
+                    },
+                    showMedicine = showMedicine,
+                    showStone = showStone,
+                    onTargetBlankChange = { targetInvalid = it },
+                    onMedicineBlankChange = { medicineBlank = it },
+                    onStoneBlankChange = { stoneBlank = it },
                 )
+
+                if (liveOutcome != DepotPlanOutcome.Enough && liveOutcome != DepotPlanOutcome.Runnable) {
+                    val (noticeBg, noticeFg) = when (liveOutcome) {
+                        DepotPlanOutcome.StageClosed -> depotWarningColors()
+                        DepotPlanOutcome.StageRequired ->
+                            MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+
+                        else -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+                    }
+                    DepotEditorNoticeBanner(
+                        icon = if (liveOutcome == DepotPlanOutcome.StageRequired) {
+                            Icons.Outlined.Info
+                        } else {
+                            Icons.Default.WarningAmber
+                        },
+                        text = depotPlanOutcomeLabel(
+                            outcome = liveOutcome,
+                            need = (draftTarget - currentCount).coerceAtLeast(0),
+                            stage = resolvedStage,
+                        ),
+                        containerColor = noticeBg,
+                        contentColor = noticeFg,
+                    )
+                }
+
+                if (!nodeEnabled) {
+                    DepotEditorNoticeBanner(
+                        icon = Icons.Default.WarningAmber,
+                        text = stringResource(R.string.depot_inventory_plan_node_disabled),
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
+            if (scrollBottomClearancePx > 0f) {
+                Spacer(modifier = Modifier.height(with(density) { scrollBottomClearancePx.toDp() }))
             }
         }
 
