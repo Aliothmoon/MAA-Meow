@@ -11,6 +11,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.Packages
+import com.aliothmoon.maameow.constant.VirtualDisplayUpgradeOutcome
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
@@ -40,6 +41,7 @@ import com.aliothmoon.maameow.manager.RemoteCallStuckException
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
 import com.aliothmoon.maameow.remote.PermissionGrantRequest
+import com.aliothmoon.maameow.remote.VirtualDisplayStatus
 import com.aliothmoon.maameow.utils.EyeProtectionDetector
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.device.XiaomiAdbInput
@@ -105,6 +107,7 @@ class MaaCompositionService(
     enum class StopOrigin { USER, CALLBACK, RUN_DURATION_LIMIT }
 
     private val runDeadlineGuard = RunDeadlineGuard()
+    private val runWakeLock = RunWakeLock(context)
 
     /** 本轮运行时长上限的截止时间（elapsedRealtime），未计时为 null */
     val runDeadline: StateFlow<Long?> = runDeadlineGuard.deadline
@@ -157,14 +160,16 @@ class MaaCompositionService(
         // startForeground 契约未履行直接杀进程（RemoteServiceException）。
         // 服务自身观察状态流，startForeground 后对 IDLE/ERROR 自行 stopSelf
         if (state != MaaExecutionState.STARTING) {
-            // 自然完成走回调直接置 IDLE，不经过 finishStop，统一在这里撤掉计时和后台监视
+            // 自然完成走回调直接置 IDLE，不经过 finishStop，统一在这里撤掉计时、唤醒锁和后台监视
             if (state == MaaExecutionState.IDLE || state == MaaExecutionState.ERROR) {
                 runDeadlineGuard.disarm()
+                runWakeLock.release()
                 stopBackgroundMonitors()
             }
             _state.value = state
             return
         }
+        runWakeLock.acquire()
         // specialUse 被系统拒绝时拉起 FGS 必崩，本轮降级为无进度通知运行
         val withFgs = !SpecialUseFgsGate.isDenied(context)
         lastStopOrigin = StopOrigin.USER
@@ -284,9 +289,11 @@ class MaaCompositionService(
                     context.getString(R.string.runlog_game_process_gone, packageName),
                     LogLevel.ERROR
                 )
-                processExitJournal.recordGame(packageName)?.let {
-                    sessionLogger.appendAndWait(describeGameExit(it), LogLevel.WARNING)
+                val cause = processExitJournal.recordGame(packageName)
+                if (cause != null) {
+                    sessionLogger.appendAndWait(describeGameExit(cause), LogLevel.WARNING)
                 }
+                telemetry.onGameProcessGone(cause?.kind)
                 // 游戏没了剩下的任务链也是白跑，整轮中止
                 if (_state.value == MaaExecutionState.RUNNING) {
                     notificationCenter.notifySubTaskFailure(
@@ -310,7 +317,10 @@ class MaaCompositionService(
 
     private fun describeGameExit(cause: GameExitCause): String {
         val time = EXIT_TIME.format(Instant.ofEpochMilli(cause.timestamp).atZone(ZoneId.systemDefault()))
-        return context.getString(cause.kind.messageRes, time, cause.tag)
+        val base = context.getString(cause.kind.messageRes, time, cause.tag)
+        if (cause.kind != GameExitCause.Kind.BACKGROUND_KILL) return base
+        val hintRes = GameExitOemHints.hintResForCurrentDevice() ?: return base
+        return "$base\n${context.getString(hintRes)}"
     }
 
     fun handleCallback(msg: Int, json: String?) {
@@ -520,8 +530,7 @@ class MaaCompositionService(
         clientType: String,
         displayBackend: VirtualDisplayBackend,
     ): StartResult? {
-        val useVdm = useVdm(displayBackend)
-        val config = when (val display = startDisplay(service, mode, clientType, useVdm)) {
+        val config = when (val display = startDisplay(service, mode, clientType, displayBackend)) {
             DisplayStart.BackendBlocked -> return failStart(
                 context.getString(R.string.runlog_display_backend_switch_blocked), "DISPLAY_BACKEND_ERROR",
                 StartResult.ConnectionError(StartResult.ConnectionError.ConnectPhase.DISPLAY_MODE)
@@ -532,10 +541,14 @@ class MaaCompositionService(
                 StartResult.ConnectionError(StartResult.ConnectionError.ConnectPhase.DISPLAY_MODE)
             )
 
-            DisplayStart.DisplayFailed -> return failVirtualDisplayStart(useVdm && mode == RunMode.BACKGROUND)
+            DisplayStart.DisplayFailed -> return failVirtualDisplayStart(
+                strictVdm = displayBackend == VirtualDisplayBackend.VDM
+                    && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+                    && mode == RunMode.BACKGROUND
+            )
 
             is DisplayStart.Ready -> {
-                if (mode == RunMode.BACKGROUND) reportVirtualDisplayTier(service, useVdm)
+                if (mode == RunMode.BACKGROUND) reportVirtualDisplayStatus(service, displayBackend)
                 buildConnectConfig(display.width, display.height, display.displayId)
             }
         }
@@ -557,17 +570,18 @@ class MaaCompositionService(
         class Ready(val width: Int, val height: Int, val displayId: Int) : DisplayStart
     }
 
-    // 只跟设置走，前台模式也不翻转，免得撞上留着的后台屏
-    private fun useVdm(backend: VirtualDisplayBackend): Boolean =
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && backend == VirtualDisplayBackend.VDM
+    private fun effectiveRemoteMode(backend: VirtualDisplayBackend): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) backend.remoteMode
+        else VirtualDisplayBackend.LEGACY.remoteMode
 
     private suspend fun startDisplay(
         service: RemoteService,
         mode: RunMode,
         clientType: String,
-        useVdm: Boolean,
+        displayBackend: VirtualDisplayBackend,
     ): DisplayStart {
-        if (!service.bounded("setUseVirtualDeviceDisplay") { it.setUseVirtualDeviceDisplay(useVdm) })
+        val remoteMode = effectiveRemoteMode(displayBackend)
+        if (!service.bounded("setVirtualDisplayBackend") { it.setVirtualDisplayBackend(remoteMode) })
             return DisplayStart.BackendBlocked
         if (!service.bounded("setVirtualDisplayMode") { it.setVirtualDisplayMode(mode.displayMode) })
             return DisplayStart.ModeFailed
@@ -600,8 +614,8 @@ class MaaCompositionService(
             withContext(Dispatchers.IO) {
                 useRemoteService { service ->
                     val ready = if (mode == RunMode.BACKGROUND) {
-                        val useVdm = useVdm(appSettings.virtualDisplayBackend.value)
-                        startDisplay(service, mode, clientType, useVdm) is DisplayStart.Ready
+                        val displayBackend = appSettings.virtualDisplayBackend.value
+                        startDisplay(service, mode, clientType, displayBackend) is DisplayStart.Ready
                     } else {
                         // 前台不起主屏采集，直接起在主屏
                         backgroundGame.value = null
@@ -640,23 +654,48 @@ class MaaCompositionService(
         return stopped
     }
 
-    private suspend fun reportVirtualDisplayTier(service: RemoteService, useVdm: Boolean) {
-        val tier = runCatching { service.virtualDisplayFlagTier }.getOrDefault(0)
-        telemetry.onVirtualDisplayStarted(useVdm, tier)
-        if (tier > 0) {
+    private suspend fun reportVirtualDisplayStatus(
+        service: RemoteService,
+        requestedBackend: VirtualDisplayBackend,
+    ) {
+        val status = runCatching { service.virtualDisplayStatus }.getOrElse {
+            VirtualDisplayStatus(
+                displayId = DefaultDisplayConfig.DISPLAY_NONE,
+                usingVdm = requestedBackend == VirtualDisplayBackend.VDM,
+                flagTier = 0,
+                displayGroupId = -1,
+                upgradeOutcome = VirtualDisplayUpgradeOutcome.NONE,
+            )
+        }
+        telemetry.onVirtualDisplayStarted(mode = requestedBackend, status = status)
+        if (requestedBackend == VirtualDisplayBackend.AUTO && status.usingVdm) {
+            sessionLogger.appendToFileOnly(
+                "[Display] AUTO upgraded virtual display to VDM (tier=${status.flagTier}, group=${status.displayGroupId})"
+            )
+        }
+        if (status.flagTier > 0) {
             sessionLogger.appendAndWait(
                 context.getString(R.string.task_start_virtual_display_compat_warning_log),
                 LogLevel.WARNING
             )
+        } else if (!status.usingVdm && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && status.displayGroupId == 0) {
+            val warningRes = if (requestedBackend == VirtualDisplayBackend.LEGACY
+                && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+            ) {
+                R.string.task_start_virtual_display_group0_legacy_warning_log
+            } else {
+                R.string.task_start_virtual_display_group0_warning_log
+            }
+            sessionLogger.appendAndWait(context.getString(warningRes), LogLevel.WARNING)
         }
     }
 
-    private suspend fun failVirtualDisplayStart(useVdm: Boolean): StartResult = failStart(
+    private suspend fun failVirtualDisplayStart(strictVdm: Boolean): StartResult = failStart(
         context.getString(
-            if (useVdm) R.string.runlog_vdm_display_failed
+            if (strictVdm) R.string.runlog_vdm_display_failed
             else R.string.runlog_virtual_display_failed
         ),
-        if (useVdm) "VDM_DISPLAY_ERROR" else "VIRTUAL_DISPLAY_ERROR",
+        if (strictVdm) "VDM_DISPLAY_ERROR" else "VIRTUAL_DISPLAY_ERROR",
         StartResult.ConnectionError(StartResult.ConnectionError.ConnectPhase.VIRTUAL_DISPLAY),
     )
 
@@ -714,8 +753,11 @@ class MaaCompositionService(
         // 独立目录：先投递用户文件，送不过去 core 那边就是 file-not-found，直接报资源错误
         if (!coreDataPusher.pushUserData()) {
             Timber.e("core user data push failed before start")
-            telemetry.onStartFailed("CORE_DATA_PUSH_ERROR")
-            return StartResult.ResourceError(IllegalStateException("core user data push failed"))
+            return failStart(
+                context.getString(R.string.runlog_resource_load_failed),
+                "CORE_DATA_PUSH_ERROR",
+                StartResult.ResourceError(IllegalStateException("core user data push failed")),
+            )
         }
         taskChainStatusTracker.clear()
         // 不清 dropsRefresher：stage 已在 Analyze 完成，会话结束/下次 Analyze 再清
@@ -903,6 +945,9 @@ class MaaCompositionService(
                     result
                 }
             } catch (e: CancellationException) {
+                if (_state.value == MaaExecutionState.STARTING) {
+                    setRunState(MaaExecutionState.IDLE)
+                }
                 throw e
             } catch (e: RemoteCallStuckException) {
                 Timber.e(e, "Elevated service stuck during start")

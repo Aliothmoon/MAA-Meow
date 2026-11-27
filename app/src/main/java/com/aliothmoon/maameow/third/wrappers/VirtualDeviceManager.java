@@ -48,6 +48,9 @@ public final class VirtualDeviceManager {
         try {
             IInterface service = ServiceManager.getService(Context.VIRTUAL_DEVICE_SERVICE,
                     "android.companion.virtual.IVirtualDeviceManager");
+            if (service == null) {
+                throw new IllegalStateException("virtualdevice service unavailable");
+            }
             Class<?> aidlClass = Class.forName("android.companion.virtual.IVirtualDeviceManager");
             Constructor<?> ctor = Class.forName("android.companion.virtual.VirtualDeviceManager")
                     .getDeclaredConstructor(aidlClass, Context.class);

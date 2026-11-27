@@ -3,7 +3,7 @@ package com.aliothmoon.maameow.domain.service
 import androidx.annotation.StringRes
 import com.aliothmoon.maameow.R
 
-/** 进程死因不单独上报遥测；App 自身在启动时记，游戏经提权服务查 */
+/** 进程退出原文不报遥测，仅游戏运行中消失时给当前轮次附带分类 */
 interface ProcessExitJournal {
 
     /** 连上服务后补记各游戏包上次之后的退出，App 自己也被杀的那几次靠这里 */

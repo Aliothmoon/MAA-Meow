@@ -64,6 +64,7 @@ object VdmDisplayController {
     // 读路径不进锁：start 可能卡在等关联上
     private val displayId = AtomicInteger(DefaultDisplayConfig.DISPLAY_NONE)
     private val flagTier = AtomicInteger(VirtualDisplayManager.FLAG_TIER_NONE)
+    private val displayGroupId = AtomicInteger(VirtualDisplayManager.DISPLAY_GROUP_UNKNOWN)
     private var session: Session? = null
     // 本进程建过或复用过关联，stop 时拆掉
     private var associated = false
@@ -82,6 +83,13 @@ object VdmDisplayController {
     fun getDisplayId(): Int = displayId.get()
 
     fun getFlagTier(): Int = flagTier.get()
+
+    fun getDisplayGroupId(): Int = displayGroupId.get()
+
+    fun isSupported(): Boolean =
+        Process.myUid() == Process.SHELL_UID &&
+            Os.geteuid() == Process.SHELL_UID &&
+            ServiceManager.hasVdmServices()
 
     /** 分辨率变了只拆显示、留关联，紧接着的 [start] 按新配置重建 */
     @Synchronized
@@ -141,11 +149,13 @@ object VdmDisplayController {
             throw failure
         }
         val display = opened.display.display
+        val groupId = displayGroupId(display)
         session = opened
         displayId.set(display.displayId)
         flagTier.set(tier)
+        displayGroupId.set(groupId)
         Ln.i(
-            "$TAG started: displayId=${display.displayId}, group=${displayGroupId(display)}, " +
+            "$TAG started: displayId=${display.displayId}, group=$groupId, " +
                 "${cfg.width}x${cfg.height}@${cfg.dpi}, tier=$tier ${tiers[tier]}"
         )
         VirtualDisplayManager.fixRotation(display, cfg, physicalRotation)
@@ -178,6 +188,7 @@ object VdmDisplayController {
         session = null
         val id = displayId.getAndSet(DefaultDisplayConfig.DISPLAY_NONE)
         flagTier.set(VirtualDisplayManager.FLAG_TIER_NONE)
+        displayGroupId.set(VirtualDisplayManager.DISPLAY_GROUP_UNKNOWN)
         runCatching { releaseDisplay(active.display) }
             .onFailure { Ln.w("$TAG: release displayId=$id failed: ${it.message}") }
         runCatching { active.device.close() }
@@ -259,8 +270,9 @@ object VdmDisplayController {
         Ln.i("$TAG: association removed addr=$address")
     }
 
+    // 不再二次等待，避免超出 App 侧 30s 超时
     private fun removeLateAssociation() {
-        if (awaitAssociation() != null) removeAssociation()
+        if (findAssociation() != null) removeAssociation()
     }
 
     private fun awaitDisplayReady(display: Display) {

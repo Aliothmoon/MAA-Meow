@@ -42,6 +42,7 @@ object VirtualDisplayManager {
 
     const val DISPLAY_NONE = -1
     const val FLAG_TIER_NONE = -1
+    const val DISPLAY_GROUP_UNKNOWN = -1
 
     data class DisplayConfig(
         val width: Int = DefaultDisplayConfig.WIDTH,
@@ -53,6 +54,7 @@ object VirtualDisplayManager {
     private val config = AtomicReference(DisplayConfig())
     private val displayId = AtomicInteger(DISPLAY_NONE)
     private val flagTier = AtomicInteger(FLAG_TIER_NONE)
+    private val displayGroupId = AtomicInteger(DISPLAY_GROUP_UNKNOWN)
     private val virtualDisplay = AtomicReference<VirtualDisplay?>()
 
     fun start(): Int {
@@ -92,6 +94,8 @@ object VirtualDisplayManager {
 
     fun getFlagTier(): Int = flagTier.get()
 
+    fun getDisplayGroupId(): Int = displayGroupId.get()
+
     private fun startInternal(): Int {
         try {
             val cfg = config.get()
@@ -112,6 +116,7 @@ object VirtualDisplayManager {
         NativeBridgeLib.releaseNativeCapturer()
         displayId.set(DISPLAY_NONE)
         flagTier.set(FLAG_TIER_NONE)
+        displayGroupId.set(DISPLAY_GROUP_UNKNOWN)
     }
 
     private fun createVirtualDisplay(surface: Surface, cfg: DisplayConfig) {
@@ -137,7 +142,8 @@ object VirtualDisplayManager {
                     ", rotation=${d.rotation}" +
                     ", flags=0x${flags.toString(16)}, tier=$tier"
         )
-        logEffective(vdId, flags, d.flags)
+        val groupId = logEffective(vdId, flags, d.flags)
+        displayGroupId.set(groupId)
         fixRotation(d, cfg, physicalRotation)
     }
 
@@ -175,13 +181,18 @@ object VirtualDisplayManager {
     }
 
     /** 部分 ROM 会悄悄不给申请的 flag */
-    private fun logEffective(vdId: Int, requested: Int, displayFlags: Int) {
-        val groupId = runCatching { ServiceManager.getDisplayManager().getDisplayGroupId(vdId) }.getOrDefault(-1)
+    private fun logEffective(vdId: Int, requested: Int, displayFlags: Int): Int {
+        val groupId = runCatching { ServiceManager.getDisplayManager().getDisplayGroupId(vdId) }
+            .getOrDefault(DISPLAY_GROUP_UNKNOWN)
         Ln.i("VD effective: group=$groupId, flags=${describeDisplayFlags(displayFlags)}")
-        if (requested and VIRTUAL_DISPLAY_FLAG_OWN_DISPLAY_GROUP != 0 && groupId == 0) {
+        if (isOwnDisplayGroupMissed(requested, groupId)) {
             Ln.w("VD requested OWN_DISPLAY_GROUP but landed in group 0, it will follow the main screen power state")
         }
+        return groupId
     }
+
+    internal fun isOwnDisplayGroupMissed(requested: Int, groupId: Int): Boolean =
+        requested and VIRTUAL_DISPLAY_FLAG_OWN_DISPLAY_GROUP != 0 && groupId == 0
 
     /** Display 的隐藏位，13～17 未变 */
     internal fun describeDisplayFlags(flags: Int): String = listOf(

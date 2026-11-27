@@ -3,9 +3,11 @@ package com.aliothmoon.maameow.telemetry
 import android.content.Context
 import android.os.PowerManager
 import com.aliothmoon.maameow.constant.Packages
+import com.aliothmoon.maameow.constant.VirtualDisplayUpgradeOutcome
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.domain.service.GameExitCause
 import com.aliothmoon.maameow.domain.service.ScreenPowerController
 import com.aliothmoon.maameow.manager.RemoteAccessCoordinator
 import com.aliothmoon.maameow.manager.ShizukuManager
@@ -74,4 +76,20 @@ internal object TelemetryRunTags {
         val powerManager = context.getSystemService(PowerManager::class.java)
         if (powerManager.isIgnoringBatteryOptimizations(context.packageName)) "exempt" else "restricted"
     }.getOrDefault(UNKNOWN)
+
+    fun vdGroup(displayGroupId: Int): String = when {
+        displayGroupId > 0 -> "own"
+        displayGroupId == 0 -> "main"
+        else -> UNKNOWN
+    }
+
+    fun vdUpgrade(upgradeOutcome: Int): String = when (upgradeOutcome) {
+        VirtualDisplayUpgradeOutcome.UPGRADED -> "upgraded"
+        VirtualDisplayUpgradeOutcome.FALLBACK -> "fallback"
+        VirtualDisplayUpgradeOutcome.UNSUPPORTED -> "unsupported"
+        else -> "none"
+    }
+
+    fun gameExitKind(kind: GameExitCause.Kind?): String =
+        kind?.name?.lowercase() ?: UNKNOWN
 }

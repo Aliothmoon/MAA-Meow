@@ -399,11 +399,12 @@
     <string name="settings_background_resolution_title">백그라운드 해상도</string>
     <string name="settings_background_resolution_desc">백그라운드 모드에서만 적용</string>
     <string name="settings_virtual_display_backend_title">가상 디스플레이 모드</string>
-    <string name="settings_virtual_display_backend_desc">Legacy는 기존 동작을 유지합니다. VDM은 독립 디스플레이 그룹을 사용하며, 실패해도 Legacy로 전환되지 않습니다</string>
+    <string name="settings_virtual_display_backend_desc">자동은 Legacy를 먼저 사용하고 권한 제한이나 독립 디스플레이 그룹을 얻지 못하면 VDM으로 자동 전환합니다. Legacy는 기존 방식만 사용하며, VDM은 독립 디스플레이 그룹을 강제하고 실패해도 전환되지 않습니다</string>
+    <string name="settings_virtual_display_backend_auto">자동</string>
     <string name="settings_virtual_display_backend_legacy">Legacy</string>
     <string name="settings_virtual_display_backend_vdm">VDM (실험적)</string>
     <string name="runlog_display_backend_switch_blocked">가상 디스플레이 모드가 변경되었지만 이전 가상 디스플레이가 아직 열려 있습니다. 먼저 「게임 종료」 후 다시 시작하세요</string>
-    <string name="runlog_vdm_display_failed">VDM 독립 가상 디스플레이를 만들지 못해 이번 실행을 취소했습니다. 설정에서 Legacy로 바꾼 뒤 다시 시도하세요</string>
+    <string name="runlog_vdm_display_failed">VDM 독립 가상 디스플레이를 만들지 못해 이번 실행을 취소했습니다. 설정에서 자동 또는 Legacy로 바꾼 뒤 다시 시도하세요</string>
     <string name="settings_skip_shizuku_check">Shizuku 확인 건너뛰기</string>
     <string name="settings_shizuku_launch_mode_title">바로가기 사용</string>
     <string name="settings_shizuku_launch_mode_desc">홈에 Shizuku 열기 버튼을 표시해 빠르게 실행할 수 있습니다</string>
@@ -2084,6 +2085,8 @@
     <string name="task_start_adb_input_restricted_warning_log">「USB 디버깅(보안 설정)」이 꺼져 있어 시스템이 터치 입력을 차단합니다. 개발자 옵션에서 켜 주세요(적용되지 않으면 휴대폰을 재부팅하세요)</string>
     <string name="task_start_smart_resolution_warning_log">시스템의 「스마트 해상도」가 켜져 있어 백그라운드 모드에서 인식 오류가 발생합니다. 시스템 디스플레이 설정에서 직접 꺼 주세요</string>
     <string name="task_start_virtual_display_compat_warning_log">현재 시스템에 백그라운드 가상 디스플레이에 필요한 권한이 없어 호환 모드로 생성했습니다. 화면이 꺼지거나 잠기면 작업이 일시 중지되며, 실행 중 메인 화면이 입력 포커스를 잃을 수 있습니다</string>
+    <string name="task_start_virtual_display_group0_warning_log">가상 디스플레이가 독립 디스플레이 그룹을 얻지 못했습니다(메인 그룹 0). 화면이 꺼지거나 잠기면 작업이 일시 중지되므로 실행 중 화면을 켜 두거나 하드웨어 화면 끄기를 사용하세요</string>
+    <string name="task_start_virtual_display_group0_legacy_warning_log">Legacy 가상 디스플레이가 메인 디스플레이 그룹 0으로 배정되어 화면이 꺼지거나 잠기면 작업이 일시 중지됩니다. 설정에서 「가상 디스플레이 모드」를 자동 또는 VDM으로 바꾸어 독립 디스플레이 그룹을 사용하세요</string>
 
     <!-- i18n: toolbox / mini game -->
     <string name="toolbox_status_starting">시작 중…</string>
@@ -2830,6 +2833,13 @@
     <string name="runlog_game_exit_self">종료 원인(%1$s): 게임이 스스로 종료되었습니다 [%2$s]</string>
     <string name="runlog_game_exit_package_change">종료 원인(%1$s): 게임이 업데이트·비활성화되었거나 권한이 변경되었습니다 [%2$s]</string>
     <string name="runlog_game_exit_other">종료 원인(%1$s): %2$s</string>
+    <string name="game_exit_oem_hint_miui">MIUI/HyperOS 팁: 게임의 「배터리 세이버」를 「제한 없음」으로 설정하고 자동 시작을 허용한 뒤 보안 앱에서 잠금 화면 정리를 끄세요. 메인 화면에서 게임을 한 번 열어 최근 앱 목록에 고정하는 것도 도움이 됩니다</string>
+    <string name="game_exit_oem_hint_vivo">OriginOS/FuntouchOS 팁: 배터리 설정에서 게임의 백그라운드 높은 전력 소비를 허용하고 수면 대기 최적화를 끄세요. 메인 화면에서 게임을 한 번 열어 최근 앱 목록에 고정하는 것도 도움이 됩니다</string>
+    <string name="game_exit_oem_hint_oppo">ColorOS 팁: 앱 배터리 관리에서 게임의 완전한 백그라운드 활동을 허용하고 「앱 동결」을 끄세요. 메인 화면에서 게임을 한 번 열어 최근 앱 목록에 고정하는 것도 도움이 됩니다</string>
+    <string name="game_exit_oem_hint_huawei">EMUI/HarmonyOS/MagicOS 팁: 「앱 실행 관리」에서 게임을 수동 관리로 바꾸고 자동 시작과 백그라운드 활동을 허용하세요. 메인 화면에서 게임을 한 번 열어 최근 앱 목록에 고정하는 것도 도움이 됩니다</string>
+    <string name="game_exit_oem_hint_samsung">One UI 팁: 게임의 배터리 사용을 「제한 없음」으로 설정하고 「절전/딥 슬립 앱」 목록에 없는지 확인하세요. 메인 화면에서 게임을 한 번 열어 최근 앱 목록에 고정하는 것도 도움이 됩니다</string>
+    <string name="game_exit_oem_hint_lenovo">Lenovo ZUI 팁: 배터리·앱 관리에서 게임의 절전 정책을 「제한 없음」으로 설정하고 백그라운드 동결 및 자동 시작 제한을 끄세요. 메인 화면에서 게임을 한 번 열어 최근 앱 목록에 고정하는 것도 도움이 됩니다</string>
+    <string name="game_exit_oem_hint_meizu">Flyme 팁: 「백그라운드 관리」에서 게임의 백그라운드 실행을 허용하고 절전 동결을 끄세요. 메인 화면에서 게임을 한 번 열어 최근 앱 목록에 고정하는 것도 도움이 됩니다</string>
     <string name="runlog_game_fps_low">게임 화면 프레임이 %1$d FPS로 30 미만입니다. 자동지휘가 오작동할 수 있습니다. 게임 설정에서 고프레임 모드를 켜고 절전 모드를 끄세요</string>
     <string name="runlog_game_fps_degraded">게임 화면 프레임이 %1$d FPS로 50 미만입니다. 전투 타이밍이 부정확할 수 있습니다. 게임 설정에서 고프레임 모드를 켜고 절전 모드를 끄는 것을 권장합니다</string>
     <string name="runlog_game_left_virtual_display">게임 창이 가상 디스플레이를 벗어났고 자동 복귀에 실패했습니다(%1$s). 「백그라운드 모드 강제 전체 화면」을 켜거나 포그라운드 실행으로 전환해 보세요</string>

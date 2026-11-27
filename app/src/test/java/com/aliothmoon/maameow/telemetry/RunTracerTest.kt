@@ -378,4 +378,20 @@ class RunTracerTest {
         assertEquals(RunTracer.MAX_RECENT_SIGNALS, failure.recent.size)
         assertEquals("Node${RunTracer.MAX_TRACED_SUBTASKS_PER_TASK + 4}", failure.node?.first)
     }
+
+    @Test
+    fun `tagActiveRun 只落到当前事务与任务 Span，不污染后续轮次`() {
+        tracer.tagActiveRun("game_exit.kind", "background_kill")
+
+        start(1, "Fight")
+        tracer.tagActiveRun("game_exit.kind", "background_kill")
+        assertEquals("background_kill", transaction.tags["game_exit.kind"])
+        assertEquals("background_kill", transaction.children.single().tags["game_exit.kind"])
+
+        emit(AsstMsg.TaskChainStopped)
+        tracer.begin("r2", "chain", listOf("Mall"))
+        emit(AsstMsg.TaskChainStart, """{"taskchain":"Mall","taskid":2}""")
+        assertNull(transactions[1].tags["game_exit.kind"])
+        assertNull(transactions[1].children.single().tags["game_exit.kind"])
+    }
 }

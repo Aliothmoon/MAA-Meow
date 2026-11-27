@@ -1,9 +1,11 @@
 package com.aliothmoon.maameow.domain.service
 
 import com.alibaba.fastjson2.JSONObject
+import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.maa.AsstMsg
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
+import com.aliothmoon.maameow.remote.VirtualDisplayStatus
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 
 /** 除 [onAppExit] 外全部方法可在任意线程调用且不阻塞；开关关着或构建没带 DSN 时空转 */
@@ -14,8 +16,9 @@ interface RunTelemetry {
 
     fun onTaskRegistered(taskId: Int, params: String)
 
-    /** 后台虚拟屏建好后调，[vdm] 为 VirtualDevice 后端，[flagTier] 为 0 即完整权限 */
-    fun onVirtualDisplayStarted(vdm: Boolean, flagTier: Int)
+    fun onVirtualDisplayStarted(mode: VirtualDisplayBackend, status: VirtualDisplayStatus)
+
+    fun onGameProcessGone(kind: GameExitCause.Kind?)
 
     fun onCallback(message: AsstMsg, details: JSONObject?)
 

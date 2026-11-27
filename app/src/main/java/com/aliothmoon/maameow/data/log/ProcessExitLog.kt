@@ -40,6 +40,18 @@ internal object ProcessExitLog {
     private val FORCE_STOP_BY_CALLER = Regex(""" due to (?:from (?:pid |process:)|stop by )(\d+)""")
     private val STOP_PREFIX = Regex("""^(?:\[[^\]]+] )?stop \S+ due to """)
 
+    // 记在 USER_REQUESTED 下的厂商后台查杀
+    private val OEM_BACKGROUND_KILL_MARKERS = listOf(
+        "com.vivo.abe",
+        "com.vivo.pem",
+        "forcestoppackagebyuid 1000",
+        "the system laoding is too high",
+        "the system loading is too high",
+        "com.miui.powerkeeper",
+        "miuimemoryservice",
+        "autopowerkill",
+    )
+
     private val TIME = DateTimeFormatter.ofPattern("MM-dd HH:mm:ss.SSS", Locale.ROOT)
 
     private val IMPORTANCE = mapOf(
@@ -91,6 +103,7 @@ internal object ProcessExitLog {
             REASON_USER_REQUESTED -> when {
                 servicePid != null && FORCE_STOP_BY_CALLER.find(desc)?.groupValues?.get(1)?.toIntOrNull() == servicePid -> return null
                 "installPackageLI" in desc -> Kind.PACKAGE_CHANGE
+                isOemBackgroundKill(desc) -> Kind.BACKGROUND_KILL
                 else -> Kind.FORCE_STOPPED
             }
 
@@ -100,6 +113,12 @@ internal object ProcessExitLog {
             else -> Kind.OTHER
         }
         return GameExitCause(kind, record.timestamp, tag(record))
+    }
+
+    private fun isOemBackgroundKill(desc: String): Boolean {
+        if (desc.isEmpty()) return false
+        val lower = desc.lowercase(Locale.ROOT)
+        return OEM_BACKGROUND_KILL_MARKERS.any { it in lower }
     }
 
     private fun tag(record: ProcessExitRecord): String = buildList {

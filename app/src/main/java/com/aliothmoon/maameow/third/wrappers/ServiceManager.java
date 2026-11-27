@@ -40,6 +40,14 @@ public final class ServiceManager {
         /* not instantiable */
     }
 
+    static boolean hasService(String service) {
+        try {
+            return GET_SERVICE_METHOD.invoke(null, service) != null;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     static IInterface getService(String service, String type) {
         try {
             IBinder binder = (IBinder) GET_SERVICE_METHOD.invoke(null, service);
@@ -108,6 +116,11 @@ public final class ServiceManager {
             virtualDeviceManager = VirtualDeviceManager.create();
         }
         return virtualDeviceManager;
+    }
+
+    @androidx.annotation.RequiresApi(AndroidVersions.API_34_ANDROID_14)
+    public static boolean hasVdmServices() {
+        return hasService("companiondevice") && hasService(Context.VIRTUAL_DEVICE_SERVICE);
     }
 
     /** 拆掉反射包的一层，让 SecurityException 这类远端异常原样抛给调用方 */

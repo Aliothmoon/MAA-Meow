@@ -137,11 +137,12 @@
     <string name="settings_background_resolution_title">Background Resolution</string>
     <string name="settings_background_resolution_desc">Background mode only</string>
     <string name="settings_virtual_display_backend_title">Virtual Display Mode</string>
-    <string name="settings_virtual_display_backend_desc">Legacy preserves the existing behavior. VDM uses an independent display group and never falls back to Legacy.</string>
+    <string name="settings_virtual_display_backend_desc">Auto tries Legacy first and upgrades to VDM if permissions are limited or an independent display group cannot be obtained. Legacy uses the classic path only. VDM requires an independent display group and never falls back.</string>
+    <string name="settings_virtual_display_backend_auto">Auto</string>
     <string name="settings_virtual_display_backend_legacy">Legacy</string>
     <string name="settings_virtual_display_backend_vdm">VDM (experimental)</string>
     <string name="runlog_display_backend_switch_blocked">The virtual display mode changed while the previous virtual display is still open. Use Close Game first, then start again</string>
-    <string name="runlog_vdm_display_failed">Could not create the independent VDM display, so this start was cancelled. Switch to Legacy in Settings and try again</string>
+    <string name="runlog_vdm_display_failed">Could not create the independent VDM display, so this start was cancelled. Switch to Auto or Legacy in Settings and try again</string>
     <string name="settings_skip_shizuku_check">Skip Shizuku Check</string>
     <string name="settings_shizuku_launch_mode_title">Enable Shortcut</string>
     <string name="settings_shizuku_launch_mode_desc">Show a Shizuku launch button on Home for quick access</string>
@@ -2047,6 +2048,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="task_start_adb_input_restricted_warning_log">“USB debugging (Security settings)” is off, so the system blocks touch input. Please enable it in Developer options (reboot if it does not take effect)</string>
     <string name="task_start_smart_resolution_warning_log">System “Smart resolution” is enabled, which breaks recognition in background mode. Please turn it off manually in the system display settings</string>
     <string name="task_start_virtual_display_compat_warning_log">This system lacks the permissions a background virtual display needs, so it was created in compatibility mode: tasks pause while the screen is off or locked, and the main screen may lose input focus during the run</string>
+    <string name="task_start_virtual_display_group0_warning_log">The virtual display could not obtain an independent display group (landed in main group 0): tasks will pause while the screen is off or locked. Keep the screen awake or use hardware screen-off during runs</string>
+    <string name="task_start_virtual_display_group0_legacy_warning_log">The Legacy virtual display was placed in main display group 0, so tasks will pause while the screen is off or locked. Switch Virtual Display Mode to Auto or VDM in Settings to use an independent display group</string>
 
     <!-- i18n: toolbox / mini game -->
     <string name="toolbox_status_starting">Starting…</string>
@@ -2792,6 +2795,13 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="runlog_game_exit_self">Exit cause (%1$s): the game exited on its own [%2$s]</string>
     <string name="runlog_game_exit_package_change">Exit cause (%1$s): the game was updated, disabled or had its permissions changed [%2$s]</string>
     <string name="runlog_game_exit_other">Exit cause (%1$s): %2$s</string>
+    <string name="game_exit_oem_hint_miui">MIUI/HyperOS tip: set the game\'s Battery saver policy to \"No restrictions\", allow Autostart, and disable lock-screen cleanup in Security. You can also open the game once on the main screen and lock its card in Recents</string>
+    <string name="game_exit_oem_hint_vivo">OriginOS/FuntouchOS tip: allow high background power usage for the game in Battery settings and disable Sleep standby optimization. You can also open the game once on the main screen and lock its card in Recents</string>
+    <string name="game_exit_oem_hint_oppo">ColorOS tip: allow full background activity for the game in App battery usage settings and turn off \"App freezing\". You can also open the game once on the main screen and lock its card in Recents</string>
+    <string name="game_exit_oem_hint_huawei">EMUI/HarmonyOS/MagicOS tip: switch App launch management for the game to Manual and allow Auto-launch and Run in background. You can also open the game once on the main screen and lock its card in Recents</string>
+    <string name="game_exit_oem_hint_samsung">One UI tip: set the game\'s battery usage to \"Unrestricted\" and make sure it is not in \"Sleeping\" or \"Deep sleeping apps\". You can also open the game once on the main screen and lock its card in Recents</string>
+    <string name="game_exit_oem_hint_lenovo">Lenovo ZUI tip: set the game\'s battery policy to \"Unrestricted\" and turn off background freezing or auto-start limits. You can also open the game once on the main screen and lock its card in Recents</string>
+    <string name="game_exit_oem_hint_meizu">Flyme tip: allow the game to run in the background under Background management and disable power-saving freeze. You can also open the game once on the main screen and lock its card in Recents</string>
     <string name="runlog_game_fps_low">Game frame rate is only %1$d FPS (below 30); copilot may misbehave. Enable the high frame rate option in the game settings and turn off battery saver</string>
     <string name="runlog_game_fps_degraded">Game frame rate is %1$d FPS (below 50); combat timing may be off. Enable the high frame rate option in the game settings and turn off battery saver</string>
     <string name="runlog_game_left_virtual_display">Game window left the virtual display and could not be moved back (%1$s). Try enabling \"Force fullscreen in background mode\" or switch to foreground mode</string>

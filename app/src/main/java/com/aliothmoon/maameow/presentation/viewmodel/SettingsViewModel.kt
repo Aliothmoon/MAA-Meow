@@ -364,7 +364,7 @@ class SettingsViewModel(
             .stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(5000),
-                VirtualDisplayBackend.LEGACY,
+                VirtualDisplayBackend.AUTO,
             )
 
     /** 运行中不许换；空闲时先关掉留着的虚拟屏（连同上面的游戏），下一轮按新后端建 */

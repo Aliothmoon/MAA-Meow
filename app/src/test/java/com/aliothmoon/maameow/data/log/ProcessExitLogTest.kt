@@ -186,6 +186,25 @@ class ProcessExitLogTest {
     }
 
     @Test
+    fun explain_oemPowerAndMemoryKillersUnderUserRequestedAreBackgroundKills() {
+        val descriptions = listOf(
+            "[FORCE STOP] stop com.hypergryph.arknights due to com.vivo.abe",
+            "[FORCE STOP] stop com.hypergryph.arknights due to com.vivo.pem",
+            "[FORCE STOP] stop com.hypergryph.arknights due to forceStopPackageByUid 1000",
+            "[FORCE STOP] stop com.hypergryph.arknights due to The system laoding is too high.",
+            "[FORCE STOP] stop com.hypergryph.arknights due to The system loading is too high.",
+            "stop com.hypergryph.arknights due to com.miui.powerkeeper",
+            "stop com.hypergryph.arknights due to MiuiMemoryService",
+            "stop com.hypergryph.arknights due to AutoPowerKill",
+        )
+        for (desc in descriptions) {
+            val rec = record(1, reason = 10, reasonName = "USER REQUESTED", description = desc)
+            assertFalse("OEM kill must not be marked expected: $desc", ProcessExitLog.isExpected(ExitSubject.GAME, rec))
+            assertEquals("Expected BACKGROUND_KILL for: $desc", Kind.BACKGROUND_KILL, kindOf(rec))
+        }
+    }
+
+    @Test
     fun explain_tagCarriesSignalSubreasonAndFirstDescriptionLine() {
         assertEquals("SIGNALED 9", ProcessExitLog.explain(record(1, reason = 2, reasonName = "SIGNALED", status = 9), null)?.tag)
 

@@ -8,7 +8,7 @@ The setting is **Settings → Third-party services → Help improve this project
 
 | Kind | When | Content |
 |---|---|---|
-| Run statistics | Every run | Name, duration and result of each task chain, plus the parameter summary described below |
+| Run statistics | Every run | Name, duration and result of each task chain, plus the parameter summary described below; if the watchdog detects the game process disappeared mid-run, also its exit cause category (such as background kill, low memory, crash, or unknown; no raw system descriptions or other app names) |
 | Task failure | A task chain fails | The failing subtask and the recognition node it was stuck on; the logs of that task; in background mode, also the game screenshot MaaCore saved on failure: downscaled before upload, sent only once per run for the same failure, and on stable releases attached to only about one failure in five |
 | Start failure | Resource loading, instance creation, virtual display or connection fails | The failing stage; the logs of that run |
 | Service death | The Shizuku / Root process exits unexpectedly during a run | The task chain that was running; the logs of that run and MaaCore's `crash.log`; the next time the service connects, the system log (logcat) lines that mention that process (by pid or process name) from one minute before to 15 seconds after its death; other kill records in that window are reported only as a count, without other apps' names; with Shizuku as the backend, also the Shizuku state about half a second after the death |
@@ -28,7 +28,7 @@ Every record carries:
 - An anonymous device ID: a salted SHA-256 of `ANDROID_ID`, which cannot be reversed. The same value appears as `Telemetry ID` in the `device_info.txt` of an exported log package; include it in bug reports so the matching records can be found
 - App version, MaaCore version, resource version and build type
 - Client type, game version, run mode, background resolution and data location
-- In background mode, whether the virtual display mode is Legacy or VDM, and whether it was created with full permissions or fell back to compatibility mode because the system lacks them
+- In background mode, the configured virtual display mode (Auto / Legacy / VDM), the actual backend used (Legacy / VDM), whether Auto upgraded or fell back, whether it obtained an independent display group, and its permission tier
 - Elevation backend, whether Shizuku runs as root or adb, and whether the app is exempt from battery optimization
 - Whether each of four behavior-changing switches is on: MAA task override, force fullscreen on the virtual display, deploy-with-pause, and turning off display power for Screen Off
 - Whether the display was already turned off by Screen Off when the run started, and whether that was done manually or by a schedule

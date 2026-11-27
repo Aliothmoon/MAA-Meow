@@ -27,6 +27,7 @@ class PowerControllerTest {
     private val defaultSystemAwake = PowerController.systemAwake
     private val defaultOps = PowerController.ops
     private val defaultSleepMs = PowerController.sleepMs
+    private val defaultSdkInt = PowerController.sdkInt
 
     @Volatile
     private var awake = true
@@ -50,6 +51,7 @@ class PowerControllerTest {
         PowerController.systemAwake = defaultSystemAwake
         PowerController.ops = defaultOps
         PowerController.sleepMs = defaultSleepMs
+        PowerController.sdkInt = defaultSdkInt
         unmockkStatic(SurfaceControl::class, Ln::class)
     }
 
@@ -184,6 +186,110 @@ class PowerControllerTest {
         val thirdSleep = sleepEntered.poll(2, TimeUnit.SECONDS)!!
         PowerController.stopUserActivityKeepAlive()
         thirdSleep.countDown()
+    }
+
+    @Test
+    fun keepAlive_api36OwnGroupAsleep_wakesPeriodically() {
+        val sleepEntered = LinkedBlockingQueue<CountDownLatch>()
+        val fake = FakeOps(groupId = 2, displayAwake = true, wakeResult = true, wakeFlipsAwake = true)
+        PowerController.ops = fake
+        PowerController.sdkInt = { AndroidVersions.API_36_ANDROID_16 }
+        PowerController.sleepMs = {
+            val gate = CountDownLatch(1)
+            sleepEntered.put(gate)
+            assertTrue(gate.await(5, TimeUnit.SECONDS))
+        }
+
+        PowerController.startUserActivityKeepAlive(8)
+        repeat(3) {
+            val gate = sleepEntered.poll(2, TimeUnit.SECONDS)!!
+            if (it == 2) fake.displayAwake = false
+            gate.countDown()
+        }
+        val afterCheck = sleepEntered.poll(2, TimeUnit.SECONDS)!!
+        assertEquals(listOf(8), fake.wokenDisplays)
+        assertEquals(true, fake.displayAwake)
+        PowerController.stopUserActivityKeepAlive()
+        afterCheck.countDown()
+    }
+
+    @Test
+    fun keepAlive_api35OwnGroupAsleep_logsOnceWithoutWaking() {
+        val sleepEntered = LinkedBlockingQueue<CountDownLatch>()
+        val fake = FakeOps(groupId = 2, displayAwake = false)
+        PowerController.ops = fake
+        PowerController.sdkInt = { AndroidVersions.API_35_ANDROID_15 }
+        PowerController.sleepMs = {
+            val gate = CountDownLatch(1)
+            sleepEntered.put(gate)
+            assertTrue(gate.await(5, TimeUnit.SECONDS))
+        }
+
+        PowerController.startUserActivityKeepAlive(8)
+        repeat(7) {
+            val gate = sleepEntered.poll(2, TimeUnit.SECONDS)!!
+            if (it < 6) {
+                gate.countDown()
+            } else {
+                PowerController.stopUserActivityKeepAlive()
+                gate.countDown()
+            }
+        }
+        assertTrue(fake.wokenDisplays.isEmpty())
+        assertEquals(2, fake.stateChecks)
+        verify(exactly = 1) { Ln.w(match { it.contains("asleep during keep-alive") }) }
+    }
+
+    @Test
+    fun keepAlive_sharedGroup0_neverChecksOrWakes() {
+        val sleepEntered = LinkedBlockingQueue<CountDownLatch>()
+        val fake = FakeOps(groupId = 0, displayAwake = false)
+        PowerController.ops = fake
+        PowerController.sdkInt = { AndroidVersions.API_36_ANDROID_16 }
+        PowerController.sleepMs = {
+            val gate = CountDownLatch(1)
+            sleepEntered.put(gate)
+            assertTrue(gate.await(5, TimeUnit.SECONDS))
+        }
+
+        PowerController.startUserActivityKeepAlive(8)
+        repeat(4) {
+            val gate = sleepEntered.poll(2, TimeUnit.SECONDS)!!
+            if (it < 3) {
+                gate.countDown()
+            } else {
+                PowerController.stopUserActivityKeepAlive()
+                gate.countDown()
+            }
+        }
+        assertEquals(0, fake.stateChecks)
+        assertTrue(fake.wokenDisplays.isEmpty())
+    }
+
+    @Test
+    fun keepAlive_api36WakeFailure_doesNotSpamRetryUntilRecovered() {
+        val sleepEntered = LinkedBlockingQueue<CountDownLatch>()
+        val fake = FakeOps(groupId = 2, displayAwake = false, wakeResult = false)
+        PowerController.ops = fake
+        PowerController.sdkInt = { AndroidVersions.API_36_ANDROID_16 }
+        PowerController.sleepMs = {
+            val gate = CountDownLatch(1)
+            sleepEntered.put(gate)
+            assertTrue(gate.await(5, TimeUnit.SECONDS))
+        }
+
+        PowerController.startUserActivityKeepAlive(8)
+        repeat(7) {
+            val gate = sleepEntered.poll(2, TimeUnit.SECONDS)!!
+            if (it < 6) {
+                gate.countDown()
+            } else {
+                PowerController.stopUserActivityKeepAlive()
+                gate.countDown()
+            }
+        }
+        assertEquals(listOf(8), fake.wokenDisplays)
+        verify(exactly = 1) { Ln.w(match { it.contains("wake failed") }) }
     }
 
     private class FakeOps(

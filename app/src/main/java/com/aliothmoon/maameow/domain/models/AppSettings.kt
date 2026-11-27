@@ -1,11 +1,16 @@
 package com.aliothmoon.maameow.domain.models
 
 import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
+import com.aliothmoon.maameow.constant.VirtualDisplayBackendMode
 import com.aliothmoon.preferences.PrefKey
 import com.aliothmoon.preferences.PrefSchema
 import kotlinx.serialization.Serializable
 
-enum class VirtualDisplayBackend { LEGACY, VDM }
+enum class VirtualDisplayBackend(val remoteMode: Int) {
+    AUTO(VirtualDisplayBackendMode.AUTO),
+    LEGACY(VirtualDisplayBackendMode.LEGACY),
+    VDM(VirtualDisplayBackendMode.VDM),
+}
 
 @Serializable
 @PrefSchema
@@ -123,9 +128,9 @@ data class AppSettings(
     @PrefKey(default = "P720")
     val backgroundResolution: String = "P720",
 
-    /** 后台虚拟屏创建方式；VDM 仅在 Android 14+ 设置页展示 */
-    @PrefKey(default = "LEGACY")
-    val virtualDisplayBackend: String = "LEGACY",
+    /** 后台虚拟屏创建方式，14+ 展示 */
+    @PrefKey(default = "AUTO")
+    val virtualDisplayBackend: String = "AUTO",
 
     @PrefKey(default = "SYSTEM")
     val language: String = "SYSTEM",

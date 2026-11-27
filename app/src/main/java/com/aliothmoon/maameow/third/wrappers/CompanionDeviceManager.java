@@ -21,6 +21,9 @@ public final class CompanionDeviceManager {
 
     static CompanionDeviceManager create() {
         IInterface manager = ServiceManager.getService("companiondevice", "android.companion.ICompanionDeviceManager");
+        if (manager == null) {
+            throw new IllegalStateException("companiondevice service unavailable");
+        }
         return new CompanionDeviceManager(manager);
     }
 
