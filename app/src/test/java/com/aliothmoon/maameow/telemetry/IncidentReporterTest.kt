@@ -336,6 +336,38 @@ class IncidentReporterTest {
     }
 
     @Test
+    fun `资源初始化失败诊断日志按 UTF-8 字节上限截断，不会因中文超预算`() = runTest(dispatcher) {
+        val reporter = reporter()
+        // 每个中文占 3 字节，60_000 字 = 180_000 字节 > 128 KiB
+        val hugeChinese = "测".repeat(60_000)
+        val report = ResourceInitFailureReport(
+            trigger = "checkAndInit",
+            phase = "FileOutputStream",
+            errorType = "IOException",
+            errnoName = "ENOENT",
+            cause = "open failed",
+            extractedCount = 0,
+            totalCount = 10,
+            attemptFailures = 3,
+            durationMs = 100L,
+            externalStorageState = "mounted",
+            externalDirPresent = false,
+            internalWritable = true,
+            assetReadable = true,
+            availStorageMb = 1024L,
+            diagnosticLog = hugeChinese,
+        )
+
+        reporter.report(ResourceInitFailure(report))
+        advanceUntilIdle()
+
+        val logs = evidence.logs!!
+        assertTrue(logs.truncated)
+        assertTrue(logs.selectedRawBytes <= 128 * 1024)
+        assertEquals(logs.selectedRawBytes, logs.entries.single().content.encodeToByteArray().size.toLong())
+    }
+
+    @Test
     fun `Shizuku 未运行不带日志`() = runTest(dispatcher) {
         val reporter = reporter()
         write("service_bind_debug.log", "BIND\n")

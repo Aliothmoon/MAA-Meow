@@ -73,7 +73,7 @@ data class UnlockAttempt(
 data class ResourceInitFailureReport(
     /** checkAndInit / reInitialize / direct */
     val trigger: String,
-    /** manifest / mkdirs / assets.open / FileOutputStream / copy / close / pre_clean / unknown */
+    /** manifest / mkdirs / assets.open / FileOutputStream / copy / close / unknown */
     val phase: String,
     /** JDK / Android 标准异常简单名，避免 R8 混淆自家异常类 */
     val errorType: String,

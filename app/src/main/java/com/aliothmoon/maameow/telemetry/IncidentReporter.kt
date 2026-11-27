@@ -147,7 +147,7 @@ internal class IncidentReporter(
             ?: return Evidence(null, AttachmentOutcome.NotSelected)
         val rawBytes = text.encodeToByteArray().size.toLong()
         val trimmed = if (rawBytes > MAX_INLINE_DIAG_BYTES) {
-            text.take(MAX_INLINE_DIAG_BYTES)
+            truncateUtf8(text, MAX_INLINE_DIAG_BYTES)
         } else {
             text
         }
@@ -159,6 +159,24 @@ internal class IncidentReporter(
             warnings = emptyList(),
         )
         return Evidence(logs, AttachmentOutcome.NotSelected)
+    }
+
+    private fun truncateUtf8(text: String, maxBytes: Int): String {
+        var bytes = 0
+        var index = 0
+        while (index < text.length) {
+            val cp = text.codePointAt(index)
+            val cpBytes = when {
+                cp < 0x80 -> 1
+                cp < 0x800 -> 2
+                cp < 0x10000 -> 3
+                else -> 4
+            }
+            if (bytes + cpBytes > maxBytes) break
+            bytes += cpBytes
+            index += Character.charCount(cp)
+        }
+        return text.substring(0, index)
     }
 
     private fun DiagnosticLogs.redacted(secrets: List<String>) = DiagnosticLogs(

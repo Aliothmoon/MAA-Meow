@@ -14,6 +14,7 @@ import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.resource.MaaCoreVersion
 import com.aliothmoon.maameow.domain.service.ResourceInitFailureReport
 import com.aliothmoon.maameow.utils.i18n.LocalizedException
+import kotlinx.serialization.SerializationException
 import timber.log.Timber
 import java.io.File
 import java.io.FileOutputStream
@@ -32,7 +33,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 /**
  * 采集资源初始化/解压期间的存储、权限、异常栈与探针诊断，
- * 优先落盘到内部 filesDir（外置存储不可写时也能留存）并由日志导出随 ZIP 打包。
+ * 失败时落盘到内部 filesDir（外置存储不可写时也能留存）并由日志导出随 ZIP 打包
  */
 class ResourceInitDiagnostics(private val context: Context) {
 
@@ -47,6 +48,9 @@ class ResourceInitDiagnostics(private val context: Context) {
         private const val PROBE_FILE_NAME = ".maameow_diag_probe"
         private const val COPY_PROBE_FILE_NAME = ".maameow_diag_copy_probe"
         private val TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS (Z)")
+        private const val RUN_RULE = "============================================================"
+        private val RUN_BOUNDARY = Regex("\n\n(?=$RUN_RULE\n=== Resource Init Run #)")
+        private val PID = runCatching { Process.myPid() }.getOrDefault(-1)
         private val MOUNT_FILTER = Regex(
             "(/storage|/sdcard|/mnt/user|/mnt/pass_through|/mnt/androidwritable|/data/media|Android/data|fuse)",
             RegexOption.IGNORE_CASE,
@@ -122,11 +126,12 @@ class ResourceInitDiagnostics(private val context: Context) {
         }
 
         private fun stableErrorName(t: Throwable): String {
+            if (t is SerializationException) return "SerializationException"
             val full = t.javaClass.name
+            // 非启动类路径异常经 R8 混淆后类名不稳定
             val allowed = full.startsWith("java.") ||
                 full.startsWith("javax.") ||
-                full.startsWith("android.") ||
-                full.startsWith("kotlinx.")
+                full.startsWith("android.")
             return if (allowed) t.javaClass.simpleName.ifBlank { "Exception" } else "AppException"
         }
 
@@ -188,15 +193,29 @@ class ResourceInitDiagnostics(private val context: Context) {
         activeRunCount.decrementAndGet()
     }
 
+    private fun clearPersistedReport() {
+        synchronized(historyLock) { history.clear() }
+        runCatching {
+            File(context.filesDir, ENTRY_NAME).delete()
+            File(context.filesDir, "$ENTRY_NAME.tmp").delete()
+        }
+    }
+
     private fun commitRun(session: RunSession, reportText: String) {
         releaseRun(session)
         val combined = synchronized(historyLock) {
+            if (history.isEmpty()) history.addAll(loadPersistedRuns())
             while (history.size >= MAX_RUNS) history.removeFirst()
             history.addLast(reportText)
             history.joinToString("\n\n")
         }
         persistReport(combined)
     }
+
+    private fun loadPersistedRuns(): List<String> = runCatching {
+        val file = File(context.filesDir, ENTRY_NAME)
+        if (file.isFile) file.readText(Charsets.UTF_8).split(RUN_BOUNDARY).filter { it.isNotBlank() } else emptyList()
+    }.getOrDefault(emptyList())
 
     private fun persistReport(content: String) {
         runCatching {
@@ -244,6 +263,8 @@ class ResourceInitDiagnostics(private val context: Context) {
         private val primaryFailure = AtomicReference<String?>(null)
         private val primaryPhase = AtomicReference<String?>(null)
         private val primaryError = AtomicReference<Throwable?>(null)
+        private val recordedExtracted = AtomicInteger(0)
+        private val recordedTotal = AtomicInteger(0)
 
         @Volatile
         private var externalDirPresentAfterFail: Boolean? = null
@@ -287,13 +308,13 @@ class ResourceInitDiagnostics(private val context: Context) {
         fun collectLeftovers(resourceDir: File): List<String> {
             if (!resourceDir.exists()) return emptyList()
             return runCatching {
-                val out = mutableListOf<String>()
-                resourceDir.walkTopDown().forEach { f ->
-                    if (out.size >= MAX_LEFTOVERS) return@forEach
-                    val rel = runCatching { f.relativeTo(resourceDir).path }.getOrDefault(f.absolutePath)
-                    out += "${rel.ifEmpty { "." }} | ${describePath(f)}"
-                }
-                out
+                resourceDir.walkTopDown()
+                    .take(MAX_LEFTOVERS)
+                    .map { f ->
+                        val rel = runCatching { f.relativeTo(resourceDir).path }.getOrDefault(f.absolutePath)
+                        "${rel.ifEmpty { "." }} | ${describePath(f)}"
+                    }
+                    .toList()
             }.getOrElse { listOf("walk failed: ${describeError(it)}") }
         }
 
@@ -316,6 +337,7 @@ class ResourceInitDiagnostics(private val context: Context) {
                     appendLine(stackTraceOf(error))
                 }
             }.trimEnd()
+            if (filteredFiles > 0) recordedTotal.set(filteredFiles)
             if (!loaded) {
                 primaryPhase.compareAndSet(null, "manifest")
                 if (error != null) primaryError.compareAndSet(null, error)
@@ -370,6 +392,8 @@ class ResourceInitDiagnostics(private val context: Context) {
             error: Throwable,
         ) {
             totalFinalFailures.incrementAndGet()
+            recordedExtracted.updateAndGet { maxOf(it, extractedSoFar) }
+            if (totalFiles > 0) recordedTotal.updateAndGet { maxOf(it, totalFiles) }
             primaryPhase.compareAndSet(null, phase)
             primaryError.compareAndSet(null, error)
             primaryFailure.compareAndSet(
@@ -403,8 +427,8 @@ class ResourceInitDiagnostics(private val context: Context) {
 
         fun finishSuccess() {
             if (!finished.compareAndSet(false, true)) return
-            // 解压正常时不落盘诊断报告，避免给正常设备留多余文件
             releaseRun(this)
+            clearPersistedReport()
         }
 
         fun finishFailure(
@@ -412,9 +436,11 @@ class ResourceInitDiagnostics(private val context: Context) {
             extractedCount: Int,
             totalFiles: Int,
         ): ResourceInitFailureReport {
+            val exactExtracted = maxOf(extractedCount, recordedExtracted.get())
+            val exactTotal = maxOf(totalFiles, recordedTotal.get())
             // 若还没跑过失败后探针（例如 preClean/manifest 阶段抛错），补做一次存储探针
             runStorageOnlyProbes(destDir)
-            val reportText = finish("FAILED", extractedCount, totalFiles, error)
+            val reportText = finish("FAILED", exactExtracted, exactTotal, error)
             val rootErr = primaryError.get() ?: (error as? LocalizedException)?.cause ?: error
             val (errorType, errnoName) = classifyError(rootErr)
             val phase = primaryPhase.get() ?: "unknown"
@@ -429,8 +455,8 @@ class ResourceInitDiagnostics(private val context: Context) {
                 errorType = errorType,
                 errnoName = errnoName,
                 cause = describeError(rootErr).take(500),
-                extractedCount = extractedCount,
-                totalCount = totalFiles,
+                extractedCount = exactExtracted,
+                totalCount = exactTotal,
                 attemptFailures = totalAttemptFailures.get(),
                 durationMs = System.currentTimeMillis() - startMs,
                 externalStorageState = extState,
@@ -458,8 +484,8 @@ class ResourceInitDiagnostics(private val context: Context) {
             val durationMs = System.currentTimeMillis() - startMs
 
             val text = buildString {
-                appendLine("============================================================")
-                appendLine("=== Resource Init Run #$runId ($outcome) ===")
+                appendLine(RUN_RULE)
+                appendLine("=== Resource Init Run #$runId ($outcome) pid=$PID ===")
                 appendLine("trigger           : $trigger")
                 appendLine("startTime         : $startWall")
                 appendLine("endTime           : $endWall (${durationMs}ms)")
@@ -510,7 +536,7 @@ class ResourceInitDiagnostics(private val context: Context) {
                     appendLine("--- Final Exception Stack ---")
                     appendLine(stackTraceOf(finalError))
                 }
-                append("============================================================")
+                append(RUN_RULE)
             }
 
             commitRun(this, text)

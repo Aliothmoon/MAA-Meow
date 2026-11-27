@@ -99,8 +99,8 @@ class AssetExtractor(
         onProgress: (ExtractProgress) -> Unit
     ): Result<Int> {
         val existingRun = diagnostics?.activeRun()
-        val ownedRun = if (existingRun == null) diagnostics?.beginDirectRun(destDir) else null
-        val runSession = existingRun ?: ownedRun
+        var ownedRun: ResourceInitDiagnostics.RunSession? = null
+        var runSession: ResourceInitDiagnostics.RunSession? = existingRun
         val extractedCount = AtomicInteger(0)
         val firstFinalFailure = AtomicBoolean(false)
         val retryWarnLogs = AtomicInteger(0)
@@ -108,6 +108,11 @@ class AssetExtractor(
         var totalFiles = 0
 
         return try {
+            if (runSession == null && diagnostics != null) {
+                // 块内赋值，防 withContext 返回处取消丢掉句柄
+                withContext(Dispatchers.IO) { ownedRun = diagnostics.beginDirectRun(destDir) }
+                runSession = ownedRun
+            }
             val startTime = System.currentTimeMillis()
             val lastReportTime = AtomicLong(0)
             val semaphore = Semaphore(PERMIT)
@@ -164,7 +169,7 @@ class AssetExtractor(
                                         initialDelayMs = 120,
                                     ) {
                                         trace.phase = "mkdirs"
-                                        trace.mkdirsResult = targetFile.parentFile?.mkdirs()
+                                        trace.mkdirsResult = targetFile.parentFile?.let { it.mkdirs() || it.isDirectory }
                                         trace.bytesCopied = 0L
                                         BufferPool.use { buffer ->
                                             trace.phase = "assets.open"
@@ -172,7 +177,7 @@ class AssetExtractor(
                                                 trace.phase = "FileOutputStream"
                                                 FileOutputStream(targetFile).use { output ->
                                                     trace.phase = "copy"
-                                                    trace.bytesCopied = input.copyToWithBuffer(output, buffer)
+                                                    input.copyToWithBuffer(output, buffer, trace)
                                                     trace.phase = "close"
                                                 }
                                             }
@@ -232,11 +237,10 @@ class AssetExtractor(
 
             val totalTime = System.currentTimeMillis() - startTime
             Timber.i("复制完成: ${extractedCount.get()} 个文件, 耗时: ${totalTime}ms")
-            ownedRun?.finishSuccess()
+            ownedRun?.let { session -> withContext(Dispatchers.IO) { session.finishSuccess() } }
 
             Result.success(extractedCount.get())
         } catch (e: CancellationException) {
-            ownedRun?.finishCancelled()
             throw e
         } catch (e: Exception) {
             // 等 coroutineScope 取消并回收全部并发协程后再做探针，避免空占信号量引发连锁空跑
@@ -255,8 +259,14 @@ class AssetExtractor(
             } else {
                 Timber.e(e, "复制失败: %s", ResourceInitDiagnostics.describeError(e))
             }
-            ownedRun?.finishFailure(e, extractedCount.get(), totalFiles)
+            ownedRun?.let { session ->
+                withContext(Dispatchers.IO) {
+                    session.finishFailure(e, extractedCount.get(), totalFiles)
+                }
+            }
             Result.failure(e)
+        } finally {
+            ownedRun?.finishCancelled()
         }
     }
 
@@ -322,12 +332,13 @@ class AssetExtractor(
         throw lastException ?: IllegalStateException("Retry failed without exception")
     }
 
-    private fun InputStream.copyToWithBuffer(out: OutputStream, buffer: ByteArray): Long {
+    private fun InputStream.copyToWithBuffer(out: OutputStream, buffer: ByteArray, trace: AttemptTrace): Long {
         var bytesCopied: Long = 0
         var bytes = read(buffer)
         while (bytes >= 0) {
             out.write(buffer, 0, bytes)
             bytesCopied += bytes
+            trace.bytesCopied = bytesCopied
             bytes = read(buffer)
         }
         return bytesCopied

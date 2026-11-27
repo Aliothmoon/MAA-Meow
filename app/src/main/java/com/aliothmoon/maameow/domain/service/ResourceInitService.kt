@@ -72,13 +72,15 @@ class ResourceInitService(
         _state.value =
             ResourceInitState.Extracting(0, 0, context.getString(R.string.resource_init_preparing))
 
-        val run = diagnostics?.beginRun(trigger, pathConfig)
+        var run: ResourceInitDiagnostics.RunSession? = null
         val lastExtracted = AtomicInteger(0)
         val lastTotal = AtomicInteger(0)
 
         try {
             val result = try {
                 withContext(Dispatchers.IO) {
+                    val session = diagnostics?.beginRun(trigger, pathConfig)
+                    run = session
                     var ensureError: Throwable? = null
                     val ensureOk = try {
                         pathConfig.ensureDirectories()
@@ -86,13 +88,15 @@ class ResourceInitService(
                         ensureError = e
                         false
                     }
+                    // 先撤版本标记，防中途打断后半份资源被判就绪
+                    pathConfig.clearAppVersion()
                     val resourceDir = File(pathConfig.resourceDir)
                     val existedBefore = resourceDir.exists()
                     val deleteStart = System.currentTimeMillis()
                     val deleteOk = if (existedBefore) resourceDir.deleteRecursively() else true
                     val deleteMs = System.currentTimeMillis() - deleteStart
                     val leftovers = if (!deleteOk || resourceDir.exists()) {
-                        run?.collectLeftovers(resourceDir).orEmpty()
+                        session?.collectLeftovers(resourceDir).orEmpty()
                     } else {
                         emptyList()
                     }
@@ -104,8 +108,8 @@ class ResourceInitService(
                             leftovers.take(5).joinToString(" ; "),
                         )
                     }
-                    val mkdirsOk = resourceDir.mkdirs()
-                    run?.recordPreClean(
+                    val mkdirsOk = resourceDir.mkdirs() || resourceDir.isDirectory
+                    session?.recordPreClean(
                         ensureOk = ensureOk,
                         ensureError = ensureError,
                         existedBefore = existedBefore,
@@ -137,15 +141,19 @@ class ResourceInitService(
 
             result.fold(
                 onSuccess = {
-                    pathConfig.markAppVersion()
-                    doForceSyncOverridesTemplate()
+                    withContext(Dispatchers.IO) {
+                        pathConfig.markAppVersion()
+                        doForceSyncOverridesTemplate()
+                        run?.finishSuccess()
+                    }
                     Timber.i("资源初始化完成")
-                    run?.finishSuccess()
                     _state.value = ResourceInitState.Ready
                 },
                 onFailure = { e ->
-                    val report = run?.finishFailure(e, lastExtracted.get(), lastTotal.get())
-                        ?: fallbackFailureReport(trigger, e, lastExtracted.get(), lastTotal.get())
+                    val report = withContext(Dispatchers.IO) {
+                        run?.finishFailure(e, lastExtracted.get(), lastTotal.get())
+                            ?: fallbackFailureReport(trigger, e, lastExtracted.get(), lastTotal.get())
+                    }
                     telemetry?.onResourceInitFailed(report)
                     _state.value = ResourceInitState.Failed(
                         (e as? LocalizedException)?.uiText
@@ -154,17 +162,23 @@ class ResourceInitService(
                 }
             )
         } catch (e: CancellationException) {
-            run?.finishCancelled()
             throw e
         } catch (e: Exception) {
             Timber.e(e, "资源初始化失败")
-            val report = run?.finishFailure(e, lastExtracted.get(), lastTotal.get())
-                ?: fallbackFailureReport(trigger, e, lastExtracted.get(), lastTotal.get())
+            val report = withContext(Dispatchers.IO) {
+                run?.finishFailure(e, lastExtracted.get(), lastTotal.get())
+                    ?: fallbackFailureReport(trigger, e, lastExtracted.get(), lastTotal.get())
+            }
             telemetry?.onResourceInitFailed(report)
             _state.value = ResourceInitState.Failed(
                 (e as? LocalizedException)?.uiText
                     ?: uiTextDynamicOr(e.message, R.string.resource_init_error_unknown)
             )
+        } finally {
+            if (_state.value is ResourceInitState.Extracting) {
+                _state.value = ResourceInitState.NotChecked
+            }
+            run?.finishCancelled()
         }
     }
 

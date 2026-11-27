@@ -13,10 +13,13 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.SerializationException
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import java.io.InputStream
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -76,6 +79,26 @@ class ResourceInitDiagnosticsTest {
     }
 
     @Test
+    fun failureInNewProcess_keepsReportsPersistedByPreviousProcess() {
+        val internalFiles = tempFolder.newFolder("files")
+        val destDir = tempFolder.newFolder("resource")
+        val context = mockk<Context>(relaxed = true) {
+            every { filesDir } returns internalFiles
+            every { cacheDir } returns tempFolder.newFolder("cache")
+        }
+
+        ResourceInitDiagnostics(context).beginDirectRun(destDir)
+            .finishFailure(IOException("first-process"), 0, 0)
+        ResourceInitDiagnostics(context).beginDirectRun(destDir)
+            .finishFailure(IOException("second-process"), 0, 0)
+
+        val persisted = File(internalFiles, ResourceInitDiagnostics.ENTRY_NAME).readText()
+        assertEquals(2, Regex("=== Resource Init Run #1 \\(FAILED\\)").findAll(persisted).count())
+        assertTrue(persisted.contains("first-process"))
+        assertTrue(persisted.contains("second-process"))
+    }
+
+    @Test
     fun assetOpenFailure_recordsAssetsOpenPhase() = runBlocking {
         val internalFiles = tempFolder.newFolder("files2")
         val destDir = tempFolder.newFolder("resource2")
@@ -127,6 +150,91 @@ class ResourceInitDiagnosticsTest {
         assertTrue(result.isSuccess)
         assertNull(diagnostics.readReport())
         assertFalse(File(internalFiles, ResourceInitDiagnostics.ENTRY_NAME).exists())
+    }
+
+    @Test
+    fun subsequentSuccess_clearsPreviousFailedReportFromMemoryAndDisk() = runBlocking {
+        val internalFiles = tempFolder.newFolder("files_clear")
+        val destDir = tempFolder.newFolder("resource_clear")
+        val manifestJson = """{"files":["MaaSync/MaaResource/a.json"]}"""
+        var shouldFail = true
+        val assets = mockk<AssetManager> {
+            every { open("MaaSync/asset_manifest.json") } answers {
+                ByteArrayInputStream(manifestJson.toByteArray())
+            }
+            every { open("MaaSync/MaaResource/a.json") } answers {
+                if (shouldFail) throw IOException("transient")
+                ByteArrayInputStream("""{"ok":true}""".toByteArray())
+            }
+            every { list("MaaSync/MaaResource") } returns arrayOf("a.json")
+        }
+        val context = mockk<Context>(relaxed = true) {
+            every { this@mockk.assets } returns assets
+            every { filesDir } returns internalFiles
+            every { cacheDir } returns tempFolder.newFolder("cache_clear")
+        }
+
+        val diagnostics = ResourceInitDiagnostics(context)
+        val extractor = AssetExtractor(context, diagnostics)
+
+        assertTrue(extractor.extract("MaaSync/MaaResource", destDir) {}.isFailure)
+        assertNotNull(diagnostics.readReport())
+        assertTrue(File(internalFiles, ResourceInitDiagnostics.ENTRY_NAME).isFile)
+
+        shouldFail = false
+        assertTrue(extractor.extract("MaaSync/MaaResource", destDir) {}.isSuccess)
+        assertNull(diagnostics.readReport())
+        assertFalse(File(internalFiles, ResourceInitDiagnostics.ENTRY_NAME).exists())
+    }
+
+    @Test
+    fun classifyError_usesStableNamesAndHidesCustomExceptions() {
+        class CustomInternalFailure : RuntimeException("boom")
+
+        assertEquals("IOException" to null, ResourceInitDiagnostics.classifyError(IOException("x")))
+        assertEquals(
+            "SerializationException" to null,
+            ResourceInitDiagnostics.classifyError(SerializationException("bad json")),
+        )
+        assertEquals("AppException" to null, ResourceInitDiagnostics.classifyError(CustomInternalFailure()))
+    }
+
+    @Test
+    fun midCopyFailure_recordsPartialBytesCopied() = runBlocking {
+        val internalFiles = tempFolder.newFolder("files_mid")
+        val destDir = tempFolder.newFolder("resource_mid")
+        val manifestJson = """{"files":["MaaSync/MaaResource/partial.json"]}"""
+        val assets = mockk<AssetManager> {
+            every { open("MaaSync/asset_manifest.json") } answers {
+                ByteArrayInputStream(manifestJson.toByteArray())
+            }
+            every { open("MaaSync/MaaResource/partial.json") } answers {
+                object : InputStream() {
+                    private var chunkSent = false
+                    override fun read(): Int = -1
+                    override fun read(b: ByteArray, off: Int, len: Int): Int {
+                        if (!chunkSent) {
+                            chunkSent = true
+                            val payload = "hello-partial".toByteArray()
+                            payload.copyInto(b, off)
+                            return payload.size
+                        }
+                        throw IOException("disk read error mid-stream")
+                    }
+                }
+            }
+            every { list("MaaSync/MaaResource") } returns arrayOf("partial.json")
+        }
+        val context = mockk<Context>(relaxed = true) {
+            every { this@mockk.assets } returns assets
+            every { filesDir } returns internalFiles
+            every { cacheDir } returns tempFolder.newFolder("cache_mid")
+        }
+
+        val diagnostics = ResourceInitDiagnostics(context)
+        assertTrue(AssetExtractor(context, diagnostics).extract("MaaSync/MaaResource", destDir) {}.isFailure)
+        val report = diagnostics.readReport()!!
+        assertTrue(report.contains("phase=copy bytes=13"))
     }
 
     @Test

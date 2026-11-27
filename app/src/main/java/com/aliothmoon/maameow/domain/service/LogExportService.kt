@@ -62,7 +62,7 @@ class LogExportService(
         private val INFO_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS (Z)")
     }
 
-    /** 导出日志 ZIP；失败返回 null。外置存储不可写时回退到内部 cacheDir。不删除 debug 源日志。 */
+    /** 导出日志 ZIP，失败返回 null；外置存储不可写时回退到内部 cacheDir，不删除 debug 源日志 */
     suspend fun exportZip(): File? = withContext(Dispatchers.IO) {
         try {
             applicationLogWriter?.flush()
@@ -110,10 +110,15 @@ class LogExportService(
                 return null
             }
             val zipFile = File(exportDir, zipFileName)
-            FileOutputStream(zipFile).use { fos ->
-                writeZipToStream(fos, logFiles, baseDir, settingsSnapshot, initDiag)
+            try {
+                FileOutputStream(zipFile).use { fos ->
+                    writeZipToStream(fos, logFiles, baseDir, settingsSnapshot, initDiag)
+                }
+                zipFile
+            } catch (e: Exception) {
+                runCatching { zipFile.delete() }
+                throw e
             }
-            zipFile
         } catch (e: Exception) {
             Timber.w(e, "Failed to write export zip in %s", exportDir.absolutePath)
             null
@@ -122,7 +127,7 @@ class LogExportService(
 
     suspend fun exportAllLogs(): Intent? = exportZip()?.let { createShareIntent(it) }
 
-    /** 写入 [targetUri]；成功返回显示名，失败返回 null。外置/内部缓存皆不可写时直写目标流。 */
+    /** 写入 [targetUri]，成功返回显示名，失败返回 null；外置/内部缓存皆不可写时直写目标流 */
     suspend fun exportToUri(targetUri: android.net.Uri): String? = withContext(Dispatchers.IO) {
         val zip = exportZip()
         try {
