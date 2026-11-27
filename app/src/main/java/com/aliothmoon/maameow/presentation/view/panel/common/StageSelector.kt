@@ -31,6 +31,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,6 +41,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.StageAliasMapper
 import com.aliothmoon.maameow.data.resource.StageGroup
 import com.aliothmoon.maameow.data.resource.StageInfo
+import com.aliothmoon.maameow.presentation.clearInputFocus
 import com.aliothmoon.maameow.presentation.components.GuideAnchor
 import com.aliothmoon.maameow.presentation.components.ITextFieldWithFocus
 import com.aliothmoon.maameow.presentation.components.LocalGuideHighlight
@@ -110,8 +114,13 @@ internal fun GroupedStageButtonGroup(
     emptyLabel: String = stringResource(R.string.panel_fight_stage_reset_current),
     /** 演示指到选关时，折叠描标题行，展开描目标关卡 */
     guided: Boolean = false,
+    /** 展开选关列表前清除当前输入焦点并收起软键盘，避免抽屉场景键盘遮挡展开内容与下方输入框 */
+    clearFocusOnExpand: Boolean = false,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val hostView = LocalView.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val selectedDisplay = stageDisplayName(resolveStage(selectedValue), stageGroups, emptyLabel)
     val guideKey = LocalGuideHighlight.current
         ?.takeIf { guided && it.anchor == GuideAnchor.STAGE_ITEM }?.key
@@ -126,7 +135,12 @@ internal fun GroupedStageButtonGroup(
                 .fillMaxWidth()
                 .guideHighlight(guideKey != null && !expanded, corner = 4.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .clickable { expanded = !expanded }
+                .clickable {
+                    if (clearFocusOnExpand && !expanded) {
+                        clearInputFocus(focusManager, hostView, keyboardController)
+                    }
+                    expanded = !expanded
+                }
                 .padding(vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)

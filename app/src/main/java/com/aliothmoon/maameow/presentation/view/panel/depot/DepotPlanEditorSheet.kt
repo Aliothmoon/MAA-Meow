@@ -113,6 +113,7 @@ import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.data.resource.StageAliasMapper
+import com.aliothmoon.maameow.presentation.ProvideInputFocusManager
 import com.aliothmoon.maameow.presentation.components.ItemIcon
 import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.theme.LocalReduceMotion
@@ -756,22 +757,24 @@ private fun DepotBottomSheetDialog(
                             onClick = {},
                         ),
                 ) {
-                    CompositionLocalProvider(
-                        LocalDepotSheetImeController provides imeController,
-                        LocalDepotSheetScrollClearancePx provides scrollBottomClearancePx,
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .windowInsetsPadding(navBottomInsets),
+                    ProvideInputFocusManager {
+                        CompositionLocalProvider(
+                            LocalDepotSheetImeController provides imeController,
+                            LocalDepotSheetScrollClearancePx provides scrollBottomClearancePx,
                         ) {
-                            Box(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.Center,
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .windowInsetsPadding(navBottomInsets),
                             ) {
-                                BottomSheetDefaults.DragHandle()
+                                Box(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    BottomSheetDefaults.DragHandle()
+                                }
+                                content()
                             }
-                            content()
                         }
                     }
                 }
@@ -987,6 +990,7 @@ private fun DepotPlanEditorContent(
                     customStageCode = customStage,
                     onCustomStageSelected = { customStage = true },
                     showStageListWithCustom = true,
+                    clearFocusOnStageExpand = true,
                     onStageSelected = {
                         draft = draft.copy(stage = it)
                         customStage = false

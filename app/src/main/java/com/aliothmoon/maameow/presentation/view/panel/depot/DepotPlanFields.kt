@@ -82,6 +82,7 @@ internal fun DepotPlanFields(
     showMedicine: Boolean = false,
     showStone: Boolean = false,
     showStageListWithCustom: Boolean = false,
+    clearFocusOnStageExpand: Boolean = false,
     onStageSelected: ((String) -> Unit)? = null,
     onTargetBlankChange: ((Boolean) -> Unit)? = null,
     onMedicineBlankChange: ((Boolean) -> Unit)? = null,
@@ -104,6 +105,7 @@ internal fun DepotPlanFields(
                 customSelected = customStageCode,
                 onCustomSelected = onCustomStageSelected,
                 emptyLabel = stringResource(R.string.panel_depot_not_selected),
+                clearFocusOnExpand = clearFocusOnStageExpand,
             )
         }
 
