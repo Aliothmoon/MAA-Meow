@@ -313,14 +313,7 @@ class PermissionManager(
     suspend fun quickGrantAccessibility(): Boolean {
         return permissions.remoteAccessGranted && try {
             val result = RemoteServiceManager.useRemoteService { srv ->
-                srv.grantPermissions(
-                    PermissionGrantRequest(
-                        packageName = context.packageName,
-                        uid = context.applicationInfo.uid,
-                        accessibilityServiceId = AccessibilityHelperService.SERVICE_ID,
-                        permissions = PERM_ACCESSIBILITY
-                    )
-                )
+                srv.grantPermissions(buildGrantRequest(PERM_ACCESSIBILITY))
             }
             if (result.accessibilityPermission) {
                 withTimeoutOrNull(3000L) {
@@ -343,20 +336,13 @@ class PermissionManager(
 
         _isGranting.value = true
         try {
-            val packageName = context.packageName
-            val uid = context.applicationInfo.uid
+            val request = buildGrantRequest()
             val isForeground = appSettings.runMode.value == RunMode.FOREGROUND
 
-            Timber.i("grantAll: packageName=$packageName, uid=$uid, isForeground=$isForeground")
+            Timber.i("grantAll: packageName=${request.packageName}, uid=${request.uid}, isForeground=$isForeground")
 
             // 后台模式用不到按键，开着是借系统绑定抬高进程优先级
-            val result = srv.grantPermissions(
-                PermissionGrantRequest(
-                    packageName = packageName,
-                    uid = uid,
-                    accessibilityServiceId = AccessibilityHelperService.SERVICE_ID,
-                )
-            )
+            val result = srv.grantPermissions(request)
 
             // 只有前台的组合键要等服务连上
             if (isForeground && result.accessibilityPermission) {
@@ -374,6 +360,15 @@ class PermissionManager(
             _isGranting.value = false
         }
     }
+
+    private fun buildGrantRequest(
+        permissions: Int = PermissionGrantRequest.PERM_ALL,
+    ): PermissionGrantRequest = PermissionGrantRequest(
+        packageName = context.packageName,
+        uid = context.applicationInfo.uid,
+        accessibilityServiceId = AccessibilityHelperService.serviceId(context),
+        permissions = permissions,
+    )
 
     /** 服务以 shell 运行，小米没开「USB 调试（安全设置）」时触控输入全被拦；Root 后端连上时直接开掉，定时任务也就不受影响 */
     private suspend fun enableXiaomiAdbInputIfRoot() {

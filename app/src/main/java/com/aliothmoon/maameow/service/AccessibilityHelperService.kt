@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.service
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.view.KeyEvent
@@ -18,7 +19,15 @@ class AccessibilityHelperService : AccessibilityService() {
     companion object {
         /** 同时按下两个键的时间容差 (毫秒) */
         private const val SIMULTANEOUS_PRESS_THRESHOLD = 300L
-        const val SERVICE_ID = "com.aliothmoon.maameow/.service.AccessibilityHelperService"
+
+        fun serviceId(context: Context): String = serviceId(context.packageName)
+
+        /** 按 ComponentName.flattenToShortString 规则生成，.dev 包名与类包名不同时必须保留完整类名 */
+        fun serviceId(packageName: String): String {
+            val cls = AccessibilityHelperService::class.java.name
+            val shortCls = if (cls.startsWith("$packageName.")) cls.substring(packageName.length) else cls
+            return "$packageName/$shortCls"
+        }
 
         private val onVolumeUpDownPressed = AtomicReference<(() -> Unit)?>()
 

@@ -8,6 +8,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
+import com.aliothmoon.maameow.schedule.service.ScheduleExecutionService
 import com.aliothmoon.maameow.schedule.service.ScheduleFailureReporter
 import com.aliothmoon.maameow.schedule.service.ScheduleWakeLock
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
@@ -20,13 +21,7 @@ import org.koin.core.context.GlobalContext
 import timber.log.Timber
 import kotlin.time.Duration.Companion.milliseconds
 
-/** 接收定时触发并启动 ScheduleExecutionService。 */
 class ScheduleReceiver : BroadcastReceiver() {
-
-    companion object {
-        private const val EXECUTION_SERVICE_CLASS =
-            "com.aliothmoon.maameow.schedule.service.ScheduleExecutionService"
-    }
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != ScheduleAlarmManager.ACTION_SCHEDULE_TRIGGER) return
@@ -46,7 +41,7 @@ class ScheduleReceiver : BroadcastReceiver() {
         runCatching { GlobalContext.get().get<ScheduleAlarmManager>().markFired(strategyId, scheduledTime) }
             .onFailure { Timber.w(it, "markFired failed: %s", strategyId) }
         val serviceIntent = Intent().apply {
-            setClassName(context, EXECUTION_SERVICE_CLASS)
+            setClassName(context, ScheduleExecutionService::class.java.name)
             action = ScheduleAlarmManager.ACTION_SCHEDULE_TRIGGER
             putExtra(ScheduleAlarmManager.EXTRA_STRATEGY_ID, strategyId)
             putExtra(ScheduleAlarmManager.EXTRA_SCHEDULED_TIME, scheduledTime)

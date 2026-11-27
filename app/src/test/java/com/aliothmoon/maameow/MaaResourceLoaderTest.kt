@@ -11,6 +11,7 @@ import com.aliothmoon.maameow.domain.service.CoreDataPusher
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.manager.RemoteServiceManager
+import com.aliothmoon.maameow.remote.CoreDataDir
 import com.aliothmoon.maameow.remote.SetupResult
 import com.aliothmoon.maameow.utils.JsonUtils
 import io.mockk.coEvery
@@ -121,7 +122,7 @@ class MaaResourceLoaderTest {
         withEnv(coreSeparated = true) { env ->
             assertTrue(env.loader.load("Official").isSuccess)
             assertTrue(env.loadedDirs.isNotEmpty())
-            assertTrue(env.loadedDirs.all { it.startsWith("/data/local/tmp/maameow") })
+            assertTrue(env.loadedDirs.all { it.startsWith(CoreDataDir.ROOT) })
             coVerify(exactly = 1) { env.coreDataPusher.prepare(any()) }
         }
     }
@@ -174,7 +175,7 @@ class MaaResourceLoaderTest {
     fun load_mapsGamePackageLayer_whenCoreSeparated() = runBlocking {
         withEnv(coreSeparated = true, gamePackages = mapOf("Official" to "com.example.cn")) { env ->
             assertTrue(env.loader.load("Official").isSuccess)
-            assertEquals("/data/local/tmp/maameow/game_package", env.loadedDirs[1].replace(File.separatorChar, '/'))
+            assertEquals("${CoreDataDir.ROOT}/game_package", env.loadedDirs[1].replace(File.separatorChar, '/'))
         }
     }
 
@@ -461,11 +462,11 @@ class MaaResourceLoaderTest {
             val resourceInitService = mockk<ResourceInitService> { every { revision } returns resourceRevision }
             every { pathConfig.isCoreSeparated } returns coreSeparated
             every { pathConfig.coreRootDir } answers {
-                if (coreSeparated) "/data/local/tmp/maameow" else rootDir.absolutePath
+                if (coreSeparated) CoreDataDir.ROOT else rootDir.absolutePath
             }
             every { pathConfig.toCorePath(any()) } answers {
                 if (coreSeparated) {
-                    MaaPathConfig.toCorePath(firstArg(), rootDir.absolutePath, "/data/local/tmp/maameow")
+                    MaaPathConfig.toCorePath(firstArg(), rootDir.absolutePath, CoreDataDir.ROOT)
                 } else firstArg()
             }
             val coreDataPusher = mockk<CoreDataPusher> {

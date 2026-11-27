@@ -38,7 +38,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 
-// 设备上查看：am start -n com.aliothmoon.maameow/androidx.compose.ui.tooling.PreviewActivity
+// 设备上查看：am start -n com.aliothmoon.maameow.dev/androidx.compose.ui.tooling.PreviewActivity
 //   --es composable com.aliothmoon.maameow.presentation.view.panel.LogPanelPreviewKt.LogPanelDemo
 
 private val BASE: LocalDateTime =

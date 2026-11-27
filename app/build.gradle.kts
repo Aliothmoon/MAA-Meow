@@ -133,6 +133,7 @@ android {
         // local.properties: maa.debugR8=true 时 debug 也走 R8
         val debugR8 = localProperties.getProperty("maa.debugR8", "false").toBoolean()
         getByName("debug") {
+            applicationIdSuffix = ".dev"
             isMinifyEnabled = debugR8
             isShrinkResources = debugR8
             if (debugR8) {
