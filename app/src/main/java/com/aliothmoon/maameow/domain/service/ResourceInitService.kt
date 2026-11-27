@@ -1,14 +1,17 @@
 package com.aliothmoon.maameow.domain.service
 
 import android.content.Context
+import android.os.Environment
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.MaaFiles.ASSET_DIR_NAME
 import com.aliothmoon.maameow.constant.MaaFiles.OVERRIDES_ASSET_TASKS
 import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.datasource.AssetExtractor
+import com.aliothmoon.maameow.data.datasource.ResourceInitDiagnostics
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.utils.i18n.LocalizedException
 import com.aliothmoon.maameow.utils.i18n.uiTextDynamicOr
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,12 +20,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 
 class ResourceInitService(
     private val context: Context,
     private val assetExtractor: AssetExtractor,
     private val pathConfig: MaaPathConfig,
     private val coreFiles: Lazy<CoreFilesGate>,
+    private val diagnostics: ResourceInitDiagnostics? = null,
+    private val telemetry: RunTelemetry? = null,
 ) {
     private val _state = MutableStateFlow<ResourceInitState>(ResourceInitState.NotChecked)
     val state: StateFlow<ResourceInitState> = _state.asStateFlow()
@@ -50,7 +56,7 @@ class ResourceInitService(
                 _state.value = ResourceInitState.Ready
                 return
             }
-            doExtractFromAssets()
+            doExtractFromAssets(trigger = "checkAndInit")
         } finally {
             // 调用方被取消时还停在 Checking，后续调用都会早退，放回去让下次重查
             _state.compareAndSet(ResourceInitState.Checking, ResourceInitState.NotChecked)
@@ -59,28 +65,64 @@ class ResourceInitService(
 
     /** 会删掉整个资源目录 */
     suspend fun reInitialize() {
-        coreFiles.value.whenIdle { doExtractFromAssets() }
+        coreFiles.value.whenIdle { doExtractFromAssets(trigger = "reInitialize") }
     }
 
-    private suspend fun doExtractFromAssets() {
+    private suspend fun doExtractFromAssets(trigger: String) {
         _state.value =
             ResourceInitState.Extracting(0, 0, context.getString(R.string.resource_init_preparing))
+
+        val run = diagnostics?.beginRun(trigger, pathConfig)
+        val lastExtracted = AtomicInteger(0)
+        val lastTotal = AtomicInteger(0)
 
         try {
             val result = try {
                 withContext(Dispatchers.IO) {
-                    pathConfig.ensureDirectories()
-                    val resourceDir = File(pathConfig.resourceDir)
-                    if (resourceDir.exists() && !resourceDir.deleteRecursively()) {
-                        Timber.w("清理旧资源目录失败: ${resourceDir.absolutePath}")
+                    var ensureError: Throwable? = null
+                    val ensureOk = try {
+                        pathConfig.ensureDirectories()
+                    } catch (e: Exception) {
+                        ensureError = e
+                        false
                     }
-                    resourceDir.mkdirs()
+                    val resourceDir = File(pathConfig.resourceDir)
+                    val existedBefore = resourceDir.exists()
+                    val deleteStart = System.currentTimeMillis()
+                    val deleteOk = if (existedBefore) resourceDir.deleteRecursively() else true
+                    val deleteMs = System.currentTimeMillis() - deleteStart
+                    val leftovers = if (!deleteOk || resourceDir.exists()) {
+                        run?.collectLeftovers(resourceDir).orEmpty()
+                    } else {
+                        emptyList()
+                    }
+                    if (!deleteOk) {
+                        Timber.w(
+                            "清理旧资源目录失败: %s (leftovers=%d, sample=%s)",
+                            resourceDir.absolutePath,
+                            leftovers.size,
+                            leftovers.take(5).joinToString(" ; "),
+                        )
+                    }
+                    val mkdirsOk = resourceDir.mkdirs()
+                    run?.recordPreClean(
+                        ensureOk = ensureOk,
+                        ensureError = ensureError,
+                        existedBefore = existedBefore,
+                        deleteOk = deleteOk,
+                        deleteMs = deleteMs,
+                        leftovers = leftovers,
+                        mkdirsOk = mkdirsOk,
+                        resourceDir = resourceDir,
+                    )
                 }
 
                 assetExtractor.extract(
                     assetDir = ASSET_DIR_NAME,
                     destDir = File(pathConfig.resourceDir),
                     onProgress = { progress ->
+                        lastExtracted.set(progress.extractedCount)
+                        lastTotal.set(progress.totalCount)
                         _state.value = ResourceInitState.Extracting(
                             extractedCount = progress.extractedCount,
                             totalCount = progress.totalCount,
@@ -98,22 +140,61 @@ class ResourceInitService(
                     pathConfig.markAppVersion()
                     doForceSyncOverridesTemplate()
                     Timber.i("资源初始化完成")
+                    run?.finishSuccess()
                     _state.value = ResourceInitState.Ready
                 },
                 onFailure = { e ->
+                    val report = run?.finishFailure(e, lastExtracted.get(), lastTotal.get())
+                        ?: fallbackFailureReport(trigger, e, lastExtracted.get(), lastTotal.get())
+                    telemetry?.onResourceInitFailed(report)
                     _state.value = ResourceInitState.Failed(
                         (e as? LocalizedException)?.uiText
                             ?: uiTextDynamicOr(e.message, R.string.resource_init_error_copy_failed)
                     )
                 }
             )
+        } catch (e: CancellationException) {
+            run?.finishCancelled()
+            throw e
         } catch (e: Exception) {
             Timber.e(e, "资源初始化失败")
+            val report = run?.finishFailure(e, lastExtracted.get(), lastTotal.get())
+                ?: fallbackFailureReport(trigger, e, lastExtracted.get(), lastTotal.get())
+            telemetry?.onResourceInitFailed(report)
             _state.value = ResourceInitState.Failed(
                 (e as? LocalizedException)?.uiText
                     ?: uiTextDynamicOr(e.message, R.string.resource_init_error_unknown)
             )
         }
+    }
+
+    private fun fallbackFailureReport(
+        trigger: String,
+        error: Throwable,
+        extractedCount: Int,
+        totalCount: Int,
+    ): ResourceInitFailureReport {
+        val unwrapped = (error as? LocalizedException)?.cause ?: error
+        val (errorType, errnoName) = ResourceInitDiagnostics.classifyError(unwrapped)
+        val extState = runCatching { Environment.getExternalStorageState() }.getOrDefault("unknown")
+        val pkgDir = runCatching { File(pathConfig.rootDir).parentFile?.parentFile }.getOrNull()
+        return ResourceInitFailureReport(
+            trigger = trigger,
+            phase = "unknown",
+            errorType = errorType,
+            errnoName = errnoName,
+            cause = ResourceInitDiagnostics.describeError(unwrapped).take(500),
+            extractedCount = extractedCount,
+            totalCount = totalCount,
+            attemptFailures = 0,
+            durationMs = 0L,
+            externalStorageState = extState,
+            externalDirPresent = pkgDir?.exists() ?: false,
+            internalWritable = null,
+            assetReadable = null,
+            availStorageMb = null,
+            diagnosticLog = null,
+        )
     }
 
     private fun doForceSyncOverridesTemplate() {

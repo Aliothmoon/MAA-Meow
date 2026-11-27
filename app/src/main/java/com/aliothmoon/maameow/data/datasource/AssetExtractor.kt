@@ -6,6 +6,7 @@ import com.aliothmoon.maameow.data.model.AssetManifest
 import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.LocalizedException
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -19,16 +20,22 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 
 
-class AssetExtractor(private val context: Context) {
+class AssetExtractor(
+    private val context: Context,
+    private val diagnostics: ResourceInitDiagnostics? = null,
+) {
 
     companion object {
         private const val MANIFEST_FILE_NAME = "MaaSync/asset_manifest.json"
         val PERMIT = Runtime.getRuntime().availableProcessors()
         private const val PROGRESS_INTERVAL_MS = 100L
+        private const val MAX_RETRY_WARN_LOGS = 8
     }
 
     class ExtractFailedException(
@@ -39,6 +46,16 @@ class AssetExtractor(private val context: Context) {
 
     private val json = JsonUtils.common
 
+    private class AttemptTrace {
+        var phase: String = "init"
+        var mkdirsResult: Boolean? = null
+        var bytesCopied: Long = 0L
+    }
+
+    private class FailedTarget(
+        val assetPath: String,
+        val targetFile: File,
+    )
 
     data class ExtractProgress(
         val extractedCount: Int,
@@ -81,16 +98,48 @@ class AssetExtractor(private val context: Context) {
         destDir: File,
         onProgress: (ExtractProgress) -> Unit
     ): Result<Int> {
+        val existingRun = diagnostics?.activeRun()
+        val ownedRun = if (existingRun == null) diagnostics?.beginDirectRun(destDir) else null
+        val runSession = existingRun ?: ownedRun
+        val extractedCount = AtomicInteger(0)
+        val firstFinalFailure = AtomicBoolean(false)
+        val retryWarnLogs = AtomicInteger(0)
+        val primaryFailedTarget = AtomicReference<FailedTarget?>(null)
+        var totalFiles = 0
+
         return try {
             val startTime = System.currentTimeMillis()
-            val extractedCount = AtomicInteger(0)
             val lastReportTime = AtomicLong(0)
             val semaphore = Semaphore(PERMIT)
 
-            val manifest = loadAssetManifest()
-                ?: throw IllegalStateException("Assets 清单文件不存在，请重新构建项目")
+            val manifestStart = System.currentTimeMillis()
+            val manifestResult = loadAssetManifest()
+            val manifestLoadMs = System.currentTimeMillis() - manifestStart
+            val manifest = manifestResult.first
+            val manifestError = manifestResult.second
+            if (manifest == null) {
+                runSession?.recordManifest(
+                    loadMs = manifestLoadMs,
+                    loaded = false,
+                    manifestTotalFiles = 0,
+                    filteredFiles = 0,
+                    assetDir = assetDir,
+                    destDir = destDir,
+                    error = manifestError,
+                )
+                throw IllegalStateException("Assets 清单文件不存在，请重新构建项目", manifestError)
+            }
             val allFiles = manifest.files.filter { it.startsWith("$assetDir/") }
-            val totalFiles = allFiles.size
+            totalFiles = allFiles.size
+            runSession?.recordManifest(
+                loadMs = manifestLoadMs,
+                loaded = true,
+                manifestTotalFiles = manifest.files.size,
+                filteredFiles = totalFiles,
+                assetDir = assetDir,
+                destDir = destDir,
+                error = null,
+            )
 
             Timber.d("待复制文件数: $totalFiles")
             onProgress(ExtractProgress(0, totalFiles, ""))
@@ -102,14 +151,29 @@ class AssetExtractor(private val context: Context) {
 
                         launch {
                             semaphore.withPermit {
+                                val targetFile = File(destDir, relativePath)
+                                val trace = AttemptTrace()
                                 try {
-                                    retryWithBackoff(maxRetries = 3, initialDelayMs = 120) {
-                                        val targetFile = File(destDir, relativePath)
-                                        targetFile.parentFile?.mkdirs()
+                                    retryWithBackoff(
+                                        assetPath = assetPath,
+                                        targetFile = targetFile,
+                                        trace = trace,
+                                        runSession = runSession,
+                                        retryWarnLogs = retryWarnLogs,
+                                        maxRetries = 3,
+                                        initialDelayMs = 120,
+                                    ) {
+                                        trace.phase = "mkdirs"
+                                        trace.mkdirsResult = targetFile.parentFile?.mkdirs()
+                                        trace.bytesCopied = 0L
                                         BufferPool.use { buffer ->
+                                            trace.phase = "assets.open"
                                             context.assets.open(assetPath).use { input ->
+                                                trace.phase = "FileOutputStream"
                                                 FileOutputStream(targetFile).use { output ->
-                                                    input.copyToWithBuffer(output, buffer)
+                                                    trace.phase = "copy"
+                                                    trace.bytesCopied = input.copyToWithBuffer(output, buffer)
+                                                    trace.phase = "close"
                                                 }
                                             }
                                         }
@@ -123,8 +187,41 @@ class AssetExtractor(private val context: Context) {
                                     ) {
                                         onProgress(ExtractProgress(extractedCount.get(), totalFiles, relativePath))
                                     }
+                                } catch (e: CancellationException) {
+                                    throw e
                                 } catch (e: Exception) {
-                                    Timber.e(e, "文件复制最终失败: $assetPath")
+                                    val done = extractedCount.get()
+                                    primaryFailedTarget.compareAndSet(null, FailedTarget(assetPath, targetFile))
+                                    runSession?.recordFinalFileFailure(
+                                        assetPath = assetPath,
+                                        targetFile = targetFile,
+                                        attempts = 3,
+                                        phase = trace.phase,
+                                        extractedSoFar = done,
+                                        totalFiles = totalFiles,
+                                        error = e,
+                                    )
+                                    val desc = ResourceInitDiagnostics.describeError(e)
+                                    if (firstFinalFailure.compareAndSet(false, true)) {
+                                        Timber.e(
+                                            e,
+                                            "文件复制最终失败: file=%s phase=%s extracted=%d/%d err=%s",
+                                            assetPath,
+                                            trace.phase,
+                                            done,
+                                            totalFiles,
+                                            desc,
+                                        )
+                                    } else {
+                                        Timber.e(
+                                            "文件复制最终失败: file=%s phase=%s extracted=%d/%d err=%s",
+                                            assetPath,
+                                            trace.phase,
+                                            done,
+                                            totalFiles,
+                                            desc,
+                                        )
+                                    }
                                     throw ExtractFailedException(assetPath, 3, e)
                                 }
                             }
@@ -135,28 +232,53 @@ class AssetExtractor(private val context: Context) {
 
             val totalTime = System.currentTimeMillis() - startTime
             Timber.i("复制完成: ${extractedCount.get()} 个文件, 耗时: ${totalTime}ms")
+            ownedRun?.finishSuccess()
 
             Result.success(extractedCount.get())
+        } catch (e: CancellationException) {
+            ownedRun?.finishCancelled()
+            throw e
         } catch (e: Exception) {
-            Timber.e(e, "复制失败")
+            // 等 coroutineScope 取消并回收全部并发协程后再做探针，避免空占信号量引发连锁空跑
+            runSession?.let { session ->
+                withContext(Dispatchers.IO) {
+                    val failed = primaryFailedTarget.get()
+                    if (failed != null) {
+                        session.runPostFailureProbes(destDir, failed.assetPath, failed.targetFile)
+                    } else {
+                        session.runStorageOnlyProbes(destDir)
+                    }
+                }
+            }
+            if (e is ExtractFailedException) {
+                Timber.e("复制失败: %s", ResourceInitDiagnostics.describeError(e.cause ?: e))
+            } else {
+                Timber.e(e, "复制失败: %s", ResourceInitDiagnostics.describeError(e))
+            }
+            ownedRun?.finishFailure(e, extractedCount.get(), totalFiles)
             Result.failure(e)
         }
     }
 
 
-    private fun loadAssetManifest(): AssetManifest? {
+    private fun loadAssetManifest(): Pair<AssetManifest?, Throwable?> {
         return try {
             context.assets.open(MANIFEST_FILE_NAME).use { input ->
                 val jsonText = input.bufferedReader().use { it.readText() }
-                json.decodeFromString<AssetManifest>(jsonText)
+                json.decodeFromString<AssetManifest>(jsonText) to null
             }
         } catch (e: Exception) {
-            Timber.e(e, "读取 Assets 清单失败")
-            null
+            Timber.e(e, "读取 Assets 清单失败: %s", ResourceInitDiagnostics.describeError(e))
+            null to e
         }
     }
 
     private suspend fun <T> retryWithBackoff(
+        assetPath: String,
+        targetFile: File,
+        trace: AttemptTrace,
+        runSession: ResourceInitDiagnostics.RunSession?,
+        retryWarnLogs: AtomicInteger,
         maxRetries: Int = 3,
         initialDelayMs: Long = 100,
         block: suspend () -> T
@@ -165,11 +287,34 @@ class AssetExtractor(private val context: Context) {
         repeat(maxRetries) { attempt ->
             try {
                 return block()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 lastException = e
+                runSession?.recordAttemptFailure(
+                    assetPath = assetPath,
+                    targetFile = targetFile,
+                    attempt = attempt + 1,
+                    maxRetries = maxRetries,
+                    phase = trace.phase,
+                    bytesCopied = trace.bytesCopied,
+                    mkdirsResult = trace.mkdirsResult,
+                    error = e,
+                )
                 if (attempt < maxRetries - 1) {
                     val delayMs = initialDelayMs * (1 shl attempt) // 100, 200, 400
-                    Timber.w("重试 ${attempt + 1}/$maxRetries，等待 ${delayMs}ms: ${e.message}")
+                    // 限流且不附完整堆栈，避免并发失败刷爆错误日志；完整统计留在诊断报告中
+                    if (retryWarnLogs.incrementAndGet() <= MAX_RETRY_WARN_LOGS) {
+                        Timber.w(
+                            "重试 %d/%d，等待 %dms: file=%s phase=%s err=%s",
+                            attempt + 1,
+                            maxRetries,
+                            delayMs,
+                            assetPath,
+                            trace.phase,
+                            ResourceInitDiagnostics.describeError(e),
+                        )
+                    }
                     delay(delayMs)
                 }
             }

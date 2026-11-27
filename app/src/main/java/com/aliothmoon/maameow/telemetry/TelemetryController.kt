@@ -17,6 +17,7 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
 import com.aliothmoon.maameow.domain.service.GameExitCause
 import com.aliothmoon.maameow.domain.service.LaunchOutcome
+import com.aliothmoon.maameow.domain.service.ResourceInitFailureReport
 import com.aliothmoon.maameow.domain.service.RunKind
 import com.aliothmoon.maameow.domain.service.RunTelemetry
 import com.aliothmoon.maameow.domain.service.ScreenPowerController
@@ -49,6 +50,7 @@ import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -309,6 +311,28 @@ class TelemetryController(
         }
     }
 
+    override fun onResourceInitFailed(report: ResourceInitFailureReport) {
+        if (BuildConfig.SENTRY_DSN.isBlank()) return
+        // 冷启动资源初始化可能早于 SentryAndroid.init 完成，等配置就绪后再按开关决定是否上报
+        if (!configured.isCompleted) {
+            scope.launch {
+                withTimeoutOrNull(CONFIGURE_WAIT_TIMEOUT_MS) { configured.await() }
+                reportResourceInitFailure(report)
+            }
+            return
+        }
+        reportResourceInitFailure(report)
+    }
+
+    private fun reportResourceInitFailure(report: ResourceInitFailureReport) {
+        if (!active) return
+        scope.launch { runCatching { refreshRunTags() } }
+        guarded {
+            if (!active) return@guarded
+            reporter.report(ResourceInitFailure(report = report))
+        }
+    }
+
     override suspend fun onAppExit() {
         if (!active) return
         reporter.awaitIdle(INCIDENT_FLUSH_TIMEOUT_MS)
@@ -548,6 +572,7 @@ class TelemetryController(
         const val TRACES_SAMPLE_RATE = 1.0
 
         const val INCIDENT_FLUSH_TIMEOUT_MS = 10_000L
+        const val CONFIGURE_WAIT_TIMEOUT_MS = 5_000L
 
         val TRACKED_MESSAGES = setOf(
             AsstMsg.TaskChainStart,

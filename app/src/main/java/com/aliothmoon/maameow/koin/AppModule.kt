@@ -20,6 +20,7 @@ import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.datasource.AppDownloader
 import com.aliothmoon.maameow.data.datasource.AssetExtractor
 import com.aliothmoon.maameow.data.datasource.ResourceDownloader
+import com.aliothmoon.maameow.data.datasource.ResourceInitDiagnostics
 import com.aliothmoon.maameow.data.datasource.ZipExtractor
 import com.aliothmoon.maameow.data.datasource.update.AndroidUnmeteredNetworkChecker
 import com.aliothmoon.maameow.data.datasource.update.MirrorChyanAppVersionChecker
@@ -304,7 +305,8 @@ val appModule = module {
     singleOf(::ResourceDownloader)
     singleOf(::AppDownloader)
     singleOf(::ZipExtractor)
-    singleOf(::AssetExtractor)
+    singleOf(::ResourceInitDiagnostics)
+    single { AssetExtractor(get(), get()) }
 
     // MirrorChyan API Client
     single { MirrorChyanCdkStatus(get()) }
@@ -318,7 +320,7 @@ val appModule = module {
     singleOf(::UpdateService)
 
     // 与 MaaCompositionService 循环依赖，只能懒取
-    single { ResourceInitService(get(), get(), get(), inject()) }
+    single { ResourceInitService(get(), get(), get(), inject(), get(), get()) }
     singleOf(::MaaResourceLoader)
     // scope 走构造默认值
     single {
@@ -406,7 +408,7 @@ val appModule = module {
             closeGameOnEnd = { settings.closeAppOnTaskEnd.value },
         )
     }
-    singleOf(::LogExportService)
+    single { LogExportService(get(), get(), get(), get(), get(), get(), get(), get()) }
     singleOf(::ToolboxExportService)
 
 

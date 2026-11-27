@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Point
 import android.os.Build
+import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
 import android.system.Os
@@ -17,6 +18,8 @@ import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.config.MaaPathConfig
+import com.aliothmoon.maameow.data.datasource.ResourceInitDiagnostics
+import com.aliothmoon.maameow.data.log.ApplicationLogWriter
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.AppSettingsSnapshot
 import com.aliothmoon.maameow.data.preferences.TaskChainState
@@ -51,29 +54,35 @@ class LogExportService(
     private val taskChainState: TaskChainState,
     private val achievementRepository: AchievementRepository,
     private val scheduleAlarmManager: ScheduleAlarmManager,
+    private val applicationLogWriter: ApplicationLogWriter? = null,
+    private val resourceInitDiagnostics: ResourceInitDiagnostics? = null,
 ) {
     companion object {
         private val DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
         private val INFO_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS (Z)")
     }
 
-    /** 导出日志 ZIP；失败返回 null。无日志时仍生成仅含 properties/device_info 的包。不删除 debug 源日志。 */
+    /** 导出日志 ZIP；失败返回 null。外置存储不可写时回退到内部 cacheDir。不删除 debug 源日志。 */
     suspend fun exportZip(): File? = withContext(Dispatchers.IO) {
         try {
+            applicationLogWriter?.flush()
             val dir = File(pathConfig.debugDir)
-            val exportDir = File(dir, LogExportCollector.EXPORT_DIR_NAME)
-            exportDir.mkdirs()
-            cleanupOldExports(exportDir)
-
-            val zipFileName = "maa_logs_${ZonedDateTime.now().format(DATE_FORMAT)}.zip"
-            val zipFile = File(exportDir, zipFileName)
-
             val logFiles = LogExportCollector.collect(dir)
             if (logFiles.isEmpty()) {
                 Timber.w("No log files found, exporting device info only")
             }
+            val settingsSnapshot = buildSettingsSnapshot()
+            val initDiag = resourceInitDiagnostics?.readReport()
+            val zipFileName = "maa_logs_${ZonedDateTime.now().format(DATE_FORMAT)}.zip"
 
-            createZipFile(zipFile, logFiles, dir, buildSettingsSnapshot())
+            val primaryExportDir = File(dir, LogExportCollector.EXPORT_DIR_NAME)
+            val fallbackExportDir = File(context.cacheDir, LogExportCollector.EXPORT_DIR_NAME)
+            cleanupOldExports(primaryExportDir)
+            cleanupOldExports(fallbackExportDir)
+
+            val zipFile = writeZipToDir(primaryExportDir, zipFileName, logFiles, dir, settingsSnapshot, initDiag)
+                ?: writeZipToDir(fallbackExportDir, zipFileName, logFiles, dir, settingsSnapshot, initDiag)
+                ?: return@withContext null
 
             Timber.i("Exported ${logFiles.size} log files to ${zipFile.absolutePath}")
             achievementRepository.report {
@@ -87,16 +96,55 @@ class LogExportService(
         }
     }
 
+    private fun writeZipToDir(
+        exportDir: File,
+        zipFileName: String,
+        logFiles: List<File>,
+        baseDir: File,
+        settingsSnapshot: String?,
+        initDiag: String?,
+    ): File? {
+        return try {
+            if (!exportDir.exists() && !exportDir.mkdirs()) {
+                Timber.w("Export dir unavailable: %s", exportDir.absolutePath)
+                return null
+            }
+            val zipFile = File(exportDir, zipFileName)
+            FileOutputStream(zipFile).use { fos ->
+                writeZipToStream(fos, logFiles, baseDir, settingsSnapshot, initDiag)
+            }
+            zipFile
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to write export zip in %s", exportDir.absolutePath)
+            null
+        }
+    }
+
     suspend fun exportAllLogs(): Intent? = exportZip()?.let { createShareIntent(it) }
 
-    /** 写入 [targetUri]；成功返回显示名，失败返回 null。 */
+    /** 写入 [targetUri]；成功返回显示名，失败返回 null。外置/内部缓存皆不可写时直写目标流。 */
     suspend fun exportToUri(targetUri: android.net.Uri): String? = withContext(Dispatchers.IO) {
-        val zip = exportZip() ?: return@withContext null
+        val zip = exportZip()
         try {
+            if (zip != null) {
+                context.contentResolver.openOutputStream(targetUri)?.use { out ->
+                    zip.inputStream().use { it.copyTo(out) }
+                } ?: return@withContext null
+                return@withContext queryDisplayName(targetUri) ?: zip.name
+            }
+            applicationLogWriter?.flush()
+            val dir = File(pathConfig.debugDir)
+            val logFiles = LogExportCollector.collect(dir)
+            val settingsSnapshot = buildSettingsSnapshot()
+            val initDiag = resourceInitDiagnostics?.readReport()
+            val fallbackName = "maa_logs_${ZonedDateTime.now().format(DATE_FORMAT)}.zip"
             context.contentResolver.openOutputStream(targetUri)?.use { out ->
-                zip.inputStream().use { it.copyTo(out) }
+                writeZipToStream(out, logFiles, dir, settingsSnapshot, initDiag)
             } ?: return@withContext null
-            queryDisplayName(targetUri) ?: zip.name
+            achievementRepository.report {
+                event = AchievementEvents.LOG_EXPORTED
+            }
+            queryDisplayName(targetUri) ?: fallbackName
         } catch (e: Exception) {
             Timber.e(e, "Failed to export to uri: $targetUri")
             null
@@ -123,15 +171,28 @@ class LogExportService(
             .onFailure { Timber.w(it, "Failed to snapshot app settings") }
             .getOrNull()
 
-    private fun createZipFile(
-        zipFile: File,
+    private fun writeZipToStream(
+        targetOut: OutputStream,
         logFiles: List<File>,
         baseDir: File,
         settingsSnapshot: String?,
+        initDiag: String?,
     ) {
         // 夹在 zip 与文件之间，量的是压缩后字节
-        val counter = CountingOutputStream(BufferedOutputStream(FileOutputStream(zipFile)))
+        val counter = CountingOutputStream(BufferedOutputStream(targetOut))
         ZipOutputStream(counter).use { zos ->
+            var diagWritten = false
+            if (!initDiag.isNullOrBlank()) {
+                try {
+                    zos.putNextEntry(ZipEntry(ResourceInitDiagnostics.ENTRY_NAME))
+                    zos.write(initDiag.toByteArray(Charsets.UTF_8))
+                    zos.closeEntry()
+                    diagWritten = true
+                } catch (e: Exception) {
+                    Timber.w(e, "Failed to write resource init diagnostics")
+                }
+            }
+
             try {
                 val process = Runtime.getRuntime().exec("getprop")
                 zos.putNextEntry(ZipEntry("properties.txt"))
@@ -170,6 +231,7 @@ class LogExportService(
             val skipped = mutableListOf<String>()
             for (file in logFiles) {
                 val name = file.relativeTo(baseDir).path
+                if (diagWritten && name == ResourceInitDiagnostics.ENTRY_NAME) continue
                 if (LogExportCollector.isScreenshot(name)) {
                     screenshots += Screenshot(name, file.length(), file.lastModified()) { FileInputStream(file) }
                     continue
@@ -303,7 +365,9 @@ class LogExportService(
         append("--- Device ---\n")
         append("Screen      : $screenInfo (density ${context.resources.displayMetrics.densityDpi}dpi)\n")
         append("RAM         : ${memoryInfo}\n")
+        append("ExternalDir : $externalDirInfo\n")
         append("Storage     : $storageInfo\n")
+        append("Internal    : $internalStorageInfo\n")
         append("Battery Opt : $batteryOptimized\n")
         append(
             "Schedule    : alarmClock=${scheduleAlarmManager.useAlarmClock}, " +
@@ -353,10 +417,23 @@ class LogExportService(
             "${formatGb(mi.totalMem)} total, ${formatGb(mi.availMem)} free"
         }.getOrElse { "unknown" }
 
+    private val externalDirInfo: String
+        get() = runCatching {
+            val raw = context.getExternalFilesDir(null)?.absolutePath ?: "null"
+            val state = Environment.getExternalStorageState()
+            "raw=$raw (state=$state, rootDir=${pathConfig.rootDir})"
+        }.getOrElse { "unknown" }
+
     private val storageInfo: String
         get() = runCatching {
             val dir = File(pathConfig.rootDir)
             "${formatGb(dir.usableSpace)} usable / ${formatGb(dir.totalSpace)} total"
+        }.getOrElse { "unknown" }
+
+    private val internalStorageInfo: String
+        get() = runCatching {
+            val dir = context.filesDir
+            "${formatGb(dir.usableSpace)} usable / ${formatGb(dir.totalSpace)} total (${dir.absolutePath})"
         }.getOrElse { "unknown" }
 
     private val batteryOptimized: String

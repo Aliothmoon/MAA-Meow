@@ -8,9 +8,11 @@ import com.aliothmoon.maameow.data.config.MaaPathConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -46,8 +48,13 @@ class ApplicationLogWriter(
 
     private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS (Z)")
 
+    private sealed interface LogEvent {
+        class Entry(val text: String) : LogEvent
+        class Flush(val ack: CompletableDeferred<Unit>) : LogEvent
+    }
+
     // 异步写入通道
-    private val writeChannel = Channel<String>(Channel.BUFFERED)
+    private val writeChannel = Channel<LogEvent>(Channel.BUFFERED)
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
 
@@ -58,8 +65,14 @@ class ApplicationLogWriter(
             if (appSettings.debugMode.value) {
                 writeAppInfoHeader()
             }
-            for (entry in writeChannel) {
-                writeToFile(entry)
+            for (event in writeChannel) {
+                when (event) {
+                    is LogEvent.Entry -> writeToFile(event.text)
+                    is LogEvent.Flush -> {
+                        runCatching { outputStream?.flush() }
+                        event.ack.complete(Unit)
+                    }
+                }
             }
         }
     }
@@ -86,7 +99,7 @@ class ApplicationLogWriter(
     fun submit(priority: Int, tag: String?, message: String, throwable: Throwable?) {
         try {
             val logEntry = formatLogEntry(priority, tag, message, throwable)
-            val result = writeChannel.trySend(logEntry)
+            val result = writeChannel.trySend(LogEvent.Entry(logEntry))
             if (result.isFailure) {
                 reportInternalError("Failed to enqueue log entry", result.exceptionOrNull())
             }
@@ -111,9 +124,19 @@ class ApplicationLogWriter(
         }
     }
 
+    /** 等待通道内待写日志落盘，供日志导出前刷出最新错误 */
+    suspend fun flush(timeoutMs: Long = 2_000L) {
+        val ack = CompletableDeferred<Unit>()
+        if (writeChannel.trySend(LogEvent.Flush(ack)).isFailure) {
+            runCatching { withTimeoutOrNull(timeoutMs) { writeChannel.send(LogEvent.Flush(ack)) } }
+        }
+        withTimeoutOrNull(timeoutMs) { ack.await() }
+    }
+
     private fun getOutputStream(): BufferedOutputStream {
         var stream = outputStream
         if (stream == null) {
+            if (!logDir.exists()) logDir.mkdirs()
             stream = BufferedOutputStream(
                 FileOutputStream(currentLogFile, true),
                 BUFFER_SIZE

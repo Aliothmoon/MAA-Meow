@@ -37,6 +37,9 @@ interface RunTelemetry {
     /** 发出 Shizuku 未运行提醒时调 */
     fun onShizukuDown(afterBoot: Boolean, enabledSchedules: Int)
 
+    /** 资源初始化（从内置资产解压）失败时调 */
+    fun onResourceInitFailed(report: ResourceInitFailureReport)
+
     /** 进程马上要退出：挂起到在途上报发完，再关 SDK 把队列发出去 */
     suspend fun onAppExit()
 }
@@ -64,6 +67,35 @@ data class UnlockAttempt(
     val ready: Boolean,
     /** 提权侧结果，[WakeUnlockEngine.WakeResult] 的小写名 */
     val result: String,
+)
+
+/** 一次资源初始化（从内置资产解压）失败的结构化摘要，供遥测归组与附带诊断日志 */
+data class ResourceInitFailureReport(
+    /** checkAndInit / reInitialize / direct */
+    val trigger: String,
+    /** manifest / mkdirs / assets.open / FileOutputStream / copy / close / pre_clean / unknown */
+    val phase: String,
+    /** JDK / Android 标准异常简单名，避免 R8 混淆自家异常类 */
+    val errorType: String,
+    /** ErrnoException 的 POSIX 错误名（如 ENOENT / EACCES / ENOSPC），无则为 null */
+    val errnoName: String?,
+    val cause: String,
+    val extractedCount: Int,
+    val totalCount: Int,
+    val attemptFailures: Int,
+    val durationMs: Long,
+    /** Environment.getExternalStorageState() */
+    val externalStorageState: String,
+    /** 失败后外置包目录是否仍存在 */
+    val externalDirPresent: Boolean,
+    /** 失败后内部 filesDir 写入探针结果 */
+    val internalWritable: Boolean?,
+    /** 失败后目标 asset 直读探针结果 */
+    val assetReadable: Boolean?,
+    /** 目标存储分区可用空间（MB） */
+    val availStorageMb: Long?,
+    /** 单次运行的完整诊断报告正文，脱敏后走 Sentry Logs */
+    val diagnosticLog: String?,
 )
 
 enum class RunKind(val value: String) {

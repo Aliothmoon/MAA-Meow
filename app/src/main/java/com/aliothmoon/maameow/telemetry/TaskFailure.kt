@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.telemetry
 
+import com.aliothmoon.maameow.domain.service.ResourceInitFailureReport
 import io.sentry.ISpan
 import io.sentry.SentryEvent
 import io.sentry.SentryLevel
@@ -308,6 +309,57 @@ internal data class ShizukuDown(
     }
 }
 
+/** 从内置资产解压资源失败，多与外置存储异常、空间不足或外部模块干扰有关 */
+internal data class ResourceInitFailure(
+    val report: ResourceInitFailureReport,
+    override val tags: Map<String, String> = emptyMap(),
+) : Incident {
+
+    override val runId: String? get() = null
+
+    override val reason: String get() = "resource_init_failure"
+
+    val diagnosticLog: String? get() = report.diagnosticLog
+
+    private val errorKey: String get() = report.errnoName?.takeIf { it.isNotBlank() } ?: report.errorType
+
+    override val logAttributes: Map<String, String>
+        get() = mapOf(
+            "resource_init.trigger" to report.trigger,
+            "resource_init.phase" to report.phase,
+            "resource_init.errno" to report.errnoName.orEmpty(),
+        )
+
+    override fun toSentryEvent(): SentryEvent = SentryEvent().also { event ->
+        event.level = SentryLevel.ERROR
+        event.logger = RUN_LOGGER
+        event.transaction = RESOURCE_INIT_FAILURE_TRANSACTION
+        event.message = Message().apply {
+            formatted = "Maa resource init failed at ${report.phase} ($errorKey)"
+        }
+        event.fingerprints = listOf(RESOURCE_INIT_FAILURE_FINGERPRINT, report.phase, errorKey)
+        event.putTags(
+            tags + mapOf(
+                "resource_init.trigger" to report.trigger,
+                "resource_init.phase" to report.phase,
+                "resource_init.error" to report.errorType,
+                "resource_init.errno" to report.errnoName.orEmpty(),
+                "storage.external_state" to report.externalStorageState,
+                "storage.external_dir_present" to report.externalDirPresent.toString(),
+                "storage.internal_writable" to (report.internalWritable?.toString().orEmpty()),
+                "resource_init.asset_readable" to (report.assetReadable?.toString().orEmpty()),
+                "result" to "failure",
+            )
+        )
+        event.setExtra("failure.cause", report.cause)
+        event.setExtra("resource_init.extracted", report.extractedCount)
+        event.setExtra("resource_init.total", report.totalCount)
+        event.setExtra("resource_init.attempt_failures", report.attemptFailures)
+        event.setExtra("resource_init.duration_ms", report.durationMs)
+        report.availStorageMb?.let { event.setExtra("storage.avail_mb", it) }
+    }
+}
+
 /**
  * 证据带没带上、为什么没带，写进 `logs.*` 与 `attachment.*`
  *
@@ -361,6 +413,7 @@ internal const val SERVICE_DEATH_TRANSACTION = "maameow.service.died"
 internal const val LAUNCH_FAILURE_TRANSACTION = "maameow.launch.failure"
 internal const val SHIZUKU_DOWN_TRANSACTION = "maameow.shizuku.down"
 internal const val REMOTE_CALL_STUCK_TRANSACTION = "maameow.remote.stuck"
+internal const val RESOURCE_INIT_FAILURE_TRANSACTION = "maameow.resource_init.failure"
 private const val TASK_LOGGER = "maameow.task"
 private const val RUN_LOGGER = "maameow.run"
 private const val TASK_FAILURE_FINGERPRINT = "maameow-task-failure"
@@ -370,6 +423,7 @@ private const val LAUNCH_FAILURE_FINGERPRINT = "maameow-launch-failure"
 private const val SKIPPED_PREFIX = "skipped_"
 private const val SHIZUKU_DOWN_FINGERPRINT = "maameow-shizuku-down"
 private const val REMOTE_CALL_STUCK_FINGERPRINT = "maameow-remote-call-stuck"
+private const val RESOURCE_INIT_FAILURE_FINGERPRINT = "maameow-resource-init-failure"
 private const val THREAD_DUMP_KEY = "remote.thread_dump"
 
 /** 任务链没报过子任务错误就失败时的占位，与 MaaFwApp 同名 */

@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.domain.state.ResourceInitState
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -30,13 +31,21 @@ class ResourceInitServiceTest {
 
     @Test
     fun revisionChangesAfterMidExtractionSnapshot_onFailure() = runBlocking {
-        val env = Env(Result.failure(IOException("boom")))
+        val telemetry = mockk<RunTelemetry>(relaxed = true)
+        val env = Env(Result.failure(IOException("boom")), telemetry = telemetry)
         env.service.checkAndInit()
         assertTrue(env.service.state.value is ResourceInitState.Failed)
         assertTrue(env.service.revision.value > env.midRevision!!)
+        verify(exactly = 1) {
+            telemetry.onResourceInitFailed(match {
+                it.trigger == "checkAndInit" &&
+                    it.errorType == "IOException" &&
+                    it.cause.contains("boom")
+            })
+        }
     }
 
-    private class Env(extractResult: Result<Int>) {
+    private class Env(extractResult: Result<Int>, telemetry: RunTelemetry? = null) {
         var midRevision: Int? = null
         var revisionAtMark: Int? = null
         val service: ResourceInitService
@@ -52,6 +61,8 @@ class ResourceInitServiceTest {
                 every { ensureDirectories() } returns true
                 every { resourceDir } returns File(root, "resource").absolutePath
                 every { overrideTasksFile } returns File(root, "overrides/tasks.json")
+                every { rootDir } returns root.absolutePath
+                every { debugDir } returns File(root, "debug").absolutePath
                 every { markAppVersion() } answers { revisionAtMark = service.revision.value }
             }
             val extractor = mockk<AssetExtractor> {
@@ -60,7 +71,7 @@ class ResourceInitServiceTest {
                     extractResult
                 }
             }
-            service = ResourceInitService(context, extractor, pathConfig, lazy { mockk<CoreFilesGate>() })
+            service = ResourceInitService(context, extractor, pathConfig, lazy { mockk<CoreFilesGate>() }, telemetry = telemetry)
         }
     }
 }

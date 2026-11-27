@@ -78,8 +78,8 @@ internal class IncidentReporter(
             } else {
                 CompletableDeferred(wholeFile(incident.logFile))
             }
-            // 本地日志里没有 Shizuku 的死因
-            is ShizukuDown -> null
+            // 本地日志里没有 Shizuku 的死因；资源初始化失败自带内存诊断正文（外置 debug/ 可能已不可写）
+            is ShizukuDown, is ResourceInitFailure -> null
             // 启动失败与进程死亡看整轮的
             else -> runStart
         }
@@ -94,7 +94,11 @@ internal class IncidentReporter(
         }
         scope.launch(workers + io) {
             val evidence = try {
-                collect(start, noImages)
+                if (incident is ResourceInitFailure) {
+                    collectInlineResourceInitLog(incident.diagnosticLog)
+                } else {
+                    collect(start, noImages)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -136,6 +140,25 @@ internal class IncidentReporter(
             .redacted(SecretRedaction.redactable(secrets()))
         val attachment = noImages ?: TaskEvidence.collectImages(evidenceStore, snapshot, encodeImage)
         return Evidence(logs, attachment)
+    }
+
+    private suspend fun collectInlineResourceInitLog(diagnosticLog: String?): Evidence {
+        val text = diagnosticLog?.takeIf { it.isNotBlank() }
+            ?: return Evidence(null, AttachmentOutcome.NotSelected)
+        val rawBytes = text.encodeToByteArray().size.toLong()
+        val trimmed = if (rawBytes > MAX_INLINE_DIAG_BYTES) {
+            text.take(MAX_INLINE_DIAG_BYTES)
+        } else {
+            text
+        }
+        val redacted = SecretRedaction.redact(trimmed, SecretRedaction.redactable(secrets()))
+        val logs = DiagnosticLogs(
+            entries = listOf(DiagnosticLog(RESOURCE_INIT_LOG_SOURCE, kind = "resource_init", redacted, rawBytes)),
+            selectedRawBytes = redacted.encodeToByteArray().size.toLong(),
+            truncated = rawBytes > MAX_INLINE_DIAG_BYTES,
+            warnings = emptyList(),
+        )
+        return Evidence(logs, AttachmentOutcome.NotSelected)
     }
 
     private fun DiagnosticLogs.redacted(secrets: List<String>) = DiagnosticLogs(
@@ -184,6 +207,8 @@ internal class IncidentReporter(
             EvidenceFile("root_launch_debug.log", kind = "boot", core = true),
         )
         const val BOOT_LOG_TAIL_BYTES = 8L * 1024
+        const val RESOURCE_INIT_LOG_SOURCE = "resource_init_diag.txt"
+        const val MAX_INLINE_DIAG_BYTES = 128 * 1024
 
         /** 基线往回退一段，取证时这一段就算新写的 */
         fun withBootLogTails(store: EvidenceStore, triggerLog: String): EvidenceStart {
