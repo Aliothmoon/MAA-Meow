@@ -43,7 +43,7 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.FactCheck
+import androidx.compose.material.icons.automirrored.rounded.FactCheck
 import androidx.compose.material.icons.rounded.Feedback
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
@@ -735,7 +735,7 @@ fun SettingsView(
                                     contentColor = contentColor,
                                     checked = skipShizukuCheck,
                                     enabled = startupBackend == RemoteBackend.SHIZUKU,
-                                    icon = Icons.Rounded.FactCheck,
+                                    icon = Icons.AutoMirrored.Rounded.FactCheck,
                                     onCheckedChange = { viewModel.setSkipShizukuCheck(it) }
                                 )
                             }

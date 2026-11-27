@@ -57,7 +57,7 @@ class ProfileShardStoreTest {
         every { this@mockk.profileDeleted } returns this@ProfileShardStoreTest.profileDeleted
         if (profileIds != null) {
             val known = profileIds.map { pid ->
-                mockk<TaskProfile> { every { this@mockk.id } returns pid }
+                mockk<TaskProfile> { every { id } returns pid }
             }
             every { this@mockk.profiles } returns MutableStateFlow(known)
         }
@@ -497,6 +497,7 @@ class ProfileShardStoreTest {
      * 用它把「读到的活跃档已经变了，但收集器不会再来纠正」这个状态固定住 ——
      * 普通 StateFlow 做不到，因为 emission 必然唤醒收集器。
      */
+    @OptIn(kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi::class)
     private class SwitchOnDemandProfileId(initial: String) : StateFlow<String> {
         private val delegate = MutableStateFlow(initial)
 

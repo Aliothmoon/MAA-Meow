@@ -53,10 +53,10 @@ fun INumericField(
             inputText = raw
             if (commitOnChange) {
                 val parsed = raw.toIntOrNull()
-                val invalid = parsed == null || parsed < minimum
-                onBlankChange?.invoke(invalid)
+                val valid = parsed != null && parsed >= minimum
+                onBlankChange?.invoke(!valid)
                 // 仅在满足下限时回写，避免界面显示空串 / "-" / 小于下限的值却静默提交旧值或下限
-                if (!invalid && parsed != null) {
+                if (valid) {
                     onValueChange(parsed.coerceAtMost(maximum))
                 }
             }
