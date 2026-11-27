@@ -751,6 +751,8 @@
     <string name="preview_input_backspace_cd">백스페이스</string>
     <string name="preview_input_enter_cd">엔터</string>
     <string name="preview_input_send_cd">보내기</string>
+    <string name="preview_input_send_failed">전송 실패. 입력란이 선택되어 있는지 확인하세요</string>
+    <string name="preview_input_paste_unsupported">현재 모드에서는 영문, 숫자 및 기본 기호만 입력할 수 있습니다</string>
 
     <!-- dialog: close app confirm -->
     <string name="dialog_close_app_title">종료 확인</string>

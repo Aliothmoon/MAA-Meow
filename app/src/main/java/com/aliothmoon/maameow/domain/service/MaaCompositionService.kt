@@ -124,6 +124,10 @@ class MaaCompositionService(
     val displayResolution: StateFlow<DefaultDisplayConfig.Resolution> =
         _displayResolution.asStateFlow()
 
+    // 建屏成功后更新；VDM 改分辨率先拆后建，不能拿分辨率作重建信号
+    private val _backgroundDisplayId = MutableStateFlow(DefaultDisplayConfig.DISPLAY_NONE)
+    val backgroundDisplayId: StateFlow<Int> = _backgroundDisplayId.asStateFlow()
+
     override fun currentRunState(): MaaExecutionState = _state.value
 
     override fun reportRunState(state: MaaExecutionState) {
@@ -589,6 +593,7 @@ class MaaCompositionService(
             RunMode.FOREGROUND -> {
                 // 切主屏时远端已关掉留着的后台屏
                 backgroundGame.value = null
+                _backgroundDisplayId.value = DefaultDisplayConfig.DISPLAY_NONE
                 val displayId = service.bounded("startVirtualDisplay", START_DISPLAY_TIMEOUT_MS) { it.startVirtualDisplay() }
                 if (displayId == -1) return DisplayStart.DisplayFailed
                 val (w, h) = Misc.getScreenSize(context)
@@ -599,6 +604,7 @@ class MaaCompositionService(
                 val r = resolveAndSetResolution(service, clientType)
                 val displayId = service.bounded("startVirtualDisplay", START_DISPLAY_TIMEOUT_MS) { it.startVirtualDisplay() }
                 if (displayId == -1) return DisplayStart.DisplayFailed
+                _backgroundDisplayId.value = displayId
                 backgroundGame.value = Packages[clientType]?.let { BackgroundGame(service.asBinder(), it) }
                 DisplayStart.Ready(r.width, r.height, displayId)
             }
@@ -1106,6 +1112,7 @@ class MaaCompositionService(
         try {
             stopBackgroundMonitors()
             _displayResolution.value = defaultResolution
+            _backgroundDisplayId.value = DefaultDisplayConfig.DISPLAY_NONE
             withContext(Dispatchers.IO) {
                 val service = RemoteServiceManager.getInstanceOrNull()
                     ?: return@withContext

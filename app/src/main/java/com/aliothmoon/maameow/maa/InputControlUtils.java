@@ -240,19 +240,22 @@ public final class InputControlUtils {
                 downTime, downTime, KeyEvent.ACTION_DOWN, keyCode, 0, metaState,
                 KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, InputDevice.SOURCE_KEYBOARD
         );
-        if (!injectKeyEvent(down, displayId)) {
+        if (!setDisplayId(down, displayId)) {
             return false;
         }
+        boolean downOk = getManager().injectInputEvent(down, InputManager.INJECT_INPUT_EVENT_MODE_WAIT_FOR_FINISH);
         long upTime = SystemClock.uptimeMillis();
         KeyEvent up = new KeyEvent(
                 downTime, upTime, KeyEvent.ACTION_UP, keyCode, 0, metaState,
                 KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, InputDevice.SOURCE_KEYBOARD
         );
-        return injectKeyEvent(up, displayId);
+        // DOWN 超时返回 false 时事件可能已送达，仍补发 UP 防卡键
+        boolean upOk = injectKeyEvent(up, displayId);
+        return downOk && upOk;
     }
 
     public static int injectAsciiText(String text, int displayId) {
-        if (text == null || text.isEmpty()) {
+        if (text == null || text.isEmpty() || !isPrintableAscii(text)) {
             return TextInjectResult.UNMAPPABLE;
         }
         KeyCharacterMap kcm = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD);
@@ -290,6 +293,17 @@ public final class InputControlUtils {
             }
         }
         return TextInjectResult.OK;
+    }
+
+    // Virtual.kcm 会把重音符映射为死键、\r 映射为回车
+    private static boolean isPrintableAscii(String text) {
+        for (int i = 0, n = text.length(); i < n; i++) {
+            char c = text.charAt(i);
+            if (c != '\n' && c != '\t' && (c < 0x20 || c > 0x7E)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static void releasePressedKeys(Map<Integer, Long> pressedDownTimes, int displayId) {

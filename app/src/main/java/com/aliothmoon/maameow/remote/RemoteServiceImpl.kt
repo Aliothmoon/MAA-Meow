@@ -393,7 +393,13 @@ class RemoteServiceImpl : RemoteService.Stub() {
     override fun injectText(text: String?): Int {
         if (text.isNullOrEmpty()) return TextInjectResult.UNMAPPABLE
         val displayId = ownFocusDisplayId() ?: return TextInjectResult.REJECTED
-        return InputControlUtils.injectAsciiText(text, displayId)
+        val directResult = InputControlUtils.injectAsciiText(text, displayId)
+        if (directResult != TextInjectResult.UNMAPPABLE) return directResult
+        if (!BackgroundDisplay.sharesDefaultClipboard()) {
+            Ln.w("$TAG: injectText non-ASCII unsupported: VDM clipboard is isolated")
+            return TextInjectResult.PASTE_UNSUPPORTED
+        }
+        return TextInjectResult.UNMAPPABLE
     }
 
     override fun sendKey(keyCode: Int, metaState: Int): Boolean {

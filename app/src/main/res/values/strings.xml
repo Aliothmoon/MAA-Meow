@@ -766,6 +766,8 @@
     <string name="preview_input_backspace_cd">退格</string>
     <string name="preview_input_enter_cd">回车</string>
     <string name="preview_input_send_cd">发送</string>
+    <string name="preview_input_send_failed">发送失败，请确认输入框已选中</string>
+    <string name="preview_input_paste_unsupported">当前模式不支持中文输入，仅支持英文和数字</string>
 
     <!-- dialog: close app confirm -->
     <string name="dialog_close_app_title">确认关闭</string>

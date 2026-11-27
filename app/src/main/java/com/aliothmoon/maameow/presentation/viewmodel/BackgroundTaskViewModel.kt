@@ -178,6 +178,13 @@ class BackgroundTaskViewModel(
         onCapabilityLost = {
             _state.update { it.copy(canInjectInput = false, isInputBarVisible = false) }
         },
+        onFailure = { failure ->
+            val resId = when (failure) {
+                InputFailure.SEND_FAILED -> R.string.preview_input_send_failed
+                InputFailure.PASTE_UNSUPPORTED -> R.string.preview_input_paste_unsupported
+            }
+            _effects.trySend(UiEffect.toast(resId))
+        },
     )
     private var pendingStart: PendingStart? = null
 
@@ -209,9 +216,11 @@ class BackgroundTaskViewModel(
                             appSettingsManager.runMode,
                             compositionService.state,
                             compositionService.backgroundDisplayPackage,
-                        ) { serviceState, runMode, _, _ ->
+                            compositionService.backgroundDisplayId,
+                        ) { serviceState, runMode, _, pkg, _ ->
                             serviceState is RemoteServiceManager.ServiceState.Connected &&
-                                runMode == RunMode.BACKGROUND
+                                runMode == RunMode.BACKGROUND &&
+                                pkg != null
                         }
                             .map { eligible ->
                                 if (!eligible) false else virtualDisplayInput.queryOwnFocus()
@@ -443,8 +452,8 @@ class BackgroundTaskViewModel(
         _state.update { if (it.isInputBarVisible) it.copy(isInputBarVisible = false) else it }
     }
 
-    fun onSendVirtualText(text: String) {
-        virtualDisplayInput.sendText(text)
+    fun onSendVirtualText(text: String, onResult: (Boolean) -> Unit) {
+        virtualDisplayInput.sendText(text, onResult)
     }
 
     fun onSendVirtualKey(keyCode: Int) {

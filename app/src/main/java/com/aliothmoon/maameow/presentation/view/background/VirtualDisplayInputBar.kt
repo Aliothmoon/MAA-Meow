@@ -43,7 +43,7 @@ import com.aliothmoon.maameow.R
 
 @Composable
 internal fun VirtualDisplayInputBar(
-    onSendText: (String) -> Unit,
+    onSendText: (text: String, onResult: (Boolean) -> Unit) -> Unit,
     onSendKey: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -52,9 +52,10 @@ internal fun VirtualDisplayInputBar(
     val keyboard = LocalSoftwareKeyboardController.current
 
     fun submit() {
-        if (text.isEmpty()) return
-        onSendText(text)
+        val sending = text
+        if (sending.isEmpty()) return
         text = ""
+        onSendText(sending) { sent -> if (!sent && text.isEmpty()) text = sending }
     }
 
     LaunchedEffect(Unit) {

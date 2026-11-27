@@ -60,6 +60,7 @@ class BackgroundDisplayTest {
         assertEquals(5, status.displayId)
         assertEquals(0, status.flagTier)
         assertEquals(2, status.displayGroupId)
+        assertTrue(BackgroundDisplay.sharesDefaultClipboard())
         assertTrue(status.hasOwnFocus)
         assertEquals(VirtualDisplayUpgradeOutcome.NONE, status.upgradeOutcome)
         assertEquals(1, fake.legacyStartCalls)
@@ -84,6 +85,7 @@ class BackgroundDisplayTest {
         assertTrue(status.usingVdm)
         assertEquals(12, status.displayId)
         assertEquals(3, status.displayGroupId)
+        assertTrue(BackgroundDisplay.sharesDefaultClipboard())
         assertTrue(status.hasOwnFocus)
         assertEquals(VirtualDisplayUpgradeOutcome.UPGRADED, status.upgradeOutcome)
         assertEquals(1, fake.legacyStartCalls)
@@ -93,6 +95,18 @@ class BackgroundDisplayTest {
         assertEquals(12, BackgroundDisplay.start())
         assertEquals(1, fake.legacyStartCalls)
         assertEquals(2, fake.vdmStartCalls)
+    }
+
+    @Test
+    fun vdm_isolatedClipboardReportsNotShared() {
+        val fake = FakeOps(vdmSupported = true, vdmId = 14, vdmSharesDefaultClipboard = false)
+        install(fake, sdk = Build.VERSION_CODES.UPSIDE_DOWN_CAKE, mode = VirtualDisplayBackendMode.VDM)
+
+        assertEquals(14, BackgroundDisplay.start())
+        assertFalse(BackgroundDisplay.sharesDefaultClipboard())
+
+        BackgroundDisplay.stop()
+        assertFalse(BackgroundDisplay.sharesDefaultClipboard())
     }
 
     @Test
@@ -223,6 +237,7 @@ class BackgroundDisplayTest {
         BackgroundDisplay.stop()
         val stopped = BackgroundDisplay.status()
         assertEquals(VirtualDisplayUpgradeOutcome.NONE, stopped.upgradeOutcome)
+        assertFalse(BackgroundDisplay.sharesDefaultClipboard())
         assertFalse(stopped.hasOwnFocus)
     }
 
@@ -276,6 +291,7 @@ class BackgroundDisplayTest {
         var vdmTier: Int = 0,
         var vdmGroupId: Int = 3,
         var vdmOwnFocus: Boolean = true,
+        var vdmSharesDefaultClipboard: Boolean = true,
         var vdmError: Throwable? = null,
     ) : BackgroundDisplay.BackendOps {
         var legacyActive = false
@@ -325,5 +341,6 @@ class BackgroundDisplayTest {
         override fun vdmDisplayGroupId(): Int =
             if (vdmActive) vdmGroupId else VirtualDisplayManager.DISPLAY_GROUP_UNKNOWN
         override fun vdmHasOwnFocus(): Boolean = vdmActive && vdmOwnFocus
+        override fun vdmSharesDefaultClipboard(): Boolean = vdmActive && vdmSharesDefaultClipboard
     }
 }

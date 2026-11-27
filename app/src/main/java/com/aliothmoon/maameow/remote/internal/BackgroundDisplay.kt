@@ -31,6 +31,7 @@ object BackgroundDisplay {
         fun vdmFlagTier(): Int
         fun vdmDisplayGroupId(): Int
         fun vdmHasOwnFocus(): Boolean
+        fun vdmSharesDefaultClipboard(): Boolean
     }
 
     private object SystemBackendOps : BackendOps {
@@ -76,6 +77,9 @@ object BackgroundDisplay {
 
         override fun vdmHasOwnFocus(): Boolean =
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && VdmDisplayController.hasOwnFocus()
+
+        override fun vdmSharesDefaultClipboard(): Boolean =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && VdmDisplayController.sharesDefaultClipboard()
     }
 
     @VisibleForTesting
@@ -124,6 +128,12 @@ object BackgroundDisplay {
         ActiveBackend.VDM -> ops.vdmDisplayId()
         ActiveBackend.LEGACY -> ops.legacyDisplayId()
         ActiveBackend.NONE -> DefaultDisplayConfig.DISPLAY_NONE
+    }
+
+    fun sharesDefaultClipboard(): Boolean = when (activeBackend) {
+        ActiveBackend.LEGACY -> true
+        ActiveBackend.VDM -> ops.vdmSharesDefaultClipboard()
+        ActiveBackend.NONE -> false
     }
 
     fun status(): VirtualDisplayStatus = when (activeBackend) {

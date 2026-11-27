@@ -497,6 +497,8 @@
     <string name="preview_input_backspace_cd">Backspace</string>
     <string name="preview_input_enter_cd">Enter</string>
     <string name="preview_input_send_cd">Send</string>
+    <string name="preview_input_send_failed">Failed to send; make sure the input field is focused</string>
+    <string name="preview_input_paste_unsupported">Only English letters, numbers, and basic symbols are supported in this mode</string>
 
     <!-- dialog: close app confirm -->
     <string name="dialog_close_app_title">Confirm Close</string>

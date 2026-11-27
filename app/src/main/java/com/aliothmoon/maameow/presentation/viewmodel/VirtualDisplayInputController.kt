@@ -1,8 +1,11 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
+import android.os.Build
+import android.os.PersistableBundle
 import android.view.KeyEvent
 import com.aliothmoon.maameow.constant.TextInjectResult
 import com.aliothmoon.maameow.manager.RemoteServiceManager
@@ -23,6 +26,11 @@ internal sealed interface ClipSnapshot {
     data object Unreadable : ClipSnapshot
 }
 
+internal enum class InputFailure {
+    SEND_FAILED,
+    PASTE_UNSUPPORTED,
+}
+
 internal interface ClipboardPort {
     fun snapshot(): ClipSnapshot
     fun setText(text: String): Boolean
@@ -31,9 +39,9 @@ internal interface ClipboardPort {
 }
 
 internal interface RemoteInputPort {
-    fun hasOwnFocus(): Boolean
-    fun injectText(text: String): Int
-    fun sendKey(keyCode: Int, metaState: Int): Boolean
+    suspend fun hasOwnFocus(): Boolean
+    suspend fun injectText(text: String): Int
+    suspend fun sendKey(keyCode: Int, metaState: Int): Boolean
 }
 
 internal class AndroidClipboardPort(context: Context) : ClipboardPort {
@@ -50,7 +58,14 @@ internal class AndroidClipboardPort(context: Context) : ClipboardPort {
     override fun setText(text: String): Boolean {
         val cm = clipboard ?: return false
         return runCatching {
-            cm.setPrimaryClip(ClipData.newPlainText(CLIP_LABEL, text))
+            val clip = ClipData.newPlainText(CLIP_LABEL, text).apply {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    description.extras = PersistableBundle().apply {
+                        putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+                    }
+                }
+            }
+            cm.setPrimaryClip(clip)
             true
         }.onFailure { Timber.w(it, "setPrimaryClip failed") }
             .getOrDefault(false)
@@ -80,18 +95,18 @@ internal class AndroidClipboardPort(context: Context) : ClipboardPort {
 }
 
 internal object RemoteServiceInputPort : RemoteInputPort {
-    override fun hasOwnFocus(): Boolean = runCatching {
+    override suspend fun hasOwnFocus(): Boolean = runCatching {
         RemoteServiceManager.getInstanceOrNull()?.getVirtualDisplayStatus()?.hasOwnFocus == true
     }.getOrDefault(false)
 
-    override fun injectText(text: String): Int {
+    override suspend fun injectText(text: String): Int {
         val service = RemoteServiceManager.getInstanceOrNull() ?: return TextInjectResult.REJECTED
         return runCatching { service.injectText(text) }
             .onFailure { Timber.w(it, "injectText failed") }
             .getOrDefault(TextInjectResult.FAILED)
     }
 
-    override fun sendKey(keyCode: Int, metaState: Int): Boolean {
+    override suspend fun sendKey(keyCode: Int, metaState: Int): Boolean {
         val service = RemoteServiceManager.getInstanceOrNull() ?: return false
         return runCatching { service.sendKey(keyCode, metaState) }
             .onFailure { Timber.w(it, "sendKey($keyCode, $metaState) failed") }
@@ -105,6 +120,7 @@ internal class VirtualDisplayInputController(
     private val clipboard: ClipboardPort,
     private val remote: RemoteInputPort,
     private val onCapabilityLost: () -> Unit,
+    private val onFailure: (InputFailure) -> Unit = {},
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val pasteSettleMs: Long = PASTE_SETTLE_MS,
     private val clipboardRestoreDelayMs: Long = CLIPBOARD_RESTORE_DELAY_MS,
@@ -113,27 +129,42 @@ internal class VirtualDisplayInputController(
     private var restoreJob: Job? = null
     private var prePasteSnapshot: ClipSnapshot? = null
     private var lastPastedText: String? = null
+    // settle 完成前不还原，防游戏粘进原剪贴板
+    private var pasteSettled = false
 
-    suspend fun queryOwnFocus(): Boolean = withContext(ioDispatcher) { remote.hasOwnFocus() }
+    suspend fun queryOwnFocus(): Boolean =
+        withContext(ioDispatcher) { remote.hasOwnFocus() }
 
-    fun sendText(text: String) {
+    fun sendText(text: String, onResult: (Boolean) -> Unit = {}) {
         if (text.isEmpty()) return
         scope.launch {
-            inputMutex.withLock {
-                if (isAsciiInjectable(text)) {
-                    when (withContext(ioDispatcher) { remote.injectText(text) }) {
-                        TextInjectResult.OK -> return@withLock
-                        TextInjectResult.FAILED -> return@withLock
-                        TextInjectResult.REJECTED -> {
-                            onCapabilityLost()
-                            return@withLock
-                        }
+            val sent = inputMutex.withLock {
+                when (withContext(ioDispatcher) { remote.injectText(text) }) {
+                    TextInjectResult.OK -> true
 
-                        TextInjectResult.UNMAPPABLE -> Unit
+                    TextInjectResult.UNMAPPABLE -> pasteViaHostClipboard(text)
+
+                    TextInjectResult.PASTE_UNSUPPORTED -> {
+                        Timber.w("sendText paste unsupported on isolated clipboard")
+                        onFailure(InputFailure.PASTE_UNSUPPORTED)
+                        false
+                    }
+
+                    TextInjectResult.REJECTED -> {
+                        Timber.w("sendText rejected by remote")
+                        onCapabilityLost()
+                        onFailure(InputFailure.SEND_FAILED)
+                        false
+                    }
+
+                    else -> {
+                        Timber.w("sendText failed")
+                        onFailure(InputFailure.SEND_FAILED)
+                        false
                     }
                 }
-                pasteText(text)
             }
+            onResult(sent)
         }
     }
 
@@ -141,10 +172,9 @@ internal class VirtualDisplayInputController(
         scope.launch {
             inputMutex.withLock {
                 val ok = withContext(ioDispatcher) { remote.sendKey(keyCode, 0) }
-                if (!ok) {
-                    val stillSupported = withContext(ioDispatcher) { remote.hasOwnFocus() }
-                    if (!stillSupported) onCapabilityLost()
-                }
+                if (ok) return@withLock
+                onFailure(InputFailure.SEND_FAILED)
+                if (!queryOwnFocus()) onCapabilityLost()
             }
         }
     }
@@ -152,55 +182,78 @@ internal class VirtualDisplayInputController(
     fun clear() {
         restoreJob?.cancel()
         restoreJob = null
-        val expected = lastPastedText ?: return
-        restoreIfUnchanged(expected)
+        val expected = lastPastedText
+        if (pasteSettled && expected != null) {
+            restoreIfUnchanged(expected)
+        } else {
+            resetPasteState()
+        }
     }
 
-    private suspend fun pasteText(text: String) {
-        restoreJob?.cancel()
-        restoreJob = null
+    private suspend fun pasteViaHostClipboard(text: String): Boolean {
         val capturedNow = prePasteSnapshot == null
         if (capturedNow) {
             prePasteSnapshot = clipboard.snapshot()
         }
         if (!clipboard.setText(text)) {
-            if (capturedNow) prePasteSnapshot = null
-            return
+            if (capturedNow) {
+                prePasteSnapshot = null
+            } else if (restoreJob?.isActive != true) {
+                lastPastedText?.let(::scheduleRestore)
+            }
+            onFailure(InputFailure.SEND_FAILED)
+            return false
         }
+        restoreJob?.cancel()
+        restoreJob = null
         lastPastedText = text
+        pasteSettled = false
 
         val pasted = withContext(ioDispatcher) { remote.sendKey(KeyEvent.KEYCODE_PASTE, 0) }
         if (!pasted) {
-            Timber.w("pasteText: KEYCODE_PASTE rejected")
-            restoreIfUnchanged(text)
-            val stillSupported = withContext(ioDispatcher) { remote.hasOwnFocus() }
-            if (!stillSupported) onCapabilityLost()
-            return
+            Timber.w("pasteViaHostClipboard: KEYCODE_PASTE failed")
+            onFailure(InputFailure.SEND_FAILED)
+            if (!queryOwnFocus()) {
+                restoreIfUnchanged(text)
+                onCapabilityLost()
+                return false
+            }
         }
 
-        // 持锁等目标进程读完剪贴板，防止连发第二条中文覆盖第一条
+        // 持锁等目标消费粘贴（WAIT_FOR_FINISH 超时也可能已送达）
         delay(pasteSettleMs)
+        pasteSettled = true
+        scheduleRestore(text)
+        return pasted
+    }
+
+    private fun scheduleRestore(expectedText: String) {
+        restoreJob?.cancel()
         restoreJob = scope.launch {
             delay(clipboardRestoreDelayMs)
-            restoreIfUnchanged(text)
+            restoreIfUnchanged(expectedText)
             restoreJob = null
         }
     }
 
     private fun restoreIfUnchanged(expectedText: String) {
-        val snapshot = prePasteSnapshot
-        prePasteSnapshot = null
-        lastPastedText = null
-        if (snapshot != null && clipboard.currentText() == expectedText) {
+        val snapshot = prePasteSnapshot ?: return resetPasteState()
+        resetPasteState()
+        // 后台读剪贴板返回 null 时仍还原
+        val current = clipboard.currentText()
+        if (current == null || current == expectedText) {
             clipboard.restore(snapshot)
         }
     }
 
-    companion object {
-        private const val PASTE_SETTLE_MS = 150L
-        private const val CLIPBOARD_RESTORE_DELAY_MS = 300L
+    private fun resetPasteState() {
+        prePasteSnapshot = null
+        lastPastedText = null
+        pasteSettled = false
+    }
 
-        fun isAsciiInjectable(text: String): Boolean =
-            text.isNotEmpty() && text.all { it.code in 0x20..0x7E || it == '\n' || it == '\t' }
+    private companion object {
+        const val PASTE_SETTLE_MS = 150L
+        const val CLIPBOARD_RESTORE_DELAY_MS = 300L
     }
 }

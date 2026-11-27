@@ -5,4 +5,5 @@ object TextInjectResult {
     const val UNMAPPABLE = 1
     const val REJECTED = 2
     const val FAILED = 3
+    const val PASTE_UNSUPPORTED = 4
 }
