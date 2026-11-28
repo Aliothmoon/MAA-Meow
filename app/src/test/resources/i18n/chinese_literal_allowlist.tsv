@@ -191,7 +191,6 @@ presentation/viewmodel/MiniGameDelegate.kt	诡影迷踪
 data/model/activity/StageActivityInfo.kt	资源收集
 
 # 持久化数据的默认名，存盘后不随语言变
-data/preferences/TaskChainState.kt	配置-
 
 # 仅诊断，或 UI 层已按错误码 / 异常类型映射为资源串
 data/api/MirrorChyanApiClient.kt	数据为空

@@ -47,7 +47,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 
-// 设备上查看：am start -n com.aliothmoon.maameow/androidx.compose.ui.tooling.PreviewActivity
+// 设备上查看：am start -n com.aliothmoon.maameow.dev/androidx.compose.ui.tooling.PreviewActivity
 //   --es composable com.aliothmoon.maameow.theme.ThemeTokensPreviewKt.ThemeTokensDemo
 
 private enum class Mode(val label: String, val theme: AppSettingsManager.ThemeMode) {

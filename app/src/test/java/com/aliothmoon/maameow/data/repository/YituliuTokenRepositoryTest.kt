@@ -28,6 +28,7 @@ class YituliuTokenRepositoryTest {
     private val chainState = mockk<TaskChainState> {
         every { profileId } returns MutableStateFlow("a")
         every { isLoaded } returns MutableStateFlow(true)
+        every { profileListRecreated } returns false
         every { profileDeleted } returns MutableSharedFlow()
         every { this@mockk.profiles } returns this@YituliuTokenRepositoryTest.profiles
     }

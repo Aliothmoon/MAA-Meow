@@ -8,8 +8,11 @@ import android.content.SharedPreferences
 import android.os.Build
 import android.os.SystemClock
 import androidx.core.content.edit
+import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import com.aliothmoon.maameow.schedule.model.ScheduleType
+import com.aliothmoon.maameow.schedule.receiver.BootReceiver
+import com.aliothmoon.maameow.schedule.receiver.ScheduleReceiver
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -24,8 +27,8 @@ class ScheduleAlarmManager(
 ) {
 
     companion object {
-        const val ACTION_SCHEDULE_TRIGGER = "com.aliothmoon.maameow.SCHEDULE_TRIGGER"
-        const val ACTION_SCHEDULE_RESYNC = "com.aliothmoon.maameow.SCHEDULE_RESYNC"
+        val ACTION_SCHEDULE_TRIGGER = "${BuildConfig.APPLICATION_ID}.SCHEDULE_TRIGGER"
+        val ACTION_SCHEDULE_RESYNC = "${BuildConfig.APPLICATION_ID}.SCHEDULE_RESYNC"
         const val EXTRA_STRATEGY_ID = "strategy_id"
         const val EXTRA_SCHEDULED_TIME = "scheduled_time"
         const val EXTRA_RETRY_COUNT = "retry_count"
@@ -370,7 +373,7 @@ class ScheduleAlarmManager(
         retryCount: Int = 0,
     ): PendingIntent {
         val intent = Intent(ACTION_SCHEDULE_TRIGGER).apply {
-            setClassName(context, "com.aliothmoon.maameow.schedule.receiver.ScheduleReceiver")
+            setClassName(context, ScheduleReceiver::class.java.name)
             putExtra(EXTRA_STRATEGY_ID, strategyId)
             putExtra(EXTRA_SCHEDULED_TIME, scheduledTimeMs)
             putExtra(EXTRA_RETRY_COUNT, retryCount)
@@ -385,7 +388,7 @@ class ScheduleAlarmManager(
 
     private fun buildResyncPendingIntent(): PendingIntent {
         val intent = Intent(ACTION_SCHEDULE_RESYNC).apply {
-            setClassName(context, "com.aliothmoon.maameow.schedule.receiver.BootReceiver")
+            setClassName(context, BootReceiver::class.java.name)
         }
         return PendingIntent.getBroadcast(
             context,

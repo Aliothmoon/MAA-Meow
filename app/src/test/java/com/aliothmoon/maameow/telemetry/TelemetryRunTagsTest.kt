@@ -1,5 +1,7 @@
 package com.aliothmoon.maameow.telemetry
 
+import com.aliothmoon.maameow.constant.VirtualDisplayUpgradeOutcome
+import com.aliothmoon.maameow.domain.service.GameExitCause
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -21,5 +23,21 @@ class TelemetryRunTagsTest {
         assertEquals("dead", TelemetryShizuku.binderState(receivedAt = 100, deadAt = 200))
         // 断过又回来了
         assertEquals("alive", TelemetryShizuku.binderState(receivedAt = 300, deadAt = 200))
+    }
+
+    @Test
+    fun `虚拟屏显示组、AUTO 升级结果与游戏退出分类映射到低基数 tag`() {
+        assertEquals("own", TelemetryRunTags.vdGroup(2))
+        assertEquals("main", TelemetryRunTags.vdGroup(0))
+        assertEquals("unknown", TelemetryRunTags.vdGroup(-1))
+
+        assertEquals("none", TelemetryRunTags.vdUpgrade(VirtualDisplayUpgradeOutcome.NONE))
+        assertEquals("upgraded", TelemetryRunTags.vdUpgrade(VirtualDisplayUpgradeOutcome.UPGRADED))
+        assertEquals("fallback", TelemetryRunTags.vdUpgrade(VirtualDisplayUpgradeOutcome.FALLBACK))
+        assertEquals("unsupported", TelemetryRunTags.vdUpgrade(VirtualDisplayUpgradeOutcome.UNSUPPORTED))
+
+        assertEquals("background_kill", TelemetryRunTags.gameExitKind(GameExitCause.Kind.BACKGROUND_KILL))
+        assertEquals("low_memory", TelemetryRunTags.gameExitKind(GameExitCause.Kind.LOW_MEMORY))
+        assertEquals("unknown", TelemetryRunTags.gameExitKind(null))
     }
 }

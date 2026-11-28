@@ -14,6 +14,7 @@ out/
 
 # Gradle files
 .gradle/
+.kotlin/
 **/build/
 
 # Gradle/Android Studio

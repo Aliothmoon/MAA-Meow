@@ -28,6 +28,7 @@ import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.ScreenPowerController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
+import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.state.isIdle
 import com.aliothmoon.maameow.domain.usecase.PrepareTaskStartUseCase
@@ -170,6 +171,21 @@ class BackgroundTaskViewModel(
 
     private val touchPreviewController = TouchPreviewController(viewModelScope)
     val markers: StateFlow<List<PreviewTouchMarker>> = touchPreviewController.markers
+    private val virtualDisplayInput = VirtualDisplayInputController(
+        scope = viewModelScope,
+        clipboard = AndroidClipboardPort(application),
+        remote = RemoteServiceInputPort,
+        onCapabilityLost = {
+            _state.update { it.copy(canInjectInput = false, isInputBarVisible = false) }
+        },
+        onFailure = { failure ->
+            val resId = when (failure) {
+                InputFailure.SEND_FAILED -> R.string.preview_input_send_failed
+                InputFailure.PASTE_UNSUPPORTED -> R.string.preview_input_paste_unsupported
+            }
+            _effects.trySend(UiEffect.toast(resId))
+        },
+    )
     private var pendingStart: PendingStart? = null
 
     private data class PendingStart(
@@ -183,6 +199,43 @@ class BackgroundTaskViewModel(
         observeTouchPreviewToggle()
         observeDefaultTaskSelection()
         observeGameStatus()
+        observeVirtualDisplayInputCapability()
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun observeVirtualDisplayInputCapability() {
+        viewModelScope.launch {
+            _state.map { it.isFullscreenMonitor }
+                .distinctUntilChanged()
+                .flatMapLatest { fullscreen ->
+                    if (!fullscreen) {
+                        flowOf(false)
+                    } else {
+                        combine(
+                            RemoteServiceManager.state,
+                            appSettingsManager.runMode,
+                            compositionService.state,
+                            compositionService.backgroundDisplayPackage,
+                            compositionService.backgroundDisplayId,
+                        ) { serviceState, runMode, _, pkg, _ ->
+                            serviceState is RemoteServiceManager.ServiceState.Connected &&
+                                runMode == RunMode.BACKGROUND &&
+                                pkg != null
+                        }
+                            .map { eligible ->
+                                if (!eligible) false else virtualDisplayInput.queryOwnFocus()
+                            }
+                    }
+                }
+                .collectLatest { canInject ->
+                    _state.update {
+                        it.copy(
+                            canInjectInput = canInject,
+                            isInputBarVisible = it.isInputBarVisible && canInject,
+                        )
+                    }
+                }
+        }
     }
 
     private fun observeGameStatus() {
@@ -389,6 +442,24 @@ class BackgroundTaskViewModel(
         }
     }
 
+    fun onToggleInputBar() {
+        _state.update {
+            if (!it.canInjectInput) it else it.copy(isInputBarVisible = !it.isInputBarVisible)
+        }
+    }
+
+    fun onDismissInputBar() {
+        _state.update { if (it.isInputBarVisible) it.copy(isInputBarVisible = false) else it }
+    }
+
+    fun onSendVirtualText(text: String, onResult: (Boolean) -> Unit) {
+        virtualDisplayInput.sendText(text, onResult)
+    }
+
+    fun onSendVirtualKey(keyCode: Int) {
+        virtualDisplayInput.sendKey(keyCode)
+    }
+
     fun onScreenOff() {
         // 开关开启时 MainActivity 常亮，系统不会休眠；同步 binder，首次还要加载 DisplayControl，不放主线程
         viewModelScope.launch(Dispatchers.IO) {
@@ -541,13 +612,23 @@ class BackgroundTaskViewModel(
     // ==================== UI State ====================
 
     fun onToggleFullscreenMonitor() {
-        _state.update { it.copy(isFullscreenMonitor = !it.isFullscreenMonitor) }
+        if (_state.value.isFullscreenMonitor) {
+            onExitFullscreenMonitor()
+            return
+        }
+        _state.update { it.copy(isFullscreenMonitor = true, isInputBarVisible = false) }
     }
 
     /** 进入画中画时调用：全屏预览锁了横屏并收了系统栏，留着会干扰小窗 */
     fun onExitFullscreenMonitor() {
         if (!_state.value.isFullscreenMonitor) return
-        _state.update { it.copy(isFullscreenMonitor = false) }
+        _state.update {
+            it.copy(
+                isFullscreenMonitor = false,
+                canInjectInput = false,
+                isInputBarVisible = false,
+            )
+        }
     }
 
     fun onTabChange(tab: PanelTab) {
@@ -578,11 +659,12 @@ class BackgroundTaskViewModel(
         context: TaskStartContext,
     ): UiText? {
         // 与链同时取，准备期间切换配置不串
+        val runProfileId = context.profileId ?: chainState.profileId.value
         val profileRunDurationLimit = chainState.activeRunDurationLimitMinutes
         val plan = when (
             val decision = prepareTaskStart(
                 chain = chainState.chain.value,
-                context = context,
+                context = context.copy(profileId = runProfileId),
             )
         ) {
             is TaskStartDecision.Ready -> {
@@ -629,6 +711,7 @@ class BackgroundTaskViewModel(
             profileRunDurationLimitMinutes = profileRunDurationLimit,
             preflightLogs = plan.logs,
             fallbacks = plan.fallbacks,
+            profileId = plan.profileId,
         )
         if (result is MaaCompositionService.StartResult.Success) {
             // 晚于 startSession 发出，拉取日志才有会话接住
@@ -739,6 +822,7 @@ class BackgroundTaskViewModel(
     }
 
     override fun onCleared() {
+        virtualDisplayInput.clear()
         touchPreviewController.onClear()
         super.onCleared()
     }

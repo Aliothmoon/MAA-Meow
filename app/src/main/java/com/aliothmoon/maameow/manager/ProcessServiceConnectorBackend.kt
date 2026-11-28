@@ -274,7 +274,7 @@ abstract class ProcessServiceConnectorBackend(
     /** 全量打进 Timber，返回尾部几行供拼进错误信息 */
     private fun dumpSpawnDebugLog(log: File): String? {
         if (!log.exists()) {
-            if (log.absolutePath.startsWith(CoreDataDir.ROOT)) {
+            if (log.absolutePath.startsWith("${CoreDataDir.ROOT}/")) {
                 Timber.e("%s launch debug log is in core dir, unreadable from app: %s (adb shell cat it, or export logs)", processName, log.absolutePath)
             } else {
                 Timber.e("%s launch debug log not found: %s", processName, log.absolutePath)

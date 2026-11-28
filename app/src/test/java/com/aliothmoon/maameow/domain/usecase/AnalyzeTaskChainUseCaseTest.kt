@@ -41,6 +41,7 @@ class AnalyzeTaskChainUseCaseTest {
 
     private val taskChainState = mockk<TaskChainState> {
         every { clientType } returns "Official"
+        every { profileId } returns MutableStateFlow("default")
     }
     private val resourceDataManager = mockk<ResourceDataManager>(relaxed = true)
     private val operBoxRepository = mockk<OperBoxRepository>(relaxed = true) {

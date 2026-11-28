@@ -1,4 +1,4 @@
-﻿package com.aliothmoon.maameow.maa.callback
+package com.aliothmoon.maameow.maa.callback
 
 import android.content.Context
 import com.alibaba.fastjson2.JSONArray
@@ -80,9 +80,18 @@ class SubTaskHandler(
     // 最近一条设施行的 facility#序号，同房间的原因提示据此省掉重复的设施行
     private var lastFacilityKey: String? = null
 
+    /** 开跑时的配置档 id，掉落与识别结果都记在这一档上，中途切档不串写 */
+    @Volatile
+    var runProfileId: String? = null
+        private set
+
     // 本次会话累计用药数（跨战斗累计，session 开始时重置）
     private var medicineUsedTotal = 0
     private var expiringMedicineUsedTotal = 0
+
+    // 掉落写入失败每场会话只提醒一次；跨线程读写要可见
+    @Volatile
+    private var dropWriteWarned = false
 
     // 会话级理智快照（最近一次 SanityBeforeStage），供 AllTasksCompleted 消费
     data class SanitySnapshot(
@@ -103,12 +112,31 @@ class SubTaskHandler(
         expiringMedicineUsedTotal = 0
         lastSanitySnapshot = null
         lastFacilityKey = null
+        runProfileId = null
+        dropWriteWarned = false
+    }
+
+    /**
+     * session 开始时钉住配置档，在 [resetSessionState] 之后、预检之前调用
+     *
+     * 预检可能耗时几十秒，晚定会让参数按 A 档算、掉落写进 B 档；
+     * [onTaskChainStart] 的懒采集兜底不走预检的入口
+     */
+    fun beginSession(profileId: String) {
+        if (runProfileId == null && profileId.isNotEmpty()) runProfileId = profileId
     }
 
     /** 新任务链开始，上一链的主题目标与设施行标识不再有效 */
     fun onTaskChainStart(taskId: Int) {
         clearThemeTarget(taskId)
         lastFacilityKey = null
+        // 只认第一次：每个任务链都会发 TaskChainStart，覆盖会把剩下的掉落写到新档
+        // 包一层 runCatching：单测里 chainState 是 relaxed mock，profileId.value 不是字符串
+        if (runProfileId == null) {
+            runProfileId = runCatching {
+                chainState.profileId.value.ifEmpty { null }
+            }.getOrNull()
+        }
     }
 
     fun clearThemeTarget(taskId: Int) {
@@ -580,12 +608,12 @@ class SubTaskHandler(
         val subDetails = details.getJSONObject("details")
         when (taskchain) {
             "Depot" -> {
-                toolboxResultCollector.onDepotResult(subDetails)?.delta()?.let(::appendDepotDelta)
+                toolboxResultCollector.onDepotResult(subDetails, runProfileId)?.delta()?.let(::appendDepotDelta)
                 return
             }
 
             "OperBox" -> {
-                toolboxResultCollector.onOperBoxResult(subDetails)
+                toolboxResultCollector.onOperBoxResult(subDetails, runProfileId)
                 return
             }
 
@@ -1029,8 +1057,17 @@ class SubTaskHandler(
         sessionLogger.append(sb.toString(), LogLevel.TRACE)
 
         if (drops.isNotEmpty()) {
-            // 同步写穿内存，下一关 TaskChainStart 立刻能 countOf 到本场掉落
-            depotRepository.merge(drops)
+            // 同步写穿内存，下一关 TaskChainStart 立刻能 countOf 到本场掉落；
+            // 目标档用开跑时捕获的那一档，避免中途切档串写，杂项由 DepotRepository.merge 统一过滤
+            val written = depotRepository.merge(drops, runProfileId)
+            // 开跑档在运行中被删时写不进去，每场会话只提醒一次
+            if (!written && !dropWriteWarned) {
+                dropWriteWarned = true
+                append(
+                    resources.getString(R.string.runlog_depot_drop_write_skipped),
+                    LogLevel.WARNING,
+                )
+            }
         }
     }
 

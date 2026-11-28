@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.telemetry
 
+import com.aliothmoon.maameow.domain.service.ResourceInitFailureReport
 import io.mockk.every
 import io.mockk.mockk
 import io.sentry.ISpan
@@ -358,6 +359,70 @@ class TaskFailureTest {
                 )
             ),
         )
+    }
+
+    @Test
+    fun `资源初始化失败按阶段与错误码分组，存储探针结果进 tag 与 extra`() {
+        val report = ResourceInitFailureReport(
+            trigger = "checkAndInit",
+            phase = "FileOutputStream",
+            errorType = "FileNotFoundException",
+            errnoName = "ENOENT",
+            cause = "java.io.FileNotFoundException: open failed: ENOENT",
+            extractedCount = 0,
+            totalCount = 9636,
+            attemptFailures = 24,
+            durationMs = 820L,
+            externalStorageState = "mounted",
+            externalDirPresent = false,
+            internalWritable = true,
+            assetReadable = true,
+            availStorageMb = 107_735L,
+            diagnosticLog = "=== Resource Init Run #1 ===",
+        )
+        val event = ResourceInitFailure(report).toSentryEvent()
+
+        assertEquals("Maa resource init failed at FileOutputStream (ENOENT)", event.message?.formatted)
+        assertEquals(listOf("maameow-resource-init-failure", "FileOutputStream", "ENOENT"), event.fingerprints)
+        assertEquals(SentryLevel.ERROR, event.level)
+        assertEquals(RESOURCE_INIT_FAILURE_TRANSACTION, event.transaction)
+        assertEquals("checkAndInit", event.tags?.get("resource_init.trigger"))
+        assertEquals("FileOutputStream", event.tags?.get("resource_init.phase"))
+        assertEquals("FileNotFoundException", event.tags?.get("resource_init.error"))
+        assertEquals("ENOENT", event.tags?.get("resource_init.errno"))
+        assertEquals("false", event.tags?.get("storage.external_dir_present"))
+        assertEquals("true", event.tags?.get("storage.internal_writable"))
+        assertEquals("true", event.tags?.get("resource_init.asset_readable"))
+        assertEquals(107_735L, event.extras?.get("storage.avail_mb"))
+        assertEquals(9636, event.extras?.get("resource_init.total"))
+        assertEquals(24, event.extras?.get("resource_init.attempt_failures"))
+    }
+
+    @Test
+    fun `资源初始化失败无 errno 时按标准异常类名分组`() {
+        val report = ResourceInitFailureReport(
+            trigger = "reInitialize",
+            phase = "manifest",
+            errorType = "IllegalStateException",
+            errnoName = null,
+            cause = "IllegalStateException: manifest missing",
+            extractedCount = 0,
+            totalCount = 0,
+            attemptFailures = 0,
+            durationMs = 12L,
+            externalStorageState = "mounted",
+            externalDirPresent = true,
+            internalWritable = true,
+            assetReadable = null,
+            availStorageMb = null,
+            diagnosticLog = null,
+        )
+        val event = ResourceInitFailure(report).toSentryEvent()
+
+        assertEquals("Maa resource init failed at manifest (IllegalStateException)", event.message?.formatted)
+        assertEquals(listOf("maameow-resource-init-failure", "manifest", "IllegalStateException"), event.fingerprints)
+        assertFalse(event.tags.orEmpty().containsKey("resource_init.errno"))
+        assertFalse(event.tags.orEmpty().containsKey("resource_init.asset_readable"))
     }
 
     @Test

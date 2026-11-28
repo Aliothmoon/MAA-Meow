@@ -43,7 +43,7 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.FactCheck
+import androidx.compose.material.icons.automirrored.rounded.FactCheck
 import androidx.compose.material.icons.rounded.Feedback
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
@@ -735,7 +735,7 @@ fun SettingsView(
                                     contentColor = contentColor,
                                     checked = skipShizukuCheck,
                                     enabled = startupBackend == RemoteBackend.SHIZUKU,
-                                    icon = Icons.Rounded.FactCheck,
+                                    icon = Icons.AutoMirrored.Rounded.FactCheck,
                                     onCheckedChange = { viewModel.setSkipShizukuCheck(it) }
                                 )
                             }
@@ -840,10 +840,10 @@ fun SettingsView(
                                         selected = virtualDisplayBackend,
                                         label = { backend ->
                                             stringResource(
-                                                if (backend == VirtualDisplayBackend.LEGACY) {
-                                                    R.string.settings_virtual_display_backend_legacy
-                                                } else {
-                                                    R.string.settings_virtual_display_backend_vdm
+                                                when (backend) {
+                                                    VirtualDisplayBackend.AUTO -> R.string.settings_virtual_display_backend_auto
+                                                    VirtualDisplayBackend.LEGACY -> R.string.settings_virtual_display_backend_legacy
+                                                    VirtualDisplayBackend.VDM -> R.string.settings_virtual_display_backend_vdm
                                                 }
                                             )
                                         },

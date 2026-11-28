@@ -299,11 +299,12 @@ class ExpandedControlPanelViewModel(
     private fun launchManualStart(context: TaskStartContext) {
         viewModelScope.launch {
             // 与链同时取，准备期间切换配置不串
+            val runProfileId = context.profileId ?: chainState.profileId.value
             val profileRunDurationLimit = chainState.activeRunDurationLimitMinutes
             val plan = when (
                 val decision = prepareTaskStart(
                     chain = chainState.chain.value,
-                    context = context,
+                    context = context.copy(profileId = runProfileId),
                 )
             ) {
                 is TaskStartDecision.Ready -> {
@@ -349,6 +350,7 @@ class ExpandedControlPanelViewModel(
                 profileRunDurationLimitMinutes = profileRunDurationLimit,
                 preflightLogs = plan.logs,
                 fallbacks = plan.fallbacks,
+                profileId = plan.profileId,
             )
             val message = application.formatStartResult(result)
             if (result is MaaCompositionService.StartResult.Success) {

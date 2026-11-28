@@ -92,6 +92,12 @@ internal class RunTracer(
         }
     }
 
+    fun tagActiveRun(key: String, value: String) {
+        val trace = run ?: return
+        trace.transaction.setTag(key, value)
+        trace.task?.span?.setTag(key, value)
+    }
+
     /** 启动失败、提权进程死亡 */
     fun abort(status: SpanStatus) {
         pending = null

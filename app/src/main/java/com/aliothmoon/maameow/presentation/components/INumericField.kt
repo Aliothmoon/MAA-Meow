@@ -12,10 +12,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 
 /**
- * 数字输入框（失焦时验证）, 基于 [ITextFieldWithFocus]
+ * 数字输入框, 基于 [ITextFieldWithFocus]
  *
  * @param value 当前值
- * @param onValueChange 值变化回调（仅在失焦且验证通过后调用）
+ * @param onValueChange 值变化回调（默认仅在失焦且验证通过后调用，见 [commitOnChange]）
  * @param modifier 修饰符
  * @param label 标签文本（浮动标签）
  * @param hint 提示文本（placeholder）
@@ -24,6 +24,10 @@ import androidx.compose.ui.text.input.KeyboardType
  * @param increment 步进值
  * @param valueFormat 格式化字符串
  * @param enabled 是否启用
+ * @param commitOnChange 为 true 时每敲一下就回写合法值。面板里有「保存」按钮时用：
+ *   只靠失焦提交的话，用户敲完数字直接点保存，写下去的还是上一个值
+ * @param onBlankChange 配合 [commitOnChange] 用；框被清空（中间态）时回调 true，
+ *   调用方据此禁用「保存」，免得把上一次的数字当成新值写进去
  */
 @Composable
 fun INumericField(
@@ -36,15 +40,30 @@ fun INumericField(
     maximum: Int = Int.MAX_VALUE,
     increment: Int = 1,
     valueFormat: String = "%d",
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    commitOnChange: Boolean = false,
+    onBlankChange: ((Boolean) -> Unit)? = null,
 ) {
     var inputText by remember(value) { mutableStateOf(valueFormat.format(value)) }
+    val allowNegative = minimum < 0
 
     ITextFieldWithFocus(
         value = inputText,
-        onValueChange = { inputText = it },
+        onValueChange = { raw ->
+            inputText = raw
+            if (commitOnChange) {
+                val parsed = raw.toIntOrNull()
+                val valid = parsed != null && parsed >= minimum
+                onBlankChange?.invoke(!valid)
+                // 仅在满足下限时回写，避免界面显示空串 / "-" / 小于下限的值却静默提交旧值或下限
+                if (valid) {
+                    onValueChange(parsed.coerceAtMost(maximum))
+                }
+            }
+        },
         onFocusLost = {
             val text = inputText
+            onBlankChange?.invoke(false)
             if (text.isEmpty() || text == "-") {
                 inputText = valueFormat.format(minimum)
                 if (minimum != value) onValueChange(minimum)
@@ -68,11 +87,15 @@ fun INumericField(
         label = label,
         placeholder = hint,
         enabled = enabled,
-        inputFilter = { it.isEmpty() || it == "-" || it.toIntOrNull() != null },
+        inputFilter = { it.isEmpty() || (allowNegative && it == "-") || it.toIntOrNull() != null },
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Number,
             imeAction = ImeAction.Done,
         ),
-        inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED,
+        inputType = if (allowNegative) {
+            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
+        } else {
+            InputType.TYPE_CLASS_NUMBER
+        },
     )
 }

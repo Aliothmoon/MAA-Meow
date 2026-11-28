@@ -572,7 +572,7 @@ class AppSettingsManager internal constructor(
 
     val virtualDisplayBackend: StateFlow<VirtualDisplayBackend> = setting {
         runCatching { VirtualDisplayBackend.valueOf(it.virtualDisplayBackend) }
-            .getOrDefault(VirtualDisplayBackend.LEGACY)
+            .getOrDefault(VirtualDisplayBackend.AUTO)
     }
 
     suspend fun setVirtualDisplayBackend(backend: VirtualDisplayBackend) {

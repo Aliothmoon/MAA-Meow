@@ -13,7 +13,9 @@ import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.bridge.NativeBridgeLib
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.DisplayMode
+import com.aliothmoon.maameow.constant.TextInjectResult
 import com.aliothmoon.maameow.constant.MaaFiles
+import com.aliothmoon.maameow.constant.VirtualDisplayBackendMode
 import com.aliothmoon.maameow.maa.DriverClass
 import com.aliothmoon.maameow.maa.InputControlUtils
 import com.aliothmoon.maameow.remote.internal.ActivityUtils
@@ -388,6 +390,30 @@ class RemoteServiceImpl : RemoteService.Stub() {
         }
     }
 
+    override fun injectText(text: String?): Int {
+        if (text.isNullOrEmpty()) return TextInjectResult.UNMAPPABLE
+        val displayId = ownFocusDisplayId() ?: return TextInjectResult.REJECTED
+        val directResult = InputControlUtils.injectAsciiText(text, displayId)
+        if (directResult != TextInjectResult.UNMAPPABLE) return directResult
+        if (!BackgroundDisplay.sharesDefaultClipboard()) {
+            Ln.w("$TAG: injectText non-ASCII unsupported: VDM clipboard is isolated")
+            return TextInjectResult.PASTE_UNSUPPORTED
+        }
+        return TextInjectResult.UNMAPPABLE
+    }
+
+    override fun sendKey(keyCode: Int, metaState: Int): Boolean {
+        val displayId = ownFocusDisplayId() ?: return false
+        return InputControlUtils.sendKey(keyCode, metaState, displayId)
+    }
+
+    private fun ownFocusDisplayId(): Int? {
+        if (virtualDisplayMode.get() != DisplayMode.BACKGROUND) return null
+        val st = BackgroundDisplay.status()
+        if (st.displayId == DefaultDisplayConfig.DISPLAY_NONE || !st.hasOwnFocus) return null
+        return st.displayId
+    }
+
     override fun setDisplayPower(on: Boolean): Boolean = PowerController.setDisplayPower(on)
 
     @Synchronized
@@ -469,7 +495,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun getGameFps(): Float = GameFpsMonitor.currentFps()
 
-    override fun getVirtualDisplayFlagTier(): Int = BackgroundDisplay.flagTier()
+    override fun getVirtualDisplayStatus(): VirtualDisplayStatus = BackgroundDisplay.status()
 
     override fun dumpThreads(): String = ThreadDump.capture()
 
@@ -581,17 +607,26 @@ class RemoteServiceImpl : RemoteService.Stub() {
     }
 
     @Synchronized
-    override fun setUseVirtualDeviceDisplay(enabled: Boolean): Boolean {
-        if (enabled && Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
-        if (BackgroundDisplay.useVdm == enabled) return true
+    override fun setVirtualDisplayBackend(mode: Int): Boolean {
+        val label = when (mode) {
+            VirtualDisplayBackendMode.AUTO -> "AUTO"
+            VirtualDisplayBackendMode.LEGACY -> "LEGACY"
+            VirtualDisplayBackendMode.VDM -> "VDM"
+            else -> return false
+        }
+        if (mode == VirtualDisplayBackendMode.VDM
+            && Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+        ) return false
+        if (BackgroundDisplay.backendMode == mode) return true
         // 不在运行时换后端：上一轮的屏还在就拒绝，由 App 侧先关屏
         val activeId = BackgroundDisplay.displayId()
         if (activeId != DefaultDisplayConfig.DISPLAY_NONE) {
             Ln.w("$TAG: refuse backend switch while displayId=$activeId is active")
             return false
         }
-        BackgroundDisplay.useVdm = enabled
-        Ln.i("$TAG: virtual display backend=${if (enabled) "VDM" else "LEGACY"}")
+        BackgroundDisplay.stop()
+        BackgroundDisplay.backendMode = mode
+        Ln.i("$TAG: virtual display backend=$label")
         return true
     }
 

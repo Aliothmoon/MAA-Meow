@@ -1,14 +1,16 @@
 package com.aliothmoon.maameow.schedule.model
 
+import com.aliothmoon.maameow.BuildConfig
+
 /**
  * 定时/外部启动相关 Intent 常量与倒计时默认值
  * Intent 映射见 [com.aliothmoon.maameow.schedule.LaunchIntentMapper]
  */
 object ScheduledExecutionRequest {
-    const val ACTION_SHOW_SCHEDULE_EXECUTION =
-        "com.aliothmoon.maameow.action.SHOW_SCHEDULE_EXECUTION"
-    const val ACTION_LAUNCH_PROFILE =
-        "com.aliothmoon.maameow.action.LAUNCH_PROFILE"
+    val ACTION_SHOW_SCHEDULE_EXECUTION =
+        "${BuildConfig.APPLICATION_ID}.action.SHOW_SCHEDULE_EXECUTION"
+    val ACTION_LAUNCH_PROFILE =
+        "${BuildConfig.APPLICATION_ID}.action.LAUNCH_PROFILE"
     const val EXTRA_REQUEST_ID = "extra_request_id"
     const val EXTRA_STRATEGY_ID = "extra_strategy_id"
     const val EXTRA_STRATEGY_NAME = "extra_strategy_name"

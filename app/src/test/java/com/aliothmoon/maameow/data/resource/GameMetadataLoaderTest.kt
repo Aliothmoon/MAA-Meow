@@ -42,7 +42,7 @@ class GameMetadataLoaderTest {
     private val resourceDataManager = mockk<ResourceDataManager> {
         coEvery { load(any(), any(), any()) } returns Unit
     }
-    private val itemHelper = mockk<ItemHelper> { justRun { load() } }
+    private val itemHelper = mockk<ItemHelper> { every { load(any()) } returns true }
     private val activityManager = mockk<ActivityManager> { justRun { load(any(), any()) } }
     private val hotUpdateRevision = MutableStateFlow(0)
     private val hotUpdateSync = mockk<HotUpdateSync> {
@@ -83,7 +83,7 @@ class GameMetadataLoaderTest {
         runCurrent()
 
         coVerify(exactly = 1) { resourceDataManager.load("Official", "zh-cn", 0) }
-        verify(exactly = 1) { itemHelper.load() }
+        verify(exactly = 1) { itemHelper.load("Official") }
         assertEquals(readyOf("Official"), loader.state.value)
     }
 
@@ -103,6 +103,9 @@ class GameMetadataLoaderTest {
 
         coVerify(exactly = 1) { resourceDataManager.load("YoStarEN", "zh-cn", 0) }
         verify(exactly = 1) { activityManager.load("YoStarEN", STAGE_JSON) }
+        // 切换客户端时同 revision 也必须按新客户端重载物品名称表
+        verify(exactly = 1) { itemHelper.load("Official") }
+        verify(exactly = 1) { itemHelper.load("YoStarEN") }
     }
 
     @Test
@@ -114,11 +117,23 @@ class GameMetadataLoaderTest {
         runCurrent()
 
         verify(exactly = 2) { activityManager.load("Official", STAGE_JSON) }
-        verify(exactly = 1) { itemHelper.load() }
+        verify(exactly = 1) { itemHelper.load("Official") }
         assertEquals(
             GameMetadataLoader.State.Ready(GameMetadataKey("Official", "zh-cn", 0, hotUpdateRevision = 1)),
             loader.state.value,
         )
+    }
+
+    @Test
+    fun failedItemLoad_retriesOnNextReload() = runTest {
+        every { itemHelper.load("Official") } returns false
+        initState.value = ResourceInitState.Ready
+        startLoader()
+
+        languageFlow.value = "en-us"
+        runCurrent()
+
+        verify(exactly = 2) { itemHelper.load("Official") }
     }
 
     @Test
@@ -130,13 +145,13 @@ class GameMetadataLoaderTest {
         runCurrent()
 
         coVerify(exactly = 1) { resourceDataManager.load("Official", "en-us", 0) }
-        verify(exactly = 1) { itemHelper.load() }
+        verify(exactly = 1) { itemHelper.load("Official") }
 
         revision.value = 1
         runCurrent()
 
         coVerify(exactly = 1) { resourceDataManager.load("Official", "en-us", 1) }
-        verify(exactly = 2) { itemHelper.load() }
+        verify(exactly = 2) { itemHelper.load("Official") }
     }
 
     @Test

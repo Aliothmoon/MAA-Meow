@@ -28,7 +28,7 @@ class AppSettingsTest {
     }
 
     @Test
-    fun virtualDisplayBackendDefaultsToLegacy() {
-        assertEquals(VirtualDisplayBackend.LEGACY.name, AppSettings().virtualDisplayBackend)
+    fun virtualDisplayBackendDefaultsToAuto() {
+        assertEquals(VirtualDisplayBackend.AUTO.name, AppSettings().virtualDisplayBackend)
     }
 }

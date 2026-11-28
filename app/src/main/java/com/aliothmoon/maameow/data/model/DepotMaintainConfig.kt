@@ -112,8 +112,12 @@ data class DepotMaintainConfig(
         }
 
         // 预先评估后备计划，暂不输出日志
+        val countForRun: (String) -> Int = { itemId ->
+            if (ctx.profileId.isNullOrEmpty()) ctx.depotRepository.countOf(itemId)
+            else ctx.depotRepository.countOf(itemId, ctx.profileId)
+        }
         val evaluated = plans.mapIndexed { index, plan ->
-            val current = DualChipConversion.count(plan.dropId, countDualChipAsChipPack, ctx.depotRepository::countOf)
+            val current = DualChipConversion.count(plan.dropId, countDualChipAsChipPack, countForRun)
             PlanDecision(
                 index = index,
                 plan = plan,

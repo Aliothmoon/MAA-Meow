@@ -8,6 +8,7 @@ import com.aliothmoon.maameow.MaaCoreService;
 import com.aliothmoon.maameow.remote.PermissionGrantRequest;
 import com.aliothmoon.maameow.remote.PermissionStateInfo;
 import com.aliothmoon.maameow.remote.ProcessExitRecord;
+import com.aliothmoon.maameow.remote.VirtualDisplayStatus;
 import com.aliothmoon.maameow.remote.WakeOutcome;
 
 interface RemoteService {
@@ -126,11 +127,7 @@ interface RemoteService {
     // 系统记下的进程退出（含被杀、崩溃），只返回不早于 sinceMs 的；查别的包靠 shell 自带的 DUMP 权限
     List<ProcessExitRecord> getProcessExitRecords(String packageName, long sinceMs, int maxNum) = 56;
 
-    // 后台虚拟屏的 flag 档位，0 为完整权限，没建返回 -1
-    int getVirtualDisplayFlagTier() = 57;
-
-    // 每轮启动前调；true 走 VirtualDevice（14+）；后台虚拟屏还在时不能换后端，返回 false
-    boolean setUseVirtualDeviceDisplay(boolean enabled) = 58;
+    // 57、58 已废弃
 
     // 卡死诊断用，不能加锁
     String dumpThreads() = 59;
@@ -148,4 +145,14 @@ interface RemoteService {
 
     // 解锁后接着拉起并确认界面，一次做完，免得主进程在返回点被冻结；type 为 null 只拉界面
     WakeOutcome wakeAndLaunch(String type, String payload, in Intent launchIntent) = 64;
+
+    // mode 见 VirtualDisplayBackendMode；虚拟屏还在时拒绝切换
+    boolean setVirtualDisplayBackend(int mode) = 65;
+
+    VirtualDisplayStatus getVirtualDisplayStatus() = 66;
+
+    // 仅后台 OWN_FOCUS 生效时可用；injectText 返回 TextInjectResult
+    int injectText(String text) = 67;
+
+    boolean sendKey(int keyCode, int metaState) = 68;
 }

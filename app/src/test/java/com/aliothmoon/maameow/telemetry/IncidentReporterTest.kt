@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.telemetry
 
+import com.aliothmoon.maameow.domain.service.ResourceInitFailureReport
 import io.mockk.mockk
 import io.sentry.ISpan
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -300,6 +301,70 @@ class IncidentReporterTest {
         val bind = evidence.logs!!.entries.single { it.source == "service_bind_debug.log" }
         assertTrue(bind.content.endsWith("BIND_DENIED\n"))
         assertTrue(bind.rawBytes < old.length)
+    }
+
+    @Test
+    fun `资源初始化失败直接带上内存诊断日志并先脱敏，不依赖外置 debug 目录`() = runTest(dispatcher) {
+        val reporter = reporter(secrets = listOf("secret-token-xyz"))
+        val report = ResourceInitFailureReport(
+            trigger = "checkAndInit",
+            phase = "FileOutputStream",
+            errorType = "FileNotFoundException",
+            errnoName = "ENOENT",
+            cause = "open failed: ENOENT",
+            extractedCount = 0,
+            totalCount = 9636,
+            attemptFailures = 24,
+            durationMs = 600L,
+            externalStorageState = "mounted",
+            externalDirPresent = false,
+            internalWritable = true,
+            assetReadable = true,
+            availStorageMb = 100_000L,
+            diagnosticLog = "=== Resource Init Run #1 (FAILED) ===\ntoken=secret-token-xyz\n",
+        )
+
+        reporter.report(ResourceInitFailure(report))
+        advanceUntilIdle()
+
+        assertEquals(listOf("resource_init_diag.txt"), sources())
+        val entry = evidence.logs!!.entries.single()
+        assertEquals("resource_init", entry.kind)
+        assertTrue(entry.content.contains("token=***"))
+        assertFalse(entry.content.contains("secret-token-xyz"))
+        assertEquals(AttachmentOutcome.NotSelected, evidence.attachment)
+    }
+
+    @Test
+    fun `资源初始化失败诊断日志按 UTF-8 字节上限截断，不会因中文超预算`() = runTest(dispatcher) {
+        val reporter = reporter()
+        // 每个中文占 3 字节，60_000 字 = 180_000 字节 > 128 KiB
+        val hugeChinese = "测".repeat(60_000)
+        val report = ResourceInitFailureReport(
+            trigger = "checkAndInit",
+            phase = "FileOutputStream",
+            errorType = "IOException",
+            errnoName = "ENOENT",
+            cause = "open failed",
+            extractedCount = 0,
+            totalCount = 10,
+            attemptFailures = 3,
+            durationMs = 100L,
+            externalStorageState = "mounted",
+            externalDirPresent = false,
+            internalWritable = true,
+            assetReadable = true,
+            availStorageMb = 1024L,
+            diagnosticLog = hugeChinese,
+        )
+
+        reporter.report(ResourceInitFailure(report))
+        advanceUntilIdle()
+
+        val logs = evidence.logs!!
+        assertTrue(logs.truncated)
+        assertTrue(logs.selectedRawBytes <= 128 * 1024)
+        assertEquals(logs.selectedRawBytes, logs.entries.single().content.encodeToByteArray().size.toLong())
     }
 
     @Test

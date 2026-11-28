@@ -84,8 +84,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter>
-                <action android:name="com.aliothmoon.maameow.action.LAUNCH_PROFILE" />
-                <action android:name="com.aliothmoon.maameow.action.SHOW_SCHEDULE_EXECUTION" />
+                <action android:name="${applicationId}.action.LAUNCH_PROFILE" />
+                <action android:name="${applicationId}.action.SHOW_SCHEDULE_EXECUTION" />
 
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
@@ -114,7 +114,7 @@
             android:name=".schedule.receiver.ScheduleReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="com.aliothmoon.maameow.SCHEDULE_TRIGGER" />
+                <action android:name="${applicationId}.SCHEDULE_TRIGGER" />
             </intent-filter>
         </receiver>
 

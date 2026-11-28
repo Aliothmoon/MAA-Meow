@@ -106,7 +106,7 @@ fun DepotRecognitionPanel(
         if (delta?.changes.isNullOrEmpty()) onlyChanged = false
     }
 
-    if (snapshot.items.isEmpty() && !snapshot.hasSynced) {
+    if (!snapshot.hasSynced) {
         DepotEmptyState(modifier, resolvedStatusMessage)
         return
     }

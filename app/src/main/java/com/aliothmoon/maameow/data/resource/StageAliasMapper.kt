@@ -59,10 +59,12 @@ object StageAliasMapper {
     fun mapToStageCode(input: String, availableStages: List<String>? = null): String {
         if (input.isBlank()) return input
 
-        val upperInput = input.uppercase()
+        val normalized = normalizeFullWidth(input)
+        val upperInput = normalized.uppercase()
 
-        // 1. 先检查别名表（别名表中的 key 可能是中文，直接用原始输入匹配）
-        stageAliases[input]?.let { return it }
+        // 1. 先检查别名表（用归一化后的输入匹配：中文键不受全角转半角影响，
+        //    英文键则能吃掉全角输入法敲出来的 ＣＥ）
+        stageAliases[normalized]?.let { return it }
         // 也检查大写版本
         stageAliases[upperInput]?.let { return it }
 
@@ -76,6 +78,19 @@ object StageAliasMapper {
 
         // 3. 返回大写版本（保持用户输入，仅转大写）
         return upperInput
+    }
+
+    /** 全角转半角：中文输入法的「1－7」MaaCore 认不出；U+FF01–U+FF5E 与 0x21–0x7E 差 0xFEE0 */
+    private fun normalizeFullWidth(input: String): String = buildString(input.length) {
+        input.forEach { char ->
+            append(
+                when (char.code) {
+                    in 0xFF01..0xFF5E -> (char.code - 0xFEE0).toChar()
+                    0x3000 -> ' '
+                    else -> char
+                },
+            )
+        }
     }
 
     /**

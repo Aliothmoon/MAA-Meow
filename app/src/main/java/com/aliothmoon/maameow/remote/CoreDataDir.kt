@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.remote
 
+import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.constant.MaaFiles
 
 /**
@@ -10,8 +11,19 @@ import com.aliothmoon.maameow.constant.MaaFiles
  */
 object CoreDataDir {
 
-    /** shell:shell 0771，两种后端都可写 */
-    const val ROOT = "/data/local/tmp/maameow"
+    private const val BASE_APPLICATION_ID = "com.aliothmoon.maameow"
+
+    /** shell:shell 0771，两种后端都可写；按包名后缀隔离，避免 .dev 与正式版互踩 */
+    val ROOT: String = rootFor(BuildConfig.APPLICATION_ID)
+
+    internal fun rootFor(applicationId: String): String =
+        if (applicationId == BASE_APPLICATION_ID) {
+            "/data/local/tmp/maameow"
+        } else {
+            val suffix = applicationId.removePrefix("$BASE_APPLICATION_ID.")
+                .replace('.', '_')
+            "/data/local/tmp/maameow_$suffix"
+        }
 
     const val RESOURCE_ASSET_PREFIX = "assets/${MaaFiles.ASSET_DIR_NAME}/"
     const val OVERRIDES_ASSET_ENTRY = "assets/${MaaFiles.OVERRIDES_ASSET_TASKS}"

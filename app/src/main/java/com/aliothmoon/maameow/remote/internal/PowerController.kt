@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 object PowerController {
     private const val TAG = "PowerController"
     private const val USER_ACTIVITY_INTERVAL_MS = 4_000L
+    private const val AWAKE_CHECK_INTERVAL_TICKS = 3
 
     // 不落盘：进程被杀后由用户唤醒时系统恢复面板
     private val poweredOff = AtomicBoolean(false)
@@ -50,6 +51,9 @@ object PowerController {
 
     @VisibleForTesting
     internal var sleepMs: (Long) -> Unit = SystemClock::sleep
+
+    @VisibleForTesting
+    internal var sdkInt: () -> Int = { Build.VERSION.SDK_INT }
 
     // 判不出按醒着处理，宁可点亮
     @VisibleForTesting
@@ -142,27 +146,62 @@ object PowerController {
     }
 
     private fun runKeepAlive() {
+        var lastDisplayId = DefaultDisplayConfig.DISPLAY_NONE
+        var tick = 0
+        var asleepReported = false
         while (true) {
             val id = nextKeepAliveDisplay()
             if (id == DefaultDisplayConfig.DISPLAY_NONE) break
+            if (id != lastDisplayId) {
+                lastDisplayId = id
+                tick = 0
+                asleepReported = false
+            }
             runCatching { ops.userActivity(id) }
                 .onFailure { Ln.e("$TAG: userActivity failed", it) }
+            if (tick > 0 && tick % AWAKE_CHECK_INTERVAL_TICKS == 0) {
+                asleepReported = !ensureKeepAliveDisplayAwake(id, asleepReported)
+            }
+            tick++
             sleepMs(USER_ACTIVITY_INTERVAL_MS)
         }
         Ln.i("$TAG: userActivity keep-alive stopped")
     }
 
+    /** 仅巡检独立电源组；单次熄屏周期内失败后不重复唤醒 */
+    private fun ensureKeepAliveDisplayAwake(displayId: Int, alreadyReportedAsleep: Boolean): Boolean {
+        val sdk = sdkInt()
+        if (sdk < AndroidVersions.API_34_ANDROID_14) return true
+        val ownGroup = runCatching { hasOwnPowerGroup(displayId) }.getOrDefault(false)
+        if (!ownGroup) return true
+        val interactive = runCatching { ops.isDisplayInteractiveOrNull(displayId) }.getOrNull()
+        if (interactive != false) return true
+        if (alreadyReportedAsleep) return false
+        if (sdk >= AndroidVersions.API_36_ANDROID_16) {
+            val woke = runCatching { tryWakeDisplay(displayId) }.getOrDefault(false)
+            if (woke) {
+                Ln.w("$TAG: display $displayId fell asleep during keep-alive, woke ok")
+                return true
+            }
+            Ln.w("$TAG: display $displayId fell asleep during keep-alive, wake failed")
+            return false
+        }
+        Ln.w("$TAG: display $displayId asleep during keep-alive (sdk=$sdk cannot per-display wake)")
+        return false
+    }
+
+    private fun tryWakeDisplay(displayId: Int): Boolean =
+        ops.wakeDisplay(displayId) && ops.isDisplayInteractiveOrNull(displayId) == true
+
     // 仅管独立电源组（同主屏组唤醒会点亮主屏）；14+ 可按屏查交互态，16+ 可按屏唤醒
     fun ensureDisplayAwake(displayId: Int): Boolean =
-        ensureDisplayAwake(displayId, Build.VERSION.SDK_INT)
+        ensureDisplayAwake(displayId, sdkInt())
 
     @VisibleForTesting
     internal fun ensureDisplayAwake(displayId: Int, sdkInt: Int): Boolean {
         if (sdkInt < AndroidVersions.API_34_ANDROID_14 || !hasOwnPowerGroup(displayId)) return true
         if (ops.isDisplayInteractiveOrNull(displayId) != false) return true
-        val woke = sdkInt >= AndroidVersions.API_36_ANDROID_16
-                && ops.wakeDisplay(displayId)
-                && ops.isDisplayInteractiveOrNull(displayId) == true
+        val woke = sdkInt >= AndroidVersions.API_36_ANDROID_16 && tryWakeDisplay(displayId)
         Ln.i("$TAG: display $displayId asleep, wake ${if (woke) "ok" else "failed"}")
         return woke
     }

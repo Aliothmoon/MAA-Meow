@@ -44,6 +44,10 @@ class OperBoxRepository(
 
     val snapshot: StateFlow<OperBoxSnapshot> get() = shards.snapshot
 
+    fun snapshotOf(profileId: String?): OperBoxSnapshot =
+        if (profileId.isNullOrEmpty()) snapshot.value
+        else shards.all.value[profileId] ?: OperBoxSnapshot()
+
     val isLoaded: StateFlow<Boolean> get() = shards.isLoaded
 
     fun start() = shards.start()

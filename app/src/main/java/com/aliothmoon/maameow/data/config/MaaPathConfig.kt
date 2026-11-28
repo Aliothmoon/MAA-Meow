@@ -171,11 +171,16 @@ class MaaPathConfig(
         File(rootDir, APP_VERSION_FILE).writeText(appVersionCode.toString())
     }
 
+    fun clearAppVersion() {
+        File(rootDir, APP_VERSION_FILE).delete()
+    }
+
     fun ensureDirectories(): Boolean {
         return runCatching {
             File(rootDir).mkdirs()
             File(cacheDir).mkdirs()
             File(rootDir, ".nomedia").createNewFile()
+            File(rootDir).isDirectory && File(cacheDir).isDirectory
         }.getOrDefault(false)
     }
 }

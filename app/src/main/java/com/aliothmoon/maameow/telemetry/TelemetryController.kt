@@ -14,7 +14,10 @@ import com.aliothmoon.maameow.data.repository.YituliuTokenRepository
 import com.aliothmoon.maameow.data.resource.MaaCoreVersion
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.models.VirtualDisplayBackend
+import com.aliothmoon.maameow.domain.service.GameExitCause
 import com.aliothmoon.maameow.domain.service.LaunchOutcome
+import com.aliothmoon.maameow.domain.service.ResourceInitFailureReport
 import com.aliothmoon.maameow.domain.service.RunKind
 import com.aliothmoon.maameow.domain.service.RunTelemetry
 import com.aliothmoon.maameow.domain.service.ScreenPowerController
@@ -26,6 +29,7 @@ import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.manager.RemoteAccessCoordinator
 import com.aliothmoon.maameow.manager.RemoteCallStuckException
 import com.aliothmoon.maameow.manager.RemoteServiceManager
+import com.aliothmoon.maameow.remote.VirtualDisplayStatus
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.utils.device.RomDetector
 import io.sentry.Attachment
@@ -46,6 +50,7 @@ import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -160,8 +165,8 @@ class TelemetryController(
             true
         }
         if (begun != true) return null
-        // 前台模式不建屏，别带上一轮的档位
-        clearEnvTag(VD_TIER_TAG)
+        // 前台模式不建屏，清掉上一轮残留的虚拟屏 tag
+        clearVirtualDisplayTags()
         // 调用方可能在主线程
         scope.launch { runCatching { refreshRunTags() } }
         return runId
@@ -173,10 +178,27 @@ class TelemetryController(
         guarded { if (active) tracer.register(taskId, summary) }
     }
 
-    override fun onVirtualDisplayStarted(vdm: Boolean, flagTier: Int) {
+    override fun onVirtualDisplayStarted(mode: VirtualDisplayBackend, status: VirtualDisplayStatus) {
         if (!active) return
-        setEnvTag(VD_BACKEND_TAG, if (vdm) "vdm" else "legacy")
-        setEnvTag(VD_TIER_TAG, flagTier.toString())
+        setEnvTag(VD_MODE_TAG, mode.name.lowercase())
+        setEnvTag(VD_BACKEND_TAG, if (status.usingVdm) "vdm" else "legacy")
+        setEnvTag(VD_TIER_TAG, status.flagTier.toString())
+        setEnvTag(VD_GROUP_TAG, TelemetryRunTags.vdGroup(status.displayGroupId))
+        setEnvTag(VD_UPGRADE_TAG, TelemetryRunTags.vdUpgrade(status.upgradeOutcome))
+    }
+
+    override fun onGameProcessGone(kind: GameExitCause.Kind?) {
+        if (!active) return
+        val label = TelemetryRunTags.gameExitKind(kind)
+        guarded { if (active) tracer.tagActiveRun(GAME_EXIT_KIND_TAG, label) }
+    }
+
+    private fun clearVirtualDisplayTags() {
+        clearEnvTag(VD_MODE_TAG)
+        clearEnvTag(VD_BACKEND_TAG)
+        clearEnvTag(VD_TIER_TAG)
+        clearEnvTag(VD_GROUP_TAG)
+        clearEnvTag(VD_UPGRADE_TAG)
     }
 
     override fun onCallback(message: AsstMsg, details: JSONObject?) {
@@ -286,6 +308,28 @@ class TelemetryController(
                     extras = TelemetryShizuku.extras(),
                 )
             )
+        }
+    }
+
+    override fun onResourceInitFailed(report: ResourceInitFailureReport) {
+        if (BuildConfig.SENTRY_DSN.isBlank()) return
+        // 冷启动资源初始化可能早于 SentryAndroid.init 完成，等配置就绪后再按开关决定是否上报
+        if (!configured.isCompleted) {
+            scope.launch {
+                withTimeoutOrNull(CONFIGURE_WAIT_TIMEOUT_MS) { configured.await() }
+                reportResourceInitFailure(report)
+            }
+            return
+        }
+        reportResourceInitFailure(report)
+    }
+
+    private fun reportResourceInitFailure(report: ResourceInitFailureReport) {
+        if (!active) return
+        scope.launch { runCatching { refreshRunTags() } }
+        guarded {
+            if (!active) return@guarded
+            reporter.report(ResourceInitFailure(report = report))
         }
     }
 
@@ -517,13 +561,18 @@ class TelemetryController(
         const val SYSTEM_LOG_SOURCE = "logcat/system"
         const val JPEG_QUALITY = 60
 
-        const val VD_TIER_TAG = "vd.tier"
+        const val VD_MODE_TAG = "vd.mode"
         const val VD_BACKEND_TAG = "vd.backend"
+        const val VD_TIER_TAG = "vd.tier"
+        const val VD_GROUP_TAG = "vd.group"
+        const val VD_UPGRADE_TAG = "vd.upgrade"
+        const val GAME_EXIT_KIND_TAG = "game_exit.kind"
 
         /** 一轮一条事务、每条任务链一条 Span，量不大，全采 */
         const val TRACES_SAMPLE_RATE = 1.0
 
         const val INCIDENT_FLUSH_TIMEOUT_MS = 10_000L
+        const val CONFIGURE_WAIT_TIMEOUT_MS = 5_000L
 
         val TRACKED_MESSAGES = setOf(
             AsstMsg.TaskChainStart,

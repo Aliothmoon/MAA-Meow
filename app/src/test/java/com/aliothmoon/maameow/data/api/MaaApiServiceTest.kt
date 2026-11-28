@@ -64,12 +64,12 @@ class MaaApiServiceTest {
         }
         every { eTagCache.updateConditionalHeaders(any(), any()) } answers {
             val key = firstArg<String>()
-            secondArg<Headers>()[ETagCacheManager.ETAG]?.let { storedETags[key] = it }
-            Unit
+            val etag = secondArg<Headers>()[ETagCacheManager.ETAG]
+            if (etag != null) storedETags[key] = etag
         }
         every { eTagCache.invalidateKey(any()) } answers {
             storedETags.remove(firstArg<String>())
-            Unit
+            return@answers
         }
 
         httpClient = mockk()

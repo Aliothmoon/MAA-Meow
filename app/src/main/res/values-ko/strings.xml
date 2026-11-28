@@ -260,6 +260,7 @@
     <string name="common_got_it">확인</string>
     <string name="common_i_got_it">확인</string>
     <string name="common_close">닫기</string>
+    <string name="common_back">뒤로</string>
     <string name="common_add">추가</string>
     <string name="common_load">불러오기</string>
     <string name="common_clear">지우기</string>
@@ -398,11 +399,12 @@
     <string name="settings_background_resolution_title">백그라운드 해상도</string>
     <string name="settings_background_resolution_desc">백그라운드 모드에서만 적용</string>
     <string name="settings_virtual_display_backend_title">가상 디스플레이 모드</string>
-    <string name="settings_virtual_display_backend_desc">Legacy는 기존 동작을 유지합니다. VDM은 독립 디스플레이 그룹을 사용하며, 실패해도 Legacy로 전환되지 않습니다</string>
+    <string name="settings_virtual_display_backend_desc">자동은 Legacy를 먼저 사용하고 권한 제한이나 독립 디스플레이 그룹을 얻지 못하면 VDM으로 자동 전환합니다. Legacy는 기존 방식만 사용하며, VDM은 독립 디스플레이 그룹을 강제하고 실패해도 전환되지 않습니다</string>
+    <string name="settings_virtual_display_backend_auto">자동</string>
     <string name="settings_virtual_display_backend_legacy">Legacy</string>
     <string name="settings_virtual_display_backend_vdm">VDM (실험적)</string>
     <string name="runlog_display_backend_switch_blocked">가상 디스플레이 모드가 변경되었지만 이전 가상 디스플레이가 아직 열려 있습니다. 먼저 「게임 종료」 후 다시 시작하세요</string>
-    <string name="runlog_vdm_display_failed">VDM 독립 가상 디스플레이를 만들지 못해 이번 실행을 취소했습니다. 설정에서 Legacy로 바꾼 뒤 다시 시도하세요</string>
+    <string name="runlog_vdm_display_failed">VDM 독립 가상 디스플레이를 만들지 못해 이번 실행을 취소했습니다. 설정에서 자동 또는 Legacy로 바꾼 뒤 다시 시도하세요</string>
     <string name="settings_skip_shizuku_check">Shizuku 확인 건너뛰기</string>
     <string name="settings_shizuku_launch_mode_title">바로가기 사용</string>
     <string name="settings_shizuku_launch_mode_desc">홈에 Shizuku 열기 버튼을 표시해 빠르게 실행할 수 있습니다</string>
@@ -744,6 +746,13 @@
     <string name="task_btn_stop">작업 중지</string>
     <string name="task_btn_quick_options">빠른 옵션</string>
     <string name="task_close_preview_cd">미리보기 닫기</string>
+    <string name="preview_input_toggle_cd">텍스트 입력</string>
+    <string name="preview_input_placeholder">보낼 텍스트 입력</string>
+    <string name="preview_input_backspace_cd">백스페이스</string>
+    <string name="preview_input_enter_cd">엔터</string>
+    <string name="preview_input_send_cd">보내기</string>
+    <string name="preview_input_send_failed">전송 실패. 입력란이 선택되어 있는지 확인하세요</string>
+    <string name="preview_input_paste_unsupported">현재 모드에서는 영문, 숫자 및 기본 기호만 입력할 수 있습니다</string>
 
     <!-- dialog: close app confirm -->
     <string name="dialog_close_app_title">종료 확인</string>
@@ -1556,15 +1565,9 @@
     <string name="panel_depot_use_expiring_medicine_tip">모든 계획에 적용되며 기준은 48시간으로 고정됩니다. 「이성 사용」에서 일수를 조절할 수 있는 같은 이름의 옵션과는 서로 영향을 주지 않습니다</string>
     <string name="panel_depot_summary_title">계획 개요</string>
     <string name="panel_depot_summary_runnable">이번 실행 대상 %1$d / %2$d</string>
-    <string name="panel_depot_summary_no_item">재료 미선택</string>
-    <string name="panel_depot_summary_zero_target">목표가 0</string>
-    <string name="panel_depot_summary_stage_required">스테이지 지정 필요</string>
-    <string name="panel_depot_summary_stage_closed">오늘 미개방</string>
-    <string name="panel_depot_summary_enough">재고 충분</string>
     <string name="panel_depot_target_inventory">목표 재고</string>
     <string name="panel_depot_stone_count">순오리지늄 최대 N개 사용</string>
     <string name="panel_depot_not_selected">미선택</string>
-    <string name="panel_depot_remove_plan">이 계획 삭제</string>
 
     <!-- panel: mall -->
     <string name="panel_mall_advanced_options">고급 옵션</string>
@@ -2089,6 +2092,8 @@
     <string name="task_start_adb_input_restricted_warning_log">「USB 디버깅(보안 설정)」이 꺼져 있어 시스템이 터치 입력을 차단합니다. 개발자 옵션에서 켜 주세요(적용되지 않으면 휴대폰을 재부팅하세요)</string>
     <string name="task_start_smart_resolution_warning_log">시스템의 「스마트 해상도」가 켜져 있어 백그라운드 모드에서 인식 오류가 발생합니다. 시스템 디스플레이 설정에서 직접 꺼 주세요</string>
     <string name="task_start_virtual_display_compat_warning_log">현재 시스템에 백그라운드 가상 디스플레이에 필요한 권한이 없어 호환 모드로 생성했습니다. 화면이 꺼지거나 잠기면 작업이 일시 중지되며, 실행 중 메인 화면이 입력 포커스를 잃을 수 있습니다</string>
+    <string name="task_start_virtual_display_group0_warning_log">가상 디스플레이가 독립 디스플레이 그룹을 얻지 못했습니다(메인 그룹 0). 화면이 꺼지거나 잠기면 작업이 일시 중지되므로 실행 중 화면을 켜 두거나 하드웨어 화면 끄기를 사용하세요</string>
+    <string name="task_start_virtual_display_group0_legacy_warning_log">Legacy 가상 디스플레이가 메인 디스플레이 그룹 0으로 배정되어 화면이 꺼지거나 잠기면 작업이 일시 중지됩니다. 설정에서 「가상 디스플레이 모드」를 자동 또는 VDM으로 바꾸어 독립 디스플레이 그룹을 사용하세요</string>
 
     <!-- i18n: toolbox / mini game -->
     <string name="toolbox_status_starting">시작 중…</string>
@@ -2802,6 +2807,7 @@
     <string name="runlog_depot_plan_stale_skipped">%1$s #%2$d: %3$s 실제 %4$d/%5$d 부족. 사전 점검에서 건너뛴 계획은 실행 중에 추가할 수 없으니, 다시 실행하면 수집됩니다</string>
     <string name="runlog_depot_delta_summary">창고: %1$s 대비 %2$d종 변동. 「툴박스 → 창고 인식」에서 확인하세요</string>
     <string name="runlog_depot_delta_none">창고 변동 없음 (%1$s 대비)</string>
+    <string name="runlog_depot_drop_write_skipped">이번 실행의 드롭이 창고에 저장되지 않았습니다: 시작 시 선택한 프로필이 삭제되었습니다</string>
     <string name="runlog_depot_skipped_activity">현재 이벤트가 진행 중이라 재고 유지를 건너뛰었습니다</string>
     <string name="runlog_depot_skipped_resource">현재 ｢물자 비축｣ 기간 한정 상시 개방 중이라 재고 유지를 건너뛰었습니다</string>
     <string name="runlog_depot_sorted_by_progress">재고 달성률 오름차순으로 정렬하여 실행했습니다</string>
@@ -2834,6 +2840,13 @@
     <string name="runlog_game_exit_self">종료 원인(%1$s): 게임이 스스로 종료되었습니다 [%2$s]</string>
     <string name="runlog_game_exit_package_change">종료 원인(%1$s): 게임이 업데이트·비활성화되었거나 권한이 변경되었습니다 [%2$s]</string>
     <string name="runlog_game_exit_other">종료 원인(%1$s): %2$s</string>
+    <string name="game_exit_oem_hint_miui">MIUI/HyperOS 팁: 게임의 「배터리 세이버」를 「제한 없음」으로 설정하고 자동 시작을 허용한 뒤 보안 앱에서 잠금 화면 정리를 끄세요. 메인 화면에서 게임을 한 번 열어 최근 앱 목록에 고정하는 것도 도움이 됩니다</string>
+    <string name="game_exit_oem_hint_vivo">OriginOS/FuntouchOS 팁: 배터리 설정에서 게임의 백그라운드 높은 전력 소비를 허용하고 수면 대기 최적화를 끄세요. 메인 화면에서 게임을 한 번 열어 최근 앱 목록에 고정하는 것도 도움이 됩니다</string>
+    <string name="game_exit_oem_hint_oppo">ColorOS 팁: 앱 배터리 관리에서 게임의 완전한 백그라운드 활동을 허용하고 「앱 동결」을 끄세요. 메인 화면에서 게임을 한 번 열어 최근 앱 목록에 고정하는 것도 도움이 됩니다</string>
+    <string name="game_exit_oem_hint_huawei">EMUI/HarmonyOS/MagicOS 팁: 「앱 실행 관리」에서 게임을 수동 관리로 바꾸고 자동 시작과 백그라운드 활동을 허용하세요. 메인 화면에서 게임을 한 번 열어 최근 앱 목록에 고정하는 것도 도움이 됩니다</string>
+    <string name="game_exit_oem_hint_samsung">One UI 팁: 게임의 배터리 사용을 「제한 없음」으로 설정하고 「절전/딥 슬립 앱」 목록에 없는지 확인하세요. 메인 화면에서 게임을 한 번 열어 최근 앱 목록에 고정하는 것도 도움이 됩니다</string>
+    <string name="game_exit_oem_hint_lenovo">Lenovo ZUI 팁: 배터리·앱 관리에서 게임의 절전 정책을 「제한 없음」으로 설정하고 백그라운드 동결 및 자동 시작 제한을 끄세요. 메인 화면에서 게임을 한 번 열어 최근 앱 목록에 고정하는 것도 도움이 됩니다</string>
+    <string name="game_exit_oem_hint_meizu">Flyme 팁: 「백그라운드 관리」에서 게임의 백그라운드 실행을 허용하고 절전 동결을 끄세요. 메인 화면에서 게임을 한 번 열어 최근 앱 목록에 고정하는 것도 도움이 됩니다</string>
     <string name="runlog_game_fps_low">게임 화면 프레임이 %1$d FPS로 30 미만입니다. 자동지휘가 오작동할 수 있습니다. 게임 설정에서 고프레임 모드를 켜고 절전 모드를 끄세요</string>
     <string name="runlog_game_fps_degraded">게임 화면 프레임이 %1$d FPS로 50 미만입니다. 전투 타이밍이 부정확할 수 있습니다. 게임 설정에서 고프레임 모드를 켜고 절전 모드를 끄는 것을 권장합니다</string>
     <string name="runlog_game_left_virtual_display">게임 창이 가상 디스플레이를 벗어났고 자동 복귀에 실패했습니다(%1$s). 「백그라운드 모드 강제 전체 화면」을 켜거나 포그라운드 실행으로 전환해 보세요</string>
@@ -3162,35 +3175,22 @@
     <string name="oper_progress_result_recognition">인식 또는 조작 실패</string>
     <string name="oper_progress_log_detail">%1$s: %2$s%3$s</string>
     <string name="oper_progress_log_summary">오퍼레이터 육성 이번 라운드 결과: 성공 %1$d, 실패 %2$d, 건너뜀 %3$d (마스터리 시작도 성공으로 집계)</string>
-
-    <!-- 网页控制台 -->
-    <string name="webui_notification_channel">웹 콘솔</string>
-    <string name="webui_notification_title">웹 콘솔 실행 중</string>
-    <string name="webui_notification_text">브라우저에서 %1$s 접속</string>
-    <string name="webui_notification_starting">시작 중</string>
-    <string name="webui_notification_no_lan">LAN에 연결되지 않음</string>
-    <string name="webui_notification_turn_off">끄기</string>
-    <string name="settings_webui_title">웹 콘솔</string>
-    <string name="settings_webui_desc">LAN 내 브라우저에서 작업 상태와 로그를 확인합니다</string>
-    <string name="search_keywords_webui">웹 브라우저 원격 LAN 로컬 네트워크 WebUI 콘솔</string>
-    <string name="webui_enable">웹 콘솔 사용</string>
-    <string name="webui_status_running">실행 중 · 포트 %1$d</string>
-    <string name="webui_status_failed">시작 실패: %1$s</string>
-    <string name="webui_status_stopped">꺼짐</string>
-    <string name="webui_address_title">접속 주소</string>
-    <string name="webui_address_empty">LAN 주소가 없습니다. Wi-Fi에 연결하거나 핫스팟을 켜세요</string>
-    <string name="webui_address_copied">복사했습니다</string>
-    <string name="webui_pair_title">브라우저 페어링</string>
-    <string name="webui_pair_desc">웹 페이지에 페어링 코드를 입력하세요. 페어링된 브라우저는 제거하기 전까지 계속 로그인 상태로 유지됩니다</string>
-    <string name="webui_pair_generate">페어링 코드 생성</string>
-    <string name="webui_pair_expires">%1$d초 후 만료</string>
-    <string name="webui_pair_cancel">폐기</string>
-    <string name="webui_sessions_title">페어링된 브라우저</string>
-    <string name="webui_sessions_empty">페어링된 브라우저가 없습니다</string>
-    <string name="webui_session_meta">페어링 %1$s · 최근 접속 %2$s</string>
-    <string name="webui_session_remove">제거</string>
-    <string name="webui_sessions_remove_all">모두 제거</string>
-    <string name="webui_port_title">포트</string>
-    <string name="webui_port_invalid">포트는 %1$d–%2$d 사이여야 합니다</string>
-    <string name="webui_security_note">LAN 내 통신은 암호화되지 않은 HTTP이므로 신뢰할 수 있는 네트워크에서만 켜세요. 외부에서 접속하려면 Tailscale 같은 암호화 터널을 사용하세요.</string>
+    <string name="depot_inventory_order_stage_closed">스테이지 미개방</string>
+    <string name="depot_inventory_maintain_title">재고 유지 계획</string>
+    <string name="depot_inventory_maintain_need">%1$d개 부족</string>
+    <string name="depot_inventory_maintain_enough">재고 충분</string>
+    <string name="depot_inventory_maintain_no_item">재료 미선택</string>
+    <string name="depot_inventory_maintain_zero_target">목표가 0</string>
+    <string name="depot_inventory_maintain_stage_required">스테이지 미선택</string>
+    <string name="depot_inventory_maintain_stage_closed">스테이지 미개방 (%1$s)</string>
+    <string name="depot_inventory_plan_new">새 재고 유지 계획</string>
+    <string name="depot_inventory_plan_stage_custom">스테이지 직접 입력</string>
+    <string name="depot_inventory_plan_node_disabled">이 작업이 비활성화되어 있어 계획이 실행되지 않습니다</string>
+    <string name="depot_inventory_plan_save">저장</string>
+    <string name="depot_inventory_plan_remove">계획 삭제</string>
+    <string name="profile_default_name">프로필-%1$d</string>
+    <string name="panel_depot_unplanned_hint">물품을 선택해 계획을 추가하세요</string>
+    <string name="panel_depot_unplanned_empty">모든 물품에 계획이 등록되어 있습니다</string>
+    <string name="panel_depot_plan_removed">「%1$s」 삭제됨</string>
+    <string name="panel_depot_undo_remove">실행 취소</string>
 </resources>

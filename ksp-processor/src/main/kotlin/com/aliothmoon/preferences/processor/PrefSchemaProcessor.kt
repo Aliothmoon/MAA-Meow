@@ -1,6 +1,8 @@
 package com.aliothmoon.preferences.processor
 
 import com.aliothmoon.preferences.PrefSchema
+import com.google.devtools.ksp.ApiFeatures
+import com.google.devtools.ksp.buildApiFeatures
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
@@ -14,11 +16,13 @@ class PrefSchemaProcessor(
     private val logger: KSPLogger
 ) : SymbolProcessor {
 
+    override val apiFeatures: ApiFeatures = buildApiFeatures {}
+
     override fun process(resolver: Resolver): List<KSAnnotated> {
         val symbols = resolver.getSymbolsWithAnnotation(PrefSchema::class.qualifiedName!!)
-        val unableToProcess = symbols.filterNot { it.validate(enableNewFeatures = false) }.toList()
+        val unableToProcess = symbols.filterNot { it.validate(apiFeatures = apiFeatures) }.toList()
 
-        symbols.filter { it is KSClassDeclaration && it.validate(enableNewFeatures = false) }
+        symbols.filter { it is KSClassDeclaration && it.validate(apiFeatures = apiFeatures) }
             .forEach { symbol ->
                 val classDecl = symbol as KSClassDeclaration
                 processClass(classDecl)

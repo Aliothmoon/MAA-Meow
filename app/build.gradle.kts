@@ -73,7 +73,11 @@ println("[Java Version] ${System.getProperty("java.version")}")
 
 android {
     namespace = "com.aliothmoon.maameow"
-    compileSdk = 37
+    compileSdk {
+        version = release(37) {
+            minorApiLevel = 2
+        }
+    }
 
 
     defaultConfig {
@@ -134,6 +138,7 @@ android {
         // local.properties: maa.debugR8=true 时 debug 也走 R8
         val debugR8 = localProperties.getProperty("maa.debugR8", "false").toBoolean()
         getByName("debug") {
+            applicationIdSuffix = ".dev"
             isMinifyEnabled = debugR8
             isShrinkResources = debugR8
             if (debugR8) {

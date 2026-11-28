@@ -10,6 +10,7 @@ import com.aliothmoon.maameow.data.model.toolbox.DepotItem
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.Serializable
+import timber.log.Timber
 
 /**
  * @param syncTimeMillis 上次全量识别；0=从未识别；merge 不更新
@@ -24,7 +25,7 @@ data class DepotSnapshot(
     val prevScanItems: Map<String, Int> = emptyMap(),
     val prevSyncTimeMillis: Long = 0L,
 ) {
-    /** 至少完整识别过一次仓库，掉落累加与缺口重算都以此为基线 */
+    /** 至少完整识别过一次仓库，掉落累加与缺口重算以此为基线 */
     val hasSynced: Boolean get() = syncTimeMillis > 0L
 
     fun countOf(itemId: String): Int = items[itemId] ?: 0
@@ -33,7 +34,7 @@ data class DepotSnapshot(
 /** 仓库分片：内存权威，set/merge 同步写内存并排队落盘。 */
 class DepotRepository(
     store: DataStore<Preferences>,
-    taskChainState: TaskChainState,
+    private val taskChainState: TaskChainState,
 ) {
     private val shards = ProfileShardStore(
         store = store,
@@ -49,9 +50,9 @@ class DepotRepository(
 
     fun start() = shards.start()
 
-    fun set(items: List<DepotItem>): DepotSnapshot? {
+    fun set(items: List<DepotItem>, profileId: String? = null): DepotSnapshot? {
         val scan = items.associate { it.id to it.count }
-        return shards.mutate { current ->
+        val transform: (DepotSnapshot) -> DepotSnapshot = { current ->
             DepotSnapshot(
                 items = scan,
                 syncTimeMillis = System.currentTimeMillis(),
@@ -60,23 +61,48 @@ class DepotRepository(
                 prevSyncTimeMillis = if (current.scanItems.isEmpty()) 0L else current.syncTimeMillis,
             )
         }
+        return if (profileId.isNullOrEmpty()) shards.mutate(transform) else shards.mutateFor(profileId, transform)
     }
 
-    fun merge(drops: List<Pair<String, Int>>) {
-        // 没有识别基线时累加只会得到残缺数据，留空让消费侧按无数据处理
-        if (!snapshot.value.hasSynced) return
+    /** 将单场战斗掉落写入指定配置档（传 null 时退回活跃档） */
+    fun merge(drops: List<Pair<String, Int>>, profileId: String? = null): Boolean {
         val valid = drops.filter { (itemId, add) -> add > 0 && !shouldExclude(itemId) }
-        if (valid.isEmpty()) return
-        shards.mutate { current ->
-            val merged = current.items.toMutableMap()
-            for ((itemId, add) in valid) {
-                merged[itemId] = (merged[itemId] ?: 0) + add
+        // 整关只掉排除集（如声望、家具零件）时无须记账，不算失败
+        if (valid.isEmpty()) return true
+        var noBaseline = false
+        val transform: (DepotSnapshot) -> DepotSnapshot = { current ->
+            // 没有识别基线时累加只会得到残缺数据，留空让消费侧按无数据处理
+            noBaseline = !current.hasSynced
+            if (noBaseline) {
+                current
+            } else {
+                val merged = current.items.toMutableMap()
+                for ((itemId, add) in valid) {
+                    merged[itemId] = (merged[itemId] ?: 0) + add
+                }
+                current.copy(items = merged)
             }
-            current.copy(items = merged)
         }
+        val targetId = profileId?.takeIf { it.isNotEmpty() } ?: taskChainState.profileId.value
+        val changed = shards.mutateForChanged(targetId, transform)
+        // 无基线是正常状态，不算写入失败
+        if (noBaseline) return true
+        if (!changed) {
+            Timber.w("掉落未写入仓库：配置档已删除（profileId=%s, items=%d）", targetId, valid.size)
+        }
+        return changed
     }
 
     fun countOf(itemId: String): Int = snapshot.value.countOf(itemId)
+
+    /** 按指定配置档读，避免运行中切档串读 */
+    fun snapshotOf(profileId: String?): DepotSnapshot =
+        if (profileId.isNullOrEmpty()) snapshot.value
+        else shards.all.value[profileId] ?: DepotSnapshot()
+
+    fun countOf(itemId: String, profileId: String?): Int = snapshotOf(profileId).countOf(itemId)
+
+    fun hasSynced(profileId: String?): Boolean = snapshotOf(profileId).hasSynced
 
     private fun shouldExclude(itemId: String): Boolean =
         itemId.isEmpty() || !itemId.all { it in '0'..'9' } || itemId in EXCLUDED_ITEM_IDS

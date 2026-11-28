@@ -88,6 +88,17 @@ class VirtualDisplayManagerTest {
         )
         assertEquals("[TOUCH_FEEDBACK_DISABLED]", VirtualDisplayManager.describeDisplayFlags(1 shl 10))
         assertEquals("[]", VirtualDisplayManager.describeDisplayFlags(0))
+        assertTrue(VirtualDisplayManager.hasOwnFocusFlag(flags))
+        assertFalse(VirtualDisplayManager.hasOwnFocusFlag(1 shl 10))
+        assertFalse(VirtualDisplayManager.hasOwnFocusFlag(0))
+    }
+
+    @Test
+    fun `isOwnDisplayGroupMissed only flags group 0 when OWN_DISPLAY_GROUP was requested`() {
+        assertTrue(VirtualDisplayManager.isOwnDisplayGroupMissed(ownDisplayGroup, 0))
+        assertFalse(VirtualDisplayManager.isOwnDisplayGroupMissed(ownDisplayGroup, 2))
+        assertFalse(VirtualDisplayManager.isOwnDisplayGroupMissed(ownDisplayGroup, VirtualDisplayManager.DISPLAY_GROUP_UNKNOWN))
+        assertFalse(VirtualDisplayManager.isOwnDisplayGroupMissed(trusted, 0))
     }
 
     @Test

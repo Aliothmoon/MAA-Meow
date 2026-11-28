@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.domain.launch.LaunchPipeline
 import com.aliothmoon.maameow.domain.launch.LaunchUserEvent
 import org.koin.core.context.GlobalContext
@@ -22,8 +23,8 @@ class ScheduleCountdownActionReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        const val ACTION_CANCEL = "com.aliothmoon.maameow.action.SCHEDULE_COUNTDOWN_CANCEL"
-        const val ACTION_START_NOW = "com.aliothmoon.maameow.action.SCHEDULE_COUNTDOWN_START_NOW"
+        val ACTION_CANCEL = "${BuildConfig.APPLICATION_ID}.action.SCHEDULE_COUNTDOWN_CANCEL"
+        val ACTION_START_NOW = "${BuildConfig.APPLICATION_ID}.action.SCHEDULE_COUNTDOWN_START_NOW"
         private const val EXTRA_REQUEST_ID = "extra_request_id"
 
         fun pendingIntent(context: Context, action: String, requestId: String): PendingIntent {

@@ -20,6 +20,7 @@ import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
 import com.aliothmoon.maameow.third.wrappers.VirtualDeviceManager.VirtualDevice
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
@@ -29,6 +30,7 @@ object VdmDisplayController {
     private const val TAG = "VdmDisplay"
     // uid 已校验为 2000，只会在 user 0
     private const val USER_ID = 0
+    private const val DEVICE_ID_INVALID = -1
     private const val STREAMING_PROFILE = "android.app.role.COMPANION_DEVICE_APP_STREAMING"
     private const val ASSOCIATION_TIMEOUT_MS = 17_000L
     private const val DISPLAY_TIMEOUT_MS = 1_000L
@@ -64,6 +66,9 @@ object VdmDisplayController {
     // 读路径不进锁：start 可能卡在等关联上
     private val displayId = AtomicInteger(DefaultDisplayConfig.DISPLAY_NONE)
     private val flagTier = AtomicInteger(VirtualDisplayManager.FLAG_TIER_NONE)
+    private val displayGroupId = AtomicInteger(VirtualDisplayManager.DISPLAY_GROUP_UNKNOWN)
+    private val ownFocus = AtomicBoolean(false)
+    private val clipboardShared = AtomicBoolean(false)
     private var session: Session? = null
     // 本进程建过或复用过关联，stop 时拆掉
     private var associated = false
@@ -82,6 +87,17 @@ object VdmDisplayController {
     fun getDisplayId(): Int = displayId.get()
 
     fun getFlagTier(): Int = flagTier.get()
+
+    fun getDisplayGroupId(): Int = displayGroupId.get()
+
+    fun hasOwnFocus(): Boolean = ownFocus.get()
+
+    fun sharesDefaultClipboard(): Boolean = clipboardShared.get()
+
+    fun isSupported(): Boolean =
+        Process.myUid() == Process.SHELL_UID &&
+            Os.geteuid() == Process.SHELL_UID &&
+            ServiceManager.hasVdmServices()
 
     /** 分辨率变了只拆显示、留关联，紧接着的 [start] 按新配置重建 */
     @Synchronized
@@ -141,11 +157,21 @@ object VdmDisplayController {
             throw failure
         }
         val display = opened.display.display
+        val groupId = displayGroupId(display)
+        val devId = runCatching { opened.device.getDeviceId() }
+            .onFailure { Ln.w("$TAG: getDeviceId failed: ${it.message}") }
+            .getOrDefault(DEVICE_ID_INVALID)
+        val sharedClipboard = opened.device.sharesDefaultClipboard(devId)
         session = opened
         displayId.set(display.displayId)
         flagTier.set(tier)
+        displayGroupId.set(groupId)
+        ownFocus.set(VirtualDisplayManager.hasOwnFocusFlag(display.flags))
+        clipboardShared.set(sharedClipboard)
         Ln.i(
-            "$TAG started: displayId=${display.displayId}, group=${displayGroupId(display)}, " +
+            "$TAG started: displayId=${display.displayId}, deviceId=$devId, group=$groupId, " +
+                "clipboardShared=$sharedClipboard, " +
+                "flags=${VirtualDisplayManager.describeDisplayFlags(display.flags)}, " +
                 "${cfg.width}x${cfg.height}@${cfg.dpi}, tier=$tier ${tiers[tier]}"
         )
         VirtualDisplayManager.fixRotation(display, cfg, physicalRotation)
@@ -153,7 +179,8 @@ object VdmDisplayController {
 
     @SuppressLint("WrongConstant")
     private fun openTier(associationId: Int, surface: Surface, cfg: DisplayConfig, tier: Tier): Session {
-        val device = ServiceManager.getVirtualDeviceManager().createVirtualDevice(associationId, tier.alwaysUnlocked)
+        val device = ServiceManager.getVirtualDeviceManager()
+            .createVirtualDevice(associationId, tier.alwaysUnlocked, tier.trusted)
         try {
             val display = device.createVirtualDisplay(
                 VirtualDisplayConfig.Builder(DefaultDisplayConfig.VD_NAME, cfg.width, cfg.height, cfg.dpi)
@@ -178,6 +205,9 @@ object VdmDisplayController {
         session = null
         val id = displayId.getAndSet(DefaultDisplayConfig.DISPLAY_NONE)
         flagTier.set(VirtualDisplayManager.FLAG_TIER_NONE)
+        displayGroupId.set(VirtualDisplayManager.DISPLAY_GROUP_UNKNOWN)
+        ownFocus.set(false)
+        clipboardShared.set(false)
         runCatching { releaseDisplay(active.display) }
             .onFailure { Ln.w("$TAG: release displayId=$id failed: ${it.message}") }
         runCatching { active.device.close() }
@@ -259,8 +289,9 @@ object VdmDisplayController {
         Ln.i("$TAG: association removed addr=$address")
     }
 
+    // 不再二次等待，避免超出 App 侧 30s 超时
     private fun removeLateAssociation() {
-        if (awaitAssociation() != null) removeAssociation()
+        if (findAssociation() != null) removeAssociation()
     }
 
     private fun awaitDisplayReady(display: Display) {

@@ -19,6 +19,7 @@ import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.data.model.TaskParamProvider
 import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
+import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.domain.models.RunDurationLimit
 import com.aliothmoon.maameow.utils.JsonUtils
@@ -27,6 +28,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -40,8 +42,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.IOException
 import java.util.Locale
@@ -66,7 +70,6 @@ class TaskChainState(
         private val PROFILES_KEY = stringPreferencesKey("profiles")
         private val ACTIVE_PROFILE_KEY = stringPreferencesKey("active_profile_id")
 
-        private const val PROFILE_NAME_PREFIX = "配置-"
         private const val MAX_PROFILE_NAME_LENGTH = 20
     }
 
@@ -82,10 +85,41 @@ class TaskChainState(
     private val _isLoaded = MutableStateFlow(false)
     val isLoaded: StateFlow<Boolean> = _isLoaded.asStateFlow()
 
+    /** 本次启动的配置档列表是新建的默认档（首装或解码失败），isLoaded 之后有效 */
+    @Volatile
+    var profileListRecreated: Boolean = false
+        private set
+
     private val _profileDeleted = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val profileDeleted: SharedFlow<String> = _profileDeleted.asSharedFlow()
 
+    /**
+     * 删除事件只发一次，调用方被取消也不能丢
+     *
+     * 无订阅者时事件直接丢弃，兜底靠 [ProfileShardStore.load] 对账；
+     * 缓冲满才挂起 emit，NonCancellable 挡住 viewModelScope 取消
+     */
+    private suspend fun emitProfileDeleted(profileId: String) {
+        if (_profileDeleted.subscriptionCount.value == 0) {
+            Timber.w("No profileDeleted subscriber, shard cleanup relies on next load(): %s", profileId)
+        }
+        if (!_profileDeleted.tryEmit(profileId)) {
+            withContext(NonCancellable) { _profileDeleted.emit(profileId) }
+        }
+    }
+
     private val _lastUsedClientType = MutableStateFlow<String?>(null)
+
+    /**
+     * 串行化 [_chain] / [_profiles] 的读改写
+     *
+     * 界面（Main）与任务回调（IO）都会读改写，不加锁会互相覆盖；
+     * 锁内只放非挂起代码，不会与 [_isLoaded] 互等
+     */
+    private val chainLock = Mutex()
+
+    /** 在链锁内做一次非挂起的读改写 */
+    private suspend fun <T> locked(block: () -> T): T = chainLock.withLock { block() }
 
     private sealed interface PersistOp {
         data object Sync : PersistOp
@@ -203,7 +237,7 @@ class TaskChainState(
 
                 val profiles = storedProfiles?.takeIf { it.isNotEmpty() } ?: listOf(
                     TaskProfile(
-                        name = "${PROFILE_NAME_PREFIX}1",
+                        name = defaultProfileName(1),
                         chain = buildDefaultChain(),
                     )
                 )
@@ -215,10 +249,13 @@ class TaskChainState(
                 val needsSync = needsDefaultProfile || storedActiveId != activeProfile.id ||
                         storedProfiles !== decodedProfiles
 
-                _profiles.value = profiles
-                _profileId.value = activeProfile.id
-                _chain.value = activeProfile.chain
-                _isLoaded.value = true
+                locked {
+                    profileListRecreated = needsDefaultProfile
+                    _profiles.value = profiles
+                    _profileId.value = activeProfile.id
+                    _chain.value = activeProfile.chain
+                    _isLoaded.value = true
+                }
 
                 if (needsSync) {
                     doSync()
@@ -430,70 +467,82 @@ class TaskChainState(
     // ========== Profile 管理 ==========
 
     suspend fun switchProfile(profileId: String) {
-        val currentProfiles = _profiles.value
-        val target = currentProfiles.find { it.id == profileId } ?: run {
-            Timber.w("switchProfile: profile %s not found", profileId)
-            return
+        var targetName: String? = null
+        locked {
+            // 读也放进锁内：与 createProfile/renameProfile/reorderProfiles 并发时，
+            // 锁外的快照会在回写时把它们的改动整段覆盖（importProfiles 已修过同类问题）
+            val currentProfiles = _profiles.value
+            val target = currentProfiles.find { it.id == profileId } ?: run {
+                Timber.w("switchProfile: profile %s not found", profileId)
+                return@locked
+            }
+            targetName = target.name
+            // 保存当前链到旧 Profile
+            val updatedProfiles = currentProfiles.map { p ->
+                if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
+            }
+            // 加载新 Profile 的链
+            _chain.value = target.chain
+            _profileId.value = profileId
+            _profiles.value = updatedProfiles
+            // 持久化
+            doSync()
         }
-        // 保存当前链到旧 Profile
-        val updatedProfiles = currentProfiles.map { p ->
-            if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
-        }
-        // 加载新 Profile 的链
-        _chain.value = target.chain
-        _profileId.value = profileId
-        _profiles.value = updatedProfiles
-        // 持久化
-        doSync()
-        Timber.d("Switched to profile: %s (%s)", target.name, profileId)
+        targetName?.let { Timber.d("Switched to profile: %s (%s)", it, profileId) }
     }
 
     suspend fun createProfile(): String {
-        val currentProfiles = _profiles.value
-        // 先保存当前活跃 Profile 的链
-        val savedProfiles = currentProfiles.map { p ->
-            if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
+        val newProfileId = locked {
+            val currentProfiles = _profiles.value
+            // 先保存当前活跃 Profile 的链
+            val savedProfiles = currentProfiles.map { p ->
+                if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
+            }
+            val newProfile = TaskProfile(
+                name = nextProfileName(savedProfiles), chain = buildDefaultChain()
+            )
+            // 切换到新 Profile
+            _chain.value = newProfile.chain
+            _profileId.value = newProfile.id
+            _profiles.value = savedProfiles + newProfile
+            doSync()
+            newProfile.id
         }
-        val newProfile = TaskProfile(
-            name = nextProfileName(savedProfiles), chain = buildDefaultChain()
-        )
-        val updatedProfiles = savedProfiles + newProfile
-        // 切换到新 Profile
-        _chain.value = newProfile.chain
-        _profileId.value = newProfile.id
-        _profiles.value = updatedProfiles
-        doSync()
-        Timber.d("Created profile: %s (%s)", newProfile.name, newProfile.id)
-        return newProfile.id
+        Timber.d("Created profile: %s", newProfileId)
+        return newProfileId
     }
 
     suspend fun removeProfile(profileId: String) {
-        val currentProfiles = _profiles.value
-        if (currentProfiles.size <= 1) {
-            Timber.w("deleteProfile: cannot delete last profile")
-            return
+        val removed = locked {
+            val currentProfiles = _profiles.value
+            if (currentProfiles.size <= 1) {
+                Timber.w("deleteProfile: cannot delete last profile")
+                return@locked false
+            }
+            // 先保存当前链
+            val savedProfiles = currentProfiles.map { p ->
+                if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
+            }
+            val remaining = savedProfiles.filter { it.id != profileId }
+            if (remaining.size == savedProfiles.size) {
+                Timber.w("deleteProfile: profile %s not found", profileId)
+                return@locked false
+            }
+            // 若删除的是活跃 Profile,切换到列表第一个
+            val newActiveId = if (_profileId.value == profileId) {
+                val first = remaining.first()
+                _chain.value = first.chain
+                first.id
+            } else {
+                _profileId.value
+            }
+            _profileId.value = newActiveId
+            _profiles.value = remaining
+            doSync()
+            true
         }
-        // 先保存当前链
-        val savedProfiles = currentProfiles.map { p ->
-            if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
-        }
-        val remaining = savedProfiles.filter { it.id != profileId }
-        if (remaining.size == savedProfiles.size) {
-            Timber.w("deleteProfile: profile %s not found", profileId)
-            return
-        }
-        // 若删除的是活跃 Profile,切换到列表第一个
-        val newActiveId = if (_profileId.value == profileId) {
-            val first = remaining.first()
-            _chain.value = first.chain
-            first.id
-        } else {
-            _profileId.value
-        }
-        _profileId.value = newActiveId
-        _profiles.value = remaining
-        doSync()
-        _profileDeleted.tryEmit(profileId)
+        if (!removed) return
+        emitProfileDeleted(profileId)
         Timber.d("Deleted profile: %s", profileId)
     }
 
@@ -503,76 +552,81 @@ class TaskChainState(
             Timber.w("renameProfile: invalid name length: %d", trimmed.length)
             return
         }
-        val currentProfiles = _profiles.value
-        val updatedProfiles = currentProfiles.map { p ->
-            if (p.id == profileId) p.copy(name = trimmed) else p
+
+        locked {
+            _profiles.value = _profiles.value.map { p ->
+                if (p.id == profileId) p.copy(name = trimmed) else p
+            }
+            doSync()
         }
-        _profiles.value = updatedProfiles
-        doSync()
         Timber.d("Renamed profile %s to: %s", profileId, trimmed)
     }
 
     /** [minutes] 为 null 时恢复跟随全局设置 */
     suspend fun setProfileRunDurationLimit(profileId: String, minutes: Int?) {
         val clamped = minutes?.coerceIn(RunDurationLimit.MIN_MINUTES, RunDurationLimit.MAX_MINUTES)
-        var changed = false
-        // CAS 更新，IO 线程上的 mutate 同时改 profiles 时不互相覆盖
-        _profiles.update { current ->
-            changed = current.any { it.id == profileId && it.runDurationLimitMinutes != clamped }
-            if (!changed) current else current.map { p ->
+        locked {
+            val current = _profiles.value
+            val changed = current.any { it.id == profileId && it.runDurationLimitMinutes != clamped }
+            if (!changed) return@locked
+            _profiles.value = current.map { p ->
                 if (p.id == profileId) p.copy(runDurationLimitMinutes = clamped) else p
             }
+            doSync()
         }
-        if (changed) doSync()
     }
 
     suspend fun duplicateProfile(profileId: String): String? {
-        val currentProfiles = _profiles.value
-        // 先保存当前活跃 Profile 的链
-        val savedProfiles = currentProfiles.map { p ->
-            if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
+        val newProfileId = locked {
+            val currentProfiles = _profiles.value
+            // 先保存当前活跃 Profile 的链
+            val savedProfiles = currentProfiles.map { p ->
+                if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
+            }
+            val source = savedProfiles.find { it.id == profileId } ?: run {
+                Timber.w("duplicateProfile: profile %s not found", profileId)
+                return@locked null
+            }
+            // 复制链时为每个节点生成新 ID
+            val duplicatedChain = source.chain.map { it.copy(id = UUID.randomUUID().toString()) }
+            val newProfile = TaskProfile(
+                name = nextProfileName(savedProfiles),
+                chain = duplicatedChain,
+                runDurationLimitMinutes = source.runDurationLimitMinutes,
+            )
+            _profiles.value = savedProfiles + newProfile
+            doSync()
+            newProfile.id
         }
-        val source = savedProfiles.find { it.id == profileId } ?: run {
-            Timber.w("duplicateProfile: profile %s not found", profileId)
-            return null
-        }
-        // 复制链时为每个节点生成新 ID
-        val duplicatedChain = source.chain.map { it.copy(id = UUID.randomUUID().toString()) }
-        val newProfile = TaskProfile(
-            name = nextProfileName(savedProfiles),
-            chain = duplicatedChain,
-            runDurationLimitMinutes = source.runDurationLimitMinutes,
-        )
-        val updatedProfiles = savedProfiles + newProfile
-        _profiles.value = updatedProfiles
-        doSync()
-        Timber.d("Duplicated profile %s as: %s (%s)", profileId, newProfile.name, newProfile.id)
-        return newProfile.id
+        Timber.d("Duplicated profile %s as: %s", profileId, newProfileId)
+        return newProfileId
     }
 
     suspend fun reorderProfiles(fromIndex: Int, toIndex: Int) {
-        val current = _profiles.value
-        if (fromIndex !in current.indices || toIndex !in current.indices) {
-            Timber.w(
-                "reorderProfiles: invalid index from=%d to=%d size=%d",
-                fromIndex,
-                toIndex,
-                current.size
-            )
-            return
-        }
         if (fromIndex == toIndex) return
+        val movedOk = locked {
+            val current = _profiles.value
+            if (fromIndex !in current.indices || toIndex !in current.indices) {
+                Timber.w(
+                    "reorderProfiles: invalid index from=%d to=%d size=%d",
+                    fromIndex,
+                    toIndex,
+                    current.size
+                )
+                return@locked false
+            }
+            // 顺便把当前未保存的链快照写回 active profile，避免重排时丢失编辑内容
+            val savedProfiles = current.map { p ->
+                if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
+            }.toMutableList()
+            val moved = savedProfiles.removeAt(fromIndex)
+            savedProfiles.add(toIndex, moved)
 
-        // 顺便把当前未保存的链快照写回 active profile, 避免重排时丢失正在编辑的内容
-        val savedProfiles = current.map { p ->
-            if (p.id == _profileId.value) p.copy(chain = _chain.value) else p
-        }.toMutableList()
-        val moved = savedProfiles.removeAt(fromIndex)
-        savedProfiles.add(toIndex, moved)
-
-        _profiles.value = savedProfiles
-        doSync()
-        Timber.d("Reordered profile from %d to %d", fromIndex, toIndex)
+            _profiles.value = savedProfiles
+            doSync()
+            true
+        }
+        if (movedOk) Timber.d("Reordered profile from %d to %d", fromIndex, toIndex)
     }
 
     // ========== 内部工具方法 ==========
@@ -583,24 +637,24 @@ class TaskChainState(
         crossinline block: (MutableList<TaskChainNode>) -> T
     ): T {
         _isLoaded.first { it }
-        val current = _chain.value.toMutableList()
-        val ret = block(current)
-        reindex(current)
-        // 没改动就不写盘，滑块、输入框会反复提交同值
-        if (others == null && current == _chain.value) return ret
-        val snapshot = current.toList()
-        _chain.value = snapshot
-        _profiles.update { profiles ->
-            profiles.map { p ->
+        return locked {
+            val current = _chain.value.toMutableList()
+            val ret = block(current)
+            reindex(current)
+            // 没改动就不写盘，滑块、输入框会反复提交同值
+            if (others == null && current == _chain.value) return@locked ret
+            val snapshot = current.toList()
+            _chain.value = snapshot
+            _profiles.value = _profiles.value.map { p ->
                 when {
                     p.id == _profileId.value -> p.copy(chain = snapshot)
                     others != null -> p.copy(chain = others(p.chain))
                     else -> p
                 }
             }
+            doSync()
+            ret
         }
-        doSync()
-        return ret
     }
 
     private fun reindex(nodes: MutableList<TaskChainNode>) {
@@ -620,29 +674,41 @@ class TaskChainState(
         }
     }
 
-    private fun defaultTaskName(typeInfo: TaskTypeInfo): String {
-        val tag = resolveSelectedLanguage(appSettings.language.value).tag
-        val localizedContext = context.createConfigurationContext(
+    private fun localizedContext(): Context =
+        contextFor(resolveSelectedLanguage(appSettings.language.value).tag)
+
+    private fun contextFor(tag: String): Context =
+        context.createConfigurationContext(
             Configuration(context.resources.configuration).apply {
                 setLocale(Locale.forLanguageTag(tag))
             })
-        return typeInfo.defaultName(localizedContext)
-    }
+
+    private fun defaultTaskName(typeInfo: TaskTypeInfo): String =
+        typeInfo.defaultName(localizedContext())
+
+    private fun defaultProfileName(number: Int): String =
+        localizedContext().getString(R.string.profile_default_name, number)
 
     suspend fun importProfiles(rawProfiles: List<TaskProfile>, activeId: String) {
         val profiles = adoptReclamation(rawProfiles.migrated(), activeId)
         val resolvedActiveId =
             profiles.find { it.id == activeId }?.id ?: profiles.firstOrNull()?.id ?: return
         val activeChain = profiles.find { it.id == resolvedActiveId }?.chain ?: buildDefaultChain()
-        val replaced = _profiles.value.map { it.id } - profiles.mapTo(HashSet()) { it.id }
-        _profiles.value = profiles
-        _profileId.value = resolvedActiveId
-        _chain.value = activeChain
-        doSync()
+        var previousIds: List<String> = emptyList()
+        locked {
+            // 在锁内取旧列表：与 createProfile 并发时，锁外的快照可能已经过时
+            previousIds = _profiles.value.map { it.id }
+            _profiles.value = profiles
+            _profileId.value = resolvedActiveId
+            _chain.value = activeChain
+            doSync()
+        }
         // 导入是用户可见的终态操作（随后会提示「导入成功」），必须确认落盘再返回
         flush()
-        // 被替换的配置档按删除处理，清掉其分片
-        replaced.forEach { _profileDeleted.emit(it) }
+        // 新列表落盘后再清被顶掉的档，落盘失败时旧档分片还在
+        previousIds
+            .filter { id -> profiles.none { it.id == id } }
+            .forEach { emitProfileDeleted(it) }
         Timber.d("Imported %d profiles, active: %s", profiles.size, resolvedActiveId)
     }
 
@@ -675,15 +741,23 @@ class TaskChainState(
     }
 
     private fun nextProfileName(profiles: List<TaskProfile>): String {
+        val patterns = defaultNamePatterns()
         val maxNum = profiles.mapNotNull { p ->
-            if (p.name.startsWith(PROFILE_NAME_PREFIX)) {
-                p.name.removePrefix(PROFILE_NAME_PREFIX).toIntOrNull()
-            } else {
-                null
-            }
+            val name = p.name.trim()
+            patterns.firstNotNullOfOrNull { it.matchEntire(name)?.groupValues?.get(1)?.toIntOrNull() }
         }.maxOrNull() ?: 0
-        return "$PROFILE_NAME_PREFIX${maxNum + 1}"
+        return defaultProfileName(maxNum + 1)
     }
+
+    /** 切过界面语言后旧默认名是别的语言，各语言都认；位数封顶防溢出 */
+    private fun defaultNamePatterns(): List<Regex> =
+        AppSettingsManager.AppLanguage.entries
+            .filter { it.tag.isNotEmpty() }
+            .map { lang ->
+                val parts = contextFor(lang.tag).getString(R.string.profile_default_name)
+                    .split("%1\$d", limit = 2)
+                Regex(Regex.escape(parts[0]) + "(\\d{1,9})" + Regex.escape(parts.getOrElse(1) { "" }))
+            }
 }
 
 /**

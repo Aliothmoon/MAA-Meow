@@ -188,11 +188,15 @@ fun HomeView(
         }
     }
 
-    // 资源初始化弹窗
-    ResourceInitDialog(
-        state = uiState.resourceInitState,
-        onRetry = { viewModel.onTryResourceInit() }
-    )
+    // 资源初始化弹窗：取消后允许关闭以便进设置导出日志，下次重试或状态切换后重新弹出
+    var failedDialogDismissed by remember(uiState.resourceInitState) { mutableStateOf(false) }
+    if (uiState.resourceInitState !is ResourceInitState.Failed || !failedDialogDismissed) {
+        ResourceInitDialog(
+            state = uiState.resourceInitState,
+            onDismiss = { failedDialogDismissed = true },
+            onRetry = { viewModel.onTryResourceInit() }
+        )
+    }
 
     // 更新公告弹窗
     val changelogDialog by updateViewModel.changelogDialog.collectAsStateWithLifecycle()

@@ -260,6 +260,7 @@
     <string name="common_got_it">知道了</string>
     <string name="common_i_got_it">我知道了</string>
     <string name="common_close">关闭</string>
+    <string name="common_back">返回</string>
     <string name="common_add">添加</string>
     <string name="common_load">加载</string>
     <string name="common_clear">清除</string>
@@ -398,11 +399,12 @@
     <string name="settings_background_resolution_title">后台分辨率</string>
     <string name="settings_background_resolution_desc">仅后台模式生效</string>
     <string name="settings_virtual_display_backend_title">虚拟屏模式</string>
-    <string name="settings_virtual_display_backend_desc">Legacy 保持原有行为；VDM 使用独立显示组，失败时不会回退到 Legacy</string>
+    <string name="settings_virtual_display_backend_desc">自动优先使用 Legacy，在权限受限或无法获得独立显示组时自动升级为 VDM；Legacy 仅走旧接口；VDM 强制使用独立显示组且失败不回退</string>
+    <string name="settings_virtual_display_backend_auto">自动</string>
     <string name="settings_virtual_display_backend_legacy">Legacy</string>
     <string name="settings_virtual_display_backend_vdm">VDM（实验性）</string>
     <string name="runlog_display_backend_switch_blocked">虚拟屏模式已更改，但上一轮的虚拟屏还在，请先「关闭游戏」再启动</string>
-    <string name="runlog_vdm_display_failed">VDM 独立虚拟屏创建失败，已取消本次启动，请在设置中调整至 Legacy 重试</string>
+    <string name="runlog_vdm_display_failed">VDM 独立虚拟屏创建失败，已取消本次启动，请在设置中切换为「自动」或「Legacy」后重试</string>
     <string name="settings_skip_shizuku_check">跳过 Shizuku 检查</string>
     <string name="settings_shizuku_launch_mode_title">打开快捷入口</string>
     <string name="settings_shizuku_launch_mode_desc">在首页显示 Shizuku 打开按钮，方便快速启动</string>
@@ -495,6 +497,21 @@
     <string name="settings_export_config_desc">将所有设置和任务配置导出为文件</string>
     <string name="settings_import_config_title">导入配置</string>
     <string name="settings_import_config_desc">从文件恢复设置和任务配置</string>
+
+    <!-- depot maintain editor & order list -->
+    <string name="depot_inventory_order_stage_closed">关卡未开放</string>
+    <string name="depot_inventory_maintain_title">库存保持计划</string>
+    <string name="depot_inventory_maintain_need">还需 %1$d</string>
+    <string name="depot_inventory_maintain_enough">已达标</string>
+    <string name="depot_inventory_maintain_no_item">未选物品</string>
+    <string name="depot_inventory_maintain_zero_target">目标为 0</string>
+    <string name="depot_inventory_maintain_stage_required">未选关卡</string>
+    <string name="depot_inventory_maintain_stage_closed">关卡未开放（%1$s）</string>
+    <string name="depot_inventory_plan_new">新建库存保持计划</string>
+    <string name="depot_inventory_plan_stage_custom">自定义关卡</string>
+    <string name="depot_inventory_plan_node_disabled">该任务未启用，计划不会执行</string>
+    <string name="depot_inventory_plan_save">保存</string>
+    <string name="depot_inventory_plan_remove">移除计划</string>
 
     <!-- settings: achievement section -->
     <string name="settings_section_achievement">成就</string>
@@ -744,6 +761,13 @@
     <string name="task_btn_stop">停止任务</string>
     <string name="task_btn_quick_options">快捷选项</string>
     <string name="task_close_preview_cd">关闭预览</string>
+    <string name="preview_input_toggle_cd">文本输入</string>
+    <string name="preview_input_placeholder">输入要发送的文字</string>
+    <string name="preview_input_backspace_cd">退格</string>
+    <string name="preview_input_enter_cd">回车</string>
+    <string name="preview_input_send_cd">发送</string>
+    <string name="preview_input_send_failed">发送失败，请确认输入框已选中</string>
+    <string name="preview_input_paste_unsupported">当前模式不支持中文输入，仅支持英文和数字</string>
 
     <!-- dialog: close app confirm -->
     <string name="dialog_close_app_title">确认关闭</string>
@@ -911,6 +935,7 @@
     <string name="panel_profile_delete_message">确定要删除配置「%1$s」吗？此操作不可撤销。</string>
     <string name="panel_profile_copy_id">复制 Profile ID</string>
     <string name="panel_profile_id_copied">已复制 Profile ID</string>
+    <string name="profile_default_name">配置-%1$d</string>
     <string name="panel_profile_run_duration_limit">单独设置运行时长上限</string>
     <string name="panel_profile_run_duration_limit_hint">未开启时跟随全局「限制单次运行时长」；开启后不论全局开关，均按此时长计时</string>
 
@@ -1528,7 +1553,7 @@
 
     <!-- panel: depot maintain -->
     <string name="panel_depot_update_before_start">任务开始前更新库存数据</string>
-    <string name="panel_depot_update_before_start_tip">任务开始时先执行一次仓库识别刷新库存数据，已加入队列的计划开始时按最新库存重算缺口。开跑前就判定已充足的计划不会加入队列，识别后若实际不足只在日志提示，重新运行即可刷取</string>
+    <string name="panel_depot_update_before_start_tip">任务开始时先执行一次仓库识别刷新库存数据，已加入队列的计划开始时按最新库存重算缺口。开始前就判定已充足的计划不会加入队列，识别后若实际不足只在日志提示，重新运行即可刷取。</string>
     <string name="panel_depot_use_auto_series">AUTO 代理倍率</string>
     <string name="panel_depot_use_auto_series_tip">未勾选时以 1 倍代理；勾选后按当前理智允许的最大倍率代理，单次掉落可能超过目标库存上限。</string>
     <string name="panel_depot_skip_during_activity">活动期间跳过</string>
@@ -1556,15 +1581,13 @@
     <string name="panel_depot_use_expiring_medicine_tip">对全部计划生效，阈值固定 48 小时；与「理智作战」里可调天数的同名开关互不影响</string>
     <string name="panel_depot_summary_title">计划概览</string>
     <string name="panel_depot_summary_runnable">本次可执行 %1$d / %2$d</string>
-    <string name="panel_depot_summary_no_item">未选材料</string>
-    <string name="panel_depot_summary_zero_target">目标为 0</string>
-    <string name="panel_depot_summary_stage_required">需指定关卡</string>
-    <string name="panel_depot_summary_stage_closed">今日未开放</string>
-    <string name="panel_depot_summary_enough">库存已足</string>
+    <string name="panel_depot_unplanned_hint">选择物品以新建计划</string>
+    <string name="panel_depot_unplanned_empty">所有物品均已添加计划</string>
+    <string name="panel_depot_plan_removed">已移除「%1$s」</string>
+    <string name="panel_depot_undo_remove">撤销</string>
     <string name="panel_depot_target_inventory">目标库存</string>
     <string name="panel_depot_stone_count">最多使用 N 个源石</string>
     <string name="panel_depot_not_selected">未选择</string>
-    <string name="panel_depot_remove_plan">删除此计划</string>
 
     <!-- panel: mall -->
     <string name="panel_mall_advanced_options">高级选项</string>
@@ -2089,6 +2112,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="task_start_adb_input_restricted_warning_log">未开启「USB 调试（安全设置）」，系统会拦截触控输入，请在开发者选项中开启（未生效可重启手机）</string>
     <string name="task_start_smart_resolution_warning_log">系统已开启「智能分辨率」，后台模式下会导致识别出错，请在系统显示设置中手动关闭</string>
     <string name="task_start_virtual_display_compat_warning_log">当前系统缺少后台虚拟屏所需权限，已改用兼容方式创建：熄屏或锁屏时任务会暂停，运行期间主屏可能失去输入焦点</string>
+    <string name="task_start_virtual_display_group0_warning_log">当前虚拟屏未能获得独立显示组（落入主屏组 0）：熄屏或锁屏时任务会暂停，运行期间请保持屏幕常亮或使用硬件熄屏</string>
+    <string name="task_start_virtual_display_group0_legacy_warning_log">Legacy 虚拟屏被系统归入主屏组 0：熄屏或锁屏时任务会暂停。建议在设置中将「虚拟屏模式」切为「自动」或「VDM」以获取独立显示组</string>
 
     <!-- i18n: toolbox / mini game -->
     <string name="toolbox_status_starting">正在启动…</string>
@@ -2802,6 +2827,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="runlog_depot_plan_stale_skipped">%1$s #%2$d：%3$s 实际 %4$d/%5$d 不足，预检时已跳过的计划无法在运行中补上，重新运行即可刷取</string>
     <string name="runlog_depot_delta_summary">仓库较 %1$s 有 %2$d 种物品变化，可在「小工具 → 仓库识别」查看</string>
     <string name="runlog_depot_delta_none">仓库无变化（较 %1$s）</string>
+    <string name="runlog_depot_drop_write_skipped">本场掉落未写入仓库：启动时选中的配置档已被删除</string>
     <string name="runlog_depot_skipped_activity">当前有活动进行中，已跳过库存保持</string>
     <string name="runlog_depot_skipped_resource">当前处于资源收集限时全天开放期间，已跳过库存保持</string>
     <string name="runlog_depot_sorted_by_progress">已按库存达成率从低到高排序执行</string>
@@ -2834,6 +2860,13 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="runlog_game_exit_self">退出原因（%1$s）：游戏自行退出 [%2$s]</string>
     <string name="runlog_game_exit_package_change">退出原因（%1$s）：游戏被更新、停用或改了权限 [%2$s]</string>
     <string name="runlog_game_exit_other">退出原因（%1$s）：%2$s</string>
+    <string name="game_exit_oem_hint_miui">MIUI/HyperOS 建议：将游戏的「省电策略」设为「无限制」、开启自启动，并在手机管家关闭锁屏清理；也可先在主屏打开游戏一次，在最近任务中锁定卡片</string>
+    <string name="game_exit_oem_hint_vivo">OriginOS/FuntouchOS 建议：在「电池 → 后台耗电管理」中为游戏开启「允许后台高耗电」，并关闭系统加速/睡眠待机优化；也可先在主屏打开游戏一次，在最近任务中锁定卡片</string>
+    <string name="game_exit_oem_hint_oppo">ColorOS 建议：在游戏的「耗电管理」中开启「允许完全后台行为」并关闭「应用速冻」；也可先在主屏打开游戏一次，在最近任务中锁定卡片</string>
+    <string name="game_exit_oem_hint_huawei">EMUI/HarmonyOS/MagicOS 建议：在「应用启动管理」中将游戏改为手动管理，开启「允许自启动」「允许后台活动」；也可先在主屏打开游戏一次，在最近任务中锁定卡片</string>
+    <string name="game_exit_oem_hint_samsung">One UI 建议：将游戏的电池用量设为「不受限制」，并确认未加入「休眠/深度休眠应用」列表；也可先在主屏打开游戏一次，在最近任务中锁定卡片</string>
+    <string name="game_exit_oem_hint_lenovo">联想 ZUI 建议：在「电池/应用管理」中将游戏的省电策略设为「无限制」并关闭后台冻结/自启限制；也可先在主屏打开游戏一次，在最近任务中锁定卡片</string>
+    <string name="game_exit_oem_hint_meizu">Flyme 建议：在「后台管理」中为游戏选择「允许后台运行」并关闭省电冻结；也可先在主屏打开游戏一次，在最近任务中锁定卡片</string>
     <string name="runlog_game_fps_low">游戏画面帧率仅 %1$d FPS，低于 30，自动战斗可能出错；请在游戏设置中开启高帧率模式，并关闭省电模式</string>
     <string name="runlog_game_fps_degraded">游戏画面帧率 %1$d FPS，低于 50，战斗时机可能不准；建议在游戏设置中开启高帧率模式，并关闭省电模式</string>
     <string name="runlog_game_left_virtual_display">游戏窗口已离开虚拟显示器且自动拉回失败(%1$s)，请尝试开启「后台模式强制全屏模式」或改用前台模式</string>

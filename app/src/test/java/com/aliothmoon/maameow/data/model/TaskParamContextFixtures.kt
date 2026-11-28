@@ -33,6 +33,7 @@ fun testTaskParamContext(
     logSink: PreflightLogSink = CollectingPreflightLogSink(),
     report: ReportOptions = ReportOptions.DEFAULT,
     operBoxUseYituliuApi: Boolean = false,
+    profileId: String? = null,
 ): TaskParamContext = TaskParamContext(
     clientType = clientType,
     chainAllowsCreditFight = chainAllowsCreditFight,
@@ -46,6 +47,7 @@ fun testTaskParamContext(
     logSink = logSink,
     report = report,
     operBoxUseYituliuApi = operBoxUseYituliuApi,
+    profileId = profileId,
 )
 
 /** 最小节点；config 仅占位，展开逻辑以 toTaskParams 的 receiver 为准。 */

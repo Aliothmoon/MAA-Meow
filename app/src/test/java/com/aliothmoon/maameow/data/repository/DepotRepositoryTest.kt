@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.data.repository
 
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.data.model.toolbox.DepotItem
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.utils.JsonUtils
@@ -40,10 +41,21 @@ class DepotRepositoryTest {
         repository = DepotRepository(store, fakeChainState())
     }
 
-    private fun fakeChainState(): TaskChainState = mockk {
+    private fun mockProfiles(ids: List<String>): List<TaskProfile> =
+        ids.map { pid -> mockk<TaskProfile> { every { this@mockk.id } returns pid } }
+
+    private fun fakeChainState(
+        profileIds: List<String>? = null,
+        profilesFlow: MutableStateFlow<List<TaskProfile>>? = null,
+    ): TaskChainState = mockk {
         every { this@mockk.profileId } returns this@DepotRepositoryTest.activeProfileId
         every { isLoaded } returns MutableStateFlow(true)
+        every { profileListRecreated } returns false
         every { this@mockk.profileDeleted } returns this@DepotRepositoryTest.profileDeleted
+        when {
+            profilesFlow != null -> every { this@mockk.profiles } returns profilesFlow
+            profileIds != null -> every { this@mockk.profiles } returns MutableStateFlow(mockProfiles(profileIds))
+        }
     }
 
     private suspend fun rawShardOf(profileId: String): String? =
@@ -100,6 +112,50 @@ class DepotRepositoryTest {
         repository.merge(listOf("30011" to 20))
 
         assertEquals(120, repository.countOf("30011"))
+    }
+
+    @Test
+    fun merge_intoNonActiveProfile_staysInTargetShard() {
+        repository.set(listOf(DepotItem("30011", 100)))
+        repository.set(listOf(DepotItem("30011", 80)), PROFILE_B)
+
+        val written = repository.merge(listOf("30011" to 20), PROFILE_B)
+
+        assertTrue(written)
+        // 活跃档原样不动，累加落在目标档自己的分片上
+        assertEquals(100, repository.countOf("30011"))
+        assertEquals(100, repository.countOf("30011", PROFILE_B))
+        assertTrue(repository.hasSynced(PROFILE_B))
+    }
+
+    @Test
+    fun merge_intoProfileWithoutBaseline_isSkippedSilently() {
+        assertTrue(repository.merge(listOf("30011" to 20), PROFILE_B))
+        assertEquals(0, repository.countOf("30011", PROFILE_B))
+    }
+
+    @Test
+    fun merge_intoDeletedProfile_isRejected() = runBlocking {
+        // 先给 B 建好基线（分片存在且 hasSynced=true），再把 B 从配置档列表里去掉：
+        // 只有闸门生效时才会拒绝写入。以前这条用例里 B 连分片都没有，
+        // 闸门即使完全失效也会走「无基线不建键」，三条断言照样全过（等于没测）
+        repository.set(listOf(DepotItem("30011", 80)), PROFILE_B)
+        withTimeout(AWAIT_TIMEOUT_MS) {
+            while (rawShardOf(PROFILE_B) == null) yield()
+        }
+
+        val profilesFlow = MutableStateFlow(mockProfiles(listOf(PROFILE_A, PROFILE_B)))
+        val target = DepotRepository(store, fakeChainState(profilesFlow = profilesFlow))
+        withTimeout(AWAIT_TIMEOUT_MS) { target.isLoaded.first { it } }
+
+        // 装载时 B 还在列表里（分片不会被当成孤儿清掉），装载后用户又删了 B
+        profilesFlow.value = mockProfiles(listOf(PROFILE_A))
+
+        val written = target.merge(listOf("30011" to 20), PROFILE_B)
+
+        assertFalse(written)
+        // 基线还在（80），没有被这次 merge 叠成 100
+        assertEquals(80, target.countOf("30011", PROFILE_B))
     }
 
     @Test
@@ -314,6 +370,40 @@ class DepotRepositoryTest {
         repository.set(listOf(DepotItem("30011", 100)))
         repository.merge(listOf("30011" to 7))
         assertEquals(107, repository.countOf("30011"))
+    }
+
+    @Test
+    fun merge_shardExistsButNotSynced_isSkipped() = runBlocking {
+        // 分片存在但 syncTimeMillis=0（未做过仓库识别）时不得写入
+        val unsyncedStore = FakePreferencesDataStore()
+        unsyncedStore.edit {
+            it[stringPreferencesKey("depot_$PROFILE_A")] =
+                JsonUtils.common.encodeToString(DepotSnapshot())
+        }
+        val repo = DepotRepository(unsyncedStore, fakeChainState())
+        withTimeout(AWAIT_TIMEOUT_MS) { repo.isLoaded.first { it } }
+
+        val written = repo.merge(listOf("30011" to 5))
+
+        assertTrue("无基线是正常状态，不算写入失败", written)
+        assertEquals(0, repo.countOf("30011"))
+        assertFalse(repo.snapshot.value.items.containsKey("30011"))
+    }
+
+    @Test
+    fun currency_followsDepotBaselineLikeOtherItems() {
+        // 仓库识别会识别龙门币与采购凭证，未同步时同样不累加
+        assertTrue(repository.merge(listOf("4001" to 10000, "4006" to 21)))
+        assertTrue(repository.snapshot.value.items.isEmpty())
+
+        repository.set(listOf(DepotItem("4001", 300000), DepotItem("4006", 50)))
+        repository.merge(listOf("4001" to 12000))
+        assertEquals(312000, repository.countOf("4001"))
+
+        // 识别结果整表替换：花光的采购凭证不在结果里，不得保留旧值
+        repository.set(listOf(DepotItem("4001", 1000)))
+        assertEquals(1000, repository.countOf("4001"))
+        assertFalse(repository.snapshot.value.items.containsKey("4006"))
     }
 
     @Test

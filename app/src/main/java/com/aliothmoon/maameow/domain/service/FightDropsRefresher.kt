@@ -37,7 +37,7 @@ class FightDropsRefresher(
     /**
      * 已被证明「窗口内临期药已用完」的天数上限，本次会话内只增不减
      *
-     * 目标库存任务下发的是 times=MAX，正常结束却没达标只可能是理智耗尽，
+     * 不限次数的目标库存任务正常结束却没达标只可能是理智耗尽，
      * 且结束前已经把窗口内的临期药用光了；后续任务据此判断能否直接跳过
      */
     @Volatile
@@ -72,8 +72,10 @@ class FightDropsRefresher(
         if (!runBound || skippedPlans.isEmpty()) return emptyList()
         val groups = skippedPlans.toList()
         skippedPlans.removeAll(groups.toSet())
+        // 只看一次开跑档：回调线程上可能正被 resetSessionState/beginSession 改写
+        val profileId = subTaskHandler.runProfileId
         return groups.flatMap { group ->
-            group.stale(depotRepository::countOf).map { (plan, current) ->
+            group.stale { depotRepository.countOf(it, profileId) }.map { (plan, current) ->
                 StaleSkippedPlan(
                     taskName = group.taskName,
                     no = plan.no,
@@ -91,10 +93,14 @@ class FightDropsRefresher(
         val t = targets[slot] ?: return
         val expireDays = t.medicineExpireDays ?: 0
         if (expireDays <= 0 || t.dropId.isBlank() || t.dropCount <= 0) return
-        // 无库存数据判不出是否达标，不构成耗尽证明
-        if (!depotRepository.snapshot.value.hasSynced) return
+        // 有次数上限时可能打满次数而未达标，结束原因不唯一
+        if (t.maxTimes != Int.MAX_VALUE) return
+        // 只看一次开跑档，避免同一回调里前后两次读到不同档
+        val profileId = subTaskHandler.runProfileId
+        // 无库存基线判不出是否达标，不构成耗尽证明
+        if (!depotRepository.hasSynced(profileId)) return
         // 已达标说明结束原因与理智无关，不构成耗尽证明
-        if (currentCount(t) >= t.dropCount) return
+        if (currentCount(t, profileId) >= t.dropCount) return
         if (expireDays > provenExhaustedMedicineDays) {
             provenExhaustedMedicineDays = expireDays
             Timber.i("临期药窗口已证明耗尽：%d 天（来自 %s）", expireDays, t.logLabel)
@@ -133,12 +139,14 @@ class FightDropsRefresher(
         if (t.dropId.isBlank() || t.dropCount <= 0) return RefreshOutcome.Skipped
 
         // 从没识别过仓库，缺口无从谈起，按 0 计会把目标量全额下发
-        if (!depotRepository.snapshot.value.hasSynced) {
+        // 开跑档只读一次：同一回调里基线检查与 countOf 必须落在同一个档上
+        val profileId = subTaskHandler.runProfileId
+        if (!depotRepository.hasSynced(profileId)) {
             val ok = setParams(taskId, t.toFightParamsJson(0))
             return RefreshOutcome.InventoryUnavailable(logLabel = t.logLabel, applied = ok)
         }
 
-        val current = currentCount(t)
+        val current = currentCount(t, profileId)
         val need = t.dropCount - current
         val dropName = itemHelper.getItemInfo(t.dropId)?.name ?: t.dropId
         val shortfall = if (need > 0) estimateSkipForSanity(t) else null
@@ -180,8 +188,8 @@ class FightDropsRefresher(
         }
     }
 
-    private fun currentCount(t: DropTarget): Int =
-        DualChipConversion.count(t.dropId, t.countDualChips, depotRepository::countOf)
+    private fun currentCount(t: DropTarget, profileId: String?): Int =
+        DualChipConversion.count(t.dropId, t.countDualChips) { depotRepository.countOf(it, profileId) }
 
     private fun setParams(taskId: Int, paramsJson: String): Boolean {
         val maa = RemoteServiceManager.getInstanceOrNull()?.maaCoreService

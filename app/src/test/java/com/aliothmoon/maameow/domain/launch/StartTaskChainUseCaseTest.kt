@@ -70,7 +70,7 @@ class StartTaskChainUseCaseTest {
 
         assertEquals(StartTaskChainUseCase.Result.SuccessWithoutCore(message), result)
         // 等在这里才有前台服务与唤醒锁；Core 一次都不能起
-        coVerify(exactly = 0) { composition.start(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { composition.start(any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test

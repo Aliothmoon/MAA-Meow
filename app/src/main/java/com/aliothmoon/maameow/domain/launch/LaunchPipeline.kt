@@ -341,7 +341,7 @@ class LaunchPipeline(
                 val result = startTaskChain(
                     chain = enabled,
                     profileRunDurationLimitMinutes = profileRunDurationLimit,
-                    context = TaskStartContext(mode = TaskStartMode.SCHEDULED),
+                    context = TaskStartContext(mode = TaskStartMode.SCHEDULED, profileId = request.profileId),
                     scheduleLabel = request.displayName,
                 )
             ) {
