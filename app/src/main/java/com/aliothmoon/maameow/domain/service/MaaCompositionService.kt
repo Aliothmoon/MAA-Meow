@@ -332,8 +332,10 @@ class MaaCompositionService(
         callbackDispatcher.onEvent(msg, json)
     }
 
-    val callback = object : MaaCoreCallback.Stub() {
-        override fun onCallback(msg: Int, json: String?) = handleCallback(msg, json)
+    val callback: MaaCoreCallback by lazy {
+        object : MaaCoreCallback.Stub() {
+            override fun onCallback(msg: Int, json: String?) = handleCallback(msg, json)
+        }
     }
 
     private fun onAsyncConnectCallback(msg: Int, json: String?): Boolean {
@@ -643,9 +645,10 @@ class MaaCompositionService(
         launched
     }
 
-    // 强停失败也照样关屏
+    // 先拆虚拟屏再强停：存活虚拟屏上强杀唯一 Activity 会触发 Shell Transition 5s 超时，阻塞主屏上滑
     suspend fun closeGame(packageName: String): Boolean {
-        val stopped = try {
+        stopVirtualDisplay()
+        return try {
             withContext(Dispatchers.IO) {
                 useRemoteService { service -> service.bounded("forceStopGame") { it.forceStopGame(packageName) } }
             }
@@ -656,8 +659,6 @@ class MaaCompositionService(
             Timber.e(e, "closeGame failed: %s", packageName)
             false
         }
-        stopVirtualDisplay()
-        return stopped
     }
 
     private suspend fun reportVirtualDisplayStatus(
