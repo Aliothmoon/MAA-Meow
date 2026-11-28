@@ -1,0 +1,64 @@
+/* 不引 Tailwind 的 preflight：它会重置掉 Semi 组件的样式，布局类照用 */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* 页面比卡片暗一级，亮色下 Semi 的 bg-0/bg-1 都是白，得自己给底色 */
+:root {
+  --app-bg: #f4f5f7;
+}
+
+body[theme-mode='dark'] {
+  --app-bg: var(--semi-color-bg-0);
+}
+
+body {
+  margin: 0;
+  color: var(--semi-color-text-0);
+  background-color: var(--app-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+body .semi-card {
+  background-color: var(--semi-color-bg-1);
+}
+
+/* 日志配色与 app/.../theme/LogColors.kt 一致 */
+@layer components {
+  .log-INFO { color: #409EFF; }
+  .log-SUCCESS { color: #67C23A; }
+  .log-WARNING { color: #E6A23C; }
+  .log-ERROR { color: #F56C6C; }
+  .log-TRACE { color: #909399; }
+  .log-RARE { color: #FFAA00; }
+  .log-STAR_1 { color: #333333; }
+  .log-STAR_2 { color: #99CC33; }
+  .log-STAR_3 { color: #3399FF; }
+  .log-STAR_4 { color: #9966FF; }
+  .log-STAR_5 { color: #FFAA33; }
+  .log-STAR_6 { color: #FF8C00; }
+  .log-ROBOT { color: #666666; }
+  .log-ROGUELIKE_SUCCESS { color: #52C41A; }
+  .log-ROGUELIKE_COMBAT { color: #1890FF; }
+  .log-ROGUELIKE_EMERGENCY { color: #FA8C16; }
+  .log-ROGUELIKE_BOSS { color: #EB2F96; }
+  .log-ROGUELIKE_ABANDON { color: #8C8C8C; }
+  body[theme-mode='dark'] .log-INFO { color: #5DADE2; }
+  body[theme-mode='dark'] .log-SUCCESS { color: #7ED957; }
+  body[theme-mode='dark'] .log-WARNING { color: #F0B050; }
+  body[theme-mode='dark'] .log-ERROR { color: #FF8585; }
+  body[theme-mode='dark'] .log-TRACE { color: #B0B4BC; }
+  body[theme-mode='dark'] .log-RARE { color: #FFC042; }
+  body[theme-mode='dark'] .log-STAR_1 { color: #E5E5E5; }
+  body[theme-mode='dark'] .log-STAR_2 { color: #B5E853; }
+  body[theme-mode='dark'] .log-STAR_3 { color: #5DADE2; }
+  body[theme-mode='dark'] .log-STAR_4 { color: #B58CFF; }
+  body[theme-mode='dark'] .log-STAR_5 { color: #FFC56B; }
+  body[theme-mode='dark'] .log-STAR_6 { color: #FFA94D; }
+  body[theme-mode='dark'] .log-ROBOT { color: #B0B0B0; }
+  body[theme-mode='dark'] .log-ROGUELIKE_SUCCESS { color: #73D13D; }
+  body[theme-mode='dark'] .log-ROGUELIKE_COMBAT { color: #4DB6F0; }
+  body[theme-mode='dark'] .log-ROGUELIKE_EMERGENCY { color: #FFB070; }
+  body[theme-mode='dark'] .log-ROGUELIKE_BOSS { color: #FF6FBA; }
+  body[theme-mode='dark'] .log-ROGUELIKE_ABANDON { color: #BFBFBF; }
+}

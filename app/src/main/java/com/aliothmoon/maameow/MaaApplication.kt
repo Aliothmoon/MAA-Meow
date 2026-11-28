@@ -32,6 +32,7 @@ import com.aliothmoon.maameow.utils.NightModeBootstrap
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap
 import com.aliothmoon.maameow.utils.log.LogTreeHolder
 import com.aliothmoon.maameow.data.log.ProcessExitRecorder
+import com.aliothmoon.maameow.web.WebUiController
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -119,6 +120,7 @@ class MaaApplication : Application() {
         get<YituliuTokenRepository>().start()
         cleanCachedUpdateApks()
         get<ShizukuDownMonitor>().start(applicationScope)
+        get<WebUiController>().start()
         applicationScope.launch {
             crashHandler.cleanOldCrashLogs()
             get<MaaSessionLogger>().cleanupOldLogs()
